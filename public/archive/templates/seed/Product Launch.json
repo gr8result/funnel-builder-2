@@ -1,0 +1,9 @@
+{
+  "html": "<h1>New Product Launch!</h1><p>Introducing our latest product — designed to help you achieve amazing results.</p>",
+  "design": {
+    "body": {
+      "rows": []
+    },
+    "schemaVersion": 1
+  }
+}

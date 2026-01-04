@@ -1,0 +1,9 @@
+{
+  "html": "<h1>Your Weekly Fitness Fix</h1><p>Check out our latest training tips, nutrition advice, and motivation to keep you on track!</p>",
+  "design": {
+    "body": {
+      "rows": []
+    },
+    "schemaVersion": 1
+  }
+}

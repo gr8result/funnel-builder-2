@@ -1,0 +1,131 @@
+/* Dark skin + layout for the Email Builder (GrapesJS) */
+/* Keep this filename EXACT: email-builders.module.css */
+
+:root {
+  --panel-bg: #0b1220;
+  --panel-border: #1f2937;
+  --panel-muted: #0f172a;
+  --text: #e5e7eb;
+  --subtext: #94a3b8;
+  --accent: #2563eb;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+.builderRoot {
+  display: grid;
+  grid-template-columns: 260px 1fr 360px; /* left blocks | canvas | right styles */
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "topbar topbar topbar"
+    "left   canvas right";
+  gap: 10px;
+  padding: 12px;
+  background: #0a0f1a;
+  min-height: calc(100vh - 0px);
+  color: var(--text);
+}
+
+/* Top bar */
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-muted);
+  color: var(--text);
+  text-decoration: none;
+}
+.btnPrimary {
+  background: var(--accent);
+  border-color: #1d4ed8;
+}
+.btnGhost {
+  background: transparent;
+}
+
+/* Left (blocks) */
+.left {
+  grid-area: left;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Canvas */
+.canvas {
+  grid-area: canvas;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Right (style manager) */
+.right {
+  grid-area: right;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Make the email body narrower (easier to see styles panel) */
+.gjs-cv-canvas {
+  background: #0b1220 !important;
+}
+.gjs-frame {
+  background: #0b1220 !important;
+}
+.gjs-editor {
+  color: var(--text);
+}
+
+/* GrapesJS panel tweaks */
+.gjs-pn-panel, .gjs-sm-sector, .gjs-clm-tags, .gjs-blocks-c, .gjs-trt-traits {
+  background: var(--panel-bg) !important;
+  color: var(--text) !important;
+}
+.gjs-pn-buttons {
+  gap: 4px;
+}
+.gjs-pn-btn, .gjs-btn-prim, .gjs-btn-prim.gjs-block {
+  background: var(--panel-muted) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--panel-border) !important;
+}
+.gjs-blocks-c .gjs-block {
+  border: 1px solid var(--panel-border) !important;
+  border-radius: 10px !important;
+  background: #0d1628 !important;
+}
+
+/* Canvas width limiter: 600–640px typical email width */
+.gjs-cv-canvas iframe {
+  display: block !important;
+  margin: 0 auto !important;
+}
+.gjs-cv-canvas .gjs-cv-canvas__frames,
+.gjs-cv-canvas .gjs-cv-canvas__frames > div {
+  display: block !important;
+}

@@ -1,0 +1,47 @@
+/* Container */
+.wrap { padding: 28px 24px 48px; color: #e6edf6; }
+.header { margin-bottom: 24px; }
+.h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px 0; letter-spacing: .2px; }
+.lede { margin: 0; color: #9fb3c9; }
+
+/* Sections */
+.section { margin-top: 26px; }
+.sectionTitle { font-size: 16px; font-weight: 700; color: #c9d7e6; margin: 0 0 12px 0; }
+
+/* Grid — 5 columns on desktop, steps down cleanly */
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+
+/* breakpoints */
+@media (max-width: 1440px){ .grid{ grid-template-columns: repeat(4,1fr);} }
+@media (max-width: 1100px){ .grid{ grid-template-columns: repeat(3,1fr);} }
+@media (max-width: 760px){  .grid{ grid-template-columns: repeat(2,1fr);} }
+@media (max-width: 520px){  .grid{ grid-template-columns: 1fr;} }
+
+/* Card: square-ish, modern */
+.card {
+  display: flex; align-items: center; gap: 14px;
+  border-radius: 10px; min-height: 140px;  /* a bit taller so it reads square at 5-wide */
+  background: linear-gradient(180deg, rgba(29,39,51,.82), rgba(21,28,38,.82));
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 2px 10px rgba(0,0,0,.28);
+  padding: 16px; text-decoration: none; color: inherit;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.14); box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+
+/* Icon chip */
+.icon { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.06); }
+.iconSvg { width: 22px; height: 22px; color: white; }
+
+/* Text */
+.cardText { display: grid; gap: 4px; }
+.cardTitle { font-weight: 800; font-size: 14px; letter-spacing: .2px; }
+.cardDesc { font-size: 12.5px; color: #a8bed6; }
+
+/* Tone colors for the chip */
+.tone_indigo { background: rgba(99,102,241,.18); color: #aab0ff; }
+.tone_blue   { background: rgba(59,130,246,.18); color: #9bc6ff; }
+.tone_emerald{ background: rgba(16,185,129,.18); color: #7dffd6; }
+.tone_violet { background: rgba(139,92,246,.18); color: #d1b6ff; }
+.tone_teal   { background: rgba(20,184,166,.18); color: #8ff2e7; }
+.tone_slate  { background: rgba(148,163,184,.18); color: #d9e3ee; }

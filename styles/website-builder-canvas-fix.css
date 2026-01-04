@@ -1,0 +1,31 @@
+/* =========================================
+   GR8 RESULT — Website Builder Canvas FIX
+   ⚠️ DO NOT EDIT BANNER
+   ✅ FORCE REAL LANDING PAGE WIDTH
+   ========================================= */
+
+/* Main website builder canvas / preview */
+.website-builder canvas,
+.website-builder .canvas,
+.website-builder .preview,
+.website-builder .live-preview,
+.website-builder [data-canvas],
+.website-builder [data-preview],
+.website-builder [class*="preview"],
+.website-builder [class*="canvas"] {
+  max-width: 1840px !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Kill fake phone constraints */
+.website-builder iframe {
+  max-width: 1440px !important;
+  width: 100% !important;
+}
+
+/* Ensure parent does not clamp width */
+.website-builder {
+  overflow-x: auto;
+}

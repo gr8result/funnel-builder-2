@@ -1,0 +1,5 @@
+﻿[
+  { "file": "/templates/gallery/gr8/newsletter.html",     "thumb": "/templates/thumbs/fallback.png" },
+  { "file": "/templates/gallery/gr8/product-promo.html",  "thumb": "/templates/thumbs/fallback.png" },
+  { "file": "/templates/gallery/gr8/webinar-invite.html", "thumb": "/templates/thumbs/fallback.png" }
+]

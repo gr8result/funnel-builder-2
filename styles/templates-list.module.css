@@ -1,0 +1,53 @@
+/* styles/templates-list.module.css */
+
+.wrap { padding: 24px 20px 40px; }
+
+.headerRow {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; margin-bottom: 18px;
+}
+
+.h1 { font-size: 22px; font-weight: 800; margin: 0; color: #e6eef7; }
+.sub { margin: 4px 0 0 0; color: #9fb3c8; font-size: 13px; }
+
+.tools { display: flex; gap: 10px; }
+.search {
+  min-width: 260px; height: 34px; border-radius: 8px;
+  border: 1px solid #263241; background: #0c1220; color: #d7e3f0; padding: 0 10px;
+}
+.search::placeholder { color: #5f7691; }
+
+.tableWrap { border-radius: 12px; border: 1px solid #1f2a38; background: #0a111d; overflow: hidden; }
+.table { width: 100%; border-collapse: collapse; }
+
+.table thead th {
+  text-align: left; font-weight: 700; font-size: 12px; letter-spacing: .02em; color: #8ea7c2;
+  background: #0d1626; border-bottom: 1px solid #1f2a38; padding: 10px 12px;
+}
+
+.table tbody td { font-size: 13px; color: #d7e3f0; border-top: 1px solid #101a2a; padding: 10px 12px; }
+
+.loadingCell, .emptyCell { text-align: center; color: #9fb3c8; padding: 24px 12px; }
+
+.colName { width: 36%; } .colType { width: 8%; } .colSource { width: 12%; }
+.colDesc { width: 28%; } .colPreview { width: 8%; } .colActions { width: 8%; }
+
+.cellName { display: flex; align-items: center; gap: 10px; }
+.fileIcon { width: 28px; height: 28px; display: grid; place-items: center; font-size: 16px;
+  background: #112035; border: 1px solid #1f2a38; border-radius: 8px; }
+.fileText { min-width: 0; } .fileTitle { font-weight: 700; }
+.filePath { color: #8ea7c2; font-size: 11px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.btnGhost, .btnPrimary {
+  display: inline-flex; align-items: center; justify-content: center; height: 28px;
+  padding: 0 12px; border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;
+}
+
+.btnGhost { background: #0b1526; border: 1px solid #1f2a38; color: #cfe2f3; }
+.btnGhost:hover { background: #0f1b2f; }
+
+.btnPrimary { background: #2563eb; border: 1px solid #1a4fcc; color: #fff; }
+.btnPrimary:hover { background: #1f56ce; }
+
+@media (max-width: 900px) { .colDesc { display:none; } .colType { display:none; } }
+@media (max-width: 680px) { .colSource { display:none; } .filePath { display:none; } }

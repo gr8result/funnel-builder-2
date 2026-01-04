@@ -1,0 +1,8 @@
+{
+  // Leave Deno installed, but do NOT let it take over the workspace
+  "deno.enable": false,
+
+  // Stop VSCode from screaming about the Supabase function .ts files
+  "typescript.validate.enable": false,
+  "javascript.validate.enable": true
+}

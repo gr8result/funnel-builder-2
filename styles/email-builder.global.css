@@ -1,0 +1,57 @@
+/* styles/email-builder.global.css */
+/* Dark, proprietary skin for GrapesJS; global so no brittle imports. */
+
+:root {
+  --ws-bg: #0b1220;
+  --ws-panel: #0f172a;
+  --ws-panel-2: #111827;
+  --ws-text: #e5e7eb;
+  --ws-accent: #2563eb;
+}
+
+/* Wrapper used by builder page */
+.ws-builder-wrap { background: var(--ws-bg); color: var(--ws-text); min-height: 100vh; }
+.ws-builder-header { padding: 16px 20px; }
+.ws-title { margin: 0 0 4px 0; font-size: 18px; font-weight: 700; }
+.ws-sub { margin: 0; opacity: 0.8; }
+
+/* GrapesJS dark skin */
+.gjs-one-bg { background-color: var(--ws-panel) !important; }
+.gjs-two-bg { background-color: var(--ws-panel-2) !important; }
+.gjs-three-bg { background-color: var(--ws-panel) !important; }
+.gjs-four-color,
+.gjs-color-warn,
+.gjs-color-hl { color: var(--ws-text) !important; }
+
+.gjs-pn-panel,
+.gjs-cv-canvas,
+.gjs-blocks-c,
+.gjs-sm-sector { color: var(--ws-text); }
+
+.gjs-pn-btn {
+  background: transparent;
+  border: 1px solid #1f2937;
+  margin-right: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--ws-text);
+}
+.gjs-pn-btn--primary {
+  background: var(--ws-accent);
+  border-color: var(--ws-accent);
+  color: #fff;
+}
+
+.gjs-block {
+  background: #111827;
+  border: 1px solid #1f2937;
+  color: var(--ws-text);
+}
+
+.gjs-field input,
+.gjs-field select,
+.gjs-field textarea {
+  background: #0b1220;
+  color: var(--ws-text);
+  border-color: #1f2937;
+}

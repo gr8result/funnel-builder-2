@@ -1,0 +1,17 @@
+{
+  "modern-magazine.html": {
+    "title": "Modern Magazine",
+    "description": "Hero masthead, feature image, 2x article cards, CTA.",
+    "category": "GR8 Modern"
+  },
+  "fashion-promo.html": {
+    "title": "Fashion Promo",
+    "description": "Full-bleed banner, 3-up product row, coupon CTA.",
+    "category": "GR8 Modern"
+  },
+  "clean-digest.html": {
+    "title": "Clean Digest",
+    "description": "Minimal newsletter with three stories and buttons.",
+    "category": "GR8 Minimal"
+  }
+}

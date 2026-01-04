@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E-commerce Catalogue</title>
+<style>html,body{margin:0;padding:0;background:#0b1220;}img{border:0;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;}a{text-decoration:none;}</style>
+</head>
+<body style="margin:0;padding:0;background:#0b1220;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Shop our latest arrivals.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b1220;">
+    <tr><td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" style="max-width:640px;background:#0f172a;border:1px solid #1f2937;border-radius:10px;">
+        <!-- Banner -->
+        <tr><td style="padding:0;border-top-left-radius:10px;border-top-right-radius:10px;overflow:hidden;">
+          <img src="https://via.placeholder.com/640x220/1f2937/e5e7eb?text=New+Arrivals" width="640" style="display:block;width:100%;height:auto;" alt="">
+        </td></tr>
+
+        <!-- Greeting -->
+        <tr><td style="padding:20px 22px 8px 22px;">
+          <h1 style="margin:0 0 8px 0;font:700 26px Arial,Helvetica,sans-serif;color:#e5e7eb;">Just dropped</h1>
+          <p style="margin:0;font:16px/1.6 Arial,Helvetica,sans-serif;color:#cbd5e1;">Fresh styles picked for you. Swap images, names, and prices.</p>
+        </td></tr>
+
+        <!-- 3-up row (x2) -->
+        <tr><td style="padding:6px 12px 0 12px;">
+          <table role="presentation" width="100%">
+            <tr>
+              <!-- product card -->
+              <!-- repeatable component -->
+              %%%ROW1%%%
+            </tr>
+          </table>
+        </td></tr>
+
+        <tr><td style="padding:6px 12px 12px 12px;">
+          <table role="presentation" width="100%">
+            <tr>
+              %%%ROW2%%%
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- CTA -->
+        <tr><td style="padding:8px 22px 22px 22px;">
+          <table role="presentation"><tr><td align="center" bgcolor="#2563eb" style="border-radius:8px;">
+            <a href="#" style="display:inline-block;padding:12px 18px;font:600 16px Arial,Helvetica,sans-serif;color:#fff;border-radius:8px;">Shop all</a>
+          </td></tr></table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td align="center" style="padding:16px;border-top:1px solid #1f2937;">
+          <p style="margin:0;font:12px Arial,Helvetica,sans-serif;color:#94a3b8;">© Your Company • <a href="#" style="color:#93c5fd;">Unsubscribe</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+
+  <!-- inline templating (safe fallback content): we pre-render here so the editor sees final HTML -->
+  <script>
+    (function () {
+      var card = function (img, title, price) {
+        return ''+
+        '<td width="33.33%" valign="top" style="padding:8px;">'+
+          '<table role="presentation" width="100%" style="background:#111827;border:1px solid #1f2937;border-radius:10px;">'+
+            '<tr><td style="padding:10px 10px 0 10px;">'+
+              '<img src="'+img+'" width="180" style="display:block;width:100%;height:auto;border-radius:8px;" alt="">'+
+            '</td></tr>'+
+            '<tr><td style="padding:10px 12px 12px 12px;">'+
+              '<div style="font:600 14px Arial,Helvetica,sans-serif;color:#e5e7eb;margin:0 0 4px 0;">'+title+'</div>'+
+              '<div style="font:14px Arial,Helvetica,sans-serif;color:#93c5fd;margin:0 0 8px 0;">'+price+'</div>'+
+              '<table role="presentation"><tr><td align="center" bgcolor="#2563eb" style="border-radius:6px;">'+
+                '<a href="#" style="display:inline-block;padding:8px 12px;font:600 14px Arial,Helvetica,sans-serif;color:#fff;border-radius:6px;">View</a>'+
+              '</td></tr></table>'+
+            '</td></tr>'+
+          '</table>'+
+        '</td>';
+      };
+      var r1 = [
+        card('https://via.placeholder.com/180x120/9fe3b4/0b1220?text=Chair','Oak Chair','$129'),
+        card('https://via.placeholder.com/180x120/b7e4c7/0b1220?text=Lamp','Glass Lamp','$59'),
+        card('https://via.placeholder.com/180x120/c7f9cc/0b1220?text=Table','Round Table','$249')
+      ].join('');
+      var r2 = [
+        card('https://via.placeholder.com/180x120/9fe3b4/0b1220?text=Sofa','Linen Sofa','$899'),
+        card('https://via.placeholder.com/180x120/b7e4c7/0b1220?text=Rug','Wool Rug','$199'),
+        card('https://via.placeholder.com/180x120/c7f9cc/0b1220?text=Vase','Stone Vase','$39')
+      ].join('');
+      document.body.innerHTML = document.body.innerHTML.replace('%%%ROW1%%%', r1).replace('%%%ROW2%%%', r2);
+    })();
+  </script>
+</body>
+</html>
+

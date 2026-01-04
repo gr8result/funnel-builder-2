@@ -1,0 +1,11 @@
+{
+  "action": { "title": "Account Action Notice", "description": "A crisp system alert email layout." },
+  "alert": { "title": "System Alert", "description": "Compact warning/alert template." },
+  "billing": { "title": "Billing & Invoices", "description": "Simple invoice and billing message." },
+  "cerberus-fluid": { "title": "Fluid Layout", "description": "Responsive fluid email base." },
+  "cerberus-hybrid": { "title": "Hybrid Layout", "description": "Hybrid responsive email base." },
+  "cerberus-responsive": { "title": "Responsive Base", "description": "Mobile-first responsive starter." },
+  "email": { "title": "Plain Newsletter", "description": "Clean newsletter scaffold." },
+  "email-inlined": { "title": "Inlined Newsletter", "description": "Inline styles version for maximum support." },
+  "starter": { "title": "Starter Template", "description": "Minimal skeleton you can customise." }
+}
