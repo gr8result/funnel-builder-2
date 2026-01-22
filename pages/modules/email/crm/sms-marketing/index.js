@@ -4,7 +4,10 @@
 // ✅ Campaign queues into sms_queue (via /api/smsglobal/launch-sequence)
 // ✅ Single sends via /api/smsglobal/SMSGlobalSMSSend using lead_id OR manual to
 // ✅ Emoji picker kept — NOW 2x size + stays open until you close it
+<<<<<<< HEAD
 // ✅ Emojis themselves are now BIG (about double): ~36px, bigger buttons
+=======
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -124,7 +127,11 @@ function BannerIcon({ size = 48 }) {
   );
 }
 
+<<<<<<< HEAD
 // ✅ BIGGER + DOES NOT AUTO CLOSE + BIGGER EMOJI GLYPHS
+=======
+// ✅ BIGGER + DOES NOT AUTO CLOSE
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 function EmojiPicker({ open, onPick, onClose }) {
   const pickerRef = useRef(null);
 
@@ -151,8 +158,13 @@ function EmojiPicker({ open, onPick, onClose }) {
         top: "calc(100% + 10px)",
         zIndex: 50,
 
+<<<<<<< HEAD
         // 2x size panel
         width: 720,
+=======
+        // 2x size
+        width: 640,
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
         borderRadius: 16,
         border: "1px solid rgba(255,255,255,0.14)",
         background: "rgba(5,10,20,0.98)",
@@ -160,17 +172,26 @@ function EmojiPicker({ open, onPick, onClose }) {
         padding: 14,
       }}
     >
+<<<<<<< HEAD
       <div style={{ color: "rgba(255,255,255,0.88)", fontSize: 18, marginBottom: 10, fontWeight: 700 }}>
         Pick emojis (stays open — press Close when done)
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 10 }}>
+=======
+      <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 18, marginBottom: 10, fontWeight: 600 }}>
+        Pick emojis (stays open — press Close when done)
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 8 }}>
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
         {EMOJIS.map((e) => (
           <button
             key={e}
             type="button"
             onClick={() => onPick?.(e)} // ✅ does NOT close
             style={{
+<<<<<<< HEAD
               height: 64,
               borderRadius: 16,
               border: "1px solid rgba(255,255,255,0.12)",
@@ -180,6 +201,15 @@ function EmojiPicker({ open, onPick, onClose }) {
               // ✅ BIG EMOJI GLYPH (double-ish)
               fontSize: 36,
               lineHeight: "64px",
+=======
+              height: 54,
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.06)",
+              cursor: "pointer",
+              fontSize: 26,
+              lineHeight: "54px",
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
             }}
             aria-label={`emoji ${e}`}
             title={e}
@@ -445,9 +475,13 @@ export default function SmsMarketingPage() {
       throw new Error("Invalid single audience type.");
     } catch (e) {
       const detail = e?.detail?.detail || e?.detail?.smsglobal_http || e?.detail?.message || "";
+<<<<<<< HEAD
       setBannerError(
         e?.message ? `Server error: ${e.message}${detail ? ` — ${detail}` : ""}` : "Server error"
       );
+=======
+      setBannerError(e?.message ? `Server error: ${e.message}${detail ? ` — ${detail}` : ""}` : "Server error");
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
     } finally {
       setSendingSingle(false);
     }

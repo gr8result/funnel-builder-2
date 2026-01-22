@@ -1,6 +1,7 @@
 // /pages/api/smsglobal/SMSGlobalSMSSend.js
 // FULL REPLACEMENT
 //
+<<<<<<< HEAD
 // ✅ FIXES:
 // - Stops querying leads.phone_number directly (uses select('*') and picks a real phone field)
 // - Uses SMSGlobal HTTP API (username/password) instead of REST (fixes 403)
@@ -13,6 +14,12 @@
 // Optional:
 //   NEXT_PUBLIC_SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
+=======
+// ✅ Single SMS uses TENANT origin from sms_provider_settings (by org_id)
+// ✅ Falls back to accounts/profiles if needed
+// ✅ lead_id OR manual { to } supported
+// ✅ Multi-tenant safe: lead must belong to logged-in user
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -25,10 +32,23 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE ||
   process.env.SUPABASE_SERVICE;
 
+<<<<<<< HEAD
+=======
+const ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+const SMSGLOBAL_API_KEY = process.env.SMSGLOBAL_API_KEY || process.env.SMSGLOBAL_KEY;
+const SMSGLOBAL_API_SECRET =
+  process.env.SMSGLOBAL_API_SECRET || process.env.SMSGLOBAL_SECRET;
+
+const DEFAULT_SMS_ORIGIN = (process.env.DEFAULT_SMS_ORIGIN || "gr8result").trim();
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 function s(v) {
   return String(v ?? "").trim();
 }
 
+<<<<<<< HEAD
 function normalizeSmsGlobalNumber(input) {
   // SMSGlobal HTTP API: "Do not use + before the country code"
   let v = s(input);
@@ -197,5 +217,191 @@ export default async function handler(req, res) {
       ok: false,
       error: e?.message || String(e),
     });
+=======
+function json(res, status, body) {
+  res.status(status).json(body);
+}
+
+function sanitizeOrigin(origin) {
+  let o = s(origin);
+  if (!o) return "";
+  o = o.replace(/[^a-zA-Z0-9]/g, ""); // remove spaces/symbols
+  if (o.length > 11) o = o.slice(0, 11);
+  return o;
+}
+
+async function getUserFromBearer(req, supabaseAnon) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  if (!token) return null;
+
+  const { data, error } = await supabaseAnon.auth.getUser(token);
+  if (error || !data?.user) return null;
+  return data.user;
+}
+
+async function getOrgIdForUser(supabaseAdmin, userId) {
+  // Try profiles.org_id first (common)
+  try {
+    const { data } = await supabaseAdmin
+      .from("profiles")
+      .select("org_id")
+      .eq("id", userId)
+      .maybeSingle();
+    if (data?.org_id) return data.org_id;
+  } catch {}
+
+  // Try accounts.org_id second (common)
+  try {
+    const { data } = await supabaseAdmin
+      .from("accounts")
+      .select("org_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (data?.org_id) return data.org_id;
+  } catch {}
+
+  return null;
+}
+
+async function pickTenantOrigin(supabaseAdmin, userId) {
+  const orgId = await getOrgIdForUser(supabaseAdmin, userId);
+
+  // 1) sms_provider_settings by org_id (YOUR ACTUAL TABLE)
+  if (orgId) {
+    try {
+      const { data } = await supabaseAdmin
+        .from("sms_provider_settings")
+        .select("origin")
+        .eq("org_id", orgId)
+        .maybeSingle();
+
+      const cleaned = sanitizeOrigin(data?.origin);
+      if (cleaned) return cleaned;
+    } catch {}
   }
+
+  // 2) accounts fallback
+  try {
+    const { data } = await supabaseAdmin
+      .from("accounts")
+      .select("sms_origin,sms_sender,brand_name,name")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const candidate = data?.sms_origin || data?.sms_sender || data?.brand_name || data?.name;
+    const cleaned = sanitizeOrigin(candidate);
+    if (cleaned) return cleaned;
+  } catch {}
+
+  // 3) profiles fallback
+  try {
+    const { data } = await supabaseAdmin
+      .from("profiles")
+      .select("sms_origin,sms_sender,brand_name,company,name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const candidate =
+      data?.sms_origin || data?.sms_sender || data?.brand_name || data?.company || data?.name;
+    const cleaned = sanitizeOrigin(candidate);
+    if (cleaned) return cleaned;
+  } catch {}
+
+  return sanitizeOrigin(DEFAULT_SMS_ORIGIN) || "gr8result";
+}
+
+async function sendViaSMSGlobal({ to, message, origin }) {
+  if (!SMSGLOBAL_API_KEY || !SMSGLOBAL_API_SECRET) {
+    return { ok: false, error: "Missing SMSGLOBAL API env (SMSGLOBAL_API_KEY / SMSGLOBAL_API_SECRET)" };
+  }
+
+  // Keep compatible with many SMSGlobal accounts (legacy HTTP API)
+  const url = "https://api.smsglobal.com/http-api.php";
+
+  const params = new URLSearchParams();
+  params.set("action", "sendsms");
+  params.set("user", SMSGLOBAL_API_KEY);
+  params.set("password", SMSGLOBAL_API_SECRET);
+  params.set("to", to);
+  params.set("text", message);
+
+  // Sender/origin
+  if (origin) params.set("from", origin);
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+
+  const text = await resp.text();
+  const providerIdMatch = String(text).match(/\b\d{8,}\b/);
+  const provider_id = providerIdMatch ? providerIdMatch[0] : null;
+
+  if (!resp.ok) {
+    return { ok: false, error: "SMSGlobal HTTP error", status: resp.status, raw: text };
+  }
+
+  return { ok: true, provider_id, raw: text };
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return json(res, 405, { ok: false, error: "Method not allowed" });
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
+  }
+
+  if (!SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) {
+    return json(res, 500, { ok: false, error: "Missing Supabase env" });
+  }
+
+  const supabaseAnon = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false },
+  });
+  const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  const user = await getUserFromBearer(req, supabaseAnon);
+  if (!user) return json(res, 401, { ok: false, error: "Unauthorized" });
+
+  let body = {};
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+  } catch {
+    body = req.body || {};
+  }
+
+  const message = s(body.message || body.body || body.text);
+  if (!message) return json(res, 400, { ok: false, error: "Missing message" });
+
+  let to = s(body.to);
+  const lead_id = s(body.lead_id || body.leadId || "");
+
+  // If lead_id provided, pull phone from leads table
+  if (!to && lead_id) {
+    const { data: lead, error: leadErr } = await supabaseAdmin
+      .from("leads")
+      .select("id, user_id, phone, mobile, phone_number, mobile_phone")
+      .eq("id", lead_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (leadErr) return json(res, 500, { ok: false, error: "Lead lookup failed", detail: leadErr.message });
+    if (!lead) return json(res, 404, { ok: false, error: "Lead not found (or not your lead)" });
+
+    to = s(lead.mobile) || s(lead.phone) || s(lead.phone_number) || s(lead.mobile_phone) || "";
+    if (!to) return json(res, 400, { ok: false, error: "Lead has no phone number" });
+  }
+
+  if (!to) return json(res, 400, { ok: false, error: "Missing 'to' (or lead_id)" });
+
+  const origin = await pickTenantOrigin(supabaseAdmin, user.id);
+
+  const sent = await sendViaSMSGlobal({ to, message, origin });
+  if (!sent.ok) return json(res, 500, { ok: false, error: sent.error, detail: sent });
+
+  return json(res, 200, { ok: true, provider_id: sent.provider_id, used_origin: origin, to });
 }

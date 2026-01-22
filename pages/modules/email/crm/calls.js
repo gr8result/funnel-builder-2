@@ -1,10 +1,20 @@
 // /pages/modules/email/crm/calls.js
 // FULL REPLACEMENT
 //
+<<<<<<< HEAD
 // ✅ Same UI
 // ✅ On failure, shows the REAL Twilio error (not generic "application error")
 // ✅ Auto-fetches /api/twilio/debug-call?sid=... after a failed/hung-up call
 // ✅ Keeps your banner / keypad sizes / recent calls / recordings
+=======
+// ✅ CALLING WORKS — do not break it
+// ✅ Bigger keypad numbers (only UI) — now forced via inner span + transform (cannot be overridden easily)
+// ✅ Darker dropdown background (only UI)
+// ✅ Recent calls shows CONTACT NAME (not just numbers)
+// ✅ Removes duplicate call rows (handled by API list-calls de-dupe)
+// ✅ Recordings show on the correct call row
+// ✅ Passes lead_id into call params so Twilio callback can auto-add notes
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -106,9 +116,13 @@ export default function CallsPage() {
   const [contacts, setContacts] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [phone, setPhone] = useState("");
+<<<<<<< HEAD
   const [sms, setSms] = useState(
     "Hi, This is XXXXXXXX,  I just tried to reach you by phone — can you please call me back when you can. 🙂"
   );
+=======
+  const [sms, setSms] = useState("Hi, This is XXXXXXXX,  I just tried to reach you by phone — can you please call me back when you can. 🙂");
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
   const [bannerError, setBannerError] = useState("");
   const [status, setStatus] = useState("idle"); // idle | registering | ready | calling | in-call | ended | error
@@ -476,6 +490,7 @@ export default function CallsPage() {
     }));
   }, [contacts]);
 
+<<<<<<< HEAD
   const KEYPAD_HEIGHT = 70;
   const KEYPAD_MIN_HEIGHT = 54;
   const KEYPAD_SCALE = 1.35;
@@ -496,6 +511,14 @@ export default function CallsPage() {
     };
   }, []);
 
+=======
+  // UI constants for keypad (so we can force-size reliably)
+  const KEYPAD_HEIGHT = 70; // you said 70 fits better
+  const KEYPAD_MIN_HEIGHT = 54; // you want at least 54px
+  const KEYPAD_SCALE = 1.35; // force bigger without relying on font-size
+  const KEYPAD_FONT = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
   return (
     <>
       <Head>
@@ -636,9 +659,19 @@ export default function CallsPage() {
                       color: "#fff",
                       cursor: "pointer",
                       padding: 0,
+<<<<<<< HEAD
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+=======
+
+                      // make sure we control the inner layout
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+
+                      // stop any global button typography weirdness
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
                       font: "inherit",
                       textTransform: "none",
                     }}
@@ -647,9 +680,18 @@ export default function CallsPage() {
                       style={{
                         fontFamily: KEYPAD_FONT,
                         fontWeight: 600,
+<<<<<<< HEAD
                         fontSize: 36,
                         lineHeight: 1,
                         display: "inline-block",
+=======
+                        fontSize: 36, // base size
+                        lineHeight: 1,
+                        display: "inline-block",
+
+                        // 🔥 THIS is the "can’t-ignore" part:
+                        // even if some CSS tries to clamp font-size, transform still makes it bigger
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
                         transform: `scale(${KEYPAD_SCALE})`,
                         transformOrigin: "center",
                       }}

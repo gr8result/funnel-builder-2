@@ -2,10 +2,13 @@
   "crons": [
     {
       "path": "/api/smsglobal/flush-queue?limit=50&key=c1ae7bf64e1173572",
+<<<<<<< HEAD
       "schedule": "* * * * *"
     },
     {
       "path": "/api/email/autoresponders/process-queue?limit=50&key=PASTE_YOUR_AUTORESPONDER_KEY_HERE",
+=======
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
       "schedule": "* * * * *"
     }
   ]

@@ -2,6 +2,7 @@
 // FULL REPLACEMENT
 //
 // ✅ Keeps LEFT dialer (BrowserDialer) intact
+<<<<<<< HEAD
 // ✅ Notes Timeline INSIDE Notes box (scrollable)
 // ✅ Audio recordings appear INSIDE Notes Timeline (not outside)
 // ✅ No SID/junk text in notes
@@ -11,6 +12,16 @@
 // ✅ Audio playback uses:
 //    - /api/twilio/recording?sid=RE...
 //    - OR /api/twilio/recording-audio?url=...
+=======
+// ✅ REMOVES the big useless panel above Notes textarea (the one in your screenshot)
+// ✅ Shows REAL call recordings INSIDE the Notes section, in date order
+// ✅ Loads recordings from BOTH:
+//    1) Supabase table crm_calls (by lead_id)  <-- NOW via server API /api/crm/lead-call-recordings (service role)
+//    2) Twilio API /api/twilio/list-call-recordings?phone=...
+// ✅ Dedupes recordings so you don’t see doubles
+// ✅ Uses /api/twilio/recording?sid=RE... and /api/twilio/recording-audio?url=...
+// ✅ Cleans “Call recording ready...” junk from notes (on load + on save)
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
@@ -168,7 +179,11 @@ export default function LeadDetailsModal({
   // recordings
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState("");
+<<<<<<< HEAD
   const [recordings, setRecordings] = useState([]);
+=======
+  const [mergedRecordings, setMergedRecordings] = useState([]);
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
   // calendar
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -220,6 +235,12 @@ export default function LeadDetailsModal({
     loadTasksForLead(lead.id);
 
     loadAllRecordings();
+    setTimeout(() => loadAllRecordings(), 6000);
+    setTimeout(() => loadAllRecordings(), 15000);
+    setTimeout(() => loadAllRecordings(), 30000);
+
+    // OPTIONAL: recordings sometimes take time to appear after hangup
+    // (keeps UI exactly same, just refreshes quietly)
     setTimeout(() => loadAllRecordings(), 6000);
     setTimeout(() => loadAllRecordings(), 15000);
     setTimeout(() => loadAllRecordings(), 30000);
@@ -290,6 +311,7 @@ export default function LeadDetailsModal({
     setTasksLoading(false);
   }
 
+<<<<<<< HEAD
   // -------------------- RECORDINGS --------------------
   function pickFirstUrl(obj) {
     // brute-force: try many common names you’ve used across versions
@@ -322,10 +344,17 @@ export default function LeadDetailsModal({
     return "";
   }
 
+=======
+  // Load recordings from crm_calls via SERVER API (service role) to avoid RLS empty results in browser
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
   async function loadDbRecordings() {
     try {
       if (!lead?.id) return [];
 
+<<<<<<< HEAD
+=======
+      // must be logged in to call server endpoint securely
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || "";
       if (!token) return [];
@@ -342,6 +371,7 @@ export default function LeadDetailsModal({
 
       const rows = Array.isArray(j?.recordings) ? j.recordings : [];
 
+<<<<<<< HEAD
       return rows
         .map((row) => {
           const recUrl = pickFirstUrl(row);
@@ -351,6 +381,19 @@ export default function LeadDetailsModal({
           const duration = row?.duration ?? row?.recording_duration ?? row?.recordingDuration ?? null;
 
           const key = recSid ? `sid:${recSid}` : recUrl ? `url:${recUrl}` : `db:${Math.random().toString(16).slice(2)}`;
+=======
+      // map api rows to unified recording items
+      return (rows || [])
+        .filter((r) => r && (s(r.recordingUrl) || s(r.sid)))
+        .map((r) => {
+          const recUrl = s(r.recordingUrl || r.recording_url || r.url || "");
+          const sid = s(r.sid || r.recordingSid || r.recording_sid || "") || extractRecordingSidFromUrl(recUrl);
+
+          const createdAt = r.createdAt || r.created_at || r.dateCreated || r.date_created || r.created || null;
+          const duration = r.duration ?? r.recordingDuration ?? r.recording_duration ?? null;
+
+          const key = sid ? `sid:${sid}` : recUrl ? `url:${recUrl}` : `db:${Math.random().toString(16).slice(2)}`;
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
           return {
             key,
@@ -385,9 +428,25 @@ export default function LeadDetailsModal({
       return recs
         .map((x) => {
           const sid = s(x.sid || x.recordingSid);
+<<<<<<< HEAD
           const createdAt = x.dateCreated || x.createdAt || x.created_at || x.timestamp || null;
           const duration = x.duration ?? x.recordingDuration ?? null;
           if (!sid) return null;
+=======
+
+          const createdAt =
+            x.dateCreated ||
+            x.date_created ||
+            x.createdAt ||
+            x.created_at ||
+            x.startTime ||
+            x.start_time ||
+            x.timestamp ||
+            null;
+
+          const duration = x.duration ?? x.recordingDuration ?? x.recording_duration ?? null;
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
           return {
             key: `sid:${sid}`,
             source: "twilio",
@@ -418,10 +477,17 @@ export default function LeadDetailsModal({
     setRecordings([]);
 
     try {
+<<<<<<< HEAD
       const [dbList, twList] = await Promise.all([loadDbRecordings(), loadTwilioRecordings()]);
       const map = new Map();
 
       // Prefer DB (it has URLs)
+=======
+      const [dbList, twList] = await Promise.all([loadDbRecordings(), loadTwilioRecordings().catch(() => [])]);
+
+      const map = new Map();
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
       for (const item of dbList) {
         const k = item.sid ? `sid:${item.sid}` : item.recordingUrl ? `url:${item.recordingUrl}` : item.key;
         map.set(k, item);
@@ -456,6 +522,10 @@ export default function LeadDetailsModal({
 
     try {
       const { error } = await supabase.from("leads").update({ notes: clean, updated_at: new Date() }).eq("id", lead.id);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
       if (error) {
         console.error("Save notes error:", error);
         alert("There was an error saving notes.");
@@ -542,7 +612,13 @@ export default function LeadDetailsModal({
           if (!prev) return text;
           const lastChar = prev.slice(-1);
           const firstChar = text[0];
+<<<<<<< HEAD
           const needsSpace = ![" ", "\n"].includes(lastChar) && !["\n", ".", ",", "!", "?", ":"].includes(firstChar);
+=======
+
+          const needsSpace = ![" ", "\n"].includes(lastChar) && !["\n", ".", ",", "!", "?", ":"].includes(firstChar);
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
           return prev + (needsSpace ? " " : "") + text;
         });
       };

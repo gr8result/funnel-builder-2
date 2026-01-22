@@ -78,6 +78,7 @@ export default async function handler(req, res) {
       ttl: 3600,
     });
 
+<<<<<<< HEAD
     const pushCredentialSid = s(process.env.TWILIO_PUSH_CREDENTIAL_SID);
 
     // IMPORTANT:
@@ -91,6 +92,15 @@ export default async function handler(req, res) {
         ...(pushCredentialSid ? { pushCredentialSid } : {}),
       })
     );
+=======
+token.addGrant(
+  new VoiceGrant({
+    outgoingApplicationSid: appSid,
+    incomingAllow: false, // ✅ FIX: browser can place calls, not receive them
+  })
+);
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
     return res.status(200).json({
       ok: true,

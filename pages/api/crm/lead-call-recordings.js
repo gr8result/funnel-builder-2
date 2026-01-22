@@ -1,6 +1,7 @@
 // /pages/api/crm/lead-call-recordings.js
 // FULL REPLACEMENT
 //
+<<<<<<< HEAD
 // ✅ Auth: Authorization: Bearer <supabase_access_token>
 // ✅ Multi-tenant safe: validates lead belongs to the logged-in user FIRST
 // ✅ Loads recordings from public.crm_calls
@@ -14,22 +15,39 @@
 //   NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
 //   NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY)
 //   SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE)
+=======
+// ✅ Uses Supabase SERVICE ROLE (server-side) to bypass RLS
+// ✅ Auth required: Authorization: Bearer <supabase access token>
+// ✅ Returns recordings for a lead_id from public.crm_calls
+//
+// Expected output:
+// { ok: true, recordings: [ { sid, recordingUrl, created_at, duration, ... } ] }
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 
+<<<<<<< HEAD
 const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+=======
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE;
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 
 function s(v) {
   return String(v ?? "").trim();
 }
 
+<<<<<<< HEAD
 function digitsOnly(v) {
   return s(v).replace(/[^\d]/g, "");
 }
@@ -64,17 +82,37 @@ function buildPhonePatterns(rawPhone) {
   return Array.from(out).filter((x) => x.length >= 7);
 }
 
+=======
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
+<<<<<<< HEAD
+=======
+    if (!SUPABASE_URL || !SERVICE_KEY) {
+      return res.status(500).json({
+        ok: false,
+        error:
+          "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY (service role) env vars.",
+      });
+    }
+
+    // require logged-in user token (so randoms cannot scrape recordings)
+    const auth = s(req.headers.authorization);
+    if (!auth.toLowerCase().startsWith("bearer ")) {
+      return res.status(401).json({ ok: false, error: "Missing Bearer token" });
+    }
+
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
     const lead_id = s(req.query.lead_id);
     if (!lead_id) {
       return res.status(400).json({ ok: false, error: "Missing lead_id" });
     }
 
+<<<<<<< HEAD
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({
         ok: false,
@@ -199,5 +237,89 @@ export default async function handler(req, res) {
     return res
       .status(500)
       .json({ ok: false, error: e?.message || "Server error" });
+=======
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { persistSession: false },
+    });
+
+    // Optional: verify the token is valid (light check)
+    // We don't need the user object here for filtering because we query by lead_id,
+    // but we DO want to ensure caller is authenticated.
+    const anon = createClient(SUPABASE_URL, s(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ""), {
+      auth: { persistSession: false },
+    });
+
+    // If you do not have anon key set, we skip verification.
+    const anonKey = s(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "");
+    if (anonKey) {
+      const token = s(auth.split(" ")[1]);
+      const { data: userData, error: userErr } = await anon.auth.getUser(token);
+      if (userErr || !userData?.user?.id) {
+        return res.status(401).json({ ok: false, error: "Invalid session" });
+      }
+    }
+
+    // Pull calls for the lead_id
+    // IMPORTANT: adjust column names here only if your crm_calls schema differs.
+    const { data, error } = await admin
+      .from("crm_calls")
+      .select(
+        `
+        id,
+        lead_id,
+        user_id,
+        created_at,
+        call_sid,
+        recording_sid,
+        recording_url,
+        recordingUrl,
+        duration,
+        recording_duration,
+        status
+      `
+      )
+      .eq("lead_id", lead_id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+
+    // Normalize to what LeadDetailsModal expects: { sid, recordingUrl, createdAt, duration }
+    const recordings = rows
+      .map((r) => {
+        const recordingUrl =
+          s(r.recordingUrl) || s(r.recording_url) || s(r.recordingUrl) || "";
+        const sid = s(r.recording_sid) || s(r.recordingSid) || s(r.recording_sid) || "";
+        const createdAt = r.created_at || null;
+        const duration = r.duration ?? r.recording_duration ?? null;
+
+        // If you stored recording url but not sid, UI can extract sid from url
+        if (!sid && !recordingUrl) return null;
+
+        return {
+          id: r.id,
+          lead_id: r.lead_id,
+          user_id: r.user_id,
+          createdAt,
+          created_at: createdAt,
+          duration,
+          recordingUrl,
+          recording_url: recordingUrl,
+          sid,
+          recordingSid: sid,
+          status: r.status || null,
+          callSid: s(r.call_sid) || null,
+        };
+      })
+      .filter(Boolean);
+
+    return res.status(200).json({ ok: true, recordings });
+  } catch (e) {
+    console.error("lead-call-recordings error:", e);
+    return res.status(500).json({ ok: false, error: e?.message || "Server error" });
+>>>>>>> 524cfe9 (WIP: autoresponder + automation + sms fixes)
   }
 }
