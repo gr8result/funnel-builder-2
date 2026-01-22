@@ -39,7 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+<<<<<<< HEAD
 .next/
 node_modules/
 .vercel
 .env*.local
+=======
+>>>>>>> origin/main
