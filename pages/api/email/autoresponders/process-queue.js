@@ -156,9 +156,6 @@ export default async function handler(req, res) {
   let failed = 0;
   const results = [];
 
-  const fromEmail = safeStr(process.env.SENDGRID_FROM_EMAIL) || "no-reply@gr8result.com";
-  const fromName = safeStr(process.env.SENDGRID_FROM_NAME) || "GR8 RESULT";
-
   for (const row of due) {
     processed += 1;
 
@@ -166,6 +163,26 @@ export default async function handler(req, res) {
     const to = safeStr(row.to_email);
     const subject = safeStr(row.subject) || " ";
     const templatePath = safeStr(row.template_path);
+
+    // Fetch account information for the user to get their name/company
+    const { data: account, error: accountErr } = await supabase
+      .from("accounts")
+      .select("id, user_id, business_name, full_name, name")
+      .eq("user_id", row.user_id)
+      .maybeSingle();
+
+    // Set from identity — use user's account name, fallback to defaults
+    const fromEmail = safeStr(process.env.SENDGRID_FROM_EMAIL) || "no-reply@gr8result.com";
+    let fromName = safeStr(process.env.SENDGRID_FROM_NAME) || "GR8 RESULT";
+    if (account && !accountErr) {
+      if (account.business_name) {
+        fromName = account.business_name;
+      } else if (account.full_name) {
+        fromName = account.full_name;
+      } else if (account.name) {
+        fromName = account.name;
+      }
+    }
 
     if (!to || !to.includes("@")) {
       failed += 1;

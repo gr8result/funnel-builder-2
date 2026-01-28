@@ -350,15 +350,35 @@ export default function LeadsPage() {
 
         if (!newLeads.length) return showMsg("⚠️ No valid emails found.");
 
+        // Check existing emails in the list to prevent duplicates
+        const { data: existing } = await supabase
+          .from("leads")
+          .select("email")
+          .eq("list_id", selectedList.id);
+
+        const existingEmails = new Set(
+          existing.map((e) => e.email.toLowerCase().trim())
+        );
+
+        const filteredLeads = newLeads.filter(
+          (l) => !existingEmails.has(l.email.toLowerCase().trim())
+        );
+
+        const skipped = newLeads.length - filteredLeads.length;
+
+        if (!filteredLeads.length) {
+          return showMsg(`⚠️ All ${newLeads.length} leads already exist in this list.`);
+        }
+
         const chunkSize = 100;
-        for (let i = 0; i < newLeads.length; i += chunkSize) {
-          const chunk = newLeads.slice(i, i + chunkSize);
+        for (let i = 0; i < filteredLeads.length; i += chunkSize) {
+          const chunk = filteredLeads.slice(i, i + chunkSize);
           const { error } = await supabase.from("leads").insert(chunk);
           if (error) throw error;
           await delay(150);
         }
 
-        showMsg(`✅ Imported ${newLeads.length} leads.`);
+        showMsg(`✅ Imported ${filteredLeads.length} leads.${skipped > 0 ? ` (${skipped} skipped as duplicates)` : ""}`);
         loadLeads(selectedList.id);
       } catch (err) {
         console.error("❌ CSV Import Error:", err);
@@ -570,6 +590,17 @@ export default function LeadsPage() {
         .update(payload)
         .eq("id", editingLead.id));
     } else {
+      // Check for duplicate email in the same list (case insensitive)
+      // const { data: existing } = await supabase
+      //   .from("leads")
+      //   .select("id")
+      //   .eq("list_id", selectedList.id)
+      //   .ilike("email", form.email.toLowerCase().trim());
+
+      // if (existing && existing.length > 0) {
+      //   return showMsg("⚠️ Lead with this email already exists in this list.");
+      // }
+
       const baseLead = {
         ...payload,
         created_at: new Date().toISOString(),
@@ -655,6 +686,7 @@ export default function LeadsPage() {
       showMsg(`❌ Failed to move lead: ${error.message}`);
     } else {
       showMsg("✅ Lead moved to new list.");
+      
       // simple refresh so table always stays in sync
       if (allMode) await showAllLeads();
       else if (selectedList) await loadLeads(selectedList.id);

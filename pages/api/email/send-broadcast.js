@@ -201,6 +201,13 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
+    // Fetch account information for the user to get their name/company
+    const { data: account, error: accountErr } = await admin
+      .from("accounts")
+      .select("id, user_id, business_name, full_name, name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
     const body = req.body || {};
     const mode = String(body.mode || "broadcast"); // "broadcast" or "test"
 
@@ -208,9 +215,17 @@ export default async function handler(req, res) {
       body.fromEmail || process.env.SENDGRID_FROM_EMAIL || user.email || ""
     ).trim();
 
-    const fromName = String(
-      body.fromName || process.env.SENDGRID_FROM_NAME || "GR8 RESULT"
-    ).trim();
+    // Use account name, fallback to body/env/default
+    let fromName = String(body.fromName || process.env.SENDGRID_FROM_NAME || "GR8 RESULT").trim();
+    if (account && !accountErr) {
+      if (account.business_name) {
+        fromName = account.business_name;
+      } else if (account.full_name) {
+        fromName = account.full_name;
+      } else if (account.name) {
+        fromName = account.name;
+      }
+    }
 
     const replyTo = String(body.replyTo || fromEmail).trim();
 
@@ -254,6 +269,13 @@ export default async function handler(req, res) {
       return res.status(400).json({
         success: false,
         error: "A/B enabled but Subject Line A/B missing",
+      });
+    }
+
+    if (abEnabled && abSubjectA === abSubjectB) {
+      return res.status(400).json({
+        success: false,
+        error: "A/B enabled but Subject Line A and B are identical. Please use different subject lines for A/B testing.",
       });
     }
 

@@ -1,20 +1,12 @@
-// ============================================
 // /pages/modules/email/reports/broadcasts/index.js
-// ============================================
-// FULL REPLACEMENT — BROADCAST REPORT WITH REAL NAMES + DELIVERY + LINE/PIE
-// + DEMO MODE (dummy data) so you can see a full working report.
-//
-// How to enable demo data:
-//   1) Add ?demo=1 to the URL
-//      /modules/email/reports/broadcasts?demo=1
-//   2) Or click "Use demo data" button on the page
-//
-// Demo data ONLY shows when enabled OR when Supabase returns no rows.
+// FULL REPLACEMENT — Broadcasts report (NO demo fallback).
+// - Shows only data for the currently logged-in user (via supabase.auth.getUser()).
+// - If no user or no rows, shows instructive message instead of demo data.
+// - Keeps chart, table, and tooltip behavior from the previous implementation.
 
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
 import { supabase } from "../../../../../utils/supabase-client";
 import {
   ResponsiveContainer,
@@ -30,199 +22,50 @@ import {
 } from "recharts";
 
 const RANGE_TO_DAYS = { today: 0, d7: 7, d30: 30, d90: 90, all: null };
-const PIE_COLORS = ["#22c55e", "#3b82f6", "#facc15", "#ef4444", "#a855f7", "#94a3b8"];
-const LS_DEMO_KEY = "gr8:emailReports:broadcasts:demo";
+const PIE_COLORS = ["#22c55e", "#3b82f6", "#facc15", "#ef4444", "#a855f7"];
 
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function isoDaysAgo(days) {
-  if (days === null) return null;
-  const d = startOfToday();
-  d.setDate(d.getDate() - days);
-  return d.toISOString();
-}
-function ymd(d) {
-  return new Date(d).toISOString().slice(0, 10);
-}
-function addDays(d, n) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-function clampInt(v, min, max) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return min;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
+function startOfToday() { const d=new Date(); d.setHours(0,0,0,0); return d; }
+function isoDaysAgo(days) { if (days===null) return null; const d=startOfToday(); d.setDate(d.getDate()-days); return d.toISOString(); }
+function ymd(d){ return new Date(d).toISOString().slice(0,10); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
 
-function normalizeStatus(r) {
+function normalizeStatus(r){
   const st = String(r.status || "").toLowerCase();
   const le = String(r.last_event || "").toLowerCase();
-  if (["delivered", "opened", "clicked", "sent", "bounced"].includes(st)) return st;
-  if (le === "delivered") return "delivered";
-  if (le === "open") return "opened";
-  if (le === "click") return "clicked";
+  const opens = Number(r.open_count || 0);
+  const clicks = Number(r.click_count || 0);
+  if (le.includes("deliver")) return "delivered";
+  if (le.includes("open")) return "opened";
+  if (le.includes("click")) return "clicked";
   if (le === "bounce" || le === "dropped") return "bounced";
+  if (st === "unsubscribe" || st === "unsubscribed") return "unsubscribe";
+  if (["delivered","opened","clicked","bounced","sent"].includes(st)) {
+    if (st === "opened" && opens > 0) return "opened";
+    if (st === "clicked" && clicks > 0) return "clicked";
+    return st;
+  }
+  if (clicks > 0) return "clicked";
+  if (opens > 0) return "opened";
   return st || "sent";
 }
 
-function buildAxis(range, rows) {
-  let start;
-  if (range === "all") {
-    start = rows.length ? new Date(rows.reduce((min, r) => {
-      const t = new Date(r.created_at).getTime();
-      return t < min ? t : min;
-    }, Date.now())) : startOfToday();
-  } else {
-    start = new Date(isoDaysAgo(RANGE_TO_DAYS[range]));
-  }
-  start.setHours(0, 0, 0, 0);
-
-  const end = startOfToday();
-  const out = [];
-  let cur = new Date(start);
-  while (cur <= end) {
-    out.push(ymd(cur));
-    cur = addDays(cur, 1);
-  }
-  return out;
-}
-
-function makeDemoDataset(range) {
-  const now = new Date();
-  const days = range === "today" ? 1 : range === "d7" ? 7 : range === "d30" ? 30 : range === "d90" ? 90 : 30;
-
-  const broadcastNames = [
-    "Welcome to GR8 (Blueprint)",
-    "December Promo – 20% Off",
-    "New Feature: CRM Calls + SMS",
-    "Weekly Tips – Marketing Boost",
-    "Re-engagement: We Miss You",
-  ];
-  const broadcastIds = broadcastNames.map((_, i) => `demo-broadcast-${i + 1}`);
-
-  const emailPool = [
-    "grant.rohde63@gmail.com",
-    "support@waiteandsea.com.au",
-    "support@elaninteriors.com.au",
-    "support@gr8result.com",
-    "hello@example.com",
-    "client1@example.com",
-    "client2@example.com",
-    "client3@example.com",
-    "client4@example.com",
-    "client5@example.com",
-  ];
-
-  // deterministic-ish seed from date
-  const seed = Number(String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0"));
-  function rand(n) {
-    // simple LCG
-    const x = (Math.sin(seed + n * 9973) + 1) * 100000;
-    return x - Math.floor(x);
-  }
-
-  const rows = [];
-  let idCounter = 1;
-
-  const start = range === "today"
-    ? startOfToday()
-    : addDays(startOfToday(), -(days - 1));
-
-  for (let di = 0; di < days; di++) {
-    const day = addDays(start, di);
-
-    // simulate varying volume
-    const baseVol = range === "today" ? 35 : 18;
-    const wave = Math.round((Math.sin((di / Math.max(1, days - 1)) * Math.PI * 2) + 1) * 8);
-    const sentCount = clampInt(baseVol + wave + Math.round(rand(di + 1) * 10), 8, 60);
-
-    for (let si = 0; si < sentCount; si++) {
-      const bIdx = clampInt(rand(di * 1000 + si) * broadcastIds.length, 0, broadcastIds.length - 1);
-      const email = emailPool[clampInt(rand(di * 2000 + si) * emailPool.length, 0, emailPool.length - 1)];
-
-      const createdAt = new Date(day);
-      createdAt.setHours(clampInt(rand(si + di + 9) * 23, 0, 23), clampInt(rand(si + 33) * 59, 0, 59), clampInt(rand(si + 77) * 59, 0, 59), 0);
-
-      // delivery/open/click/unsub probabilities
-      const deliveredP = 0.92;
-      const openP = 0.38;
-      const clickP = 0.11;
-      const unsubP = 0.01;
-      const bounceP = 1 - deliveredP;
-
-      const roll = rand(di * 3000 + si * 7 + 123);
-
-      let status = "sent";
-      let last_event = "processed";
-      let open_count = 0;
-      let click_count = 0;
-      let unsubscribed = false;
-      let bounced_at = null;
-
-      if (roll < bounceP) {
-        status = "bounced";
-        last_event = "bounce";
-        bounced_at = new Date(createdAt.getTime() + 1000 * 60 * clampInt(rand(si + 44) * 30, 1, 30)).toISOString();
-      } else {
-        status = "delivered";
-        last_event = "delivered";
-      }
-
-      // opens/clicks only if not bounced
-      if (status !== "bounced") {
-        const r2 = rand(di * 5000 + si * 13 + 555);
-        if (r2 < openP) {
-          const times = 1 + clampInt(rand(si + 88) * 3, 0, 2);
-          open_count = times;
-          status = "opened";
-          last_event = "open";
-        }
-        const r3 = rand(di * 7000 + si * 17 + 777);
-        if (r3 < clickP) {
-          const times = 1 + clampInt(rand(si + 99) * 2, 0, 1);
-          click_count = times;
-          status = "clicked";
-          last_event = "click";
-        }
-        const r4 = rand(di * 9000 + si * 19 + 999);
-        if (r4 < unsubP) {
-          unsubscribed = true;
-          status = "unsubscribe";
-          last_event = "unsubscribe";
-        }
-      }
-
-      const last_event_at = new Date(createdAt.getTime() + 1000 * 60 * clampInt(rand(si + 222) * 120, 1, 120)).toISOString();
-
-      rows.push({
-        id: `demo-send-${idCounter++}`,
-        user_id: "demo-user",
-        email,
-        broadcast_id: broadcastIds[bIdx],
-        status,
-        last_event,
-        open_count,
-        click_count,
-        unsubscribed,
-        bounced_at,
-        created_at: createdAt.toISOString(),
-        last_event_at,
-      });
-    }
-  }
-
-  const nameMap = {};
-  broadcastIds.forEach((id, i) => (nameMap[id] = broadcastNames[i]));
-
-  return { rows, nameMap };
+/* Simple high-contrast tooltip */
+function CustomTooltip({ active, label, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div style={{ background: "rgba(8,12,20,0.95)", color: "#fff", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", fontSize: 13 }}>
+      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{label}</div>
+      {payload.map((p,i)=>(
+        <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
+          <div style={{ color: p.color, fontWeight: 700 }}>{p.name || p.dataKey}</div>
+          <div style={{ color: "#e6eef8" }}>{p.value}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function BroadcastsReport() {
-  const router = useRouter();
   const [range, setRange] = useState("today");
   const [chartMode, setChartMode] = useState("line");
   const [rows, setRows] = useState([]);
@@ -230,40 +73,16 @@ export default function BroadcastsReport() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
-  const [demo, setDemo] = useState(false);
 
   const fromIso = useMemo(() => isoDaysAgo(RANGE_TO_DAYS[range]), [range]);
 
   useEffect(() => {
-    // demo flag from query OR localStorage
-    const qDemo = String(router?.query?.demo || "").toLowerCase();
-    const demoFromQuery = qDemo === "1" || qDemo === "true" || qDemo === "yes" || qDemo === "on";
-    let demoFromLS = false;
-    try {
-      demoFromLS = localStorage.getItem(LS_DEMO_KEY) === "1";
-    } catch {}
-    setDemo(Boolean(demoFromQuery || demoFromLS));
-  }, [router?.query?.demo]);
-
-  useEffect(() => {
     let mounted = true;
-
-    async function run() {
+    (async () => {
       setLoading(true);
       setErr(null);
 
       try {
-        // If demo is enabled, load demo immediately (no Supabase dependency)
-        if (demo) {
-          const { rows: dRows, nameMap: dMap } = makeDemoDataset(range);
-          if (!mounted) return;
-          setUserId("demo-user");
-          setRows(dRows.map((r) => ({ ...r, status: normalizeStatus(r) })));
-          setNameMap(dMap);
-          setLoading(false);
-          return;
-        }
-
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id || null;
         if (!mounted) return;
@@ -278,9 +97,7 @@ export default function BroadcastsReport() {
 
         let q = supabase
           .from("email_sends")
-          .select(
-            "id,email,status,last_event,open_count,click_count,unsubscribed,bounced_at,created_at,last_event_at,broadcast_id"
-          )
+          .select("id,email,status,last_event,open_count,click_count,unsubscribed,bounced_at,created_at,last_event_at,broadcast_id")
           .eq("user_id", uid)
           .not("broadcast_id", "is", null)
           .order("created_at", { ascending: true })
@@ -291,33 +108,18 @@ export default function BroadcastsReport() {
         const { data, error } = await q;
         if (error) throw error;
 
-        const cleaned = (data || []).map((r) => ({
-          ...r,
-          status: normalizeStatus(r),
-        }));
-
-        // If no rows came back, auto-show demo so you can see the layout
-        if (!cleaned.length) {
-          const { rows: dRows, nameMap: dMap } = makeDemoDataset(range);
-          if (!mounted) return;
-          setRows(dRows.map((r) => ({ ...r, status: normalizeStatus(r) })));
-          setNameMap(dMap);
-          setLoading(false);
-          return;
-        }
+        const cleaned = (data || []).map((r) => ({ ...r, status: normalizeStatus(r) }));
 
         if (!mounted) return;
         setRows(cleaned);
 
         const ids = Array.from(new Set(cleaned.map((r) => r.broadcast_id).filter(Boolean))).slice(0, 500);
-
         if (ids.length) {
           const { data: bcasts, error: bErr } = await supabase
             .from("email_broadcasts")
-            .select("id, name, title, subject")
+            .select("id,name,title,subject")
             .in("id", ids)
             .limit(500);
-
           if (!bErr && bcasts) {
             const m = {};
             for (const b of bcasts) m[b.id] = b.name || b.title || b.subject || "Broadcast";
@@ -335,111 +137,99 @@ export default function BroadcastsReport() {
         setErr(String(e?.message || e));
         setLoading(false);
       }
-    }
-
-    run();
-    return () => (mounted = false);
-  }, [fromIso, demo, range]);
+    })();
+    return () => { mounted = false; };
+  }, [fromIso]);
 
   const metrics = useMemo(() => {
     const sent = rows.length;
-    const delivered = rows.filter((r) => ["delivered", "opened", "clicked"].includes(String(r.status || "").toLowerCase())).length;
-    const opened = rows.filter((r) => Number(r.open_count || 0) > 0).length;
-    const clicked = rows.filter((r) => Number(r.click_count || 0) > 0).length;
+    const delivered = rows.filter((r) => ["delivered","opened","clicked"].includes(String(r.status || "").toLowerCase())).length;
+    const opened = rows.filter((r) => Number(r.open_count || 0) > 0 || String(r.last_event || "").toLowerCase().includes("open") || String(r.status || "").toLowerCase() === "opened").length;
+    const clicked = rows.filter((r) => Number(r.click_count || 0) > 0 || String(r.last_event || "").toLowerCase().includes("click") || String(r.status || "").toLowerCase() === "clicked").length;
     const bounced = rows.filter((r) => String(r.status || "").toLowerCase() === "bounced").length;
     const unsub = rows.filter((r) => !!r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe").length;
     return { sent, delivered, opened, clicked, bounced, unsub };
   }, [rows]);
 
   const chartData = useMemo(() => {
-    const axis = buildAxis(range, rows);
-    const map = {};
-    axis.forEach((d) => {
-      map[d] = { date: d, sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsub: 0 };
-    });
+    const axis = (() => {
+      let start;
+      if (range === "all") {
+        start = rows.length ? new Date(rows.reduce((min, r) => { const t = new Date(r.created_at).getTime(); return t < min ? t : min; }, Date.now())) : startOfToday();
+      } else {
+        start = new Date(isoDaysAgo(RANGE_TO_DAYS[range]));
+      }
+      start.setHours(0,0,0,0);
+      const end = startOfToday();
+      const out = []; let cur = new Date(start);
+      while (cur <= end) { out.push(ymd(cur)); cur = addDays(cur,1); } return out;
+    })();
 
-    rows.forEach((r) => {
+    const map = {};
+    chartData: axis.forEach && axis.forEach; // noop hint to avoid lint noise
+    axis.forEach(d => map[d] = { date: d, sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsub: 0 });
+
+    rows.forEach(r => {
       const d = ymd(r.created_at);
       if (!map[d]) return;
       map[d].sent++;
-      if (["delivered", "opened", "clicked"].includes(String(r.status || "").toLowerCase())) map[d].delivered++;
-      if (Number(r.open_count || 0) > 0) map[d].opened++;
-      if (Number(r.click_count || 0) > 0) map[d].clicked++;
+      if (["delivered","opened","clicked"].includes(String(r.status || "").toLowerCase())) map[d].delivered++;
+      if (Number(r.open_count || 0) > 0 || String(r.status || "").toLowerCase() === "opened") map[d].opened++;
+      if (Number(r.click_count || 0) > 0 || String(r.status || "").toLowerCase() === "clicked") map[d].clicked++;
       if (String(r.status || "").toLowerCase() === "bounced") map[d].bounced++;
-      if (r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe") map[d].unsub++;
+      if (r.unsubscribed) map[d].unsub++;
     });
 
-    return axis.map((d) => map[d]);
+    return axis.map(d => map[d]);
   }, [rows, range]);
 
-  const pieData = useMemo(
-    () =>
-      [
-        { name: "Delivered", value: metrics.delivered },
-        { name: "Opened", value: metrics.opened },
-        { name: "Clicked", value: metrics.clicked },
-        { name: "Bounced", value: metrics.bounced },
-        { name: "Unsubscribed", value: metrics.unsub },
-      ].filter((x) => x.value > 0),
-    [metrics]
-  );
+  const pieData = useMemo(() => [
+    { name: "Delivered", value: metrics.delivered },
+    { name: "Opened", value: metrics.opened },
+    { name: "Clicked", value: metrics.clicked },
+    { name: "Bounced", value: metrics.bounced },
+    { name: "Unsubscribed", value: metrics.unsub }
+  ].filter(x => x.value > 0), [metrics]);
 
-  const recent = useMemo(
-    () =>
-      [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 250),
-    [rows]
-  );
-
-  function setDemoPersist(v) {
-    try {
-      localStorage.setItem(LS_DEMO_KEY, v ? "1" : "0");
-    } catch {}
-    setDemo(!!v);
-  }
+  const recent = useMemo(() => [...rows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,250), [rows]);
 
   return (
     <>
       <Head><title>Broadcast analytics</title></Head>
-
       <div style={styles.page}>
         <div style={styles.container}>
           <div style={{ ...styles.banner, background: "#facc15" }}>
-            <div>
-              <div style={styles.bannerTitle}>Broadcasts</div>
-              <div style={styles.bannerSub}>Delivery, opens, clicks & unsubscribes</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={styles.bannerIconWrap} aria-hidden="true"><span style={{ fontSize: 28 }}>📧</span></div>
+              <div>
+                <div style={styles.bannerTitle}>Broadcasts</div>
+                <div style={styles.bannerSub}>Delivery, opens, clicks & unsubscribes</div>
+              </div>
             </div>
-            <Link href="/modules/email/reports" style={styles.backBtn}>← Back</Link>
+            <Link href="/modules/email/reports" legacyBehavior><a style={styles.backBtn}>← Back</a></Link>
           </div>
 
           <div style={styles.rangeRow}>
-            <RangePill label="Today" active={range === "today"} onClick={() => setRange("today")} />
-            <RangePill label="Last 7 days" active={range === "d7"} onClick={() => setRange("d7")} />
-            <RangePill label="Last 30 days" active={range === "d30"} onClick={() => setRange("d30")} />
-            <RangePill label="Last 90 days" active={range === "d90"} onClick={() => setRange("d90")} />
-            <RangePill label="All time" active={range === "all"} onClick={() => setRange("all")} />
+            <RangePill label="Today" active={range==="today"} onClick={()=>setRange("today")} />
+            <RangePill label="Last 7 days" active={range==="d7"} onClick={()=>setRange("d7")} />
+            <RangePill label="Last 30 days" active={range==="d30"} onClick={()=>setRange("d30")} />
+            <RangePill label="Last 90 days" active={range==="d90"} onClick={()=>setRange("d90")} />
+            <RangePill label="All time" active={range==="all"} onClick={()=>setRange("all")} />
             <div style={{ flex: 1 }} />
-
-            <button
-              style={styles.toggleBtn}
-              onClick={() => setChartMode(chartMode === "line" ? "pie" : "line")}
-            >
-              {chartMode === "line" ? "View pie chart" : "View line graph"}
-            </button>
-
-            <button
-              style={{ ...styles.toggleBtn, ...(demo ? styles.toggleBtnOn : null) }}
-              onClick={() => setDemoPersist(!demo)}
-              title="For previewing the UI with fake data"
-            >
-              {demo ? "Demo data ON" : "Use demo data"}
+            <button style={styles.toggleBtn} onClick={()=>setChartMode(chartMode==="line"?"pie":"line")}>
+              {chartMode==="line" ? "View pie chart" : "View line graph"}
             </button>
           </div>
 
           {loading ? <div style={styles.note}>Loading…</div> : null}
-          {!loading && !userId ? <div style={styles.note}>You must be logged in to view analytics.</div> : null}
+          {!loading && !userId ? <div style={styles.note}>You must be logged in to view broadcast analytics. (This page no longer shows demo data.)</div> : null}
           {!loading && err ? <div style={{ ...styles.note, border: "1px solid #ef4444" }}>{err}</div> : null}
 
-          {!loading && userId && !err ? (
+          {!loading && userId && !err && rows.length === 0 ? (
+            <div style={styles.note}>No broadcast sends found for your account in this time range.</div>
+          ) : null}
+
+          {!loading && userId && !err && rows.length > 0 ? (
             <>
               <div style={styles.metricsGrid}>
                 <Metric title="Sent" value={metrics.sent} />
@@ -450,30 +240,28 @@ export default function BroadcastsReport() {
               </div>
 
               <div style={styles.chartWrap}>
-                {chartMode === "line" ? (
-                  <ResponsiveContainer width="100%" height={320}>
+                {chartMode==="line" ? (
+                  <ResponsiveContainer width="100%" height={360}>
                     <LineChart data={chartData}>
                       <XAxis dataKey="date" />
                       <YAxis allowDecimals={false} />
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip/>} />
                       <Legend />
-                      <Line dataKey="sent" stroke="#94a3b8" dot={false} />
-                      <Line dataKey="delivered" stroke="#22c55e" dot={false} />
-                      <Line dataKey="opened" stroke="#3b82f6" dot={false} />
-                      <Line dataKey="clicked" stroke="#facc15" dot={false} />
-                      <Line dataKey="bounced" stroke="#ef4444" dot={false} />
-                      <Line dataKey="unsub" stroke="#a855f7" dot={false} />
+                      <Line dataKey="sent" stroke="#94a3b8" dot={false} name="sent" />
+                      <Line dataKey="delivered" stroke="#22c55e" dot={false} name="delivered" />
+                      <Line dataKey="opened" stroke="#3b82f6" dot={false} name="opened" />
+                      <Line dataKey="clicked" stroke="#facc15" dot={false} name="clicked" />
+                      <Line dataKey="bounced" stroke="#ef4444" dot={false} name="bounced" />
+                      <Line dataKey="unsub" stroke="#a855f7" dot={false} name="unsubscribed" />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <ResponsiveContainer width="100%" height={320}>
+                  <ResponsiveContainer width="100%" height={360}>
                     <PieChart>
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip/>} />
                       <Legend />
-                      <Pie data={pieData} dataKey="value" outerRadius={120}>
-                        {pieData.map((_, i) => (
-                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                        ))}
+                      <Pie data={pieData} dataKey="value" outerRadius={120} nameKey="name">
+                        {pieData.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -492,28 +280,23 @@ export default function BroadcastsReport() {
                   <div style={styles.th}>Status</div>
                 </div>
 
-                {recent.length === 0 ? (
-                  <div style={styles.tableEmpty}>No broadcast rows found.</div>
-                ) : (
-                  recent.map((r) => {
-                    const when = r.last_event_at || r.created_at;
-                    const deliveredYes = ["delivered", "opened", "clicked"].includes(String(r.status || "").toLowerCase());
-                    const bName = nameMap[r.broadcast_id] || "Broadcast";
-
-                    return (
-                      <div key={r.id} style={styles.tr}>
-                        <div style={styles.td}>{when ? new Date(when).toLocaleString() : "—"}</div>
-                        <div style={styles.td}>{r.email || "—"}</div>
-                        <div style={styles.td} title={bName}>{bName}</div>
-                        <div style={styles.td}>{deliveredYes ? "Yes" : "—"}</div>
-                        <div style={styles.td}>{Number(r.open_count || 0)}</div>
-                        <div style={styles.td}>{Number(r.click_count || 0)}</div>
-                        <div style={styles.td}>{r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe" ? "Yes" : "—"}</div>
-                        <div style={styles.td}>{String(r.status || "—")}</div>
-                      </div>
-                    );
-                  })
-                )}
+                {recent.map((r) => {
+                  const when = r.last_event_at || r.created_at;
+                  const deliveredYes = ["delivered","opened","clicked"].includes(String(r.status || "").toLowerCase());
+                  const bName = nameMap[r.broadcast_id] || r.broadcast_id || "Broadcast";
+                  return (
+                    <div key={String(r.id)} style={styles.tr}>
+                      <div style={styles.td}>{when ? new Date(when).toLocaleString() : "—"}</div>
+                      <div style={styles.td}>{r.email || "—"}</div>
+                      <div style={styles.td} title={bName}>{bName}</div>
+                      <div style={styles.td}>{deliveredYes ? "Yes" : "—"}</div>
+                      <div style={styles.td}>{Number(r.open_count || 0)}</div>
+                      <div style={styles.td}>{Number(r.click_count || 0)}</div>
+                      <div style={styles.td}>{r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe" ? "Yes" : "—"}</div>
+                      <div style={styles.td}>{String(r.status || "—")}</div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           ) : null}
@@ -523,125 +306,29 @@ export default function BroadcastsReport() {
   );
 }
 
-function RangePill({ label, active, onClick }) {
-  return (
-    <button onClick={onClick} style={{ ...styles.rangePill, ...(active ? styles.rangePillActive : null) }}>
-      {label}
-    </button>
-  );
-}
+/* small helpers */
+function RangePill({ label, active, onClick }) { return <button onClick={onClick} style={{ ...styles.rangePill, ...(active?styles.rangePillActive:{}) }}>{label}</button>; }
+function Metric({ title, value }) { return <div style={styles.metricBox}><div style={styles.metricTitle}>{title}</div><div style={styles.metricValue}>{value}</div></div>; }
 
-function Metric({ title, value }) {
-  return (
-    <div style={styles.metricBox}>
-      <div style={styles.metricTitle}>{title}</div>
-      <div style={styles.metricValue}>{value}</div>
-    </div>
-  );
-}
-
+/* styles (trimmed) */
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background:
-      "radial-gradient(circle at top, rgba(15,23,42,0.9) 0%, rgba(2,6,23,1) 55%, rgba(2,6,23,1) 100%)",
-    padding: "30px 20px 40px",
-    color: "#e6eef8",
-    fontSize: 16,
-  },
-  container: { maxWidth: 1320, margin: "0 auto" },
-
-  banner: {
-    width: "100%",
-    borderRadius: 18,
-    padding: "16px 18px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
-    border: "1px solid rgba(255,255,255,0.10)",
-  },
-  bannerTitle: { fontSize: 34, fontWeight: 600, color: "#241a00", lineHeight: 1.05 },
-  bannerSub: { fontSize: 16, marginTop: 3, color: "rgba(36,26,0,0.80)" },
-
-  backBtn: {
-    background: "rgba(2,6,23,0.75)",
-    color: "#e6eef8",
-    borderRadius: 999,
-    padding: "10px 16px",
-    fontSize: 16,
-    textDecoration: "none",
-    border: "1px solid rgba(255,255,255,0.18)",
-    fontWeight: 600,
-  },
-
-  rangeRow: { marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  rangePill: {
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(2,6,23,0.55)",
-    color: "#e6eef8",
-    borderRadius: 999,
-    padding: "7px 12px",
-    fontSize: 16,
-    cursor: "pointer",
-    fontWeight: 600,
-  },
-  rangePillActive: { background: "rgba(250,204,21,0.20)", border: "1px solid rgba(250,204,21,0.55)" },
-
-  toggleBtn: {
-    border: "1px solid rgba(255,255,255,0.18)",
-    background: "rgba(2,6,23,0.75)",
-    color: "#e6eef8",
-    borderRadius: 999,
-    padding: "10px 16px",
-    fontSize: 16,
-    cursor: "pointer",
-    fontWeight: 700,
-    whiteSpace: "nowrap",
-  },
-  toggleBtnOn: {
-    background: "rgba(34,197,94,0.18)",
-    border: "1px solid rgba(34,197,94,0.55)",
-  },
-
-  note: {
-    marginTop: 10,
-    padding: "10px 12px",
-    borderRadius: 12,
-    background: "rgba(2,6,23,0.55)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    fontSize: 16,
-    opacity: 0.95,
-  },
-
-  metricsGrid: { marginTop: 14, display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 },
-  metricBox: { padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" },
-  metricTitle: { fontSize: 16, opacity: 0.85, fontWeight: 700 },
-  metricValue: { fontSize: 16, fontWeight: 700, marginTop: 6 },
-
-  chartWrap: {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 14,
-    background: "rgba(2,6,23,0.55)",
-    border: "1px solid rgba(255,255,255,0.10)",
-  },
-
-  tableWrap: { marginTop: 14, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" },
-  tableHeadRow: {
-    display: "grid",
-    gridTemplateColumns: "1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",
-    padding: "10px 12px",
-    background: "rgba(255,255,255,0.06)",
-  },
-  th: { fontSize: 16, fontWeight: 700, opacity: 0.9 },
-  tr: {
-    display: "grid",
-    gridTemplateColumns: "1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",
-    padding: "10px 12px",
-    background: "rgba(2,6,23,0.45)",
-    borderTop: "1px solid rgba(255,255,255,0.08)",
-  },
-  td: { fontSize: 16, opacity: 0.92, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  tableEmpty: { padding: 12, fontSize: 16, opacity: 0.85, background: "rgba(2,6,23,0.45)" },
+  page:{minHeight:"100vh",background:"radial-gradient(circle at top, rgba(15,23,42,0.9) 0%, rgba(2,6,23,1) 55%)",padding:"30px 20px 40px",color:"#e6eef8",fontSize:16},
+  container:{maxWidth:1320,margin:"0 auto"},
+  banner:{width:"100%",borderRadius:18,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 18px 40px rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.10)"},
+  bannerIconWrap:{width:56,height:56,display:"grid",placeItems:"center",borderRadius:10,background:"rgba(0,0,0,0.14)"},
+  bannerTitle:{fontSize:34,fontWeight:600,color:"#241a00"}, bannerSub:{fontSize:16,marginTop:3,color:"rgba(36,26,0,0.80)"},
+  backBtn:{background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,textDecoration:"none",border:"1px solid rgba(255,255,255,0.18)",fontWeight:600},
+  rangeRow:{marginTop:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"},
+  rangePill:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.55)",color:"#e6eef8",borderRadius:999,padding:"7px 12px",fontSize:16,cursor:"pointer",fontWeight:600},
+  rangePillActive:{background:"rgba(250,204,21,0.20)",border:"1px solid rgba(250,204,21,0.55)"},
+  toggleBtn:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,cursor:"pointer",fontWeight:700},
+  note:{marginTop:10,padding:"10px 12px",borderRadius:12,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)",fontSize:16,opacity:0.95},
+  metricsGrid:{marginTop:14,display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:10},
+  metricBox:{padding:12,borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)"},
+  metricTitle:{fontSize:16,opacity:0.85,fontWeight:700}, metricValue:{fontSize:16,fontWeight:700,marginTop:6},
+  chartWrap:{marginTop:14,padding:14,borderRadius:14,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)"},
+  tableWrap:{marginTop:14,borderRadius:12,overflow:"hidden",border:"1px solid rgba(255,255,255,0.10)"},
+  tableHeadRow:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(255,255,255,0.06)"},
+  th:{fontSize:16,fontWeight:700,opacity:0.9}, tr:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(2,6,23,0.45)",borderTop:"1px solid rgba(255,255,255,0.08)"},
+  td:{fontSize:16,opacity:0.92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}
 };

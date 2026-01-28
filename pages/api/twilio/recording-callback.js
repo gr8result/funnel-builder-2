@@ -1,12 +1,13 @@
 // /pages/api/twilio/recording-callback.js
 // FULL REPLACEMENT
 //
-// ✅ Attaches recording to EXISTING crm_calls row
-// ✅ Preserves outbound direction
-// ✅ BACKFILLS lead_id via phone lookup if missing
-// ✅ AUTO-APPENDS recording into leads.notes
-// ✅ No fake inbound rows
-// ✅ Idempotent / retry-safe
+// ✅ Receives Twilio recordingStatusCallback
+// ✅ Updates public.crm_calls by CallSid
+// ✅ Stores recording_sid + recording_url (browser-playable via /api/twilio/recording)
+//
+// ENV REQUIRED:
+//   NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
+//   SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE / SUPABASE_SERVICE_KEY / SUPABASE_SERVICE)
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -15,115 +16,90 @@ const SUPABASE_URL =
 
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE ||
-  process.env.SUPABASE_SERVICE_KEY;
+  process.env.SUPABASE_SERVICE;
 
 function s(v) {
   return String(v ?? "").trim();
 }
 
-function normPhone(v) {
-  return s(v).replace(/[^\d+]/g, "");
-}
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ ok: false });
-  }
-
   try {
     if (!SUPABASE_URL || !SERVICE_KEY) {
       return res.status(500).json({ ok: false, error: "Missing Supabase env" });
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { persistSession: false },
-    });
+    const body = await readBody(req);
 
-    const body = req.body || {};
+    const lead_id = s(req.query.lead_id);
 
-    const callSid = s(body.CallSid);
-    const recordingSid = s(body.RecordingSid);
-    const recordingDuration = Number(body.RecordingDuration || 0);
+    const CallSid = s(body.CallSid);
+    const RecordingSid = s(body.RecordingSid);
+    const RecordingStatus = s(body.RecordingStatus);
+    const RecordingDuration = body.RecordingDuration != null ? Number(body.RecordingDuration) : null;
 
-    if (!callSid || !recordingSid) {
-      return res.status(200).json({ ok: true, skipped: true });
+    if (!CallSid) {
+      return res.status(400).json({ ok: false, error: "Missing CallSid" });
     }
 
-    const recordingUrl = `/api/twilio/recording?sid=${encodeURIComponent(
-      recordingSid
-    )}`;
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // 1️⃣ Load existing call row
-    const { data: callRow } = await supabase
+    const { data: existing } = await supabase
       .from("crm_calls")
-      .select(
-        "id, lead_id, user_id, from_number, to_number"
-      )
-      .eq("twilio_sid", callSid)
+      .select("id")
+      .eq("twilio_sid", CallSid)
       .maybeSingle();
 
-    let leadId = callRow?.lead_id || null;
-    let userId = callRow?.user_id || null;
+    const recording_url =
+      RecordingSid && RecordingSid.startsWith("RE")
+        ? `/api/twilio/recording?sid=${encodeURIComponent(RecordingSid)}`
+        : null;
 
-    // 2️⃣ Backfill lead_id via phone lookup IF missing
-    if (!leadId) {
-      const phone =
-        normPhone(callRow?.from_number) ||
-        normPhone(body.From) ||
-        normPhone(body.Caller);
+    const patch = {
+      lead_id: lead_id || null,
+      recording_sid: RecordingSid || null,
+      recording_url,
+      status: RecordingStatus || null,
+      recording_duration: Number.isFinite(RecordingDuration) ? RecordingDuration : null,
+    };
 
-      if (phone) {
-        const { data: lead } = await supabase
-          .from("leads")
-          .select("id,user_id,notes")
-          .or(
-            `phone.eq.${phone},phone.eq.${phone.replace(/^61/, "0")}`
-          )
-          .limit(1)
-          .maybeSingle();
-
-        if (lead) {
-          leadId = lead.id;
-          userId = lead.user_id || null;
-        }
-      }
-    }
-
-    // 3️⃣ Update crm_calls (NO new rows)
-    await supabase
-      .from("crm_calls")
-      .update({
-        recording_url: recordingUrl,
-        recording_duration: Number.isFinite(recordingDuration)
-          ? recordingDuration
-          : null,
-        has_recording: true,
-        direction: "outbound",
-        unread: true,
-        lead_id: leadId,
-        user_id: userId,
-      })
-      .eq("twilio_sid", callSid);
-
-    // 4️⃣ Append into leads.notes (AUTO)
-    if (leadId) {
-      const stamp = new Date().toLocaleString();
-      const line =
-        `[${stamp}] Call recorded (${recordingDuration}s)\n` +
-        `Recording: ${recordingUrl}\n\n`;
-
-      await supabase.rpc("append_lead_note_safe", {
-        p_lead_id: leadId,
-        p_text: line,
+    if (existing?.id) {
+      await supabase.from("crm_calls").update(patch).eq("id", existing.id);
+    } else {
+      await supabase.from("crm_calls").insert({
+        twilio_sid: CallSid,
+        lead_id: lead_id || null,
+        ...patch,
       });
     }
 
     return res.status(200).json({ ok: true });
   } catch (e) {
-    console.error("[recording-callback]", e);
-    return res.status(200).json({ ok: false });
+    console.error("recording-callback error:", e);
+    return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }
-v
+
+async function readBody(req) {
+  if (req.body && typeof req.body === "object") return req.body;
+
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString("utf8");
+
+  try {
+    return JSON.parse(raw);
+  } catch {}
+
+  const out = {};
+  raw
+    .split("&")
+    .map((p) => p.split("="))
+    .forEach(([k, v]) => {
+      if (!k) return;
+      out[decodeURIComponent(k)] = decodeURIComponent((v || "").replace(/\+/g, " "));
+    });
+
+  return out;
+}

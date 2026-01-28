@@ -1,0 +1,448 @@
+// /pages/modules/email/reports/broadcasts/index.js
+// FULL REPLACEMENT — Broadcasts report that:
+// - Detects seeded demo rows using either 'demo-user' (text) OR demo UUID '0000...0001'.
+// - If a real logged-in user exists, shows their rows; otherwise falls back to seeded demo rows.
+// - Includes demo generator (makeDemoDataset) used only when nothing is in DB or when demo toggle enabled.
+// - Uses emoji icon 📧 to match Email hub visuals, legacy Link, and a high-contrast tooltip.
+// - Drop this file over your existing page file to replace it.
+
+import Head from "next/head";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../../../../utils/supabase-client";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+const RANGE_TO_DAYS = { today: 0, d7: 7, d30: 30, d90: 90, all: null };
+const PIE_COLORS = ["#22c55e", "#3b82f6", "#facc15", "#ef4444", "#a855f7"];
+const LS_DEMO_KEY = "gr8:emailReports:broadcasts:demo";
+const DEMO_UUID = "00000000-0000-0000-0000-000000000001";
+const DEMO_TEXT = "demo-user";
+
+function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function isoDaysAgo(days) { if (days === null) return null; const d = startOfToday(); d.setDate(d.getDate()-days); return d.toISOString(); }
+function ymd(d) { return new Date(d).toISOString().slice(0,10); }
+function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+function buildAxis(range, rows) {
+  let start;
+  if (range === "all") start = rows.length ? new Date(rows[0].created_at) : startOfToday();
+  else start = new Date(isoDaysAgo(RANGE_TO_DAYS[range]));
+  start.setHours(0,0,0,0);
+  const end = startOfToday();
+  const out = []; let cur = new Date(start);
+  while (cur <= end) { out.push(ymd(cur)); cur = addDays(cur,1); } return out;
+}
+
+function normalizeStatus(r) {
+  const last = String(r.last_event || "").toLowerCase();
+  const st = String(r.status || "").toLowerCase();
+  const opens = Number(r.open_count || 0);
+  const clicks = Number(r.click_count || 0);
+  if (last.includes("deliver")) return "delivered";
+  if (last.includes("open")) return "opened";
+  if (last.includes("click")) return "clicked";
+  if (last === "bounce" || last === "dropped") return "bounced";
+  if (["delivered","opened","clicked","bounced","sent"].includes(st)) {
+    if (st === "opened" && opens>0) return "opened";
+    if (st === "clicked" && clicks>0) return "clicked";
+    return st;
+  }
+  if (clicks>0) return "clicked";
+  if (opens>0) return "opened";
+  return st || "sent";
+}
+
+/* Deterministic demo generator — used when DB has no rows or demo toggle enabled */
+function makeDemoDataset(range) {
+  const now = new Date();
+  const days = range === "today" ? 1 : range === "d7" ? 7 : range === "d30" ? 30 : range === "d90" ? 90 : 30;
+  const broadcastNames = [
+    "Welcome to GR8 (Blueprint)",
+    "December Promo – 20% Off",
+    "New Feature: CRM Calls + SMS",
+    "Weekly Tips – Marketing Boost",
+    "Re-engagement: We Miss You",
+  ];
+  const broadcastIds = ['11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222','33333333-3333-3333-3333-333333333333','44444444-4444-4444-4444-444444444444','55555555-5555-5555-5555-555555555555'];
+  const emailPool = [
+    "grant.rohde63@gmail.com","support@waiteandsea.com.au","support@elaninteriors.com.au","support@gr8result.com","hello@example.com",
+    "client1@example.com","client2@example.com","client3@example.com","client4@example.com","client5@example.com",
+  ];
+  const rows = []; let idCounter = 1;
+  const start = range === "today" ? startOfToday() : addDays(startOfToday(), -(days-1));
+  for (let di=0; di<days; di++){
+    const day = addDays(start, di);
+    const baseVol = range === "today" ? 12 : 8;
+    const sentCount = Math.max(6, Math.round(baseVol + Math.sin((di/(days||1))*Math.PI*2)*6));
+    for (let si=0; si<sentCount; si++){
+      const bIdx = (di+si) % broadcastIds.length;
+      const createdAt = new Date(day);
+      createdAt.setHours((si*37)%24,(si*19)%60,0,0);
+      const roll = (di*13 + si*7) % 100;
+      let status='delivered', last_event='delivered', open_count=0, click_count=0, unsubscribed=false, bounced_at=null;
+      if (roll < 6) { status='bounced'; last_event='bounce'; bounced_at = new Date(createdAt.getTime()+60000).toISOString(); }
+      else {
+        if (roll < 45) { status='opened'; last_event='open'; open_count = 1 + (si%3); }
+        if (roll < 12) { click_count = 1; status='clicked'; last_event='click'; }
+        if (roll > 98) { unsubscribed = true; status='unsubscribe'; last_event='unsubscribe'; }
+      }
+      rows.push({
+        id: `demo-send-${idCounter++}`,
+        user_id: DEMO_TEXT,
+        email: emailPool[(di*7 + si) % emailPool.length],
+        broadcast_id: broadcastIds[bIdx],
+        status, last_event, open_count, click_count, unsubscribed,
+        bounced_at, created_at: createdAt.toISOString(), last_event_at: new Date(createdAt.getTime()+60000).toISOString()
+      });
+    }
+  }
+  const nameMap = {};
+  broadcastIds.forEach((id,i)=>nameMap[id]=broadcastNames[i]);
+  return { rows, nameMap };
+}
+
+/* Custom tooltip for readability */
+function CustomTooltip({ active, label, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div style={{ background: "rgba(8,12,20,0.95)", color: "#fff", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", fontSize: 13 }}>
+      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{label}</div>
+      {payload.map((p,i)=>(
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ color: p.color, fontWeight: 700 }}>{p.name || p.dataKey}</div>
+          <div style={{ color: "#e6eef8" }}>{p.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function BroadcastsReport() {
+  const [range, setRange] = useState("today");
+  const [chartMode, setChartMode] = useState("line");
+  const [rows, setRows] = useState([]);
+  const [nameMap, setNameMap] = useState({});
+  const [userId, setUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+  const [demo, setDemo] = useState(false);
+
+  const fromIso = useMemo(()=> isoDaysAgo(RANGE_TO_DAYS[range]), [range]);
+
+  useEffect(() => {
+    try { setDemo(localStorage.getItem(LS_DEMO_KEY) === "1"); } catch {}
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    async function run() {
+      setLoading(true);
+      setErr(null);
+
+      try {
+        // 1) If user logged in, prefer their id
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth?.user?.id || null;
+
+        // If not logged in, check for seeded demo rows in DB (either demo text or demo uuid)
+        let effectiveUid = uid;
+
+        if (!effectiveUid) {
+          // try to find any rows for demo ids (safe query using OR)
+          const q = supabase
+            .from("email_sends")
+            .select("id")
+            .or(`user_id.eq.${DEMO_TEXT},user_id.eq.${DEMO_UUID}`)
+            .limit(1);
+          const { data: found, error: foundErr } = await q;
+          if (!foundErr && found && found.length) {
+            // prefer DEMO_UUID if present in DB, otherwise DEMO_TEXT
+            effectiveUid = found[0].user_id || DEMO_TEXT;
+          }
+        }
+
+        // If demo toggle enabled, skip reading current user and use demo generator or seeded demo rows
+        if (demo) effectiveUid = null;
+
+        // Fetch rows for effectiveUid if present
+        let fetchedRows = [];
+        let fetchedNameMap = {};
+
+        if (effectiveUid) {
+          // Query for sends for that user (safe — Supabase tolerates text/uuid types for equality)
+          const orClause = `user_id.eq.${effectiveUid}`;
+          const { data: dataRows, error } = await supabase
+            .from("email_sends")
+            .select("id,email,status,last_event,open_count,click_count,unsubscribed,bounced_at,created_at,last_event_at,broadcast_id")
+            .or(`user_id.eq.${effectiveUid}`)
+            .order("created_at", { ascending: true })
+            .limit(10000);
+
+          if (error) throw error;
+          fetchedRows = (dataRows || []).map(r => ({ ...r, status: normalizeStatus(r) }));
+          // If there are broadcasts referenced, fetch their names
+          const ids = Array.from(new Set(fetchedRows.map(r => r.broadcast_id).filter(Boolean))).slice(0, 500);
+          if (ids.length) {
+            const { data: bcasts, error: bErr } = await supabase
+              .from("email_broadcasts")
+              .select("id,name,title,subject")
+              .in("id", ids)
+              .limit(500);
+            if (!bErr && bcasts) {
+              for (const b of bcasts) fetchedNameMap[b.id] = b.name || b.title || b.subject || "Broadcast";
+            }
+          }
+        }
+
+        // If no rows found (or demo mode requested) use demo generator OR use seeded demo rows if present
+        if ((!fetchedRows || !fetchedRows.length) || demo) {
+          // First try seeded DB demo by querying for demo ids
+          const { data: seeded, error: seededErr } = await supabase
+            .from("email_sends")
+            .select("id,email,status,last_event,open_count,click_count,unsubscribed,bounced_at,created_at,last_event_at,broadcast_id")
+            .or(`user_id.eq.${DEMO_TEXT},user_id.eq.${DEMO_UUID}`)
+            .order("created_at", { ascending: true })
+            .limit(10000);
+
+          if (!seededErr && seeded && seeded.length) {
+            fetchedRows = (seeded || []).map(r => ({ ...r, status: normalizeStatus(r) }));
+            const ids = Array.from(new Set(fetchedRows.map(r => r.broadcast_id).filter(Boolean))).slice(0,500);
+            if (ids.length) {
+              const { data: bcasts, error: bErr } = await supabase
+                .from("email_broadcasts")
+                .select("id,name,title,subject")
+                .in("id", ids)
+                .limit(500);
+              if (!bErr && bcasts) {
+                for (const b of bcasts) fetchedNameMap[b.id] = b.name || b.title || b.subject || "Broadcast";
+              }
+            }
+            // mark userId as demo for UI if seeded demo used
+            setUserId(DEMO_TEXT);
+          } else {
+            // No seeded rows found — use generated demo dataset
+            const { rows: dRows, nameMap: dMap } = makeDemoDataset(range);
+            fetchedRows = dRows.map(r => ({ ...r, status: normalizeStatus(r) }));
+            fetchedNameMap = dMap;
+            setUserId(DEMO_TEXT);
+          }
+        } else {
+          // we have fetchedRows for effectiveUid — set that user id
+          setUserId(effectiveUid);
+        }
+
+        if (!mounted) return;
+        setRows(fetchedRows);
+        setNameMap(fetchedNameMap);
+        setLoading(false);
+      } catch (e) {
+        if (!mounted) return;
+        setErr(String(e?.message || e));
+        setLoading(false);
+      }
+    }
+    run();
+    return () => { mounted = false; };
+  }, [fromIso, demo, range]);
+
+  const metrics = useMemo(() => {
+    const sent = rows.length;
+    const delivered = rows.filter((r) => ["delivered","opened","clicked"].includes(String(r.status || "").toLowerCase())).length;
+    const opened = rows.filter((r) => Number(r.open_count || 0) > 0 || String(r.last_event || "").toLowerCase().includes("open") || String(r.status || "").toLowerCase() === "opened").length;
+    const clicked = rows.filter((r) => Number(r.click_count || 0) > 0 || String(r.last_event || "").toLowerCase().includes("click") || String(r.status || "").toLowerCase() === "clicked").length;
+    const bounced = rows.filter((r) => String(r.status || "").toLowerCase() === "bounced").length;
+    const unsub = rows.filter((r) => !!r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe").length;
+    return { sent, delivered, opened, clicked, bounced, unsub };
+  }, [rows]);
+
+  const chartData = useMemo(() => {
+    const axis = buildAxis(range, rows);
+    const map = {};
+    axis.forEach((d) => { map[d] = { date: d, sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsub: 0 }; });
+    rows.forEach((r) => {
+      const d = ymd(r.created_at);
+      if (!map[d]) return;
+      map[d].sent++;
+      if (["delivered","opened","clicked"].includes(r.status)) map[d].delivered++;
+      if (Number(r.open_count || 0) > 0 || r.status === "opened") map[d].opened++;
+      if (Number(r.click_count || 0) > 0 || r.status === "clicked") map[d].clicked++;
+      if (r.status === "bounced") map[d].bounced++;
+      if (r.unsubscribed) map[d].unsub++;
+    });
+    return axis.map((d) => map[d]);
+  }, [rows, range]);
+
+  const pieData = useMemo(() => [
+    { name: "Delivered", value: metrics.delivered },
+    { name: "Opened", value: metrics.opened },
+    { name: "Clicked", value: metrics.clicked },
+    { name: "Bounced", value: metrics.bounced },
+    { name: "Unsubscribed", value: metrics.unsub }
+  ].filter(x => x.value > 0), [metrics]);
+
+  const recent = useMemo(() => [...rows].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,250), [rows]);
+
+  function setDemoPersist(v) {
+    try { localStorage.setItem(LS_DEMO_KEY, v ? "1" : "0"); } catch {}
+    setDemo(!!v);
+  }
+
+  function makeDemoDataset(range) {
+    const axis = buildAxis(range, []);
+    const rows = axis.flatMap(d => [
+      { id: `demo-${d}-1`, email: 'alice@example.com', status: 'delivered', open_count: 2, click_count: 1, created_at: d, last_event_at: d },
+      { id: `demo-${d}-2`, email: 'bob@example.com', status: 'opened', open_count: 3, click_count: 0, created_at: d, last_event_at: d }
+    ]);
+    return { rows, nameMap: {} };
+  }
+
+  return (
+    <>
+      <Head><title>Broadcast analytics</title></Head>
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={{ ...styles.banner, background: "#facc15" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={styles.bannerIconWrap} aria-hidden="true"><span style={{ fontSize: 28 }}>📧</span></div>
+              <div>
+                <div style={styles.bannerTitle}>Broadcasts</div>
+                <div style={styles.bannerSub}>Delivery, opens, clicks & unsubscribes</div>
+              </div>
+            </div>
+            <Link href="/modules/email/reports" legacyBehavior><a style={styles.backBtn}>← Back</a></Link>
+          </div>
+
+          <div style={styles.rangeRow}>
+            <RangePill label="Today" active={range==="today"} onClick={()=>setRange("today")} />
+            <RangePill label="Last 7 days" active={range==="d7"} onClick={()=>setRange("d7")} />
+            <RangePill label="Last 30 days" active={range==="d30"} onClick={()=>setRange("d30")} />
+            <RangePill label="Last 90 days" active={range==="d90"} onClick={()=>setRange("d90")} />
+            <RangePill label="All time" active={range==="all"} onClick={()=>setRange("all")} />
+            <div style={{ flex: 1 }} />
+            <button style={styles.toggleBtn} onClick={()=>setChartMode(chartMode==="line"?"pie":"line")}>
+              {chartMode==="line" ? "View pie chart" : "View line graph"}
+            </button>
+            <button style={{ ...styles.toggleBtn, ...(demo ? styles.toggleBtnOn : null) }} onClick={()=>setDemoPersist(!demo)}>
+              {demo ? "Demo data ON" : "Use demo data"}
+            </button>
+          </div>
+
+          {loading ? <div style={styles.note}>Loading…</div> : null}
+          {!loading && !userId ? <div style={styles.note}>No user available and no seeded demo found. Toggle "Use demo data" to preview UI.</div> : null}
+          {!loading && err ? <div style={{ ...styles.note, border: "1px solid #ef4444" }}>{err}</div> : null}
+
+          {!loading && (rows || []).length ? (
+            <>
+              <div style={styles.metricsGrid}>
+                <Metric title="Sent" value={metrics.sent} />
+                <Metric title="Delivered" value={metrics.delivered} />
+                <Metric title="Opened" value={metrics.opened} />
+                <Metric title="Clicked" value={metrics.clicked} />
+                <Metric title="Unsubscribed" value={metrics.unsub} />
+              </div>
+
+              <div style={styles.chartWrap}>
+                {chartMode==="line" ? (
+                  <ResponsiveContainer width="100%" height={360}>
+                    <LineChart data={chartData}>
+                      <XAxis dataKey="date" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip/>} />
+                      <Legend />
+                      <Line dataKey="sent" stroke="#94a3b8" dot={false} name="sent" />
+                      <Line dataKey="delivered" stroke="#22c55e" dot={false} name="delivered" />
+                      <Line dataKey="opened" stroke="#3b82f6" dot={false} name="opened" />
+                      <Line dataKey="clicked" stroke="#facc15" dot={false} name="clicked" />
+                      <Line dataKey="bounced" stroke="#ef4444" dot={false} name="bounced" />
+                      <Line dataKey="unsub" stroke="#a855f7" dot={false} name="unsubscribed" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height={360}>
+                    <PieChart>
+                      <Tooltip content={<CustomTooltip/>} />
+                      <Legend />
+                      <Pie data={pieData} dataKey="value" outerRadius={120} nameKey="name">
+                        {pieData.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div style={styles.tableWrap}>
+                <div style={styles.tableHeadRow}>
+                  <div style={styles.th}>When</div>
+                  <div style={styles.th}>Email</div>
+                  <div style={styles.th}>Broadcast</div>
+                  <div style={styles.th}>Delivered</div>
+                  <div style={styles.th}>Open</div>
+                  <div style={styles.th}>Click</div>
+                  <div style={styles.th}>Unsub</div>
+                  <div style={styles.th}>Status</div>
+                </div>
+
+                {recent.map((r) => {
+                  const when = r.last_event_at || r.created_at;
+                  const deliveredYes = ["delivered","opened","clicked"].includes(String(r.status || "").toLowerCase());
+                  const bName = nameMap[r.broadcast_id] || r.broadcast_id || "Broadcast";
+                  return (
+                    <div key={String(r.id)} style={styles.tr}>
+                      <div style={styles.td}>{when ? new Date(when).toLocaleString() : "—"}</div>
+                      <div style={styles.td}>{r.email || "—"}</div>
+                      <div style={styles.td} title={bName}>{bName}</div>
+                      <div style={styles.td}>{deliveredYes ? "Yes" : "—"}</div>
+                      <div style={styles.td}>{Number(r.open_count || 0)}</div>
+                      <div style={styles.td}>{Number(r.click_count || 0)}</div>
+                      <div style={styles.td}>{r.unsubscribed || String(r.status || "").toLowerCase() === "unsubscribe" ? "Yes" : "—"}</div>
+                      <div style={styles.td}>{String(r.status || "—")}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* UI helpers */
+function RangePill({ label, active, onClick }) { return <button onClick={onClick} style={{ ...styles.rangePill, ...(active ? styles.rangePillActive : {}) }}>{label}</button>; }
+function Metric({ title, value }) { return <div style={styles.metricBox}><div style={styles.metricTitle}>{title}</div><div style={styles.metricValue}>{value}</div></div>; }
+
+/* Styles (kept compact) */
+const styles = {
+  page:{minHeight:"100vh",background:"radial-gradient(circle at top, rgba(15,23,42,0.9) 0%, rgba(2,6,23,1) 55%)",padding:"30px 20px 40px",color:"#e6eef8",fontSize:16},
+  container:{maxWidth:1320,margin:"0 auto"},
+  banner:{width:"100%",borderRadius:18,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 18px 40px rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.10)"},
+  bannerIconWrap:{width:56,height:56,display:"grid",placeItems:"center",borderRadius:10,background:"rgba(0,0,0,0.14)"},
+  bannerTitle:{fontSize:34,fontWeight:600,color:"#241a00"}, bannerSub:{fontSize:16,marginTop:3,color:"rgba(36,26,0,0.80)"},
+  backBtn:{background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,textDecoration:"none",border:"1px solid rgba(255,255,255,0.18)",fontWeight:600},
+  rangeRow:{marginTop:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"},
+  rangePill:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.55)",color:"#e6eef8",borderRadius:999,padding:"7px 12px",fontSize:16,cursor:"pointer",fontWeight:600},
+  rangePillActive:{background:"rgba(250,204,21,0.20)",border:"1px solid rgba(250,204,21,0.55)"},
+  toggleBtn:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"},
+  toggleBtnOn:{background:"rgba(34,197,94,0.18)",border:"1px solid rgba(34,197,94,0.55)"},
+  note:{marginTop:10,padding:"10px 12px",borderRadius:12,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)",fontSize:16,opacity:0.95},
+  metricsGrid:{marginTop:14,display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:10},
+  metricBox:{padding:12,borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)"},
+  metricTitle:{fontSize:16,opacity:0.85,fontWeight:700}, metricValue:{fontSize:16,fontWeight:700,marginTop:6},
+  chartWrap:{marginTop:14,padding:14,borderRadius:14,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)"},
+  tableWrap:{marginTop:14,borderRadius:12,overflow:"hidden",border:"1px solid rgba(255,255,255,0.10)"},
+  tableHeadRow:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(255,255,255,0.06)"},
+  th:{fontSize:16,fontWeight:700,opacity:0.9}, tr:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(2,6,23,0.45)",borderTop:"1px solid rgba(255,255,255,0.08)"},
+  td:{fontSize:16,opacity:0.92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}, tableEmpty:{padding:12,fontSize:16,opacity:0.85,background:"rgba(2,6,23,0.45)"}
+};

@@ -13,6 +13,7 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
   const [productName, setProductName] = useState(initial.productName || "");
   const [url, setUrl] = useState(initial.url || "");
   const [cartTimeout, setCartTimeout] = useState(initial.cartTimeout || 30);
+  const [waitHours, setWaitHours] = useState(initial.waitHours || 24);
 
   const saveAndClose = () => {
     const newData = {
@@ -27,6 +28,7 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
         productName,
         url,
         cartTimeout,
+        waitHours,
       },
     };
 
@@ -112,13 +114,18 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
           {/* EMAIL OPENED */}
           {type === "email_opened" && (
             <>
-              <label style={s.label}>Email ID or Name</label>
+              <label style={s.label}>Wait Before Checking (Hours)</label>
               <input
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
+                type="number"
+                min={1}
+                value={waitHours}
+                onChange={(e) => setWaitHours(Math.max(1, Number(e.target.value)))}
                 style={s.input}
-                placeholder="Which email to check?"
+                placeholder="24"
               />
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 14 }}>
+                The flow will wait this long before checking if the email was opened. If opened, goes to YES path; if not opened, goes to NO path.
+              </div>
             </>
           )}
 

@@ -59,9 +59,12 @@ export default function TriggerNode({ data }) {
           color: "#e5e7eb",
           fontWeight: 600,
           fontSize: 14,
+          lineHeight: 1.4,
         }}
       >
-        Trigger starts the flow for all enrolled members
+        {active > 0 
+          ? `✅ ${active} member${active !== 1 ? "s" : ""} enrolled and active in flow` 
+          : "⚠️ No members enrolled - add members to start the flow"}
       </div>
 
       <Handle

@@ -62,32 +62,31 @@ async function bestEffortAlreadyQueued({ lead_id, template_id, flow_id, node_id 
   const filters = [
     async () => {
       const { count, error } = await supabaseAdmin
-        .from("email_campaign_queue")
+        .from("automation_queue")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead_id)
-        .eq("template_id", template_id)
         .eq("flow_id", flow_id)
         .eq("node_id", node_id)
-        .in("status", ["queued", "processing", "sent"]);
+        .in("status", ["pending", "processing", "sent"]);
       if (error) throw error;
       return (count || 0) > 0;
     },
     async () => {
       const { count, error } = await supabaseAdmin
-        .from("email_campaign_queue")
+        .from("automation_queue")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead_id)
-        .eq("template_id", template_id)
-        .in("status", ["queued", "processing", "sent"]);
+        .eq("flow_id", flow_id)
+        .in("status", ["pending", "processing", "sent"]);
       if (error) throw error;
       return (count || 0) > 0;
     },
     async () => {
       const { count, error } = await supabaseAdmin
-        .from("email_campaign_queue")
+        .from("automation_queue")
         .select("id", { count: "exact", head: true })
         .eq("lead_id", lead_id)
-        .eq("template_id", template_id);
+        .eq("flow_id", flow_id);
       if (error) throw error;
       return (count || 0) > 0;
     },
@@ -103,42 +102,22 @@ async function bestEffortAlreadyQueued({ lead_id, template_id, flow_id, node_id 
 }
 
 async function tryInsertQueue(rows) {
-  // Try multiple payload shapes so it works with slightly different queue schemas.
-  const attempts = [
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-      flow_id: r.flow_id,
-      node_id: r.node_id,
-      email_index: r.email_index,
-    })),
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-      email_index: r.email_index,
-    })),
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-    })),
-  ];
+  // Use automation_queue table with correct schema
+  const payload = rows.map((r) => ({
+    user_id: r.user_id,
+    lead_id: r.lead_id,
+    flow_id: r.flow_id,
+    node_id: r.node_id,
+    to_email: r.to_email,
+    subject: r.subject,
+    html_content: r.html_content,
+    variant: r.variant,
+    status: r.status,
+  }));
 
-  let lastErr = null;
-  for (const payload of attempts) {
-    const { error } = await supabaseAdmin.from("email_campaign_queue").insert(payload);
-    if (!error) return { ok: true };
-    lastErr = error;
-  }
-  return { ok: false, error: lastErr?.message || "Queue insert failed" };
+  const { error } = await supabaseAdmin.from("automation_queue").insert(payload);
+  if (!error) return { ok: true };
+  return { ok: false, error: error?.message || "Queue insert failed" };
 }
 
 export default async function handler(req, res) {
@@ -225,20 +204,69 @@ export default async function handler(req, res) {
       });
     }
 
-    const template_id =
-      firstEmail?.data?.template_id ||
-      firstEmail?.data?.email_template_id ||
-      firstEmail?.data?.templateId ||
-      null;
-
-    if (!template_id) {
-      return res.status(400).json({ ok: false, error: "Email node missing template_id" });
+    const emailData = firstEmail?.data || {};
+    const subject = emailData.subject || emailData.label || "Message from your automation";
+    const bucket = emailData.bucket || emailData.storage_bucket || "email-user-assets";
+    
+    // Check for emailPreviewUrl first (direct path to HTML)
+    const previewUrl = emailData.emailPreviewUrl || emailData.preview_url || "";
+    let htmlPath = "";
+    
+    if (previewUrl) {
+      // Extract path from URL: /storage/v1/object/public/bucket/path
+      const match = previewUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (match) {
+        htmlPath = match[2];
+      } else {
+        htmlPath = previewUrl.replace(/^\/+/, '');
+      }
+    }
+    
+    if (!htmlPath) {
+      return res.status(400).json({ ok: false, error: "Email node missing emailPreviewUrl" });
+    }
+    
+    // Load HTML from storage
+    let html = "";
+    try {
+      const { data: htmlData, error: htmlErr } = await supabaseAdmin.storage
+        .from(bucket)
+        .download(htmlPath);
+      
+      if (htmlErr || !htmlData) {
+        return res.status(500).json({ 
+          ok: false, 
+          error: `Failed to load email HTML: ${htmlErr?.message || 'no data'}` 
+        });
+      }
+      
+      html = await htmlData.text();
+    } catch (e) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: `HTML load error: ${e.message}` 
+      });
+    }
+    
+    if (!html) {
+      return res.status(400).json({ ok: false, error: "Email HTML is empty" });
+    }
+    
+    // Get lead email
+    const { data: leadData, error: leadErr } = await supabaseAdmin
+      .from("leads")
+      .select("email")
+      .eq("id", lead_id)
+      .single();
+    
+    if (leadErr || !leadData?.email) {
+      return res.status(400).json({ ok: false, error: "Lead email not found" });
     }
 
     // Best-effort duplicate protection
     const already = await bestEffortAlreadyQueued({
       lead_id,
-      template_id,
+      template_id: null,
       flow_id,
       node_id: firstEmail.id,
     });
@@ -252,17 +280,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const now = new Date().toISOString();
     const rows = [
       {
         user_id: owner_id,
         lead_id,
-        template_id,
-        scheduled_at: now,
-        status: "queued",
         flow_id,
         node_id: firstEmail.id,
-        email_index: 1,
+        to_email: leadData.email,
+        subject: subject,
+        html_content: html,
+        variant: emailData.label || subject,
+        status: "pending",
       },
     ];
 

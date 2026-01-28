@@ -9,6 +9,8 @@ export default function DelayNode({ data }) {
       ? `${d.amount} ${d.unit}`
       : "No delay set";
 
+  const count = Number(data?.count ?? 0);
+
   return (
     <div
       style={{
@@ -30,6 +32,24 @@ export default function DelayNode({ data }) {
       <div style={{ marginTop: 2, fontSize: 16, opacity: 0.85 }}>
         {summary}
       </div>
+
+      {count > 0 && (
+        <div
+          style={{
+            marginTop: 8,
+            background: "rgba(2,6,23,0.35)",
+            border: "1px solid rgba(2,6,23,0.45)",
+            color: "#e5e7eb",
+            padding: "4px 8px",
+            borderRadius: 999,
+            fontWeight: 700,
+            fontSize: 14,
+            textAlign: "center",
+          }}
+        >
+          {count}
+        </div>
+      )}
 
       <Handle
         type="target"

@@ -32,7 +32,7 @@ export default function TriggerNodeDrawer({ node, onSave, onClose }) {
     <div style={styles.overlay}>
       <div style={styles.panel}>
         <div style={styles.header}>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Trigger Settings</div>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>Trigger Settings</div>
           <button onClick={onClose} style={styles.xBtn} aria-label="Close">
             ×
           </button>
@@ -49,7 +49,7 @@ export default function TriggerNodeDrawer({ node, onSave, onClose }) {
 
           <label style={styles.label}>Trigger Type</label>
           <select
-            style={styles.input}
+            style={{ ...styles.input, background: "#1a1f29" }}
             value={triggerType}
             onChange={(e) => setTriggerType(e.target.value)}
           >
@@ -67,18 +67,6 @@ export default function TriggerNodeDrawer({ node, onSave, onClose }) {
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 placeholder="e.g. VIP"
-              />
-            </>
-          )}
-
-          {triggerType === "list_added" && (
-            <>
-              <label style={styles.label}>List ID (optional)</label>
-              <input
-                style={styles.input}
-                value={listId}
-                onChange={(e) => setListId(e.target.value)}
-                placeholder="Paste list UUID if needed"
               />
             </>
           )}
@@ -123,7 +111,7 @@ const styles = {
     height: "100%",
     background: "#0b1220",
     borderLeft: "1px solid rgba(255,255,255,0.08)",
-    color: "#fff",
+    color: "#eaeaf3",
     display: "flex",
     flexDirection: "column",
   },
@@ -137,7 +125,7 @@ const styles = {
   xBtn: {
     background: "transparent",
     border: "none",
-    color: "#fff",
+    color: "#6cec30",
     fontSize: 26,
     cursor: "pointer",
     lineHeight: 1,
@@ -149,7 +137,7 @@ const styles = {
   },
   label: {
     display: "block",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 700,
     margin: "10px 0 6px",
     opacity: 0.9,
@@ -160,7 +148,7 @@ const styles = {
     borderRadius: 10,
     border: "1px solid rgba(255,255,255,0.12)",
     background: "rgba(255,255,255,0.06)",
-    color: "#fff",
+    color: "#85f32b",
     outline: "none",
   },
   footer: {

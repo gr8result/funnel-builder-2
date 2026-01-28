@@ -38,7 +38,8 @@ function StatRow({ label, value }) {
   );
 }
 
-export default function EmailNode({ data }) {
+export default function EmailNode({ id, data }) {
+  
   const previewUrl =
     data?.emailPreviewUrl ||
     data?.thumbnailUrl ||
@@ -49,6 +50,7 @@ export default function EmailNode({ data }) {
   const delivered = Number(stats.delivered || 0);
   const opened = Number(stats.opened || 0);
   const clicked = Number(stats.clicked || 0);
+  const activeMembers = Number(data?.activeMembers || 0);
 
   return (
     <div
@@ -130,12 +132,32 @@ export default function EmailNode({ data }) {
 
         {/* RIGHT: STATS */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <StatRow label="Processed" value={processed} />
+          {/* Active Members Count */}
+          <div
+            onClick={() => data?.onNodeClick?.(id, data)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "2px solid #10b981",
+              background: activeMembers > 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.08)",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#10b981",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            title="Click to view/manage members"
+          >
+            👥 {activeMembers} Waiting
+          </div>
+
+          <StatRow label="Total Sent" value={processed} />
           <StatRow label="Delivered" value={delivered} />
           <StatRow label="Opened" value={opened} />
           <StatRow label="Clicked" value={clicked} />
 
-          {/* Optional quick status line */}
+          {/* Status line showing what's happening */}
           <div
             style={{
               marginTop: 4,
@@ -146,10 +168,13 @@ export default function EmailNode({ data }) {
               borderRadius: 10,
               background: "rgba(2,6,23,0.18)",
               border: "1px solid rgba(255,255,255,0.18)",
+              lineHeight: 1.3,
             }}
           >
-            {delivered > 0
-              ? "✅ Sending working"
+            {activeMembers > 0
+              ? `⏳ ${activeMembers} queued for sending`
+              : delivered > 0
+              ? "✅ Emails sent"
               : processed > 0
               ? "⏳ Processing"
               : "— No activity yet"}

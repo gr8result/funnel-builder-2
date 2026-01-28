@@ -153,9 +153,9 @@ async function ensureRun({ flow_id, lead_id, user_id }) {
         user_id,
         flow_id,
         lead_id,
-        status: "active",
+        status: "pending",
         available_at: now,
-        current_node_id: null, // start at trigger
+        current_node_id: null, // will be set by tick.js
         last_error: null,
         created_at: now,
         updated_at: now,
@@ -184,15 +184,19 @@ function flowMatchesEvent(flow, { event, list_id }) {
   if (!trig) return false;
 
   const d = trig.data || {};
-  const t = String(d.triggerType || "").trim();
+  const triggerData = d.trigger || d; // Support both old and new formats
+  const t = String(triggerData.triggerType || triggerData.type || "").trim();
 
   if (e === "list_subscribed") {
-    if (t !== "list_subscribed") return false;
-    const nodeListId = String(d.listId || "");
-    return nodeListId && String(list_id || "") && nodeListId === String(list_id);
+    // Match both "list_subscribed" and "list_added" trigger types
+    if (t !== "list_subscribed" && t !== "list_added") return false;
+    const nodeListId = String(triggerData.listId || triggerData.list_id || "");
+    // If no list_id specified in trigger, match any list. If specified, must match exactly.
+    if (!nodeListId) return true;
+    return String(list_id || "") && nodeListId === String(list_id);
   }
 
-  if (e === "lead_created") return t === "lead_created";
+  if (e === "lead_created") return t === "lead_created" || t === "lead_added";
   if (e === "crm_sent") return t === "crm_sent";
 
   return false;
@@ -260,17 +264,17 @@ export default async function handler(req, res) {
     if (flow_id) {
       debug.forced = true;
 
-      // (Optional) ownership check: flow.user_id/account_id must match this user’s account_id or auth id
+      // (Optional) ownership check: flow.user_id must match this user's account_id or auth id
       const { data: flowRow, error: flowErr } = await supabase
         .from("automation_flows")
-        .select("id,user_id,account_id")
+        .select("id,user_id")
         .eq("id", flow_id)
         .maybeSingle();
 
       if (flowErr) throw flowErr;
       if (!flowRow?.id) return res.status(404).json({ ok: false, error: "Flow not found", debug });
 
-      const flowOwner = flowRow.account_id || flowRow.user_id || null;
+      const flowOwner = flowRow.user_id || null;
       if (flowOwner && account_id && flowOwner !== account_id && flowOwner !== lead_owner_user_id) {
         return res.status(403).json({ ok: false, error: "Not allowed for this flow", debug });
       }
@@ -316,14 +320,14 @@ export default async function handler(req, res) {
     {
       const { data, error } = await supabase
         .from("automation_flows")
-        .select("id,name,nodes,is_standard,user_id,account_id");
+        .select("id,name,nodes,is_standard,user_id");
       if (error) throw error;
       flows = Array.isArray(data) ? data : [];
     }
 
     // Restrict to this user’s flows if we can
     const ownedFlows = flows.filter((f) => {
-      const owner = f.account_id || f.user_id || null;
+      const owner = f.user_id || null;
       if (!owner) return true; // tolerate older rows
       if (account_id && owner === account_id) return true;
       if (owner === lead_owner_user_id) return true;

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "autoresponder:cron": "node scripts/local-autoresponder-cron.js"
@@ -36,7 +36,7 @@
     "lucide-react": "^0.545.0",
     "mhtml2html": "^3.0.0",
     "micro": "^10.0.1",
-    "next": "^15.0.4",
+    "next": "^16.1.6",
     "node-fetch": "^3.3.2",
     "node-red-node-email": "^5.0.0",
     "nodemailer": "^7.0.10",

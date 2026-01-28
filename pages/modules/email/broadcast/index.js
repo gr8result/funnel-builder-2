@@ -341,6 +341,9 @@ export default function CreateEmail() {
     if (form.abEnabled) {
       if (!form.abSubjectA?.trim()) err.abSubjectA = "Subject Line A is required.";
       if (!form.abSubjectB?.trim()) err.abSubjectB = "Subject Line B is required.";
+      if (form.abSubjectA?.trim() && form.abSubjectB?.trim() && form.abSubjectA.trim() === form.abSubjectB.trim()) {
+        err.abSubjectB = "Subject Line B must be different from Subject Line A.";
+      }
     }
 
     return err;

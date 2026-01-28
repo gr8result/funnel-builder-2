@@ -1,66 +1,37 @@
-// /pages/api/twilio/recording-audio.js
-// FULL REPLACEMENT
-//
-// Streams Twilio recording audio from a RecordingUrl saved in DB.
-// Usage:
-//   /api/twilio/recording-audio?url=https://api.twilio.com/2010-04-01/Accounts/.../Recordings/RE....json
-//
-// ENV required:
-//   TWILIO_ACCOUNT_SID
-//   TWILIO_AUTH_TOKEN
-
-function s(v) {
-  return String(v ?? "").trim();
-}
-
-function toMp3Url(u) {
-  const url = s(u);
-  if (!url) return "";
-  // If it's the .json endpoint, swap to .mp3
-  if (url.endsWith(".json")) return url.replace(/\.json$/i, ".mp3");
-  // If it's already mp3/wav etc, keep it
-  if (/\.(mp3|wav)(\?|$)/i.test(url)) return url;
-  // If it's the resource without extension, append .mp3
-  if (/\/Recordings\/RE[a-zA-Z0-9]+$/i.test(url)) return url + ".mp3";
-  return url;
-}
+import { Buffer } from "buffer";
 
 export default async function handler(req, res) {
+  const encoded = Array.isArray(req.query.url) ? req.query.url[0] : req.query.url;
+  if (!encoded) return res.status(400).json({ error: "Missing 'url' query parameter" });
+
+  const url = decodeURIComponent(encoded);
+  const isTwilioApi = url.startsWith("https://api.twilio.com/") || url.includes("twilio.com");
+
+  const TW_ACCOUNT = process.env.TWILIO_ACCOUNT_SID;
+  const TW_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+
+  const headers = {};
+  if (isTwilioApi) {
+    if (!TW_ACCOUNT || !TW_TOKEN) {
+      return res.status(500).json({ error: "Twilio credentials not configured on server." });
+    }
+    headers["Authorization"] = "Basic " + Buffer.from(`${TW_ACCOUNT}:${TW_TOKEN}`).toString("base64");
+  }
+
   try {
-    if (req.method !== "GET") {
-      return res.status(405).send("Method not allowed");
+    const upstreamRes = await fetch(url, { headers });
+    if (!upstreamRes.ok) {
+      return res.status(upstreamRes.status).json({ error: "Failed to fetch audio", statusText: upstreamRes.statusText });
     }
 
-    const ACCOUNT_SID = s(process.env.TWILIO_ACCOUNT_SID);
-    const AUTH_TOKEN = s(process.env.TWILIO_AUTH_TOKEN);
-    if (!ACCOUNT_SID || !AUTH_TOKEN) {
-      return res.status(500).send("Missing TWILIO env vars");
-    }
+    const contentType = upstreamRes.headers.get("content-type") || "audio/mpeg";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
 
-    const rawUrl = s(req.query.url);
-    if (!rawUrl) return res.status(400).send("Missing url");
-
-    const url = toMp3Url(rawUrl);
-    const auth = Buffer.from(`${ACCOUNT_SID}:${AUTH_TOKEN}`).toString("base64");
-
-    const r = await fetch(url, {
-      headers: {
-        Authorization: `Basic ${auth}`,
-      },
-    });
-
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      return res.status(r.status).send(txt || "Failed to fetch recording");
-    }
-
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Cache-Control", "private, max-age=60");
-
-    const arr = Buffer.from(await r.arrayBuffer());
-    return res.status(200).send(arr);
-  } catch (e) {
-    console.error("recording-audio proxy error:", e);
-    return res.status(500).send("Server error");
+    const ab = await upstreamRes.arrayBuffer();
+    res.status(200).send(Buffer.from(ab));
+  } catch (err) {
+    console.error("recording-audio proxy error:", err);
+    res.status(500).json({ error: "Proxy fetch failed" });
   }
 }
