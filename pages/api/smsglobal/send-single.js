@@ -129,6 +129,7 @@ export default async function handler(req, res) {
     if (insErr) return res.status(500).json({ ok: false, error: insErr.message });
 
     // Auto-flush this queued SMS
+    let flushResult = null;
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
       const cronKey = process.env.CRON_SECRET || process.env.AUTOMATION_CRON_KEY || '';
@@ -138,16 +139,26 @@ export default async function handler(req, res) {
         ? `${siteUrl}/api/smsglobal/flush-queue?key=${encodeURIComponent(cronKey)}&limit=1`
         : `${siteUrl}/api/smsglobal/flush-queue?limit=1`;
       
-      await fetch(flushUrl, {
+      const flushResponse = await fetch(flushUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-      }).catch(() => {}); // Silently fail if flush doesn't work
+      });
+      flushResult = await flushResponse.json();
+      
+      if (!flushResult?.ok) {
+        console.warn('Auto-flush returned non-ok:', flushResult);
+      }
     } catch (flushErr) {
-      // Flush error doesn't fail the response
-      console.error('Auto-flush SMS failed:', flushErr?.message || flushErr);
+      // Flush error doesn't fail the response, but log it
+      console.error('Auto-flush SMS fetch failed:', flushErr?.message || flushErr);
     }
 
-    return res.status(200).json({ ok: true, queued: 1, row: inserted });
+    return res.status(200).json({ 
+      ok: true, 
+      queued: 1, 
+      row: inserted,
+      auto_flush: flushResult?.ok ? { sent: flushResult?.debug?.sent || 0 } : { attempt_made: true }
+    });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
