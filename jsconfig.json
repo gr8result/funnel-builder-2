@@ -1,23 +1,7 @@
-<<<<<<< HEAD
-// jsconfig.json
-// FULL REPLACEMENT
-// Adds @lib alias so "@lib/..." imports work (fixes @lib/lists/crm-sync error)
-
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@lib/*": ["lib/*"],
-      "@components/*": ["components/*"],
-      "@utils/*": ["utils/*"],
-      "@styles/*": ["styles/*"],
-      "@data/*": ["data/*"]
-=======
 {
   "compilerOptions": {
     "paths": {
       "@/*": ["./*"]
->>>>>>> origin/main
     }
   }
 }
