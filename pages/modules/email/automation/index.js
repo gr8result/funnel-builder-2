@@ -414,12 +414,14 @@ function AutomationBuilder() {
             };
           }
           if (n.type !== "email") return n;
-          const s = (j.stats || {})?.[n.id] || {
-            processed: 0,
-            delivered: 0,
-            opened: 0,
-            clicked: 0,
-          };
+            const s = (j.stats || {})?.[n.id] || {
+              processed: 0,
+              delivered: 0,
+              opened: 0,
+              clicked: 0,
+              bounced: 0,
+              unsubscribed: 0,
+            };
           return { ...n, data: { ...n.data, stats: s } };
         })
       );

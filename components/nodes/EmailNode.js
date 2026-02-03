@@ -49,6 +49,8 @@ export default function EmailNode({ data }) {
   const delivered = Number(stats.delivered || 0);
   const opened = Number(stats.opened || 0);
   const clicked = Number(stats.clicked || 0);
+  const bounced = Number(stats.bounced || 0);
+  const unsubscribed = Number(stats.unsubscribed || 0);
 
   return (
     <div
@@ -134,6 +136,8 @@ export default function EmailNode({ data }) {
           <StatRow label="Delivered" value={delivered} />
           <StatRow label="Opened" value={opened} />
           <StatRow label="Clicked" value={clicked} />
+          <StatRow label="Bounced" value={bounced} />
+          <StatRow label="Unsubscribed" value={unsubscribed} />
 
           {/* Optional quick status line */}
           <div
