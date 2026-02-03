@@ -16,6 +16,7 @@
 //  - SENDGRID_FROM_EMAIL
 //  - SENDGRID_FROM_NAME
 //  - AUTORESPONDER_CRON_SECRET (or AUTOMATION_CRON_SECRET)
+//  - EMAIL_ASSETS_BUCKET (optional; default "email-user-assets")
 
 import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
@@ -26,13 +27,23 @@ const SUPABASE_URL =
 const SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE ||
-  process.env.SUPABASE_SERVICE_KEY;
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE ||
+  "";
 
 const CRON_SECRET =
   process.env.AUTORESPONDER_CRON_SECRET || process.env.AUTOMATION_CRON_SECRET;
 
+const SENDGRID_API_KEY =
+  process.env.SENDGRID_API_KEY ||
+  process.env.GR8_MAIL_SEND_ONLY ||
+  process.env.SENDGRID_KEY ||
+  "";
+
+const BUCKET = (process.env.EMAIL_ASSETS_BUCKET || "email-user-assets").trim();
+
 function getApiKey() {
-  return process.env.SENDGRID_API_KEY || process.env.GR8_MAIL_SEND_ONLY || "";
+  return SENDGRID_API_KEY;
 }
 
 function readAuthKey(req) {
@@ -65,7 +76,7 @@ async function loadHtmlFromStorage(supabase, templatePath) {
   const path = safeStr(templatePath);
   if (!path) return "";
 
-  const bucketsToTry = ["email-user-assets", "email_templates", "templates", "emails"];
+  const bucketsToTry = [BUCKET, "email-user-assets", "email_templates", "templates", "emails"];
 
   for (const bucket of bucketsToTry) {
     try {
@@ -84,7 +95,7 @@ async function loadHtmlFromStorage(supabase, templatePath) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 

@@ -1,5 +1,5 @@
-// /pages/api/smsglobal/send-single.js
-// FULL REPLACEMENT — Queue ONE SMS (Single SMS box)
+// /pages/api/smsglobal/SMSSend.js
+// FULL REPLACEMENT — Send SMS immediately using proper MAC SHA256 authentication
 //
 // POST JSON (any of these shapes supported):
 // - { lead_id, message }
@@ -11,27 +11,17 @@
 // ✅ Auth: Authorization: Bearer <SUPABASE ACCESS TOKEN>
 // ✅ Finds logged-in user
 // ✅ If lead provided, verifies it belongs to the user and uses leads.phone
-// ✅ Inserts into public.sms_queue WITHOUT using 'origin' column (avoids schema cache issues)
+// ✅ Sends immediately via SMSGlobal with correct MAC SHA256 authentication
+// ✅ Uses shared sendSmsGlobal from lib/smsglobal/index.js
 
 import { createClient } from "@supabase/supabase-js";
+import { sendSmsGlobal } from "../../../lib/smsglobal/index.js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
 function s(v) {
   return String(v ?? "").trim();
-}
-
-function digitsOnly(v) {
-  return s(v).replace(/[^\d+]/g, "");
-}
-
-function normalizeAUTo61(raw) {
-  let v = digitsOnly(raw);
-  if (!v) return "";
-  if (v.startsWith("+")) v = v.slice(1);
-  if (v.startsWith("0")) v = "61" + v.slice(1);
-  return v;
 }
 
 function getBearer(req) {
@@ -87,7 +77,7 @@ export default async function handler(req, res) {
     if (!msg) return res.status(400).json({ ok: false, error: "Missing message/body" });
 
     let toPhone = "";
-    let resolvedLeadId = lead_id || null;
+    let leadName = "";
 
     if (directTo) {
       toPhone = directTo;
@@ -105,61 +95,40 @@ export default async function handler(req, res) {
       }
 
       toPhone = lead.phone || "";
+      leadName = lead.name || "";
     } else {
       return res.status(400).json({ ok: false, error: "Missing lead_id (or direct 'to' phone)" });
     }
 
-    const to61 = normalizeAUTo61(toPhone);
-    if (!to61) return res.status(400).json({ ok: false, error: "Missing/invalid to phone" });
+    if (!toPhone) return res.status(400).json({ ok: false, error: "Missing/invalid to phone" });
 
-    // Insert WITHOUT origin column to avoid schema cache/origin mismatch
-    const insertRow = {
-      user_id,
-      lead_id: resolvedLeadId,
-      to_phone: to61,
-      body: msg,
-    };
+    // Send SMS using shared library with proper MAC authentication
+    const result = await sendSmsGlobal({
+      toPhone,
+      message: msg,
+      origin: process.env.DEFAULT_SMS_ORIGIN,
+    });
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("sms_queue")
-      .insert(insertRow)
-      .select("*")
-      .single();
-
-    if (insErr) return res.status(500).json({ ok: false, error: insErr.message });
-
-    // Auto-flush this queued SMS
-    let flushResult = null;
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      const cronKey = process.env.CRON_SECRET || process.env.AUTOMATION_CRON_KEY || '';
-      
-      // Always try to flush - endpoint handles auth (dev mode allows no key)
-      const flushUrl = cronKey 
-        ? `${siteUrl}/api/smsglobal/flush-queue?key=${encodeURIComponent(cronKey)}&limit=1`
-        : `${siteUrl}/api/smsglobal/flush-queue?limit=1`;
-      
-      const flushResponse = await fetch(flushUrl, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+    if (!result.ok) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: "Failed to send SMS",
+        detail: result.body,
+        http_status: result.http
       });
-      flushResult = await flushResponse.json();
-      
-      if (!flushResult?.ok) {
-        console.warn('Auto-flush returned non-ok:', flushResult);
-      }
-    } catch (flushErr) {
-      // Flush error doesn't fail the response, but log it
-      console.error('Auto-flush SMS fetch failed:', flushErr?.message || flushErr);
     }
 
+    // Return success with provider details
     return res.status(200).json({ 
       ok: true, 
-      queued: 1, 
-      row: inserted,
-      auto_flush: flushResult?.ok ? { sent: flushResult?.debug?.sent || 0 } : { attempt_made: true }
+      sent: true,
+      destination: result.destination,
+      origin: result.used_origin,
+      provider_response: result.body,
+      lead_name: leadName || undefined
     });
   } catch (e) {
+    console.error("SMSSend error:", e);
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }

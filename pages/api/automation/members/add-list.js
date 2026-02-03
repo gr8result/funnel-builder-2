@@ -1,19 +1,18 @@
 // /pages/api/automation/members/add-list.js
-// FULL REPLACEMENT
+// FULL REPLACEMENT — combines best of both approaches
 //
-// ✅ Correct ownership check:
-//    - automation_flows.user_id is accounts.id
-//    - request user is auth.users.id
-//    - so we map auth uid -> accounts.id and compare to flow.user_id
+// ✅ Imports automation members from leads.list_id (authoritative source)
+// ✅ Multi-tenant safe (user must own the flow + leads)
+// ✅ Correct ownership check: maps auth uid -> accounts.id and compares to flow.user_id
+// ✅ Idempotent: won't duplicate members, handles user_id column gracefully
 //
-// ✅ Correct list membership source:
-//    - Imports leads via public.lead_list_members (NOT leads.list_id, NOT email_list_members)
+// Expects JSON body:
+//  { "flow_id": "<uuid>", "list_id": "<uuid>" }
 //
-// ✅ Inserts automation_flow_members with:
-//    - user_id = auth uid (matches your automation_flow_members schema)
-//    - flow_id, lead_id
-//
-// ✅ Idempotent via upsert on (flow_id, lead_id)
+// Requires env:
+//  NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
+//  SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE / SUPABASE_SERVICE_KEY / SUPABASE_SERVICE)
+//  NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -125,56 +124,106 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3) Pull lead_ids from lead_list_members for this list
-    // and join to leads to ensure the leads belong to the same auth user.
-    const { data: rows, error: rowsErr } = await supabaseAdmin
-      .from("lead_list_members")
-      .select("lead_id, leads!lead_list_members_lead_id_fkey!inner(id,user_id)")
+    // 3) Pull leads from leads.list_id (the authoritative source)
+    const { data: leads, error: leadsErr } = await supabaseAdmin
+      .from("leads")
+      .select("id,user_id,email,name,list_id")
+      .eq("user_id", user.id)
       .eq("list_id", list_id)
-      .eq("leads.user_id", user.id)
-      .limit(10000);
+      .limit(5000);
 
-    if (rowsErr) throw rowsErr;
+    if (leadsErr) throw leadsErr;
 
-    const leadIds = (rows || []).map((r) => r.lead_id).filter(Boolean);
+    const leadIds = (leads || []).map((l) => l.id).filter(Boolean);
 
-    if (!leadIds.length) {
+    if (leadIds.length === 0) {
       return res.json({
         ok: true,
-        flow_id,
-        list_id,
         imported: 0,
         skipped: 0,
-        message: "No leads found in that list for this user (lead_list_members -> leads.user_id).",
+        message: "No leads found in that list (using leads.list_id).",
       });
     }
 
-    // 4) Upsert into automation_flow_members (your table requires user_id, flow_id, lead_id)
-    // NOTE: this requires a UNIQUE constraint on (flow_id, lead_id) for onConflict to work properly.
-    const now = new Date().toISOString();
-    const payload = leadIds.map((lead_id) => ({
-      user_id: user.id, // auth uid
-      flow_id,
-      lead_id,
-      status: "active",
-      source: "list_import",
-      created_at: now,
-      updated_at: now,
-    }));
+    // 4) Insert into automation_flow_members with graceful user_id handling
+    let imported = 0;
+    let skipped = 0;
 
-    const { error: upErr } = await supabaseAdmin
-      .from("automation_flow_members")
-      .upsert(payload, { onConflict: "flow_id,lead_id" });
+    for (const leadId of leadIds) {
+      // Check if already exists
+      const { data: existing, error: exErr } = await supabaseAdmin
+        .from("automation_flow_members")
+        .select("id")
+        .eq("flow_id", flow_id)
+        .eq("lead_id", leadId)
+        .maybeSingle();
 
-    if (upErr) throw upErr;
+      if (exErr) throw exErr;
+
+      if (existing?.id) {
+        skipped++;
+        continue;
+      }
+
+      // Try insert with user_id first (preferred)
+      const { error: insErr } = await supabaseAdmin.from("automation_flow_members").insert({
+        flow_id,
+        lead_id: leadId,
+        user_id: user.id, // auth uid
+        status: "active",
+        source: "list_import",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (insErr) {
+        // If user_id column doesn't exist or causes issues, retry without it
+        if (String(insErr.message || "").toLowerCase().includes("user_id")) {
+          const { error: ins2Err } = await supabaseAdmin.from("automation_flow_members").insert({
+            flow_id,
+            lead_id: leadId,
+            status: "active",
+            source: "list_import",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+          if (ins2Err) throw ins2Err;
+        } else {
+          throw insErr;
+        }
+      }
+
+      imported++;
+    }
+
+    // 5) Automatically trigger the automation engine to start processing these new members
+    if (imported > 0) {
+      try {
+        const tickUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/automation/engine/tick`;
+        const cron_secret = process.env.AUTOMATION_CRON_SECRET || process.env.AUTOMATION_CRON_KEY || process.env.CRON_SECRET || "";
+        
+        // Fire and forget - don't block the response
+        fetch(tickUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-cron-key": cron_secret,
+          },
+          body: JSON.stringify({ flow_id, arm: "yes", max: 100 }),
+        }).catch((err) => console.error("Auto-tick failed:", err));
+      } catch (tickErr) {
+        console.error("Failed to trigger automation:", tickErr);
+        // Don't fail the response - import was successful
+      }
+    }
 
     return res.json({
       ok: true,
       flow_id,
       list_id,
-      imported: leadIds.length,
-      skipped: 0,
-      note: "Upsert used (duplicates automatically ignored).",
+      imported,
+      skipped,
+      total_in_list: leadIds.length,
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: msg(e) });

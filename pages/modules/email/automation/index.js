@@ -75,6 +75,9 @@ function AutomationBuilder() {
 
   const [membersOpen, setMembersOpen] = useState(false);
 
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const fileInputRef = useRef();
   const fileButtonRef = useRef();
@@ -93,9 +96,84 @@ function AutomationBuilder() {
   const [nodeStats, setNodeStats] = useState({});
   const [triggerActive, setTriggerActive] = useState(0);
 
+  const [queueStatus, setQueueStatus] = useState(null);
+  const [flushingQueue, setFlushingQueue] = useState(false);
+
   const toastMsg = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2000);
+  };
+
+  const handleNodeClick = (nodeId, nodeData) => {
+    // Handle node click if needed
+  };
+
+  const fetchQueueStatus = async () => {
+    try {
+      const res = await fetch(`/api/automation/email/queue-health`);
+      const data = await res.json();
+      setQueueStatus(data);
+    } catch (err) {
+      console.error('Failed to fetch queue status:', err);
+    }
+  };
+
+  const flushQueue = async () => {
+    if (!confirm('Send all pending queued emails now?')) return;
+    
+    setFlushingQueue(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/automation/email/flush-queue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-cron-key': process.env.NEXT_PUBLIC_CRON_SECRET || '',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const result = await res.json();
+      if (result.ok) {
+        toastMsg(`✅ Sent ${result.debug?.sent || 0} emails`);
+        await fetchQueueStatus(); // Refresh status
+      } else {
+        alert('Flush failed: ' + (result.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Error flushing queue: ' + err.message);
+    } finally {
+      setFlushingQueue(false);
+    }
+  };
+
+  const resetFlow = async () => {
+    if (!flowId) {
+      alert("No flow selected");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const res = await fetch(`/api/automation/flows/${flowId}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm_deletion: true }),
+      });
+
+      const result = await res.json();
+      if (result.ok) {
+        toastMsg("✅ Flow data cleared!");
+        setResetConfirmOpen(false);
+        await fetchNodeStats(); // Refresh stats
+      } else {
+        alert("Reset failed: " + (result.error || "Unknown error"));
+      }
+    } catch (err) {
+      alert("Error resetting flow: " + err.message);
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const getToken = useCallback(async () => {
@@ -244,6 +322,8 @@ function AutomationBuilder() {
         ...n,
         data: {
           ...n.data,
+          onNodeClick: handleNodeClick,
+          type: n.type,
           color:
             n.type === "trigger"
               ? triggerColor
@@ -407,22 +487,44 @@ function AutomationBuilder() {
 
       setNodes((nds) =>
         nds.map((n) => {
+          const countAtNode = (j.counts || {})[n.id] || 0;
           if (n.type === "trigger") {
             return {
               ...n,
               data: { ...n.data, activeCount: Number(j.trigger_active || 0) },
             };
           }
-          if (n.type !== "email") return n;
+          if (n.type === "email") {
             const s = (j.stats || {})?.[n.id] || {
               processed: 0,
               delivered: 0,
               opened: 0,
               clicked: 0,
-              bounced: 0,
-              unsubscribed: 0,
             };
-          return { ...n, data: { ...n.data, stats: s } };
+            return { 
+              ...n, 
+              data: { 
+                ...n.data, 
+                stats: s, 
+                count: countAtNode,
+                activeMembers: countAtNode, // Show how many members are at this node
+                onNodeClick: handleNodeClick, // Pass click handler to open members modal
+              } 
+            };
+          }
+          if (n.type === "condition") {
+            const s = (j.stats || {})?.[n.id] || {};
+            return { 
+              ...n, 
+              data: { 
+                ...n.data, 
+                activeMembers: s.activeMembers || 0,
+                hoursRemaining: s.hoursRemaining || null,
+                waitHours: s.waitHours || 24,
+              } 
+            };
+          }
+          return { ...n, data: { ...n.data, count: countAtNode } };
         })
       );
     } catch {}
@@ -769,23 +871,68 @@ function AutomationBuilder() {
               <span style={{ color: "#22c55e", marginLeft: 10 }}>
                 (Active: {triggerActive})
               </span>
+              {queueStatus?.queue?.counts?.pending > 0 && (
+                <span style={{ color: "#f59e0b", marginLeft: 10 }}>
+                  📧 {queueStatus.queue.counts.pending} queued
+                </span>
+              )}
             </div>
 
-            <button
-              onClick={saveFlow}
-              style={{
-                background: "#22c55e",
-                border: "none",
-                color: "#071022",
-                padding: "8px 14px",
-                borderRadius: 999,
-                fontWeight: 900,
-                cursor: "pointer",
-                boxShadow: "0 0 18px rgba(34,197,94,0.18)",
-              }}
-            >
-              💾 Save
-            </button>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button
+                onClick={() => setResetConfirmOpen(true)}
+                title="Clear all runs, queued emails, and members for this flow only"
+                style={{
+                  background: "#7c3aed",
+                  border: "none",
+                  color: "#ffffff",
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  boxShadow: "0 0 12px rgba(124, 58, 237, 0.2)",
+                }}
+              >
+                🔄 Reset Flow
+              </button>
+
+              {queueStatus?.queue?.counts?.pending > 0 && (
+                <button
+                  onClick={flushQueue}
+                  disabled={flushingQueue}
+                  style={{
+                    background: "#f59e0b",
+                    border: "none",
+                    color: "#ffffff",
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    fontWeight: 900,
+                    cursor: flushingQueue ? "not-allowed" : "pointer",
+                    boxShadow: "0 0 18px rgba(245,158,11,0.18)",
+                    opacity: flushingQueue ? 0.6 : 1,
+                  }}
+                >
+                  {flushingQueue ? "⏳ Sending..." : "📤 Flush Queue"}
+                </button>
+              )}
+
+              <button
+                onClick={saveFlow}
+                style={{
+                  background: "#22c55e",
+                  border: "none",
+                  color: "#071022",
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  boxShadow: "0 0 18px rgba(34,197,94,0.18)",
+                }}
+              >
+                💾 Save
+              </button>
+            </div>
           </div>
 
           <div
@@ -829,6 +976,7 @@ function AutomationBuilder() {
           flowName={flowName}
           onOpenLead={openLeadFromMembers}
           getToken={getToken}
+          onMembersChanged={fetchNodeStats}
         />
       )}
 
@@ -891,6 +1039,100 @@ function AutomationBuilder() {
         />
       )}
 
+      {resetConfirmOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+          }}
+          onClick={() => !isResetting && setResetConfirmOpen(false)}
+        >
+          <div
+            style={{
+              background: "#1a1f2e",
+              border: "2px solid #ef4444",
+              borderRadius: 12,
+              padding: 32,
+              maxWidth: 500,
+              color: "#e5e7eb",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 16px 0", color: "#ef4444", fontSize: 24 }}>
+              ⚠️ Reset Flow Data?
+            </h2>
+
+            <p style={{ margin: "0 0 12px 0", lineHeight: 1.6 }}>
+              You are about to <strong>permanently delete</strong> all data for flow:
+            </p>
+
+            <p style={{ margin: "12px 0 24px 0", background: "#020617", padding: 12, borderRadius: 8, color: "#93c5fd", fontWeight: 600 }}>
+              {flowName || "Untitled Flow"}
+            </p>
+
+            <p style={{ margin: "0 0 24px 0", lineHeight: 1.6, color: "#fca5a5" }}>
+              <strong>This will delete:</strong>
+              <ul style={{ margin: "8px 0 0 0", paddingLeft: 20 }}>
+                <li>All automation runs ({triggerActive} active)</li>
+                <li>All queued emails ({queueStatus?.queue?.counts?.pending || 0} pending)</li>
+                <li>All flow members</li>
+                <li>All activity logs</li>
+              </ul>
+            </p>
+
+            <p style={{ margin: "0 0 24px 0", background: "#7c2d12", padding: 12, borderRadius: 8, color: "#fcd34d" }}>
+              ⛔ <strong>This action CANNOT be undone.</strong> Data will be permanently lost.
+            </p>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setResetConfirmOpen(false)}
+                disabled={isResetting}
+                style={{
+                  background: "#374151",
+                  border: "none",
+                  color: "#e5e7eb",
+                  padding: "10px 20px",
+                  borderRadius: 6,
+                  cursor: isResetting ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                  opacity: isResetting ? 0.6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={resetFlow}
+                disabled={isResetting}
+                style={{
+                  background: "#ef4444",
+                  border: "none",
+                  color: "#ffffff",
+                  padding: "10px 20px",
+                  borderRadius: 6,
+                  cursor: isResetting ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                  boxShadow: "0 0 12px rgba(239, 68, 68, 0.3)",
+                  opacity: isResetting ? 0.7 : 1,
+                }}
+              >
+                {isResetting ? "⏳ Resetting..." : "🗑️ Delete All Data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeNode?.type === "trigger" && (
         <TriggerNodeDrawer
           node={activeNode}
@@ -924,6 +1166,8 @@ function AutomationBuilder() {
         />
       )}
 
+
+
       {showColorModal && (
         <NodeColorModal
           initialColors={{
@@ -948,6 +1192,7 @@ function FlowMembersModal({
   flowName,
   onOpenLead,
   getToken,
+  onMembersChanged,
 }) {
   const [lists, setLists] = useState([]);
   const [selectedListId, setSelectedListId] = useState("");
@@ -1020,6 +1265,14 @@ function FlowMembersModal({
     }
   }, [flowId, getToken]);
 
+  // ✨ NEW: Reload members and lists when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadLists();
+      loadMembers();
+    }
+  }, [isOpen, flowId, loadLists, loadMembers]);
+
   const importSelectedList = useCallback(async () => {
     if (!flowId) return;
     if (!selectedListId) return toastMsg("Pick a list first.");
@@ -1087,12 +1340,17 @@ function FlowMembersModal({
       }
 
       await loadMembers();
+      // Refresh stats immediately to show updated counts
+      if (onMembersChanged) {
+        await new Promise(r => setTimeout(r, 500));
+        onMembersChanged();
+      }
     } catch (e) {
       toastMsg(`Import failed: ${e?.message || String(e)}`);
     } finally {
       setBusy(false);
     }
-  }, [flowId, selectedListId, getToken, loadMembers]);
+  }, [flowId, selectedListId, getToken, loadMembers, onMembersChanged]);
 
   const deleteMember = useCallback(
     async (leadId) => {
@@ -1141,8 +1399,9 @@ function FlowMembersModal({
   useEffect(() => {
     if (!isOpen) return;
     loadLists();
-    loadMembers();
-  }, [isOpen, loadLists, loadMembers]);
+    // DISABLED: Don't auto-reload members on open - causes deleted members to reappear
+    // loadMembers();
+  }, [isOpen, loadLists]);
 
   if (!isOpen) return null;
 
