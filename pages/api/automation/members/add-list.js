@@ -129,7 +129,7 @@ export default async function handler(req, res) {
     // and join to leads to ensure the leads belong to the same auth user.
     const { data: rows, error: rowsErr } = await supabaseAdmin
       .from("lead_list_members")
-      .select("lead_id, leads!inner(id,user_id)")
+      .select("lead_id, leads!lead_list_members_lead_id_fkey!inner(id,user_id)")
       .eq("list_id", list_id)
       .eq("leads.user_id", user.id)
       .limit(10000);
