@@ -11,11 +11,54 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../../../utils/supabase-client";
 import styles from "../../../../styles/email-crm.module.css";
+import { exportFullHtml, extractEmailSettings } from "../../../../components/email/editor2/EmailEditor";
 
 const EMAIL_TYPES = ["broadcast", "autoresponders", "templates"];
 const lsKey = (type) => "gr8:new-email:" + (type || "broadcast");
 const isEmail = (v) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+const normalizeSavedEmailLabel = (value = "") =>
+  String(value || "")
+    .replace(/\.(html?|json)$/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+function getStorageAssetBase(path = "", bucket = "email-user-assets") {
+  const cleanPath = String(path || "").trim().replace(/^\/+/, "");
+  const supabaseUrl =
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) ||
+    (typeof process !== "undefined" && process.env.SUPABASE_URL) ||
+    "";
+
+  if (!cleanPath || !supabaseUrl) return "";
+
+  const slashIndex = cleanPath.lastIndexOf("/");
+  const dir = slashIndex >= 0 ? cleanPath.slice(0, slashIndex + 1) : "";
+  return `${String(supabaseUrl).replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${dir}`;
+}
+
+function resolveAssetUrl(value = "", assetBase = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(data:|mailto:|tel:|#)/i.test(raw) || raw.startsWith("{{") || raw.startsWith("{{{")) return raw;
+  if (raw.startsWith("//")) return `https:${raw}`;
+  if (/^https?:/i.test(raw)) return raw.replace(/^http:/i, "https:");
+  if (!assetBase) return raw;
+
+  const cleanBase = String(assetBase).replace(/\/+$/, "");
+  const cleanPath = raw.replace(/^\.\//, "").replace(/^\//, "");
+  return `${cleanBase}/${cleanPath}`;
+}
+
+function rewriteAssetUrls(html = "", assetBase = "") {
+  const input = String(html || "");
+  if (!input || !assetBase) return input;
+
+  return input
+    .replace(/src=(["'])(?!data:|mailto:|tel:|#|\/\/|https?:|\{)([^"']+)\1/gi, (_, quote, url) => `src=${quote}${resolveAssetUrl(url, assetBase)}${quote}`)
+    .replace(/url\((["']?)(?!data:|#|\/\/|https?:|\{)([^"')]+)\1\)/gi, (_, quote, url) => `url(${quote}${resolveAssetUrl(url, assetBase)}${quote})`);
+}
 
 const initialForm = {
   name: "",
@@ -106,11 +149,36 @@ export default function CreateEmail() {
       } = await supabase.auth.getUser();
       if (!user || cancelled) return;
 
+      let accountBrand = null;
+      try {
+        const { data } = await supabase
+          .from("accounts")
+          .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, sendgrid_from_email, from_email")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        accountBrand = data || null;
+      } catch {}
+
+      const defaultFromName =
+        accountBrand?.sendgrid_from_name ||
+        accountBrand?.from_name ||
+        accountBrand?.brand_name ||
+        accountBrand?.business_name ||
+        accountBrand?.company_name ||
+        user.user_metadata?.full_name ||
+        "";
+
+      const defaultFromEmail =
+        accountBrand?.sendgrid_from_email ||
+        accountBrand?.from_email ||
+        user.email ||
+        "";
+
       // ✅ Always seed defaults so fromEmail is never blank
       setForm((f) => ({
         ...f,
-        fromName: f.fromName || user.user_metadata?.full_name || "",
-        fromEmail: f.fromEmail || user.email || "",
+        fromName: f.fromName || defaultFromName,
+        fromEmail: f.fromEmail || defaultFromEmail,
         replyTo: f.replyTo || user.email || "",
       }));
       setTestEmail(user.email || "");
@@ -136,22 +204,59 @@ export default function CreateEmail() {
         if (cancelled) return;
         setSavedEmailsLoading(true);
 
-        const basePrefix = `${user.id}/finished-emails`;
-        const { data: files, error: filesError } = await supabase.storage
-          .from("email-user-assets")
-          .list(basePrefix, { limit: 500 });
+        const [docsRes, legacyRes] = await Promise.allSettled([
+          fetch(`/api/email/builder-doc-list?userId=${encodeURIComponent(user.id)}`),
+          fetch(`/api/email/list-saved-emails?userId=${encodeURIComponent(user.id)}`),
+        ]);
 
         if (!cancelled) {
-          if (!filesError && Array.isArray(files)) {
-            const htmlFiles = files.filter((f) =>
-              (f.name || "").toLowerCase().endsWith(".html")
-            );
-            setSavedEmails(
-              htmlFiles.map((f) => ({
-                label: f.name.replace(/\.html$/i, ""),
-                path: `${basePrefix}/${f.name}`,
-              }))
-            );
+          const mapped = [];
+
+          if (docsRes.status === "fulfilled") {
+            const docsJson = await docsRes.value.json().catch(() => null);
+            if (docsRes.value.ok && docsJson?.ok) {
+              for (const doc of docsJson.docs || []) {
+                mapped.push({
+                  label: doc.name || "Untitled Email",
+                  path: `doc:${String(doc.docId || "")}`,
+                  type: "doc",
+                  htmlUrl: String(doc.htmlUrl || ""),
+                });
+              }
+            }
+          }
+
+          if (legacyRes.status === "fulfilled") {
+            const legacyJson = await legacyRes.value.json().catch(() => null);
+            if (legacyRes.value.ok && legacyJson?.ok) {
+              for (const file of legacyJson.files || []) {
+                mapped.push({
+                  label: file.name || file.filename || file.path,
+                  path: String(file.path || file.id || ""),
+                  type: "legacy",
+                });
+              }
+            }
+          }
+
+          if (mapped.length) {
+            const preferred = new Map();
+
+            for (const entry of mapped) {
+              const key = normalizeSavedEmailLabel(entry.label || entry.path || "");
+              const existing = preferred.get(key);
+              if (!existing || (entry.type === "doc" && existing.type !== "doc")) {
+                preferred.set(key, entry);
+              }
+            }
+
+            const deduped = Array.from(preferred.values()).map((entry) => ({
+              ...entry,
+              label: `${entry.label}${entry.type === "doc" ? " (Builder)" : " (Legacy HTML)"}`,
+            }));
+
+            deduped.sort((a, b) => String(a.label || "").localeCompare(String(b.label || "")));
+            setSavedEmails(deduped);
             setSavedEmailsError("");
           } else {
             setSavedEmails([]);
@@ -205,9 +310,9 @@ export default function CreateEmail() {
               fromName:
                 bcast.from_name ||
                 f.fromName ||
-                user.user_metadata?.full_name ||
+                defaultFromName ||
                 "",
-              fromEmail: bcast.from_email || f.fromEmail || user.email || "",
+              fromEmail: bcast.from_email || f.fromEmail || defaultFromEmail || "",
               replyTo: bcast.reply_to || f.replyTo || user.email || "",
               audienceType: audienceTypeFromDb || "emails",
               audience:
@@ -296,19 +401,69 @@ export default function CreateEmail() {
     setForm((f) => ({ ...f, savedEmailPath: path }));
 
     try {
-      const bucket = supabase.storage.from("email-user-assets");
-      const { data, error } = await bucket.download(path);
-      if (error || !data) {
-        alert("Could not load selected email content.");
-        return;
-      }
-
-      const text = await data.text();
+      const text = await loadSavedEmailHtml(path);
       setForm((f) => ({ ...f, bodyHtml: text, body: text }));
     } catch {
       alert("Could not load selected email content.");
     }
   };
+
+  const loadSavedEmailHtml = async (path) => {
+    const selected = savedEmails.find((email) => email.path === path);
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+
+    if (selected?.type === "doc") {
+      const docId = String(path || "").replace(/^doc:/, "").trim();
+      const response = await fetch(
+        `/api/email/builder-doc-load?userId=${encodeURIComponent(currentUser?.id || "")}&docId=${encodeURIComponent(docId)}`
+      );
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok || !Array.isArray(payload?.doc?.blocks)) {
+        throw new Error("Could not load selected email content.");
+      }
+
+      const savedBlocks = Array.isArray(payload.doc.blocks) ? payload.doc.blocks : [];
+      const emailName = String(payload?.doc?.name || selected?.label || "Email");
+      return exportFullHtml(savedBlocks, emailName, extractEmailSettings(savedBlocks));
+    }
+
+    const bucket = supabase.storage.from("email-user-assets");
+    const { data, error } = await bucket.download(path);
+    if (error || !data) {
+      throw new Error("Could not load selected email content.");
+    }
+
+    const html = await data.text();
+    return rewriteAssetUrls(html, getStorageAssetBase(path));
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!form.savedEmailPath) return;
+
+      try {
+        const latestHtml = await loadSavedEmailHtml(form.savedEmailPath);
+        if (!cancelled) {
+          setForm((f) => {
+            if ((f.bodyHtml || f.body || "") === latestHtml) return f;
+            return { ...f, bodyHtml: latestHtml, body: latestHtml };
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedEmailsError("Could not refresh the selected saved email.");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.savedEmailPath, savedEmails]);
 
   const errors = useMemo(() => {
     const err = {};
@@ -521,7 +676,9 @@ export default function CreateEmail() {
         sendAt = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
       }
 
-      const html = (form.bodyHtml || form.body || "").trim();
+      const html = form.savedEmailPath
+        ? (await loadSavedEmailHtml(form.savedEmailPath)).trim()
+        : (form.bodyHtml || form.body || "").trim();
       const subject = (form.subject || "").trim();
 
       let recipients = [];
@@ -663,7 +820,9 @@ export default function CreateEmail() {
         return;
       }
 
-      const html = (form.bodyHtml || form.body || "").trim();
+      const html = form.savedEmailPath
+        ? (await loadSavedEmailHtml(form.savedEmailPath)).trim()
+        : (form.bodyHtml || form.body || "").trim();
       const subject = (form.subject || "").trim();
 
       const safeFromEmail = (form.fromEmail || user.email || "").trim();
@@ -831,7 +990,7 @@ export default function CreateEmail() {
         </div>
 
         <Link
-          href="/modules/email/broadcast/view"
+          href="/modules/email/"
           style={{
             background: "#111",
             color: "#fff",
@@ -916,6 +1075,9 @@ export default function CreateEmail() {
                 {errors.fromEmail}
               </div>
             )}
+            <div style={{ fontSize: 13, opacity: 0.72, marginTop: 6 }}>
+              Delivery uses the platform's verified sender address until your domain is authenticated. Recipients will still see your business name and replies go to your reply-to address.
+            </div>
           </div>
 
           <div className={styles.field}>
@@ -1243,9 +1405,16 @@ export default function CreateEmail() {
                 }}
               >
                 {form.bodyHtml || form.body ? (
-                  <div
-                    style={{ background: "#ffffff", margin: "0 auto" }}
-                    dangerouslySetInnerHTML={{ __html: form.bodyHtml || form.body }}
+                  <iframe
+                    title="Broadcast email preview"
+                    srcDoc={form.bodyHtml || form.body}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      minHeight: 520,
+                      border: 0,
+                      background: "#ffffff",
+                    }}
                   />
                 ) : (
                   <div style={{ fontSize: 16, opacity: 0.7, color: "#111827" }}>

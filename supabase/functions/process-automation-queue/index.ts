@@ -3,7 +3,7 @@
 // ✅ Auth: x-cron-secret must match EMAIL_QUEUE_SECRET or CRON_SECRET (if either is set)
 // ✅ Env: SUPABASE_URL/PROJECT_URL + SUPABASE_SERVICE_ROLE_KEY/SERVICE_ROLE_KEY
 // ✅ Env: SENDGRID_API_KEY or GR8_MAIL_SEND_ONLY
-// ✅ Processes public.email_campaigns_queue where status in (queued, scheduled), processing=false, scheduled_at <= now
+// ✅ Processes public.automation_email_queue where status in (queued, scheduled), processing=false, scheduled_at <= now
 // ✅ Updates rows to sent/error with sendgrid_message_id + last_error
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
@@ -113,7 +113,7 @@ serve(async (req) => {
 
     // ---- load due jobs ----
     const { data: jobs, error: jobsErr } = await supabase
-      .from("email_campaigns_queue")
+      .from("automation_email_queue")
       .select(
         [
           "id",
@@ -158,7 +158,7 @@ serve(async (req) => {
 
       // claim
       await supabase
-        .from("email_campaigns_queue")
+        .from("automation_email_queue")
         .update({
           processing: true,
           claimed_at: nowISO(),
@@ -207,7 +207,7 @@ serve(async (req) => {
         }
 
         await supabase
-          .from("email_campaigns_queue")
+          .from("automation_email_queue")
           .update({
             status: "sent",
             sent_at: nowISO(),

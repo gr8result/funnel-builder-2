@@ -1,0 +1,21 @@
+You've found the secret!
+
+Email not displaying correctly? View it ( {{Weblink}} ) in your browser.
+
+Welcome to the family!
+
+You've found a community of travelers that are just like you.
+
+We don't want to be stuck in tourist traps that isolate us from vibrant, local experiences. We want to discover the hidden gems and less-traveled roads of our next destination.
+
+Ready for your next authentic travel experience?
+
+Browse Gallery
+
+( https://www.facebook.com/sendgrid/ ) ( https://twitter.com/sendgrid?ref_src=twsrc%5egoogle%7ctwcamp%5eserp%7ctwgr%5eauthor ) ( https://www.instagram.com/sendgrid/?hl=en ) ( https://www.pinterest.com/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )

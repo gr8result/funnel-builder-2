@@ -1,0 +1,19 @@
+Ingrid & Anders knows your style!
+
+Email not displaying correctly? View it ( {{Weblink}} ) in your browser.
+
+*Welcome to Ingrid & Anders!*
+
+Thanks for signing up to our newsletter! We couldn't be more thrilled to have you as a customer. We hope you love browsing our unique collection of boutique clothing as much as we do.
+
+*Hungry for style inspiration?*
+
+Start Shopping!
+
+( https://facebook.com ) ( https://twitter.com ) ( https://instagram.com ) ( https://www.pinterest.com/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )

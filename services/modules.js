@@ -4,6 +4,7 @@
 export const MODULES = [
   { slug: "automation",  name: "Automation",            env: "NEXT_PUBLIC_PRICE_AUTOMATION"  },
   { slug: "email",       name: "Email marketing",       env: "NEXT_PUBLIC_PRICE_EMAIL"       },
+  { slug: "sms",         name: "SMS Marketing",         env: "NEXT_PUBLIC_PRICE_SMS"         },
   { slug: "affiliates",  name: "Affiliate management",  env: "NEXT_PUBLIC_PRICE_AFFILIATES"  },
   { slug: "products",    name: "Physical products",     env: "NEXT_PUBLIC_PRICE_PRODUCTS"    },
   { slug: "courses",     name: "Online courses",        env: "NEXT_PUBLIC_PRICE_COURSES"     },

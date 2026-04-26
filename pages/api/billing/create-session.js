@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { lineItems } = req.body;
+    const { lineItems, metadata = {} } = req.body;
 
     // 🛡 Validate payload
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
@@ -38,11 +38,35 @@ export default async function handler(req, res) {
     }
 
     // 🧾 Create Stripe session
+    const successParts = ["session_id={CHECKOUT_SESSION_ID}"];
+    if (metadata.emailPlan) {
+      successParts.push(`emailPlan=${encodeURIComponent(String(metadata.emailPlan))}`);
+    }
+    if (metadata.smsPlan) {
+      successParts.push(`smsPlan=${encodeURIComponent(String(metadata.smsPlan))}`);
+    }
+    if (metadata.calendarPlan) {
+      successParts.push(`calendarPlan=${encodeURIComponent(String(metadata.calendarPlan))}`);
+    }
+    if (metadata.socialPlan) {
+      successParts.push(`socialPlan=${encodeURIComponent(String(metadata.socialPlan))}`);
+    }
+    if (metadata.selected) {
+      successParts.push(`selected=${encodeURIComponent(String(metadata.selected))}`);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: formattedItems,
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      metadata: {
+        emailPlan: metadata.emailPlan ? String(metadata.emailPlan) : "",
+        smsPlan: metadata.smsPlan ? String(metadata.smsPlan) : "",
+        calendarPlan: metadata.calendarPlan ? String(metadata.calendarPlan) : "",
+        socialPlan: metadata.socialPlan ? String(metadata.socialPlan) : "",
+        selected: metadata.selected ? String(metadata.selected) : "",
+      },
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?${successParts.join("&")}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/cancel`,
     });
 

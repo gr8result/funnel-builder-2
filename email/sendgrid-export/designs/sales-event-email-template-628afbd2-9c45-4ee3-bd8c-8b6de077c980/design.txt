@@ -1,0 +1,25 @@
+Trouble viewing this email? Try it in the browser. ( {{weblink}} )
+
+Clearance ( http://www.google.com )
+
+Weekly Catalouge ( http://www.google.com )
+
+Locations ( http://www.google.com )
+
+*Up to 80% off* all items in the store and online!
+
+*TROPICANA* Outdoor Set
+Sale $259 Normally $329
+
+*CIRCA* Living Room Set
+Sale $599 Normally $799
+
+Shop Now
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

@@ -1,0 +1,28 @@
+Thanks for signing up, Jane!
+
+Please verify your email address to get access to thousands of exclusive job listings.
+*Thank you!*
+
+Verify Email Now
+
+*Here’s what happens next:*
+
+1. Upload your resume and we'll keep it on file for every job submission.
+
+2. Submit and edit personalized cover letters for every job you apply to.
+
+3. Get access to our career coaches when you need 1:1 help with your job application.
+*+ much more!*
+
+Need support? Our support team is always
+ready to help!
+
+Contact Support
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

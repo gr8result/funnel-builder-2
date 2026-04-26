@@ -3,7 +3,7 @@
 // Editable contact fields, same layout.
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../utils/supabase-client";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function LeadInfoCard({
   lead,
@@ -144,6 +144,8 @@ export default function LeadInfoCard({
         color: "#e5e7eb",
         fontFamily:
           'Arial, "Helvetica Neue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        height: "100%",
+        minHeight: 0,
       }}
     >
       {/* HEADER */}
@@ -260,6 +262,11 @@ export default function LeadInfoCard({
           padding: "10px 12px 12px",
           gap: 10,
           display: "grid",
+          alignContent: "start",
+          overflowY: "auto",
+          flex: 1,
+          minHeight: 0,
+          maxHeight: "100%",
         }}
       >
         {/* Name */}

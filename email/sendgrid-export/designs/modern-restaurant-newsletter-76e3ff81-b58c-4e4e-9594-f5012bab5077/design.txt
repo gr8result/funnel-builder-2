@@ -1,0 +1,41 @@
+VIEW EMAIL IN BROWSER
+
+Spring Special at Modern Eats
+
+As spring rolls in, so do our seasonal dishes. Join us every Thursday night in April to celebrate the new menu, live music, and a cooking class.
+
+LEARN MORE
+
+SPRING MENU
+
+Come try our spring menu that uses seasonal ingredients to create a fresh flavor.
+
+WINE TASTING
+
+We feature different wine tasting themes every week, providing various types of wine.
+
+WEEKLY SPECIALS
+
+Want to discover some new food with friends? We have a special menu every week tailored by our team!
+
+LIVE MUSIC
+
+Come for the food and stay for the music. Enjoy live music every weekend from 6pm to 9pm.
+
+SCHEDULE
+
+COOKING CLASS
+
+Let our team of talented chefs teach you the skills of the trade. You'll walk away with a handful of recipes and new know-how for cooking.
+
+RESERVE NOW
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

@@ -1,0 +1,23 @@
+Show What You Know!
+
+Email not displaying correctly? View it ( {{Weblink}} ) in your browser.
+
+************************
+*Welcome to SongRiddle!*
+************************
+
+*YOU'VE JOINED A COMMUNITY FOR MUSIC ENTHUSIASTS AND TRIVIA LOVERS.*
+
+Pick one of your favorite artists and start listening to their radio station. Soon, you’ll hear songs by similar artists…but we don’t reveal who they are! That’s the riddle, and your mission is to solve it.
+
+Guess the artist, get it right, and prove that you know your musical genre like no one else!
+
+PLAY TRIVIA!
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/?hl=en ) ( https://www.pinterest.com/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )

@@ -28,16 +28,15 @@ export default function BusinessAutomation() {
 
       {/* Coming Soon Content */}
       <div style={styles.contentBox}>
-        <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>
+        <h2 style={{ margin: 0, fontSize: 32, fontWeight: 600 }}>
           🚀 Coming Soon
         </h2>
-        <p style={{ fontSize: 18, opacity: 0.85, marginTop: 12 }}>
+        <p style={{ fontSize: 24, opacity: 0.85, marginTop: 12 }}>
           Visual workflow automation, triggers, AI actions, delays, webhooks and more.
+          <br/>
+          Expected Delivery July 2026
         </p>
-        <p style={{ fontSize: 16, opacity: 0.55 }}>
-          This module is currently being built and will roll out prior to launch.
-        </p>
-      </div>
+            </div>
     </div>
   );
 }

@@ -1,0 +1,63 @@
+Order Confirmation
+
+Order Number: TR3D52019
+
+Hi {( first_name }}, thanks for your order!
+
+We’ll get it to your doorstep as soon as possible! You'll get a shipping notification once your order has left our shop and is on the way to you!
+
+Shipping Information
+
+A full name
+1234 Address Road
+City, State 12345
+(123) 456 - 7890
+
+Express Shipping
+
+*James Cashmere Sweater*
+
+Style Number: 012345
+Color: Cream
+Size: M
+Price: $99.90
+Qty: 1
+Total: $99.90
+
+*Leonardo Button Down*
+
+Style Number: 019355
+Color: Parchment White
+Size: M
+Price: $49.90
+Qty: 2
+Total: $99.80
+
+Billing Information
+
+A full name
+1234 Address Road
+City, State 12345
+(123) 456 - 7890
+
+Payment Method: VISA 9876
+
+Order Summary
+
+Subtotal: $199.70
+Shipping: $10.00
+Tax: $18.70
+
+*Total: $228.40*
+
+Questions About Your Order?
+
+Contact Us ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

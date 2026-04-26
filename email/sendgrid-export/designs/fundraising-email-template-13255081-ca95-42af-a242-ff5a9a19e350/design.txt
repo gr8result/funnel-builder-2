@@ -1,0 +1,30 @@
+Give back to communities
+around the globe.
+
+100% of your donations go toward
+backpacks and basic supplies for children in need.
+
+To these kids, *every penny counts.*
+
+donate now
+
+What is Big Heart Backpacks?
+
+Big Heart Backpacks is a non-profit organization that buys backpacks for children in need and fills them with necessities such as: water, snacks, first aid kits, feminine hygiene products, school supplies, down jackets, lightweight blankets, solar powered light bulbs, and other essentials.
+
+Our team organizes trips to rural areas and villages in need to personall y deliver the backpacks.
+
+All of this is made possibly by you and your generous donations.
+
+Review frequently asked questions,
+volunteering info, and supplies lists
+
+Learn More
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

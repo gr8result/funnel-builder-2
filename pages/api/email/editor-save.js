@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     const templateId = String(req.body?.templateId || "").trim();
     const userId = String(req.body?.userId || "").trim();
     const blocks = Array.isArray(req.body?.blocks) ? req.body.blocks : [];
+    const html = typeof req.body?.html === "string" ? req.body.html : "";
 
     if (!templateId) {
       return res.status(400).json({ ok: false, error: "Missing templateId" });
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
 
     const path = `${userId}/${FOLDER}/${templateId}.json`;
     const payload = JSON.stringify(
-      { version: 1, templateId, userId, blocks, savedAt: new Date().toISOString() },
+      { version: 1, templateId, userId, blocks, html, savedAt: new Date().toISOString() },
       null,
       2
     );

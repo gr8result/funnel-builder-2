@@ -1,16 +1,12 @@
-// FULL REPLACEMENT — FIXES BROKEN ENDPOINT WIRING + REMOVES UNSUPPORTED "LIST/MANUAL CAMPAIGN" PATHS
+// FULL REPLACEMENT — FIXES BROKEN ENDPOINT WIRING + ENABLES LIST-BASED SMS CAMPAIGNS
 //
 // ✅ Keeps your existing structure + banner
-// ✅ Campaign queues into sms_queue via POST /api/smsglobal/launch-sequence (LEAD ONLY — matches your API)
-// ✅ Single sends via POST /api/smsglobal/SMSSend (lead_id OR manual to)
+// ✅ Campaign queues into sms_queue via POST /api/smsglobal/launch-sequence
+// ✅ Campaign supports audience.type === "lead" or "list"
+// ✅ Single sends via POST /api/smsglobal/send-single (lead_id OR manual to)
 // ✅ Emoji picker kept — BIG + stays open until you close it
 // ✅ Pulls lead_id from URL (?lead_id=...) and preselects Campaign + Single
 // ✅ IMPORTANT: Never sends empty Authorization header (cached tokenRef)
-//
-// NOTE (the actual fix):
-// Your /api/smsglobal/launch-sequence endpoint you pasted ONLY supports audience.type === "lead".
-// So this UI now ONLY allows Campaign = Lead.
-// (We removed Campaign List/Manual and Single List so it stops throwing errors.)
 
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -219,14 +215,28 @@ export default function SmsMarketingPage() {
 
   const [bannerError, setBannerError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [smsConfig, setSmsConfig] = useState(null);
+  const [smsUsage, setSmsUsage] = useState({ sent: 0, limit: 0, percentage: 0 });
+  const [smsPlanTier, setSmsPlanTier] = useState(null);
+
+  const SMS_PLAN_LABELS = {
+    'sms-starter':      'Starter — A$25/month',
+    'sms-growth':       'Growth — A$120/month',
+    'sms-professional': 'Professional — A$229/month',
+    'sms-business':     'Business — A$429/month',
+    'sms-enterprise':   'Enterprise — Contact Support',
+  };
 
   const [accessToken, setAccessToken] = useState("");
   const tokenRef = useRef("");
 
   const [leads, setLeads] = useState([]);
+  const [lists, setLists] = useState([]);
 
-  // Campaign audience (LEAD ONLY to match /api/smsglobal/launch-sequence)
+  // Campaign audience
+  const [campaignAudienceType, setCampaignAudienceType] = useState("lead");
   const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [selectedListId, setSelectedListId] = useState("");
 
   const [templates] = useState(DEFAULT_TEMPLATES);
 
@@ -310,6 +320,18 @@ export default function SmsMarketingPage() {
     });
   }, [leads]);
 
+  const listOptions = useMemo(() => {
+    const arr = Array.isArray(lists) ? lists : [];
+    return arr.map((item) => {
+      const count = Number(item?.subscriber_count || item?.count || 0);
+      const name = s(item?.name) || "Untitled list";
+      return {
+        id: item?.id,
+        label: count > 0 ? `${name} — ${count} contact${count === 1 ? "" : "s"}` : name,
+      };
+    });
+  }, [lists]);
+
   // ✅ keep token in sync even if session refreshes
   useEffect(() => {
     let alive = true;
@@ -365,16 +387,22 @@ export default function SmsMarketingPage() {
           throw new Error("Not logged in (missing session). Please refresh and log in again.");
         }
 
-        const leadRes = await apiGet("/api/crm/leads?limit=50000");
+        const [leadRes, listRes] = await Promise.all([
+          apiGet("/api/crm/leads?limit=50000"),
+          apiGet("/api/crm/lead-lists"),
+        ]);
         const leadArr = Array.isArray(leadRes?.leads) ? leadRes.leads : [];
+        const listArr = Array.isArray(listRes?.lists) ? listRes.lists : [];
 
         if (!alive) return;
 
         setLeads(leadArr);
+        setLists(listArr);
 
         const qLead = s(router?.query?.lead_id);
 
         if (qLead) {
+          setCampaignAudienceType("lead");
           setSelectedLeadId(qLead);
           setSingleLeadId(qLead);
         } else {
@@ -382,10 +410,12 @@ export default function SmsMarketingPage() {
           if (!singleLeadId && leadArr.length) setSingleLeadId(leadArr[0].id);
         }
 
+        if (!selectedListId && listArr.length) setSelectedListId(listArr[0].id);
+
         setLoading(false);
       } catch (e) {
         if (!alive) return;
-        setBannerError(e?.message ? `Failed to load leads: ${e.message}` : "Failed to load leads");
+        setBannerError(e?.message ? `Failed to load SMS data: ${e.message}` : "Failed to load SMS data");
         setLoading(false);
       }
     }
@@ -401,6 +431,114 @@ export default function SmsMarketingPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  // Load SMS config to check sender_id
+  useEffect(() => {
+    let alive = true;
+
+    async function loadSmsConfig() {
+      try {
+        if (!tokenRef.current) return;
+        const config = await apiGet("/api/debug/check-sms-config");
+        if (!alive) return;
+        setSmsConfig(config);
+      } catch (e) {
+        console.warn("Could not load SMS config:", e.message);
+      }
+    }
+
+    if (tokenRef.current) loadSmsConfig();
+
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  // Load SMS usage for slider under banner
+  useEffect(() => {
+    let alive = true;
+
+    async function loadSmsUsage() {
+      try {
+        if (!tokenRef.current) return;
+        const usage = await apiGet("/api/usage/check-limits?check=sms");
+        const u = usage?.stats?.sms;
+        if (!alive || !u) return;
+
+        setSmsUsage({
+          sent: Number(u.sent) || 0,
+          limit: typeof u.limit === "number" ? u.limit : 0,
+          percentage: Number(u.percentage) || 0,
+        });
+      } catch (e) {
+        console.warn("Could not load SMS usage:", e.message);
+      }
+    }
+
+    if (tokenRef.current) loadSmsUsage();
+
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  // Load SMS plan tier from accounts table
+  useEffect(() => {
+    async function loadSmsPlan() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user;
+        if (!user) return;
+        const { data } = await supabase
+          .from('accounts')
+          .select('sms_plan_tier')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        if (data?.[0]?.sms_plan_tier) setSmsPlanTier(data[0].sms_plan_tier);
+      } catch (e) {
+        console.warn('Could not load SMS plan tier:', e.message);
+      }
+    }
+    loadSmsPlan();
+  }, []);
+
+  const smsLimitDisplay = smsUsage.limit > 0 ? smsUsage.limit.toLocaleString() : "No limit yet";
+  const smsPercent = smsUsage.limit > 0
+    ? Math.min(100, Math.round((smsUsage.sent / smsUsage.limit) * 100))
+    : Math.max(0, Math.min(100, smsUsage.percentage || 0));
+  const smsUsageStage =
+    smsPercent >= 100
+      ? {
+          tone: "critical",
+          title: "Hard Stop (100%)",
+          text: "SMS sending is blocked until you upgrade your SMS plan.",
+        }
+      : smsPercent >= 95
+      ? {
+          tone: "critical",
+          title: "Critical Warning (95%+)",
+          text: "You are close to hard stop at 100%. Upgrade now to avoid interruptions.",
+        }
+      : smsPercent >= 80
+      ? {
+          tone: "warning",
+          title: "Usage Notice (80%+)",
+          text: "SMS sending is still active, but your allowance is running low.",
+        }
+      : null;
+  const senderIdValue = s(smsConfig?.account?.sender_id);
+  const businessNameValue = s(smsConfig?.account?.business_name);
+  const actualOriginValue = s(smsConfig?.priority?.actual_origin_used);
+  const fallbackOriginValue = s(smsConfig?.env?.DEFAULT_SMS_ORIGIN || "gr8result");
+  const isFallbackOnlyOrigin =
+    !senderIdValue &&
+    (!actualOriginValue ||
+      actualOriginValue.toLowerCase() === fallbackOriginValue.toLowerCase() ||
+      actualOriginValue.toLowerCase() === "gr8result");
+  const showSenderIdWarning = Boolean(smsConfig) && !senderIdValue && !businessNameValue && isFallbackOnlyOrigin;
 
   function setStep(i, patch) {
     setSteps((prev) => {
@@ -446,11 +584,21 @@ export default function SmsMarketingPage() {
     try {
       requireToken();
 
-      const lead_id = s(selectedLeadId);
-      if (!lead_id) throw new Error("Pick a lead.");
+      const type = s(campaignAudienceType || "lead").toLowerCase();
+
+      let audience;
+      if (type === "list") {
+        const list_id = s(selectedListId);
+        if (!list_id) throw new Error("Pick a list.");
+        audience = { type: "list", list_id };
+      } else {
+        const lead_id = s(selectedLeadId);
+        if (!lead_id) throw new Error("Pick a lead.");
+        audience = { type: "lead", lead_id };
+      }
 
       const payload = {
-        audience: { type: "lead", lead_id },
+        audience,
         steps: steps
           .map((st) => ({
             delay: Number(st.delay || 0),
@@ -462,8 +610,16 @@ export default function SmsMarketingPage() {
       };
 
       const r = await apiPost("/api/smsglobal/launch-sequence", payload);
+      const policyPopup = r?.usage?.policy?.popupMessage;
 
-      setBannerError(`Queued: ${r?.queued ?? 0}`);
+      let msg = `Queued: ${r?.queued ?? 0} SMS`;
+      if (r?.auto_flush?.error) {
+        msg += ` — ⚠️  (flush: ${r.auto_flush.error})`;
+      } else if (r?.auto_flush?.sent) {
+        msg += ` — ✅ Sent: ${r.auto_flush.sent}`;
+      }
+      setBannerError(msg);
+      if (policyPopup) alert(policyPopup);
     } catch (e) {
       const detail = e?.detail?.detail || e?.detail?.message || "";
       setBannerError(
@@ -490,8 +646,10 @@ export default function SmsMarketingPage() {
       if (singleAudienceType === "lead") {
         const lead_id = s(singleLeadId);
         if (!lead_id) throw new Error("Pick a lead.");
-        const r = await apiPost("/api/smsglobal/SMSSend", { lead_id, message: msg });
-        setBannerError(`Sent OK (provider_id: ${r?.provider_id || "-"})`);
+        const r = await apiPost("/api/smsglobal/send-single", { lead_id, message: msg });
+        const policyPopup = r?.usage?.policy?.popupMessage;
+        setBannerError(`Queued OK${r?.auto_flush?.sent ? ` — Sent: ${r.auto_flush.sent}` : ""}`);
+        if (policyPopup) alert(policyPopup);
         setSingleMessage("");
         return;
       }
@@ -499,8 +657,10 @@ export default function SmsMarketingPage() {
       if (singleAudienceType === "manual") {
         const to = normalizePhoneForSend(singleManualPhone);
         if (!to) throw new Error("Enter a phone number.");
-        const r = await apiPost("/api/smsglobal/SMSSend", { to, message: msg });
-        setBannerError(`Sent OK (provider_id: ${r?.provider_id || "-"})`);
+        const r = await apiPost("/api/smsglobal/send-single", { to, message: msg });
+        const policyPopup = r?.usage?.policy?.popupMessage;
+        setBannerError(`Queued OK${r?.auto_flush?.sent ? ` — Sent: ${r.auto_flush.sent}` : ""}`);
+        if (policyPopup) alert(policyPopup);
         setSingleMessage("");
         return;
       }
@@ -530,7 +690,7 @@ export default function SmsMarketingPage() {
           style={{
             maxWidth: 1320,
             margin: "0 auto 14px auto",
-            padding: "16px 18px",
+            padding: "26px 28px",
             borderRadius: 12,
             background: "linear-gradient(90deg, rgba(12,148,149,0.95), rgba(9,113,126,0.95))",
             color: "#fff",
@@ -543,27 +703,159 @@ export default function SmsMarketingPage() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <BannerIcon size={48} />
             <div>
-              <div style={{ fontSize: 48, fontWeight: 500, lineHeight: 1.05 }}>SMS Marketing</div>
-              <div style={{ opacity: 0.9, fontSize: 18 }}>
-                Templates + single SMS + scheduled SMS campaigns (1–3 steps).
-              </div>
+                <div style={{ fontSize: 48, fontWeight: 500, lineHeight: 1.05, marginBottom: 12 }}>SMS Marketing</div>
+                <div style={{ opacity: 0.9, fontSize: 18 }}>
+                  Templates + single SMS + scheduled SMS campaigns (1–3 steps).
+                </div>
             </div>
           </div>
 
-          <button
-            onClick={() => router.push("/modules/email/crm")}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => router.push("/modules/email/crm/sms-dashboard")}
+              style={{
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "rgba(0,0,0,0.18)",
+                color: "#fff",
+                padding: "12px 48px",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
+
+        {/* Current SMS Plan banner */}
+        <div style={{ maxWidth: 1320, margin: "0 auto 10px auto", padding: "12px 16px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Current SMS Plan</span>
+            <div style={{ color: smsPlanTier ? "#86efac" : "rgba(255,255,255,0.4)", fontSize: 16, fontWeight: 700, marginTop: 2 }}>
+              {smsPlanTier ? (SMS_PLAN_LABELS[smsPlanTier] || smsPlanTier) : "No plan selected"}
+            </div>
+          </div>
+          <button onClick={() => router.push("/modules/billing/sms-plans")} style={{ background: "#facc15", color: "#111827", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            {smsPlanTier ? "Manage / Upgrade Plan" : "Select a Plan"}
+          </button>
+        </div>
+
+        <div
+          style={{
+            maxWidth: 1320,
+            margin: "0 auto 10px auto",
+            padding: "12px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(255,255,255,0.05)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 16, fontWeight: 600 }}>Monthly SMS Usage</span>
+            <span style={{ color: "rgba(255,255,255,0.82)", fontSize: 15 }}>
+              {smsUsage.sent.toLocaleString()} / {smsLimitDisplay}
+            </span>
+          </div>
+
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={smsPercent}
             style={{
-              border: "1px solid rgba(255,255,255,0.25)",
-              background: "rgba(0,0,0,0.18)",
-              color: "#fff",
-              padding: "8px 12px",
+              position: "relative",
+              width: "100%",
+              height: 28,
               borderRadius: 999,
-              cursor: "pointer",
-              fontWeight: 500,
+              background: "#0f172a",
+              border: "1px solid #334155",
+              overflow: "hidden",
             }}
           >
-            ← Back to CRM
-          </button>
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
+                height: "100%",
+                width: `${smsPercent}%`,
+                background: "linear-gradient(90deg, #22c55e, #f59e0b, #ef4444)",
+                transition: "width 0.3s ease",
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "80%",
+                top: 0,
+                bottom: 0,
+                width: 2,
+                background: "#f59e0b",
+                zIndex: 2,
+                opacity: 0.95,
+              }}
+            />
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "calc(80% - 18px)",
+                top: -18,
+                zIndex: 3,
+                fontSize: 11,
+                color: "#f59e0b",
+                fontWeight: 700,
+              }}
+            >
+              80%
+            </span>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "#94a3b8", fontSize: 12 }}>
+            <span>0%</span>
+            <span>50%</span>
+            <span>100%</span>
+          </div>
+
+          {smsUsageStage && (
+            <div
+              style={{
+                marginTop: 10,
+                borderRadius: 10,
+                padding: "10px 12px",
+                border: smsUsageStage.tone === "critical" ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(245,158,11,0.5)",
+                background: smsUsageStage.tone === "critical" ? "rgba(239,68,68,0.14)" : "rgba(245,158,11,0.12)",
+                color: smsUsageStage.tone === "critical" ? "#fecaca" : "#fde68a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+                fontSize: 13,
+              }}
+            >
+              <span>
+                <strong>{smsUsageStage.title}</strong> {smsUsageStage.text}
+              </span>
+              <button
+                type="button"
+                onClick={() => router.push("/modules/billing/sms-plans")}
+                style={{
+                  background: "#facc15",
+                  color: "#111827",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Upgrade SMS Plan
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Error bar */}
@@ -581,6 +873,59 @@ export default function SmsMarketingPage() {
             }}
           >
             {loading ? "Loading…" : bannerError}
+          </div>
+        )}
+
+        {/* SMS Config Warning */}
+        {showSenderIdWarning && (
+          <div
+            style={{
+              maxWidth: 1320,
+              margin: "0 auto 10px auto",
+              padding: "14px 16px",
+              borderRadius: 10,
+              border: "2px solid rgba(251,191,36,0.6)",
+              background: "rgba(251,191,36,0.12)",
+              color: "#fef3c7",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+              ⚠️ SMS Sender ID Not Set
+            </div>
+            <div style={{ marginBottom: 10, fontSize: 15, opacity: 0.95 }}>
+              Your SMS sender name is not activated yet because <strong>accounts.sender_id and business_name are empty</strong>.
+            </div>
+            <div style={{ marginBottom: 10, fontSize: 14, opacity: 0.9 }}>
+              Phone verification on the account page does <strong>not</strong> fill this automatically. The missing piece is the separate SMS Activation access code / sender ID.
+            </div>
+            <div style={{ marginBottom: 10, fontSize: 14, opacity: 0.9 }}>
+              <strong>Current config:</strong>
+            </div>
+            <div style={{ background: "rgba(0,0,0,0.25)", padding: 12, borderRadius: 8, fontSize: 13, fontFamily: "monospace", marginBottom: 12 }}>
+              sender_id: <strong style={{color: "#f87171"}}>{smsConfig.account?.sender_id || "(EMPTY)"}</strong><br/>
+              business_name: {smsConfig.account?.business_name || "(empty)"}<br/>
+              fallback: {smsConfig.env?.DEFAULT_SMS_ORIGIN || "gr8result"}<br/>
+              <br/>
+              <strong>SMS will send from: {smsConfig.priority?.actual_origin_used}</strong>
+            </div>
+            <div style={{ fontSize: 14, marginBottom: 10 }}>
+              <strong>To fix:</strong> Go to Account page → SMS Activation section → enter the access code / sender name you received by email → click "Activate SMS"
+            </div>
+            <button
+              onClick={() => router.push("/account")}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 8,
+                background: "#facc15",
+                color: "#000",
+                border: "none",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: 15,
+              }}
+            >
+              Go to Account Page →
+            </button>
           </div>
         )}
 
@@ -602,16 +947,15 @@ export default function SmsMarketingPage() {
               Queue up to 3 SMS messages. Delays are “since previous step”.
             </div>
 
-            {/* Audience row (LEAD ONLY) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 16, marginBottom: 6 }}>
-                  Select lead
+                  Send campaign to
                 </div>
                 <select
                   className="gr8Select"
-                  value={selectedLeadId}
-                  onChange={(e) => setSelectedLeadId(e.target.value)}
+                  value={campaignAudienceType}
+                  onChange={(e) => setCampaignAudienceType(e.target.value)}
                   style={{
                     width: "100%",
                     padding: "9px 10px",
@@ -622,16 +966,66 @@ export default function SmsMarketingPage() {
                     fontWeight: 500,
                   }}
                 >
-                  {leadOptions.length ? (
-                    leadOptions.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.label}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">(No leads loaded for this user)</option>
-                  )}
+                  <option value="lead">One lead</option>
+                  <option value="list">A list</option>
                 </select>
+              </div>
+
+              <div>
+                <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 16, marginBottom: 6 }}>
+                  {campaignAudienceType === "list" ? "Select list" : "Select lead"}
+                </div>
+                {campaignAudienceType === "list" ? (
+                  <select
+                    className="gr8Select"
+                    value={selectedListId}
+                    onChange={(e) => setSelectedListId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 10px",
+                      borderRadius: 10,
+                      background: "rgba(0,0,0,0.55)",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {listOptions.length ? (
+                      listOptions.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">(No lists loaded for this user)</option>
+                    )}
+                  </select>
+                ) : (
+                  <select
+                    className="gr8Select"
+                    value={selectedLeadId}
+                    onChange={(e) => setSelectedLeadId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 10px",
+                      borderRadius: 10,
+                      background: "rgba(0,0,0,0.55)",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {leadOptions.length ? (
+                      leadOptions.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">(No leads loaded for this user)</option>
+                    )}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -789,6 +1183,8 @@ export default function SmsMarketingPage() {
 
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 16 }}>
                 Leads loaded: <b>{Array.isArray(leads) ? leads.length : 0}</b>
+                {" · "}
+                Lists loaded: <b>{Array.isArray(lists) ? lists.length : 0}</b>
               </div>
             </div>
           </div>

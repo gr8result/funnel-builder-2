@@ -55,20 +55,20 @@ export default function Subaccounts() {
               >
                 {/* same icon as Subaccounts in the sidenav */}
                 {ICONS.subaccounts
-                  ? ICONS.subaccounts({ size: 30 })
+                  ? ICONS.subaccounts({ size: 48 })
                   : ICONS.modules
-                  ? ICONS.modules({ size: 30 })
+                  ? ICONS.modules({ size: 48 })
                   : null}
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 900 }}>
+                <div style={{ fontSize: 48, fontWeight: 600 }}>
                   Subaccounts
                 </div>
                 <div
                   style={{
-                    fontSize: 15,
+                    fontSize: 18,
                     opacity: 0.9,
-                    fontWeight: 400,
+                    fontWeight: 500,
                   }}
                 >
                   Create and manage agency workspaces and client subaccounts.
@@ -98,6 +98,23 @@ export default function Subaccounts() {
             >
               ← Back
             </button>
+          </div>
+
+                    {/* Coming Soon */}
+          <div
+            style={{
+              background: "#111827",
+              border: "1px dashed #06b6d4",
+              borderRadius: 12,
+              padding: 24,
+              fontSize: 24,
+              textAlign: "center",
+              opacity: 0.85,
+            }}
+          >
+            🚧 <strong>Coming Soon</strong> 🚧 <br/> 
+            Expected Delivery date: May 2026 <br/><br/>  
+            Agency workspaces and client subaccounts management.
           </div>
 
           {/* CONTENT AREA */}

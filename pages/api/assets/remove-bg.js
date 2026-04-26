@@ -5,61 +5,61 @@
 // - Calls remove.bg API
 // - Uploads result PNG into Supabase assets bucket under <userId>/
 // - Returns { publicUrl }
-//
-// REQUIRED env:
-//   REMOVEBG_API_KEY=xxxx
-//
-// Notes:
-// - Uses Service Role key for uploading to storage securely (server-side only).
-// - Make sure you have these env vars set:
-//   NEXT_PUBLIC_SUPABASE_URL=...
-//   SUPABASE_SERVICE_ROLE_KEY=...
 
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    const { imageUrl } = req.body || {};
-    if (!imageUrl) return res.status(400).json({ error: "Missing imageUrl" });
+    const { imageUrl, base64: bodyBase64, userId: bodyUserId } = req.body || {};
+    if (!imageUrl && !bodyBase64) return res.status(400).json({ error: "Missing imageUrl or base64" });
 
-    const apiKey = process.env.REMOVEBG_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "Missing REMOVEBG_API_KEY" });
+    const apiKey = String(process.env.REMOVEBG_API_KEY || "").trim();
+    const normalizedApiKey = apiKey.toLowerCase();
+    const invalidApiKey = !apiKey
+      || apiKey === "your_remove_bg_api_key_here"
+      || apiKey === "real_key_from_remove_bg"
+      || normalizedApiKey.includes("placeholder")
+      || normalizedApiKey.includes("your_remove_bg")
+      || normalizedApiKey.includes("real_key_from_remove_bg");
+    if (invalidApiKey) {
+      return res.status(500).json({ error: "REMOVEBG_API_KEY is not configured with a real remove.bg key in .env.local" });
+    }
 
-    // Get current user (via Supabase auth cookie)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !serviceKey) return res.status(500).json({ error: "Missing Supabase env vars" });
 
-    // lazy import (keeps this file self-contained)
     const { createClient } = await import("@supabase/supabase-js");
     const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     });
 
-    // Try to read user from JWT in cookie (best-effort). If you already have your own auth middleware,
-    // you can replace this with your existing userId lookup.
-    const authHeader = req.headers.authorization || "";
-    let userId = null;
-
-    // If you don't send Authorization header, we fallback to an "anonymous" folder.
-    // (Works, but your assets won't be per-user)
-    if (authHeader.startsWith("Bearer ")) {
-      const jwt = authHeader.replace("Bearer ", "").trim();
-      const { data } = await supabaseAdmin.auth.getUser(jwt);
-      userId = data?.user?.id || null;
+    let userId = String(bodyUserId || "").trim() || null;
+    if (!userId) {
+      const authHeader = req.headers.authorization || "";
+      if (authHeader.startsWith("Bearer ")) {
+        const jwt = authHeader.replace("Bearer ", "").trim();
+        const { data } = await supabaseAdmin.auth.getUser(jwt);
+        userId = data?.user?.id || null;
+      }
     }
-
     if (!userId) userId = "anonymous";
 
-    // Download source image
-    const imgResp = await fetch(imageUrl);
-    if (!imgResp.ok) return res.status(400).json({ error: "Could not download imageUrl" });
-    const imgBuf = Buffer.from(await imgResp.arrayBuffer());
+    let imgBuf;
+    if (bodyBase64) {
+      const cleaned = String(bodyBase64).replace(/^data:[^;]+;base64,/, "");
+      imgBuf = Buffer.from(cleaned, "base64");
+    } else {
+      const imgResp = await fetch(imageUrl);
+      if (!imgResp.ok) return res.status(400).json({ error: "Could not download imageUrl" });
+      imgBuf = Buffer.from(await imgResp.arrayBuffer());
+    }
 
-    // Call remove.bg
     const form = new FormData();
     form.append("image_file", new Blob([imgBuf]), "image.png");
     form.append("size", "auto");
+    form.append("format", "png");
+    form.append("type", "product");
 
     const rb = await fetch("https://api.remove.bg/v1.0/removebg", {
       method: "POST",
@@ -74,20 +74,19 @@ export default async function handler(req, res) {
 
     const outBuf = Buffer.from(await rb.arrayBuffer());
 
-    // Upload result to Supabase assets bucket
-    const filePath = `${userId}/${Date.now()}-removed-bg.png`;
-    const { error: upErr } = await supabaseAdmin.storage.from("assets").upload(filePath, outBuf, {
+    const filePath = `${userId}/email-images/${Date.now()}-removed-bg.png`;
+    const { error: upErr } = await supabaseAdmin.storage.from("email-user-assets").upload(filePath, outBuf, {
       contentType: "image/png",
       upsert: true,
     });
 
-    if (upErr) return res.status(500).json({ error: "Upload failed" });
+    if (upErr) return res.status(500).json({ error: "Upload failed: " + upErr.message });
 
-    const { data: pub } = supabaseAdmin.storage.from("assets").getPublicUrl(filePath);
+    const { data: pub } = supabaseAdmin.storage.from("email-user-assets").getPublicUrl(filePath);
 
     return res.status(200).json({ publicUrl: pub.publicUrl });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: e?.message || "Server error" });
   }
 }

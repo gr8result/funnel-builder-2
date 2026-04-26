@@ -10,20 +10,20 @@ export const CORE = [
 
 export const MODULES = [
   { href: "/modules/website-builder", emoji: "🧩", title: "Website builder" },
-  { href: "/automation",  emoji: "⚙️", title: "Business automation" },
-  { href: "/email",       emoji: "📧", title: "Email marketing" },
-  { href: "/affiliates",  emoji: "🤝", title: "Affiliate management" },
-  { href: "/courses",     emoji: "🎓", title: "Online courses" },
-  { href: "/products",    emoji: "📦", title: "Physical products" },
-  { href: "/webinars",    emoji: "🧷", title: "Evergreen webinars" },
-  { href: "/booking",     emoji: "📅", title: "Booking calendar" },
-  { href: "/subaccounts", emoji: "👥", title: "Subaccounts" },
-  { href: "/pipelines",   emoji: "🌿", title: "Pipelines" },
-  { href: "/communities", emoji: "💬", title: "Communities" },
+  { href: "/modules/business-automation", emoji: "⚙️", title: "Business automation" },
+  { href: "/modules/email",               emoji: "📧", title: "Email marketing" },
+  { href: "/modules/affiliates",          emoji: "🤝", title: "Affiliate management" },
+  { href: "/modules/vendor/courses",      emoji: "🎓", title: "Online courses" },
+  { href: "/modules/vendor/physical",     emoji: "📦", title: "Physical products" },
+  { href: "/modules/webinars",            emoji: "🧷", title: "Evergreen webinars" },
+  { href: "/modules/calendar/dashboard",  emoji: "📅", title: "Booking calendar" },
+  { href: "/modules/subaccounts",         emoji: "👥", title: "Subaccounts" },
+  { href: "/modules/pipelines",           emoji: "🌿", title: "Pipelines" },
+  { href: "/modules/communities",         emoji: "💬", title: "Communities" },
 ];
 
 export const TOOLS = [
   { href: "/export",    emoji: "📤", title: "Export" },
   { href: "/import",    emoji: "📥", title: "Import" },
-  { href: "/templates", emoji: "🧰", title: "Templates" },
+  { href: "/modules/email/templates/select", emoji: "🧰", title: "Templates" },
 ];

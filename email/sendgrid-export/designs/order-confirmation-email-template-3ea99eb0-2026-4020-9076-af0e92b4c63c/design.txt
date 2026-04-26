@@ -1,0 +1,50 @@
+Email not displaying correctly? View it ( {{Weblink}} ) in your browser.
+
+Thank you for your order!
+
+Now you can relax. We're workin on
+getting your food to you ASAP!
+
+Follow Your Delivery
+
+Order Summary
+
+Transaction Number: NT029811
+*Expected Delivery Time: 9:50 - 10:15 PM*
+
+Monday, July 26, 2019 9:34 PM
+Order From: Saigon Baguette Co.
+Irvine, California
+
+Veggie Bahn Mi Sandwich
+
+$9.49
+
+Vietnamese Iced Coffee w/ Boba
+
+$2.49
+
+Subtotal - $11.98
+Taxes - $1.27
+Delivery Charges - $1.99
+Driver Tips - $2.49
+
+Grand Total
+
+$17.73
+
+Support ( http:// )
+
+Contact Us ( http:// )
+
+Drivers ( http:// )
+
+Legal ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

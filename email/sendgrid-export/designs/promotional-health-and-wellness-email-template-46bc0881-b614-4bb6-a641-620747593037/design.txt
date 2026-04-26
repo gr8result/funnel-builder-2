@@ -1,0 +1,26 @@
+Not displaying correctly? View this email in the browser. ( {{Weblink}} )
+
+5. DAYS. ONLY.
+
+ALL JUICES $2
+
+Yes, that's right - for a limited time, all juices are only $2!
+Offer includes wellness boosts, ginger, and turmeric shots.
+
+LOCALLY SOURCED,
+ORGANIC & FRESH
+
+TRY OUR CLEANSES, TOO!
+
+Golden Juice Co. has 3 cleanses to support distinct cleansing goals.
+Visit one of our store locations to speak with a team member to select the cleanse program that's best for you and your health goals.
+
+Store Locations
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

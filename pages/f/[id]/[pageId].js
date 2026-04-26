@@ -1,11 +1,36 @@
 // pages/f/[id]/[pageId].js
-// FULL REPLACEMENT
-// Fixes missing "../templates.js" import by removing it.
-// Keeps route alive and build-safe.
+// Legacy route — redirects to /p/[slug] if funnel has a slug,
+// otherwise shows a simple "not available" message.
 
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { supabase } from "../../../utils/supabase-client";
+import { useEffect } from "react";
+import { supabase } from "../../../lib/supabaseClient";
+
+export default function FunnelPageLegacy() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("funnels")
+        .select("slug, status")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (data?.slug && data?.status === "published") {
+        router.replace(`/p/${data.slug}`);
+      }
+    })();
+  }, [id]);
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0c121a", color: "#e6eef5" }}>
+      <p>Loading…</p>
+    </div>
+  );
+}
 
 export default function FunnelPage() {
   const router = useRouter();

@@ -1,6 +1,8 @@
 ﻿// /components/iconMap.js
 // Centralised icon map with default white stroke for dark theme + full-colour official social media icons
 
+import React from "react";
+
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -29,6 +31,8 @@ import {
   Trash2,
   LineChart,
   HelpCircle,
+  MessageSquare,
+  Store, // ✅ Added Marketplace icon from lucide
 } from "lucide-react";
 
 import {
@@ -37,14 +41,12 @@ import {
   FaLinkedin,
   FaYoutube,
   FaPinterest,
+  FaSearch,
 } from "react-icons/fa";
 
 import { SiTiktok, SiX } from "react-icons/si";
-
 import { FcGoogle } from "react-icons/fc";
 import { MdEmail } from "react-icons/md";
-
-import { FaSearch } from "react-icons/fa";
 
 const defaultColor = "#fff";
 
@@ -62,6 +64,7 @@ const ICONS = {
   funnels: (props) => <Compass color={defaultColor} {...props} />,
   automation: (props) => <Bot color={defaultColor} {...props} />,
   email: (props) => <Mail color={defaultColor} {...props} />,
+  sms: (props) => <MessageSquare color={defaultColor} {...props} />,
   affiliateManagement: (props) => (
     <Handshake color={defaultColor} {...props} />
   ),
@@ -74,6 +77,7 @@ const ICONS = {
   social: (props) => <Megaphone color={defaultColor} {...props} />,
   subaccounts: (props) => <Layers color={defaultColor} {...props} />,
   digitalProducts: (props) => <HardDrive color={defaultColor} {...props} />,
+  marketplace: (props) => <Store color={defaultColor} {...props} />, // ✅ Properly added here
 
   // ---------- Extras ----------
   reports: (props) => <BarChart color={defaultColor} {...props} />,
@@ -87,17 +91,17 @@ const ICONS = {
   analytics: (props) => <LineChart color={defaultColor} {...props} />,
 
   // ---------- Official Social Media Icons (Full-Colour) ----------
-  facebook: (props) => <FaFacebookSquare {...props} />,     // Blue square Facebook logo
-  instagram: (props) => <FaInstagram {...props} />,         // Gradient Instagram icon
-  tiktok: (props) => <SiTiktok {...props} />,               // Official TikTok colour logo
-  linkedin: (props) => <FaLinkedin {...props} />,           // Blue LinkedIn logo
-  youtube: (props) => <FaYoutube {...props} />,             // Red YouTube logo
-  pinterest: (props) => <FaPinterest {...props} />,         // Red Pinterest logo
-  twitter: (props) => <SiX {...props} />,                   // Official X logo
-  google: (props) => <FcGoogle {...props} />,               // Full-colour Google "G"
-  emailIcon: (props) => <MdEmail {...props} />,             // Email envelope
-  referral: (props) => <Handshake {...props} />,            // Referral handshake
-  other: (props) => <HelpCircle {...props} />,              // Default "Other"
+  facebook: (props) => <FaFacebookSquare {...props} />,
+  instagram: (props) => <FaInstagram {...props} />,
+  tiktok: (props) => <SiTiktok {...props} />,
+  linkedin: (props) => <FaLinkedin {...props} />,
+  youtube: (props) => <FaYoutube {...props} />,
+  pinterest: (props) => <FaPinterest {...props} />,
+  twitter: (props) => <SiX {...props} />,
+  google: (props) => <FcGoogle {...props} />,
+  emailIcon: (props) => <MdEmail {...props} />,
+  referral: (props) => <Handshake {...props} />,
+  other: (props) => <HelpCircle {...props} />,
 };
 
 export default ICONS;

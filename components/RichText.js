@@ -17,9 +17,19 @@ export default function RichText({ value = '', onChange, placeholder = 'Type…'
     ref.current && onChange && onChange(ref.current.innerHTML);
   }
 
+  function applyHierarchy(tag) {
+    const normalizedTag = String(tag || 'p').toLowerCase();
+    const formatValue = normalizedTag === 'p' ? 'p' : `<${normalizedTag}>`;
+    exec('formatBlock', formatValue);
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+        <button type="button" onClick={() => applyHierarchy('p')} style={tb}>P</button>
+        <button type="button" onClick={() => applyHierarchy('h1')} style={tb}>H1</button>
+        <button type="button" onClick={() => applyHierarchy('h2')} style={tb}>H2</button>
+        <button type="button" onClick={() => applyHierarchy('h3')} style={tb}>H3</button>
         <button type="button" onClick={() => exec('bold')} style={tb}>B</button>
         <button type="button" onClick={() => exec('italic')} style={tb}><i>I</i></button>
         <button type="button" onClick={() => exec('underline')} style={tb}><u>U</u></button>

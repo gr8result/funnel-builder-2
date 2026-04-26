@@ -87,11 +87,20 @@ export default async function handler(req, res) {
     if (payload.twilio_sid) {
       const { data: existing, error: selErr } = await supabase
         .from("crm_calls")
-        .select("id, twilio_sid")
+        .select("id, user_id, lead_id")
         .eq("twilio_sid", payload.twilio_sid)
         .maybeSingle();
 
       if (!selErr && existing?.id) {
+        // ✅ If user_id not provided, use the one from existing record
+        if (!payload.user_id && existing.user_id) {
+          payload.user_id = existing.user_id;
+        }
+        // ✅ If lead_id not provided, use the one from existing record
+        if (!payload.lead_id && existing.lead_id) {
+          payload.lead_id = existing.lead_id;
+        }
+
         const { error: updErr } = await supabase
           .from("crm_calls")
           .update(payload)

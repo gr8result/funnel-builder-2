@@ -147,30 +147,42 @@ export default function Communities() {
     init();
   }, []);
 
-  // ---------- Brand / account name (via RPC – but we don't trust it anymore for label) ----------
+  // ---------- Brand / account name ----------
   const loadAccountName = async (currentUser) => {
     try {
-      let resolved = "";
+      const meta = currentUser.user_metadata || {};
+      let resolved =
+        meta.business_name ||
+        meta.company ||
+        meta.full_name ||
+        meta.name ||
+        "";
 
-      // Call the SQL function we just created
-      const { data, error } = await supabase.rpc("get_account_brand");
-      if (error) {
-        console.warn("get_account_brand() error:", error.message);
-      }
-      if (data && typeof data === "string" && data.trim().length > 0) {
-        resolved = data.trim();
-      }
-
-      // Fallbacks
+      // If metadata is empty, use the newest account row for this user.
       if (!resolved) {
-        const meta = currentUser.user_metadata || {};
-        resolved =
-          meta.business_name ||
-          meta.company ||
-          meta.full_name ||
-          meta.name ||
-          (currentUser.email || "").split("@")[0] ||
-          "Member";
+        const { data: accountRows, error: accountErr } = await supabase
+          .from("accounts")
+          .select("business_name, updated_at")
+          .eq("user_id", currentUser.id)
+          .order("updated_at", { ascending: false })
+          .limit(20);
+
+        if (accountErr) {
+          console.warn("Could not read accounts.business_name:", accountErr.message);
+        }
+
+        const rowWithName = (Array.isArray(accountRows) ? accountRows : []).find(
+          (r) => typeof r?.business_name === "string" && r.business_name.trim().length > 0
+        );
+
+        if (rowWithName?.business_name) {
+          resolved = rowWithName.business_name.trim();
+        }
+      }
+
+      // Final fallback
+      if (!resolved) {
+        resolved = (currentUser.email || "").split("@")[0] || "Member";
       }
 
       setAccountName(resolved);
@@ -189,11 +201,9 @@ export default function Communities() {
     }
   };
 
-  // Helper – this is the label for *our* posts
-  // *** HARD OVERRIDE: NEVER SHOW "support" – ALWAYS SHOW YOUR BUSINESS NAME ***
+  // Helper – label for this user's posts in the UI
   const getOwnDisplayName = () => {
-    // Change this string if you ever rename the business
-    return "Waite and Sea Health and Fitness";
+    return accountName || (user?.email || "").split("@")[0] || "Member";
   };
 
   // ---------- Community helpers ----------
@@ -1131,6 +1141,22 @@ export default function Communities() {
                     const labelName = isOwnPost
                       ? getOwnDisplayName()
                       : post.author_name || "Member";
+                    const avatarLead = isOwnPost
+                      ? {
+                          id: user?.id || post.user_id,
+                          name: getOwnDisplayName(),
+                          email:
+                            user?.email ||
+                            post.author_email ||
+                            `${post.user_id}@community.local`,
+                        }
+                      : {
+                          id: post.user_id,
+                          name: post.author_name || "Member",
+                          email:
+                            post.author_email ||
+                            `${post.user_id}@community.local`,
+                        };
                     const isEditing = editingPostId === post.id;
 
                     return (
@@ -1153,11 +1179,7 @@ export default function Communities() {
                         >
                           <SubscriberAvatar
                             size={30}
-                            lead={{
-                              id: post.user_id,
-                              name: labelName,
-                              email: post.author_email || "",
-                            }}
+                            lead={avatarLead}
                           />
                           <span style={{ fontWeight: 600 }}>{labelName}</span>
                           <span style={{ opacity: 0.6 }}>·</span>

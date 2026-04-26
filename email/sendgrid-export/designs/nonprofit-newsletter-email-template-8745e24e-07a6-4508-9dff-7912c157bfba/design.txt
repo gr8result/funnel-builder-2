@@ -1,0 +1,31 @@
+*Volunteers Needed!*
+Please join us for our 2020 volunteer drive.
+
+SIGN UP NOW
+
+*Volunteer Opportunities*
+
+*Winter Volunteer Opportunity:*
+*Teach about clean drinking water in Denver schools*
+Explain how access to clean water can impact an entire community. In this volunteer opportunity, you'll spend a day in Denver Public School classrooms and lead an activity to show students how we ensure they have access to clean drinking water.
+*Learn More*
+
+*Spring Volunteer Opportunity:*
+*Plant seeds in our public gardens*
+Do you have a green thumb? Then help us show how access to clean water can turn our neighborhoods into places where healthy food thrives. Volunteer to spend a day planting our community gardens beds with vegetables and herbs that everyone can enjoy.
+
+*Learn More*
+
+*About the Organization*
+
+Five Points Water Bank is committed to making clean drinking water available to our community. We depend on volunteers to run our water education programs in schools, corporations, and other groups.
+
+HOW YOU CAN HELP
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

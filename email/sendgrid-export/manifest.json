@@ -1,0 +1,441 @@
+{
+  "exported_at": "2026-03-28T21:03:16.993Z",
+  "subuser": null,
+  "item_count": 62,
+  "items": [
+    {
+      "type": "design",
+      "id": "e07a0978-4c14-4abe-90d3-82a0414efc66",
+      "name": "Duplicate: Event Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-event-email-template-e07a0978-4c14-4abe-90d3-82a0414efc66",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "3ea99eb0-2026-4020-9076-af0e92b4c63c",
+      "name": "Duplicate: Order Confirmation Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-order-confirmation-email-template-3ea99eb0-2026-4020-9076-af0e92b4c63c",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "d0754650-19f7-4ad3-bbb3-865fbbe60ce0",
+      "name": "Duplicate: Welcome Sign-up Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-welcome-sign-up-email-template-d0754650-19f7-4ad3-bbb3-865fbbe60ce0",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "212eaae7-e763-41eb-be94-d2a48c1d2b72",
+      "name": "Duplicate: Small Business Sales Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-small-business-sales-email-template-212eaae7-e763-41eb-be94-d2a48c1d2b72",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "7963ada0-e53f-4ea1-9893-022dbab4827a",
+      "name": "Duplicate: Small Business Newsletter Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-small-business-newsletter-email-template-7963ada0-e53f-4ea1-9893-022dbab4827a",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "19061a1b-dd0a-4b46-9c25-230a054fda2e",
+      "name": "Duplicate: Thanksgiving Customer Reviews Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-thanksgiving-customer-reviews-email-template-19061a1b-dd0a-4b46-9c25-230a054fda2e",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "3b614140-c50f-4b2e-a216-40b4c05b28de",
+      "name": "Duplicate: Thanksgiving Customer Reviews Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-thanksgiving-customer-reviews-email-template-3b614140-c50f-4b2e-a216-40b4c05b28de",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "d1f2a4ad-4652-4e57-9338-74cdbc61d536",
+      "name": "Duplicate: Retail Sale Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-sale-email-template-d1f2a4ad-4652-4e57-9338-74cdbc61d536",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "a064a218-12d1-435e-9ac7-dd2cb73f4892",
+      "name": "Duplicate: Retail Holiday Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-holiday-email-template-a064a218-12d1-435e-9ac7-dd2cb73f4892",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "0c3a7d06-6ea1-40eb-885c-224aa8eccbea",
+      "name": "Duplicate: Flexible Welcome Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-flexible-welcome-email-template-0c3a7d06-6ea1-40eb-885c-224aa8eccbea",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "e4eb72e1-b66f-4e1b-8457-a6a2e2e2f5d7",
+      "name": "Duplicate: Small Business Promotional Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-small-business-promotional-email-template-e4eb72e1-b66f-4e1b-8457-a6a2e2e2f5d7",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "c729f435-a655-4a8a-95df-1670eeda922a",
+      "name": "Duplicate: Jewelry Promotion Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-jewelry-promotion-email-template-c729f435-a655-4a8a-95df-1670eeda922a",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "92be91e5-d1b9-4ae3-80d3-19efab81b6bf",
+      "name": "Duplicate: Promotional Pet Care Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-promotional-pet-care-email-template-92be91e5-d1b9-4ae3-80d3-19efab81b6bf",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "22a8d7ac-60d6-48d8-af73-1b2c2f35f015",
+      "name": "Duplicate: Product Announcement Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-product-announcement-email-template-22a8d7ac-60d6-48d8-af73-1b2c2f35f015",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "0a58a96c-6633-488c-b3a4-d069ff422d17",
+      "name": "Duplicate: Your Design",
+      "folder": "email/sendgrid-export/designs/duplicate-your-design-0a58a96c-6633-488c-b3a4-d069ff422d17",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "8745e24e-07a6-4508-9dff-7912c157bfba",
+      "name": "Duplicate: Nonprofit Newsletter Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-nonprofit-newsletter-email-template-8745e24e-07a6-4508-9dff-7912c157bfba",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "bb48ba5c-59ea-4784-904a-ba06510312d3",
+      "name": "Duplicate: Contest Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-contest-email-template-bb48ba5c-59ea-4784-904a-ba06510312d3",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "1e92844e-59cc-4858-8c1f-9617992e5e65",
+      "name": "Duplicate: Abandoned Cart Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-abandoned-cart-email-template-1e92844e-59cc-4858-8c1f-9617992e5e65",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "813adcf3-47b8-4a95-9448-0916c41e0189",
+      "name": "Duplicate: Bank Newsletter Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-bank-newsletter-email-template-813adcf3-47b8-4a95-9448-0916c41e0189",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "96ca2312-e560-4cc5-bc10-22e4763b57d4",
+      "name": "Duplicate: Password Reset Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-password-reset-email-template-96ca2312-e560-4cc5-bc10-22e4763b57d4",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "200884b2-a443-45d0-8463-711b8b8322ba",
+      "name": "Duplicate: Holiday Thank You Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-holiday-thank-you-email-template-200884b2-a443-45d0-8463-711b8b8322ba",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "0b4849f4-ae89-4cd7-b7b1-155e47d597c9",
+      "name": "Duplicate: Holiday Event Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-holiday-event-email-template-0b4849f4-ae89-4cd7-b7b1-155e47d597c9",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "88172f6c-a515-4787-9104-89cc516810a4",
+      "name": "Duplicate: Time to get spooky!",
+      "folder": "email/sendgrid-export/designs/duplicate-time-to-get-spooky-88172f6c-a515-4787-9104-89cc516810a4",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "13255081-ca95-42af-a242-ff5a9a19e350",
+      "name": "Duplicate: Fundraising Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-fundraising-email-template-13255081-ca95-42af-a242-ff5a9a19e350",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "4d9ac54e-2ec0-4418-a69a-d25fc5db2568",
+      "name": "Duplicate: Email Blast Fitness Template",
+      "folder": "email/sendgrid-export/designs/duplicate-email-blast-fitness-template-4d9ac54e-2ec0-4418-a69a-d25fc5db2568",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "61bb9765-1ae1-4173-812d-c03d8519cae5",
+      "name": "Duplicate: Featured Content Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-featured-content-email-template-61bb9765-1ae1-4173-812d-c03d8519cae5",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "8ac9f0cc-8f8f-44ca-b094-644da1c9e466",
+      "name": "Duplicate: Confirmation Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-confirmation-email-template-8ac9f0cc-8f8f-44ca-b094-644da1c9e466",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "74ce660d-65fd-4f3a-b57d-55ab10fca170",
+      "name": "Duplicate: Subscription Confirmation Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-subscription-confirmation-email-template-74ce660d-65fd-4f3a-b57d-55ab10fca170",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "bb83fc5e-d4bd-4f40-ad94-13659b07e053",
+      "name": "Duplicate: Verification Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-verification-email-template-bb83fc5e-d4bd-4f40-ad94-13659b07e053",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "dcc4d507-2b52-41c8-92cf-9feba1fe5676",
+      "name": "Duplicate: Retail Confirmation Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-confirmation-email-template-dcc4d507-2b52-41c8-92cf-9feba1fe5676",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "bb6519d2-e83c-4cae-a894-f1fe57bb3c92",
+      "name": "Duplicate: B2B Newsletter Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-b2b-newsletter-email-template-bb6519d2-e83c-4cae-a894-f1fe57bb3c92",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "b5bfc46e-668d-4f74-885c-9add34838ad5",
+      "name": "Duplicate: Promo Code Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-promo-code-email-template-b5bfc46e-668d-4f74-885c-9add34838ad5",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "46bc0881-b614-4bb6-a641-620747593037",
+      "name": "Duplicate: Promotional Health and Wellness Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-promotional-health-and-wellness-email-template-46bc0881-b614-4bb6-a641-620747593037",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "26d4017f-8d9e-4a46-8482-edb8ddde38cc",
+      "name": "Duplicate: Product Promotion Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-product-promotion-email-template-26d4017f-8d9e-4a46-8482-edb8ddde38cc",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "628afbd2-9c45-4ee3-bd8c-8b6de077c980",
+      "name": "Duplicate: Sales Event Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-sales-event-email-template-628afbd2-9c45-4ee3-bd8c-8b6de077c980",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "dfc614be-6f64-4b3c-913d-b71bfe4232ce",
+      "name": "Duplicate: Black Friday Promotional Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-black-friday-promotional-email-template-dfc614be-6f64-4b3c-913d-b71bfe4232ce",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "dd63e0f1-81c9-48af-98c8-72ef8e1ea180",
+      "name": "Duplicate: Ingrid & Anders 1",
+      "folder": "email/sendgrid-export/designs/duplicate-ingrid-anders-1-dd63e0f1-81c9-48af-98c8-72ef8e1ea180",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "7569f111-00ba-4eac-b2d2-577d88759648",
+      "name": "Duplicate: Ingrid & Anders 2",
+      "folder": "email/sendgrid-export/designs/duplicate-ingrid-anders-2-7569f111-00ba-4eac-b2d2-577d88759648",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "141b115b-6334-4071-898e-3f330b86f159",
+      "name": "Duplicate: Ingrid & Anders 3",
+      "folder": "email/sendgrid-export/designs/duplicate-ingrid-anders-3-141b115b-6334-4071-898e-3f330b86f159",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "6d541030-b9c4-4e4a-a765-66419c511955",
+      "name": "Duplicate: Event Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-event-email-template-6d541030-b9c4-4e4a-a765-66419c511955",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "ad188c03-0dfe-4a16-b406-a995c3d28152",
+      "name": "Duplicate: Retail Purchase Receipt Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-purchase-receipt-email-template-ad188c03-0dfe-4a16-b406-a995c3d28152",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "1542b6bf-340f-4c8e-a049-22567d1d64bf",
+      "name": "Duplicate: Registration and Welcome Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-registration-and-welcome-email-template-1542b6bf-340f-4c8e-a049-22567d1d64bf",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "513856fc-aec9-4abb-b16c-038e85f1b6cf",
+      "name": "Duplicate: Fitness Newsletter Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-fitness-newsletter-email-template-513856fc-aec9-4abb-b16c-038e85f1b6cf",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "daf2f2e9-0848-4018-8d8c-f9b32ba36c94",
+      "name": "Duplicate: Free Trial Promo",
+      "folder": "email/sendgrid-export/designs/duplicate-free-trial-promo-daf2f2e9-0848-4018-8d8c-f9b32ba36c94",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "5ddc3678-7542-4a26-8ba6-5233eea834ff",
+      "name": "Duplicate: Retail Transactional Shipping Confirmation",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-transactional-shipping-confirmation-5ddc3678-7542-4a26-8ba6-5233eea834ff",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "df3a09a4-e80f-417b-ae4a-1a2193f47eb1",
+      "name": "Duplicate: Retail Ecommerce Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-ecommerce-newsletter-df3a09a4-e80f-417b-ae4a-1a2193f47eb1",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "0c7e1e44-f85b-467b-b13e-2131abc1833a",
+      "name": "Duplicate: Retail Monthly Promo Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-monthly-promo-newsletter-0c7e1e44-f85b-467b-b13e-2131abc1833a",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "58684b8b-1e3b-4561-a86e-f8a5fedcfdb7",
+      "name": "Duplicate: Retail Weekly Discount Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-weekly-discount-newsletter-58684b8b-1e3b-4561-a86e-f8a5fedcfdb7",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "b5143cf7-d5e6-4987-baf3-0bd3e27563ca",
+      "name": "Duplicate: Retail Seasonal Sale",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-seasonal-sale-b5143cf7-d5e6-4987-baf3-0bd3e27563ca",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "697e1374-fc64-4454-b300-261c64ff303e",
+      "name": "Duplicate: Retail Free Product Trial",
+      "folder": "email/sendgrid-export/designs/duplicate-retail-free-product-trial-697e1374-fc64-4454-b300-261c64ff303e",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "1d10ad31-9a5e-42c2-bef6-1cecdd2ed1de",
+      "name": "Duplicate: Hospitality Travel Getaway ",
+      "folder": "email/sendgrid-export/designs/duplicate-hospitality-travel-getaway-1d10ad31-9a5e-42c2-bef6-1cecdd2ed1de",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "c9261d36-de72-40ea-8161-38a63ab0d6e7",
+      "name": "Duplicate: Travel Newsletter Template",
+      "folder": "email/sendgrid-export/designs/duplicate-travel-newsletter-template-c9261d36-de72-40ea-8161-38a63ab0d6e7",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "17b4a07b-1ae9-4ba2-96e9-ce593d5e56e9",
+      "name": "Duplicate: Hotel Member Loyalty Program",
+      "folder": "email/sendgrid-export/designs/duplicate-hotel-member-loyalty-program-17b4a07b-1ae9-4ba2-96e9-ce593d5e56e9",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "847f2a9e-4bd4-47a4-8e78-76e8efa5004a",
+      "name": "Duplicate: Hotel Welcome Email",
+      "folder": "email/sendgrid-export/designs/duplicate-hotel-welcome-email-847f2a9e-4bd4-47a4-8e78-76e8efa5004a",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "2247d5a0-44d9-409f-b655-f9d2c67fb7fa",
+      "name": "Duplicate: Off Grid Adventures",
+      "folder": "email/sendgrid-export/designs/duplicate-off-grid-adventures-2247d5a0-44d9-409f-b655-f9d2c67fb7fa",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "2754cdeb-5bd4-4c4b-a30f-021b13f0c3c3",
+      "name": "Duplicate: Black Friday Deal Email Template",
+      "folder": "email/sendgrid-export/designs/duplicate-black-friday-deal-email-template-2754cdeb-5bd4-4c4b-a30f-021b13f0c3c3",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "90fe84ac-221a-4244-8685-a215131aa4cd",
+      "name": "Duplicate: Hospitality Hotel Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-hospitality-hotel-newsletter-90fe84ac-221a-4244-8685-a215131aa4cd",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "61f849f6-5f29-443a-b2e5-5da9c1537a57",
+      "name": "Duplicate: Short Employee Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-short-employee-newsletter-61f849f6-5f29-443a-b2e5-5da9c1537a57",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "17f21279-4f36-4539-9fd1-99892fb1b1a9",
+      "name": "Duplicate: Non-Profit Volunteer Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-non-profit-volunteer-newsletter-17f21279-4f36-4539-9fd1-99892fb1b1a9",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "76e3ff81-b58c-4e4e-9594-f5012bab5077",
+      "name": "Duplicate: Modern Restaurant Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-modern-restaurant-newsletter-76e3ff81-b58c-4e4e-9594-f5012bab5077",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "f2e7a3e2-7119-48f9-aaf1-2471cd6fd682",
+      "name": "Duplicate: Real Estate Newsletter",
+      "folder": "email/sendgrid-export/designs/duplicate-real-estate-newsletter-f2e7a3e2-7119-48f9-aaf1-2471cd6fd682",
+      "versions": 1
+    },
+    {
+      "type": "design",
+      "id": "dd3928b6-58eb-46ee-be33-d56d76ba47f0",
+      "name": "Your Design",
+      "folder": "email/sendgrid-export/designs/your-design-dd3928b6-58eb-46ee-be33-d56d76ba47f0",
+      "versions": 1
+    }
+  ]
+}

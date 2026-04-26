@@ -575,7 +575,8 @@ export default function AutoresponderSetup() {
         }
         .title {
           margin: 0;
-          font-size: 36px;
+          font-size: 48px;
+          font-weight: 600;
         }
         .subtitle {
           margin: 2px 0 0;
@@ -589,8 +590,8 @@ export default function AutoresponderSetup() {
           padding: 10px 18px;
           border-radius: 999px;
           cursor: pointer;
-          font-weight: 500;
-          font-size: 20px;
+          font-weight: 600;
+          font-size: 18px;
         }
 
         .form-wrapper {
@@ -599,7 +600,7 @@ export default function AutoresponderSetup() {
           width: 100%;
         }
         .form-inner {
-          width: 1100px;
+          width: 1320px;
           display: flex;
           flex-direction: column;
           gap: 18px;
@@ -618,8 +619,8 @@ export default function AutoresponderSetup() {
         }
         label {
           font-weight: 600;
-          color: #fff;
-          font-size: 18px;
+          color: #dfbd39;
+          font-size: 24px;
         }
         input,
         select {
@@ -649,7 +650,7 @@ export default function AutoresponderSetup() {
           border-radius: 10px;
           cursor: pointer;
           font-weight: 500;
-          font-size: 14px;
+          font-size: 16px;
         }
 
         .days {
@@ -676,7 +677,7 @@ export default function AutoresponderSetup() {
           border: none;
           border-radius: 6px;
           padding: 8px 14px;
-          font-weight: 600;
+          font-weight: 500;
           font-size: 18px;
         }
 
@@ -746,7 +747,7 @@ export default function AutoresponderSetup() {
           border-radius: 6px;
           padding: 10px 18px;
           color: #fff;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           font-size: 18px;
         }
@@ -793,7 +794,7 @@ export default function AutoresponderSetup() {
           margin-top: 10px;
           cursor: pointer;
           font-weight: 600;
-          font-size: 18px;
+          font-size: 16px;
         }
         .create[disabled] {
           opacity: 0.6;

@@ -1,11 +1,11 @@
-﻿// /components/SideNav.js 
-import Link from "next/link";
+﻿import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
+import { LineChart } from "lucide-react";
 import ICONS from "./iconMap";
 
 // Same network / circle style icon for Communities (Option 3)
-const CommunitiesIcon = ({ size = 18, color = "#fff" }) => (
+const CommunitiesIcon = ({ size = 24, color = "#fff" }) => (
   <svg
     width={size}
     height={size}
@@ -25,37 +25,52 @@ const CommunitiesIcon = ({ size = 18, color = "#fff" }) => (
 );
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard, color: "u01" },
+  { href: "/dashboard", label: "Navigation Dashboard", icon: ICONS.dashboard, color: "u01" },
 
   // ⭐ Priority To-Do List (same as dashboard card 1)
   {
     href: "/store/dashboard",
-    label: "Priority To-Do List",
+    label: "Command Centre",
     icon: ICONS.dashboard,
     color: "u01", // same green as dashboard
   },
 
   {
-    href: "/modules/affiliates/affiliate-marketplace",
-    label: "Affiliate Marketplace",
-    icon: ICONS.affiliates,
-    color: "u02",
+    href: "/marketplace",
+    label: "The Xchange Marketplace",
+    icon: ICONS.marketplace,
+    color: "u23",
+    target: "_blank",
+    rel: "noopener noreferrer",
   },
-  { href: "/assets", label: "Assets", icon: ICONS.assets, color: "u03" },
+
+  {
+    href: "/modules/vendor",
+    label: "Vendor's Dashboard",
+    icon: ICONS.marketplace,
+    color: "u01", // Use same green as Dashboard for visibility
+  },
+  {
+    href: "/modules/affiliates",
+    label: "Affiliates Dashboard",
+    icon: ICONS.affiliates,
+    color: "u18",
+  },
+  { href: "/assets", label: "Media Library", icon: ICONS.assets, color: "u03" },
   { href: "/leads", label: "Leads", icon: ICONS.leads, color: "u04" },
   { href: "/account", label: "Account", icon: ICONS.account, color: "u05" },
-  { href: "/billing", label: "Billing & Modules", icon: ICONS.billing, color: "u06" }, // orange
+  { href: "/billing", label: "Billing & Modules", icon: ICONS.billing, color: "u06" },
   {
     href: "/modules/communities",
     label: "Communities",
     icon: CommunitiesIcon,
-    color: "u17", // teal now
+    color: "u17",
   },
   {
     href: "/modules/accounting",
     label: "Accounting",
-    icon: ICONS.billing, // you can replace with a dedicated accounting icon later
-    color: "u21", // blue, matches dashboard
+    icon: ICONS.billing,
+    color: "u21",
   },
 ];
 
@@ -70,8 +85,27 @@ const MODULE_ITEMS = [
   {
     href: "/modules/email/crm",
     label: "CRM",
-    icon: ICONS.leads, // same icon as dashboard CRM card
-    color: "u22", // new colour band – light blue
+    icon: ICONS.account,
+    color: "u22", // new colour band – pink
+  },
+  {
+    label: "SMS Marketing",
+    desc: "SMS",
+    href: "/modules/email/crm/sms-dashboard",
+    icon: ICONS.sms,
+    color: "u33",
+  },
+  {
+    href: "/modules/social_media/dashboard",
+    label: "Social Media",
+    icon: ICONS.social,
+    color: "u25",
+  },
+  {
+    href: "/modules/calendar/dashboard",  
+    label: "Calendar Booking", 
+    icon: ICONS.calendar,
+    color: "u15",
   },
   {
     href: "/modules/website-builder",
@@ -92,28 +126,10 @@ const MODULE_ITEMS = [
     color: "u09",
   },
   {
-    href: "/modules/courses",
-    label: "Online courses",
-    icon: ICONS.courses,
-    color: "u12",
-  },
-  {
-    href: "/modules/physical-products",
-    label: "Physical products",
-    icon: ICONS.products,
-    color: "u13",
-  },
-  {
     href: "/modules/webinars",
     label: "Webinars",
     icon: ICONS.webinars,
     color: "u14",
-  },
-  {
-    href: "/modules/booking-calendar",
-    label: "Calendar",
-    icon: ICONS.calendar,
-    color: "u15",
   },
   {
     href: "/modules/pipelines",
@@ -122,22 +138,10 @@ const MODULE_ITEMS = [
     color: "u16",
   },
   {
-    href: "/modules/social-media",
-    label: "Social Media",
-    icon: ICONS.social,
-    color: "u18",
-  },
-  {
-    href: "/modules/subaccounts",
-    label: "Subaccounts",
-    icon: ICONS.subaccounts,
+    href: "/modules/agency",
+    label: "Agency Dashboard",
+    icon: ICONS.agency,
     color: "u19",
-  },
-  {
-    href: "/modules/digital-products",
-    label: "Digital products",
-    icon: ICONS.digitalProducts,
-    color: "u20",
   },
 ];
 
@@ -173,6 +177,8 @@ export default function SideNav() {
                 className={`nav-item ${item.color} ${
                   isActive(item.href) ? "active" : ""
                 }`}
+                {...(item.target ? { target: item.target } : {})}
+                {...(item.rel ? { rel: item.rel } : {})}
               >
                 <span className="icon">
                   {item.icon && <item.icon color="#fff" size={18} />}
@@ -304,21 +310,29 @@ export default function SideNav() {
         .u04 { border-color: #f43f5e; }
         .u05 { border-color: #8b5cf6; }
         .u06 { border-color: #f59e0b; } /* Billing */
-        .u07 { border-color: #3b82f6; }
-        .u08 { border-color: #d946ef; }
+        .u07 { border-color: #2d94c3; }
+        .u08 { border-color: #ef465d; }
         .u09 { border-color: #fb923c; }
         .u10 { border-color: #facc15; }
         .u12 { border-color: #ec4899; }
         .u13 { border-color: #0ea5e9; }
         .u14 { border-color: #ef4444; }
-        .u15 { border-color: #84cc16; }
+        .u15 { border-color: #bae974; }
         .u16 { border-color: #7c3aed; }
         .u17 { border-color: #14b8a6; } /* Communities teal */
-        .u18 { border-color: #06b6d4; }
+        .u18 { border-color: #06a9db; }
         .u19 { border-color: #10b981; }
         .u20 { border-color: #475569; }
         .u21 { border-color: #0ea5e9; } /* Accounting blue */
-        .u22 { border-color: #38bdf8; } /* CRM light blue – matches dashboard card */
+        .u22 { border-color: #ec4899; } /* CRM */
+        .u23 { border-color: #0d87f1; } /* Marketplace */
+        .u24 { border-color: #0df118; } /* Vendor's Dashboard */
+        .u25 { border-color: #8126e9; }
+        .u33 { border-color: #06b6d4; } /* SMS Marketing 
+    .nav-item.u33 .label { color: #fff; }
+    .nav-item.u33:hover .label, .active.u33 .label { color: #000; }
+  .nav-item.u33 { color: #fff; }
+  .nav-item.u33:hover, .active.u33 { background: #06b6d4; border-color: #06b6d4; color: #000; }
 
         /* Active + hover fill colours (dashboard-style full colour) */
         .nav-item.u01:hover,
@@ -334,9 +348,9 @@ export default function SideNav() {
         .nav-item.u06:hover,
         .active.u06 { background: #f59e0b; border-color: #f59e0b; color: #000; }
         .nav-item.u07:hover,
-        .active.u07 { background: #3b82f6; border-color: #3b82f6; color: #000; }
+        .active.u07 { background: #2d94c3; border-color: #2d94c3; color: #000; }
         .nav-item.u08:hover,
-        .active.u08 { background: #d946ef; border-color: #d946ef; color: #000; }
+        .active.u08 { background: #ef465d; border-color: #ef465d; color: #000; }
         .nav-item.u09:hover,
         .active.u09 { background: #fb923c; border-color: #fb923c; color: #000; }
         .nav-item.u10:hover,
@@ -354,7 +368,7 @@ export default function SideNav() {
         .nav-item.u17:hover,
         .active.u17 { background: #14b8a6; border-color: #14b8a6; color: #000; }
         .nav-item.u18:hover,
-        .active.u18 { background: #06b6d4; border-color: #06b6d4; color: #000; }
+        .active.u18 { background: #06a9db; border-color: #06a9db; color: #000; }
         .nav-item.u19:hover,
         .active.u19 { background: #10b981; border-color: #10b981; color: #000; }
         .nav-item.u20:hover,
@@ -362,7 +376,15 @@ export default function SideNav() {
         .nav-item.u21:hover,
         .active.u21 { background: #0ea5e9; border-color: #0ea5e9; color: #000; }
         .nav-item.u22:hover,
-        .active.u22 { background: #38bdf8; border-color: #38bdf8; color: #000; }
+        .active.u22 { background: #ec4899; border-color: #ec4899; color: #000; }
+        .nav-item.u23:hover,
+        .active.u23 { background: #0d87f1; border-color: #0d87f1; color: #000; }
+        .nav-item.u24:hover,
+        .active.u24 { background: #0df118; border-color: #0df118; color: #000; }
+        .nav-item.u25:hover,
+        .active.u25 { background: #8126e9; border-color: #8126e9; color: #000; }
+        .nav-item.u33:hover 
+        .active.u33 { background: #06b6d4; border-color: #06b6d4; color: #000; }
 
         .bottom-actions {
           margin-top: auto;
@@ -375,26 +397,28 @@ export default function SideNav() {
 
         .funnel-btn {
           width: 100%;
-          padding: 10px;
+          padding: 14px 0;
           border: none;
-          border-radius: 6px;
-          font-weight: 700;
+          border-radius: 8px;
+          font-size: 18px;
+          font-weight: 600;
           cursor: pointer;
-          transition: background 0.2s ease;
+          transition: background 0.2s, box-shadow 0.2s;
           text-align: center;
+          box-shadow: 0 2px 8px rgba(34,197,94,0.12);
         }
 
         .funnel-btn.import {
-          background: #22c55e;
+          background: linear-gradient(135deg,#22c55e,#3b82f6);
           color: #fff;
         }
-        .funnel-btn.import:hover { background: #16a34a; }
+        .funnel-btn.import:hover { background: linear-gradient(135deg,#16a34a,#2563eb); }
 
         .funnel-btn.export {
-          background: #ef4444;
+          background: linear-gradient(135deg,#ef4444,#ef465d);
           color: #fff;
         }
-        .funnel-btn.export:hover { background: #b91c1c; }
+        .funnel-btn.export:hover { background: linear-gradient(135deg,#b91c1c,#ef465d); }
       `}</style>
     </aside>
   );

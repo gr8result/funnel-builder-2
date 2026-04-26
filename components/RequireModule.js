@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import supabaseDefault, { supabase as supabaseNamed } from "../utils/supabase-client";
+import { supabase } from "../lib/supabaseClient";
 const supabase = supabaseNamed || supabaseDefault;
 
 export default function RequireModule({ slug, children }) {

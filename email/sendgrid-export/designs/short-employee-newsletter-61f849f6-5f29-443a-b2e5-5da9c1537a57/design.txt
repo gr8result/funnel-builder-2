@@ -1,0 +1,53 @@
+Email not displaying correctly? View it in your browser.
+
+COMPANY HIGHLIGHTS
+FOR THIS WEEK
+
+The Global Week of Service is coming up soon, and there's still time for you to find a cause you care about. Browse through our upcoming company-sponsored service events to find one that works for your schedule.
+
+Learn more >>
+
+GLOBAL
+
+*We opened our second store in Asia!*
+
+This is a big moment for our brand. Learn about where we launched, why, and what this means for us moving forward.
+
+Read more >>
+
+DEVELOPMENT
+
+*Breakthrough from our R&D department*
+
+After months of trial and error, we've finally found a sustainable way to manufacture our products without hurting our margins.
+
+Read more >>
+
+PARTNER
+
+*Collaboration with*
+*Space Co.*
+
+We're excited to announce our new partnership with Space Co. Learn what this means for our business and what we hope to accomplish together.
+
+Read more >>
+
+WHAT'S NEXT
+
+Next Thursday is our company's 20th anniversary celebration! Parties will be held at our buildings located around the world. Families and friends are welcome to come!
+
+Facebok
+
+Twitter
+
+Instagram
+
+Linkedin
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

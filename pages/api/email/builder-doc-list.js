@@ -47,11 +47,14 @@ export default async function handler(req, res) {
       const path = `${folder}/${f.name}`;
       const j = await downloadJson(path);
       if (!j) continue;
+      const docId = j.docId || f.name.replace(".json", "");
       docs.push({
-        docId: j.docId || f.name.replace(".json", ""),
+        docId,
         name: j.name || "Untitled Email",
         updatedAt: j.updatedAt || null,
         createdAt: j.createdAt || null,
+        thumbUrl: j.thumbUrl || "",
+        htmlUrl: `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${userId}/builder-docs/${docId}.html`,
       });
     }
 

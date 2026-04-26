@@ -1,0 +1,35 @@
+Email not displaying correctly?
+View it in your browser.
+
+************************
+WELCOME TO LUXURY STAYS!
+************************
+
+Thank you for joining our program. We're thrilled to have you as a member!
+
+Book Now
+
+OUR PROGRAM
+
+*Our Luxury Stays Program makes booking your hotel stays easy. With priority access to 500 hotels across the country, you'll always find the perfect hotel for your travels.*
+
+MEMBER EXCLUSIVES
+
+*Member exclusives include the use of the hotel's spa, business conference rooms for any meeting you have during your stay, and reservations at any of our hotel's restaurants.*
+
+OUR SERVICE
+
+*We provide the highest quality experience from helping you book your stay to providing you transportation to the hotel. Book your first stay with us today!*
+
+*41 FLORENCE WAY*
+*NEW YORK CITY, NEW YORK 71302*
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

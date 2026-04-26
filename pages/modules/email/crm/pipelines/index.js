@@ -59,6 +59,82 @@ const DEFAULT_STAGES = [
 // localStorage keys
 const LAST_PIPELINE_KEY = "crm:pipeline:lastPipelineId";
 const CARD_STYLE_KEY = "crm:pipeline:cardStyle";
+const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
+const PIPELINE_TEAM_KEY_PREFIX = "crm:pipeline:teamAssignments:";
+const LEAD_META_KEY_PREFIX = "crm:pipeline:leadMeta:";
+
+function readStoredJson(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function formatMoney(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return "$0";
+  try {
+    return new Intl.NumberFormat("en-AU", {
+      style: "currency",
+      currency: "AUD",
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return `$${Math.round(n)}`;
+  }
+}
+
+function parseList(value) {
+  return String(value || "")
+    .split(/,|\n|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getInitials(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (!parts.length) return "•";
+  return parts.map((part) => part[0]?.toUpperCase() || "").join("");
+}
+
+function getLeadCrmMeta(lead, metaMap = {}) {
+  return {
+    source: lead?.source || "",
+    tags: lead?.tags || "",
+    product: lead?.product || "",
+    ...(metaMap?.[lead?.id] || {}),
+    ...(lead?.crmMeta || {}),
+  };
+}
+
+function buildDefaultTeams() {
+  return [
+    {
+      id: "team_default",
+      name: "Sales Team",
+      manager: "Owner",
+      members: "Closer, Setter",
+      target: 25000,
+      color: "#22c55e",
+    },
+  ];
+}
 
 // helper for card visuals – outline = stage colour
 function getCardVisualStyles(styleKey, color) {
@@ -102,6 +178,11 @@ export default function Pipelines() {
   const [stages, setStages] = useState([]);
   const [leads, setLeads] = useState([]);
   const [activeLead, setActiveLead] = useState(null);
+  const [crmTasks, setCrmTasks] = useState([]);
+  const [leadMetaMap, setLeadMetaMap] = useState({});
+  const [teamRows, setTeamRows] = useState([]);
+  const [currentPipelineTeamId, setCurrentPipelineTeamId] = useState("");
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   // Lists (for “List to use in this board”)
   const [lists, setLists] = useState([]);
@@ -182,8 +263,32 @@ export default function Pipelines() {
     const uid = data.user.id;
     setUserId(uid);
 
-    await Promise.all([loadLists(uid), loadPipelines(uid), loadLeads(uid)]);
+    await Promise.all([
+      loadLists(uid),
+      loadPipelines(uid),
+      loadLeads(uid),
+      loadCrmTasks(uid),
+    ]);
     setLoading(false);
+  }
+
+  async function loadCrmTasks(uid) {
+    try {
+      const { data, error } = await supabase
+        .from("crm_tasks")
+        .select("id, due_date, completed, contact_id")
+        .eq("user_id", uid);
+
+      if (error) {
+        console.warn("loadCrmTasks error:", error);
+        setCrmTasks([]);
+      } else {
+        setCrmTasks(data || []);
+      }
+    } catch (err) {
+      console.warn("loadCrmTasks exception:", err);
+      setCrmTasks([]);
+    }
   }
 
   async function loadLists(uid) {
@@ -293,6 +398,34 @@ export default function Pipelines() {
       setListFilter("all");
     }
   }, [currentPipeline]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const teamsKey = `${TEAM_STORAGE_KEY_PREFIX}${userId}`;
+    const leadMetaKey = `${LEAD_META_KEY_PREFIX}${userId}`;
+
+    const storedTeams = readStoredJson(teamsKey, []);
+    if (storedTeams.length) {
+      setTeamRows(storedTeams);
+    } else {
+      const defaults = buildDefaultTeams();
+      setTeamRows(defaults);
+      writeStoredJson(teamsKey, defaults);
+    }
+
+    setLeadMetaMap(readStoredJson(leadMetaKey, {}));
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !currentPipeline?.id) {
+      setCurrentPipelineTeamId("");
+      return;
+    }
+
+    const map = readStoredJson(`${PIPELINE_TEAM_KEY_PREFIX}${userId}`, {});
+    setCurrentPipelineTeamId(map[currentPipeline.id] || "");
+  }, [userId, currentPipeline?.id]);
 
   // helper: quick stage names
   function getStageTitleById(id) {
@@ -482,6 +615,25 @@ export default function Pipelines() {
     setSaveAsLocation("");
     setIsSaveAsOpen(true);
     setIsFileMenuOpen(false);
+  }
+
+  function handleFileNewPipeline() {
+    openCreatePipelineModal();
+    setIsFileMenuOpen(false);
+  }
+
+  function handleFileRenamePipeline() {
+    openEditPipelineModal();
+    setIsFileMenuOpen(false);
+  }
+
+  function handleFileDuplicatePipeline() {
+    handleFileSaveAs();
+  }
+
+  async function handleFileDeleteCurrentPipeline() {
+    setIsFileMenuOpen(false);
+    await handleDeletePipeline();
   }
 
   async function handleConfirmSaveAs() {
@@ -741,10 +893,73 @@ export default function Pipelines() {
     }
   }
 
+  function handleSaveTeams(nextTeams) {
+    setTeamRows(nextTeams);
+    if (userId) {
+      writeStoredJson(`${TEAM_STORAGE_KEY_PREFIX}${userId}`, nextTeams);
+    }
+  }
+
+  function handleAssignPipelineTeam(teamId) {
+    setCurrentPipelineTeamId(teamId || "");
+    if (!userId || !currentPipeline?.id) return;
+    const key = `${PIPELINE_TEAM_KEY_PREFIX}${userId}`;
+    const map = readStoredJson(key, {});
+    map[currentPipeline.id] = teamId || "";
+    writeStoredJson(key, map);
+  }
+
+  async function handleLeadMetaSave(leadId, meta) {
+    if (!userId || !leadId) return;
+    const key = `${LEAD_META_KEY_PREFIX}${userId}`;
+    const next = { ...readStoredJson(key, {}), [leadId]: meta };
+    const currentLead = leads.find((item) => item.id === leadId);
+    const lostStage = stages.find(
+      (stage) =>
+        String(stage?.id) === "not_qualified" ||
+        String(stage?.title || "").toLowerCase().includes("not qualified")
+    );
+    const shouldMoveToNotQualified =
+      String(meta?.status || "").toLowerCase() === "lost" &&
+      lostStage?.id &&
+      currentLead?.stage !== lostStage.id;
+
+    writeStoredJson(key, next);
+    setLeadMetaMap(next);
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId
+          ? { ...lead, crmMeta: meta, ...(shouldMoveToNotQualified ? { stage: lostStage.id } : {}) }
+          : lead
+      )
+    );
+    setSelectedLead((prev) =>
+      prev && prev.id === leadId
+        ? { ...prev, crmMeta: meta, ...(shouldMoveToNotQualified ? { stage: lostStage.id } : {}) }
+        : prev
+    );
+
+    if (shouldMoveToNotQualified) {
+      try {
+        const { error } = await supabase
+          .from("leads")
+          .update({ stage: lostStage.id, updated_at: new Date() })
+          .eq("id", leadId);
+
+        if (error) {
+          console.error("Move lost lead error:", error);
+        }
+      } catch (err) {
+        console.error("Move lost lead error:", err);
+      }
+    }
+  }
+
   // ---------- MODAL HANDLERS ----------
 
   function handleOpenLeadModal(lead) {
-    setSelectedLead(lead);
+    const meta = getLeadCrmMeta(lead, leadMetaMap);
+    setSelectedLead({ ...lead, crmMeta: meta });
     setIsLeadModalOpen(true);
   }
 
@@ -771,10 +986,67 @@ export default function Pipelines() {
   const stageIdSet = new Set(stages.map((s) => s.id));
 
   // filtered leads by list (for this board)
-  const leadsForBoard =
+  const leadsForBoardRaw =
     listFilter === "all"
       ? leads
       : leads.filter((l) => String(l.list_id) === String(listFilter));
+
+  const leadsForBoard = leadsForBoardRaw.map((lead) => ({
+    ...lead,
+    crmMeta: getLeadCrmMeta(lead, leadMetaMap),
+  }));
+
+  const currentTeam =
+    teamRows.find((team) => String(team.id) === String(currentPipelineTeamId)) ||
+    null;
+
+  const currentTeamMembers = currentTeam
+    ? Array.from(new Set([currentTeam.manager, ...parseList(currentTeam.members)].filter(Boolean)))
+    : [];
+
+  const pipelineSummary = (() => {
+    const today = new Date();
+    let pipelineValue = 0;
+    let weightedForecast = 0;
+    let closingSoon = 0;
+    let highPriority = 0;
+    let unassigned = 0;
+
+    for (const lead of leadsForBoard) {
+      const meta = lead.crmMeta || {};
+      const dealValue = Number(meta.dealValue || 0);
+      const probability = Math.max(0, Math.min(100, Number(meta.probability || 0)));
+      pipelineValue += dealValue;
+      weightedForecast += dealValue * (probability / 100);
+      if ((meta.priority || "").toLowerCase() === "high") highPriority++;
+      if (!String(meta.owner || "").trim()) unassigned++;
+
+      if (meta.closeDate) {
+        const close = new Date(meta.closeDate);
+        const diff = Math.ceil((close.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (Number.isFinite(diff) && diff >= 0 && diff <= 14) closingSoon++;
+      }
+    }
+
+    const overdueActivities = crmTasks.filter((task) => {
+      if (!task?.due_date || task?.completed) return false;
+      const due = new Date(task.due_date);
+      due.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return due < now;
+    }).length;
+
+    return {
+      pipelineValue,
+      weightedForecast,
+      closingSoon,
+      highPriority,
+      unassigned,
+      overdueActivities,
+      teamCount: teamRows.length,
+    };
+  })();
 
   return (
     <>
@@ -926,6 +1198,30 @@ export default function Pipelines() {
                 </button>
               </div>
 
+              {/* Team selector pill */}
+              <div style={styles.pipelineSelector}>
+                <span style={styles.pipelineLabel}>Team:</span>
+                <select
+                  style={{ ...styles.pipelineSelect, minWidth: 170 }}
+                  value={currentPipelineTeamId || ""}
+                  onChange={(e) => handleAssignPipelineTeam(e.target.value)}
+                >
+                  <option value="">No team</option>
+                  {teamRows.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  style={styles.pipelineSmallBtn}
+                  onClick={() => setIsTeamModalOpen(true)}
+                  title="Manage sales teams"
+                >
+                  👥
+                </button>
+              </div>
+
               {/* File menu – pushed to far right */}
               <div style={styles.fileMenuWrapper} ref={fileMenuRef}>
                 <button
@@ -937,6 +1233,24 @@ export default function Pipelines() {
 
                 {isFileMenuOpen && (
                   <div style={styles.fileMenu}>
+                    <button style={styles.fileMenuItem} onClick={handleFileNewPipeline}>
+                      ➕ New Pipeline…
+                    </button>
+                    <button
+                      style={styles.fileMenuItem}
+                      onClick={handleFileRenamePipeline}
+                      disabled={!currentPipeline}
+                    >
+                      ✏ Rename / Settings…
+                    </button>
+                    <button
+                      style={styles.fileMenuItem}
+                      onClick={handleFileDuplicatePipeline}
+                      disabled={!currentPipeline}
+                    >
+                      📑 Duplicate Pipeline…
+                    </button>
+                    <div style={styles.fileMenuDivider} />
                     <button style={styles.fileMenuItem} onClick={handleFileSave}>
                       💾 Save
                     </button>
@@ -951,8 +1265,7 @@ export default function Pipelines() {
                       onClick={handleFileImport}
                       disabled={isImporting}
                     >
-                      📥{" "}
-                      {isImporting ? "Importing…" : "Import (Reload Leads)"}
+                      📥 {isImporting ? "Importing…" : "Import (Reload Leads)"}
                     </button>
                     <button
                       style={styles.fileMenuItem}
@@ -963,15 +1276,133 @@ export default function Pipelines() {
                     <div style={styles.fileMenuDivider} />
                     <button
                       style={styles.fileMenuItem}
-                      onClick={handleFileEditPipeline}
+                      onClick={() => {
+                        setIsTeamModalOpen(true);
+                        setIsFileMenuOpen(false);
+                      }}
                     >
-                      ✏ Edit Pipeline Stages
+                      👥 Manage Sales Teams
+                    </button>
+                    <button
+                      style={styles.fileMenuItem}
+                      onClick={handleFileEditPipeline}
+                      disabled={!currentPipeline}
+                    >
+                      🧱 Edit Pipeline Stages
+                    </button>
+                    <button
+                      style={{ ...styles.fileMenuItem, color: "#fca5a5" }}
+                      onClick={handleFileDeleteCurrentPipeline}
+                      disabled={!currentPipeline}
+                    >
+                      🗑 Delete Current Pipeline
                     </button>
                   </div>
                 )}
               </div>
             </div>
           </div>
+        </div>
+
+        <div
+          style={{
+            width: "1320px",
+            margin: "0 auto 14px",
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 10,
+          }}
+        >
+          {[
+            {
+              label: currentTeam ? `Team • ${currentTeam.name}` : "Teams",
+              value: `${pipelineSummary.teamCount}`,
+              sub: currentTeam
+                ? `Manager: ${currentTeam.manager || "Not set"}`
+                : "Assign this pipeline to a team",
+              tone: currentTeam?.color || "#22c55e",
+              members: currentTeamMembers,
+            },
+            {
+              label: "Pipeline Value",
+              value: formatMoney(pipelineSummary.pipelineValue),
+              sub: `${pipelineSummary.highPriority} high-priority opportunities`,
+              tone: "#0ea5e9",
+            },
+            {
+              label: "Anticipated Revenue",
+              value: formatMoney(pipelineSummary.weightedForecast),
+              sub: `${pipelineSummary.closingSoon} deals closing in 14 days`,
+              tone: "#a855f7",
+            },
+            {
+              label: "Activity Focus",
+              value: `${pipelineSummary.overdueActivities}`,
+              sub: `${pipelineSummary.unassigned} deals missing an owner`,
+              tone: "#f59e0b",
+            },
+          ].map((card) => (
+            <div
+              key={card.label}
+              style={{
+                background: "#0f172a",
+                border: `1px solid ${card.tone}55`,
+                borderRadius: 14,
+                padding: "14px 16px",
+                boxShadow: "0 10px 22px rgba(0,0,0,0.35)",
+              }}
+            >
+              <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                {card.label}
+              </div>
+              <div style={{ color: "#fff", fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>
+                {card.value}
+              </div>
+              <div style={{ color: card.tone, fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+                {card.sub}
+              </div>
+
+              {!!card.members?.length && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                  {card.members.slice(0, 6).map((member) => (
+                    <span
+                      key={`${card.label}-${member}`}
+                      title={member}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "4px 8px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#e5e7eb",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 999,
+                          display: "grid",
+                          placeItems: "center",
+                          background: `${card.tone}22`,
+                          color: card.tone,
+                          fontSize: 10,
+                          fontWeight: 800,
+                        }}
+                      >
+                        👤
+                      </span>
+                      {member}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* BOARD */}
@@ -1084,6 +1515,17 @@ export default function Pipelines() {
           />
         )}
 
+        {isTeamModalOpen && (
+          <TeamManagerModal
+            teams={teamRows}
+            onClose={() => setIsTeamModalOpen(false)}
+            onSave={(nextTeams) => {
+              handleSaveTeams(nextTeams);
+              setIsTeamModalOpen(false);
+            }}
+          />
+        )}
+
         {/* Create / Edit Pipeline modal */}
         {isPipelineModalOpen && (
           <div style={styles.modalOverlay}>
@@ -1151,6 +1593,9 @@ export default function Pipelines() {
           fontScale={fontScale}
           onClose={handleCloseLeadModal}
           onNotesUpdated={handleNotesUpdated}
+          crmMeta={selectedLead?.crmMeta || {}}
+          teamOptions={teamRows}
+          onCrmMetaSave={handleLeadMetaSave}
         />
       </main>
     </>
@@ -1286,6 +1731,71 @@ function LeadCard({ lead, color, isCompactMode, onOpen, cardStyle }) {
               <p style={styles.textWrap}>{lead.email || ""}</p>
             </>
           )}
+
+          {(lead.crmMeta?.owner || lead.crmMeta?.dealValue || lead.crmMeta?.priority || lead.crmMeta?.tags || lead.crmMeta?.product) && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+              {parseList(lead.crmMeta?.owner).slice(0, 2).map((owner) => (
+                <span
+                  key={`${lead.id}-${owner}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: 10,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    background: "rgba(148,163,184,0.18)",
+                    color: "#e2e8f0",
+                    maxWidth: "100%",
+                  }}
+                  title={owner}
+                >
+                  <span
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 999,
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(59,130,246,0.25)",
+                      color: "#bfdbfe",
+                      fontSize: 9,
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    👤
+                  </span>
+                  {owner}
+                </span>
+              ))}
+              {parseList(lead.crmMeta?.owner).length > 2 ? (
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(148,163,184,0.14)", color: "#cbd5e1" }}>
+                  +{parseList(lead.crmMeta?.owner).length - 2} more
+                </span>
+              ) : null}
+              {lead.crmMeta?.dealValue ? (
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(34,197,94,0.18)", color: "#bbf7d0" }}>
+                  Revenue {formatMoney(lead.crmMeta.dealValue)}
+                </span>
+              ) : null}
+              {lead.crmMeta?.priority ? (
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: lead.crmMeta.priority === "High" ? "rgba(239,68,68,0.18)" : "rgba(59,130,246,0.18)", color: lead.crmMeta.priority === "High" ? "#fecaca" : "#bfdbfe" }}>
+                  {lead.crmMeta.priority}
+                </span>
+              ) : null}
+              {lead.crmMeta?.product ? (
+                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(168,85,247,0.18)", color: "#e9d5ff" }}>
+                  📦 {lead.crmMeta.product}
+                </span>
+              ) : null}
+              {parseList(lead.crmMeta?.tags).slice(0, 2).map((tag) => (
+                <span key={`${lead.id}-${tag}`} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(249,115,22,0.16)", color: "#fdba74" }}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1295,6 +1805,95 @@ function LeadCard({ lead, color, isCompactMode, onOpen, cardStyle }) {
 /* -------------------------------------------------------------
    STAGE EDITOR MODAL
 ------------------------------------------------------------- */
+function TeamManagerModal({ teams, onClose, onSave }) {
+  const [localTeams, setLocalTeams] = useState(
+    Array.isArray(teams) && teams.length ? [...teams] : buildDefaultTeams()
+  );
+
+  function updateTeam(index, field, value) {
+    const next = [...localTeams];
+    next[index] = { ...next[index], [field]: value };
+    setLocalTeams(next);
+  }
+
+  function addTeam() {
+    setLocalTeams((prev) => [
+      ...prev,
+      {
+        id: `team_${Date.now()}`,
+        name: "New Team",
+        manager: "",
+        members: "",
+        target: 0,
+        color: "#22c55e",
+      },
+    ]);
+  }
+
+  function deleteTeam(index) {
+    setLocalTeams((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.modal}>
+        <h2 style={styles.modalTitle}>Sales Teams</h2>
+        <p style={styles.modalText}>
+          Manage teams, managers, members, and revenue targets without changing the board layout.
+        </p>
+
+        {localTeams.map((team, index) => (
+          <div key={team.id} style={{ ...styles.stageRow, gridTemplateColumns: "1.3fr 1fr 1fr 120px 64px 52px", alignItems: "center" }}>
+            <input
+              type="text"
+              value={team.name}
+              onChange={(e) => updateTeam(index, "name", e.target.value)}
+              style={styles.stageInput}
+              placeholder="Team name"
+            />
+            <input
+              type="text"
+              value={team.manager || ""}
+              onChange={(e) => updateTeam(index, "manager", e.target.value)}
+              style={styles.stageInput}
+              placeholder="Manager"
+            />
+            <input
+              type="text"
+              value={team.members || ""}
+              onChange={(e) => updateTeam(index, "members", e.target.value)}
+              style={styles.stageInput}
+              placeholder="Members (comma-separated)"
+            />
+            <input
+              type="number"
+              min="0"
+              value={team.target || 0}
+              onChange={(e) => updateTeam(index, "target", e.target.value)}
+              style={styles.stageInput}
+              placeholder="Target"
+            />
+            <input
+              type="color"
+              value={team.color || "#22c55e"}
+              onChange={(e) => updateTeam(index, "color", e.target.value)}
+              style={styles.colorPicker}
+            />
+            <button onClick={() => deleteTeam(index)} style={styles.deleteBtn}>🗑</button>
+          </div>
+        ))}
+
+        <button onClick={addTeam} style={styles.addBtn}>+ Add Team</button>
+
+        <div style={styles.modalActionsRight}>
+          <button onClick={onClose} style={styles.backBtn2}>Cancel</button>
+          <button onClick={() => onSave(localTeams)} style={styles.saveBtn}>Save Teams</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StageEditor({ stages, onClose, onSave }) {
   const [localStages, setLocalStages] = useState([...stages]);
 
@@ -1612,16 +2211,20 @@ const styles = {
   scrollWrap: {
     width: "100%",
     overflowX: "auto",
+    overflowY: "hidden",
+    padding: "0 12px 8px",
+    boxSizing: "border-box",
+    scrollbarGutter: "stable both-edges",
   },
 
   board: {
-    display: "flex",
+    display: "inline-flex",
     gap: "22px",
-    padding: "0 20px 24px",
+    padding: "0 8px 24px",
     alignItems: "flex-start",
-    justifyContent: "center",
-    margin: "0 auto",
-    minWidth: "fit-content",
+    justifyContent: "flex-start",
+    minWidth: "max-content",
+    width: "max-content",
   },
 
   column: {

@@ -13,6 +13,7 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
   const [productName, setProductName] = useState(initial.productName || "");
   const [url, setUrl] = useState(initial.url || "");
   const [cartTimeout, setCartTimeout] = useState(initial.cartTimeout || 30);
+  const [waitHours, setWaitHours] = useState(initial.waitHours || 24);
 
   const saveAndClose = () => {
     const newData = {
@@ -27,6 +28,7 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
         productName,
         url,
         cartTimeout,
+        waitHours,
       },
     };
 
@@ -118,6 +120,16 @@ export default function ConditionNodeDrawer({ node, onSave, onClose }) {
                 onChange={(e) => setValue(e.target.value)}
                 style={s.input}
                 placeholder="Which email to check?"
+              />
+
+              <label style={s.label}>Wait Hours Before "Not Opened"</label>
+              <input
+                type="number"
+                min={1}
+                value={waitHours}
+                onChange={(e) => setWaitHours(Number(e.target.value))}
+                style={s.input}
+                placeholder="e.g. 24"
               />
             </>
           )}

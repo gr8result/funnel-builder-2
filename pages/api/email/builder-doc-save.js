@@ -26,6 +26,8 @@ export default async function handler(req, res) {
     const docId = String(req.body?.docId || "").trim();
     const name = String(req.body?.name || "").trim() || "Untitled Email";
     const blocks = Array.isArray(req.body?.blocks) ? req.body.blocks : [];
+    const html = typeof req.body?.html === "string" ? req.body.html : "";
+    const thumbUrl = typeof req.body?.thumbUrl === "string" ? req.body.thumbUrl : "";
 
     if (!userId) return res.status(400).json({ ok: false, error: "Missing userId" });
     if (!docId) return res.status(400).json({ ok: false, error: "Missing docId" });
@@ -37,6 +39,8 @@ export default async function handler(req, res) {
       userId,
       name,
       blocks,
+      html,
+      thumbUrl,
       updatedAt: now,
       createdAt: req.body?.createdAt ? String(req.body.createdAt) : now,
     };
@@ -51,6 +55,14 @@ export default async function handler(req, res) {
 
     if (error) {
       return res.status(500).json({ ok: false, error: "Save failed", detail: error.message });
+    }
+
+    // Also save HTML snapshot for thumbnail preview
+    if (html) {
+      const htmlPath = `${userId}/builder-docs/${docId}.html`;
+      await supabase.storage
+        .from(BUCKET)
+        .upload(htmlPath, html, { contentType: "text/html", upsert: true });
     }
 
     return res.status(200).json({ ok: true, path, docId, name, updatedAt: now });

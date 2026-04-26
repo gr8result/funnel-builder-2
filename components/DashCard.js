@@ -15,7 +15,7 @@ export default function DashCard({ href, title, subtitle, emoji = "✉️" }) {
         onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
         onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
       >
-        <div style={{ fontSize: 18, fontWeight: 700, display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ fontSize: 18, fontWeight:600, display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 20 }}>{emoji}</span>
           {title}
         </div>

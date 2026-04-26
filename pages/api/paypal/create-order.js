@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { items, total } = req.body;
+  const { items, total, metadata = {} } = req.body;
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_SECRET;
 
@@ -30,6 +30,14 @@ export default async function handler(req, res) {
     const accessToken = tokenData.access_token;
 
     // Create PayPal order
+    const returnParts = [];
+    if (metadata.emailPlan) returnParts.push(`emailPlan=${encodeURIComponent(String(metadata.emailPlan))}`);
+    if (metadata.smsPlan) returnParts.push(`smsPlan=${encodeURIComponent(String(metadata.smsPlan))}`);
+    if (metadata.calendarPlan) returnParts.push(`calendarPlan=${encodeURIComponent(String(metadata.calendarPlan))}`);
+    if (metadata.socialPlan) returnParts.push(`socialPlan=${encodeURIComponent(String(metadata.socialPlan))}`);
+    if (metadata.selected) returnParts.push(`selected=${encodeURIComponent(String(metadata.selected))}`);
+    const returnSuffix = returnParts.length ? `?${returnParts.join("&")}` : "";
+
     const orderRes = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
       method: "POST",
       headers: {
@@ -59,7 +67,7 @@ export default async function handler(req, res) {
           brand_name: "Gr8 Result Digital Solutions",
           landing_page: "LOGIN",
           user_action: "PAY_NOW",
-          return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/paypal/capture-order`,
+          return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/paypal/capture-order${returnSuffix}`,
           cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true`,
         },
       }),

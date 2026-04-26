@@ -1,15 +1,3 @@
-// /pages/modules/email/autoresponders/open.js
-// FULL REPLACEMENT
-//
-// ✅ Keeps the PURPLE 1320 banner EXACTLY as-is (same layout + sizing)
-// ✅ Centers content under banner
-// ✅ Increases table/page width to 1400px
-// ✅ Minimum font size across the whole page = 16px (no tiny text)
-// ✅ Shows Stats column (Queued/Pending/Sent/Failed + last sent + opens if available)
-// ✅ Uses /api/email/autoresponders/stats (Bearer token)
-// ✅ Lists autoresponders from email_automations for the logged-in user
-// ✅ Action buttons: Edit emails / Edit details / Delete (same vibe as your screenshot)
-
 import Head from "next/head";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
@@ -38,8 +26,14 @@ export default function AutorespondersOpen() {
   const [statsMap, setStatsMap] = useState({}); // { [autoresponder_id]: stats }
 
   async function getToken() {
-    const { data } = await supabase.auth.getSession();
-    return data?.session?.access_token || null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      // data?.session?.access_token is the usual shape; handle safely
+      return data?.session?.access_token || null;
+    } catch (e) {
+      console.error("getToken error:", e);
+      return null;
+    }
   }
 
   async function loadAll() {
@@ -91,27 +85,80 @@ export default function AutorespondersOpen() {
 
       setRows(mapped);
 
-      // Load stats via API (Bearer)
+      // Load stats via API (Bearer). Add robust logging + fallback.
       const token = await getToken();
-      if (token) {
+      let statsResponse = null;
+      let statsJson = null;
+      let triedNoAuth = false;
+
+      try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const r = await fetch("/api/email/autoresponders/stats", {
           method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
+          headers,
           cache: "no-store",
         });
-        const j = await r.json().catch(() => null);
-        if (r.ok && j?.ok && Array.isArray(j.data)) {
-          const m = {};
-          for (const st of j.data) {
-            if (st?.autoresponder_id) m[st.autoresponder_id] = st;
-          }
-          setStatsMap(m);
-        } else {
-          // keep UI working even if stats fails
-          setStatsMap({});
+        statsResponse = r;
+        try {
+          statsJson = await r.json().catch(() => null);
+        } catch {
+          statsJson = null;
         }
+
+        // If the token call fails (401/403/ok:false) try without auth as fallback
+        if (!(r.ok && statsJson?.ok && Array.isArray(statsJson.data))) {
+          // store debug to console
+          console.error(
+            "Stats fetch (with token) failed",
+            "status:",
+            r.status,
+            "body:",
+            statsJson
+          );
+
+          // Fallback attempt without Authorization header (some setups expose to anon)
+          triedNoAuth = true;
+          const r2 = await fetch("/api/email/autoresponders/stats", {
+            method: "GET",
+            cache: "no-store",
+          });
+          const j2 = await r2.json().catch(() => null);
+          // log fallback response
+          console.error(
+            "Stats fetch (no auth) result",
+            "status:",
+            r2.status,
+            "body:",
+            j2
+          );
+          statsResponse = r2;
+          statsJson = j2;
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching stats:", err);
+        statsResponse = null;
+        statsJson = null;
+      }
+
+      if (statsResponse && statsResponse.ok && statsJson?.ok && Array.isArray(statsJson.data)) {
+        const m = {};
+        for (const st of statsJson.data) {
+          if (st?.autoresponder_id) m[st.autoresponder_id] = st;
+        }
+        setStatsMap(m);
       } else {
+        // keep UI working even if stats fails
         setStatsMap({});
+        // helpful message for debugging
+        if (statsResponse) {
+          setMsg((prev) =>
+            prev
+              ? prev
+              : `Stats unavailable (status ${statsResponse.status}). Check console/network.`
+          );
+        } else {
+          setMsg((prev) => (prev ? prev : "Stats unavailable. Check console for errors."));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -179,7 +226,7 @@ export default function AutorespondersOpen() {
       <div className="banner-wrapper">
         <div className="banner">
           <div className="banner-left">
-            <span className="icon">✉️</span>
+            <span className="icon">⏱️</span>
             <div>
               <h1 className="title">Autoresponders</h1>
               <p className="subtitle">View and manage your timed email sequences.</p>
@@ -375,7 +422,7 @@ export default function AutorespondersOpen() {
         }
         .title {
           margin: 0;
-          font-size: 36px;
+          font-size: 48px;
         }
         .subtitle {
           margin: 2px 0 0;
@@ -390,7 +437,7 @@ export default function AutorespondersOpen() {
         .back {
           background: #111821;
           color: #e5e7eb;
-          border: 1px solid #4b5563;
+          border: 1px solid #000000;
           padding: 10px 18px;
           border-radius: 999px;
           cursor: pointer;
@@ -505,7 +552,7 @@ export default function AutorespondersOpen() {
         }
         .pill .v {
           color: #ffffff;
-          font-weight: 900;
+          font-weight: 600;
           font-size: 16px;
         }
 
@@ -538,8 +585,8 @@ export default function AutorespondersOpen() {
           border-radius: 6px;
           padding: 10px 12px;
           cursor: pointer;
-          font-weight: 800;
-          font-size: 16px;
+          font-weight: 600;
+          font-size: 18px;
         }
         .btn.blue {
           background: #2563eb;

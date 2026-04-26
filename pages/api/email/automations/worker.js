@@ -13,6 +13,7 @@
 // NOTE: Does NOT touch autoresponder/broadcast/campaign modules.
 
 import { createClient } from "@supabase/supabase-js";
+import { guardEmailSend, recordEmailSent } from "../../../../lib/emailValidation";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -437,6 +438,26 @@ async function processOneJob(job) {
     try {
       const lead = await loadLead(job);
       const brand = await loadAccountBrandByAuthUser(job.user_id);
+      const emailGuard = await guardEmailSend(job.user_id, 1);
+      const subject =
+        node?.data?.subject ||
+        node?.data?.title ||
+        node?.data?.label ||
+        "Automation email";
+
+      const { data: sendRow } = await supabaseAdmin
+        .from("email_sends")
+        .insert({
+          user_id: job.user_id,
+          email: lead.email,
+          recipient_email: lead.email,
+          email_type: "automation",
+          subject,
+          status: "processing",
+          created_at: nowIso(),
+        })
+        .select("id")
+        .single();
 
       const sent = await sendEmailSendGrid({
         lead,
@@ -444,6 +465,18 @@ async function processOneJob(job) {
         fromEmail: brand.fromEmail,
         fromName: brand.fromName,
       });
+      await recordEmailSent(job.user_id, 1);
+
+      if (sendRow?.id) {
+        await supabaseAdmin
+          .from("email_sends")
+          .update({
+            status: "sent",
+            sent_at: nowIso(),
+            sendgrid_message_id: sent?.sgMessageId || null,
+          })
+          .eq("id", sendRow.id);
+      }
 
       // mark current job done FIRST (so it won’t re-run)
       await markJob(job.id, { status: "done" });
@@ -463,6 +496,7 @@ async function processOneJob(job) {
         next: nextDefault,
         to: lead.email,
         from: { email: brand.fromEmail, name: brand.fromName },
+        usage: emailGuard?.policy || null,
         sendgrid: sent,
         enqueue: enq,
         brandDebug: brand.brandDebug,

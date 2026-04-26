@@ -1,0 +1,49 @@
+Join HELPFUL SPACE
+
+Email not displaying correctly? View it in your browser.
+
+*TOGETHER WITH THE NEXT GENERATION*
+
+*We are dedicated to helping the next generation, supporting children of low-income families, giving them the emotional support and education they need to be successful.*
+
+*We are looking for volunteers of all backgrounds to be part of our global team. Contribute to a community in need by signing up today.*
+
+JOIN US NOW
+
+*WHAT WE ARE DOING*
+
+*EDUCATE*
+*—*
+*We have a versatile and fully-equipped education system for all learning levels and a variety interests.*
+
+*SUPPORT*
+*—*
+*Our well-structured global team can provide timely support for those who need assistance.*
+
+*EMPOWER*
+*—*
+*Our students obtain the life skills, support network, and education they need to succeed.*
+
+*HOW YOU CAN START*
+
+*Connect with a local group*
+
+*Find the group nearest you and connect with the coordinators.*
+
+GROUPS NEAR ME
+
+*Come to our events*
+
+*You don't need to be a member to join our events, just show up and say hi!*
+
+UPCOMING EVENTS
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

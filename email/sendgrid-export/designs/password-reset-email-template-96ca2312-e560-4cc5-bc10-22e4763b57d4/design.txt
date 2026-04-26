@@ -1,0 +1,20 @@
+We received a request to reset your online banking password.
+
+*Protecting your data is important to us.*
+*Please click on the button below to begin.*
+
+Reset Password
+
+If you did not request a password change, please contact us
+IMMEDIATELY so we can keep your account secure.
+
+Call Us at +33 80345690
+or Email at security-suppprt@sandown.com
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

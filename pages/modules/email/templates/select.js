@@ -4,11 +4,482 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { createClient } from "@supabase/supabase-js";
+import s from "./select.module.css";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
+
+function prettyTemplateName(value) {
+  const raw = String(value || "").replace(/\.html$/i, "").trim();
+  const isImported = /^(studio-|template-)/i.test(raw);
+  const clean = raw
+    .replace(/^(studio-|template-)/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return isImported ? `Campaign ${clean}` : clean;
+}
+
+function normalizeTemplateKey(value) {
+  return String(value || "")
+    .replace(/\.html$/i, "")
+    .replace(/^gr8result marketing\s*-\s*/i, "")
+    .replace(/^gr8result\s+/i, "")
+    .replace(/^business\s+/i, "")
+    .replace(/^campaign\s+/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function getTemplateAssetBase(tpl) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (tpl?.htmlUrl) return String(tpl.htmlUrl).replace(/[^/]+(?:\?.*)?$/, '');
+  if (!supabaseUrl || !tpl?.path) return '';
+
+  const bucket = tpl?.type === 'base' ? 'email-assets' : 'email-user-assets';
+  const path = String(tpl.path).replace(/^\/+/, '');
+  const slashIndex = path.lastIndexOf('/');
+  const dir = slashIndex >= 0 ? path.slice(0, slashIndex + 1) : '';
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${dir}`;
+}
+
+function absolutizeTemplateAssets(html, tpl) {
+  const input = String(html || '');
+  const base = getTemplateAssetBase(tpl);
+  if (!input || !base) return input;
+
+  const toAbsolute = (value = '') => {
+    const raw = String(value || '').trim();
+    if (!raw || /^(data:|mailto:|tel:|#|https?:)/i.test(raw) || raw.startsWith('//') || raw.startsWith('{{')) return raw;
+    return `${base.replace(/\/+$/, '')}/${raw.replace(/^\.\//, '').replace(/^\//, '')}`;
+  };
+
+  return input
+    .replace(/src=(['"])(?!data:|mailto:|tel:|#|\/\/|https?:|\{)([^'"]+)\1/gi, (_, quote, url) => `src=${quote}${toAbsolute(url)}${quote}`)
+    .replace(/url\((['"]?)(?!data:|#|\/\/|https?:|\{)([^'")]+)\1\)/gi, (_, quote, url) => `url(${quote}${toAbsolute(url)}${quote})`);
+}
+
+function makeThemeThumb(title, accent = '#2563eb', bg = '#0f172a', soft = '#eff6ff') {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="520" height="720" viewBox="0 0 520 720">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${soft}"/>
+          <stop offset="100%" stop-color="${bg}"/>
+        </linearGradient>
+      </defs>
+      <rect width="520" height="720" rx="28" fill="#ffffff"/>
+      <rect x="18" y="18" width="484" height="684" rx="24" fill="url(#g)"/>
+      <rect x="46" y="54" width="140" height="16" rx="8" fill="#ffffffaa"/>
+      <rect x="46" y="94" width="250" height="36" rx="10" fill="#ffffff"/>
+      <rect x="46" y="144" width="220" height="14" rx="7" fill="#ffffffcc"/>
+      <rect x="46" y="182" width="428" height="170" rx="20" fill="${accent}" opacity="0.92"/>
+      <circle cx="382" cy="148" r="58" fill="#ffffff22"/>
+      <circle cx="428" cy="106" r="30" fill="#ffffff33"/>
+      <rect x="46" y="382" width="200" height="18" rx="9" fill="#0f172a" opacity="0.9"/>
+      <rect x="46" y="414" width="390" height="12" rx="6" fill="#334155" opacity="0.3"/>
+      <rect x="46" y="438" width="360" height="12" rx="6" fill="#334155" opacity="0.22"/>
+      <rect x="46" y="486" width="126" height="38" rx="19" fill="${accent}"/>
+      <rect x="46" y="556" width="134" height="100" rx="18" fill="#ffffffbb"/>
+      <rect x="192" y="556" width="134" height="100" rx="18" fill="#ffffff99"/>
+      <rect x="338" y="556" width="134" height="100" rx="18" fill="#ffffff77"/>
+      <text x="46" y="118" font-size="28" font-weight="700" font-family="Arial, Helvetica, sans-serif" fill="#0f172a">${String(title).replace(/&/g, '&amp;')}</text>
+    </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function photoThumb(theme = 'lifestyle', width = 900) {
+  const photos = {
+    summer: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=' + width + '&q=80',
+    beauty: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=' + width + '&q=80',
+    food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=' + width + '&q=80',
+    property: 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=' + width + '&q=80',
+    fashion: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=' + width + '&q=80',
+    wellness: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=' + width + '&q=80',
+    app: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=' + width + '&q=80',
+  };
+
+  return photos[theme] || photos.summer;
+}
+
+function buildPreviewHtml({ title, accent = '#2563eb', bg = '#0f172a', body = 'Editable email design', soft = '#eff6ff', layout = 'hero' }) {
+  const layouts = {
+    hero: `
+      <div style="background:${bg};color:#fff;padding:24px 20px;text-align:center;">
+        <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.8;margin-bottom:8px;">Editable Template</div>
+        <div style="font-size:28px;font-weight:700;line-height:1.2;">${title}</div>
+      </div>
+      <div style="padding:20px;background:${soft};text-align:center;">
+        <div style="height:120px;border-radius:10px;background:linear-gradient(135deg, ${accent}, #ffffff22);"></div>
+      </div>
+      <div style="padding:18px 20px;color:#0f172a;">
+        <p style="margin:0 0 10px;font-size:18px;font-weight:700;">${body}</p>
+        <p style="margin:0;color:#475569;font-size:14px;line-height:1.5;">Fully editable blocks with working image placeholders, text areas, and CTAs.</p>
+      </div>
+    `,
+    editorial: `
+      <div style="padding:18px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.18em;color:${accent};text-transform:uppercase;">Weekly Digest</div>
+        <div style="font-size:12px;color:#64748b;">Issue 24</div>
+      </div>
+      <div style="padding:18px 20px;">
+        <div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1.2;margin-bottom:8px;">${title}</div>
+        <div style="color:#475569;font-size:14px;line-height:1.55;">${body}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 20px;">
+        <div style="background:${soft};border-radius:10px;height:86px;"></div>
+        <div style="background:#e2e8f0;border-radius:10px;height:86px;"></div>
+      </div>
+    `,
+    product: `
+      <div style="padding:18px;background:${soft};text-align:center;">
+        <div style="height:138px;border-radius:14px;background:linear-gradient(145deg,#ffffff,${accent});border:1px solid rgba(15,23,42,.08);"></div>
+      </div>
+      <div style="padding:18px 20px;">
+        <div style="font-size:25px;font-weight:800;color:#0f172a;margin-bottom:6px;">${title}</div>
+        <div style="color:#475569;font-size:14px;margin-bottom:14px;">${body}</div>
+        <span style="display:inline-block;background:${accent};color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;">Shop Now</span>
+      </div>
+    `,
+    invitation: `
+      <div style="background:linear-gradient(135deg,${bg},${accent});color:#fff;padding:26px 20px;text-align:center;">
+        <div style="font-size:12px;letter-spacing:.15em;text-transform:uppercase;opacity:.85;margin-bottom:10px;">Save The Date</div>
+        <div style="font-size:28px;font-weight:800;line-height:1.2;">${title}</div>
+        <div style="margin-top:8px;font-size:14px;opacity:.92;">${body}</div>
+      </div>
+      <div style="padding:16px 20px;display:grid;gap:8px;">
+        <div style="background:${soft};padding:10px 12px;border-radius:10px;color:#334155;font-size:13px;">Date • Time • Location</div>
+        <div style="background:${soft};padding:10px 12px;border-radius:10px;color:#334155;font-size:13px;">Speaker • Agenda • RSVP</div>
+      </div>
+    `,
+    minimal: `
+      <div style="padding:24px 22px;">
+        <div style="width:42px;height:4px;background:${accent};border-radius:999px;margin-bottom:14px;"></div>
+        <div style="font-size:27px;font-weight:800;color:#0f172a;line-height:1.2;margin-bottom:8px;">${title}</div>
+        <div style="font-size:14px;line-height:1.6;color:#475569;margin-bottom:16px;">${body}</div>
+        <div style="height:1px;background:#e2e8f0;margin:12px 0 14px;"></div>
+        <span style="display:inline-block;color:${accent};font-size:13px;font-weight:800;">Read More →</span>
+      </div>
+    `,
+    gallery: `
+      <div style="background:${bg};color:#fff;padding:22px 20px;text-align:center;">
+        <div style="font-size:27px;font-weight:800;">${title}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;background:${soft};">
+        <div style="height:78px;border-radius:10px;background:#fff;"></div>
+        <div style="height:78px;border-radius:10px;background:#fff;"></div>
+        <div style="height:78px;border-radius:10px;background:#fff;"></div>
+        <div style="height:78px;border-radius:10px;background:#fff;"></div>
+      </div>
+    `,
+    app: `
+      <div style="background:${bg};padding:18px 20px;color:#fff;">
+        <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.8;">Product Update</div>
+        <div style="font-size:26px;font-weight:800;line-height:1.2;margin-top:8px;">${title}</div>
+      </div>
+      <div style="padding:16px 20px;display:flex;gap:12px;align-items:center;">
+        <div style="flex:0 0 88px;height:120px;border-radius:16px;background:linear-gradient(180deg,${accent},#0f172a);"></div>
+        <div style="flex:1;">
+          <div style="height:10px;background:#cbd5e1;border-radius:999px;margin-bottom:10px;width:90%;"></div>
+          <div style="height:10px;background:#e2e8f0;border-radius:999px;margin-bottom:10px;width:75%;"></div>
+          <div style="height:10px;background:#e2e8f0;border-radius:999px;width:60%;"></div>
+        </div>
+      </div>
+    `,
+  };
+
+  return `<!doctype html>
+  <html>
+    <body style="margin:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+      <div style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;overflow:hidden;">
+        ${layouts[layout] || layouts.hero}
+      </div>
+    </body>
+  </html>`;
+}
+
+const EDITABLE_TEMPLATE_LIBRARY = [
+  {
+    id: 'preset-black-friday',
+    name: 'Black Friday Campaign',
+    type: 'preset',
+    preset: 'black-friday',
+    html: buildPreviewHtml({ title: 'Black Friday Campaign', accent: '#f97316', bg: '#09090b', body: 'Bold seasonal promo with stacked offers and urgency.', soft: '#fff7ed', layout: 'hero' }),
+    thumbUrl: makeThemeThumb('Black Friday', '#f97316', '#09090b', '#fff7ed'),
+  },
+  {
+    id: 'preset-bundle',
+    name: 'Bundle Deal Promo',
+    type: 'preset',
+    preset: 'bundle-sale',
+    html: buildPreviewHtml({ title: 'Bundle Deal Promo', accent: '#0ea5e9', bg: '#082f49', body: 'Built for multi-buy offers, bundles, and upsells.', soft: '#e0f2fe', layout: 'product' }),
+    thumbUrl: makeThemeThumb('Bundle Deal', '#0ea5e9', '#082f49', '#e0f2fe'),
+  },
+  {
+    id: 'preset-quiz',
+    name: 'Quiz Recommendation',
+    type: 'preset',
+    preset: 'quiz-recommendation',
+    html: buildPreviewHtml({ title: 'Quiz Recommendation', accent: '#8b5cf6', bg: '#312e81', body: 'Perfect for assessment results, custom plans, and guided next steps.', soft: '#ede9fe', layout: 'invitation' }),
+    thumbUrl: makeThemeThumb('Quiz Funnel', '#8b5cf6', '#312e81', '#ede9fe'),
+  },
+  {
+    id: 'preset-cart',
+    name: 'Cart Recovery Reminder',
+    type: 'preset',
+    preset: 'cart-recovery',
+    html: buildPreviewHtml({ title: 'Cart Recovery Reminder', accent: '#ef4444', bg: '#7f1d1d', body: 'Use for cart abandonment, urgency, and saved-cart reminders.', soft: '#fee2e2', layout: 'minimal' }),
+    thumbUrl: makeThemeThumb('Cart Recovery', '#ef4444', '#7f1d1d', '#fee2e2'),
+  },
+  {
+    id: 'preset-newsletter',
+    name: 'Newsletter Digest',
+    type: 'preset',
+    preset: 'newsletter',
+    html: buildPreviewHtml({ title: 'Newsletter Digest', accent: '#2563eb', bg: '#0f172a', body: 'Editorial layout for updates, articles, and links.', soft: '#dbeafe', layout: 'editorial' }),
+    thumbUrl: makeThemeThumb('Newsletter', '#2563eb', '#0f172a', '#dbeafe'),
+  },
+  {
+    id: 'preset-stories',
+    name: 'Customer Story Listicle',
+    type: 'preset',
+    preset: 'customer-stories',
+    html: buildPreviewHtml({ title: 'Customer Story Listicle', accent: '#ec4899', bg: '#831843', body: 'Great for before-and-after style social proof and story-led selling.', soft: '#fce7f3', layout: 'editorial' }),
+    thumbUrl: makeThemeThumb('Customer Stories', '#ec4899', '#831843', '#fce7f3'),
+  },
+  {
+    id: 'preset-product',
+    name: 'Product Spotlight',
+    type: 'preset',
+    preset: 'product-spotlight',
+    html: buildPreviewHtml({ title: 'Product Spotlight', accent: '#14b8a6', bg: '#134e4a', body: 'Feature one main product with benefits and CTA.', soft: '#ccfbf1', layout: 'product' }),
+    thumbUrl: makeThemeThumb('Product Spotlight', '#14b8a6', '#134e4a', '#ccfbf1'),
+  },
+  {
+    id: 'preset-listicle',
+    name: 'Listicle Offer',
+    type: 'preset',
+    preset: 'listicle-offer',
+    html: buildPreviewHtml({ title: 'Listicle Offer', accent: '#f59e0b', bg: '#78350f', body: 'A content-first pitch layout with points, takeaways, and a CTA.', soft: '#fef3c7', layout: 'minimal' }),
+    thumbUrl: makeThemeThumb('Listicle', '#f59e0b', '#78350f', '#fef3c7'),
+  },
+  {
+    id: 'preset-event',
+    name: 'Event Invite',
+    type: 'preset',
+    preset: 'event-invite',
+    html: buildPreviewHtml({ title: 'Event Invite', accent: '#7c3aed', bg: '#4c1d95', body: 'Perfect for workshops, launches, and live events.', soft: '#ede9fe', layout: 'invitation' }),
+    thumbUrl: makeThemeThumb('Event Invite', '#7c3aed', '#4c1d95', '#ede9fe'),
+  },
+  {
+    id: 'preset-announcement',
+    name: 'Clean Announcement',
+    type: 'preset',
+    preset: 'announcement',
+    html: buildPreviewHtml({ title: 'Clean Announcement', accent: '#2563eb', bg: '#1d4ed8', body: 'Simple modern alert or company update layout.', soft: '#dbeafe', layout: 'minimal' }),
+    thumbUrl: makeThemeThumb('Announcement', '#2563eb', '#1d4ed8', '#dbeafe'),
+  },
+  {
+    id: 'preset-lookbook',
+    name: 'Luxury Lookbook',
+    type: 'preset',
+    preset: 'luxury-lookbook',
+    html: buildPreviewHtml({ title: 'Luxury Lookbook', accent: '#b45309', bg: '#111827', body: 'Showcase multiple featured items in a premium style.', soft: '#fef3c7', layout: 'gallery' }),
+    thumbUrl: makeThemeThumb('Lookbook', '#b45309', '#111827', '#fef3c7'),
+  },
+  {
+    id: 'preset-webinar',
+    name: 'Webinar Registration',
+    type: 'preset',
+    preset: 'webinar-registration',
+    html: buildPreviewHtml({ title: 'Webinar Registration', accent: '#8b5cf6', bg: '#312e81', body: 'Built for expert sessions, coaching calls, and demos.', soft: '#ede9fe', layout: 'invitation' }),
+    thumbUrl: makeThemeThumb('Webinar', '#8b5cf6', '#312e81', '#ede9fe'),
+  },
+  {
+    id: 'preset-wellness',
+    name: 'Wellness Promo',
+    type: 'preset',
+    preset: 'wellness-promo',
+    html: buildPreviewHtml({ title: 'Wellness Promo', accent: '#22c55e', bg: '#14532d', body: 'Great for beauty, health, and lifestyle offers.', soft: '#dcfce7', layout: 'hero' }),
+    thumbUrl: makeThemeThumb('Wellness', '#22c55e', '#14532d', '#dcfce7'),
+  },
+  {
+    id: 'preset-app',
+    name: 'App Launch Update',
+    type: 'preset',
+    preset: 'app-launch',
+    html: buildPreviewHtml({ title: 'App Launch Update', accent: '#06b6d4', bg: '#0f172a', body: 'A product update design for SaaS and feature releases.', soft: '#cffafe', layout: 'app' }),
+    thumbUrl: makeThemeThumb('App Launch', '#06b6d4', '#0f172a', '#cffafe'),
+  },
+  {
+    id: 'preset-summer',
+    name: 'Tropical Summer Escape',
+    type: 'preset',
+    preset: 'summer-escape',
+    html: buildPreviewHtml({ title: 'Tropical Summer Escape', accent: '#f59e0b', bg: '#155e75', body: 'A vibrant travel-style campaign packed with colour and visual space.', soft: '#ecfeff', layout: 'gallery' }),
+    thumbUrl: photoThumb('summer'),
+    tags: ['featured', 'photo'],
+  },
+  {
+    id: 'preset-beauty-glow',
+    name: 'Beauty Glow Collection',
+    type: 'preset',
+    preset: 'beauty-glow',
+    html: buildPreviewHtml({ title: 'Beauty Glow Collection', accent: '#ec4899', bg: '#831843', body: 'Polished beauty campaign styling with soft colour and strong imagery.', soft: '#fce7f3', layout: 'hero' }),
+    thumbUrl: photoThumb('beauty'),
+    tags: ['featured', 'photo'],
+  },
+  {
+    id: 'preset-food-festival',
+    name: 'Food Festival Promo',
+    type: 'preset',
+    preset: 'food-festival',
+    html: buildPreviewHtml({ title: 'Food Festival Promo', accent: '#f97316', bg: '#7c2d12', body: 'Warm, punchy email styling for menus, launches, and special events.', soft: '#fff7ed', layout: 'product' }),
+    thumbUrl: photoThumb('food'),
+    tags: ['featured', 'photo'],
+  },
+  {
+    id: 'preset-property',
+    name: 'Property Showcase Luxe',
+    type: 'preset',
+    preset: 'property-showcase',
+    html: buildPreviewHtml({ title: 'Property Showcase Luxe', accent: '#8b5cf6', bg: '#111827', body: 'A premium image-led style for listings, interiors, and venue promos.', soft: '#ede9fe', layout: 'gallery' }),
+    thumbUrl: photoThumb('property'),
+    tags: ['featured', 'photo'],
+  },
+  {
+    id: 'preset-fashion-flash',
+    name: 'Fashion Flash Sale',
+    type: 'preset',
+    preset: 'fashion-flash',
+    html: buildPreviewHtml({ title: 'Fashion Flash Sale', accent: '#ec4899', bg: '#111827', body: 'A bright style-led promo with bold visual energy and retail focus.', soft: '#fdf2f8', layout: 'hero' }),
+    thumbUrl: photoThumb('fashion'),
+    tags: ['featured', 'photo'],
+  },
+];
+
+function TemplateCardPreview({ tpl }) {
+  const [previewHtml, setPreviewHtml] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadPreview() {
+      try {
+        if (tpl?.thumbUrl && ["base", "library", "sendgrid-design", "sendgrid-transactional", "sendgrid-single-send"].includes(String(tpl?.type || ""))) {
+          if (alive) setPreviewHtml("");
+          return;
+        }
+
+        let html = String(tpl?.html || "");
+
+        if (!html && tpl?.type === "base" && tpl?.path) {
+          const res = await fetch(`/api/templates/import?scope=public&path=${encodeURIComponent(tpl.path)}&name=${encodeURIComponent(tpl.name || "")}`);
+          const json = await res.json().catch(() => null);
+          html = String(json?.html || "");
+        }
+
+        if (!html && tpl?.path && tpl?.type !== "base") {
+          const res = await fetch(`/api/email/get-saved-email?path=${encodeURIComponent(tpl.path)}`);
+          html = await res.text();
+        }
+
+        if (!html && tpl?.htmlUrl) {
+          const res = await fetch(`${tpl.htmlUrl}${String(tpl.htmlUrl).includes("?") ? "&" : "?"}v=${Date.now()}`);
+          html = await res.text();
+        }
+
+        if (alive) setPreviewHtml(absolutizeTemplateAssets(String(html || ""), tpl));
+      } catch {
+        if (alive) setPreviewHtml("");
+      }
+    }
+
+    loadPreview();
+    return () => {
+      alive = false;
+    };
+  }, [tpl]);
+
+  if (String(tpl?.type || '') === 'preset' && (tpl?.thumbUrl || tpl?.thumb)) {
+    return (
+      <img
+        src={tpl.thumbUrl || tpl.thumb}
+        alt={tpl.name}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+          backgroundColor: "#f8fafc",
+        }}
+      />
+    );
+  }
+
+  if (previewHtml) {
+    return (
+      <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#fff" }}>
+        <iframe
+          title={`${tpl?.name || tpl?.id || "Email"} preview`}
+          srcDoc={previewHtml}
+          loading="lazy"
+          sandbox="allow-same-origin"
+          scrolling="no"
+          style={{
+            width: "320%",
+            height: "320%",
+            border: "none",
+            background: "#fff",
+            pointerEvents: "none",
+            transform: "scale(0.3125)",
+            transformOrigin: "top left",
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (tpl?.thumbUrl || tpl?.thumb) {
+    return (
+      <img
+        src={tpl.thumbUrl || tpl.thumb}
+        alt={tpl.name}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          objectPosition: "top center",
+          backgroundColor: "#f8fafc",
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "grid",
+        placeItems: "center",
+        background: "linear-gradient(135deg,#f8fafc,#e2e8f0)",
+        color: "#334155",
+        fontWeight: 700,
+        textAlign: "center",
+        padding: 12,
+      }}
+    >
+      {prettyTemplateName(tpl?.name || tpl?.id || "Email")}
+    </div>
+  );
+}
 
 export default function TemplateSelector() {
   const router = useRouter();
@@ -16,6 +487,9 @@ export default function TemplateSelector() {
   const [templates, setTemplates] = useState([]);
   const [loadingEmails, setLoadingEmails] = useState(true);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+
+  const featuredTemplates = templates.filter((tpl) => Array.isArray(tpl?.tags) && tpl.tags.includes('featured'));
+  const libraryTemplates = templates.filter((tpl) => !(Array.isArray(tpl?.tags) && tpl.tags.includes('featured')));
 
   // DELETE MODAL STATE
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -26,165 +500,192 @@ export default function TemplateSelector() {
     loadTemplates();
   }, []);
 
-  // ===== LOAD USER'S SAVED EMAILS (HTML + PNG) =====
+  // ===== LOAD ONLY THIS USER'S SAVED EMAILS =====
   async function loadUserEmails() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
-      if (!userId) return;
-
-      const { data: files, error } = await supabase.storage
-        .from("email-user-assets")
-        .list(`${userId}/finished-emails`, { limit: 1000 });
-
-      if (error) {
-        console.error(error);
+      if (!userId) {
+        setSavedEmails([]);
         return;
       }
 
-      const htmlFiles = (files || []).filter((f) => f.name.endsWith(".html"));
+      const [docsRes, legacyRes] = await Promise.allSettled([
+        fetch(`/api/email/builder-doc-list?userId=${encodeURIComponent(userId)}`),
+        fetch(`/api/email/list-saved-emails?userId=${encodeURIComponent(userId)}`),
+      ]);
 
-      const all = await Promise.all(
-        htmlFiles.map(async (file) => {
-          const base = file.name.replace(".html", "");
-          const path = `${userId}/finished-emails/${file.name}`;
-
-          // get fresh HTML directly from storage (no CDN cache)
-          let html = "";
-          try {
-            const { data: fileData } = await supabase.storage
-              .from("email-user-assets")
-              .download(path);
-            if (fileData) {
-              html = await fileData.text();
-            }
-          } catch (e) {
-            console.error("Error downloading html", e);
+      const docEmails = [];
+      if (docsRes.status === "fulfilled") {
+        const docsJson = await docsRes.value.json().catch(() => null);
+        if (docsRes.value.ok && docsJson?.ok) {
+          for (const doc of docsJson.docs || []) {
+            docEmails.push({
+              key: `doc:${doc.docId}`,
+              id: doc.docId,
+              docId: doc.docId,
+              name: doc.name || "Untitled Email",
+              html: "",
+              htmlUrl: doc.htmlUrl || "",
+              thumbUrl: doc.thumbUrl || "https://via.placeholder.com/260x260/0c121a/FFFFFF?text=Saved+Email",
+              type: "doc",
+              updatedAt: doc.updatedAt || doc.createdAt || "",
+            });
           }
+        }
+      }
 
-          // PNG thumbnail (add ?v= to avoid showing old cached image)
-          const thumbUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/email-user-assets/${userId}/finished-emails/${base}.png?v=${Date.now()}`;
+      const legacyEmails = [];
+      if (legacyRes.status === "fulfilled") {
+        const legacyJson = await legacyRes.value.json().catch(() => null);
+        if (legacyRes.value.ok && legacyJson?.ok) {
+          for (const file of legacyJson.files || []) {
+            const path = String(file?.path || file?.id || "");
+            const base = path.split("/").pop().replace(/\.html$/i, "");
+            const pngPath = path.replace(/\.html$/i, ".png");
+            legacyEmails.push({
+              key: `legacy:${path}`,
+              id: base,
+              name: file?.name || base,
+              html: "",
+              path,
+              pngPath,
+              thumbUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/email-user-assets/${pngPath}?v=${Date.now()}`,
+              type: "legacy",
+            });
+          }
+        }
+      }
 
-          return {
-            id: base,
-            name: base,
-            html,
-            thumbUrl,
-            type: "user",
-          };
-        })
-      );
-
-      setSavedEmails(all);
+      const combined = [...docEmails, ...legacyEmails];
+      combined.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || String(a.name).localeCompare(String(b.name)));
+      setSavedEmails(combined);
     } catch (e) {
       console.error(e);
+      setSavedEmails([]);
     } finally {
       setLoadingEmails(false);
     }
   }
 
-  // ===== LOAD PUBLIC BASE TEMPLATES =====
+  // ===== LOAD EDITABLE TEMPLATE LIBRARY =====
   async function loadTemplates() {
     try {
-      const { data: files, error } = await supabase.storage
-        .from("email-assets")
-        .list("templates", { limit: 200 });
+      const deduped = [];
+      const seen = new Set();
 
-      if (error) {
-        console.error(error);
-        return;
+      for (const item of EDITABLE_TEMPLATE_LIBRARY) {
+        const cleanName = prettyTemplateName(String(item.name || item.id || 'Template'));
+        const key = normalizeTemplateKey(cleanName || item.id);
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        deduped.push({
+          ...item,
+          name: cleanName,
+          type: 'preset',
+          tags: Array.isArray(item.tags) ? item.tags : ['editable'],
+        });
       }
 
-      const all = [];
-      for (const file of files || []) {
-        if (!file.name.endsWith(".html")) continue;
-
-        const base = file.name.replace(".html", "");
-        const htmlUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/email-assets/templates/${file.name}`;
-        const thumbUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/email-assets/templates/${base}.png`;
-
-        all.push({ id: base, name: base, htmlUrl, thumbUrl, type: "base" });
-      }
-
-      setTemplates(all.sort((a, b) => a.name.localeCompare(b.name)));
+      setTemplates(deduped);
     } catch (e) {
       console.error(e);
+      setTemplates([]);
     } finally {
       setLoadingTemplates(false);
     }
   }
 
-  // ===== Convert HTML => blocks (simple + reliable starter)
-  // We keep it dead simple: store the whole HTML in a single TEXT block.
-  // Later we can parse into multiple blocks, but this makes "templates load" immediately.
-  function htmlToBlocks(html) {
+  function extractBodyHtml(html) {
     const safe = String(html || "").trim();
+    if (!safe) return "";
+    const match = safe.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    return (match?.[1] || safe).trim();
+  }
 
-    // "blank" should truly be blank
-    if (!safe) return [];
+  // ===== Convert imported HTML into the live editor block format =====
+  function htmlToBlocks(html) {
+    const bodyHtml = extractBodyHtml(html);
+    if (!bodyHtml) return [];
 
     return [
       {
-        id: `header_${Date.now().toString(16)}`,
-        type: "header",
-        style: { background: "brand", padding: 18, radius: 0, align: "center", textColor: "#ffffff" },
-        content: { title: "GR8 RESULT", subtitle: "Your next campaigns starts here" },
-      },
-      {
-        id: `text_${(Date.now() + 1).toString(16)}`,
+        id: `text_${Date.now().toString(16)}`,
         type: "text",
-        style: { background: "none", padding: 18, radius: 0, align: "left", textColor: "#ffffff" },
-        content: {
-          // Wrap HTML in a container so it renders as-is inside the editor
-          html: safe,
+        props: {
+          html: bodyHtml,
+          bgColor: "#ffffff",
+          textColor: "#1e293b",
+          fontSize: 18,
+          align: "left",
         },
-      },
-      {
-        id: `footer_${(Date.now() + 2).toString(16)}`,
-        type: "footer",
-        style: { background: "none", padding: 18, radius: 0, align: "center", textColor: "#cbd5e1" },
-        content: { text: "© GR8 RESULT — All rights reserved." },
       },
     ];
   }
 
-  async function saveBlocksToTemplate(templateId, blocks) {
+  async function saveBlocksToDocument(docId, name, blocks, html = "") {
     const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id || "public";
+    const userId = userData?.user?.id || "";
 
-    const r = await fetch("/api/email/editor-save", {
+    if (!userId) throw new Error("Please sign in first.");
+
+    const r = await fetch("/api/email/builder-doc-save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ templateId, userId, blocks }),
+      body: JSON.stringify({
+        userId,
+        docId,
+        name: name || "Imported Email",
+        blocks,
+        html,
+      }),
     });
     const j = await r.json();
     if (!j?.ok) throw new Error(j?.detail || j?.error || "Save failed");
+    return j;
   }
 
   // ===== OPEN EDITOR WITH CHOSEN TEMPLATE / SAVED EMAIL =====
   async function useTemplate(tpl) {
     try {
-      // TRUE blank means: open editor blank (do NOT import html)
-      if (String(tpl.id) === "blank") {
-        router.push(`/modules/email/editor?id=blank`);
+      if (["blank", "single", "two", "three"].includes(String(tpl.id))) {
+        router.push(
+          `/modules/email/editor?starter=${encodeURIComponent(String(tpl.id))}&templateName=${encodeURIComponent(tpl.name || "Email Template")}`
+        );
         return;
       }
 
-      let html = tpl.html || "";
-
-      // For base templates we still need to fetch the HTML
-      if (!html && tpl.htmlUrl) {
-        const res = await fetch(`${tpl.htmlUrl}?v=${Date.now()}`);
-        html = await res.text();
+      if (tpl.type === "preset" && tpl.preset) {
+        router.push(
+          `/modules/email/editor?preset=${encodeURIComponent(String(tpl.preset))}&templateName=${encodeURIComponent(tpl.name || "Email Template")}`
+        );
+        return;
       }
 
-      // Convert HTML => blocks and SAVE it so editor-load finds it
-      const blocks = htmlToBlocks(html);
+      // Existing saved builder doc: open directly
+      if (tpl.type === "doc" && tpl.docId) {
+        router.push(`/modules/email/editor?id=${encodeURIComponent(tpl.docId)}`);
+        return;
+      }
 
-      await saveBlocksToTemplate(String(tpl.id), blocks);
+      // Open templates in place without creating a duplicate saved email
+      if (tpl.path) {
+        const scope = tpl.type === "base" ? "public" : "user";
+        router.push(
+          `/modules/email/editor?templateScope=${encodeURIComponent(scope)}&templatePath=${encodeURIComponent(tpl.path)}&templateName=${encodeURIComponent(tpl.name || "Template")}`
+        );
+        return;
+      }
 
-      // Now open builder with that id
-      router.push(`/modules/email/editor?id=${encodeURIComponent(tpl.id)}`);
+      if (tpl.htmlUrl) {
+        router.push(
+          `/modules/email/editor?templateUrl=${encodeURIComponent(tpl.htmlUrl)}&templateName=${encodeURIComponent(tpl.name || "Template")}`
+        );
+        return;
+      }
+
+      throw new Error("This template cannot be opened.");
     } catch (e) {
       console.error(e);
       alert(e?.message || "Could not open template");
@@ -196,8 +697,22 @@ export default function TemplateSelector() {
     try {
       let html = tpl.html || "";
 
+      if (!html && tpl.type === "base" && tpl.path) {
+        const res = await fetch(`/api/templates/import?scope=public&path=${encodeURIComponent(tpl.path)}&name=${encodeURIComponent(tpl.name || "")}`);
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.ok) {
+          throw new Error(json?.error || "Could not preview template");
+        }
+        html = String(json?.html || "");
+      }
+
+      if (!html && tpl.path && tpl.type !== "base") {
+        const res = await fetch(`/api/email/get-saved-email?path=${encodeURIComponent(tpl.path)}`);
+        html = await res.text();
+      }
+
       if (!html && tpl.htmlUrl) {
-        const res = await fetch(`${tpl.htmlUrl}?v=${Date.now()}`);
+        const res = await fetch(`${tpl.htmlUrl}${String(tpl.htmlUrl).includes("?") ? "&" : "?"}v=${Date.now()}`);
         html = await res.text();
       }
 
@@ -225,15 +740,26 @@ export default function TemplateSelector() {
       const userId = userData?.user?.id;
       if (!userId) return;
 
-      const htmlPath = `${userId}/finished-emails/${emailToDelete.id}.html`;
-      const pngPath = `${userId}/finished-emails/${emailToDelete.id}.png`;
+      if (emailToDelete.type === "doc" && emailToDelete.docId) {
+        const res = await fetch("/api/email/builder-doc-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, docId: emailToDelete.docId }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json?.ok) {
+          throw new Error(json?.detail || json?.error || "Could not delete email");
+        }
+      } else {
+        const htmlPath = emailToDelete.path || `${userId}/finished-emails/${emailToDelete.id}.html`;
+        const pngPath = emailToDelete.pngPath || htmlPath.replace(/\.html$/i, ".png");
 
-      await supabase.storage
-        .from("email-user-assets")
-        .remove([htmlPath, pngPath]);
+        await supabase.storage
+          .from("email-user-assets")
+          .remove([htmlPath, pngPath]);
+      }
 
-      // remove from UI
-      setSavedEmails((prev) => prev.filter((e) => e.id !== emailToDelete.id));
+      setSavedEmails((prev) => prev.filter((e) => (e.key || e.id) !== (emailToDelete.key || emailToDelete.id)));
 
       setShowDeleteModal(false);
       setEmailToDelete(null);
@@ -255,27 +781,27 @@ export default function TemplateSelector() {
         <title>Select Template - GR8 RESULT</title>
       </Head>
 
-      <main className="wrap">
-        <div className="inner">
-          <div className="banner">
-            <div className="banner-left">
-              <span className="banner-icon">📧</span>
-              <div className="banner-text">
-                <h1 className="banner-title">Select a Template</h1>
-                <p className="banner-desc">
-                  Start a new email, reopen saved ones, or use a base design.
+      <main className={s.wrap}>
+        <div className={s.inner}>
+          <div className={s.banner}>
+            <div className={s.bannerLeft}>
+              <span className={s.bannerIcon}>📧</span>
+              <div className={s.bannerText}>
+                <h1 className={s.bannerTitle}>Select a Template</h1>
+                <p className={s.bannerDesc}>
+                  Start a new email, reopen saved ones, or choose a fully editable ready-made design.
                 </p>
               </div>
             </div>
-            <Link href="/modules/email/broadcast" className="btn-back">
+            <Link href="/modules/email/broadcast" className={s.btnBack}>
               ⬅ Back
             </Link>
           </div>
 
           {/* BLANK STARTER TEMPLATES */}
-          <h2 className="section-title">Start a New Email</h2>
+          <h2 className={s.sectionTitle}>Start a New Email</h2>
 
-          <section className="grid">
+          <section className={s.grid}>
             {[
               {
                 id: "blank",
@@ -302,113 +828,101 @@ export default function TemplateSelector() {
                 htmlUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/email-assets/blank-templates/three-column/base.html`,
               },
             ].map((b) => (
-              <div key={b.id} className="card">
-                <div className="thumb">
-                  <div className="preview-wrapper">
-                    <img
-                      src={b.thumb}
-                      alt={b.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        objectPosition: "top center",
-                        backgroundColor: "#000",
-                      }}
-                    />
+              <div key={b.id} className={s.card}>
+                <div className={s.thumb}>
+                  <div className={s.previewWrapper}>
+                    <TemplateCardPreview tpl={b} />
                   </div>
-                  <div className="overlay">
+                  <div className={s.overlay}>
                     <button onClick={() => useTemplate(b)}>Use</button>
                     <button onClick={() => previewTemplate(b)}>Preview</button>
                   </div>
                 </div>
-                <div className="template-name">{b.name}</div>
+                <div className={s.templateName}>{b.name}</div>
               </div>
             ))}
           </section>
 
-          <hr className="divider" />
+          <hr className={s.divider} />
 
           {/* MY SAVED EMAILS */}
-          <h2 className="section-title">My Saved Emails</h2>
+          <h2 className={s.sectionTitle}>My Saved Emails</h2>
 
           {loadingEmails ? (
-            <p className="status-text">Loading emails...</p>
+            <p className={s.statusText}>Loading emails...</p>
           ) : savedEmails.length === 0 ? (
-            <p className="status-text">No saved emails yet.</p>
+            <p className={s.statusText}>No saved emails yet.</p>
           ) : (
-            <section className="grid saved-grid">
+            <section className={s.grid}>
               {savedEmails.map((tpl) => (
-                <div key={tpl.id} className="card saved-card">
-                  <div className="thumb saved-thumb">
-                    <div className="preview-wrapper">
-                      <img
-                        src={tpl.thumbUrl}
-                        alt={tpl.name}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          objectPosition: "top center",
-                          backgroundColor: "#000",
-                        }}
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/260x260/0c121a/FFFFFF?text=No+Thumbnail";
-                        }}
-                      />
+                <div key={tpl.key || tpl.id} className={s.card}>
+                  <div className={s.thumb}>
+                    <div className={s.previewWrapper}>
+                      <TemplateCardPreview tpl={tpl} />
                     </div>
-                    <div className="overlay">
+                    <div className={s.overlay}>
                       <button onClick={() => useTemplate(tpl)}>Use</button>
                       <button onClick={() => previewTemplate(tpl)}>Preview</button>
                       <button onClick={() => openDeleteModal(tpl)}>Delete 🗑</button>
                     </div>
                   </div>
-                  <div className="template-name">{tpl.name}</div>
+                  <div className={s.templateName}>{tpl.name}</div>
                 </div>
               ))}
             </section>
           )}
 
-          <hr className="divider" />
+          <hr className={s.divider} />
 
-          {/* BASE TEMPLATES — PNG ONLY */}
-          <h2 className="section-title">Base Templates</h2>
+          {featuredTemplates.length > 0 && (
+            <>
+              <h2 className={s.sectionTitle}>Beautiful Marketing Themes</h2>
+              <section className={s.grid}>
+                {featuredTemplates.map((tpl) => (
+                  <div key={tpl.id} className={s.card}>
+                    <div className={s.thumb}>
+                      <div className={s.previewWrapper}>
+                        <TemplateCardPreview tpl={tpl} />
+                      </div>
+                      <div className={s.overlay}>
+                        <button onClick={() => useTemplate(tpl)}>Use</button>
+                        <button onClick={() => previewTemplate(tpl)}>Preview</button>
+                      </div>
+                    </div>
+                    <div className={s.templateName}>{tpl.name}</div>
+                  </div>
+                ))}
+              </section>
+              <hr className={s.divider} />
+            </>
+          )}
+
+          {/* TEMPLATE LIBRARY */}
+          <h2 className={s.sectionTitle}>Template Library</h2>
 
           {loadingTemplates ? (
-            <p className="status-text">Loading templates...</p>
+            <p className={s.statusText}>Loading templates...</p>
+          ) : libraryTemplates.length === 0 ? (
+            <p className={s.statusText}>No templates available.</p>
           ) : (
-            <section className="grid">
-              {templates.map((tpl) => (
-                <div key={tpl.id} className="card">
-                  <div className="thumb">
-                    <div className="preview-wrapper">
-                      <img
-                        src={tpl.thumbUrl}
-                        alt={tpl.name}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          objectPosition: "top center",
-                          backgroundColor: "#000",
-                        }}
-                        onError={(e) =>
-                          (e.target.src =
-                            "https://via.placeholder.com/260x260/0c121a/FFFFFF?text=No+Image")
-                        }
-                      />
+            <section className={s.grid}>
+              {libraryTemplates.map((tpl) => (
+                <div key={tpl.id} className={s.card}>
+                  <div className={s.thumb}>
+                    <div className={s.previewWrapper}>
+                      <TemplateCardPreview tpl={tpl} />
                     </div>
-                    <div className="overlay">
+                    <div className={s.overlay}>
                       <button onClick={() => useTemplate(tpl)}>Use</button>
                       <button onClick={() => previewTemplate(tpl)}>Preview</button>
                     </div>
                   </div>
-                  <div className="template-name">{tpl.name}</div>
+                  <div className={s.templateName}>{tpl.name}</div>
                 </div>
               ))}
             </section>
           )}
+
         </div>
 
         {/* DELETE MODAL */}
@@ -444,7 +958,7 @@ export default function TemplateSelector() {
                   textAlign: "center",
                 }}
               >
-                Delete Email
+                Delete Template
               </h2>
               <p
                 style={{
@@ -503,109 +1017,7 @@ export default function TemplateSelector() {
       </main>
 
       <style jsx>{`
-        .wrap {
-          background: #0c121a;
-          color: #fff;
-          min-height: 100vh;
-          padding: 24px;
-          display: flex;
-          justify-content: center;
-        }
-        .inner {
-          width: 100%;
-          max-width: 1320px;
-        }
-        .banner {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #38bdf8;
-          border-radius: 14px;
-          padding: 16px 20px;
-          margin-bottom: 24px;
-        }
-        .section-title {
-          color: #38bdf8;
-          margin-bottom: 12px;
-        }
-        .divider {
-          border-color: #23303a;
-          margin: 40px 0;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 26px;
-        }
-        .card {
-          background: #111827;
-          border: 2px solid rgba(255, 255, 255, 0.15);
-          border-radius: 14px;
-          text-align: center;
-          padding: 18px;
-        }
-        .thumb {
-          height: 260px;
-          overflow: hidden;
-          border-radius: 10px;
-          background: #000;
-          position: relative;
-          margin-bottom: 10px;
-        }
-        .preview-wrapper {
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          display: flex;
-          justify-content: flex-start;
-          align-items: flex-start;
-          background: #000;
-        }
-        .overlay {
-          position: absolute;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          opacity: 0;
-          transition: 0.2s;
-        }
-        .card:hover .overlay {
-          opacity: 1;
-        }
-        .overlay button {
-          background: #38bdf8;
-          border: none;
-          border-radius: 8px;
-          padding: 8px 14px;
-          margin: 5px 0;
-          font-weight: bold;
-          color: white;
-          cursor: pointer;
-          width: 85%;
-        }
-        .template-name {
-          font-weight: 700;
-          font-size: 15px;
-        }
-        .banner-left {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 18px;
-        }
-        .banner-icon {
-          font-size: 60px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .banner-text {
-          display: flex;
-          flex-direction: column;
-        }
+        /* styles moved to select.module.css */
       `}</style>
     </>
   );

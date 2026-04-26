@@ -1,0 +1,46 @@
+{
+  "name": "Framer Animated Portfolio",
+  "slug": "framer-animated-portfolio",
+  "description": "A modern, animated portfolio template with hero animation, scroll-triggered fade-ins, and interactive project cards.",
+  "preview": "preview.png",
+  "sections": [
+    {
+      "type": "hero",
+      "animation": { "type": "fade-in", "delay": 0, "duration": 1 },
+      "content": {
+        "headline": "Showcase Your Work with Style",
+        "subheadline": "A stunning animated hero section to grab attention.",
+        "backgroundImage": "hero-bg.jpg"
+      }
+    },
+    {
+      "type": "about",
+      "animation": { "type": "slide-up", "delay": 0.2, "duration": 0.8 },
+      "content": {
+        "title": "About Me",
+        "text": "I’m a creative professional passionate about design, animation, and web experiences."
+      }
+    },
+    {
+      "type": "projects",
+      "animation": { "type": "stagger-fade", "delay": 0.3, "duration": 1 },
+      "content": {
+        "title": "Selected Projects",
+        "cards": [
+          { "title": "Brand Redesign", "desc": "A full rebrand for a SaaS company.", "image": "project1.jpg", "interactive": true },
+          { "title": "Animated Landing Page", "desc": "A Framer-powered animated hero.", "image": "project2.jpg", "interactive": true },
+          { "title": "Mobile App UI", "desc": "A smooth, animated mobile UI.", "image": "project3.jpg", "interactive": true }
+        ]
+      }
+    },
+    {
+      "type": "contact",
+      "animation": { "type": "fade-in", "delay": 0.5, "duration": 1 },
+      "content": {
+        "title": "Let’s Work Together",
+        "cta": "Contact Me",
+        "email": "hello@yourdomain.com"
+      }
+    }
+  ]
+}

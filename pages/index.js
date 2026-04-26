@@ -5,7 +5,7 @@ export async function getServerSideProps() {
   return {
     redirect: {
       destination: "/dashboard",
-      permanent: false, // keep it non-permanent while you’re iterating
+      permanent: false,
     },
   };
 }

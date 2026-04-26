@@ -1,0 +1,28 @@
+*LOCATIONS* ( http:// )
+
+*MENU* ( http:// )
+
+*GIFT CARDS* ( http:// )
+
+Place your orders for Thanksgiving pickup by 11/22
+
+Spend more time eating
+and less time watching the oven.
+
+*PEOPLE LOVE PEDRO'S PIES*
+
+“There’s no one else I trust with my Thanksgiving pies than Pedro’s. For 5 years, I’ve picked up my pies on Thanksgiving day. It's hassle-free and they're so delicious.” — Derrick J.
+
+“My daughter is lactose intolerant and I don’t have to worry about her allergies when I pick up her favorite apple cherry pie from Pedro’s. Now, she doesn’t have to miss out on Thanksgiving!” — Estelle M.
+
+“The family goes NUTS on Thanksgiving for your pumpkin pie! They don’t even know its vegan. They're happy. I'm happy. Thank you!” — Brian B.
+
+For locations and prices, visit pedropies.com ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

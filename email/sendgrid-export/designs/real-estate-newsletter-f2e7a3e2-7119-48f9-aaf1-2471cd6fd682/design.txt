@@ -1,0 +1,48 @@
+Email not displaying correctly? *VIEW IT* in your browser.
+
+Welcome to
+*Chavez Real Estate Group*
+
+Ready to find your dream home? Work with our team of real estate experts to locate the home you've always wanted. We'll work with your taste, budget, and schedule to make the process painless and easy (and, dare we say: fun).
+
+Learn more
+
+*TRENDING THIS WEEK*
+
+*Contemporary Kitchens*
+
+The clean design fits into a contemporary lifestyle that many urbanites desire, giving the busy life a break for gathering with families and friends.
+
+*Modern Rooms*
+
+Our modern rooms feature the latest trends in home design, giving people an upscale atmosphere.
+
+*Traditional Dining Rooms*
+
+The tradition never goes away. We are experts in treasuring and decorating the house with whatever tradition speaks to you.
+
+*Our Personal Service*
+
+Expect next-level customer service. We take pride in helping you every step of the way. From figuring out your wants and needs to securing a place on the market, we'll be there to walk you through the entire home-buying process.
+
+*1-to-1 meeting*
+
+Book an online or onsite appointment with our representative to talk about your dream home anytime, anywhere!
+
+Book now
+
+*Estimate your property*
+
+Wonder about the current value for your house? Come to us and we can figure it out for you!
+
+Find out now
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

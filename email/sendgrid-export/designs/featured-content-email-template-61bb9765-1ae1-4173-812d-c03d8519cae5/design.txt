@@ -1,0 +1,32 @@
+View in browser ( {{Weblink}} )
+
+*December 2020*
+
+*Creative Ideas for*
+*Traveling Designers.*
+
+*by Jolie Kingston*
+*Principle Product Designer, LivingType*
+
+*As a remote designer, it can be a challenge to collaborate with your team. Even though technology makes up for it 90% of the way, there's still that 10%. Body language, tone, water-cooler conversations. You miss the in-between moments that help you understand what someone is looking for and why. Fortunately, I've learned a handful of strategies to bridge the gap and get the inside scoop so you can do your best work no matter where you're working.*
+
+See The Tips
+
+*"Design is not just what it looks like and feels like. Design is how it works."*
+*- Steve Jobs, co-founder of Apple, Inc.*
+
+*Read More Stories
+*
+*Designing with a Distributed Team* ( http:// )
+*How to Involve Stakeholders in your Design Process* ( http:// )
+*Intelligent Accessibility on the World Wide Web* ( http:// )
+
+More Stories Online
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

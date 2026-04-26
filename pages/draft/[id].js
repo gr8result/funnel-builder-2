@@ -1,7 +1,7 @@
 // pages/draft/[id].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import supabase from "../../utils/supabase-client";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function DraftPageById() {
   const { query } = useRouter();

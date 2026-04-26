@@ -1,0 +1,45 @@
+HAPPY FEET HAPPY YOU
+
+Email not displaying correctly? *VIEW IT* in your browser.
+
+*Our versatile care for your feet*
+
+Our all-natural products provide spa-like quality from the comfort of home for a price guaranteed to give you Happy Feet.
+
+SHOP NOW
+
+*How to best use our products*
+
+*Wash with*
+
+*MILKY SOFTENING WASH*
+
+Made with all natural ingredients, our Milky Softening Wash provides a comforting clean every time. Try this bestseller today!
+
+BUY NOW FOR $19.79
+
+*Massage with*
+
+*WAKEN ENERGY FORMULA*
+
+Infused with caffeine and other energizing ingredients, this moisturizing formula is the perfect way to start your day.
+
+BUY NOW FOR $39.79
+
+*Put on*
+
+*DAILY COMFORT LAYERS*
+
+This daily moisturizer provides your feet with all of the hydration and comfort they need to get through the day. Try this bestselling product today.
+
+BUY NOW FOR $29.79
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

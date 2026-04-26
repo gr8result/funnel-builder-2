@@ -2,7 +2,12 @@ import { Handle, Position } from "reactflow";
 
 export default function ConditionNode({ data }) {
   const c = data.condition || {};
-  const summary = c.type || "No condition set";
+  const passed = Number(data?.passedCount ?? 0);
+  const waitHours = Number(c.waitHours || 24);
+  const summary =
+    c.type === "email_opened"
+      ? `Email opened (wait ${waitHours}h)`
+      : c.type || "No condition set";
 
   return (
     <div
@@ -24,6 +29,20 @@ export default function ConditionNode({ data }) {
 
       <div style={{ marginTop: 2, fontSize: 16, opacity: 0.85 }}>
         {summary}
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 14,
+          fontWeight: 700,
+          background: "rgba(0,0,0,0.25)",
+          padding: "6px 10px",
+          borderRadius: 999,
+          display: "inline-block",
+        }}
+      >
+        Passed: {passed}
       </div>
 
       <Handle

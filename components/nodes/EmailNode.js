@@ -51,6 +51,7 @@ export default function EmailNode({ data }) {
   const clicked = Number(stats.clicked || 0);
   const bounced = Number(stats.bounced || 0);
   const unsubscribed = Number(stats.unsubscribed || 0);
+  const passed = Number(stats.passed || 0);
 
   return (
     <div
@@ -132,6 +133,7 @@ export default function EmailNode({ data }) {
 
         {/* RIGHT: STATS */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <StatRow label="Passed" value={passed} />
           <StatRow label="Processed" value={processed} />
           <StatRow label="Delivered" value={delivered} />
           <StatRow label="Opened" value={opened} />

@@ -2,7 +2,7 @@
 // Handles Stripe checkout completions and records affiliate + platform payouts.
 
 import Stripe from "stripe";
-import { supabase } from "../../../utils/supabase-client";
+import { supabase } from "../../../lib/supabaseClient";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",

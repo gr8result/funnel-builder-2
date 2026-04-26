@@ -1,6 +1,14 @@
 // next.config.mjs
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
+
+  async rewrites() {
+    return [];
+  },
 
   // opt into Turbopack explicitly
   turbopack: {},
@@ -16,6 +24,12 @@ const nextConfig = {
         "C:\\swapfile.sys",
         "C:\\DumpStack.log.tmp",
       ],
+    };
+
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      immer: require.resolve("immer"),
     };
     return config;
   },

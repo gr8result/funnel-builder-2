@@ -36,6 +36,9 @@ function extractError(bodyText, json, status) {
 }
 
 async function sendRestV2({ to, message, origin }) {
+  // DEBUG: Log env vars to verify they are present at runtime
+  console.log("[SMSGlobal] API_KEY:", process.env.SMSGLOBAL_API_KEY);
+  console.log("[SMSGlobal] API_SECRET:", process.env.SMSGLOBAL_API_SECRET);
   const apiKey = must(process.env.SMSGLOBAL_API_KEY, "SMSGLOBAL_API_KEY");
   const apiSecret = must(process.env.SMSGLOBAL_API_SECRET, "SMSGLOBAL_API_SECRET");
 

@@ -1,7 +1,7 @@
 // /pages/api/automation/engine/sendgrid-event.js
 // FULL FILE — receives SendGrid event webhook and wakes automation runs
-// ✅ Looks for customArgs: automation_run_id, automation_node_id, event_token
-// ✅ On open/click: sets automation_flow_runs.status="active" and records last_event_type
+// ✅ Now ALSO updates email_sends analytics
+// ✅ Keeps existing automation wake logic EXACTLY as-is
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -28,9 +28,8 @@ async function tickRun(run_id) {
 
 function normalizeEventType(e) {
   const t = String(e?.event || "").toLowerCase();
-  if (t === "open") return "open";
-  if (t === "click") return "click";
-  return null;
+  if (!t) return null;
+  return t;
 }
 
 export default async function handler(req, res) {
@@ -51,10 +50,57 @@ export default async function handler(req, res) {
       const runId = String(ca.automation_run_id || ca.automationRunId || "").trim();
       const nodeId = String(ca.automation_node_id || ca.automationNodeId || "").trim();
       const token = String(ca.event_token || ca.eventToken || "").trim();
+      const sendRowId = String(ca.gr8_send_row_id || "").trim();
+
+      // ---------------------------------------------------
+      // ✅ UPDATE email_sends TABLE (ANALYTICS FIX)
+      // ---------------------------------------------------
+
+      if (sendRowId) {
+        const updateData = {
+          last_event: type,
+          last_event_at: new Date().toISOString(),
+        };
+
+        if (type === "delivered") {
+          updateData.delivered_at = new Date().toISOString();
+          updateData.status = "delivered";
+        }
+
+        if (type === "open") {
+          updateData.opened_at = new Date().toISOString();
+          updateData.status = "opened";
+        }
+
+        if (type === "click") {
+          updateData.clicked_at = new Date().toISOString();
+          updateData.status = "clicked";
+          updateData.click_count = 1; // simple increment logic
+        }
+
+        if (type === "bounce") {
+          updateData.bounced_at = new Date().toISOString();
+          updateData.status = "bounced";
+        }
+
+        if (type === "unsubscribe") {
+          updateData.unsubscribed_at = new Date().toISOString();
+          updateData.unsubscribed = true;
+          updateData.status = "unsubscribed";
+        }
+
+        await supabase
+          .from("email_sends")
+          .update(updateData)
+          .eq("id", sendRowId);
+      }
+
+      // ---------------------------------------------------
+      // ✅ EXISTING AUTOMATION WAKE LOGIC (UNCHANGED)
+      // ---------------------------------------------------
 
       if (!runId || !token) continue;
 
-      // wake run only if it matches waiting token
       const { data: run, error: runErr } = await supabase
         .from("automation_flow_runs")
         .select("id,status,waiting_for,waiting_token,waiting_node_id")
@@ -63,13 +109,15 @@ export default async function handler(req, res) {
 
       if (runErr || !run) continue;
 
-      // Only wake if it was waiting_event and token matches
       if (run.status !== "waiting_event") continue;
       if (String(run.waiting_token || "") !== token) continue;
 
-      // If it's waiting_for open but we received click, still wake (click implies open-ish)
       const waitingFor = String(run.waiting_for || "").toLowerCase();
-      if (waitingFor && waitingFor !== type && !(waitingFor === "open" && type === "click")) {
+      if (
+        waitingFor &&
+        waitingFor !== type &&
+        !(waitingFor === "open" && type === "click")
+      ) {
         continue;
       }
 

@@ -2,15 +2,29 @@
 // FULL REPLACEMENT — removes GlobalDialer entirely (no floating dialer on every page)
 
 import "../styles/globals.css";
+import "@chaibuilder/sdk/styles";
+import "react-image-crop/dist/ReactCrop.css";
 import "../styles/sidenav.css";
+import "../styles/marketplace-overhaul.css";
 import Layout from "../components/Layout";
+import { AuthProvider } from "../context/AuthContext";
 import { useRouter } from "next/router";
 
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
 
-  const noLayoutRoutes = ["/account", "/login", "/signup"];
+  const noLayoutRoutes = [
+    "/account",
+    "/login",
+    "/signup",
+    "/verify-email",
+    "/legal/vendor-agreement",
+    "/reset-password",
+    "/u/",
+    "/p/",
+    "/modules/website-builder/project/[id]/preview",
+  ];
   const hideLayout = noLayoutRoutes.some((path) =>
     router.pathname.startsWith(path)
   );
@@ -20,13 +34,13 @@ export default function MyApp({ Component, pageProps }) {
       <style jsx global>{`
         html,
         body {
-          font-size: 16px !important;
+          font-size: 16px;
         }
         button,
         input,
         select,
         textarea {
-          font-size: 16px !important;
+          font-size: 16px;
         }
       `}</style>
       {children}
@@ -35,17 +49,21 @@ export default function MyApp({ Component, pageProps }) {
 
   if (hideLayout) {
     return (
-      <Root>
-        <Component {...pageProps} />
-      </Root>
+      <AuthProvider>
+        <Root>
+          <Component {...pageProps} />
+        </Root>
+      </AuthProvider>
     );
   }
 
   return (
-    <Root>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
-    </Root>
+    <AuthProvider>
+      <Root>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </Root>
+    </AuthProvider>
   );
 }

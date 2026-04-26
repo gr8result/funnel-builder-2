@@ -176,18 +176,39 @@ export default function Newcampaigns() {
 
         setLists(listRows || []);
 
-        // saved emails
-        const { data: files, error: filesError } = await supabase.storage
-          .from("email-user-assets")
-          .list(`${user.id}/finished-emails`, { limit: 500 });
+        // saved emails for this logged-in account only
+        try {
+          const [docsRes, legacyRes] = await Promise.allSettled([
+            fetch(`/api/email/builder-doc-list?userId=${encodeURIComponent(user.id)}`),
+            fetch(`/api/email/list-saved-emails?userId=${encodeURIComponent(user.id)}`),
+          ]);
 
-        if (!filesError && Array.isArray(files)) {
-          const htmlFiles = files.filter((f) => f.name.endsWith(".html"));
-          const mapped = htmlFiles.map((f) => {
-            const base = f.name.replace(".html", "");
-            return { id: base, name: base };
-          });
+          const mapped = [];
+
+          if (docsRes.status === "fulfilled") {
+            const docsJson = await docsRes.value.json().catch(() => null);
+            if (docsRes.value.ok && docsJson?.ok) {
+              for (const doc of docsJson.docs || []) {
+                mapped.push({ id: String(doc.docId || ""), name: doc.name || "Untitled Email" });
+              }
+            }
+          }
+
+          if (legacyRes.status === "fulfilled") {
+            const legacyJson = await legacyRes.value.json().catch(() => null);
+            if (legacyRes.value.ok && legacyJson?.ok) {
+              for (const f of legacyJson.files || []) {
+                const path = String(f?.path || f?.id || "");
+                const base = path.split("/").pop().replace(/\.html$/i, "");
+                mapped.push({ id: base, name: f?.name || base });
+              }
+            }
+          }
+
+          mapped.sort((a, b) => String(a.name).localeCompare(String(b.name)));
           setSavedEmails(mapped);
+        } catch (savedEmailErr) {
+          console.error("Could not load saved emails", savedEmailErr);
         }
 
         // existing campaigns
@@ -246,13 +267,19 @@ export default function Newcampaigns() {
   // fetch template HTML
   const fetchTemplateHtml = async (templateId) => {
     if (!userId || !templateId) return null;
-    const path = `${userId}/finished-emails/${templateId}.html`;
-    const { data } = supabase.storage.from("email-user-assets").getPublicUrl(path);
-    const url = data?.publicUrl;
-    if (!url) throw new Error("No public URL for template");
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Could not load template HTML");
-    return await res.text();
+    const params = new URLSearchParams({
+      userId,
+      templateId: String(templateId),
+    });
+    const res = await fetch(`/api/email/editor-load?${params.toString()}`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.error || "Could not load template HTML");
+    }
+    if (!data?.html) {
+      throw new Error("Selected template has no rendered HTML.");
+    }
+    return data.html;
   };
 
   // preview in modal

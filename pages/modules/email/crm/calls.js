@@ -234,8 +234,13 @@ export default function CallsPage() {
     device.on("registered", () => setStatus("ready"));
     device.on("error", (err) => {
       console.error("[Twilio Device error]", err);
-      setBannerError(err?.message || "Twilio device error");
+      const msg = err?.message || "Twilio device error";
+      setBannerError(msg);
       setStatus("error");
+      // Token expired: clear device so next action re-fetches a fresh token.
+      if (err?.code === 20104 || String(msg).includes("AccessTokenExpired")) {
+        resetDevice();
+      }
     });
     device.on("unregistered", () => setStatus("idle"));
 
@@ -245,6 +250,16 @@ export default function CallsPage() {
     return device;
   }
 
+  async function resetDevice() {
+    try {
+      await deviceRef.current?.unregister?.();
+    } catch {}
+    try {
+      await deviceRef.current?.destroy?.();
+    } catch {}
+    deviceRef.current = null;
+  }
+
   async function loadRecentCalls() {
     setLoadingCalls(true);
     setBannerError("");
@@ -252,26 +267,54 @@ export default function CallsPage() {
       const { data: auth } = await supabase.auth.getSession();
       const token = auth?.session?.access_token || "";
 
-      // ✅ cache-bust + no-store (kills the 304 stale response problem)
-      const r = await fetch(`/api/twilio/list-calls?limit=50&t=${Date.now()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      console.log("[loadRecentCalls] Auth token:", token ? "present" : "missing");
+
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      // ✅ Use API endpoint that handles auth with service role
+      const r = await fetch(`/api/crm/calls?limit=50&t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
 
-      const j = await r.json().catch(() => ({}));
+      console.log("[loadRecentCalls] Response status:", r.status);
+
+      const j = await r.json();
+      
+      console.log("[loadRecentCalls] Response data:", {
+        ok: j?.ok,
+        callsCount: j?.calls?.length || 0,
+        error: j?.error,
+        firstCall: j?.calls?.[0]
+      });
+
       if (!r.ok || !j?.ok) {
-        throw new Error(j?.error || `Failed to load recent calls (${r.status})`);
+        throw new Error(j?.error || `Failed to load calls (${r.status})`);
       }
 
-      // ✅ Filter: only show real calls (must have at least from/to or recording)
-      const cleaned = (Array.isArray(j.calls) ? j.calls : []).filter((c) => {
-        const from = s(c?.from);
-        const to = s(c?.to);
-        const rec = s(c?.recording_url) || s(c?.recording_sid);
-        const dir = s(c?.direction).toLowerCase();
-        const hasDir = dir === "inbound" || dir === "outbound";
-        return hasDir && ((from && to) || rec);
-      });
+      // Transform to match expected format
+      const cleaned = (j.calls || []).map((c) => ({
+        id: c.id,
+        sid: c.twilio_sid,
+        startTime: c.created_at || c.tw_start_at,
+        created_at: c.created_at,
+        direction: c.direction,
+        from: c.from_number || c.our_number,
+        to: c.to_number || c.contact_number,
+        duration: c.duration || c.recording_duration,
+        status: c.status,
+        recording_sid: c.recording_sid,
+        recording_url: c.recording_url,
+        recordingSid: c.recording_sid,
+        recordingUrl: c.recording_url,
+        lead_id: c.lead_id,
+        caller_name: c.caller_name,
+        contact_number: c.to_number || c.contact_number,
+      }));
+
+      console.log("[loadRecentCalls] Cleaned calls:", cleaned.length);
 
       setRecentCalls(cleaned);
     } catch (e) {
@@ -293,7 +336,9 @@ export default function CallsPage() {
 
     const to = normalizePhone(phone);
     if (!to) return setBannerError("Phone number is required.");
-    if (!to.startsWith("+")) return setBannerError("Use +61 format (E.164).");
+    // Accept E.164 format (+61...) OR Australian service numbers (1300, 1800, 13)
+    const isValidFormat = to.startsWith("+") || /^1[0-9]{9,10}$/.test(to);
+    if (!isValidFormat) return setBannerError("Use +61 format or Australian service numbers (1300, 1800, 13).");
 
     try {
       setStatus("calling");
@@ -303,11 +348,16 @@ export default function CallsPage() {
 
       const device = await ensureDevice();
 
+      // Get user_id from auth session
+      const { data: auth } = await supabase.auth.getSession();
+      const userId = auth?.session?.user?.id || "";
+
       const conn = await device.connect({
         params: {
           To: to,
           record: "1",
           lead_id: selectedId || "",
+          user_id: userId,
         },
       });
 
@@ -441,19 +491,18 @@ export default function CallsPage() {
               📞
             </div>
             <div>
-              <div style={{ fontSize: 48, fontWeight: 450, color: "#fff", lineHeight: 1.1 }}>
-                Calls & Voicemails
+              <div style={{ fontSize: 48, fontWeight: 500, color: "#fff", lineHeight: 1.1 }}>
+                Calls & Recordings
               </div>
               <div style={{ fontSize: 18, color: "rgba(255,255,255,0.9)" }}>
-                Review inbound calls, listen to recordings and tidy up your call log.
+                Make outbound calls, listen to recordings, and track campaign performance.
               </div>
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
-              onClick={loadRecentCalls}
-              style={{
+                style={{
                 background: "#45d000",
                 border: "none",
                 color: "#062b00",
@@ -466,7 +515,7 @@ export default function CallsPage() {
               Refresh
             </button>
             <button
-              onClick={() => router.push("/modules/email/crm")}
+              onClick={() => router.push("/modules/email/crm/sms-dashboard")}
               style={{
                 background: "rgba(0,0,0,0.35)",
                 border: "1px solid rgba(255, 255, 255, 0.25)",
@@ -477,7 +526,7 @@ export default function CallsPage() {
                 cursor: "pointer",
               }}
             >
-              ← Back to CRM
+               Back
             </button>
           </div>
         </div>
@@ -710,10 +759,10 @@ export default function CallsPage() {
             </div>
           </div>
 
-          {/* ✅ Recent calls (ONLY real calls) */}
+          {/* ✅ Recent outbound calls with recordings */}
           <div style={{ marginTop: 18 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>Recent calls</div>
+              <div style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>Recent outbound calls</div>
               <div style={{ color: "#cfd7ff", fontWeight: 800, fontSize: 12, opacity: 0.85 }}>
                 {loadingCalls ? "Loading..." : `${recentCalls.length} shown`}
               </div>
@@ -732,8 +781,6 @@ export default function CallsPage() {
                   <tr>
                     <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>When</th>
                     <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>Name</th>
-                    <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>Direction</th>
-                    <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>From</th>
                     <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>To</th>
                     <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>Duration</th>
                     <th style={{ padding: 10, textAlign: "left", color: "#cfd7ff" }}>Recording</th>
@@ -746,22 +793,25 @@ export default function CallsPage() {
                     const recSrc = getRecordingSrc(c);
 
                     return (
-                      <tr key={String(c.id)} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <tr key={String(c.sid)} style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                         <td style={{ padding: 10, color: "#fff", fontWeight: 500 }}>
-                          {fmtDate(c.created_at)}
+                          {fmtDate(c.startTime)}
                         </td>
                         <td style={{ padding: 10, color: "#fff", fontWeight: 600 }}>{nm || "—"}</td>
-                        <td style={{ padding: 10, color: "#fff", fontWeight: 500 }}>{c.direction || "-"}</td>
-                        <td style={{ padding: 10, color: "#fff", fontWeight: 500 }}>{c.from || "-"}</td>
                         <td style={{ padding: 10, color: "#fff", fontWeight: 500 }}>{c.to || "-"}</td>
                         <td style={{ padding: 10, color: "#fff", fontWeight: 500 }}>
                           {Number.isFinite(Number(c.duration)) ? `${Number(c.duration)}s` : "—"}
                         </td>
                         <td style={{ padding: 10 }}>
                           {recSrc ? (
-                            <audio controls preload="none" src={recSrc} style={{ height: 28, width: 240 }} />
+                            <audio
+                              controls
+                              preload="none"
+                              src={recSrc}
+                              style={{ height: 28, width: 240, maxWidth: "100%" }}
+                            />
                           ) : (
-                            <span style={{ color: "#cfd7ff", opacity: 0.7, fontWeight: 600 }}>—</span>
+                            <span style={{ color: "#cfd7ff", opacity: 0.7, fontWeight: 600 }}>No recording</span>
                           )}
                         </td>
                       </tr>
@@ -770,8 +820,8 @@ export default function CallsPage() {
 
                   {!recentCalls.length ? (
                     <tr>
-                      <td colSpan={7} style={{ padding: 14, color: "#cfd7ff", fontWeight: 600, opacity: 0.85 }}>
-                        No calls yet.
+                      <td colSpan={5} style={{ padding: 14, color: "#cfd7ff", fontWeight: 600, opacity: 0.85 }}>
+                        No outbound calls yet. Make a call above to see it here.
                       </td>
                     </tr>
                   ) : null}
@@ -780,7 +830,7 @@ export default function CallsPage() {
             </div>
 
             <div style={{ marginTop: 8, color: "#e2e5f7", opacity: 0.75, fontWeight: 500, fontSize: 16 }}>
-              Note: recordings can appear a few seconds after hangup (Twilio processes them). Hit Refresh if needed.
+              💾 Recordings appear within seconds after hangup. 
             </div>
           </div>
         </div>

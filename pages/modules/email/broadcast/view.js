@@ -195,7 +195,7 @@ export default function ViewBroadcasts() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 48 }}>📨</span>
+          <span style={{ fontSize: 48 }}>📢</span>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 48, fontWeight: 600, lineHeight: 1.05 }}>View broadcasts</span>
             <span style={{ fontSize: 18, fontWeight: 500, opacity: 0.9, marginTop: 2 }}>

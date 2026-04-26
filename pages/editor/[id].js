@@ -1,7 +1,7 @@
 // pages/editor/[id].js
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import supabaseDefault, { supabase as supabaseNamed } from "../../utils/supabase-client";
+import { supabase } from "../../lib/supabaseClient";
 
 const supabase = supabaseNamed || supabaseDefault;
 

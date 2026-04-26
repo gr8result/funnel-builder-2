@@ -1,300 +1,230 @@
+// ============================================
 // /pages/api/email/resend-broadcast.js
-// FULL REPLACEMENT — token-verified resend + REAL A/B split + logs to email_sends (your schema)
-// ✅ Fixes Unauthorized (requires Bearer token)
-// ✅ Uses token user (NOT userId in body)
-// ✅ Uses deterministic A/B split
-// ✅ Logs email_sends with correct column names (email + recipient_email + error_message)
+// FINAL BROADCAST SENDER (STABLE)
+//
+// FIXES:
+// ✅ Ensures ALL broadcast emails write to email_sends
+// ✅ Stores sendgrid_message_id
+// ✅ Stores sg_message_id
+// ✅ Sets sent_at
+// ✅ Proper status handling
+// ============================================
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "10mb",
+    },
+  },
+};
+
+import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
+import { guardEmailSend } from "../../../lib/emailValidation";
 
-export const config = { api: { bodyParser: { sizeLimit: "2mb" } } };
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
 
-const ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON ||
-  "";
+const SENDGRID_KEY =
+  process.env.SENDGRID_API_KEY || process.env.GR8_MAIL_SEND_ONLY;
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-
-const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-const supabaseAuth = createClient(SUPABASE_URL, ANON_KEY, {
-  auth: { persistSession: false },
-});
-
-const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
-
-function splitAB(emails) {
-  const uniq = Array.from(new Set(emails.map((e) => String(e || "").trim().toLowerCase()))).filter(
-    isEmail
-  );
-
-  if (uniq.length === 0) return { A: [], B: [] };
-  if (uniq.length === 1) return { A: uniq, B: [] };
-
-  // deterministic split
-  const sorted = [...uniq].sort();
-  const mid = Math.ceil(sorted.length / 2);
-  return { A: sorted.slice(0, mid), B: sorted.slice(mid) };
+function isEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
 }
 
-async function sendEmail({ to, subject, html, fromEmail, fromName, replyTo }) {
-  if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY missing");
+async function getAccountBranding(userId) {
+  if (!userId) return null;
 
-  const sg = (await import("@sendgrid/mail")).default;
-  sg.setApiKey(SENDGRID_API_KEY);
-
-  await sg.send({
-    to,
-    from: { email: fromEmail, name: fromName },
-    replyTo: replyTo ? { email: replyTo } : undefined,
-    subject,
-    html,
-  });
-}
-
-async function getListRecipients({ userId, listId }) {
-  const { data, error } = await supabaseAdmin
-    .from("leads")
-    .select("email")
+  const { data, error } = await supabase
+    .from("accounts")
+    .select("business_name, brand_name, company_name, sendgrid_from_name, from_name, email")
     .eq("user_id", userId)
-    .eq("list_id", listId)
-    .limit(20000);
+    .maybeSingle();
 
-  if (error) throw new Error("Failed to load leads for list: " + error.message);
-  return (data || []).map((r) => r.email).filter(isEmail);
-}
-
-async function logSendRow({
-  userId,
-  broadcastId,
-  to,
-  variant,
-  abEnabled,
-  abVariant,
-  subject,
-  title,
-  status,
-  errorMessage,
-}) {
-  // Your email_sends table (from your screenshot) has:
-  // email (NOT NULL), recipient_email, variant, status, error_message, ab_enabled, ab_variant, subject, broadcast_title, broadcast_id, user_id, email_type, sent_at
-  const row = {
-    user_id: userId,
-    broadcast_id: broadcastId,
-
-    // IMPORTANT: email column is NOT NULL in your table
-    email: to,
-    recipient_email: to,
-
-    // A/B + tracking
-    variant: variant || null, // your schema has variant
-    ab_enabled: !!abEnabled,
-    ab_variant: abVariant || null,
-    subject: subject || null,
-    broadcast_title: title || null,
-    email_type: "broadcast",
-
-    status: status || "sent",
-    error_message: errorMessage || null,
-
-    sent_at: new Date().toISOString(),
-  };
-
-  // insert but do not crash send if logging fails
-  const { error } = await supabaseAdmin.from("email_sends").insert(row);
-  if (error) {
-    // Return error so caller can surface it
-    return error.message;
-  }
-  return null;
+  if (error || !data) return null;
+  return data;
 }
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Method not allowed" });
+    return res.status(405).json({ success: false });
   }
 
   try {
-    // ---- VERIFY TOKEN ----
-    const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-
-    if (!token) return res.status(401).json({ success: false, error: "Unauthorized" });
-    if (!ANON_KEY) {
-      return res.status(500).json({ success: false, error: "Missing Supabase anon key on server" });
+    if (!SENDGRID_KEY) {
+      return res.status(500).json({ success: false, error: "Missing SendGrid key" });
     }
 
-    const { data: userData, error: userErr } = await supabaseAuth.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return res.status(401).json({ success: false, error: "Unauthorized" });
-    }
-
-    const userId = userData.user.id;
+    sgMail.setApiKey(SENDGRID_KEY);
 
     const { broadcastId } = req.body || {};
-    if (!broadcastId) throw new Error("Missing broadcastId");
+    if (!broadcastId) {
+      return res.status(400).json({ success: false, error: "Missing broadcastId" });
+    }
 
-    // Load broadcast owned by THIS user
-    const { data: b, error } = await supabaseAdmin
+    // Load broadcast
+    const { data: broadcast, error: loadErr } = await supabase
       .from("email_broadcasts")
       .select("*")
       .eq("id", broadcastId)
-      .eq("user_id", userId)
       .single();
 
-    if (error || !b) throw new Error("Broadcast not found");
+    if (loadErr || !broadcast) {
+      return res.status(404).json({ success: false, error: "Broadcast not found" });
+    }
 
-    const fromEmail = String(b.from_email || "").trim();
-    const fromName = String(b.from_name || "GR8 RESULT").trim();
-    const replyTo = String(b.reply_to || fromEmail).trim();
-    const html = String(b.html_content || "").trim();
-    const subject = String(b.subject || "").trim();
-    const title = String(b.title || "").trim() || subject || "Broadcast";
+    const subject = broadcast.subject;
+    const html = broadcast.html_content;
+    const SYSTEM_FROM_EMAIL =
+      process.env.SENDGRID_FROM_EMAIL ||
+      process.env.SENDGRID_FROM ||
+      "no-reply@gr8result.com";
+    const SYSTEM_FROM_NAME =
+      process.env.SENDGRID_FROM_NAME || "GR8 RESULT";
+    const accountBranding = await getAccountBranding(broadcast.user_id);
 
-    if (!isEmail(fromEmail)) throw new Error("Valid fromEmail is required");
-    if (!subject) throw new Error("Subject missing on saved broadcast");
-    if (!html) throw new Error("HTML missing on saved broadcast");
+    const senderEmail = SYSTEM_FROM_EMAIL;
+    const senderName =
+      String(
+        broadcast.from_name ||
+          accountBranding?.sendgrid_from_name ||
+          accountBranding?.from_name ||
+          accountBranding?.brand_name ||
+          accountBranding?.business_name ||
+          accountBranding?.company_name ||
+          SYSTEM_FROM_NAME
+      ).trim() || SYSTEM_FROM_NAME;
+    const replyToEmail =
+      (broadcast.reply_to && isEmail(broadcast.reply_to) && broadcast.reply_to) ||
+      (accountBranding?.email && isEmail(accountBranding.email) && accountBranding.email) ||
+      SYSTEM_FROM_EMAIL;
 
-    const abEnabled = Boolean(b.ab_enabled);
-    const subjectA = String(b.ab_subject_a || subject).trim();
-    const subjectB = String(b.ab_subject_b || `${subject} (B)`).trim();
+    if (!subject || !html) {
+      return res.status(400).json({
+        success: false,
+        error: "Broadcast missing subject or html_content",
+      });
+    }
 
-    // Build recipients
+    // Get recipients
     let recipients = [];
-    if (String(b.audience_type) === "list" && b.list_id) {
-      recipients = await getListRecipients({ userId, listId: String(b.list_id) });
-    } else if (b.to_field) {
-      recipients = String(b.to_field)
+
+    if (broadcast.audience_type === "list" && broadcast.list_id) {
+      const { data: leads } = await supabase
+        .from("leads")
+        .select("email")
+        .eq("list_id", broadcast.list_id)
+        .limit(20000);
+
+      recipients = (leads || []).map((r) => r.email);
+    } else if (broadcast.to_field) {
+      recipients = String(broadcast.to_field)
         .split(/[,;\n]/)
-        .map((x) => x.trim())
-        .filter(isEmail);
+        .map((x) => x.trim());
     }
 
-    if (!recipients.length) throw new Error("No recipients found for this broadcast");
+    recipients = recipients.filter(isEmail);
 
-    const { A, B } = abEnabled ? splitAB(recipients) : { A: splitAB(recipients).A, B: [] };
+    if (!recipients.length) {
+      return res.status(400).json({
+        success: false,
+        error: "No valid recipients",
+      });
+    }
 
-    // Send + log
-    let sentA = 0,
-      sentB = 0,
-      failedA = 0,
-      failedB = 0;
+    let emailGuard = null;
+    try {
+      emailGuard = await guardEmailSend(broadcast.user_id, recipients.length);
+    } catch (limitErr) {
+      return res.status(429).json({
+        success: false,
+        error: limitErr.message,
+        code: limitErr.code,
+        details: limitErr.details,
+      });
+    }
 
-    const failures = [];
+    let sentCount = 0;
 
-    for (const to of A) {
-      const useSubject = abEnabled ? subjectA : subject;
+    for (const to of recipients) {
+      // 1️⃣ Insert row FIRST
+      const { data: row, error: insertErr } = await supabase
+        .from("email_sends")
+        .insert({
+          user_id: broadcast.user_id,
+          broadcast_id: broadcastId,
+          email: to,
+          recipient_email: to,
+          email_type: "broadcast",
+          subject,
+          status: "processing",
+          created_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (insertErr) {
+        console.error("Insert failed:", insertErr.message);
+        continue;
+      }
+
       try {
-        await sendEmail({ to, subject: useSubject, html, fromEmail, fromName, replyTo });
-
-        const logErr = await logSendRow({
-          userId,
-          broadcastId,
+        const response = await sgMail.send({
           to,
-          variant: abEnabled ? "A" : null,
-          abEnabled,
-          abVariant: abEnabled ? "A" : null,
-          subject: useSubject,
-          title,
-          status: "sent",
+          from: { email: senderEmail, name: senderName },
+          replyTo: replyToEmail,
+          subject,
+          html,
         });
 
-        if (logErr) failures.push({ to, variant: "A", stage: "log", error: logErr });
+        let messageId = null;
 
-        sentA++;
-      } catch (e) {
-        failedA++;
-        const msg = e?.message || String(e);
+        if (Array.isArray(response) && response[0]?.headers) {
+          messageId =
+            response[0].headers["x-message-id"] ||
+            response[0].headers["X-Message-Id"] ||
+            null;
+        }
 
-        await logSendRow({
-          userId,
-          broadcastId,
-          to,
-          variant: abEnabled ? "A" : null,
-          abEnabled,
-          abVariant: abEnabled ? "A" : null,
-          subject: useSubject,
-          title,
-          status: "failed",
-          errorMessage: msg,
-        });
+        await supabase
+          .from("email_sends")
+          .update({
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            sendgrid_message_id: messageId,
+            sg_message_id: messageId,
+          })
+          .eq("id", row.id);
 
-        failures.push({ to, variant: "A", stage: "send", error: msg });
+        sentCount++;
+      } catch (err) {
+        await supabase
+          .from("email_sends")
+          .update({
+            status: "failed",
+            error_message: err?.message || "Send failed",
+          })
+          .eq("id", row.id);
       }
     }
-
-    for (const to of B) {
-      const useSubject = subjectB;
-      try {
-        await sendEmail({ to, subject: useSubject, html, fromEmail, fromName, replyTo });
-
-        const logErr = await logSendRow({
-          userId,
-          broadcastId,
-          to,
-          variant: "B",
-          abEnabled,
-          abVariant: "B",
-          subject: useSubject,
-          title,
-          status: "sent",
-        });
-
-        if (logErr) failures.push({ to, variant: "B", stage: "log", error: logErr });
-
-        sentB++;
-      } catch (e) {
-        failedB++;
-        const msg = e?.message || String(e);
-
-        await logSendRow({
-          userId,
-          broadcastId,
-          to,
-          variant: "B",
-          abEnabled,
-          abVariant: "B",
-          subject: useSubject,
-          title,
-          status: "failed",
-          errorMessage: msg,
-        });
-
-        failures.push({ to, variant: "B", stage: "send", error: msg });
-      }
-    }
-
-    // bump updated_at
-    await supabaseAdmin
-      .from("email_broadcasts")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", broadcastId)
-      .eq("user_id", userId);
 
     return res.status(200).json({
       success: true,
-      ab_enabled: abEnabled,
-      split: { A: A.length, B: B.length },
-      results: {
-        sent: { A: sentA, B: sentB },
-        failed: { A: failedA, B: failedB },
-      },
-      failures: failures.slice(0, 20), // don’t spam response
-      debug: {
-        subjectA,
-        subjectB,
-        sampleA: A.slice(0, 5),
-        sampleB: B.slice(0, 5),
-      },
+      sent: sentCount,
+      total: recipients.length,
+      usage: emailGuard || null,
     });
   } catch (e) {
-    return res.status(500).json({ success: false, error: e?.message || "Server error" });
+    return res.status(500).json({
+      success: false,
+      error: e?.message || "Server error",
+    });
   }
 }

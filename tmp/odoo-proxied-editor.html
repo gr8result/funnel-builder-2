@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head><base href="/api/website-builder/visual-host/" /><style>
+      #top, header#top, footer#bottom, .o_footer_copyright, .o_brand_promotion { display:none !important; }
+      #wrapwrap, main, #wrap { min-height: 100vh !important; background: #fff !important; }
+      #wrap { padding-top: 24px !important; }
+    </style>
+        <meta charset="utf-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <title>GR8 Visual Block Builder</title>
+        <link type="image/x-icon" rel="shortcut icon" href="/api/website-builder/visual-host/web/static/img/favicon.ico"/>
+        <script id="web.layout.odooscript" type="text/javascript">
+            var odoo = {
+                csrf_token: "6711414a034317ab462189fd9030cd45153abae6o1807995140",
+                debug: "",
+            };
+        </script>
+        
+                <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+                <meta name="theme-color" content="#71639e"/>
+                <link rel="manifest" href="/api/website-builder/visual-host/web/manifest.webmanifest" crossorigin="use-credentials"/>
+                <link rel="apple-touch-icon" href="/api/website-builder/visual-host/web/static/img/odoo-icon-ios.png"/>
+                <script type="text/javascript">
+                    // Block to avoid leaking variables in the script scope
+                    {
+                        odoo.__session_info__ = {"uid": 2, "is_system": true, "is_admin": true, "is_public": false, "is_internal_user": true, "user_context": {"lang": "en_US", "tz": false, "uid": 2}, "db": "sitebuilder", "user_settings": {"id": 1, "user_id": {"id": 2}, "is_discuss_sidebar_category_channel_open": true, "is_discuss_sidebar_category_chat_open": true, "push_to_talk_key": false, "use_push_to_talk": false, "voice_active_duration": 200, "volume_settings_ids": [["ADD", []]]}, "server_version": "17.0-20260409", "server_version_info": [17, 0, 0, "final", 0, ""], "support_url": "#", "name": "Administrator", "username": "admin", "partner_display_name": "Administrator", "partner_id": 3, "web.base.url": "http://127.0.0.1:8069", "active_ids_limit": 20000, "profile_session": null, "profile_collectors": null, "profile_params": null, "max_file_upload_size": 134217728, "home_action_id": false, "cache_hashes": {"translations": "7e62b73b34489b56d25d5117217c6172cbe2b6c2", "load_menus": "6ab61d5f9b579b7d35625421702c57f5f229914ff69839277e9cd0dfb35982d5"}, "currencies": {"1": {"symbol": "$", "position": "before", "digits": [69, 2]}}, "bundle_params": {"lang": "en_US"}, "user_companies": {"current_company": 1, "allowed_companies": {"1": {"id": 1, "name": "My Company", "sequence": 0, "child_ids": [], "parent_id": false}}, "disallowed_ancestor_companies": {}}, "show_effect": true, "display_switch_company_menu": false, "user_id": [2], "websocket_worker_version": "17.0-3", "web_tours": [], "tour_disable": false, "notification_type": "email", "odoobot_initialized": false, "iap_company_enrich": true};
+                        const { user_context,  cache_hashes } = odoo.__session_info__;
+                        const lang = new URLSearchParams(document.location.search).get("lang");
+                        let menuURL = `/web/webclient/load_menus/${cache_hashes.load_menus}`;
+                        if (lang) {
+                            user_context.lang = lang;
+                            menuURL += `?lang=${lang}`
+                        }
+                        odoo.reloadMenus = () => fetch(menuURL).then(res => res.json());
+                        odoo.loadMenusPromise = odoo.reloadMenus();
+                        // Prefetch translations to speedup webclient. This is done in JS because link rel="prefetch"
+                        // is not yet supported on safari.
+                        fetch(`/web/webclient/translations/${cache_hashes.translations}?lang=${user_context.lang}`);
+                    }
+                </script>
+                    <link type="text/css" rel="stylesheet" href="/api/website-builder/visual-host/web/assets/bbb2a65/web.assets_web.min.css"/>
+        <script type="text/javascript" src="/api/website-builder/visual-host/web/assets/8ded228/web.assets_web.min.js" onerror="__odooAssetError=1"></script>
+            
+    </head>
+    <body class="o_web_client">
+        
+        
+    </body>
+</html>

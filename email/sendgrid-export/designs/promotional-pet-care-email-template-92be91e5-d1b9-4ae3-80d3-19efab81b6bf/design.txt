@@ -1,0 +1,36 @@
+Trouble viewing this email? View it in your browser ( {{Weblink}} ).
+
+Mention the promo code below to
+claim your special pawrice (up to 50% all services!)
+
+PAWFRIENDS50
+
+the paw spa menu
+
+Bronze Package
+
+Bath, blow dry, styling, teeth cleaning, and massage (30 mins)
+
+Silver Package
+
+Bath, blow dry, styling, teeth cleaning, nail trim, and massage (45 mins)
+
+Gold Package
+
+Bath, mask, blow dry, styling, teeth cleaning, nail trim, and massage (60 mins) + a special treat to take home!
+
+Instagram
+
+Facebook
+
+Website
+
+1801 California St. Denver, CO 80202
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

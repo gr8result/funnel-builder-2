@@ -1,0 +1,39 @@
+*BAGS*
+
+*TRAVEL*
+
+*ACCESSORIES*
+
+*Free Shipping and Returns*
+
+*SAVE $10* *WHEN YOU SPEND $90+*
+*SAVE $30* *WHEN YOU SPEND $150+*
+*SAVE $60* *WHEN YOU SPEND $200+*
+
+*Promo Code: CAROUSELFRIENDS*
+Valid from October 31 - November 6
+Must be logged in at time of purchase. Single Use Code.
+
+*MORE FROM CAROUSEL BAG CO.*
+
+Laptop
+
+Crossbody
+
+Fanny Pack
+
+Weekender
+
+Travel
+
+Tolietry Bags
+
+*FIND A LOCATION NEAR YOU* ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

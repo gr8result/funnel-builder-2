@@ -5,7 +5,7 @@
 // NOTE: This only works if your page imports/uses this component.
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../utils/supabase-client";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function FlowMembersModal({
   isOpen,

@@ -1,5 +1,7 @@
 // /pages/api/smsglobal/send-bulk.js
+
 import { createClient } from "@supabase/supabase-js";
+import { guardSmsSend } from "../../../lib/smsValidation";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,25 +34,61 @@ export default async function handler(req, res) {
     const SMSGLOBAL_FROM = process.env.SMSGLOBAL_FROM || "GR8RESULT";
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return res.status(500).json({ ok: false, error: "Supabase env not configured (URL/service role key)." });
+      return res.status(500).json({ ok: false, error: "Supabase env not configured." });
     }
     if (!SMSGLOBAL_USERNAME || !SMSGLOBAL_PASSWORD) {
-      return res.status(500).json({ ok: false, error: "SMSGlobal not configured (missing username/password)." });
+      return res.status(500).json({ ok: false, error: "SMSGlobal not configured." });
     }
 
     const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Pull leads in this list
+    // ============================
+    // 🔥 GET PLAN LIMIT
+    // ============================
+    const { data: sub } = await supa
+      .from("subscriptions")
+      .select("plan_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const planId = sub?.plan_id || "free";
+
+    const { data: plan } = await supa
+      .from("plan_limits")
+      .select("max_sms_per_month")
+      .eq("plan_id", planId)
+      .maybeSingle();
+
+    const maxSms = plan?.max_sms_per_month ?? 0;
+
+    // ============================
+    // 🔥 GET CURRENT USAGE
+    // ============================
+    const start = new Date();
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+
+    const { data: usage } = await supa
+      .from("usage_sms")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("period_start", start.toISOString())
+      .maybeSingle();
+
+    let used = usage?.sms_sent || 0;
+
+    // ============================
+    // 🔥 GET RECIPIENTS
+    // ============================
     const { data: leads, error } = await supa
       .from("leads")
-      .select("id,name,phone,email,user_id,list_id")
+      .select("id,name,phone")
       .eq("user_id", userId)
       .eq("list_id", listId);
 
     if (error) return res.status(500).json({ ok: false, error: error.message });
 
-    const rows = Array.isArray(leads) ? leads : [];
-    const recipients = rows
+    const recipients = (leads || [])
       .map((l) => ({
         lead_id: l.id,
         name: l.name || "",
@@ -58,11 +96,30 @@ export default async function handler(req, res) {
       }))
       .filter((x) => x.to && x.to.startsWith("+"));
 
+    let smsGuard = null;
+    try {
+      smsGuard = await guardSmsSend(userId, recipients.length);
+    } catch (limitErr) {
+      return res.status(429).json({
+        ok: false,
+        error: limitErr.message,
+        code: limitErr.code,
+        details: limitErr.details,
+      });
+    }
+
     const results = [];
     let okCount = 0;
     let failCount = 0;
 
     for (const rcp of recipients) {
+
+      // 🛑 STOP MID-SEND if limit hit
+      if (maxSms > 0 && used >= maxSms) {
+        console.log("🛑 SMS limit reached mid-send");
+        break;
+      }
+
       try {
         const params = new URLSearchParams();
         params.set("action", "sendsms");
@@ -72,38 +129,56 @@ export default async function handler(req, res) {
         params.set("to", rcp.to);
         params.set("text", msg);
 
-        // OPTIONAL: if you set SMSGLOBAL_DLR_URL in env, we add callback in message (SMSGlobal supports callbacks in some plans)
-        // If your account uses a different callback parameter name, we’ll adjust after you confirm the SMSGlobal receipt docs.
-        const dlr = process.env.SMSGLOBAL_DLR_URL;
-        if (dlr) params.set("callback", dlr);
-
         const url = `${SMSGLOBAL_API_URL}?${params.toString()}`;
         const http = await fetch(url, { method: "GET" });
         const raw = await http.text();
 
         if (!http.ok) {
           failCount++;
-          results.push({ ok: false, to: rcp.to, lead_id: rcp.lead_id, error: raw || "send failed" });
+          results.push({ ok: false, to: rcp.to, error: raw });
           continue;
         }
 
         okCount++;
-        // provider id parsing varies; store raw
-        results.push({ ok: true, to: rcp.to, lead_id: rcp.lead_id, provider_id: null, raw });
+        used++;
+
+        // ============================
+        // 📊 UPDATE USAGE
+        // ============================
+        if (usage) {
+          await supa
+            .from("usage_sms")
+            .update({ sms_sent: used })
+            .eq("id", usage.id);
+        } else {
+          await supa
+            .from("usage_sms")
+            .insert({
+              user_id: userId,
+              sms_sent: 1,
+              period_start: start.toISOString(),
+            });
+        }
+
+        results.push({ ok: true, to: rcp.to });
+
       } catch (e) {
         failCount++;
-        results.push({ ok: false, to: rcp.to, lead_id: rcp.lead_id, error: e?.message || "send failed" });
+        results.push({ ok: false, to: rcp.to, error: e.message });
       }
     }
 
     return res.status(200).json({
       ok: true,
       total: recipients.length,
-      sent: recipients.length,
-      okCount,
-      failCount,
-      results,
+      sent: okCount,
+      failed: failCount,
+      warning: Boolean(smsGuard?.policy?.shouldWarn),
+      usage: smsGuard || null,
+      used,
+      max: maxSms,
     });
+
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || "Bulk send failed." });
   }

@@ -69,6 +69,7 @@ export default async function handler(req, res) {
     const callerId = normalizePhone(callerIdRaw);
 
     const leadId = pickFirst(q.lead_id, b.lead_id, q.leadId, b.leadId);
+    const userId = pickFirst(q.user_id, b.user_id, q.userId, b.userId);
     const record = pickFirst(q.record, b.record, "1") === "1";
 
     const base = pickFirst(process.env.PUBLIC_BASE_URL, process.env.TWILIO_WEBHOOK_URL);
@@ -95,11 +96,16 @@ export default async function handler(req, res) {
       );
     }
 
-    // Build status callback URL (include lead_id if present)
-    const statusCallback =
-      statusCallbackBase && leadId
-        ? `${statusCallbackBase}?lead_id=${encodeURIComponent(s(leadId))}`
-        : statusCallbackBase;
+    // Build status callback URL (include lead_id and user_id if present)
+    let statusCallback = statusCallbackBase;
+    if (statusCallbackBase) {
+      const params = [];
+      if (leadId) params.push(`lead_id=${encodeURIComponent(s(leadId))}`);
+      if (userId) params.push(`user_id=${encodeURIComponent(s(userId))}`);
+      if (params.length > 0) {
+        statusCallback = `${statusCallbackBase}?${params.join("&")}`;
+      }
+    }
 
     // Dial attributes
     const dialAttrs = [];

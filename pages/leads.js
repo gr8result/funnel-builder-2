@@ -14,6 +14,41 @@ import { getAvatarForLead } from "../utils/avatar";
 import SubscriberAvatar from "../components/crm/SubscriberAvatar";
 import LeadDetailsModal from "../components/crm/LeadDetailsModal";
 
+const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
+
+function readStoredJson(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildDefaultTeams() {
+  return [
+    {
+      id: "team_default",
+      name: "Sales Team",
+      manager: "Owner",
+      members: "Closer, Setter",
+      target: 25000,
+      color: "#22c55e",
+    },
+  ];
+}
+
+function isNewLead(lead) {
+  const stage = String(lead?.stage || "").toLowerCase();
+  if (stage === "new_lead" || stage === "new lead" || stage === "new_leads") return true;
+
+  const createdAt = Date.parse(String(lead?.created_at || ""));
+  if (!Number.isFinite(createdAt)) return false;
+
+  return Date.now() - createdAt <= 1000 * 60 * 60 * 72;
+}
+
 export default function LeadsPage() {
   const [lists, setLists] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -47,6 +82,7 @@ export default function LeadsPage() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [stages, setStages] = useState([]);
+  const [teamRows, setTeamRows] = useState([]);
 
   // 🔀 Drag & drop state
   const [draggedLeadId, setDraggedLeadId] = useState(null);
@@ -69,6 +105,7 @@ export default function LeadsPage() {
 
   const [colWidths, setColWidths] = useState(defaultColWidths);
   const resizingRef = useRef(null);
+  const newLeadCount = useMemo(() => (leads || []).filter((lead) => isNewLead(lead)).length, [leads]);
 
   function onStartResize(colKey, e) {
     e.preventDefault();
@@ -130,15 +167,26 @@ export default function LeadsPage() {
   }, []);
 
   useEffect(() => {
+    if (!userId) return;
     loadLists();
     loadStages();
-  }, []);
+    loadTeams();
+  }, [userId]);
+
+  function loadTeams() {
+    const storedTeams = readStoredJson(
+      `${TEAM_STORAGE_KEY_PREFIX}${userId}`,
+      buildDefaultTeams()
+    );
+    setTeamRows(Array.isArray(storedTeams) && storedTeams.length ? storedTeams : buildDefaultTeams());
+  }
 
   async function loadStages() {
     try {
       const { data, error } = await supabase
         .from("crm_pipelines")
         .select("stages")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true })
         .limit(1)
         .single();
@@ -157,9 +205,16 @@ export default function LeadsPage() {
   }
 
   async function loadLists() {
+    if (!userId) {
+      setLists([]);
+      setLeads([]);
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("lead_lists")
       .select("id,name")
+      .eq("user_id", userId)
       .order("created_at");
 
     if (error) console.error(error);
@@ -177,7 +232,7 @@ export default function LeadsPage() {
   async function loadLeads(listId) {
     setLoading(true);
 
-    const query = supabase.from("leads").select("*");
+    const query = supabase.from("leads").select("*").eq("user_id", userId);
 
     if (!allMode) {
       query.eq("list_id", listId);
@@ -201,6 +256,7 @@ export default function LeadsPage() {
     const { data, error } = await supabase
       .from("leads")
       .select("*")
+      .eq("user_id", userId)
       .order(sortField, { ascending: sortDir === "asc" });
 
     if (error) console.error(error);
@@ -244,6 +300,7 @@ export default function LeadsPage() {
       const { data, error } = await supabase
         .from("crm_pipelines")
         .select("id, stages")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true })
         .limit(1)
         .single();
@@ -330,6 +387,7 @@ export default function LeadsPage() {
 
             const baseLead = {
               ...lead,
+              user_id: userId,
               list_id: selectedList.id,
               pipeline_id: pipelineId,
               stage: stageId,
@@ -541,6 +599,17 @@ export default function LeadsPage() {
     setIsLeadModalOpen(true);
   }
 
+  function handleLeadCrmMetaSave(leadId, meta) {
+    const patch = {
+      source: meta?.source || "",
+      tags: meta?.tags || "",
+      crmMeta: meta || {},
+    };
+
+    setLeads((prev) => (prev || []).map((l) => (l.id === leadId ? { ...l, ...patch } : l)));
+    setSelectedLead((prev) => (prev?.id === leadId ? { ...prev, ...patch } : prev));
+  }
+
   // SAVE LEAD – uses shared avatar helper for NEW leads
   async function saveLead() {
     if (!selectedList && !allMode) return showMsg("⚠️ Select a list first.");
@@ -557,6 +626,7 @@ export default function LeadsPage() {
 
     const payload = {
       ...form,
+      user_id: userId,
       list_id: selectedList?.id || null,
       ...(pipeline_id ? { pipeline_id } : {}),
       ...(stage ? { stage } : {}),
@@ -814,6 +884,12 @@ export default function LeadsPage() {
                     </button>
                   </div>
 
+                  {newLeadCount > 0 && (
+                    <div className="new-leads-note">
+                      ✨ {newLeadCount} new {newLeadCount === 1 ? "lead is" : "leads are"} highlighted below so they can be set up quickly.
+                    </div>
+                  )}
+
                   <div className="table-wrap">
                     <table>
                       <colgroup>
@@ -889,9 +965,12 @@ export default function LeadsPage() {
                       </thead>
 
                       <tbody>
-                        {leads.map((lead) => (
+                        {leads.map((lead) => {
+                          const showNewBadge = isNewLead(lead);
+                          return (
                           <tr
                             key={lead.id}
+                            className={showNewBadge ? "lead-row-new" : ""}
                             draggable
                             onDragStart={(e) => {
                               e.dataTransfer.effectAllowed = "move";
@@ -927,7 +1006,14 @@ export default function LeadsPage() {
                             <td className="col-name">
                               <div className="lead-name-cell">
                                 <SubscriberAvatar lead={lead} size={28} fontSize={16} />
-                                <span className="name-text">{lead.name || "-"}</span>
+                                <div className="lead-name-stack">
+                                  <span className="name-text">{lead.name || "-"}</span>
+                                  {showNewBadge && (
+                                    <div className="lead-badges">
+                                      <span className="lead-badge new">New Enquiry</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </td>
 
@@ -947,7 +1033,7 @@ export default function LeadsPage() {
                               </button>
                             </td>
                           </tr>
-                        ))}
+                        );})}
                       </tbody>
                     </table>
                   </div>
@@ -1005,6 +1091,9 @@ export default function LeadsPage() {
           stages={stages}
           userId={userId}
           fontScale={1.35}
+          crmMeta={selectedLead?.crmMeta || {}}
+          teamOptions={teamRows}
+          onCrmMetaSave={handleLeadCrmMetaSave}
           onClose={() => {
             setIsLeadModalOpen(false);
             setSelectedLead(null);
@@ -1172,6 +1261,16 @@ export default function LeadsPage() {
           gap: 8px;
           margin-bottom: 10px;
         }
+        .new-leads-note {
+          margin-bottom: 10px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid rgba(250, 204, 21, 0.35);
+          background: rgba(250, 204, 21, 0.08);
+          color: #fde68a;
+          font-size: 15px;
+          font-weight: 700;
+        }
         .bulk-btn {
           border: none;
           border-radius: 6px;
@@ -1232,7 +1331,13 @@ export default function LeadsPage() {
         .lead-name-cell {
           display: flex;
           align-items: center;
-          gap: 8px; /* keep normal spacing between avatar and name */
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .lead-name-stack {
+          display: flex;
+          flex-direction: column;
           min-width: 0;
         }
 
@@ -1242,6 +1347,34 @@ export default function LeadsPage() {
           white-space: nowrap;
           min-width: 0;
           display: inline-block;
+        }
+
+        .lead-badges {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-top: 3px;
+        }
+
+        .lead-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .lead-badge.new {
+          background: rgba(250, 204, 21, 0.15);
+          border: 1px solid rgba(250, 204, 21, 0.35);
+          color: #fde68a;
+        }
+
+        :global(.lead-row-new td) {
+          background: rgba(250, 204, 21, 0.05);
         }
 
         .truncate {

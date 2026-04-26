@@ -1,0 +1,37 @@
+Eye Exams
+
+Mens Glasses
+
+Womens Glasses
+
+Shop The Collection Now
+
+Featured
+
+LEAH
+
+The Leah is made of Japanese titanium and Swiss crystal with frames available in 3 colors: rose gold, chrome, or brushed gold.
+
+Lastest
+
+Hamilton
+
+The Hamilton is a universally face-flattering shape. Its polished cellulose acetate frames come in crystal clear, seaglass blue, and powder pink. Can easily be converted into sunnies, too!
+
+Shop Frames Now
+
+Website
+
+Instagram
+
+Twitter
+
+Customer Service
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { id, design, html, name } = req.body || {};
+    const { id, design, html, name, css, userId } = req.body || {};
 
     if (!id || !design || !html) {
       return res.status(400).json({
@@ -36,19 +36,75 @@ export default async function handler(req, res) {
 
     const designString = JSON.stringify(design);
 
-    // Adjust these column names if your table uses different ones
-    const upsertPayload = {
-      id,
-      name: name || null,
-      design_json: designString,
-      html,
-    };
+    const attempts = [
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html_content: html,
+        design_json: designString,
+        css: css || "",
+      },
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html_content: html,
+        design_json: designString,
+      },
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html: html,
+        design_json: designString,
+        css: css || "",
+      },
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html: html,
+        design_json: designString,
+      },
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html_content: html,
+      },
+      {
+        id,
+        user_id: userId || null,
+        name: name || null,
+        html: html,
+      },
+    ];
 
-    const { data, error } = await supabaseAdmin
-      .from("email_templates")
-      .upsert(upsertPayload, { onConflict: "id" })
-      .select("*")
-      .maybeSingle();
+    let data = null;
+    let error = null;
+
+    for (const upsertPayload of attempts) {
+      const result = await supabaseAdmin
+        .from("email_templates")
+        .upsert(upsertPayload, { onConflict: "id" })
+        .select("*")
+        .maybeSingle();
+
+      data = result.data;
+      error = result.error;
+
+      if (!error) break;
+
+      const message = error.message || "";
+      const isSchemaMismatch =
+        message.includes("does not exist") ||
+        message.includes("schema cache") ||
+        message.includes("Could not find the") ||
+        error.code === "PGRST204";
+
+      if (!isSchemaMismatch) break;
+    }
 
     if (error) {
       console.error("[save-template] Supabase error:", error);

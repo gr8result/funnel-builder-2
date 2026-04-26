@@ -1,0 +1,37 @@
+View email in your browser
+
+( http:// )
+
+See today's new listings for Venice, Los Angeles, CA
+
+See Homes ( http:// )
+
+Neighborhood Guide: Venice, Los Angeles
+
+Su Casa agents have put together a list of hot spots for you
+to check out as you shop for a new neighborhood to call "home."
+
+Abbot Kinney Boulevard
+
+Venice Muscle Beach
+
+Venice Sign
+
+Venice Canals
+
+Venice Guide ( http:// )
+
+Ready to find your dream home?
+
+Su Casa agents are local experts who can help you
+navigate the market and find your next home.
+
+Contact Us Now
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

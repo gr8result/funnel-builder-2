@@ -1,6 +1,6 @@
 // /components/crm/SendToAutomationPanel.js
 import React, { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabase-client"; // ✅ adjust if your folder differs
+import { supabase } from "../../lib/supabaseClient";
 
 export default function SendToAutomationPanel({ leadId, onSent }) {
   const [loading, setLoading] = useState(false);

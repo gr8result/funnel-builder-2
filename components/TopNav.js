@@ -11,7 +11,7 @@ export default function TopNav() {
         justifyContent: "space-between",
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 15, color: "#22c55e" }}>
+      <div style={{ fontWeight: 600, fontSize: 15, color: "#22c55e" }}>
         Gr8 Result Digital Solutions
       </div>
       <div

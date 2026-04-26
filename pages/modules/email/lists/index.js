@@ -12,6 +12,31 @@ import SubscriberAvatar from "/components/crm/SubscriberAvatar";
 import LeadDetailsModal from "/components/crm/LeadDetailsModal";
 import { getAvatarForLead } from "../../../../utils/avatar";
 
+const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
+
+function readStoredJson(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildDefaultTeams() {
+  return [
+    {
+      id: "team_default",
+      name: "Sales Team",
+      manager: "Owner",
+      members: "Closer, Setter",
+      target: 25000,
+      color: "#22c55e",
+    },
+  ];
+}
+
 export default function EmailListsDashboard() {
   const [lists, setLists] = useState([]);
   const [selectedList, setSelectedList] = useState(null);
@@ -47,6 +72,7 @@ export default function EmailListsDashboard() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [stages, setStages] = useState([]);
+  const [teamRows, setTeamRows] = useState([]);
 
   useEffect(() => {
     loadUser();
@@ -56,6 +82,7 @@ export default function EmailListsDashboard() {
     if (userId) {
       loadLists();
       loadStages();
+      loadTeams();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -103,6 +130,14 @@ export default function EmailListsDashboard() {
     }
   }
 
+  function loadTeams() {
+    const storedTeams = readStoredJson(
+      `${TEAM_STORAGE_KEY_PREFIX}${userId}`,
+      buildDefaultTeams()
+    );
+    setTeamRows(Array.isArray(storedTeams) && storedTeams.length ? storedTeams : buildDefaultTeams());
+  }
+
   async function loadLists() {
     const { data, error } = await supabase
       .from("lead_lists")
@@ -136,6 +171,7 @@ export default function EmailListsDashboard() {
     const { data, error } = await supabase
       .from("leads")
       .select("*")
+      .eq("user_id", userId)
       .eq("list_id", listId)
       .order("created_at", { ascending: false });
 
@@ -154,6 +190,7 @@ export default function EmailListsDashboard() {
     const { data, error } = await supabase
       .from("leads")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (!error) setSubscribers(data || []);
@@ -185,6 +222,17 @@ export default function EmailListsDashboard() {
   function openLeadDetails(lead) {
     setSelectedLead(lead);
     setIsLeadModalOpen(true);
+  }
+
+  function handleLeadCrmMetaSave(leadId, meta) {
+    const patch = {
+      source: meta?.source || "",
+      tags: meta?.tags || "",
+      crmMeta: meta || {},
+    };
+
+    setSubscribers((prev) => (prev || []).map((x) => (x.id === leadId ? { ...x, ...patch } : x)));
+    setSelectedLead((prev) => (prev?.id === leadId ? { ...prev, ...patch } : prev));
   }
 
   // EXPORT CSV
@@ -764,6 +812,7 @@ export default function EmailListsDashboard() {
                       </th>
                       <th>Email</th>
                       <th>Phone</th>
+                      <th>Source</th>
 
                       {showAllMode && <th>List</th>}
 
@@ -822,6 +871,7 @@ export default function EmailListsDashboard() {
                           </td>
                           <td>{s.email}</td>
                           <td>{s.phone || "-"}</td>
+                          <td>{s.source || "-"}</td>
 
                           {showAllMode && <td>{getListName(s.list_id)}</td>}
 
@@ -881,6 +931,9 @@ export default function EmailListsDashboard() {
           stages={stages}
           userId={userId}
           fontScale={1.35}
+          crmMeta={selectedLead?.crmMeta || {}}
+          teamOptions={teamRows}
+          onCrmMetaSave={handleLeadCrmMetaSave}
           onClose={() => {
             setIsLeadModalOpen(false);
             setSelectedLead(null);

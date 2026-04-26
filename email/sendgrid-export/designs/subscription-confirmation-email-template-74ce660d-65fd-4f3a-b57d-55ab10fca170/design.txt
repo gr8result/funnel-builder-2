@@ -1,0 +1,24 @@
+Food delivery for pets!
+
+It's Confirmed!
+
+You're now signed up for
+weekly deliveries.
+
+Your cat's favorite food will be delivered to your home every two weeks, so your feline friend won't run out ever again. No more late-night trips to the pet store to pick up a bag when you hear those hungry meows.
+
+Just organic ingredients and wholesome food for your furry companion.
+
+Need to change your delivery frequency? Log in to your account to make updates.
+
+My Account
+
+Pricing and Plans
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

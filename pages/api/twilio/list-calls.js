@@ -127,6 +127,8 @@ export default async function handler(req, res) {
 
     let calls = (list || [])
       .filter((c) => {
+        // ✅ Filter outbound calls only
+        if ((c.direction || "").toLowerCase() !== "outbound") return false;
         if (!variants.length) return true;
         return matchPhone(c.from) || matchPhone(c.to);
       })
@@ -147,6 +149,27 @@ export default async function handler(req, res) {
     if (includeRecordings) {
       // For each call, try to find a recording. (Usually 0 or 1)
       // Note: Twilio recording list() can be slow; keep it bounded.
+      const withRec = [];
+
+      for (const c of calls) {
+        const row = { ...c };
+        try {
+          const recs = await client.recordings.list({ callSid: c.sid, limit: 1 });
+          const rec = recs && recs[0] ? recs[0] : null;
+          if (rec?.sid) {
+            row.recordingSid = rec.sid;
+            row.recordingUrl = `/api/twilio/recording?sid=${encodeURIComponent(rec.sid)}`;
+            row.recordingDuration = Number(rec.duration) || null;
+          }
+        } catch {
+          // ignore per-call recording fetch errors
+        }
+        withRec.push(row);
+      }
+
+      calls = withRec;
+    } else {
+      // ✅ Always fetch recordings for outbound calls (no query flag needed)
       const withRec = [];
 
       for (const c of calls) {

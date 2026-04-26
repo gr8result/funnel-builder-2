@@ -230,6 +230,7 @@ export default async function handler(req, res) {
   };
 
   try {
+    console.log("[ENROLL] Incoming body:", JSON.stringify(req.body));
     if (req.method !== "POST") {
       return res.status(405).json({ ok: false, error: "POST only" });
     }
@@ -291,6 +292,21 @@ export default async function handler(req, res) {
       // Kick DB engine if available
       await tryRunDbEngine(flow_id);
 
+      // After enrollment, trigger tick to queue emails
+      try {
+        const tickRes = await fetch(
+          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/automation/engine/tick`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ flow_id }),
+          }
+        );
+        const tickJson = await tickRes.json();
+        debug.tick = tickJson;
+      } catch (e) {
+        debug.tick_error = String(e?.message || e);
+      }
       return res.json({
         ok: true,
         mode: "forced",
@@ -369,6 +385,22 @@ export default async function handler(req, res) {
 
       // Kick DB engine if available
       await tryRunDbEngine(f.id);
+
+      // After enrollment, trigger tick to queue emails for each flow
+      try {
+        const tickRes = await fetch(
+          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/automation/engine/tick`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ flow_id: f.id }),
+          }
+        );
+        const tickJson = await tickRes.json();
+        debug[`tick_${f.id}`] = tickJson;
+      } catch (e) {
+        debug[`tick_error_${f.id}`] = String(e?.message || e);
+      }
     }
 
     debug.enrolled_flows = enrolled_flows;
@@ -386,7 +418,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     debug.errors.push(msg(err));
-    console.error("automation/engine/enroll error:", err);
+    console.error("[ENROLL] automation/engine/enroll error:", err, debug);
     return res.status(500).json({ ok: false, error: msg(err), debug });
   }
 }

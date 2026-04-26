@@ -1,0 +1,31 @@
+Email not displaying correctly? View it in the browser
+
+Th e Eve ryday Supima Cotton Tee
+
+So comfy, you'll never want to take it off.
+Now available in 10 colors.
+
+Shop now
+
+Costa Mesa
+Pop-Up Party
+
+Join us for our pop-up store launch party.
+The Everyday Supima Cotton Series will be 10% off!
+
+Try on new t-shirts designs
+Live music (featuring DJ Kat)
+Cocktails & Hor d'ouevres
+Prizes
+
+September 3rd, 7 p.m. at South Coast Plaza
+
+RSVP to Attend ( http://www.google.com )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

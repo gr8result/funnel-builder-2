@@ -29,7 +29,9 @@ export default async function handler(req, res) {
     if (!docId) return res.status(400).json({ ok: false, error: "Missing docId" });
 
     const path = `${userId}/builder-docs/${docId}.json`;
-    const { error } = await supabase.storage.from(BUCKET).remove([path]);
+    const htmlPath = `${userId}/builder-docs/${docId}.html`;
+    const thumbPath = `${userId}/builder-docs/thumb-${docId}.png`;
+    const { error } = await supabase.storage.from(BUCKET).remove([path, htmlPath, thumbPath]);
 
     if (error) return res.status(500).json({ ok: false, error: "Delete failed", detail: error.message });
     return res.status(200).json({ ok: true });

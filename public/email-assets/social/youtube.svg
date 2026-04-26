@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-label="YouTube">
+  <rect width="24" height="24" rx="6" fill="#FF0000"/>
+  <path fill="#fff" d="M15.7 11.9 10.6 9v5.8l5.1-2.9z"/>
+  <path fill="#fff" opacity="0.9" d="M21 12s0-3-.4-4.4c-.2-.8-.8-1.4-1.6-1.6C17.6 5.6 12 5.6 12 5.6s-5.6 0-7 .4c-.8.2-1.4.8-1.6 1.6C3 9 3 12 3 12s0 3 .4 4.4c.2.8.8 1.4 1.6 1.6 1.4.4 7 .4 7 .4s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.4.4-4.4z"/>
+</svg>

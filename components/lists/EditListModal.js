@@ -2,7 +2,7 @@
 // GR8 RESULT — EMAIL LIST BUILDER (SAFE SAVE VERSION)
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabase-client";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function EditListModal({ userId, list, onClose, onSaved }) {
   const isEdit = Boolean(list && list.id);

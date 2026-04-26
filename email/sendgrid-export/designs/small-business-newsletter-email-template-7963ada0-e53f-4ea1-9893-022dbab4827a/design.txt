@@ -1,0 +1,34 @@
+*FLORAROJA*
+
+Order Online ( http://www.google.com ) Visit Us ( http://google.com ) Blog ( http://www.google.com )
+
+Pick something pretty.
+
+Summer blooms are here and ready for the picking. Peonies, irises, and sunflowers are in season.
+
+Handcraft your own bouquet or place an order for your next special event. FLORAROJA guarantees fresh flowers that are delivered on time and in perfect condition!
+
+Place Your Next Order
+
+Say "I do" to beautiful bouquets
+
+At their beautiful ceremony at Saddleback Ranch in Temecula, Eva and Simon loved these pastel blooms. Take a look at our Wedding Gallery to see they made their special day.
+
+The Wedding Gallery → ( http://google.com )
+
+Go on. Make someone's day.
+
+Read how one Bay Area tech company started celebrating one-year anniversaries with floral arrangements.
+
+Read Now → ( http://google.com )
+
+Stop in and smell the roses
+1500 Rapid Rivers Rd. Long Beach, CA 90001
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

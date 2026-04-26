@@ -1,9 +1,15 @@
 ﻿// /pages/modules/affiliates/vendor/manage-products/index.js
 // ✅ Manage Products Dashboard — full version with proper routes + Back button
+// ✅ Banner title is NOW explicitly 48px / weight 600 (not relying on inheritance)
+// ✅ Banner subtitle 18px
+// ✅ Back button 18px
+// ✅ Min font size across page is 16px
+// ✅ Uses iconMap the same way as the rest of your app (ICONS.xxx({ size, color })) — no component-style icons
 
 import Link from "next/link";
 import { useRouter } from "next/router";
 import ICONS from "../../../components/iconMap";
+import VendorUserBanner from "../../../components/vendor/VendorUserBanner";
 
 export default function ManageProducts() {
   const router = useRouter();
@@ -18,27 +24,75 @@ export default function ManageProducts() {
         "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
       display: "flex",
       justifyContent: "center",
+      fontSize: 48, // ✅ min font size baseline
+      fontWeight: 600,
     },
     inner: { width: "100%", maxWidth: 1320 },
+
+
+icon: ICONS.affiliates,
+
+
     banner: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      background: "#10b981",
-      padding: "14px 18px",
+      background: "#06a9db",
+      padding: "18px 22px",
       borderRadius: 14,
-      fontWeight: 700,
-      fontSize: 18,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      fontWeight: 600,
       marginBottom: 26,
+      gap: 14,
     },
     leftBanner: {
       display: "flex",
       alignItems: "center",
-      gap: 12,
+      gap: 14,
+      minWidth: 0,
     },
+    bannerIconWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      background: "rgba(0,0,0,0.25)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#fff",
+      flexShrink: 0,
+    },
+    bannerTitle: {
+      fontSize: 48, // ✅ explicitly set
+      fontWeight: 600,
+      lineHeight: 1.1,
+      margin: 0,
+    },
+    bannerSubtitle: {
+      fontSize: 18,
+      opacity: 0.9,
+      fontWeight: 600,
+      marginTop: 6,
+      lineHeight: 1.25,
+    },
+
+    backBtn: {
+      background: "#0c121a",
+      color: "#fff",
+      border: "2px solid rgba(255,255,255,0.25)",
+      borderRadius: 8,
+      padding: "10px 18px",
+      fontWeight: 600,
+      fontSize: 18, // ✅ requested
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      whiteSpace: "nowrap",
+    },
+
     grid: {
       display: "grid",
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: "repeat(2, 2fr)",
       gap: 18,
     },
     card: {
@@ -51,6 +105,9 @@ export default function ManageProducts() {
       alignItems: "center",
       gap: 14,
       cursor: "pointer",
+      color: "#fff",
+      textDecoration: "none",
+      minHeight: 88,
     },
     iconBox: {
       width: 42,
@@ -62,32 +119,27 @@ export default function ManageProducts() {
       justifyContent: "center",
       flexShrink: 0,
     },
-    title: { fontWeight: 700, fontSize: 15 },
-    desc: { opacity: 0.8, fontSize: 13, marginTop: 4 },
+    cardTitle: { fontWeight: 600, fontSize: 28, color: "#6456f7" },
+    cardDesc: { opacity: 0.85, fontSize: 16, marginTop: 4, fontWeight: 600 },
   };
 
   const cards = [
-    {
-      title: "My Products",
-      desc: "View, edit, upload, or remove your product listings.",
-      href: "/modules/affiliates/vendor/manage-products/my-products",
-      color: "#10b981",
-      icon: <ICONS.products size={24} />,
+     {
+    title: "Affiliate Dashboard",
+    desc: "View your affiliate analytics, commissions, sales, and payouts.",
+    href: "/modules/affiliates/affiliate-marketplace/affiliate_analytics",
+    color: "#ec4899",
+    icon: ICONS.analytics({ size: 36, color: "#fff" }),
+  },
+   
+  {
+      title: "Our Affiliate Applications",
+      desc: "Review our applications for Affiliate programs.",
+       href: "/modules/affiliates/affiliate-marketplace/affiliate_applications",
+      color: "#43f916",
+      icon: ICONS.products({ size: 36, color: "#fff" }),
     },
-    {
-      title: "Affiliate Applications",
-      desc: "Review and approve affiliate partnership requests.",
-      href: "/modules/affiliates/vendor/affiliate-applications",
-      color: "#f59e0b",
-      icon: <ICONS.approvals size={24} />,
-    },
-    {
-      title: "Performance Reports",
-      desc: "Track sales, revenue, and affiliate performance.",
-      href: "/modules/affiliates/vendor/performance-reports",
-      color: "#06b6d4",
-      icon: <ICONS.analytics size={24} />,
-    },
+
   ];
 
   return (
@@ -96,50 +148,49 @@ export default function ManageProducts() {
         {/* ✅ Banner */}
         <div style={page.banner}>
           <div style={page.leftBanner}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: "rgba(0,0,0,0.25)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                flexShrink: 0,
-              }}
-            >
-              <ICONS.products size={28} />
+            <div style={page.bannerIconWrap}>
+              {ICONS.affiliates({ size: 48, color: "#fff" })}
+              
+
+
             </div>
-            <div>
-              <div>Manage Products</div>
-              <div style={{ fontSize: 14, opacity: 0.9, fontWeight: 400 }}>
+
+            <div style={{ minWidth: 0 }}>
+              <div style={page.bannerTitle}>Affiliate Dashboard - Manage Products</div>
+              <div style={page.bannerSubtitle}>
                 Manage your listings and affiliate approvals.
               </div>
             </div>
           </div>
 
-          {/* 🔙 Back Button */}
-          <button
-            onClick={() => router.back()}
-            style={{
-              background: "#0c121a",
-              color: "#fff",
-              border: "2px solid rgba(255,255,255,0.25)",
-              borderRadius: 8,
-              padding: "8px 16px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#111827")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#0c121a")}
-          >
-            ← Back
-          </button>
+        {/* 🔙 Back Button */}
+        <button
+          onClick={async () => {
+            // Check if user is logged into the platform (Supabase)
+            const { data: { user } } = await import("../../../lib/supabaseClient").then(m => m.supabase.auth.getUser());
+            if (user) {
+              router.push("/dashboard");
+            } else {
+              router.push("/marketplace");
+            }
+          }}
+          style={page.backBtn}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "#111827";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = "#0c121a";
+          }}
+        >
+          ← Back
+        </button>
+
         </div>
 
         {/* 🟩 Cards */}
+  <VendorUserBanner />
+
+  {/* 🟩 Cards */}
         <div style={page.grid}>
           {cards.map((card, i) => (
             <Link
@@ -160,12 +211,10 @@ export default function ManageProducts() {
                 e.currentTarget.style.color = "#fff";
               }}
             >
-              <div style={{ ...page.iconBox, color: card.color }}>
-                {card.icon}
-              </div>
+              <div style={{ ...page.iconBox }}>{card.icon}</div>
               <div>
-                <div style={page.title}>{card.title}</div>
-                <div style={page.desc}>{card.desc}</div>
+                <div style={page.cardTitle}>{card.title}</div>
+                <div style={page.cardDesc}>{card.desc}</div>
               </div>
             </Link>
           ))}

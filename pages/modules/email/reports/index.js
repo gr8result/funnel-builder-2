@@ -1,5 +1,5 @@
 // /pages/modules/email/reports/index.js
-// Email analytics control centre â€” collapsible section summaries + drill-down.
+// Email analytics control centre — collapsible section summaries + drill-down.
 // LIVE version (reads from email_sends).
 //
 // Routes:
@@ -7,8 +7,6 @@
 // - /modules/email/reports/broadcasts
 // - /modules/email/reports/campaigns
 // - /modules/email/reports/autoresponders
-// - /modules/email/reports/automations
-
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -88,23 +86,24 @@ export default function EmailReportsControlCentre() {
         desc: "Combined analytics across all email types.",
         href: "/modules/email/reports/all",
         colour: "#10b981",
-        icon: "ðŸ“ˆ",
+        icon: "📈",
       },
       {
         key: "broadcasts",
         title: "Broadcasts",
         desc: "One-off broadcast emails sent to lists or specific contacts.",
         href: "/modules/email/reports/broadcasts",
-        colour: "#facc15",
-        icon: "ðŸ“§",
+        colour: "#f59e0b",
+        icon: "📢",
+
       },
       {
         key: "campaigns",
-        title: "campaigns",
+        title: "Campaigns",
         desc: "Multi-step email campaigns and sequences.",
         href: "/modules/email/reports/campaigns",
         colour: "#14b8a6",
-        icon: "ðŸ“£",
+        icon: "📣",
       },
       {
         key: "autoresponders",
@@ -112,7 +111,7 @@ export default function EmailReportsControlCentre() {
         desc: "Autoresponder emails triggered by sign-ups or events.",
         href: "/modules/email/reports/autoresponders",
         colour: "#a855f7",
-        icon: "â±ï¸",
+        icon: "⏱️",
       },
       {
         key: "automations",
@@ -120,7 +119,23 @@ export default function EmailReportsControlCentre() {
         desc: "Emails sent from automation flows and rules.",
         href: "/modules/email/reports/automations",
         colour: "#f97316",
-        icon: "âš™ï¸",
+        icon: "⚙️",
+      },
+      {
+        key: "sms-messages",
+        title: "SMS Messages",
+        desc: "SMS analytics, delivery status and tracking.",
+        href: "/modules/email/reports/sms",
+        colour: "#14b8a6",
+        icon: "💬",
+      },
+      {
+        key: "calls",
+        title: "Calls & Recordings",
+        desc: "Outbound call history with audio recordings and metrics.",
+        href: "/modules/email/reports/calls",
+        colour: "#8b5cf6",
+        icon: "📞",
       },
     ],
     []
@@ -179,7 +194,7 @@ export default function EmailReportsControlCentre() {
         const qAll = base(
           supabase
             .from("email_sends")
-            .select("id, user_id, email, broadcast_id, campaigns_id, automation_id, open_count, click_count, bounced_at, unsubscribed, last_event, last_event_at, created_at")
+            .select("*")
             .order("created_at", { ascending: false })
             .limit(5000)
         );
@@ -187,13 +202,10 @@ export default function EmailReportsControlCentre() {
         const { data: allData, error: allErr } = await qAll;
         if (allErr) throw allErr;
 
-        const broadcasts = (allData || []).filter((r) => !!r.broadcast_id);
-        const campaigns = (allData || []).filter((r) => !!r.campaigns_id);
-        // NOTE: if you later distinguish autoresponders vs campaigns, add autoresponder_id or source_type.
-        // For now: autoresponders = campaigns_id rows where those campaigns are autoresponder-triggered (future),
-        // so we show "0" unless you wire a flag. We'll still surface campaigns_id metrics in campaigns.
-        const autoresponders = []; // reserved for a dedicated id/flag
-        const automations = (allData || []).filter((r) => !!r.automation_id);
+        const broadcasts = (allData || []).filter((r) => !!(r.broadcast_id || r.broadcastId));
+        const campaigns = (allData || []).filter((r) => !!(r.campaigns_id || r.campaign_id || r.campaignId));
+        const autoresponders = (allData || []).filter((r) => !!(r.autoresponder_id || r.autoresponderId));
+        const automations = (allData || []).filter((r) => !!(r.automation_id || r.automationId));
 
         if (!mounted) return;
 
@@ -246,18 +258,18 @@ export default function EmailReportsControlCentre() {
           <div style={styles.banner}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={styles.bannerIconWrap} aria-hidden="true">
-                <span style={{ fontSize: 48, lineHeight: 1 }}>ðŸ“ˆ</span>
+                <span style={{ fontSize: 48, lineHeight: 1 }}>📈</span>
               </div>
               <div>
                 <div style={styles.bannerTitle}>Email analytics control centre</div>
                 <div style={styles.bannerSub}>
-                  Broadcasts, campaigns, autoresponders, automations â€“ all your key email stats in one dashboard.
+                  Broadcasts, campaigns, autoresponders, automations – all your key email stats in one dashboard.
                 </div>
               </div>
             </div>
 
             <Link href="/modules/email" style={styles.backBtn}>
-              â† Back
+              ← Back
             </Link>
           </div>
 
@@ -282,7 +294,7 @@ export default function EmailReportsControlCentre() {
             </button>
           </div>
 
-          {loading ? <div style={styles.note}>Loading live analyticsâ€¦</div> : null}
+          {loading ? <div style={styles.note}>Loading live analytics…</div> : null}
 
           {!loading && !userId ? (
             <div style={styles.note}>You must be logged in to view analytics.</div>
@@ -296,7 +308,7 @@ export default function EmailReportsControlCentre() {
 
           {!loading && userId && !loadErr ? (
             <div style={styles.note}>
-              Live data from <code>email_sends</code>. (If something reads 0, it means that email type hasnâ€™t written into
+              Live data from <code>email_sends</code>. (If something reads 0, it means that email type hasn't written into
               <code> email_sends</code> yet.)
             </div>
           ) : null}
@@ -337,16 +349,16 @@ export default function EmailReportsControlCentre() {
                 </div>
 
                 {recentRows.map((r) => {
-                  const type = r.broadcast_id ? "Broadcast" : r.campaigns_id ? "campaigns" : r.automation_id ? "Automation" : "â€”";
+                  const type = r.broadcast_id ? "Broadcast" : r.campaigns_id ? "campaigns" : r.automation_id ? "Automation" : "—";
                   const when = r.last_event_at || r.created_at;
                   return (
                     <div key={r.id} style={styles.tr}>
-                      <div style={styles.td}>{when ? new Date(when).toLocaleString() : "â€”"}</div>
-                      <div style={styles.td}>{r.email || "â€”"}</div>
+                      <div style={styles.td}>{when ? new Date(when).toLocaleString() : "—"}</div>
+                      <div style={styles.td}>{r.email || "—"}</div>
                       <div style={styles.td}>{type}</div>
                       <div style={styles.td}>{Number(r.open_count || 0)}</div>
                       <div style={styles.td}>{Number(r.click_count || 0)}</div>
-                      <div style={styles.td}>{r.last_event || "â€”"}</div>
+                      <div style={styles.td}>{r.last_event || "—"}</div>
                     </div>
                   );
                 })}
@@ -391,9 +403,9 @@ function SectionCard({ card, pills, isOpen, onToggle }) {
           background: safeColour,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
           <div style={styles.sectionIconWrap} aria-hidden="true">
-            <span style={{ fontSize: 24, lineHeight: 1 }}>{card.icon || "ðŸ“Š"}</span>
+            <span style={{ fontSize: 48, lineHeight: 1 }}>{card.icon || "📊"}</span>
           </div>
 
           <div style={{ textAlign: "left" }}>
@@ -411,11 +423,11 @@ function SectionCard({ card, pills, isOpen, onToggle }) {
               e.stopPropagation();
             }}
           >
-            View report â†’
+            View report →
           </Link>
 
           <div style={styles.chev} aria-hidden="true">
-            {isOpen ? "â–²" : "â–¼"}
+            {isOpen ? "▲" : "▼"}
           </div>
         </div>
       </button>
@@ -441,7 +453,7 @@ function SectionCard({ card, pills, isOpen, onToggle }) {
 
           <div style={{ marginTop: 12 }}>
             <Link href={card.href} style={styles.deepLink}>
-              Open full {card.title} report â†’
+              Open full {card.title} report →
             </Link>
           </div>
         </div>
@@ -490,7 +502,7 @@ const styles = {
     borderRadius: 10,
     background: "rgba(0,0,0,0.18)",
   },
-  bannerTitle: { fontSize: 48, fontWeight: 600, color: "#052b1b", lineHeight: 1.05 },
+  bannerTitle: { fontSize: 48, fontWeight: 600, color: "#ffffff", lineHeight: 1.05 },
   bannerSub: { fontSize: 18, marginTop: 3, color: "rgba(5,43,27,0.90)" },
 
   backBtn: {
@@ -539,7 +551,7 @@ const styles = {
     padding: "10px 16px",
     fontSize: 18,
     cursor: "pointer",
-    fontWeight: 800,
+    fontWeight: 600,
     whiteSpace: "nowrap",
   },
 
@@ -572,16 +584,16 @@ const styles = {
   },
 
   sectionIconWrap: {
-    width: 40,
-    height: 40,
+    width: 69,
+    height: 69,
     borderRadius: 10,
     display: "grid",
     placeItems: "center",
     background: "rgba(0,0,0,0.18)",
   },
 
-  sectionTitle: { fontSize: 24, fontWeight: 600, color: "#052b1b" },
-  sectionDesc: { fontSize: 18, color: "rgba(5,43,27,0.90)", marginTop: 2 },
+  sectionTitle: { fontSize: 36, fontWeight: 550, color: "#ffffff" },
+  sectionDesc: { fontSize: 20, color: "rgba(5,43,27,0.90)", marginTop: 2 },
 
   viewBtn: {
     background: "rgba(2,6,23,0.80)",
@@ -592,7 +604,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.18)",
     whiteSpace: "nowrap",
     textDecoration: "none",
-    fontWeight: 700,
+    fontWeight: 500,
   },
 
   chev: {

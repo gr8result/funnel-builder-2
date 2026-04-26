@@ -1,0 +1,35 @@
+For You: $25 off your purchase of $100+
+
+The New Beginnings Spring Collection is here!
+
+To celebrate, you’re getting $25 off your purchase of $100 or more for a limited time only! *Discount is applied at checkout - no promo code required.*
+
+SHOP THE COLLECTION ( http:// )
+
+SHOP BY CATEGORY
+
+Necklaces ( http:// )
+
+Bracelets ( http:// )
+
+Earrings ( http:// )
+
+Rings ( http:// )
+
+Sets ( http:// )
+
+Bridal ( http:// )
+
+NEED HELP?
+
+Our stylists are standing by to help you hand-pick the pieces that match your style and complement what you already own.
+
+ASK A STYLIST ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

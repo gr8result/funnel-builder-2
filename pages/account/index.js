@@ -8,6 +8,10 @@ import Link from "next/link";
 import ICONS from "../../components/iconMap";
 import { Card } from "../../components/ui/card";
 
+function getPhoneVerifiedStorageKey(userId) {
+  return userId ? `gr8:account:phone-verified:${userId}` : "";
+}
+
 function generateAffiliateTail() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let s = "";
@@ -42,17 +46,32 @@ export default function AccountPage() {
   // -----------------------------
   // STATE
   // -----------------------------
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [planPrice, setPlanPrice] = useState(null);
 
   const [userId, setUserId] = useState(null);
   const [approved, setApproved] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [agreementSigned, setAgreementSigned] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
+  const [smsCodeInput, setSmsCodeInput] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingEmailVerify, setSendingEmailVerify] = useState(false);
+  const [checkingEmailVerify, setCheckingEmailVerify] = useState(false);
+
+  // Progressive section unlock
+  const [activeSection, setActiveSection] = useState(1);
+
+  // Phone OTP verification (end of section 1)
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneCodeInput, setPhoneCodeInput] = useState("");
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneCodeSending, setPhoneCodeSending] = useState(false);
+  const [phoneVerifyError, setPhoneVerifyError] = useState("");
+
 
   // Hide Email API Key card after copy / if key already exists
   const [apiKeyHidden, setApiKeyHidden] = useState(false);
@@ -60,6 +79,13 @@ export default function AccountPage() {
   // DKIM state
   const [dkimRecords, setDkimRecords] = useState(null);
   const [dkimVerified, setDkimVerified] = useState(false);
+
+  // SMS application state
+  const [smsMobile, setSmsMobile] = useState("");
+  const [smsEmail, setSmsEmail] = useState("");
+  const [smsSenderId, setSmsSenderId] = useState("");
+  const [smsApplied, setSmsApplied] = useState(false);
+  const [smsApplying, setSmsApplying] = useState(false);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -103,6 +129,10 @@ export default function AccountPage() {
     // DKIM domain on the form
     dkimDomain: "",
   });
+
+  // --- BUCKET CONSTANTS ---
+  const BUCKET_PRIVATE = "Private-assets";
+  const BUCKET_PUBLIC = "public-assets";
 
   const [files, setFiles] = useState({
     logo: null,
@@ -182,6 +212,7 @@ export default function AccountPage() {
   useEffect(() => {
     async function loadData() {
       try {
+        console.log('[AccountPage] Loading account data...');
         const {
           data: { user },
           error: userError,
@@ -194,8 +225,17 @@ export default function AccountPage() {
           return;
         }
 
+
         setUserId(user.id);
+        const isEmailVerified = Boolean(user.email_confirmed_at);
+        setEmailVerified(isEmailVerified);
         setForm((p) => ({ ...p, email: user.email || "" }));
+
+        // Auto-unlock sections for returning users who have already verified
+        if (isEmailVerified) {
+          setActiveSection((prev) => Math.max(prev, 2));
+        }
+
 
         // Load account data
         const { data: account, error: accError } = await supabase
@@ -210,10 +250,8 @@ export default function AccountPage() {
           setLoadingData(false);
           return;
         }
+        console.log('[AccountPage] Loaded account row:', account);
 
-        // Restore email plan info
-        if (account.email_plan) setSelectedPlan(account.email_plan);
-        if (account.email_plan_price) setPlanPrice(account.email_plan_price);
 
         // Flags
         setApproved(account.approved === true);
@@ -227,8 +265,17 @@ export default function AccountPage() {
           email: account.email || user.email || "",
           phone: account.phone || "",
           altPhone: account.alt_phone || "",
+          residentialAddress: account.residential_address || "",
+          residentialCity: account.residential_city || "",
+          residentialState: account.residential_state || "",
+          residentialPostcode: account.residential_postcode || "",
+          residentialCountry: account.residential_country || "Australia",
+          driverLicenceNumber: account.driver_licence_number || "",
+          driverCardNumber: account.driver_card_number || "",
+          driverExpiry: account.driver_expiry || "",
           businessName: account.business_name || "",
-          businessId: account.abn || "",
+          businessId: account.abn || account.business_id || "",
+          businessCountry: account.business_country || "Australia",
           businessAddress: account.business_address || "",
           businessCity: account.business_city || "",
           businessState: account.business_state || "",
@@ -237,8 +284,14 @@ export default function AccountPage() {
           postalCity: account.postal_city || "",
           postalState: account.postal_state || "",
           postalPostcode: account.postal_postcode || "",
+          postalCountry: account.postal_country || "Australia",
+          businessPhone: account.business_phone || "",
+          businessEmail: account.business_email || "",
           website: account.website || "",
+          linkedin: account.linkedin || "",
+          taxCountry: account.tax_country || "",
           paypalEmail: account.paypal_email || "",
+          bankAccount: account.bank_account || "",
           vendorOptIn: account.vendor === true,
           affiliateOptIn: account.affiliate === true,
           agreeTerms: account.agree_terms === true,
@@ -248,11 +301,28 @@ export default function AccountPage() {
           dkimDomain: account.dkim_domain || "",
         }));
 
+        // Auto-unlock sections for returning users based on saved data
+        if (account.business_name) {
+          setActiveSection((prev) => Math.max(prev, 3));
+        }
+        if (account.agree_terms === true && account.agree_privacy === true) {
+          setActiveSection((prev) => Math.max(prev, 4));
+        }
+        // Log restored form
+        console.log('[AccountPage] Restored form state:', {
+          residentialAddress: account.residential_address,
+          driverLicenceNumber: account.driver_licence_number,
+          id_front_url: account.id_front_url,
+          id_back_url: account.id_back_url,
+          proof_of_address_url: account.proof_of_address_url,
+        });
+
         // DKIM state restore
         setDkimVerified(account.dkim_verified === true);
         if (account.dkim_records) {
           setDkimRecords(account.dkim_records);
         }
+
 
         // Preview helper (logos, IDs, etc.)
         async function preview(key, val) {
@@ -307,27 +377,27 @@ export default function AccountPage() {
             }
 
             const isPDF = cleanPath.toLowerCase().endsWith(".pdf");
+            const storagePath = isPrivate ? `Private-assets/${cleanPath}` : `public-assets/${cleanPath}`;
             setPreviews((prev) => ({
               ...prev,
-              [key]: { url, type: isPDF ? "pdf" : "image" },
+              [key]: { url, type: isPDF ? "pdf" : "image", storagePath },
             }));
+            console.log(`[AccountPage] Restored preview for ${key}:`, url);
           } catch (err) {
             console.error(`❌ Error restoring ${key}:`, err.message);
           }
         }
 
         // Restore all images
-        await preview("logo", account.business_logo);
-        await preview("avatar", account.business_avatar);
-        await preview("idFront", account.id_front);
-        await preview("idBack", account.id_back);
-        await preview("proofAddress", account.proof_address);
-        await preview("registrationDoc", account.registration_doc);
+        await preview("logo", account.business_logo || account.business_logo_url);
+        await preview("avatar", account.business_avatar || account.business_avatar_url);
+        await preview("idFront", account.id_front_url);
+        await preview("idBack", account.id_back_url);
+        await preview("proofAddress", account.proof_of_address_url);
+        await preview("registrationDoc", account.registration_doc || account.registration_doc_url);
 
-        // Affiliate slug
-        if (account.affiliate_slug) setAffiliateTail(account.affiliate_slug);
-
-        // Licence / proof / registration from Private-assets
+        // Fallback for older rows where KYC paths are missing/stale on accounts table.
+        // Pull latest uploaded files directly from Private-assets folders.
         try {
           const folders = [
             { key: "id-front", state: "idFront" },
@@ -337,6 +407,8 @@ export default function AccountPage() {
           ];
 
           for (const f of folders) {
+            if (previews[f.state]?.url) continue;
+
             const { data, error } = await supabase.storage
               .from("Private-assets")
               .list(`${user.id}/${f.key}`, {
@@ -346,35 +418,34 @@ export default function AccountPage() {
 
             if (error || !data?.length) continue;
             const file = data[0];
+            const objectPath = `${user.id}/${f.key}/${file.name}`;
 
-            const { data: signed } = await supabase.storage
+            const { data: signed, error: signErr } = await supabase.storage
               .from("Private-assets")
-              .createSignedUrl(`${user.id}/${f.key}/${file.name}`, 3600);
+              .createSignedUrl(objectPath, 3600);
 
-            if (!signed?.signedUrl) continue;
-            setPreviews((p) => ({ ...p, [f.state]: signed.signedUrl }));
+            if (signErr || !signed?.signedUrl) continue;
 
-            if (f.key === "id-front") {
-              const { data: meta } = await supabase
-                .from("storage.objects")
-                .select("metadata")
-                .eq("bucket_id", "Private-assets")
-                .eq("name", `${user.id}/${f.key}/${file.name}`)
-                .maybeSingle();
-
-              if (meta?.metadata) {
-                setForm((p) => ({
-                  ...p,
-                  driverLicenceNumber: meta.metadata.licence_number || "",
-                  driverCardNumber: meta.metadata.card_number || "",
-                  driverExpiry: meta.metadata.expiry_date || "",
-                }));
-              }
-            }
+            const isPDF = file.name.toLowerCase().endsWith(".pdf");
+            setPreviews((p) => ({
+              ...p,
+              [f.state]: {
+                url: signed.signedUrl,
+                type: isPDF ? "pdf" : "image",
+                storagePath: `Private-assets/${objectPath}`,
+              },
+            }));
+            console.log(`[AccountPage] Fallback restored preview for ${f.state}:`, objectPath);
           }
-        } catch (err) {
-          console.error("❌ Image restore error:", err);
+        } catch (fallbackErr) {
+          console.warn("⚠️ KYC preview fallback restore failed:", fallbackErr.message);
         }
+
+        // Affiliate slug
+        if (account.affiliate_slug) setAffiliateTail(account.affiliate_slug);
+
+        // Licence / proof / registration from Private-assets
+
 
         // Restore licence metadata from accounts row
         setForm((p) => ({
@@ -383,12 +454,70 @@ export default function AccountPage() {
           driverCardNumber: account.driver_card_number || "",
           driverExpiry: account.driver_expiry || "",
         }));
+
+        // Load SMS application data from profiles first, then accounts fallback
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("sms_mobile, sms_email, sender_id, sms_applied")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (!profileError && profile) {
+            setSmsMobile(profile.sms_mobile || "");
+            setSmsEmail(profile.sms_email || "");
+            
+            // If profile has sender_id, use it; otherwise try accounts fallback
+            if (profile.sender_id) {
+              setSmsSenderId(profile.sender_id);
+              setSmsApplied(true);
+            } else {
+              // Fallback: check accounts.sender_id
+              try {
+                const { data: accountData } = await supabase
+                  .from("accounts")
+                  .select("sender_id")
+                  .eq("user_id", user.id)
+                  .maybeSingle();
+                
+                if (accountData?.sender_id) {
+                  setSmsSenderId(accountData.sender_id);
+                  setSmsApplied(true);
+                } else {
+                  setSmsApplied(profile.sms_applied || false);
+                }
+              } catch (err) {
+                console.warn("⚠️ Could not check accounts.sender_id:", err.message);
+                setSmsApplied(profile.sms_applied || false);
+              }
+            }
+          }
+        } catch (smsErr) {
+          console.warn("⚠️ SMS profiles load failed:", smsErr.message);
+        }
+
+        try {
+          const phoneVerifiedKey = getPhoneVerifiedStorageKey(user.id);
+          if (phoneVerifiedKey && typeof window !== "undefined") {
+            const storedPhoneVerified = window.localStorage.getItem(phoneVerifiedKey);
+            if (storedPhoneVerified === "true") {
+              setPhoneVerified(true);
+            }
+          }
+        } catch (storageErr) {
+          console.warn("⚠️ Could not restore phone verification state:", storageErr.message);
+        }
       } catch (err) {
         console.error("❌ Error loading account:", err);
-        alert(
-          "❌ Failed to load account details:\n" +
-            (err.message || JSON.stringify(err))
-        );
+        // Only show alert if it's not a profiles table error (non-critical SMS feature)
+        if (!err.message?.includes("profiles")) {
+          alert(
+            "❌ Failed to load account details:\n" +
+              (err.message || JSON.stringify(err))
+          );
+        } else {
+          console.warn("⚠️ Profiles table unavailable (SMS feature will be limited)");
+        }
       } finally {
         setLoadingData(false);
       }
@@ -437,55 +566,79 @@ export default function AccountPage() {
     // FILES
     if (type === "file") {
       const file = fileList[0];
-      if (!file) return;
-
+      if (!file) {
+        alert(`❌ No file selected for ${name}`);
+        return;
+      }
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) return alert("You must be logged in.");
-
+        if (!user || !user.id) {
+          alert("❌ You must be logged in. No user ID found.");
+          console.error("No user or user.id for upload", user);
+          return;
+        }
+        // Map input names to correct folder names
+        const folderMap = {
+          idFront: "id-front",
+          idBack: "id-back",
+          proofAddress: "proof",
+          registrationDoc: "registration",
+          logo: "logos",
+          avatar: "avatars"
+        };
+        const folder = folderMap[name] || name;
         const PrivateFolders = ["id-front", "id-back", "proof", "registration"];
-        const isPrivate = PrivateFolders.includes(name);
-        const bucket = isPrivate ? "Private-assets" : "public-assets";
-
+        const isPrivate = PrivateFolders.includes(folder);
+        // FORCE: Always use 'Private-assets' for private files (case-sensitive)
+        const bucket = isPrivate ? "Private-assets" : BUCKET_PUBLIC;
         const ext = file.name.split(".").pop();
         const timestamp = Date.now();
-        const path = `${user.id}/${name}/${timestamp}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
+        const path = `${user.id}/${folder}/${timestamp}.${ext}`;
+        console.log(`Uploading ${name} to ${bucket}/${path}`);
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from(bucket)
           .upload(path, file, { upsert: true, contentType: file.type });
-
-        if (uploadError) throw uploadError;
-
-        // Get URL
-        let url;
+        if (uploadError || !uploadData) {
+          alert(`❌ Upload failed for ${name}: ${uploadError?.message || 'Unknown error'}`);
+          console.error(`Upload failed for ${name}:`, uploadError);
+          return;
+        }
+        // Use the exact path returned by Supabase
+        const savedPath = uploadData.path ? `${bucket}/${uploadData.path}` : `${bucket}/${path}`;
+        // Get URL for preview
+        let url = null;
         if (isPrivate) {
           const { data: signed, error: signedErr } = await supabase.storage
             .from(bucket)
-            .createSignedUrl(path, 3600);
-          if (signedErr) throw signedErr;
+            .createSignedUrl(uploadData.path, 3600);
+          if (signedErr) {
+            alert(`❌ Signed URL failed for ${name}: ${signedErr.message}`);
+            console.error(`Signed URL failed for ${name}:`, signedErr);
+            return;
+          }
           url = signed?.signedUrl;
         } else {
           const { data: pub } = supabase.storage
             .from(bucket)
-            .getPublicUrl(path);
+            .getPublicUrl(uploadData.path);
           url = pub?.publicUrl;
         }
-
         setPreviews((prev) => ({
           ...prev,
-          [name]: { url, type: file.type.includes("pdf") ? "pdf" : "image" },
+          [name]: {
+            url,
+            type: file.type.includes("pdf") ? "pdf" : "image",
+            storagePath: savedPath,
+          },
         }));
-
-        setForm((prev) => ({
-          ...prev,
-          [`business_${name}`]: url,
-        }));
+        // Log both returned and saved path for debug
+        console.log(`Supabase returned path for ${name}:`, uploadData.path);
+        console.log(`Storage path saved for ${name}:`, savedPath);
       } catch (err) {
-        console.error("❌ Upload error:", err);
-        alert("❌ Upload failed: " + err.message);
+        alert(`❌ Upload error for ${name}: ${err.message}`);
+        console.error(`❌ Upload error for ${name}:`, err);
       }
       return;
     }
@@ -569,6 +722,8 @@ export default function AccountPage() {
   // SUBMIT HANDLER
   // -----------------------------
   const handleSubmit = async (e) => {
+      // ID and proof images
+      // ...existing code...
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
@@ -592,14 +747,30 @@ export default function AccountPage() {
       }
     }
 
+
     setUploading(true);
     try {
+      // Debug: Log files and user
+      console.log("Submitting account form");
+      console.log("User:", user);
+      console.log("Files:", files);
+
+      const hasIdFront = files.idFront || previews.idFront?.url;
+      const hasIdBack = files.idBack || previews.idBack?.url;
+      const hasProof = files.proofAddress || previews.proofAddress?.url;
+      if (!hasIdFront || !hasIdBack || !hasProof) {
+        alert("❌ Please select all required ID and proof files before submitting.");
+        setUploading(false);
+        return;
+      }
+
+
       const uploads = await Promise.all([
         uploadToStorage(files.logo, "logo"),
         uploadToStorage(files.avatar, "avatar"),
         uploadToStorage(files.idFront, "id-front"),
         uploadToStorage(files.idBack, "id-back"),
-        uploadToStorage(files.proof, "proof"),
+        uploadToStorage(files.proofAddress, "proof"),
         uploadToStorage(files.registrationDoc, "registration"),
       ]);
 
@@ -612,10 +783,57 @@ export default function AccountPage() {
         regDocUrl,
       ] = uploads;
 
+      // Debug: Log upload results
+      console.log("Upload results:", uploads);
+
+      // Always use the latest uploaded storage path if present, fallback to preview.storagePath, else null
+
+      function getKycStoragePath(uploaded, preview, label) {
+        if (uploaded) {
+          console.log(`✅ Using uploaded KYC path for ${label}:`, uploaded);
+          return uploaded;
+        }
+        if (preview?.storagePath) {
+          console.log(`⚠️ Using preview.storagePath for ${label}:`, preview.storagePath);
+          return preview.storagePath;
+        }
+        if (preview?.url) {
+          console.log(`⚠️ Using preview.url for ${label}:`, preview.url);
+          return preview.url;
+        }
+        console.warn(`❌ No KYC path found for ${label}`);
+        return null;
+      }
+
+      const idFrontStorage = getKycStoragePath(idFrontUrl, previews.idFront, "id_front_url");
+      const idBackStorage = getKycStoragePath(idBackUrl, previews.idBack, "id_back_url");
+      const proofStorage = getKycStoragePath(proofUrl, previews.proofAddress, "proof_of_address_url");
+      const registrationStorage = getKycStoragePath(regDocUrl, previews.registrationDoc, "registration_doc");
+
+      function getOptionalStoragePath(uploaded, preview, existingValue, label) {
+        if (uploaded) return uploaded;
+        if (preview?.storagePath) return preview.storagePath;
+        if (existingValue) return existingValue;
+        console.warn(`⚠️ Optional file path missing for ${label}`);
+        return null;
+      }
+
+      const asNullableDate = (v) => {
+        const s = String(v ?? "").trim();
+        return s ? s : null;
+      };
+
+      // If any required KYC field is missing, block submit
+      if (!idFrontStorage || !idBackStorage || !proofStorage) {
+        alert("❌ Upload failed for one or more required files. Please try again. [KYC fields missing]");
+        setUploading(false);
+        return;
+      }
+
       const payload = {
         user_id: user.id,
         full_name: form.fullName,
-        dob: form.dob,
+        dob: asNullableDate(form.dob),
         email: form.email,
         phone: form.phone,
         alt_phone: form.altPhone,
@@ -626,9 +844,10 @@ export default function AccountPage() {
         residential_country: form.residentialCountry,
         driver_licence_number: form.driverLicenceNumber,
         driver_card_number: form.driverCardNumber,
-        driver_expiry: form.driverExpiry,
+        driver_expiry: asNullableDate(form.driverExpiry),
         business_name: form.businessName,
         abn: form.businessId,
+        business_id: form.businessId,
         business_country: form.businessCountry,
         business_address: form.businessAddress,
         business_city: form.businessCity,
@@ -651,9 +870,18 @@ export default function AccountPage() {
         vendor: form.vendorOptIn,
         agree_terms: form.agreeTerms,
         agree_privacy: form.agreePrivacy,
-        business_logo: logoUrl || previews.logo,
-        business_avatar: avatarUrl || previews.avatar,
+        business_logo: getOptionalStoragePath(logoUrl, previews.logo, null, "business_logo"),
+        business_logo_url: getOptionalStoragePath(logoUrl, previews.logo, null, "business_logo_url"),
+        business_avatar: getOptionalStoragePath(avatarUrl, previews.avatar, null, "business_avatar"),
+        business_avatar_url: getOptionalStoragePath(avatarUrl, previews.avatar, null, "business_avatar_url"),
         affiliate_slug: affiliateTail || null,
+
+        // ID and proof images (ALWAYS persist correct storage path)
+        id_front_url: idFrontStorage,
+        id_back_url: idBackStorage,
+        proof_of_address_url: proofStorage,
+        registration_doc: registrationStorage,
+        registration_doc_url: registrationStorage,
 
         // DKIM fields
         dkim_domain: form.dkimDomain || null,
@@ -673,6 +901,7 @@ export default function AccountPage() {
       if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
       let saveError = null;
+      const isFirstSubmission = !existing;
       if (existing) {
         const { error: updateError } = await supabase
           .from("accounts")
@@ -707,6 +936,17 @@ export default function AccountPage() {
           alert("✅ Saved successfully.");
         }
         setSubmitted(true);
+        // Only first submission should send admin-notification email and show onboarding modal.
+        if (isFirstSubmission) {
+          try {
+            await fetch("/api/account/application-received", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: user.id, email: form.email, name: form.fullName }),
+            });
+          } catch (_) {}
+          setShowApprovalModal(true);
+        }
       }
     } catch (err) {
       alert("Save failed: " + err.message);
@@ -745,18 +985,42 @@ export default function AccountPage() {
           <title>Account & Onboarding | Gr8 Result</title>
         </Head>
         <div className="inner">
-          {/* Banner – forced purple to match side nav, with icon + bigger text */}
-          <div className="banner purple">
-            <span className="banner-icon">{ICONS.account}</span>
-            <h1 className="banner-title">
-              {approved ? "Edit Your Account Details" : "Account & Onboarding"}
-            </h1>
+          {/* Banner */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '20px 24px',
+            borderRadius: '14px',
+            background: 'linear-gradient(90deg, #4c1d95, #7c3aed, #a855f7)',
+            border: '2px solid #a855f7',
+            marginBottom: '28px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {ICONS.account && typeof ICONS.account === 'function' ? ICONS.account({ size: 48 }) : ICONS.account}
+              <div>
+                <h1 style={{ fontSize: 48, fontWeight: 600, margin: 0, lineHeight: 1.1 }}>Account Details</h1>
+                <p style={{ fontSize: 18, margin: 0, opacity: 0.9, marginTop: 4 }}>Manage your profile, business details, and platform settings</p>
+              </div>
+            </div>
+            <Link href="/dashboard">
+              <button style={{
+                padding: '10px 20px',
+                borderRadius: 8,
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}>← Back to Dashboard</button>
+            </Link>
           </div>
 
           <form onSubmit={handleSubmit} className="form">
             {/* CONTACT INFORMATION */}
             <div className="card teal">
-              <h2>Personal & Contact Information</h2>
+              <h2 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20, color: '#14b8a6' }}>Personal & Contact Information</h2>
               <label>
                 Full Name
                 <input
@@ -798,6 +1062,53 @@ export default function AccountPage() {
                 />
               </label>
 
+              {/* Residential Address Details */}
+              <label>
+                Residential Address
+                <input
+                  name="residentialAddress"
+                  value={form.residentialAddress}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Residential City
+                <input
+                  name="residentialCity"
+                  value={form.residentialCity}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Residential State
+                <input
+                  name="residentialState"
+                  value={form.residentialState}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Residential Postcode
+                <input
+                  name="residentialPostcode"
+                  value={form.residentialPostcode}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Residential Country
+                <input
+                  name="residentialCountry"
+                  value={form.residentialCountry}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
               <h3>Driver’s Licence Verification</h3>
               <label>
                 Licence Number
@@ -828,15 +1139,30 @@ export default function AccountPage() {
                 />
               </label>
               <div className="preview-row">
-                {previews.idFront && (
-                  <img src={previews.idFront} className="thumb" />
-                )}
-                {previews.idBack && (
-                  <img src={previews.idBack} className="thumb" />
-                )}
-                {previews.proofAddress && (
-                  <img src={previews.proofAddress} className="thumb" />
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: 16 }}>
+                  <h4 style={{ color: '#facc15', marginBottom: 4 }}>Licence Front</h4>
+                  {previews.idFront?.url ? (
+                    <img src={previews.idFront.url} className="thumb" alt="Licence Front" />
+                  ) : (
+                    <div style={{ color: '#999', fontSize: '13px' }}>No licence front uploaded yet</div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: 16 }}>
+                  <h4 style={{ color: '#facc15', marginBottom: 4 }}>Licence Back</h4>
+                  {previews.idBack?.url ? (
+                    <img src={previews.idBack.url} className="thumb" alt="Licence Back" />
+                  ) : (
+                    <div style={{ color: '#999', fontSize: '13px' }}>No licence back uploaded yet</div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <h4 style={{ color: '#facc15', marginBottom: 4 }}>Proof of Address</h4>
+                  {previews.proofAddress?.url ? (
+                    <img src={previews.proofAddress.url} className="thumb" alt="Proof of Address" />
+                  ) : (
+                    <div style={{ color: '#999', fontSize: '13px' }}>No proof uploaded yet</div>
+                  )}
+                </div>
               </div>
               <label>
                 Licence Front
@@ -854,11 +1180,247 @@ export default function AccountPage() {
                   onChange={handleChange}
                 />
               </label>
+
+              {/* ===== SECTION 1 VERIFICATION ===== */}
+              <div style={{ marginTop: 28, borderTop: "1px solid rgba(20,184,166,0.3)", paddingTop: 24 }}>
+
+                {/* Email Verification */}
+                <div
+                  style={{
+                    padding: "20px",
+                    borderRadius: 12,
+                    border: `2px solid ${emailVerified ? "#22c55e" : "#f59e0b"}`,
+                    background: emailVerified ? "rgba(34,197,94,0.07)" : "rgba(245,158,11,0.07)",
+                    marginBottom: 20,
+                  }}
+                >
+                  <h4 style={{ color: emailVerified ? "#22c55e" : "#f59e0b", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                    {emailVerified ? "✅ Email Verified" : "📧 Step 1 — Verify Your Email"}
+                  </h4>
+                  <p style={{ color: "#e2e8f0", fontSize: 14, marginBottom: emailVerified ? 0 : 14 }}>
+                    {emailVerified
+                      ? `Email verified: ${form.email}`
+                      : <>We'll send a verification link to <strong>{form.email || "your email"}</strong>. Click the link to confirm your address.</>}
+                  </p>
+
+                  {!emailVerified && (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!form.email?.trim()) {
+                            alert("No email found on your account.");
+                            return;
+                          }
+                          setSendingEmailVerify(true);
+                          try {
+                            const { error } = await supabase.auth.resend({
+                              type: "signup",
+                              email: form.email.trim(),
+                              options: { emailRedirectTo: `${window.location.origin}/account` },
+                            });
+                            if (error) throw error;
+                            alert("✅ Verification email sent! Check your inbox and click the link, then come back here.");
+                          } catch (err) {
+                            alert("❌ Failed to send verification email: " + err.message);
+                          } finally {
+                            setSendingEmailVerify(false);
+                          }
+                        }}
+                        disabled={sendingEmailVerify}
+                        style={{
+                          padding: "10px 18px", borderRadius: 999, border: "none",
+                          background: "#f59e0b", color: "#111827", fontWeight: 700,
+                          cursor: sendingEmailVerify ? "not-allowed" : "pointer",
+                          opacity: sendingEmailVerify ? 0.65 : 1,
+                        }}
+                      >
+                        {sendingEmailVerify ? "Sending..." : "Send Verification Email"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setCheckingEmailVerify(true);
+                          try {
+                            const { data: { user }, error } = await supabase.auth.getUser();
+                            if (error) throw error;
+                            const verified = Boolean(user?.email_confirmed_at);
+                            setEmailVerified(verified);
+                            if (verified) {
+                              alert("✅ Email verified! Now verify your phone number below.");
+                            } else {
+                              alert("⚠️ Not verified yet. Click the link in your email first, then check again.");
+                            }
+                          } catch (err) {
+                            alert("❌ Could not check: " + err.message);
+                          } finally {
+                            setCheckingEmailVerify(false);
+                          }
+                        }}
+                        disabled={checkingEmailVerify}
+                        style={{
+                          padding: "10px 18px", borderRadius: 999,
+                          border: "1px solid #60a5fa", background: "rgba(59,130,246,0.12)",
+                          color: "#bfdbfe", fontWeight: 700,
+                          cursor: checkingEmailVerify ? "not-allowed" : "pointer",
+                          opacity: checkingEmailVerify ? 0.65 : 1,
+                        }}
+                      >
+                        {checkingEmailVerify ? "Checking..." : "I've Verified My Email"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Phone SMS Verification — only shows after email verified */}
+                {emailVerified && (
+                  <div
+                    style={{
+                      padding: "20px",
+                      borderRadius: 12,
+                      border: `2px solid ${phoneVerified ? "#22c55e" : "#3b82f6"}`,
+                      background: phoneVerified ? "rgba(34,197,94,0.07)" : "rgba(59,130,246,0.07)",
+                      marginBottom: 20,
+                    }}
+                  >
+                    <h4 style={{ color: phoneVerified ? "#22c55e" : "#3b82f6", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                      {phoneVerified ? "✅ Phone Verified" : "📱 Step 2 — Verify Your Phone"}
+                    </h4>
+                    {!phoneVerified && (
+                      <>
+                        <p style={{ color: "#e2e8f0", fontSize: 14, marginBottom: 14 }}>
+                          We'll send a 6-digit code via SMS to <strong>{form.phone || "your phone number"}</strong>.
+                        </p>
+                        {!phoneCodeSent ? (
+                          <button
+                            type="button"
+                            disabled={!form.phone?.trim() || phoneCodeSending}
+                            onClick={async () => {
+                              if (!form.phone?.trim()) {
+                                alert("Please enter your phone number above first.");
+                                return;
+                              }
+                              setPhoneCodeSending(true);
+                              setPhoneVerifyError("");
+                              try {
+                                const res = await fetch("/api/account/send-phone-otp", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ phone: form.phone.trim() }),
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.error || "Failed to send SMS");
+                                setPhoneCode(data.code);
+                                setPhoneCodeSent(true);
+                                setPhoneCodeInput("");
+                              } catch (err) {
+                                setPhoneVerifyError("❌ " + err.message);
+                              } finally {
+                                setPhoneCodeSending(false);
+                              }
+                            }}
+                            style={{
+                              padding: "10px 18px", borderRadius: 999, border: "none",
+                              background: "#3b82f6", color: "#fff", fontWeight: 700,
+                              cursor: (!form.phone?.trim() || phoneCodeSending) ? "not-allowed" : "pointer",
+                              opacity: (!form.phone?.trim() || phoneCodeSending) ? 0.65 : 1,
+                            }}
+                          >
+                            {phoneCodeSending ? "Sending SMS..." : "Send SMS Code"}
+                          </button>
+                        ) : (
+                          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                            <input
+                              type="text"
+                              placeholder="Enter 6-digit code"
+                              value={phoneCodeInput}
+                              onChange={(e) => setPhoneCodeInput(e.target.value)}
+                              style={{
+                                padding: "10px 14px", borderRadius: 8, border: "2px solid #3b82f6",
+                                background: "#1a2232", color: "#e2e8f0", fontSize: 16, width: 180,
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPhoneVerifyError("");
+                                if (phoneCodeInput.trim() === phoneCode) {
+                                  setPhoneVerified(true);
+                                  try {
+                                    supabase.auth.getUser().then(({ data: { user } }) => {
+                                      const phoneVerifiedKey = getPhoneVerifiedStorageKey(user?.id);
+                                      if (phoneVerifiedKey && typeof window !== "undefined") {
+                                        window.localStorage.setItem(phoneVerifiedKey, "true");
+                                      }
+                                    });
+                                  } catch (storageErr) {
+                                    console.warn("Could not persist phone verification state:", storageErr?.message || storageErr);
+                                  }
+                                  setPhoneCode("");
+                                  setPhoneCodeInput("");
+                                  setActiveSection((prev) => Math.max(prev, 2));
+                                } else {
+                                  setPhoneVerifyError("❌ Incorrect code. Please try again.");
+                                }
+                              }}
+                              style={{
+                                padding: "10px 18px", borderRadius: 999, border: "none",
+                                background: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer",
+                              }}
+                            >
+                              Verify Code
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setPhoneCodeSent(false); setPhoneCodeInput(""); setPhoneVerifyError(""); }}
+                              style={{
+                                padding: "10px 14px", borderRadius: 999,
+                                border: "1px solid #6b7280", background: "transparent",
+                                color: "#9ca3af", fontSize: 13, cursor: "pointer",
+                              }}
+                            >
+                              Resend
+                            </button>
+                          </div>
+                        )}
+                        {phoneVerifyError && (
+                          <p style={{ color: "#f87171", fontSize: 13, marginTop: 8 }}>{phoneVerifyError}</p>
+                        )}
+                      </>
+                    )}
+                    {phoneVerified && (
+                      <div>
+                        <p style={{ color: "#bbf7d0", fontSize: 14, marginBottom: 6 }}>Phone number {form.phone} has been verified.</p>
+                        <p style={{ color: "#93c5fd", fontSize: 13, margin: 0 }}>
+                          This only verifies your phone for onboarding. SMS sending still needs the separate SMS Activation step and access code below.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Continue button — only unlocks after both verified */}
+                {emailVerified && phoneVerified && activeSection < 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection(2)}
+                    style={{
+                      width: "100%", padding: "16px", borderRadius: 12, border: "none",
+                      background: "linear-gradient(90deg, #14b8a6, #0891b2)",
+                      color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Continue to Business Information →
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* BUSINESS DETAILS */}
+            {activeSection >= 2 && (
             <div className="card yellow">
-              <h2>Business Information</h2>
+              <h2 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20, color: '#facc15' }}>Business Information</h2>
 
               {/* Business Logo Section */}
               <div className="preview-row">
@@ -942,101 +1504,81 @@ export default function AccountPage() {
                   required
                 />
               </label>
-            </div>
 
-            {/* AFFILIATE & VENDOR */}
-            <div className="card blue">
-              <h2>Platform Roles</h2>
-
-              {/* Affiliate */}
-              <label className="check-large">
+              {/* Business Address Details */}
+              <label>
+                Business Address
                 <input
-                  type="checkbox"
-                  name="affiliateOptIn"
-                  checked={form.affiliateOptIn}
+                  name="businessAddress"
+                  value={form.businessAddress}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Business City
+                <input
+                  name="businessCity"
+                  value={form.businessCity}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Business State
+                <input
+                  name="businessState"
+                  value={form.businessState}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Business Postcode
+                <input
+                  name="businessPostcode"
+                  value={form.businessPostcode}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Business Country
+                <input
+                  name="businessCountry"
+                  value={form.businessCountry}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label>
+                Website
+                <input
+                  name="website"
+                  value={form.website}
                   onChange={handleChange}
                 />
-                I want to become an Affiliate.
               </label>
 
-              {form.affiliateOptIn && (
-                <div style={{ marginTop: 10 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <span style={{ color: "#ccc" }}>ref/</span>
-                    <input
-                      type="text"
-                      placeholder="yourname"
-                      value={affiliateTail.replace(/^ref\//, "")}
-                      onChange={(e) =>
-                        setAffiliateTail(`ref/${e.target.value}`)
-                      }
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const { data: u } = await supabase.auth.getUser();
-                      const usr = u?.user;
-                      if (!usr) return alert("Login required.");
-                      const { error } = await supabase
-                        .from("accounts")
-                        .update({
-                          affiliate_slug: affiliateTail,
-                          updated_at: new Date().toISOString(),
-                        })
-                        .eq("user_id", usr.id);
-                      if (error) return alert("Error saving: " + error.message);
-                      alert("Affiliate link saved.");
-                    }}
-                    className="btn green-btn"
-                    style={{ marginTop: 8 }}
-                  >
-                    Save Tail
-                  </button>
-                </div>
-              )}
-
-              {/* Vendor */}
-              <div style={{ marginTop: 24 }}>
-                <label
-                  className="check-large"
+              {activeSection < 3 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSection(3)}
                   style={{
-                    opacity: agreementSigned ? 0.8 : 1,
-                    cursor: agreementSigned ? "not-allowed" : "pointer",
+                    marginTop: 24, width: "100%", padding: "16px", borderRadius: 12, border: "none",
+                    background: "linear-gradient(90deg, #d97706, #f59e0b)",
+                    color: "#111827", fontSize: 18, fontWeight: 800, cursor: "pointer",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    name="vendorOptIn"
-                    checked={form.vendorOptIn}
-                    onChange={handleChange}
-                    disabled={agreementSigned}
-                  />
-                  I want to become a Vendor.
-                </label>
-                {agreementSigned ? (
-                  <p style={{ fontSize: 13, color: "#22c55e", marginTop: 4 }}>
-                    ✅ Vendor Agreement already signed and verified.
-                  </p>
-                ) : (
-                  <p style={{ fontSize: 13, color: "#aaa", marginTop: 4 }}>
-                    This opens the Vendor Agreement which must be signed before
-                    continuing.
-                  </p>
-                )}
-              </div>
+                  Continue to Agreements →
+                </button>
+              )}
             </div>
+            )}
 
-            {/* AGREEMENTS */}
+            {activeSection >= 3 && (
             <div className="card green">
-              <h2>Agreements</h2>
+              <h2 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20, color: '#22c55e' }}>Agreements</h2>
               <label className="check-large">
                 <input
                   type="checkbox"
@@ -1050,7 +1592,7 @@ export default function AccountPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Terms
+                  Terms and Conditions
                 </a>
               </label>
 
@@ -1070,11 +1612,404 @@ export default function AccountPage() {
                   Privacy Policy
                 </a>
               </label>
+
+              {activeSection < 4 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSection(4)}
+                  style={{
+                    marginTop: 24, width: "100%", padding: "16px", borderRadius: 12, border: "none",
+                    background: "linear-gradient(90deg, #15803d, #22c55e)",
+                    color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer",
+                  }}
+                >
+                  Continue to Account Setup →
+                </button>
+              )}
+            </div>
+            )}
+
+            {activeSection >= 4 && (<>
+            <div
+              className="card blue"
+              style={{
+                marginTop: "36px",
+                width: "100%",
+                maxWidth: "1080px",
+                marginLeft: "auto",
+                marginRight: "auto",
+                background: "rgba(0, 0, 0, 0.7)",
+                padding: "24px",
+                borderRadius: "16px",
+                border: "2px solid #3b82f6",
+              }}
+            >
+              <h3
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "28px",
+                  fontWeight: 600,
+                  color: "#3b82f6",
+                  marginBottom: "16px",
+                }}
+              >
+                <span>📱</span> SMS Account Setup
+              </h3>
+
+              {/* SMS Active - Show success */}
+              {smsSenderId ? (
+                <div
+                  style={{
+                    padding: "20px",
+                    borderRadius: 12,
+                    background: "rgba(34, 197, 94, 0.1)",
+                    border: "2px solid #22c55e",
+                  }}
+                >
+                  <p style={{ color: "#bbf7d0", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+                    ✅ SMS Account Active
+                  </p>
+                  <p style={{ color: "#e2e8f0", fontSize: 15, marginBottom: 8 }}>
+                    Your SMSGlobal Sender ID: <strong style={{ color: "#22c55e" }}>{smsSenderId}</strong>
+                  </p>
+                  <p style={{ color: "#9ca3af", fontSize: 13, lineHeight: 1.5 }}>
+                    💡 Want a dedicated number? You can add a dedicated SMS number for <strong>$35/month</strong>. Contact support.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {!emailVerified ? (
+                    <div
+                      style={{
+                        padding: "16px 20px",
+                        borderRadius: 10,
+                        background: "rgba(245, 158, 11, 0.1)",
+                        border: "2px solid #f59e0b",
+                      }}
+                    >
+                      <p style={{ color: "#fde68a", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                        ⚠️ Verify email first
+                      </p>
+                      <p style={{ color: "#e2e8f0", fontSize: 14, margin: 0 }}>
+                        Go to the Personal Information section above, send/complete email verification,
+                        then return here to continue SMS setup.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                  {/* Instructions */}
+                  <div style={{ marginBottom: 24 }}>
+                    <p style={{ color: "#e2e8f0", lineHeight: "1.6", fontSize: 18, fontWeight: 500, marginBottom: 12 }}>
+                      <strong>Step 1:</strong> Submit your application below and we'll create your SMS account. (Note, this is a pooled number system)
+                    </p>
+                    <p style={{ color: "#e2e8f0", lineHeight: "1.6", fontSize: 18, fontWeight: 500, marginBottom: 12 }}>
+                      <strong>Step 2:</strong> We'll email you your own private access code so your messages say where they have come from.
+                    </p>
+                    <p style={{ color: "#e2e8f0", lineHeight: "1.6", fontSize: 18, fontWeight: 500, marginBottom: 16 }}>
+                      <strong>Step 3:</strong> Come back here and enter your code when you get our email to activate your SMS sending.
+                    </p>
+                    <div style={{ 
+                      padding: "12px 16px", 
+                      borderRadius: 8, 
+                      background: "rgba(59, 130, 246, 0.1)",
+                      borderLeft: "4px solid #3b82f6",
+                      marginBottom: 20
+                    }}>
+                      <p style={{ color: "#93c5fd", fontSize: 16, margin: 0, lineHeight: 1.5 }}>
+                        💡 Do you need your own dedicated SMS number? You can add one for <strong>$35/month</strong> — order one when you complete the billing page!                    </p>
+                    </div>
+                  </div>
+
+                  {/* Application Form */}
+                  {!smsApplied ? (
+                    <>
+                      <div style={{ marginBottom: 16 }}>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "6px",
+                            fontWeight: "600",
+                            color: "#e2e8f0",
+                            fontSize: 20,
+                          }}
+                        >
+                          Mobile Number *
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="e.g. 0412 345 678"
+                          value={smsMobile}
+                          onChange={(e) => setSmsMobile(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            borderRadius: "10px",
+                            border: "1px solid #3b82f6",
+                            backgroundColor: "#1a2232",
+                            color: "#e2e8f0",
+                            fontSize: "20px",
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ marginBottom: 20 }}>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "6px",
+                            fontWeight: "600",
+                            color: "#e2e8f0",
+                            fontSize: 20,
+                          }}
+                        >
+                          Preferred Email *
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="your@email.com"
+                          value={smsEmail}
+                          onChange={(e) => setSmsEmail(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            borderRadius: "10px",
+                            border: "1px solid #3b82f6",
+                            backgroundColor: "#1a2232",
+                            color: "#e2e8f0",
+                            fontSize: "20px",
+                          }}
+                        />
+                        <p style={{ fontSize: 16, color: "#9ca3af", marginTop: 6 }}>
+                          We'll send your access code to this email address
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!smsMobile || !smsEmail) {
+                            alert("Please enter both mobile number and email");
+                            return;
+                          }
+
+                          setSmsApplying(true);
+                          try {
+                            const {
+                              data: { user },
+                            } = await supabase.auth.getUser();
+                            if (!user) throw new Error("Not logged in");
+
+                            const res = await fetch("/api/sms/apply", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                userId: user.id,
+                                mobile: smsMobile,
+                                email: smsEmail,
+                              }),
+                            });
+
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+
+                            setSmsApplied(true);
+                            alert("✅ " + data.message);
+                          } catch (err) {
+                            alert("❌ Error: " + err.message);
+                          } finally {
+                            setSmsApplying(false);
+                          }
+                        }}
+                        disabled={smsApplying}
+                        style={{
+                          padding: "14px 32px",
+                          borderRadius: 999,
+                          border: "none",
+                          background: "#3b82f6",
+                          color: "#fff",
+                          fontSize: 16,
+                          fontWeight: 700,
+                          cursor: smsApplying ? "not-allowed" : "pointer",
+                          opacity: smsApplying ? 0.6 : 1,
+                        }}
+                      >
+                        {smsApplying ? "Submitting..." : "📤 Submit Application"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Application Submitted - Show Code Entry */}
+                      <div
+                        style={{
+                          padding: "16px 20px",
+                          borderRadius: 10,
+                          background: "rgba(34, 197, 94, 0.1)",
+                          border: "2px solid #22c55e",
+                          marginBottom: 24,
+                        }}
+                      >
+                        <p style={{ color: "#bbf7d0", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                          ✅ Application Submitted!
+                        </p>
+                        <p style={{ color: "#e2e8f0", fontSize: 14 }}>
+                          Check <strong>{smsEmail}</strong> for your access code (usually within 24 hours).
+                        </p>
+                      </div>
+
+                      {/* Code Entry Section */}
+                      <div
+                        style={{
+                          padding: "20px",
+                          borderRadius: 12,
+                          background: "rgba(59, 130, 246, 0.05)",
+                          border: "2px solid #3b82f6",
+                        }}
+                      >
+                        <h4 style={{ color: "#3b82f6", fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
+                          🔑 Enter Your Access Code
+                        </h4>
+                        <p style={{ color: "#e2e8f0", fontSize: 16, marginBottom: 16, lineHeight: 1.5 }}>
+                          Once you receive your access code via email, enter it below to activate SMS sending.
+                        </p>
+                        <div style={{
+                          padding: "10px 12px",
+                          borderRadius: 8,
+                          background: "rgba(14,165,233,0.12)",
+                          border: "1px solid rgba(56,189,248,0.35)",
+                          color: "#bae6fd",
+                          fontSize: 13,
+                          marginBottom: 14,
+                          lineHeight: 1.5,
+                        }}>
+                          Phone verification and SMS activation are different steps. Verifying your phone does not set your SMS sender name. This access code is what fills your sender ID for the SMS pages.
+                        </div>
+                        
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "8px",
+                            fontWeight: "600",
+                            color: "#e2e8f0",
+                            fontSize: 16,
+                          }}
+                        >
+                          Access Code / Sender ID *
+                        </label>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <input
+                            type="text"
+                            placeholder="Code from email"
+                            value={smsCodeInput}
+                            onChange={(e) => setSmsCodeInput(e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: "14px",
+                              borderRadius: "10px",
+                              border: "2px solid #3b82f6",
+                              backgroundColor: "#1a2232",
+                              color: "#e2e8f0",
+                              fontSize: "16px",
+                              fontWeight: 500,
+                            }}
+                          />
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!smsCodeInput.trim()) {
+                                alert("Please enter your access code");
+                                return;
+                              }
+
+                              try {
+                                const {
+                                  data: { user },
+                                } = await supabase.auth.getUser();
+                                if (!user) throw new Error("Not logged in");
+
+                                const cleanCode = smsCodeInput.trim();
+
+                                // Save to profiles (try but don't fail if table doesn't exist)
+                                try {
+                                  await supabase
+                                    .from("profiles")
+                                    .upsert(
+                                      {
+                                        user_id: user.id,
+                                        sender_id: cleanCode,
+                                        sms_applied: true,
+                                      },
+                                      { onConflict: "user_id" }
+                                    );
+                                } catch (profileErr) {
+                                  console.warn("Could not save to profiles:", profileErr.message);
+                                }
+
+                                // ALSO persist to accounts.sender_id (SMS endpoints rely on this field).
+                                // Update first, and if no row exists, insert a minimal row.
+                                const { data: updatedRows, error: accountUpdateError } = await supabase
+                                  .from("accounts")
+                                  .update({
+                                    sender_id: cleanCode,
+                                    updated_at: new Date().toISOString(),
+                                  })
+                                  .eq("user_id", user.id)
+                                  .select("id,user_id,sender_id");
+
+                                if (accountUpdateError) throw accountUpdateError;
+
+                                if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+                                  const { error: accountInsertError } = await supabase
+                                    .from("accounts")
+                                    .insert({
+                                      user_id: user.id,
+                                      sender_id: cleanCode,
+                                      email: user.email || form.email || null,
+                                      business_name: form.businessName || null,
+                                      updated_at: new Date().toISOString(),
+                                    });
+                                  if (accountInsertError) throw accountInsertError;
+                                }
+                                
+                                // Update state to show success immediately
+                                setSmsApplied(true);
+                                setSmsSenderId(cleanCode);
+                                setSmsCodeInput("");
+                                
+                                alert("✅ SMS activated! You can now send SMS messages from " + cleanCode);
+                              } catch (err) {
+                                alert("❌ Error saving SMS code: " + err.message);
+                              }
+                            }}
+                            style={{
+                              padding: "14px 28px",
+                              borderRadius: 999,
+                              border: "none",
+                              background: "#22c55e",
+                              color: "#fff",
+                              fontSize: 16,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            🚀 Activate SMS
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                    </>
+                  )}
+                </>
+              )}
             </div>
 
             {/* ===========================
-📬 DKIM + SPF DNS Setup
-=========================== */}
+            �📬 DKIM + SPF DNS Setup
+            =========================== */}
             <div
               className="card magenta"
               style={{
@@ -1094,9 +2029,9 @@ export default function AccountPage() {
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
-                  fontSize: "20px",
-                  fontWeight: 1200,
-                  color: "#a855f7",
+                  fontSize: "28px",
+                  fontWeight: 600,
+                  color: "#d946ef",
                   marginBottom: "4px",
                 }}
               >
@@ -1227,7 +2162,7 @@ export default function AccountPage() {
                 </button>
               </div>
 
-              <p style={{ color: "#e2e8f0", lineHeight: "1.6", fontSize: 15 }}>
+              <p style={{ color: "#e2e8f0", lineHeight: "1.6", fontSize: 16, fontWeight: 400 }}>
                 DKIM (DomainKeys Identified Mail) and SPF records help verify
                 your emails are legitimately sent from your domain. These
                 records improve deliverability and prevent spam issues.
@@ -1584,312 +2519,7 @@ export default function AccountPage() {
                 )}
             </div>
 
-            {/* EMAIL PLAN SELECTION CARD */}
-            <div
-              className="card yellow"
-              style={{ marginTop: "36px", padding: "24px" }}
-            >
-              <h2 style={{ fontSize: "20px", marginBottom: "12px" }}>
-                Email Plan Selection
-              </h2>
-              <p
-                style={{
-                  fontSize: 15,
-                  color: "#ddd",
-                  marginBottom: 14,
-                }}
-              >
-                You must select an email plan before proceeding. Choose one below
-                or inspect all plans for full details.
-              </p>
-
-              {selectedPlan ? (
-                <div
-                  style={{
-                    background: "#14532d",
-                    border: "1px solid #22c55e",
-                    borderRadius: 8,
-                    padding: "12px 18px",
-                    color: "#bbf7d0",
-                    fontWeight: 600,
-                    marginBottom: 24,
-                    fontSize: 15,
-                  }}
-                >
-                  ✅ Current Plan: {selectedPlan} —{" "}
-                  {planPrice ? `A$${planPrice}/month` : "Custom pricing"}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    background: "#451a03",
-                    border: "1px solid #f59e0b",
-                    borderRadius: 8,
-                    padding: "12px 18px",
-                    color: "#fcd34d",
-                    marginBottom: 24,
-                    fontSize: 15,
-                  }}
-                >
-                  ⚠️ No plan selected yet
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "60px 1fr 120px",
-                  rowGap: "12px",
-                  alignItems: "center",
-                  color: "#fff",
-                }}
-              >
-                {[
-                  {
-                    id: "starter",
-                    name: "Starter",
-                    price: 29,
-                    desc: "3 lists, 500 subscribers, 1,000 emails/month",
-                  },
-                  {
-                    id: "growth",
-                    name: "Growth",
-                    price: 75,
-                    desc:
-                      "5 lists, 2,000 subscribers, 10,000 emails/month",
-                  },
-                  {
-                    id: "expansion",
-                    name: "Expansion",
-                    price: 250,
-                    desc:
-                      "Unlimited lists, 15,000 subscribers, 30,000 emails/month",
-                  },
-                  {
-                    id: "enterprise",
-                    name: "Enterprise",
-                    price: 350,
-                    desc:
-                      "Unlimited lists, 25,000 subscribers, 100,000 emails/month",
-                  },
-                  {
-                    id: "agency",
-                    name: "Agency",
-                    price: "Custom",
-                    desc:
-                      "Unlimited everything, white-label + priority support",
-                  },
-                ].map((plan) => (
-                  <div key={plan.id} style={{ display: "contents" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <input
-                        type="radio"
-                        name="emailPlan"
-                        checked={selectedPlan === plan.name}
-                        onChange={() => {
-                          setSelectedPlan(plan.name);
-                          setPlanPrice(plan.price);
-                        }}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          accentColor: "#facc15",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        background:
-                          selectedPlan === plan.name
-                            ? "rgba(250,204,21,0.1)"
-                            : "rgba(255,255,255,0.02)",
-                        border: `2px solid ${
-                          selectedPlan === plan.name
-                            ? "#facc15"
-                            : "#1f2937"
-                        }`,
-                        borderRadius: 8,
-                        padding: "14px 18px",
-                      }}
-                    >
-                      <strong
-                        style={{
-                          display: "block",
-                          fontSize: 16,
-                          color: "#fff",
-                          marginBottom: 4,
-                        }}
-                      >
-                        {plan.name}
-                      </strong>
-                      <span style={{ fontSize: 14, color: "#bbb" }}>
-                        {plan.desc}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        textAlign: "right",
-                        fontWeight: 700,
-                        fontSize: 15,
-                        color: "#facc15",
-                      }}
-                    >
-                      {plan.price === "Custom"
-                        ? "Custom"
-                        : `A$${plan.price}/mo`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  justifyContent: "center",
-                  marginTop: 24,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const { data: userData } = await supabase.auth.getUser();
-                      const user = userData?.user;
-                      if (!user) {
-                        alert("Please log in first.");
-                        return;
-                      }
-
-                      const {
-                        data: accountData,
-                        error: accountErr,
-                      } = await supabase
-                        .from("accounts")
-                        .select("id, business_name")
-                        .eq("user_id", user.id)
-                        .maybeSingle();
-
-                      if (accountErr || !accountData) {
-                        throw new Error("No account found for this user.");
-                      }
-
-                      const accountId = accountData.id;
-                      const accountName = accountData.business_name;
-
-                      const { error: planErr } = await supabase
-                        .from("accounts")
-                        .update({
-                          email_plan: selectedPlan,
-                          email_plan_price: planPrice,
-                          updated_at: new Date().toISOString(),
-                        })
-                        .eq("user_id", user.id);
-
-                      if (planErr) throw planErr;
-
-                      const response = await fetch(
-                        "/api/connect-sendgrid",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            account_id: accountId,
-                            account_name: accountName,
-                          }),
-                        }
-                      );
-
-                      const result = await response.json();
-
-                      if (!response.ok) {
-                        const message =
-                          typeof result === "object"
-                            ? JSON.stringify(result)
-                            : result;
-                        console.error(
-                          "❌ SendGrid key creation failed:",
-                          message
-                        );
-                        alert(`SendGrid setup failed: ${message}`);
-                        return;
-                      }
-
-                      alert(
-                        "✅ Email plan and SendGrid key saved successfully!"
-                      );
-
-                      const {
-                        data: keyRow,
-                        error: keyError,
-                      } = await supabase
-                        .from("sendgrid_keys")
-                        .select("api_key")
-                        .eq("account_id", accountId)
-                        .maybeSingle();
-
-                      if (keyError)
-                        console.error(
-                          "⚠️ Error loading key:",
-                          keyError.message
-                        );
-                      if (keyRow?.api_key) {
-                        setApiKey(keyRow.api_key);
-                        console.log(
-                          "🔑 API key loaded into frontend:",
-                          keyRow.api_key
-                        );
-                      } else {
-                        console.warn(
-                          "⚠️ No API key found in Supabase for this account"
-                        );
-                      }
-                    } catch (err) {
-                      console.error(
-                        "❌ Error saving plan or creating SendGrid key:",
-                        err
-                      );
-                      alert("❌ Error: " + err.message);
-                    }
-                  }}
-                  style={{
-                    background: "#facc15",
-                    color: "#000",
-                    fontWeight: 800,
-                    padding: "12px 24px",
-                    borderRadius: 8,
-                    flex: 1,
-                    maxWidth: 220,
-                    cursor: "pointer",
-                    fontSize: 15,
-                  }}
-                >
-                  Save Selection
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    (window.location.href = "/modules/billing/email-plans")
-                  }
-                  style={{
-                    background: "#1e293b",
-                    color: "#fff",
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    fontWeight: "800",
-                    width: 220,
-                    fontSize: 14,
-                  }}
-                >
-                  Inspect Full Plans
-                </button>
-              </div>
-            </div>
+            </>)}
           </form>
         </div>
       </div>
@@ -1910,7 +2540,7 @@ export default function AccountPage() {
             border: "2px solid #3b82f6",
           }}
         >
-          <h3>
+          <h3 style={{ fontSize: 28, fontWeight: 600, marginBottom: 16, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🔑</span> Email API Key Setup
           </h3>
 
@@ -1963,7 +2593,96 @@ export default function AccountPage() {
         >
           {uploading ? "Saving..." : "Save Changes"}
         </button>
+        {/* Stripe Connect button (if not connected) */}
+        {!submitted && (
+          <button
+            type="button"
+            className="btn green-btn"
+            style={{
+              marginTop: 18,
+              padding: "16px 34px",
+              borderRadius: "10px",
+              fontWeight: "900",
+              fontSize: "17px",
+              cursor: "pointer",
+              background: "#635bff",
+              border: "2px solid #635bff",
+            }}
+            onClick={async () => {
+              try {
+                const { data: userData } = await supabase.auth.getUser();
+                const user = userData?.user;
+                if (!user) return alert("You must be logged in.");
+                const connectRes = await fetch("/api/stripe/create-connect-link", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: user.id }),
+                });
+                const connectData = await connectRes.json();
+                if (connectRes.ok && connectData.url) {
+                  window.location.href = connectData.url;
+                } else {
+                  alert("Stripe Connect setup failed.");
+                }
+              } catch (err) {
+                alert("Stripe Connect setup failed.");
+              }
+            }}
+          >
+            Connect with Stripe
+          </button>
+        )}
       </div>
+
+      {/* APPROVAL PENDING MODAL */}
+      {showApprovalModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: "rgba(0,0,0,0.75)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px",
+        }}>
+          <div style={{
+            background: "#0b1220",
+            border: "2px solid #a855f7",
+            borderRadius: 16,
+            padding: "40px 36px",
+            maxWidth: 520,
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 8px 48px rgba(168,85,247,0.25)",
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+            <h2 style={{ color: "#a855f7", fontSize: 26, fontWeight: 800, marginBottom: 12 }}>
+              Application Submitted!
+            </h2>
+            <p style={{ color: "#e2e8f0", fontSize: 16, lineHeight: 1.7, marginBottom: 8 }}>
+              Your account application has been sent to our admins for review.
+            </p>
+            <p style={{ color: "#e2e8f0", fontSize: 16, lineHeight: 1.7, marginBottom: 24 }}>
+              You will receive an email at <strong style={{ color: "#a855f7" }}>{form.email}</strong> once your account has been approved.
+            </p>
+            <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 28 }}>
+              This usually takes 1–2 business days. No further action is needed from you right now.
+            </p>
+            <button
+              onClick={() => setShowApprovalModal(false)}
+              style={{
+                padding: "12px 32px",
+                borderRadius: 999,
+                border: "none",
+                background: "linear-gradient(90deg, #7c3aed, #a855f7)",
+                color: "#fff",
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              OK, Got It
+            </button>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .wrap {
@@ -2050,7 +2769,8 @@ export default function AccountPage() {
           background: #1a2232;
           color: #fff;
           margin-top: 4px;
-          font-size: 15px;
+          font-size: 16px;
+          font-weight: 400;
           line-height: 1.4;
         }
         input:focus {

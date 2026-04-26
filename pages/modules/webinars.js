@@ -32,15 +32,15 @@ export default function Webinars() {
               background: "#ef4444",
               padding: "18px 22px",
               borderRadius: 14,
-              fontWeight: 700,
+              fontWeight: 600,
               marginBottom: 26,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div
                 style={{
-                  width: 52,
-                  height: 52,
+                  width: 56,
+                  height: 56,
                   borderRadius: 14,
                   background: "rgba(0,0,0,0.25)",
                   display: "flex",
@@ -48,12 +48,12 @@ export default function Webinars() {
                   justifyContent: "center",
                 }}
               >
-                {ICONS.webinars({ size: 30 })}
+                {ICONS.webinars({ size: 48 })}
               </div>
 
               <div>
-                <div style={{ fontSize: 22, marginBottom: 2 }}>Webinars</div>
-                <div style={{ fontSize: 15, opacity: 0.9 }}>
+                <div style={{ fontSize: 48, marginBottom: 2 }}>Webinars</div>
+                <div style={{ fontSize: 18, opacity: 0.9 }}>
                   Live events, replays & webinar automations.
                 </div>
               </div>
@@ -68,6 +68,7 @@ export default function Webinars() {
                   border: "2px solid rgba(255,255,255,0.25)",
                   borderRadius: 8,
                   padding: "8px 16px",
+                  fontSize: 18,
                   fontWeight: 600,
                   cursor: "pointer",
                   transition: "all 0.2s ease",
@@ -89,12 +90,27 @@ export default function Webinars() {
               border: "1px solid #ef4444",
             }}
           >
-            <p style={{ fontSize: 16, opacity: 0.9 }}>
-              📌 Webinar hosting, replay libraries & scheduling will be added here soon.
-            </p>
-            <p style={{ fontSize: 14, opacity: 0.65, marginTop: 10 }}>
-              <em>Coming Soon • Expected rollout Q2 2026</em>
-            </p>
+
+
+           {/* Coming Soon */}
+          <div
+            style={{
+              background: "#111827",
+              border: "1px dashed #06b6d4",
+              borderRadius: 12,
+              padding: 24,
+              fontSize: 24,
+              textAlign: "center",
+              opacity: 0.85,
+            }}
+          >
+            🚧 <strong>Coming Soon</strong> 🚧 <br/> 
+            Expected Delivery date: Q4 2026 <br/><br/>  
+            📌 Webinar hosting, replay libraries & scheduling will be added here soon.
+          </div>
+
+            
+
           </div>
         </div>
       </div>

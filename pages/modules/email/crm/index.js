@@ -1,6 +1,7 @@
 ﻿// /pages/modules/email/crm/index.js
 import React from "react";
 import Link from "next/link";
+import ICONS from "../../../../components/iconMap";
 
 export default function CRMDashboard() {
   const CRM_COLOUR = "#ec4899";
@@ -21,8 +22,19 @@ export default function CRMDashboard() {
           }}
         >
           <div style={styles.bannerLeft}>
-            <div style={styles.iconCircle}>📊</div>
-            <h1 style={styles.bannerTitle}>CRM Dashboard</h1>
+            <div style={styles.iconCircle}>
+              {/* Use ICONS.account for CRM icon */}
+              {ICONS.account({ size: 48 })}
+            </div>
+
+            {/* ✅ Title + Subtitle on LEFT next to icon */}
+            <div style={styles.titleStack}>
+              <h1 style={styles.bannerTitle}>CRM Dashboard</h1>
+              <div style={styles.bannerSubtitle}>
+                Manage leads, conversations, pipelines, and customer activity in
+                one place
+              </div>
+            </div>
           </div>
 
           <div style={styles.bannerRight}>
@@ -39,19 +51,11 @@ export default function CRMDashboard() {
 
         <div style={styles.grid3}>
           <Card
-            icon="📥"
-            title="Subscribers"
-            text="Manage all subscribers, lists, and segmentation."
-            href="/modules/email/lists"
-            color="#38bdf8"
-          />
-
-          <Card
-            icon="🗓️"
-            title="Tasks & Reminders"
-            text="Stay organised with calls, meetings, and follow-ups."
-            href="/modules/email/crm/tasks"
-            color="#3b82f6"
+            icon="👥"
+            title="Sales Teams"
+            text="Set up teams, managers, members, and revenue targets."
+            href="/modules/email/crm/teams"
+            color="#f97316"
           />
 
           <Card
@@ -71,20 +75,43 @@ export default function CRMDashboard() {
           />
 
           <Card
-            icon="📞"
-            title="Calls & Voicemails"
-            text="Review inbound calls, listen to recordings, and tidy your call log"
-            href="/modules/email/crm/calls"
-            color="#ec4899"
+            icon="📥"
+            title="Subscribers"
+            text="Manage all subscribers, lists, and segmentation."
+            href="/modules/email/lists"
+            color="#38bdf8"
           />
 
-          {/* ✅ NEW */}
           <Card
-            icon="💬"
-            title="SMS Marketing"
-            text="Send SMS broadcasts to a list, use templates, and track delivery."
-            href="/modules/email/crm/sms-marketing"
-            color="#14b8a6"
+            icon="🗓️"
+            title="Tasks & Reminders"
+            text="Stay organised with calls, meetings, and follow-ups."
+            href="/modules/email/crm/tasks"
+            color="#3b82f6"
+          />
+
+          <Card
+            icon="💼"
+            title="Deals & Revenue"
+            text="Track opportunities, anticipated revenue, and quote progress."
+            href="/modules/email/crm/deals"
+            color="#f43f5e"
+          />
+
+          <Card
+            icon="🧾"
+            title="Quotations"
+            text="Use quotation templates and manage the quotes linked to your leads."
+            href="/modules/email/crm/quotes"
+            color="#facc15"
+          />
+
+          <Card
+            icon="📊"
+            title="CRM Reports"
+            text="Generate forecasting, revenue, team, product, and status reports."
+            href="/modules/email/crm/reports"
+            color="#06b6d4"
           />
         </div>
       </div>
@@ -135,18 +162,41 @@ const styles = {
     borderRadius: "16px",
     boxShadow: "0 8px 28px rgba(0,0,0,.35)",
   },
-  bannerLeft: { display: "flex", alignItems: "center", gap: "12px" },
+
+  bannerLeft: { display: "flex", alignItems: "center", gap: "14px" },
+
+  // ✅ BIGGER icon: 48px
   iconCircle: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "10px",
+    width: "56px",
+    height: "56px",
+    borderRadius: "14px",
     display: "grid",
     placeItems: "center",
-    fontSize: "20px",
+    fontSize: "48px",
+    lineHeight: "1",
     background: "rgba(0,0,0,.2)",
     border: "1px solid rgba(255,255,255,.25)",
   },
-  bannerTitle: { fontSize: "22px", fontWeight: 900, margin: 0 },
+
+  // ✅ Title/subtitle stack stays LEFT next to icon (not centered)
+  titleStack: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    lineHeight: 1.05,
+  },
+
+  bannerTitle: { fontSize: "48px", fontWeight: 600, margin: 0 },
+
+  // ✅ Subtitle 18px
+  bannerSubtitle: {
+    fontSize: "18px",
+    fontWeight: 400,
+    opacity: 0.9,
+    marginTop: "6px",
+  },
+
   bannerRight: { display: "flex", alignItems: "center" },
   backBtn: {
     background: "rgba(0,0,0,.2)",
@@ -155,7 +205,7 @@ const styles = {
     padding: "8px 12px",
     color: "#fff",
     textDecoration: "none",
-    fontWeight: 800,
+    fontWeight: 600,
   },
   container: {
     width: "100%",
@@ -163,7 +213,7 @@ const styles = {
     margin: "40px auto",
     padding: "0 20px",
   },
-  sectionTitle: { fontSize: "20px", fontWeight: 900, marginBottom: "20px" },
+  sectionTitle: { fontSize: "30px", fontWeight: 600, marginBottom: "20px" },
 
   /* 3 wide layout */
   grid3: {
@@ -183,14 +233,14 @@ const styles = {
     flexDirection: "column",
   },
   cardHeader: { display: "flex", gap: "12px", alignItems: "center" },
-  cardTitle: { margin: 0, fontSize: "18px", fontWeight: 800 },
-  cardText: { marginTop: "12px", fontSize: "15px", opacity: 0.9 },
+  cardTitle: { margin: 0, fontSize: "28px", fontWeight: 500 },
+  cardText: { marginTop: "12px", fontSize: "18px", opacity: 0.9 },
   openBtn: {
     textAlign: "center",
     borderRadius: "8px",
     padding: "8px",
     marginTop: "16px",
-    fontWeight: 700,
+    fontWeight: 600,
   },
 };
 

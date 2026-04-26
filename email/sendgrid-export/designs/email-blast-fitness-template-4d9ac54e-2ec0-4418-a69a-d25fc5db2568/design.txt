@@ -1,0 +1,44 @@
+Email not displaying correctly? View it in your browser ( {{Weblink}} ).
+
+Start your fitness journey today!
+
+You’ll find classes and workouts for every fitness level. Our friendly instructors are here to help you find the right programs to achieve your workout goals.
+
+Check out our class schedule and get know the instructors!
+
+Class Schedule
+
+Browse some of our most popular classes!
+
+*Yoga*
+
+Boost your wellbeing with stretches and poses that are rooted in ancient tradition. Focus on flexibility and strength while you learn to control your breathing. It’s one of our most popular classes!
+
+*Hip Hop Dance*
+
+This high-energy dance class is guaranteed to get your heart rate up. Led by our award-winning instructor, Lisa Williams, former back-up dancer for Destiny's Child.
+
+*Crossfit*
+
+Learn how to lift weights the right way with this high-intensity workout. These quick-hitting classes change daily to provide variety in your fitness routine. Join us for an introductory class to give it a try!
+
+No yearly fees. No commitments.
+Pay monthly or buy a series of classes.
+
+Payment Plans
+
+*FACEBOOK* ( http://h )
+
+*T* ( http://h ) *WITTER*
+
+*Y* ( http://h ) *OUTUBE*
+
+*T* ( http://h ) *ERMS*
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

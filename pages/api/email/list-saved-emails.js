@@ -29,12 +29,14 @@ export default async function handler(req, res) {
     });
 
     const bucket = String(req.query.bucket || "email-user-assets");
+    const userId = String(req.query.userId || "").trim();
     const maxDepth = clampInt(req.query.maxDepth, 10, 2, 30);
     const maxFiles = clampInt(req.query.maxFiles, 4000, 50, 20000);
 
     const files = await scanBucketForPremadeHtml(supabaseAdmin, bucket, {
       maxDepth,
       maxFiles,
+      startPrefix: userId || "",
     });
 
     files.sort((a, b) => a.name.localeCompare(b.name));
@@ -42,6 +44,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       bucket,
+      userId,
       prefixes: ["finished-emails", "user-templates"],
       count: files.length,
       files,
@@ -88,12 +91,12 @@ function prettyName(filename) {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-async function scanBucketForPremadeHtml(supabaseAdmin, bucket, { maxDepth, maxFiles }) {
+async function scanBucketForPremadeHtml(supabaseAdmin, bucket, { maxDepth, maxFiles, startPrefix = "" }) {
   const out = [];
   const seen = new Set();
 
-  // breadth-first scan from root
-  const q = [{ prefix: "", depth: 0 }];
+  // breadth-first scan from root or a specific user prefix
+  const q = [{ prefix: startPrefix, depth: 0 }];
 
   while (q.length > 0) {
     const { prefix, depth } = q.shift();

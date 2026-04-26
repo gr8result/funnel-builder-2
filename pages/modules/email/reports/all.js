@@ -82,10 +82,10 @@ function normalizeStatus(r) {
 }
 
 function guessType(r) {
-  if (r.broadcast_id) return "Broadcast";
-  if (r.campaigns_id) return "campaigns";
-  if (r.automation_id) return "Automation";
-  if (r.autoresponder_id) return "Autoresponder";
+  if (r.broadcast_id || r.broadcastId) return "Broadcast";
+  if (r.campaigns_id || r.campaign_id || r.campaignId) return "campaigns";
+  if (r.automation_id || r.automationId) return "Automation";
+  if (r.autoresponder_id || r.autoresponderId) return "Autoresponder";
   return "—";
 }
 
@@ -119,9 +119,7 @@ export default function AllEmailReport() {
 
         let q = supabase
           .from("email_sends")
-          .select(
-            "id,email,status,last_event,open_count,click_count,unsubscribed,bounced_at,created_at,last_event_at,broadcast_id,campaigns_id,automation_id,autoresponder_id"
-          )
+          .select("*")
           .eq("user_id", uid)
           .order("created_at", { ascending: true })
           .limit(10000);
@@ -200,9 +198,14 @@ export default function AllEmailReport() {
       <div style={styles.page}>
         <div style={styles.container}>
           <div style={{ ...styles.banner, background: "#10b981" }}>
-            <div>
-              <div style={styles.bannerTitle}>All email types (Total)</div>
-              <div style={styles.bannerSub}>Live data from <code>email_sends</code></div>
+            <div style={styles.bannerLeft}>
+              <div style={styles.bannerIconWrap} aria-hidden="true">
+                <span style={styles.bannerIcon}>📈</span>
+              </div>
+              <div>
+                <div style={styles.bannerTitle}>All email types (Total)</div>
+                <div style={styles.bannerSub}>Live delivery and engagement across all email types.</div>
+              </div>
             </div>
             <Link href="/modules/email/reports" style={styles.backBtn}>← Back</Link>
           </div>
@@ -309,13 +312,16 @@ const styles = {
   page:{minHeight:"100vh",background:"radial-gradient(circle at top,#0f172a 0%,#020617 55%)",padding:"30px 20px",color:"#e6eef8",fontSize:16},
   container:{maxWidth:1320,margin:"0 auto"},
   banner:{borderRadius:18,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"},
-  bannerTitle:{fontSize:34,fontWeight:600,color:"#052b1b"},
-  bannerSub:{fontSize:16},
-  backBtn:{fontSize:16},
+  bannerLeft:{display:"flex",alignItems:"center",gap:14},
+  bannerIconWrap:{width:69,height:69,display:"grid",placeItems:"center",borderRadius:10,background:"rgba(0,0,0,0.18)"},
+  bannerIcon:{fontSize:48,lineHeight:1},
+  bannerTitle:{fontSize:48,fontWeight:600,color:"#ffffff",lineHeight:1.05},
+  bannerSub:{fontSize:18,color:"rgba(255, 255, 255, 0.9)"},
+  backBtn:{fontSize:18,background:"#ffffff",color:"#111",borderRadius:999,padding:"10px 16px",textDecoration:"none",fontWeight:600},
   rangeRow:{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"},
-  rangePill:{padding:"7px 12px",fontSize:16},
+  rangePill:{padding:"7px 12px",fontSize:16,borderRadius:999},
   rangePillActive:{background:"rgba(16,185,129,0.25)"},
-  toggleBtn:{padding:"8px 14px",fontSize:16},
+  toggleBtn:{padding:"8px 14px",fontSize:16,borderRadius:999},
   note:{marginTop:10,padding:10},
   metricsGrid:{marginTop:14,display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10},
   metricBox:{padding:12},

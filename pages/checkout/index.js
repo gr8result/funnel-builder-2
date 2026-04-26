@@ -8,7 +8,7 @@ import PRICING from "../../data/pricing";
 
 export default function Checkout() {
   const router = useRouter();
-  const { selected = "" } = router.query;
+  const { selected = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "" } = router.query;
   const [loading, setLoading] = useState(false);
 
   const selectedModules = selected.split(",").filter(Boolean);
@@ -28,6 +28,15 @@ export default function Checkout() {
       }
 
       // ✅ This structure matches /api/billing/create-session.js
+      const params = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+      const emailPlanParam = params.get("emailPlan") || emailPlan || "";
+      const smsPlanParam = params.get("smsPlan") || smsPlan || "";
+      const calendarPlanParam = params.get("calendarPlan") || calendarPlan || "";
+      const socialPlanParam = params.get("socialPlan") || socialPlan || "";
+      const selectedParam = params.get("selected") || selected || "";
+
       const lineItems = selectedModules.map((id) => ({
         name: PRICING[id]?.name || id,
         amount: PRICING[id]?.price || 0,
@@ -36,7 +45,16 @@ export default function Checkout() {
       const res = await fetch("/api/billing/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineItems }),
+        body: JSON.stringify({
+          lineItems,
+          metadata: {
+            selected: selectedParam,
+            emailPlan: emailPlanParam,
+            smsPlan: smsPlanParam,
+            calendarPlan: calendarPlanParam,
+            socialPlan: socialPlanParam,
+          },
+        }),
       });
 
       const data = await res.json();
@@ -59,6 +77,15 @@ export default function Checkout() {
     if (loading) return;
     setLoading(true);
     try {
+      const params = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+      const emailPlanParam = params.get("emailPlan") || emailPlan || "";
+      const smsPlanParam = params.get("smsPlan") || smsPlan || "";
+      const calendarPlanParam = params.get("calendarPlan") || calendarPlan || "";
+      const socialPlanParam = params.get("socialPlan") || socialPlan || "";
+      const selectedParam = params.get("selected") || selected || "";
+
       const items = selectedModules.map((id) => ({
         name: PRICING[id]?.name || id,
         price: PRICING[id]?.price || 0,
@@ -67,7 +94,17 @@ export default function Checkout() {
       const res = await fetch("/api/paypal/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, total: totalAmount }),
+        body: JSON.stringify({
+          items,
+          total: totalAmount,
+          metadata: {
+            selected: selectedParam,
+            emailPlan: emailPlanParam,
+            smsPlan: smsPlanParam,
+            calendarPlan: calendarPlanParam,
+            socialPlan: socialPlanParam,
+          },
+        }),
       });
 
       const data = await res.json();

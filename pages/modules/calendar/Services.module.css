@@ -1,0 +1,44 @@
+.wrap {
+  padding: 40px;
+  background: #0f172a;
+  min-height: 100vh;
+}
+
+.form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.form input {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: white;
+  color: black;
+  font-size: 14px;
+}
+
+.form button {
+  padding: 12px 18px;
+  background: #22c55e;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  font-weight: 600;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  background: #1f2937;
+  padding: 15px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

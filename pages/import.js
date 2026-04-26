@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 // Works with either default or named supabase export
-import supabaseDefault, { supabase as supabaseNamed } from "../utils/supabase-client";
+import { supabase } from "../lib/supabaseClient";
 import { validateImportJson, slugify } from "../utils/transfer";
 
 const supabase = supabaseNamed || supabaseDefault;

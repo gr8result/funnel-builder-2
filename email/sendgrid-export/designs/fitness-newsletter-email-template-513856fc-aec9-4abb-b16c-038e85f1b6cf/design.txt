@@ -1,0 +1,32 @@
+Email not displaying correctly? View it in the browser. ( {{Weblink}} )
+
+*Ballet + Rose*
+
+*Mark your calendar for this month's dance + happy hour events:*
+
+*Wednesday, June 9*
+*Thursday, June 17*
+*Tuesday, June 29*
+
+Sign Me Up!
+
+About The Show
+
+*Featured Dancer*
+
+*Samantha J.: Modern Dance and Samba*
+
+*"Dancing came to me at a time when I needed it the most. I was 16, depressed, and needing direction. My neighbor, Carmen, who was originally from Brazil, was a Samba dancer…"*
+
+*Read More*
+
+1523 89th Street New York, New York 11111
+Instagram l Facebook l Snapchat
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

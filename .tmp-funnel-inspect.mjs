@@ -1,0 +1,15 @@
+import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const funnelId = '5abbf73a-32f2-46dc-a3b7-0f3b56fa53c0';
+const { data: funnel, error: e1 } = await supabase.from('funnels').select('id,name,slug').eq('id', funnelId).single();
+if (e1) throw e1;
+console.log('FUNNEL', JSON.stringify(funnel));
+const { data: steps, error: e2 } = await supabase.from('funnel_steps').select('id,title,order_index,content').eq('funnel_id', funnelId).order('order_index');
+if (e2) throw e2;
+console.log('STEPS', JSON.stringify(steps.map(s => ({ id: s.id, title: s.title, order: s.order_index, hasShape: String(s.content || '').includes('data-shape-block') }))));
+const sample = steps.find(s => String(s.content || '').includes('data-shape-block')) || steps[0];
+const content = String(sample?.content || '');
+const idx = content.indexOf('data-shape-block');
+console.log('SAMPLE', sample?.id || 'none');
+console.log(content.slice(Math.max(0, idx - 1200), Math.min(content.length, idx + 2600)));

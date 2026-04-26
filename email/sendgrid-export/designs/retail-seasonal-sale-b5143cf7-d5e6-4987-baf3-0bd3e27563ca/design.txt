@@ -1,0 +1,60 @@
+It's our biggest sale of the year!
+
+Having trouble viewing this email?
+Try this link.
+
+A WAY TO CONNECT WITH NATURE
+
+One of our biggest sales of the year
+
+SHOP NOW
+
+Skincare products sourced from natural ingredients
+
+LEARN MORE
+
+FACIAL WASH
+
+Tea tree and clay mud wash
+
+STARTS FROM $29.99
+
+ORIGINAL PRICE:
+$59.99
+
+MOISTURE
+
+Pearl lotion
+
+STARTS FROM $59.99
+
+ORIGINAL PRICE:
+$99.99
+
+FACIAL CREAM
+
+Ocean minerals cream
+
+STARTS FROM $99.99
+
+ORIGINAL PRICE:
+$159.99
+
+BODY CARE
+
+Herbal lotion & oil
+
+STARTS FROM $49.99
+
+ORIGINAL PRICE:
+$89.99
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/solutions/email-marketing/ )

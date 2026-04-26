@@ -16,6 +16,7 @@
 // NOTE: This endpoint ENQUEUES. Your sender/worker should flush sms_queue.
 
 import { createClient } from "@supabase/supabase-js";
+import { guardSmsSend } from "../../../lib/smsValidation";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -29,8 +30,30 @@ const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE ||
   process.env.SUPABASE_SERVICE;
 
+const DEFAULT_SMS_ORIGIN = (process.env.DEFAULT_SMS_ORIGIN || "gr8result").trim();
+const SMSGLOBAL_ALLOWED_ORIGINS = String(
+  process.env.SMSGLOBAL_ALLOWED_ORIGINS || ""
+)
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
+
+// ✅ Fallback to main account for users without SMS subaccount
+const MAIN_SMS_API_KEY = process.env.SMSGLOBAL_API_KEY || "";
+const MAIN_SMS_API_SECRET = process.env.SMSGLOBAL_API_SECRET || "";
+
 function s(v) {
   return String(v ?? "").trim();
+}
+
+function pickAllowedOrigin(candidate) {
+  const cleaned = s(candidate);
+  if (!cleaned) return "";
+  if (!SMSGLOBAL_ALLOWED_ORIGINS.length) return cleaned;
+  const match = SMSGLOBAL_ALLOWED_ORIGINS.find(
+    (o) => o.toLowerCase() === cleaned.toLowerCase()
+  );
+  return match || "";
 }
 
 function json(res, status, body) {
@@ -75,21 +98,12 @@ async function getUserFromBearer(req, supabaseAnon) {
 function pickLeadPhone(leadRow) {
   if (!leadRow || typeof leadRow !== "object") return "";
 
+  // Simplified: check only the most common columns
   const candidates = [
-    leadRow.to_phone,
     leadRow.phone,
     leadRow.mobile,
-    leadRow.mobile_phone,
     leadRow.phone_number,
-    leadRow.cell,
-    leadRow.cell_phone,
-    leadRow.sms,
-    leadRow.sms_phone,
-    leadRow.contact_number,
-    leadRow.contact_phone,
-    leadRow.primary_phone,
-    leadRow.tel,
-    leadRow.telephone,
+    leadRow.mobile_phone,
   ];
 
   for (const c of candidates) {
@@ -136,14 +150,21 @@ async function getLeadIdsForList(supabaseAdmin, listId) {
   const lid = s(listId);
   if (!lid) return [];
 
-  const attempts = [
+  const found = new Set();
+
+  const directAttempts = [
+    { table: "leads", leadCol: "id", listCol: "list_id" },
+    { table: "leads", leadCol: "id", listCol: "lead_list_id" },
+  ];
+
+  const membershipAttempts = [
     { table: "lead_list_members", leadCol: "lead_id", listCol: "list_id" },
     { table: "lead_lists_members", leadCol: "lead_id", listCol: "list_id" },
     { table: "email_list_members", leadCol: "lead_id", listCol: "list_id" },
     { table: "lead_list_memberships", leadCol: "lead_id", listCol: "list_id" },
   ];
 
-  for (const a of attempts) {
+  for (const a of [...directAttempts, ...membershipAttempts]) {
     try {
       const { data, error } = await supabaseAdmin
         .from(a.table)
@@ -152,9 +173,10 @@ async function getLeadIdsForList(supabaseAdmin, listId) {
         .limit(50000);
 
       if (!error && Array.isArray(data)) {
-        const ids = data.map((r) => s(r?.[a.leadCol])).filter(Boolean);
-        if (ids.length) return Array.from(new Set(ids));
-        return [];
+        data
+          .map((r) => s(r?.[a.leadCol]))
+          .filter(Boolean)
+          .forEach((id) => found.add(id));
       }
       // if relation missing or other error, try next
     } catch {
@@ -162,8 +184,7 @@ async function getLeadIdsForList(supabaseAdmin, listId) {
     }
   }
 
-  // If you use a different membership table, add it above.
-  return [];
+  return Array.from(found);
 }
 
 // --- SMS QUEUE INSERT (tries multiple column variants until one works) ---
@@ -177,10 +198,12 @@ function buildInsertVariants({
   scheduled_for,
   available_at,
   status,
+  sender_id,
+  origin,
 }) {
   // We will try these shapes in order until one inserts without "column does not exist" errors.
   // Your sms_queue schema has: id, user_id, lead_id, step_no, to_phone, body, scheduled_for, status, 
-  // provider_message_id, error, created_at, updated_at, origin, available_at, provider_id, last_error
+  // provider_message_id, error, created_at, updated_at, origin, available_at, provider_id, last_error, sender_id
   return [
     // Variant A (matches your actual schema exactly)
     {
@@ -192,8 +215,10 @@ function buildInsertVariants({
       scheduled_for,
       status,
       available_at,
+      sender_id,
+      origin,
     },
-    // Variant B (with origin if provided)
+    // Variant B (no origin)
     {
       user_id,
       lead_id,
@@ -203,7 +228,7 @@ function buildInsertVariants({
       scheduled_for,
       status,
       available_at,
-      origin: null,
+      sender_id,
     },
     // Variant C (minimal - let defaults handle created_at, updated_at)
     {
@@ -213,6 +238,8 @@ function buildInsertVariants({
       to_phone,
       body,
       scheduled_for,
+      sender_id,
+      origin,
     },
     // Variant D (no available_at)
     {
@@ -223,6 +250,30 @@ function buildInsertVariants({
       body,
       scheduled_for,
       status,
+      sender_id,
+      origin,
+    },
+    // Variant E (no sender_id column)
+    {
+      user_id,
+      lead_id,
+      step_no,
+      to_phone,
+      body,
+      scheduled_for,
+      status,
+      available_at,
+      origin,
+    },
+    // Variant F (minimal, no sender_id)
+    {
+      user_id,
+      lead_id,
+      step_no,
+      to_phone,
+      body,
+      scheduled_for,
+      origin,
     },
   ];
 }
@@ -299,6 +350,93 @@ export default async function handler(req, res) {
 
   const user = await getUserFromBearer(req, supabaseAnon);
   if (!user) return json(res, 401, { ok: false, error: "Unauthorized" });
+
+  // Fetch user's SMS account info
+  // accounts.sender_id = approved sender name (SMS origin)
+  // business_name = fallback if origin is missing
+  let originSenderId = null;
+  let businessName = null;
+  let smsApiKey = null;
+  let smsApiSecret = null;
+  let usingMainAccount = false;
+  
+  try {
+    const { data: account } = await supabaseAdmin
+      .from("accounts")
+      .select("sender_id,business_name,sms_api_key,sms_api_secret")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (account?.sender_id) originSenderId = s(account.sender_id);
+    if (account?.business_name) businessName = s(account.business_name);
+    if (account?.sms_api_key) smsApiKey = s(account.sms_api_key);
+    if (account?.sms_api_secret) smsApiSecret = s(account.sms_api_secret);
+  } catch (err) {
+    console.warn("⚠️ Error fetching SMS config:", err.message);
+  }
+
+  // ✅ Fall back to main SMSGlobal account if user doesn't have subaccount configured
+  if (!smsApiKey || !smsApiSecret) {
+    if (MAIN_SMS_API_KEY && MAIN_SMS_API_SECRET) {
+      smsApiKey = MAIN_SMS_API_KEY;
+      smsApiSecret = MAIN_SMS_API_SECRET;
+      usingMainAccount = true;
+      console.log(`📱 User ${user.id} using main SMS account (no subaccount configured)`);
+    } else {
+      return json(res, 403, {
+        ok: false,
+        error: "SMS not activated for this account.",
+        detail: "User's SMS subaccount not found and no main account fallback configured.",
+      });
+    }
+  }
+
+  // Compute origin with ALLOWED_ORIGINS validation
+  let finalOrigin;
+  if (usingMainAccount) {
+    // Using main account: validate against ALLOWED_ORIGINS
+    const rawOrigins = s(process.env.SMSGLOBAL_ALLOWED_ORIGINS || "");
+    const allowedOrigins = rawOrigins
+      .split(",")
+      .map(x => s(x).toLowerCase())
+      .filter(Boolean);
+    
+    // Try originSenderId first, then businessName
+    const candidateOrigin = s(originSenderId || businessName);
+    const candidateLower = candidateOrigin.toLowerCase();
+    
+    const isAllowed = allowedOrigins.length === 0 || allowedOrigins.includes(candidateLower);
+    
+    if (isAllowed && candidateOrigin) {
+      finalOrigin = candidateOrigin;
+      console.log(`📱 MAIN account: using allowed origin "${finalOrigin}"`);
+    } else {
+      finalOrigin = DEFAULT_SMS_ORIGIN || "gr8result";
+      console.log(`⚠️  MAIN account: user's origin "${candidateOrigin}" not in ALLOWED_ORIGINS [${rawOrigins}], using "${finalOrigin}"`);
+    }
+  } else {
+    // User has own subaccount: can use ANY sender_id they've registered with SMSGlobal
+    // NO ALLOWED_ORIGINS restriction for user subaccounts!
+    finalOrigin =
+      originSenderId || 
+      businessName || 
+      DEFAULT_SMS_ORIGIN || 
+      "gr8result";
+    console.log(`📱 USER subaccount: using origin "${finalOrigin}"`);
+  }
+
+  console.log("📱 Launching SMS campaign with origin:", {
+    user_id: user.id,
+    originSenderId: originSenderId || "none",
+    businessName: businessName || "none",
+    finalOrigin,
+    usingMainAccount,
+  });
+  
+  if (finalOrigin === "gr8result" && !originSenderId && !businessName) {
+    console.warn("⚠️  FALLBACK ORIGIN USED FOR CAMPAIGN: User has no sender_id set. Campaign will queue with default 'gr8result'. " +
+      "User should set their approved sender name in Account → SMS Activation first.");
+  }
 
   let body = {};
   try {
@@ -416,8 +554,22 @@ export default async function handler(req, res) {
         scheduled_for: send_at_iso,
         available_at,
         status: "queued",
+        origin: finalOrigin,  // Validated SMS origin (will be sent by flush worker)
       });
     }
+  }
+
+  // ✅ Check SMS limit before enqueueing
+  let smsGuard = null;
+  try {
+    smsGuard = await guardSmsSend(user.id, baseRows.length);
+  } catch (limitErr) {
+    return json(res, 429, {
+      ok: false,
+      error: limitErr.message,
+      code: limitErr.code,
+      details: limitErr.details,
+    });
   }
 
   const ins = await insertSmsQueueRows(supabaseAdmin, baseRows);
@@ -433,24 +585,40 @@ export default async function handler(req, res) {
   // Auto-flush queued SMS after queueing (like automation does for emails)
   let flushResult = null;
   try {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const cronKey = process.env.CRON_SECRET || process.env.AUTOMATION_CRON_KEY || '';
-    
-    // Always try to flush - endpoint handles auth (dev mode allows no key)
-    const flushUrl = cronKey 
+    const isDev = process.env.NODE_ENV === "development";
+    const requestHost = req.headers?.host || "localhost:3000";
+    const siteUrl = isDev
+      ? `http://${requestHost}`
+      : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const cronKey = process.env.CRON_SECRET || process.env.AUTOMATION_CRON_KEY || "";
+    const authHeader = req.headers.authorization || "";
+
+    // Use key if available, otherwise rely on Bearer auth
+    const flushUrl = cronKey
       ? `${siteUrl}/api/smsglobal/flush-queue?key=${encodeURIComponent(cronKey)}&limit=50`
       : `${siteUrl}/api/smsglobal/flush-queue?limit=50`;
-    
+
+    console.log("Auto-flush URL:", flushUrl);
+
     const flushResponse = await fetch(flushUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
     });
-    flushResult = await flushResponse.json();
+    
+    if (flushResponse.ok) {
+      flushResult = await flushResponse.json();
+      console.log("Auto-flush result:", JSON.stringify(flushResult, null, 2));
+    } else {
+      console.error("Auto-flush HTTP error:", flushResponse.status);
+      flushResult = { error: `HTTP ${flushResponse.status}` };
+    }
   } catch (flushErr) {
     // Flush error doesn't fail the response, just log it
-    console.error('Auto-flush SMS failed:', flushErr?.message || flushErr);
+    console.error("Auto-flush SMS failed:", flushErr?.message || flushErr);
+    flushResult = { error: flushErr?.message || "Flush error" };
   }
 
   return json(res, 200, {
@@ -458,9 +626,10 @@ export default async function handler(req, res) {
     recipients: recipients.length,
     steps: steps.length,
     queued: baseRows.length,
+    usage: smsGuard || null,
     inserted_ids: ins.ids || [],
     used_variant: ins.used_variant,
     used_keys: ins.used_keys,
-    auto_flush: flushResult?.ok ? { sent: flushResult?.debug?.sent || 0 } : { error: 'no flush' },
+    auto_flush: flushResult,
   });
 }

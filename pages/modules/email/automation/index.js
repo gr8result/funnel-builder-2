@@ -275,11 +275,13 @@ function AutomationBuilder() {
 
   const handleNodeDoubleClick = (_, node) => setActiveNode(node);
 
-  const updateNodeFromDrawer = (newData) => {
+  const updateNodeFromDrawer = async (newData) => {
     setNodes((nds) =>
       nds.map((n) => (n.id === activeNode.id ? { ...n, data: newData } : n))
     );
     setActiveNode(null);
+    // Auto-save flow changes immediately when node is updated from drawer
+    setTimeout(() => saveFlow(), 100);
   };
 
   useEffect(() => {
@@ -488,10 +490,15 @@ function AutomationBuilder() {
       setNodes((nds) =>
         nds.map((n) => {
           const countAtNode = (j.counts || {})[n.id] || 0;
+          const passedAtNode = (j.passed_counts || {})[n.id] || 0;
           if (n.type === "trigger") {
             return {
               ...n,
-              data: { ...n.data, activeCount: Number(j.trigger_active || 0) },
+              data: {
+                ...n.data,
+                activeCount: Number(j.trigger_active || 0),
+                passedCount: passedAtNode,
+              },
             };
           }
           if (n.type === "email") {
@@ -508,6 +515,7 @@ function AutomationBuilder() {
                 stats: s, 
                 count: countAtNode,
                 activeMembers: countAtNode, // Show how many members are at this node
+                passedCount: passedAtNode,
                 onNodeClick: handleNodeClick, // Pass click handler to open members modal
               } 
             };
@@ -521,10 +529,11 @@ function AutomationBuilder() {
                 activeMembers: s.activeMembers || 0,
                 hoursRemaining: s.hoursRemaining || null,
                 waitHours: s.waitHours || 24,
+                passedCount: passedAtNode,
               } 
             };
           }
-          return { ...n, data: { ...n.data, count: countAtNode } };
+          return { ...n, data: { ...n.data, count: countAtNode, passedCount: passedAtNode } };
         })
       );
     } catch {}
@@ -1147,6 +1156,7 @@ function AutomationBuilder() {
           onSave={updateNodeFromDrawer}
           onClose={() => setActiveNode(null)}
           userId={authUserId}
+          flowId={flowId}
         />
       )}
 

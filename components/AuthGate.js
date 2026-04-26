@@ -1,7 +1,6 @@
 // components/AuthGate.js
 import { useEffect, useState } from "react";
-import supabaseDefault, { supabase as supabaseNamed } from "../utils/supabase-client";
-const supabase = supabaseNamed || supabaseDefault;
+import { supabase } from "../lib/supabaseClient";
 
 export default function AuthGate({ children }) {
   const [loading, setLoading] = useState(true);
@@ -62,25 +61,32 @@ export default function AuthGate({ children }) {
           <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 10 }}>
             <a href="/login">
               <button style={{
-                padding: "10px 14px",
-                background: "#2563eb",
+                padding: "14px 24px",
+                background: "linear-gradient(135deg,#3b82f6,#ef465d)",
                 border: "none",
                 borderRadius: 8,
                 color: "#fff",
-                cursor: "pointer"
+                cursor: "pointer",
+                fontSize: 18,
+                fontWeight: 600,
+                boxShadow: "0 2px 8px rgba(59,130,246,0.18)",
+                transition: "background 0.2s, box-shadow 0.2s"
               }}>
                 Sign in
               </button>
             </a>
             <a href="/onboarding">
               <button style={{
-                padding: "10px 14px",
-                background: "#10b981",
+                padding: "14px 24px",
+                background: "linear-gradient(135deg,#22c55e,#3b82f6)",
                 border: "none",
                 borderRadius: 8,
                 color: "#0b0f19",
                 cursor: "pointer",
-                fontWeight: 600
+                fontSize: 18,
+                fontWeight: 600,
+                boxShadow: "0 2px 8px rgba(34,197,94,0.18)",
+                transition: "background 0.2s, box-shadow 0.2s"
               }}>
                 Sign up
               </button>

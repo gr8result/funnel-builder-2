@@ -109,9 +109,14 @@ export default function AutorespondersReport() {
       <div style={styles.page}>
         <div style={styles.container}>
           <div style={{ ...styles.banner, background: "#a855f7" }}>
-            <div>
-              <div style={styles.bannerTitle}>Autoresponders</div>
-              <div style={styles.bannerSub}>Uses <code>autoresponder_id</code> or <code>source_type=autoresponder</code> if available.</div>
+            <div style={styles.bannerLeft}>
+              <div style={styles.bannerIconWrap} aria-hidden="true">
+                <span style={styles.bannerIcon}>⏱️</span>
+              </div>
+              <div>
+                <div style={styles.bannerTitle}>Autoresponders</div>
+                <div style={styles.bannerSub}>Uses <code>autoresponder_id</code> or <code>source_type=autoresponder</code> if available.</div>
+              </div>
             </div>
             <Link href="/modules/email/reports" style={styles.backBtn}>← Back</Link>
           </div>
@@ -220,6 +225,9 @@ const styles = {
     boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
     border: "1px solid rgba(255,255,255,0.10)",
   },
+  bannerLeft: { display: "flex", alignItems: "center", gap: 14 },
+  bannerIconWrap: { width: 69, height: 69, display: "grid", placeItems: "center", borderRadius: 10, background: "rgba(0,0,0,0.18)" },
+  bannerIcon: { fontSize: 48, lineHeight: 1 },
   bannerTitle: { fontSize: 48, fontWeight: 600, color: "#1f0736", lineHeight: 1.05 },
   bannerSub: { fontSize: 18, marginTop: 3, color: "rgba(31,7,54,0.85)" },
 

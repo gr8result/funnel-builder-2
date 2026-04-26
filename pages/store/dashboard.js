@@ -1,5 +1,5 @@
 // /pages/store/dashboard.js
-// TASKS + PLATFORM DASHBOARD â€“ imports tasks from tasks + crm_tasks
+// TASKS + PLATFORM DASHBOARD -imports tasks from tasks + crm_tasks
 // with subscriber/lead avatars, coloured module cards matching the side nav.
 
 import { useEffect, useState } from "react";
@@ -36,6 +36,8 @@ const CommunitiesIcon = ({ size = 22, color = "#000" }) => (
     <line x1="15" y1="8.6" x2="13.4" y2="14.4" />
   </svg>
 );
+
+
 
 // Card colour + icon map (matches SideNav colours)
 const MODULE_META = {
@@ -105,7 +107,7 @@ const MODULE_ROUTES = {
   leads: "/leads",
   subscriptions: "/modules/online-courses",
   webinars: "/modules/webinars",
-  social: "/modules/social-media",
+  social: "/modules/social_media/dashboard",
   subaccounts: "/modules/subaccounts",
   community: "/modules/communities",
 };
@@ -119,14 +121,14 @@ const DEFAULT_MODULE_CARDS = [
   },
   {
     id: "affiliate-vendors",
-    title: "Vendors â€“ Affiliate Products",
-    subtitle: "Vendors whose products you list as an affiliate",
+    title: "Vendor's Sales Revenue",
+    subtitle: "Vendor's products you sell using affiliates",
     enabled: true,
   },
   {
     id: "affiliate-revenue",
-    title: "Affiliate Sales â€“ Other Peopleâ€™s Products",
-    subtitle: "Revenue earned selling other peopleâ€™s products",
+    title: "Affiliate Sales - Other People's Products",
+    subtitle: "Revenue earned selling other people's products",
     enabled: true,
   },
   {
@@ -407,7 +409,7 @@ function parseNotes(raw) {
     body,
   };
 
-  meta.split("â€¢").forEach((chunk) => {
+  meta.split("•").forEach((chunk) => {
     const [labelRaw, valueRaw] = chunk.split(":");
     if (!labelRaw || !valueRaw) return;
     const label = labelRaw.trim().toLowerCase();
@@ -489,16 +491,16 @@ export default function StoreDashboard() {
 
   const [showModuleConfig, setShowModuleConfig] = useState(false);
 
-  // ðŸ”‘ Card style â€“ default glass, then read LS on first client render
+  // ðŸ”‘ Card style -default glass, then read LS on first client render
   const [cardStyle, setCardStyle] = useState("glass");
 
   // client edit modal
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
-  const [stages] = useState([]); // weâ€™re not using pipeline stages here, keep empty
+  const [stages] = useState([]); // we're not using pipeline stages here, keep empty
   const [userId, setUserId] = useState(null);
 
-  // selected tasks (checkbox) â€“ dashboard version
+  // selected tasks (checkbox) -dashboard version
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
 
   const handleOpenLeadDetails = (lead) => {
@@ -522,7 +524,7 @@ export default function StoreDashboard() {
     }
   };
 
-  // âœ… Read saved card style from localStorage (glass / solid)
+  // ✅ Read saved card style from localStorage (glass / solid)
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -548,7 +550,7 @@ export default function StoreDashboard() {
     }
   }, [moduleCards]);
 
-  // MAIN LOAD â€“ stats + tasks + subscribers + email stats
+  // MAIN LOAD -stats + tasks + subscribers + email stats
   useEffect(() => {
     (async () => {
       try {
@@ -646,7 +648,7 @@ export default function StoreDashboard() {
 
         setAllTasks(combinedTasks);
 
-        // Subscriber stats (for mini cards â€“ total + last 7 days)
+        // Subscriber stats (for mini cards -total + last 7 days)
         let subscribersTotal = 0;
         let subscribersLast7 = 0;
         try {
@@ -714,7 +716,7 @@ export default function StoreDashboard() {
           setSubscriberMap({});
         }
 
-        // stats â€“ revenue + orders
+        // stats -revenue + orders
         const totalRevenueCents = safeOrders.reduce(
           (sum, o) => sum + (o.amount_cents || 0),
           0
@@ -859,7 +861,7 @@ export default function StoreDashboard() {
             broadcasts7d + campaigns7d + automations7d + autoresponders7d,
         });
 
-        // visible tasks list â€“ default to "overdue"
+        // visible tasks list -default to "overdue"
         setTasks(applyTaskFilter(combinedTasks, "overdue", taskDate));
         setSelectedTaskIds([]);
 
@@ -1115,19 +1117,19 @@ export default function StoreDashboard() {
         <title>Tasks & Platform Overview</title>
       </Head>
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", paddingBottom: 50 }}>
+      <div style={{ maxWidth: 1320, margin: "0 auto", paddingBottom: 180 }}>
         {/* GREEN BANNER */}
         <div
           style={{
             marginTop: 24,
-            marginBottom: 18,
+            marginBottom: 24,
             background: "#22c55e",
             padding: "18px 24px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            fontWeight: 550,
-            fontSize: 32,
+            fontWeight: 600,
+            fontSize: 48,
             borderRadius: 12,
             boxShadow: "0 12px 30px rgba(0,0,0,0.55)",
           }}
@@ -1138,21 +1140,29 @@ export default function StoreDashboard() {
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 40,
-                height: 40,
+                width:50,
+                height: 50,
                 borderRadius: "999px",
                 background: "rgba(0,0,0,0.18)",
-                fontSize: 32,
+                fontSize: 48,
               }}
             >
-              ðŸ“Š
+              📊
             </span>
             <div>
-              <div>Today&apos;s Important Tasks</div>
+              <div
+                style={{
+                  fontSize: 48,
+                  fontWeight: 600,
+                  lineHeight: 1.35,
+                }}
+              >
+                Command Centre
+              </div>
               <div
                 style={{
                   fontSize: 18,
-                  fontWeight: 400,
+                  fontWeight: 600,
                   opacity: 0.92,
                 }}
               >
@@ -1210,7 +1220,7 @@ export default function StoreDashboard() {
                 boxShadow: "0 6px 16px rgba(0,0,0,0.55)",
               }}
             >
-              âš™ï¸ Customise dashboard
+              ⚙️ Customise dashboard
             </button>
             <Link
               href="/dashboard"
@@ -1227,7 +1237,7 @@ export default function StoreDashboard() {
                 fontSize: 16,
               }}
             >
-              â† Back
+              ← Back
             </Link>
           </div>
         </div>
@@ -1257,7 +1267,7 @@ export default function StoreDashboard() {
             boxShadow: "0 22px 60px rgba(0,0,0,0.7)",
             background:
               "linear-gradient(135deg, #020617 0%, #020617 60%, #020617 100%)",
-            padding: 22,
+            padding: 28,
           }}
         >
           {/* MINI CRM SUMMARY CARDS */}
@@ -1290,7 +1300,7 @@ export default function StoreDashboard() {
             <MiniStatCard
               title="Email Activity (7 days)"
               primary={`${emailStats.total7d} emails sent`}
-              secondary={`Broadcasts ${emailStats.broadcasts7d} Â· campaigns ${emailStats.campaigns7d} Â· Auto ${
+              secondary={`Broadcasts: ${emailStats.broadcasts7d} | Campaigns: ${emailStats.campaigns7d} | Automations: ${
                 emailStats.automations7d + emailStats.autoresponders7d
               }`}
               accent="#a855f7"
@@ -1341,7 +1351,7 @@ export default function StoreDashboard() {
                         "0 0 0 2px rgba(248,113,113,0.7),0 8px 18px rgba(0,0,0,0.7)",
                     }}
                   >
-                    ðŸ“ž
+                     📞
                   </span>
                   Calls &amp; Voicemails
                 </div>
@@ -1638,7 +1648,7 @@ export default function StoreDashboard() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  ðŸ—‘ Delete Selected ({selectedTaskIds.length})
+                   🗑 Delete Selected ({selectedTaskIds.length})
                 </button>
               </div>
 
@@ -1693,7 +1703,7 @@ export default function StoreDashboard() {
               </div>
             </div>
 
-            {/* TASKS LIST â€“ CRM-style cards */}
+            {/* TASKS LIST -CRM-style cards */}
             <div
               style={{
                 borderRadius: 12,
@@ -1748,8 +1758,8 @@ export default function StoreDashboard() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 18,
-              marginBottom: 24,
+              gap: 24,
+              marginBottom: 34,
             }}
           >
             <StatCard
@@ -1775,7 +1785,7 @@ export default function StoreDashboard() {
           </div>
 
           {/* PLATFORM MODULE CARDS */}
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 24 }}>
             <div
               style={{
                 display: "flex",
@@ -1790,7 +1800,7 @@ export default function StoreDashboard() {
                   fontWeight: 600,
                 }}
               >
-                Platform Modules â€“ Activity Overview
+                Platform Modules -Activity Overview
               </div>
               <div
                 style={{
@@ -1847,12 +1857,12 @@ export default function StoreDashboard() {
                         fontWeight: 500,
                       }}
                     >
-                      âœ… {c.title}
+                      ✅ {c.title}
                     </button>
                   ))}
                   {enabledCards.length === 0 && (
                     <span style={{ color: "#f97316" }}>
-                      No modules enabled â€“ turn some back on below.
+                      No modules enabled -turn some back on below.
                     </span>
                   )}
                 </div>
@@ -1894,7 +1904,7 @@ export default function StoreDashboard() {
                           fontWeight: 500,
                         }}
                       >
-                        âž• {c.title}
+                         ➕ {c.title}
                       </button>
                     ))
                   )}
@@ -1983,8 +1993,8 @@ export default function StoreDashboard() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 18,
-              marginBottom: 24,
+              gap: 28,
+              marginBottom: 34,
             }}
           >
             {enabledCards.map((card) => (
@@ -2007,7 +2017,8 @@ export default function StoreDashboard() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 18,
+              gap: 28,
+              marginTop: 8,
             }}
           >
             <div
@@ -2184,7 +2195,7 @@ export default function StoreDashboard() {
           setSelectedLead(null);
         }}
         onNotesUpdated={() => {
-          // optional â€“ keep this dashboard's tasks/leads in sync if needed
+          // optional -keep this dashboard's tasks/leads in sync if needed
         }}
       />
 
@@ -2209,7 +2220,7 @@ export default function StoreDashboard() {
   );
 }
 
-/* TASK ROW â€“ CRM-style for dashboard */
+/* TASK ROW -CRM-style for dashboard */
 
 function TaskRow({
   task,
@@ -2304,7 +2315,7 @@ function TaskRow({
           flex: 1,
         }}
       >
-        {/* checkbox â€“ replaces old 00:00 column */}
+        {/* checkbox -replaces old 00:00 column */}
         <input
           type="checkbox"
           checked={!!selected}
@@ -2419,7 +2430,7 @@ function TaskRow({
         </div>
       </div>
 
-      {/* right side â€“ due + status */}
+      {/* right side -due + status */}
       <div
         style={{
           display: "flex",
@@ -2468,7 +2479,7 @@ function TaskRow({
   );
 }
 
-/* MODULE CARDS â€“ supports glass + solid */
+/* MODULE CARDS -supports glass + solid */
 
 function ModuleCard({
   card,
@@ -2519,7 +2530,7 @@ function ModuleCard({
           padding: 18,
           boxShadow: "0 14px 36px rgba(0,0,0,0.85)",
           cursor: "pointer",
-          color: "#ffffff",
+          color: "#0f172a",
         }}
       >
         <div
@@ -2536,18 +2547,18 @@ function ModuleCard({
                 width: 46,
                 height: 46,
                 borderRadius: 12,
-                background: "rgba(0,0,0,0.22)",
+                  background: "rgba(255,255,255,0.24)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 26,
               }}
             >
-              {Icon ? <Icon color="#ffffff" size={26} /> : "?"}
+              {Icon ? <Icon color="#0f172a" size={26} /> : "?"}
             </div>
 
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{card.title}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#ffffff" }}>{card.title}</div>
               <div style={{ fontSize: 16, opacity: 0.9, fontWeight: 400 }}>
                 {card.subtitle}
               </div>
@@ -2563,14 +2574,14 @@ function ModuleCard({
             style={{
               border: "none",
               background: "transparent",
-              color: "#ffffff",
+              color: "#0f172a",
               cursor: "pointer",
               fontSize: 22,
               fontWeight: 900,
               paddingLeft: 6,
             }}
           >
-            âœ•
+             ✖
           </button>
         </div>
 
@@ -2584,22 +2595,27 @@ function ModuleCard({
                 marginTop: 6,
               }}
             >
-              <SmallMetric label="Broadcasts sent (7d)" value={broadcastCount} />
+              <SmallMetric label="Broadcasts sent (7d)" value={broadcastCount} labelColor="#0f172a" valueColor="#0f172a" />
               <SmallMetric
                 label="campaigns emails (7d)"
                 value={campaignsCount}
+                labelColor="#0f172a"
+                valueColor="#0f172a"
               />
-              <SmallMetric label="Automation emails (7d)" value={autoCount} />
+              <SmallMetric label="Automation emails (7d)" value={autoCount} labelColor="#0f172a" valueColor="#0f172a" />
               <SmallMetric
                 label="Autoresponder sends (7d)"
                 value={autoresCount}
+                labelColor="#0f172a"
+                valueColor="#0f172a"
               />
             </div>
             <div
               style={{
                 marginTop: 8,
                 fontSize: 16,
-                opacity: 0.82,
+                color: "#0f172a",
+                opacity: 0.9,
                 fontWeight: 400,
               }}
             >
@@ -2617,7 +2633,7 @@ function ModuleCard({
             >
               <div>
                 <div
-                  style={{ fontSize: 16, opacity: 0.85, fontWeight: 400 }}
+                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
                 >
                   Today
                 </div>
@@ -2628,7 +2644,7 @@ function ModuleCard({
 
               <div>
                 <div
-                  style={{ fontSize: 16, opacity: 0.85, fontWeight: 400 }}
+                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
                 >
                   This week
                 </div>
@@ -2639,7 +2655,7 @@ function ModuleCard({
 
               <div>
                 <div
-                  style={{ fontSize: 16, opacity: 0.85, fontWeight: 400 }}
+                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
                 >
                   This month
                 </div>
@@ -2653,11 +2669,12 @@ function ModuleCard({
               style={{
                 marginTop: 8,
                 fontSize: 16,
-                opacity: 0.8,
+                color: "#0f172a",
+                opacity: 0.9,
                 fontWeight: 400,
               }}
             >
-              Placeholder stats â€“ connected shortly to real data.
+              Placeholder stats -connected shortly to real data.
             </div>
           </>
         )}
@@ -2728,7 +2745,7 @@ function ModuleCard({
         <button
           type="button"
           onClick={(e) => {
-            e.stopPropagation(); // donâ€™t trigger navigation when hiding
+            e.stopPropagation(); // don't trigger navigation when hiding
             onHide(card.id);
           }}
           style={{
@@ -2740,7 +2757,7 @@ function ModuleCard({
           }}
           title="Hide this module"
         >
-          âœ•
+           ✖
         </button>
       </div>
 
@@ -2818,7 +2835,7 @@ function ModuleCard({
               fontWeight: 400,
             }}
           >
-            Placeholder stats for now â€“ will be wired to live data from this
+            Placeholder stats for now -will be wired to live data from this
             module (signups, revenue, posts, etc.).
           </div>
         </>
@@ -2827,13 +2844,13 @@ function ModuleCard({
   );
 }
 
-function SmallMetric({ label, value }) {
+function SmallMetric({ label, value, labelColor = "#9ca3af", valueColor = "inherit" }) {
   return (
     <div>
-      <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
+      <div style={{ fontSize: 16, color: labelColor, fontWeight: 400 }}>
         {label}
       </div>
-      <div style={{ fontSize: 20, fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor }}>{value}</div>
     </div>
   );
 }
@@ -2918,7 +2935,7 @@ function StatCard({ label, value, accent }) {
   );
 }
 
-function SectionHeader({ title, subtitle }) {
+function SectionHeader({ title, subtitle, titleColor = "#e5e7eb", subtitleColor = "#6b7280" }) {
   return (
     <div
       style={{
@@ -2934,7 +2951,7 @@ function SectionHeader({ title, subtitle }) {
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: 0.5,
-          color: "#e5e7eb",
+          color: titleColor,
         }}
       >
         {title}
@@ -2942,7 +2959,7 @@ function SectionHeader({ title, subtitle }) {
       <div
         style={{
           fontSize: 16,
-          color: "#6b7280",
+          color: subtitleColor,
           fontWeight: 400,
         }}
       >
@@ -2967,17 +2984,17 @@ function ScrollTable({ children }) {
   );
 }
 
-function EmptyCopy({ children }) {
+function EmptyCopy({ children, color = "#6b7280" }) {
   return (
     <div
-      style={{ fontSize: 16, color: "#6b7280", marginTop: 4, fontWeight: 400 }}
+      style={{ fontSize: 16, color, marginTop: 4, fontWeight: 400 }}
     >
       {children}
     </div>
   );
 }
 
-function Th({ children }) {
+function Th({ children, color = "#9ca3af" }) {
   return (
     <th
       style={{
@@ -2986,7 +3003,7 @@ function Th({ children }) {
         fontSize: 16,
         textTransform: "uppercase",
         letterSpacing: 0.5,
-        color: "#9ca3af",
+        color,
         borderBottom: "1px solid rgba(31,41,55,0.9)",
         position: "sticky",
         top: 0,
@@ -2999,13 +3016,13 @@ function Th({ children }) {
   );
 }
 
-function Td({ children, style }) {
+function Td({ children, style, color = "#e5e7eb" }) {
   return (
     <td
       style={{
         padding: "7px 10px",
         fontSize: 16,
-        color: "#e5e7eb",
+        color,
         verticalAlign: "top",
         fontWeight: 400,
         ...style,

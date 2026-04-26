@@ -4,7 +4,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "../utils/supabase-client";
+import { supabase } from "../lib/supabaseClient";
+
+function formatSignupError(error) {
+  const raw = String(error?.message || "");
+  const msg = raw.toLowerCase();
+
+  if (msg.includes("database error saving new user")) {
+    return "We could not finish creating your account due to a server setup issue. Please contact support or try again shortly.";
+  }
+
+  if (msg.includes("already registered") || msg.includes("user already registered")) {
+    return "This email is already registered. Please sign in or reset your password.";
+  }
+
+  if (msg.includes("password")) {
+    return raw;
+  }
+
+  return raw || "Something went wrong while creating your account.";
+}
 
 export default function Login() {
   const router = useRouter();
@@ -22,6 +41,7 @@ export default function Login() {
     setMsg("");
     setSuccess(false);
 
+
     if (!email || !password) return setMsg("Please enter your email and password.");
     if (mode === "signup" && password !== confirmPassword)
       return setMsg("Passwords do not match.");
@@ -31,44 +51,81 @@ export default function Login() {
 
       // --- SIGNUP ---
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: "http://localhost:3000/login" },
-        });
-        if (error) throw error;
+        try {
+          setBusy(true);
+          setMsg("");
 
-        const newUser = data.user || data.session?.user;
-        if (newUser) {
-          const { data: existing } = await supabase
-            .from("accounts")
-            .select("id")
-            .eq("user_id", newUser.id)
-            .maybeSingle();
+          // Try to create user
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+          });
 
-          if (!existing) {
-            await supabase.from("accounts").insert([
-              {
-                user_id: newUser.id,
-                email: newUser.email,
-                name: newUser.email?.split("@")[0] || "New User",
-                status: "pending",
-                is_approved: false,
-                subscription_status: "none",
-                created_at: new Date().toISOString(),
-              },
-            ]);
+          // 🔥 HANDLE DUPLICATE CLEANLY (THIS IS THE FIX)
+          if (error && error.message.includes("duplicate key value")) {
+            console.warn("User already exists → switching to sign in");
+
+            // Try logging them in instead
+            const loginRes = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
+            if (loginRes.error) {
+              setMsg("This email already exists. Try signing in or resetting your password.");
+              return;
+            }
+
+            // Continue as logged-in user
+            return router.push("/account");
           }
+
+          if (error) throw error;
+
+          const newUser = data.user || data.session?.user;
+
+          if (!newUser) {
+            setMsg("Signup failed. Try again.");
+            return;
+          }
+
+          // ✅ Create account record
+          const { error: insertError } = await supabase.from("accounts").insert([
+            {
+              user_id: newUser.id,
+              email: newUser.email,
+              full_name: newUser.email?.split("@")[0] || "New User",
+              status: "pending",
+              is_approved: false,
+              subscription_status: "none",
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+          if (insertError) {
+            console.error(insertError);
+            setMsg("Account created but setup failed.");
+            return;
+          }
+
+          setMsg("✅ Account created. Check your email or sign in.");
+          setSuccess(true);
+
+          setTimeout(() => {
+            setMode("signin");
+            setMsg("");
+          }, 3000);
+
+        } catch (err) {
+          console.error(err);
+          setMsg(err.message || "Signup failed.");
+        } finally {
+          setBusy(false);
         }
 
-        setMsg("✅ Verification email sent! Please check your inbox.");
-        setSuccess(true);
-        setTimeout(() => {
-          setMode("signin");
-          setMsg("");
-        }, 15000);
         return;
       }
+        
 
       // --- SIGNIN ---
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -92,37 +149,50 @@ export default function Login() {
           {
             user_id: user.id,
             email: user.email,
-            name: user.email?.split("@")[0] || "New User",
+            full_name: user.email?.split("@")[0] || "New User",
             status: "pending",
             is_approved: false,
             subscription_status: "none",
             created_at: new Date().toISOString(),
           },
         ]);
-        return router.push("/pending-approval");
+        return router.push("/account");
+      }
+
+      if (account.status === "paused") {
+        await supabase.auth.signOut();
+        setMsg("Your account is temporarily paused. Please contact support to restore access.");
+        return;
       }
 
       // ✅ Routing logic
       if (!account.is_approved || account.status === "pending") {
-        return router.push("/pending-approval");
+        return router.push("/account");
       }
 
-      if (
-        account.is_approved === true &&
-        (account.subscription_status === "none" || account.subscription_status === "pending")
-      ) {
-        return router.push("/billing");
-      }
-
-      if (account.is_approved && account.subscription_status === "active") {
+      if (account.is_approved === true) {
+        // Honour explicit redirect param (e.g. from approval email link)
+        const redirectTo = router.query.redirect;
+        if (redirectTo && redirectTo.startsWith("/")) {
+          return router.push(redirectTo);
+        }
+        // Approved but no active subscription → must complete billing first
+        const hasSub = account.subscription_status && account.subscription_status !== "none" && account.subscription_status !== "inactive";
+        if (!hasSub) {
+          return router.push("/billing");
+        }
         return router.push("/dashboard");
       }
 
       // fallback
-      router.push("/pending-approval");
+      router.push("/account");
     } catch (err) {
       console.error(err);
-      setMsg(err.message || "Something went wrong.");
+      if (mode === "signup") {
+        setMsg(formatSignupError(err));
+      } else {
+        setMsg(err.message || "Something went wrong.");
+      }
     } finally {
       setBusy(false);
     }
@@ -130,12 +200,11 @@ export default function Login() {
 
   const handleForgot = async () => {
     if (!email) return setMsg("Enter your email to reset password.");
+    setMsg("If your email is registered, a password reset link has been sent. Check your inbox and spam folder.");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/login",
+      redirectTo: "http://localhost:3000/reset-password",
     });
-    setMsg(
-      error ? error.message : "Password reset link sent to your email."
-    );
+    if (error) setMsg(error.message);
   };
 
   return (
@@ -250,9 +319,9 @@ const box = {
   boxShadow: "0 0 14px rgba(0,0,0,0.5)",
 };
 
-const title = { fontSize: 20, fontWeight: 900, margin: "12px 0 4px" };
-const subtitle = { opacity: 0.8, fontSize: 14, marginBottom: 20 };
-const label = { fontWeight: 700, fontSize: 14, marginTop: 10, display: "block" };
+const title = { fontSize: 22, fontWeight: 700, margin: "12px 0 4px" };
+const subtitle = { opacity: 0.8, fontSize: 18, marginBottom: 20 };
+const label = { fontWeight: 600, fontSize: 16, marginTop: 10, display: "block" };
 const input = {
   width: "100%",
   background: "#0e1420",
@@ -301,3 +370,4 @@ const msgBox = (success) => ({
   textAlign: "center",
   fontWeight: 600,
 });
+import Link from "next/link";

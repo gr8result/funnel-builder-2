@@ -1,0 +1,37 @@
+Email not displaying correctly? View in browser ( {{weblink}} )
+
+ENTER YOUR BRACKET ( http:// )
+
+*MARCH MADNESS BONUS!*
+
+*Increase your chances of scoring big.*
+*There are 3 ways to earn more credits:*
+
+*Refer a Friend*
+
+*Get 10 credits when someone signs up with your referral code (found in account settings).*
+
+*Make a Purchase*
+*
+*
+*Get 30 credits every time you buy from any of our retail partners.*
+
+*Enter a weekly lotto*
+
+*Get 2 credits when you submit a pick through one of our weekly lotteries.*
+
+*SUPPORT* ( http:// )
+
+*I* ( http:// ) *NSTAGRAM*
+
+*F* ( http:// ) *ACEBOOK*
+
+*T* ( http:// ) *WITTER*
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

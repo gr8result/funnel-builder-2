@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: sitebuilder
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    restart: unless-stopped
+    volumes:
+      - sitebuilder-db-data:/var/lib/postgresql/data
+
+  visual-builder:
+    image: odoo:17.0
+    depends_on:
+      - db
+    command: >
+      odoo --proxy-mode --db_host=db --db_user=odoo --db_password=odoo -d sitebuilder --init=base,website --without-demo=all
+    ports:
+      - "8069:8069"
+    restart: unless-stopped
+    volumes:
+      - sitebuilder-web-data:/var/lib/odoo
+
+volumes:
+  sitebuilder-db-data:
+  sitebuilder-web-data:

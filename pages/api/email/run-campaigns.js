@@ -6,8 +6,10 @@
 // ✅ Writes from_email/from_name into every job
 // ✅ Prevents duplicates unless ?force=1
 // ✅ Cumulative delay: email3 is AFTER email2
+// ✅ ENFORCES EMAIL LIMITS (NEW)
 
 import { createClient } from "@supabase/supabase-js";
+import { guardEmailSend } from "../../../lib/emailValidation";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -22,6 +24,16 @@ const clean = (v) => String(v ?? "").trim();
 const isEmail = (v) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(v).toLowerCase());
 
+const parseRecipientEmails = (value) =>
+  Array.from(
+    new Set(
+      clean(value)
+        .split(/[\n,;]+/g)
+        .map((entry) => clean(entry).toLowerCase())
+        .filter(Boolean)
+    )
+  );
+
 function pickFirst(obj, keys) {
   for (const k of keys) {
     const v = obj?.[k];
@@ -32,14 +44,16 @@ function pickFirst(obj, keys) {
 
 // ✅ your real schema uses a single "delay_minutes" integer per email
 function delayMs(campaign, idx) {
-  // preferred: real columns
   const minutesCol = Number(campaign?.[`email${idx}_delay_minutes`] ?? 0);
   if (!Number.isNaN(minutesCol) && minutesCol > 0) return minutesCol * 60_000;
 
-  // fallback: legacy split fields (if you ever add them)
   const d = Number(campaign?.[`email${idx}_delay_days`] ?? 0);
   const h = Number(campaign?.[`email${idx}_delay_hours`] ?? 0);
-  const m = Number(campaign?.[`email${idx}_delay_minutes_legacy`] ?? campaign?.[`email${idx}_delay_mins`] ?? 0);
+  const m = Number(
+    campaign?.[`email${idx}_delay_minutes_legacy`] ??
+      campaign?.[`email${idx}_delay_mins`] ??
+      0
+  );
   const totalMins = d * 1440 + h * 60 + m;
   return Math.max(0, totalMins) * 60_000;
 }
@@ -47,24 +61,52 @@ function delayMs(campaign, idx) {
 async function loadHtml(userId, templateId) {
   if (!templateId) return null;
 
-  const filename = String(templateId).endsWith(".html")
-    ? String(templateId)
-    : `${templateId}.html`;
+  const rawTemplateId = clean(templateId).replace(/^\/+/, "");
+  if (!rawTemplateId) return null;
 
-  const paths = [
-    `finished-emails/${filename}`,
-    `${userId}/finished-emails/${filename}`,
+  const builderDocJsonPath = rawTemplateId.endsWith(".json")
+    ? rawTemplateId
+    : `${userId}/builder-docs/${rawTemplateId}.json`;
+
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from("email-user-assets")
+      .download(builderDocJsonPath);
+    if (!error && data) {
+      const parsed = JSON.parse(await data.text());
+      const html = clean(parsed?.html || "");
+      if (html) return html;
+    }
+  } catch {}
+
+  const filename = rawTemplateId.endsWith(".html")
+    ? rawTemplateId
+    : `${rawTemplateId}.html`;
+
+  const storageTargets = [
+    { bucket: "email-user-assets", path: rawTemplateId },
+    { bucket: "email-user-assets", path: filename },
+    { bucket: "email-user-assets", path: `${userId}/builder-docs/${filename}` },
+    { bucket: "email-user-assets", path: `${userId}/finished-emails/${filename}` },
+    { bucket: "email-user-assets", path: `finished-emails/${filename}` },
+    { bucket: "email-assets", path: rawTemplateId },
+    { bucket: "email-assets", path: filename },
+    { bucket: "email-assets", path: `templates/${filename}` },
   ];
 
-  for (const p of paths) {
+  const seen = new Set();
+
+  for (const target of storageTargets) {
+    const key = `${target.bucket}:${target.path}`;
+    if (!target.path || seen.has(key)) continue;
+    seen.add(key);
+
     try {
       const { data, error } = await supabaseAdmin.storage
-        .from("email-user-assets")
-        .download(p);
+        .from(target.bucket)
+        .download(target.path);
       if (!error && data) return await data.text();
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   return null;
@@ -136,70 +178,49 @@ export default async function handler(req, res) {
       campaign.list_id ||
       campaign.lead_list_id;
 
-    if (!listId) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Campaign missing subscriber_list_id" });
-    }
+    let recipients = [];
 
-    // Prevent duplicate queue unless force
-    const { count: existingCount, error: existingErr } = await supabaseAdmin
-      .from("email_campaigns_queue")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id)
-      .in("status", ["queued", "scheduled", "error"]);
+    if (listId) {
+      const { data: leads, error: leadsErr } = await supabaseAdmin
+        .from("leads")
+        .select("id,email")
+        .eq("list_id", listId);
 
-    if (existingErr) {
-      return res.status(500).json({
-        ok: false,
-        error: existingErr.message || String(existingErr),
-      });
-    }
+      if (leadsErr) {
+        return res
+          .status(500)
+          .json({ ok: false, error: leadsErr.message || String(leadsErr) });
+      }
+      if (!leads?.length) {
+        return res.status(400).json({ ok: false, error: "List is empty" });
+      }
 
-    if (!force && (existingCount || 0) > 0) {
-      return res.status(409).json({
-        ok: false,
-        error:
-          "Campaign is already queued. Use POST ?force=1 to re-queue (clears unsent jobs).",
-        existing_unsent_jobs: existingCount || 0,
-      });
-    }
+      recipients = leads.map((lead) => ({
+        subscriber_id: lead.id,
+        lead_id: lead.id,
+        email: lead.email,
+      }));
+    } else {
+      recipients = parseRecipientEmails(campaign.extra_recipients).map((email) => ({
+        subscriber_id: null,
+        lead_id: null,
+        email,
+      }));
 
-    if (force) {
-      const { error: delErr } = await supabaseAdmin
-        .from("email_campaigns_queue")
-        .delete()
-        .eq("campaign_id", campaign.id)
-        .in("status", ["queued", "scheduled", "error"]);
-      if (delErr) {
-        return res.status(500).json({
+      if (!recipients.length) {
+        return res.status(400).json({
           ok: false,
-          error: `Failed clearing old queue: ${delErr.message || String(delErr)}`,
+          error: "Campaign needs a subscriber list or at least one custom recipient email.",
         });
       }
     }
 
-    const { data: leads, error: leadsErr } = await supabaseAdmin
-      .from("leads")
-      .select("id,email")
-      .eq("list_id", listId);
-
-    if (leadsErr) {
-      return res
-        .status(500)
-        .json({ ok: false, error: leadsErr.message || String(leadsErr) });
-    }
-    if (!leads?.length) {
-      return res.status(400).json({ ok: false, error: "List is empty" });
-    }
-
-    // ✅ Template id column name drift protection
     const templateKeys = (idx) => [
-      `email${idx}_template_id`,     // your schema
-      `email${idx}_template`,        // older UI variants
-      `email${idx}_saved_email`,     // older UI variants
-      `email${idx}_saved_email_id`,  // older UI variants
-      `email${idx}_email_id`,        // just in case
+      `email${idx}_template_id`,
+      `email${idx}_template`,
+      `email${idx}_saved_email`,
+      `email${idx}_saved_email_id`,
+      `email${idx}_email_id`,
     ];
 
     const buildEmail = async (idx) => {
@@ -208,7 +229,6 @@ export default async function handler(req, res) {
 
       const templateId = pickFirst(campaign, templateKeys(idx));
 
-      // If BOTH empty -> skip (optional emails)
       if (!subject && !templateId) return null;
 
       const html =
@@ -231,13 +251,13 @@ export default async function handler(req, res) {
 
     const now = Date.now();
     const d2 = delayMs(campaign, 2);
-    const d3 = d2 + delayMs(campaign, 3); // cumulative
+    const d3 = d2 + delayMs(campaign, 3);
 
     const jobs = [];
     let invalid = 0;
 
-    for (const l of leads) {
-      const to = clean(l.email).toLowerCase();
+    for (const recipient of recipients) {
+      const to = clean(recipient.email).toLowerCase();
       if (!isEmail(to)) {
         invalid++;
         continue;
@@ -248,8 +268,8 @@ export default async function handler(req, res) {
         jobs.push({
           user_id: campaign.user_id,
           campaign_id: campaign.id,
-          subscriber_id: l.id,
-          lead_id: l.id,
+          subscriber_id: recipient.subscriber_id,
+          lead_id: recipient.lead_id,
           subscriber_email: to,
           to_email: to,
           from_email: fromEmail,
@@ -270,10 +290,15 @@ export default async function handler(req, res) {
       push(3, e3, now + d3);
     }
 
-    if (!jobs.length) {
-      return res.status(400).json({
+    let emailGuard = null;
+    try {
+      emailGuard = await guardEmailSend(campaign.user_id, jobs.length);
+    } catch (limitErr) {
+      return res.status(429).json({
         ok: false,
-        error: "No jobs created (no valid emails).",
+        error: limitErr.message,
+        code: limitErr.code,
+        details: limitErr.details,
       });
     }
 
@@ -295,14 +320,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      force,
-      recipients: leads.length,
+      recipients: recipients.length,
       queued_jobs: jobs.length,
       invalid_recipients: invalid,
-      queued_email_1: !!e1,
-      queued_email_2: !!e2,
-      queued_email_3: !!e3,
-      delays_ms: { email2: d2, email3: d3 },
+      usage: emailGuard || null,
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });

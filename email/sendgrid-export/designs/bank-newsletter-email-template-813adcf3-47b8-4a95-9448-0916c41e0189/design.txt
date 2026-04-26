@@ -1,0 +1,45 @@
+Email not displaying correctly? View it in the browser ( {{Weblink}} ).
+
+*APPLY TODAY!*
+
+Introducing our new
+travel credit card
+
+*START EARNING*
+
+Make Every Dollar Count
+
+*- 3x points on hotels, gas, and flights*
+*- 10% off international transportation*
+*- Airport lounge access*
+*- Discounts at international airports*
+
+Learn More!
+
+*SPOTLIGHT: MEET LUCIA*
+
+Lucia Baez talks about how she used the Star Capital Bank Travel Card to fund her trip to Istanbul.
+
+Read More
+
+*SPOTLIGHT: TRAVEL*
+
+Brazil is a top destination and you can now book top resorts at discounted rates with your card!
+
+Read More
+
+If you have concerns about the authenticity of this email, please visit starcapitalbank.com/contact
+
+ABOUT ( http:// )
+
+TERMS AND CONDITIONS ( http:// )
+
+SUPPORT ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

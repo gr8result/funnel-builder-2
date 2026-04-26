@@ -91,6 +91,24 @@ export default async function handler(req, res) {
           .filter(Boolean);
       }
 
+      // ✅ Ensure a profiles row exists for this user
+      if (userId) {
+        const legacyStatus = session.metadata?.calendarPlan
+          ? `active:${session.metadata.calendarPlan}`
+          : (slugs.includes("calendar") ? "active" : null);
+        await supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              user_id: userId,
+              email: email,
+              calendar_subscription_status: legacyStatus,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+      }
+
       // ✅ Grant entitlements
       if (userId && slugs.length) {
         const now = new Date().toISOString();
@@ -110,15 +128,51 @@ export default async function handler(req, res) {
             );
         }
 
-        // ✅ Mark account as active/paid
-        await supabaseAdmin
+        // ✅ Mark account as active/paid and write plan tiers from metadata
+        const planPayload = {
+          subscription_status: "active",
+          status: "active",
+          updated_at: new Date().toISOString(),
+        };
+        if (session.metadata?.calendarPlan) planPayload.calendar_plan_tier = session.metadata.calendarPlan;
+        if (session.metadata?.emailPlan) planPayload.email_plan_tier = session.metadata.emailPlan;
+        if (session.metadata?.smsPlan) planPayload.sms_plan_tier = session.metadata.smsPlan;
+
+        let { error: planUpdateErr } = await supabaseAdmin
           .from("accounts")
-          .update({
-            subscription_status: "active",
-            status: "active",
-            updated_at: new Date().toISOString(),
-          })
+          .update(planPayload)
           .eq("user_id", userId);
+
+        if (planUpdateErr && /calendar_plan_tier/i.test(planUpdateErr.message || "")) {
+          const payloadWithoutCalendarTier = { ...planPayload };
+          delete payloadWithoutCalendarTier.calendar_plan_tier;
+          const retry = await supabaseAdmin
+            .from("accounts")
+            .update(payloadWithoutCalendarTier)
+            .eq("user_id", userId);
+          planUpdateErr = retry.error || null;
+        }
+
+        if (planUpdateErr) {
+          console.error("accounts plan update error:", planUpdateErr);
+        }
+
+        if (session.metadata?.calendarPlan || slugs.includes("calendar")) {
+          const legacyStatus = session.metadata?.calendarPlan
+            ? `active:${session.metadata.calendarPlan}`
+            : "active";
+          await supabaseAdmin
+            .from("profiles")
+            .upsert(
+              {
+                user_id: userId,
+                email,
+                calendar_subscription_status: legacyStatus,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" }
+            );
+        }
 
         console.log("✅ Entitlements and account activated for", email);
       }

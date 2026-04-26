@@ -1,0 +1,34 @@
+MUSIC AND VIDEO STREAMING PLATFORM
+
+Only 2 days left...
+
+Your trial is almost over!
+
+Upgrade to continue enjoying music and videos on demand.
+Any time. Any place.
+
+I'm Ready To Upgrade!
+
+Need more time to decide? Extend your trial for 3 days.
+
+Extend My Trial
+
+Check out the
+the playlist of the week!
+
+Viral hits, trending tracks, and new releases from your favorite artists.
+
+Let's Hear It
+
+Need help choosing a plan? Questions about accounts or billing?
+We're here to help. Our customer services reps are available 24/7.
+
+*Contact Us* ( http:// )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

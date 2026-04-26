@@ -2,11 +2,31 @@
   "crons": [
     {
       "path": "/api/automation/engine/tick",
-       "schedule": "0 2 * * *"
+      "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/email/autoresponders/process-queue?key=c1ae7bf64e1173572ebddde70789919bf457975eae044dc1413654e5ac524645",
+      "path": "/api/email/autoresponders/process-queue",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/smsglobal/flush-queue",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/social/cron/process-schedule",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/social/cron/process-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/social/cron/refresh-tokens",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/calendar/send-reminders",
+      "schedule": "0 * * * *"
     }
   ]
 }

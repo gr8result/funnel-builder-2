@@ -1,7 +1,7 @@
 // components/Banner.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "../utils/supabase-client";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Banner() {
   const router = useRouter();
@@ -79,8 +79,8 @@ export default function Banner() {
           object-fit: cover;
         }
         .company {
-          font-weight: 700;
-          font-size: 16px;
+          font-weight: 600;
+          font-size: 24px;
         }
         .profile {
           position: relative;

@@ -1,7 +1,7 @@
 ﻿// pages/logout.js
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import supabase from "../utils/supabase-client";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Logout() {
   const router = useRouter();

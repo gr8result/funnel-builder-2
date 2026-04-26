@@ -2,6 +2,7 @@ import { Handle, Position } from "reactflow";
 
 export default function DelayNode({ data }) {
   const d = data.delay || {};
+  const passed = Number(data?.passedCount ?? 0);
   const summary =
     d.mode === "absolute"
       ? `Specific: ${d.date || ""} ${d.time || ""}`
@@ -29,6 +30,20 @@ export default function DelayNode({ data }) {
 
       <div style={{ marginTop: 2, fontSize: 16, opacity: 0.85 }}>
         {summary}
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 14,
+          fontWeight: 700,
+          background: "rgba(0,0,0,0.25)",
+          padding: "6px 10px",
+          borderRadius: 999,
+          display: "inline-block",
+        }}
+      >
+        Passed: {passed}
       </div>
 
       <Handle

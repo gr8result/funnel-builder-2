@@ -1,0 +1,23 @@
+Email not displaying correctly? *VIEW IT* in your browser.
+
+The protein drink that tastes like milk
+
+*Try the*
+
+*SANDY PROTEIN*
+
+*for free!*
+
+You shouldn't have to pinch your nose to swallow your protein drink. That's why we designed Sandy Protein with a well-balanced natural flavor combination—to delight your body and your tastebuds.
+
+TRY IT NOW!
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

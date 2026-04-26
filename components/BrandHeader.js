@@ -113,14 +113,14 @@ export default function BrandHeader() {
         .left{display:flex; align-items:center; gap:12px}
         .logoWrap{width:48px;height:48px;border-radius:50%;overflow:hidden;border:1px solid #223448;background:#0f1722;display:flex;align-items:center;justify-content:center}
         .logoWrap img{width:100%;height:100%;object-fit:cover}
-        .placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#eaf0ff}
-        .orgName{font-weight:900;color:#eaf0ff;max-width:42vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#eaf0ff}
+        .orgName{font-weight:600;color:#eaf0ff;max-width:42vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .orgHint{font-size:12px;opacity:.7;margin-top:-2px}
         .centre{flex:1;text-align:center;font-size:13px;color:#ffd36b;min-height:18px}
         .right{position:relative}
         .avatarBtn{width:72px;height:72px;border-radius:50%;border:1px solid #223448;background:#0f1722;color:#eaf0ff;cursor:pointer;display:flex;align-items:center;justify-content:center}
         .avatarBtn img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-        .initials{font-weight:900;font-size:22px}
+        .initials{font-weight:600;font-size:22px}
         .menu{position:absolute;right:0;top:80px;background:#0f1722;border:1px solid #223448;border-radius:12px;padding:6px;min-width:200px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
         .menu a{display:block;padding:10px 12px;border-radius:10px;color:#eaf0ff;text-decoration:none}
         .menu a:hover{background:#0b111a}

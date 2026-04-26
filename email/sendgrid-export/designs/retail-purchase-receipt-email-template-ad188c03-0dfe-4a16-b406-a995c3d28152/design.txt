@@ -1,0 +1,49 @@
+View this email in your browser. ( {{Weblink}} )
+
+Irvine Spectrum Center Suite 104B
+670 Spectrum Center Dr.
+Irvine, CA 92618
+
+*THANK YOU FOR SHOPPING WITH US TODAY.*
+
+*Sales Receipt*
+January 20, 2020 5:40 PM
+
+*Employee:* Sammie
+*Customer:* Jane Doe
+*Email:* janedoe@example.com
+*Ticket Number:* 123456789
+
+*ITEM*
+
+*QTY*
+
+*PRICE*
+
+Villa Floral (120 mL)
+
+1
+
+$175.90
+
+Port Toulon (40 mL)
+
+1
+
+$35.90
+
+*Want to check out all our products? We now offer free shipping!*
+
+Shop Online
+
+*Thank you for shopping at Beauvais + Lille. If you need to return any items, they need to be returned in its original packaging with proof of purchase. If you do not have a proof of purchase, we can offer you store credit.*
+
+*We hope you enjoy our products!*
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

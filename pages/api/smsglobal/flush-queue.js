@@ -1,347 +1,287 @@
 // /pages/api/smsglobal/flush-queue.js
 // FULL REPLACEMENT
 //
-// ✅ Option B (recommended): CRON key access for server/cron/browser calls
-//    GET /api/smsglobal/flush-queue?key=<CRON_SECRET>&limit=50
-//
-// ✅ Option A (still supported): Bearer token access
-//    POST /api/smsglobal/flush-queue?limit=50
-//    Authorization: Bearer <SUPABASE_ACCESS_TOKEN>
-//
-// ✅ Sends queued sms_queue rows via SMSGlobal
-// ✅ Updates: status + sent_at + provider_message_id/provider_id + last_error/error
-// ✅ Handles your schema: scheduled_for + available_at + provider_message_id + last_error
-// ✅ Works with integer sms_queue.id
-// ✅ Uses shared sendSmsGlobal from lib/smsglobal/index.js for proper MAC auth
-//
-// Query params:
-//   limit=50 (default 25, max 200)
-//   dry=1    (no sends, just reports due rows)
-//
-// ENV required:
-//   NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
-//   NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY)
-//   SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE / SUPABASE_SERVICE_KEY / SUPABASE_SERVICE)
-//
-//   SMSGLOBAL_API_KEY
-//   SMSGLOBAL_API_SECRET
-//   DEFAULT_SMS_ORIGIN (optional)
-//   SMSGLOBAL_ALLOWED_ORIGINS (optional comma list)
-//   CRON_SECRET (or AUTOMATION_CRON_KEY)  <-- Option B key
+// Sends queued SMS from sms_queue using per-user SMSGlobal credentials
+// Multi-tenant safe
 
 import { createClient } from "@supabase/supabase-js";
-import { sendSmsGlobal } from "../../../lib/smsglobal/index.js";
+import { sendSmsGlobal } from "../../../lib/smsglobal";
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE ||
-  process.env.SUPABASE_SERVICE;
+  process.env.SUPABASE_SERVICE_KEY ||
+  "";
 
-const DEFAULT_SMS_ORIGIN = (process.env.DEFAULT_SMS_ORIGIN || "gr8result").trim();
+// ✅ Main account fallback
+const MAIN_SMS_API_KEY = process.env.SMSGLOBAL_API_KEY || "";
+const MAIN_SMS_API_SECRET = process.env.SMSGLOBAL_API_SECRET || "";
+const DEFAULT_SMS_ORIGIN = process.env.DEFAULT_SMS_ORIGIN || "gr8result";
 
-const SMSGLOBAL_ALLOWED_ORIGINS = String(
-  process.env.SMSGLOBAL_ALLOWED_ORIGINS || ""
-)
-  .split(",")
-  .map((x) => x.trim())
-  .filter(Boolean);
+const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false },
+});
 
-const CRON_SECRET = process.env.CRON_SECRET || process.env.AUTOMATION_CRON_KEY;
-
-function s(v) {
-  return String(v ?? "").trim();
+function nowIso() {
+  return new Date().toISOString();
 }
 
-function json(res, status, body) {
-  return res.status(status).json(body);
+async function updateRow(id, patch) {
+  const { error } = await supabaseAdmin
+    .from("sms_queue")
+    .update(patch)
+    .eq("id", id);
+
+  if (error) throw error;
 }
 
-function normalizePhone(raw) {
-  let v = String(raw || "").trim();
-  if (!v) return "";
-  v = v.replace(/[^\d+]/g, "");
+/* -------------------------------------------------------------------------- */
+/*                        GET USER SMS SETTINGS                                */
+/* -------------------------------------------------------------------------- */
 
-  // Strip leading + if present
-  if (v.startsWith("+")) v = v.slice(1);
-
-  // AU normalisation: convert 0XXXXXXXXX to 61XXXXXXXXX
-  if (v.startsWith("0") && v.length >= 9) v = "61" + v.slice(1);
-
-  // Ensure it starts with 61 (AU country code)
-  if (!v.startsWith("61")) {
-    // If it's already just digits without country code, assume AU
-    if (/^\d{9,}$/.test(v)) v = "61" + v;
+async function getUserSettings(user_id) {
+  if (!user_id) {
+    throw new Error("Missing user_id on sms_queue row");
   }
 
-  return v;
-}
+  // Fetch account settings (required)
+  const { data: account, error: accountError } = await supabaseAdmin
+    .from("accounts")
+    .select("sms_api_key, sms_api_secret, sender_id, business_name")
+    .eq("user_id", user_id)
+    .maybeSingle();
 
-function pickOrigin() {
-  if (SMSGLOBAL_ALLOWED_ORIGINS.length) {
-    if (SMSGLOBAL_ALLOWED_ORIGINS.includes(DEFAULT_SMS_ORIGIN)) return DEFAULT_SMS_ORIGIN;
-    return SMSGLOBAL_ALLOWED_ORIGINS[0];
-  }
-  return DEFAULT_SMS_ORIGIN;
-}
-
-function parseTime(v) {
-  if (!v) return NaN;
-  const t = new Date(String(v)).getTime();
-  return Number.isFinite(t) ? t : NaN;
-}
-
-function isDueNow(row, nowMs) {
-  // includes YOUR scheduled_for
-  const candidates = [
-    row?.scheduled_for,
-    row?.scheduled_at,
-    row?.available_at,
-    row?.send_at,
-    row?.run_at,
-  ]
-    .map(parseTime)
-    .filter((t) => Number.isFinite(t));
-
-  if (!candidates.length) return true;
-  return Math.min(...candidates) <= nowMs;
-}
-
-function getRowToPhone(row) {
-  return (
-    normalizePhone(row?.to_phone) ||
-    normalizePhone(row?.to) ||
-    normalizePhone(row?.phone) ||
-    normalizePhone(row?.destination) ||
-    ""
-  );
-}
-
-function getRowMessage(row) {
-  return s(row?.body) || s(row?.message) || s(row?.text) || "";
-}
-
-function getRowId(row) {
-  return row?.id; // integer in your table
-}
-
-async function updateRow(supabaseAdmin, id, patch) {
-  // Try variants so we survive minor schema differences
-  const variants = [
-    patch,
-    {
-      ...patch,
-      provider_message_id: patch.provider_message_id ?? patch.provider_id,
-      provider_id: patch.provider_id ?? patch.provider_message_id,
-      last_error: patch.last_error ?? patch.error,
-      error: patch.error ?? patch.last_error,
-    },
-  ];
-
-  let lastErr = null;
-  for (const p of variants) {
-    const up = await supabaseAdmin.from("sms_queue").update(p).eq("id", id);
-    if (!up.error) return { ok: true };
-    lastErr = up.error;
-  }
-  return { ok: false, error: lastErr };
-}
-
-async function getUserFromBearer(req, supabaseAnon) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-  if (!token) return null;
-
-  const { data, error } = await supabaseAnon.auth.getUser(token);
-  if (error || !data?.user) return null;
-  return data.user;
-}
-
-function hasValidKey(req) {
-  const key = s(req.query?.key);
-  if (!CRON_SECRET) return false;
-  return key && key === CRON_SECRET;
-}
-
-export default async function handler(req, res) {
-  // Allow GET (cron/browser) + POST (api client)
-  if (req.method !== "GET" && req.method !== "POST") {
-    res.setHeader("Allow", "GET, POST");
-    return json(res, 405, { ok: false, error: "Method not allowed" });
+  if (accountError || !account) {
+    throw new Error("No SMS settings for user account");
   }
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_KEY) {
-    return json(res, 500, { ok: false, error: "Missing Supabase env" });
-  }
+  // ✅ Return user settings with flag if using main account fallback
+  const hasUserCreds = !!(account.sms_api_key && account.sms_api_secret);
+  
+  return {
+    sms_api_key: hasUserCreds ? account.sms_api_key : MAIN_SMS_API_KEY,
+    sms_api_secret: hasUserCreds ? account.sms_api_secret : MAIN_SMS_API_SECRET,
+    sender_id: account.sender_id,
+    business_name: account.business_name,
+    usingMainAccount: !hasUserCreds,
+  };
+}
 
-  const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
+/* -------------------------------------------------------------------------- */
+/*                           FETCH QUEUED SMS                                  */
+/* -------------------------------------------------------------------------- */
 
-  const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false },
-  });
+async function fetchQueue(limit = 25) {
+  const now = nowIso();
 
-  const keyMode = hasValidKey(req);
-
-  // If not keyMode, require Bearer user
-  let user = null;
-  if (!keyMode) {
-    user = await getUserFromBearer(req, supabaseAnon);
-    if (!user) {
-      return json(res, 401, { ok: false, error: "Unauthorized (missing/invalid Bearer token)" });
-    }
-  }
-
-  const limit = Math.min(Math.max(Number(req.query.limit || 25), 1), 200);
-  const dry = String(req.query.dry || "").trim() === "1";
-
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const nowMs = now.getTime();
-
-  // Pull a batch of rows, then filter due in JS (schema-safe)
-  // Key mode = all users; Bearer mode = this user only.
-  let q = supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("sms_queue")
     .select("*")
-    .order("id", { ascending: true })
-    .limit(limit * 10);
+    .in("status", ["queued", "pending"])
+    .or(`scheduled_for.is.null,scheduled_for.lte.${now}`)
+    .order("scheduled_for", { ascending: true, nullsFirst: true })
+    .limit(limit);
 
-  if (!keyMode && user?.id) {
-    q = q.eq("user_id", user.id);
+  if (error) throw error;
+  return data || [];
+}
+
+// ✅ NOTE: After successful send, queue rows are DELETED (not just marked as "sent")
+// This keeps the queue table clean and uncluttered
+// If you need historical records of sent SMS, Archive completed rows to a separate table
+
+/* -------------------------------------------------------------------------- */
+/*                                HANDLER                                      */
+/* -------------------------------------------------------------------------- */
+
+export default async function handler(req, res) {
+  if (req.method !== "POST" && req.method !== "GET") {
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  const read = await q;
-
-  if (read.error) {
-    return json(res, 500, {
-      ok: false,
-      error: "Failed to read sms_queue",
-      detail: read.error.message,
+  // Authentication check (allow in dev, require key in production)
+  const isDev = process.env.NODE_ENV === "development";
+  const authHeader = String(req.headers?.authorization || "");
+  const bearerToken = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const providedKey = req.query?.key || req.headers["x-cron-key"] || "";
+  const expectedKey = process.env.CRON_SECRET || 
+                      process.env.AUTOMATION_CRON_KEY || 
+                      process.env.SMSGLOBAL_CRON_KEY || 
+                      "";
+  const hasValidSecret =
+    !expectedKey ||
+    providedKey === expectedKey ||
+    bearerToken === expectedKey;
+  
+  if (!isDev && !hasValidSecret) {
+    return res.status(401).json({ 
+      ok: false, 
+      error: "Unauthorized - invalid or missing cron key" 
     });
   }
 
-  const all = Array.isArray(read.data) ? read.data : [];
-
-  // Pending statuses
-  const pending = all.filter((r) => {
-    const st = s(r?.status).toLowerCase();
-    const alreadySent = !!s(r?.sent_at) || !!s(r?.provider_message_id) || !!s(r?.provider_id);
-    if (alreadySent) return false;
-    return !st || st === "queued" || st === "pending" || st === "ready";
-  });
-
-  const due = pending.filter((r) => isDueNow(r, nowMs)).slice(0, limit);
-
-  // Fast report for dry mode
-  if (dry) {
-    return json(res, 200, {
-      ok: true,
-      dry: true,
-      now: nowIso,
-      key_mode: keyMode,
-      pending_found: pending.length,
-      due_found: due.length,
-      sample_ids: due.slice(0, 20).map((r) => r.id),
+  try {
+    const limit = Number(req.query?.limit || 25);
+    
+    console.log("🔄 flush-queue: Starting to process SMS queue", {
+      limit,
+      isDev: process.env.NODE_ENV === "development",
+      hasAuth: !!providedKey || isDev,
     });
-  }
+    
+    const rows = await fetchQueue(limit > 0 ? limit : 25);
+    
+    console.log(`📋 flush-queue: Found ${rows.length} queued messages`);
 
-  let processed = 0;
-  let sent = 0;
-  let failed = 0;
-  const results = [];
-
-  for (const row of due) {
-    processed++;
-
-    const id = getRowId(row);
-    const to = getRowToPhone(row);
-    const message = getRowMessage(row);
-
-    if (!id || !to || !message) {
-      failed++;
-      results.push({ id: id ?? null, ok: false, error: "Row missing id/to/message" });
-      continue;
+    if (!rows.length) {
+      return res.status(200).json({
+        ok: true,
+        processed: 0,
+        sent: 0,
+        failed: 0,
+        message: "No queued SMS",
+      });
     }
 
-    // mark sending
-    await updateRow(supabaseAdmin, id, { status: "sending", last_error: null, error: null });
+    let sent = 0;
+    let failed = 0;
 
-    try {
-      const out = await sendSmsGlobal({
-        toPhone: to,
-        message,
-        origin: s(row?.origin) || pickOrigin(),
-      });
+    for (const row of rows) {
+      try {
+        console.log(`📤 Processing SMS queue row ${row.id} for user ${row.user_id}`);
+        
+        await updateRow(row.id, { status: "pending", last_error: null });
 
-      if (!out.ok) {
-        failed++;
+        const settings = await getUserSettings(row.user_id);
 
-        await updateRow(supabaseAdmin, id, {
+        if (!settings.sms_api_key || !settings.sms_api_secret) {
+          throw new Error("SMS credentials missing (no user subaccount and no main account fallback)");
+        }
+        
+        // Validate phone number exists
+        if (!row.to_phone) {
+          throw new Error("Missing to_phone in queue row");
+        }
+        
+        // Validate message exists
+        if (!row.body) {
+          throw new Error("Missing message body in queue row");
+        }
+
+        // ✅ CRITICAL LOGIC FOR SENDER ID:
+        // - If user has their OWN subaccount credentials: use their custom sender_id (NO restrictions)
+        // - If using MAIN account credentials: ONLY use origins registered in main account (check ALLOWED_ORIGINS)
+        // - User subaccount sender IDs (like "WaitandSea") won't work with main account credentials!
+        
+        let origin;
+        
+        if (settings.usingMainAccount) {
+          // Using main account - can ONLY use origins registered in main account
+          const rawAllowed = process.env.SMSGLOBAL_ALLOWED_ORIGINS || "";
+          const allowedOrigins = rawAllowed
+            .split(",")
+            .map(s => s.trim().toLowerCase())
+            .filter(Boolean);
+          
+          const candidateOrigin = row.origin || settings.sender_id || settings.business_name || "";
+          const candidateLower = candidateOrigin.trim().toLowerCase();
+          const isAllowed = allowedOrigins.length === 0 || allowedOrigins.includes(candidateLower);
+          
+          if (isAllowed && candidateOrigin.trim()) {
+            origin = candidateOrigin.trim();
+            console.log(`📱 MAIN account: using allowed origin "${origin}"`);
+          } else {
+            origin = DEFAULT_SMS_ORIGIN || "gr8result";
+            console.log(`⚠️ MAIN account: "${candidateOrigin}" not in ALLOWED_ORIGINS, using "${origin}"`);
+          }
+        } else {
+          // User has own subaccount - can use ANY sender_id they've registered (NO ALLOWED_ORIGINS check)
+          origin = row.origin || settings.sender_id || settings.business_name || DEFAULT_SMS_ORIGIN || "gr8result";
+          console.log(`📱 USER subaccount: using origin "${origin}"`);
+        }
+        
+        console.log(`📱 SMS ${row.id}: Account: ${settings.usingMainAccount ? 'MAIN' : 'USER'}, Origin: "${origin}"`);
+        
+        const result = await sendSmsGlobal({
+          apiKey: settings.sms_api_key,
+          apiSecret: settings.sms_api_secret,
+          origin,
+          toPhone: row.to_phone,
+          message: row.body,
+        });
+        
+        if (!result.ok) {
+          throw new Error(
+            typeof result.body === 'object' 
+              ? JSON.stringify(result.body) 
+              : String(result.body || 'SMS send failed')
+          );
+        }
+        
+        // Extract message ID from SMSGlobal response
+        const providerId = result.body?.messages?.[0]?.id || 
+                          result.body?.id || 
+                          String(result.body || '');
+
+        // ✅ SAVE TO HISTORY before deleting from queue
+        // This preserves all sent SMS for historical analysis
+        const { error: histErr } = await supabaseAdmin
+          .from("sms_sent_history")
+          .insert({
+            user_id: row.user_id,
+            to_phone: row.to_phone,
+            body: row.body,
+            origin: origin,
+            status: "sent",
+            provider_message_id: providerId,
+            sent_at: nowIso(),
+          });
+
+        if (histErr) {
+          console.warn(`⚠️ Failed to save history for SMS ${row.id}: ${histErr.message}`);
+          // Still continue - queue deletion is more important than history
+        } else {
+          console.log(`💾 Saved SMS ${row.id} to sms_sent_history`);
+        }
+
+        // ✅ DELETE the row from queue after successful send (flush the queue)
+        const { error: delErr } = await supabaseAdmin
+          .from("sms_queue")
+          .delete()
+          .eq("id", row.id);
+
+        if (delErr) {
+          console.warn(`⚠️ Failed to delete queue row ${row.id}: ${delErr.message}`);
+          // Still count as sent to avoid retry loops
+        } else {
+          console.log(`✅ Flushed queue row ${row.id}`);
+        }
+
+        sent++;
+      } catch (err) {
+        await updateRow(row.id, {
           status: "failed",
-          last_error: `SMSGlobal HTTP ${out.http}`,
-          error: JSON.stringify(out.body || {}),
-          smsglobal_http: out.http,
+          last_error: String(err.message || err).slice(0, 1000),
         });
-
-        results.push({
-          id,
-          ok: false,
-          error: "SMSGlobal request failed",
-          smsglobal_http: out.http,
-          detail: out.body || {},
-        });
-        continue;
+        failed++;
       }
-
-      sent++;
-
-      // Extract provider_id from response body
-      const provider_id = 
-        (Array.isArray(out.body?.messages) && out.body.messages[0]?.id) ||
-        out.body?.messageId ||
-        out.body?.id ||
-        "";
-
-      await updateRow(supabaseAdmin, id, {
-        status: "sent",
-        sent_at: nowIso,
-        provider_message_id: provider_id || "",
-        provider_id: provider_id || "",
-        last_error: null,
-        error: null,
-      });
-
-      results.push({ id, ok: true, provider_id: provider_id || "" });
-    } catch (e) {
-      failed++;
-
-      await updateRow(supabaseAdmin, id, {
-        status: "failed",
-        last_error: e?.message || "Send failed",
-        error: e?.message || "Send failed",
-      });
-
-      results.push({ id, ok: false, error: e?.message || "Send failed" });
     }
-  }
 
-  return json(res, 200, {
-    ok: true,
-    key_mode: keyMode,
-    now: nowIso,
-    pending_found: pending.length,
-    due_found: due.length,
-    processed,
-    sent,
-    failed,
-    results,
-  });
+    console.log(`✅ flush-queue complete: ${sent} sent, ${failed} failed out of ${rows.length} processed`);
+
+    return res.status(200).json({
+      ok: true,
+      processed: rows.length,
+      sent,
+      failed,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
 }

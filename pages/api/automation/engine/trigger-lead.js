@@ -103,42 +103,24 @@ async function bestEffortAlreadyQueued({ lead_id, template_id, flow_id, node_id 
 }
 
 async function tryInsertQueue(rows) {
-  // Try multiple payload shapes so it works with slightly different queue schemas.
-  const attempts = [
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-      flow_id: r.flow_id,
-      node_id: r.node_id,
-      email_index: r.email_index,
-    })),
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-      email_index: r.email_index,
-    })),
-    rows.map((r) => ({
-      user_id: r.user_id,
-      lead_id: r.lead_id,
-      template_id: r.template_id,
-      scheduled_at: r.scheduled_at,
-      status: r.status,
-    })),
-  ];
-
-  let lastErr = null;
-  for (const payload of attempts) {
-    const { error } = await supabaseAdmin.from("email_campaign_queue").insert(payload);
-    if (!error) return { ok: true };
-    lastErr = error;
-  }
-  return { ok: false, error: lastErr?.message || "Queue insert failed" };
+  // Insert into automation_email_queue with required fields
+  // (Assume first row is representative)
+  const payload = rows.map((r) => ({
+    user_id: r.user_id,
+    flow_id: r.flow_id,
+    node_id: r.node_id,
+    lead_id: r.lead_id,
+    status: r.status || "queued",
+    scheduled_at: r.scheduled_at,
+    to_email: r.to_email,
+    html_path: r.html_path,
+    template_id: r.template_id,
+    email_index: r.email_index,
+    // Add more fields as needed by your automation worker
+  }));
+  const { error } = await supabaseAdmin.from("automation_email_queue").insert(payload);
+  if (!error) return { ok: true };
+  return { ok: false, error: error?.message || "Queue insert failed" };
 }
 
 export default async function handler(req, res) {
@@ -235,15 +217,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: "Email node missing template_id" });
     }
 
-    // Best-effort duplicate protection
-    const already = await bestEffortAlreadyQueued({
-      lead_id,
-      template_id,
-      flow_id,
-      node_id: firstEmail.id,
-    });
+    // Compose to_email, subject, html_content, html_path for the queue row
+    let to_email = null;
+    let subject = null;
+    let html_content = null;
+    let html_path = firstEmail?.data?.htmlPath || firstEmail?.data?.storagePath || null;
 
-    if (already) {
+    // Get lead email
+    try {
+      const { data: lead } = await supabaseAdmin
+        .from("leads")
+        .select("email")
+        .eq("id", lead_id)
+        .maybeSingle();
+      to_email = lead?.email || null;
+    } catch {}
+
+    // Get subject from node data
+    subject = firstEmail?.data?.label || firstEmail?.data?.subject || "Automation Email";
+
+    // Fetch HTML content from storage if html_path is set
+    if (html_path) {
+      try {
+        const { data, error } = await supabaseAdmin.storage
+          .from(firstEmail?.data?.bucket || "email-user-assets")
+          .download(html_path);
+        if (!error && data) {
+          const ab = await data.arrayBuffer();
+          html_content = Buffer.from(ab).toString("utf8");
+        }
+      } catch {}
+    }
+
+    // Best-effort duplicate protection (update to check automation_email_queue)
+    const { count: alreadyCount } = await supabaseAdmin
+      .from("automation_email_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("lead_id", lead_id)
+      .eq("template_id", template_id)
+      .eq("flow_id", flow_id)
+      .eq("node_id", firstEmail.id)
+      .in("status", ["queued", "processing", "sent"]);
+    if (alreadyCount > 0) {
       return res.json({
         ok: true,
         enrolled: true,
@@ -263,6 +278,10 @@ export default async function handler(req, res) {
         flow_id,
         node_id: firstEmail.id,
         email_index: 1,
+        to_email,
+        subject,
+        html_content,
+        html_path,
       },
     ];
 

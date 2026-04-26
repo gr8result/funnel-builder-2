@@ -1,0 +1,35 @@
+Welcome, Lisa!
+
+Thanks so much for joining Under the Stars Photo Guild—we're thrilled to have you! Please click on the link below to complete your registration and set up your online profile. Then, check out our upcoming events below.
+
+Complete Registration
+
+*Upcoming Events*
+
+*Sandy Lake at Night*
+
+Join us for a night under the starry skies around Sandy Lake. Meet at the Trinity trailhead.
+
+July 21, 8:00 PM
+
+*Japantown Bar Crawl*
+
+Come shoot the exciting nightlife in Sawtelle Japantown and sip a few drinks along the way.
+
+July 29, 8:00 PM
+
+*Featured Photograph*
+
+July Fourth by *Mike M*.
+
+*Want to be featured in our next newsletter?*
+
+Submit Your Photos
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

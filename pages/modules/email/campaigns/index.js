@@ -465,7 +465,7 @@ const page = {
   banner: {
     maxWidth: 1320,
     margin: "0 auto 20px",
-    background: "#0ea5e9",
+    background: "#14b8a6",
     borderRadius: 14,
     padding: "18px 22px",
     display: "flex",

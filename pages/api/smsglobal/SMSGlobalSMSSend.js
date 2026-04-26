@@ -1,6 +1,5 @@
 // /pages/api/smsglobal/SMSGlobalSMSSend.js
 // FULL REPLACEMENT
-//
 // ✅ Alias route to keep older frontend calls working.
 // ✅ Forwards to /api/smsglobal/SMSSend
 

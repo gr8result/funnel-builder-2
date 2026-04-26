@@ -1,0 +1,42 @@
+*VISIT YOUR LOCAL STORE*
+3000 E 10th Ave. Denver, CO 80206 ( http:// )
+
+*CATEGORIES* ( http:// )
+
+*NEW ARRIVALS* ( http:// )
+
+*STORE LOCATOR* ( http:// )
+
+SHOP NOW ( http:// )
+
+*Picks for You*
+
+*HyrdraRun*
+
+*$99.95 - BUY NOW* ( http:// )
+
+*Road Runner XV*
+
+*$99.95 - BUY NOW* ( http:// )
+
+*Phantom 3000V*
+
+*$199.95 -* ( http:// ) *BUY NOW*
+
+*Join our loyalty program*
+*and save.*
+
+*For every 5 pairs you buy, get 1 free!*
+*We know. It's crazy.*
+
+SHOP NOW ( http:// )
+
+( http://www.facebook.com ) ( http://www.facebook.com ) ( http://www.facebook.com ) ( http://www.facebook.com )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

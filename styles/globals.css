@@ -1,5 +1,34 @@
+input,
+textarea,
+select {
+  background: #16202a !important;
+  color: #e6eef5 !important;
+  border: 1.5px solid #334155 !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  margin-bottom: 8px !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7dd3fc !important;
+  opacity: 1;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #00d4ff !important;
+  background: #1e293b !important;
+  color: #fff !important;
+}
 @import "./website-builder-canvas-fix.css";
 
+/* Removed Tailwind directives: not used in platform */
 
 :root {
   --background: #ffffff;
@@ -60,19 +89,19 @@ a {
   text-decoration: none;
 }
 
-/* ✅ Form controls MUST never drop below 16px */
+/* Form controls baseline */
 button,
 input,
 select,
 textarea {
-  font-size: 16px !important;
+  font-size: 16px;
 }
 
-/* ✅ Prevent legacy "small text" helpers */
+/* Prevent legacy "small text" helpers */
 small,
 .text-xs,
 .text-sm {
-  font-size: 16px !important;
+  font-size: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,3 +115,16 @@ small,
   /* pick your shade; this one is a mid light grey-blue */
   --panel: #2d3746;
 }
+/* Global CSS styles for scrollbars (and anything that must be global) */
+::-webkit-scrollbar-thumb {
+  background: #1c232b;
+  border-radius: 9px;
+}
+::-webkit-scrollbar {
+  width: 7px;
+  height: 12px;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

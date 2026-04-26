@@ -1,0 +1,37 @@
+Having trouble viewing this email? Try this link.
+
+It’s the end of year, are you ready for celebrating the new year? Let S+S provide you the most unforgettable experience!
+
+Book now
+
+*NEW YEAR*
+*DINNER*
+
+Ring in the New Year in style! Celebrate with a private meal on the beach or explore other the gorgeous locations on our property.
+
+Learn more
+
+*SUNBATHE*
+*BY THE*
+*POOL*
+
+Soak in some sun by the pool and get some much rest and relaxation.
+
+Learn more
+
+*LOCAL*
+*ADVENTURE*
+
+Explore the scenery with guided tours provided by our experts.
+
+Learn more
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

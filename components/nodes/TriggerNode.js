@@ -5,6 +5,7 @@ import { Handle, Position } from "reactflow";
 export default function TriggerNode({ data }) {
   const label = data?.label || "Trigger";
   const color = data?.color || "#22c55e";
+  const stats = data?.stats || {};
   const active = Number(data?.activeCount ?? 0);
 
   return (

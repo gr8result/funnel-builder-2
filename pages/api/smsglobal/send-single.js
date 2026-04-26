@@ -14,6 +14,7 @@
 // ✅ Inserts into public.sms_queue WITHOUT using 'origin' column (avoids schema cache issues)
 
 import { createClient } from "@supabase/supabase-js";
+import { guardSmsSend } from "../../../lib/smsValidation";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -112,12 +113,60 @@ export default async function handler(req, res) {
     const to61 = normalizeAUTo61(toPhone);
     if (!to61) return res.status(400).json({ ok: false, error: "Missing/invalid to phone" });
 
-    // Insert WITHOUT origin column to avoid schema cache/origin mismatch
+    // Optional: Fetch user's sender_id from profiles, then accounts (fallback to null)
+    let userSenderId = null;
+    
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("sender_id")
+        .eq("user_id", user_id)
+        .maybeSingle();
+      if (profile?.sender_id) userSenderId = s(profile.sender_id);
+    } catch (err) {
+      // ignore
+    }
+
+    if (!userSenderId) {
+      try {
+        const { data: account } = await supabase
+          .from("accounts")
+          .select("sender_id")
+          .eq("user_id", user_id)
+          .maybeSingle();
+        if (account?.sender_id) userSenderId = s(account.sender_id);
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    let smsGuard = null;
+    try {
+      smsGuard = await guardSmsSend(user_id, 1);
+    } catch (limitErr) {
+      return res.status(429).json({
+        ok: false,
+        error: limitErr.message,
+        code: limitErr.code,
+        details: limitErr.details,
+      });
+    }
+
+    // Insert WITH sender_id so flush worker can charge the correct subaccount
+    // Use DEFAULT_SMS_ORIGIN from env (approved by SMSGlobal)
+    const DEFAULT_ORIGIN = process.env.DEFAULT_SMS_ORIGIN || "gr8result";
+    const nowIso = new Date().toISOString();
     const insertRow = {
       user_id,
       lead_id: resolvedLeadId,
+      step_no: 1,
       to_phone: to61,
       body: msg,
+      scheduled_for: nowIso,
+      available_at: nowIso,
+      status: "queued",
+      origin: DEFAULT_ORIGIN,
+      sender_id: userSenderId,
     };
 
     const { data: inserted, error: insErr } = await supabase
@@ -157,6 +206,7 @@ export default async function handler(req, res) {
       ok: true, 
       queued: 1, 
       row: inserted,
+      usage: smsGuard || null,
       auto_flush: flushResult?.ok ? { sent: flushResult?.debug?.sent || 0 } : { attempt_made: true }
     });
   } catch (e) {

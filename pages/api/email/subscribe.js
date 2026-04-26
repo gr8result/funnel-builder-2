@@ -9,6 +9,7 @@ import {
   getOrCreateTags,
   tagSubscriber,
 } from "../../../lib/emailDB";
+import { guardAddSubscriber } from "../../../lib/emailValidation";
 
 export const config = { api: { bodyParser: true } };
 
@@ -26,6 +27,17 @@ export default async function handler(req, res) {
       user_id = l.user_id;
     } else {
       return res.status(400).send("list_id required for routing");
+    }
+
+    // ✅ Check subscriber limit before adding
+    try {
+      await guardAddSubscriber(user_id, list_id, 1);
+    } catch (limitErr) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: limitErr.message,
+        code: limitErr.code 
+      });
     }
 
     const subscriber_id = await upsertSubscriber({ user_id, email, name });

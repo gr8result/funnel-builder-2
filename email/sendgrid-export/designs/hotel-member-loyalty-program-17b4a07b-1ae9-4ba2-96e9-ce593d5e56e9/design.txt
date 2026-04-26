@@ -1,0 +1,46 @@
+125 points is in your account now!
+
+Email not displaying correctly?
+*View it* in your browser.
+
+Thank you so much for being Laurence's customer and part of our family!
+We have credited your account with *125 points* !
+
+REDEEM NOW
+
+*BAR*
+Every $5 spent in our hotel bar can earn 10 points.
+
+RESTAURANT
+Every $10 spent in our hotel restaurant can earn 25 points.
+
+SPA
+Every $75 spent in our hotel spa can earn 250 points.
+
+CREDIT CARDS
+Every $1 spent with our credit cards can earn 5x points.
+
+*BENEFITS*
+
+Points from our loyalty program can be used
+in a variety of ways for our service.
+
+*Booking hotels*
+
+*Room upgrades*
+
+*Air*
+*travel*
+
+*Rental*
+*car*
+
+( https://www.facebook.com/sendgrid/ ) ( https://www.instagram.com/sendgrid/ ) ( https://www.pinterest.com/sendgrid/ ) ( https://www.linkedin.com/company/sendgrid/ )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://sendgrid.com/ )

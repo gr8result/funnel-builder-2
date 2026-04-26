@@ -72,8 +72,8 @@ export default function ClientHeader({ orgName, userName, logoSrc }) {
           border-radius: 8px; overflow: hidden;
           background: #121a25; border: 1px solid rgba(255,255,255,.15);
         }
-        .logo-fallback { font-weight: 900; font-size: 12px; color: #9fb3ff; }
-        .org { font-weight: 900; color: #e5e7eb; white-space: nowrap; }
+        .logo-fallback { font-weight: 600; font-size: 16px; color: #9fb3ff; }
+        .org { font-weight: 600; color: #e5e7eb; white-space: nowrap; }
 
         .right { position: relative; }
         .profile {
@@ -82,7 +82,7 @@ export default function ClientHeader({ orgName, userName, logoSrc }) {
           color: #e5e7eb; background: #121a25;
           border: 1px solid rgba(255,255,255,.18);
         }
-        .initials { font-weight: 800; font-size: 13px; }
+        .initials { font-weight: 600; font-size: 13px; }
 
         .menu {
           position: absolute; top: 46px; right: 0;

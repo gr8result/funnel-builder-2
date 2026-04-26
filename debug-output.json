@@ -1,0 +1,14 @@
+﻿curl.exe :   % Total    % Received % Xferd  Average Speed   Time    Time     
+Time  Current
+At line:1 char:1
++ curl.exe -X GET "http://localhost:3000/api/debug-sms-queue" 2>&1 | Ou ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  % Total    % ...  Time  Current:S 
+   tring) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100  1903  100  1903    0     0   6089      0 --:--:-- --:--:-- --:--:--  6099
+{"ok":true,"queue":[{"id":431,"user_id":"3c921040-cd45-4a05-ba74-60db34591091","lead_id":"91977ab6-dd38-4f8e-8b9f-6c8ce5c16811","step_no":1,"to_phone":"61417004315","body":"1a­ƒæì","scheduled_for":"2026-02-10T08:35:26.964+10:00","status":"failed","provider_message_id":null,"error":null,"created_at":"2026-02-10T08:35:24.748927+10:00","sent_at":null,"origin":"gr8result","available_at":"2026-02-10T08:35:26.964+10:00","provider_id":null,"last_error":"{\"errors\":{\"origin\":{\"errors\":[\"Origin is invalid.\"]}}}","sender_id":null,"updated_at":"2026-02-10T08:35:24.748927+10:00"},{"id":432,"user_id":"3c921040-cd45-4a05-ba74-60db34591091","lead_id":"91977ab6-dd38-4f8e-8b9f-6c8ce5c16811","step_no":2,"to_phone":"61417004315","body":"2b­ƒæÅ","scheduled_for":"2026-02-10T08:36:26.964+10:00","status":"failed","provider_message_id":null,"error":null,"created_at":"2026-02-10T08:35:24.748927+10:00","sent_at":null,"origin":"gr8result","available_at":"2026-02-10T08:35:26.964+10:00","provider_id":null,"last_error":"{\"errors\":{\"origin\":{\"errors\":[\"Origin is invalid.\"]}}}","sender_id":null,"updated_at":"2026-02-10T08:35:24.748927+10:00"},{"id":433,"user_id":"3c921040-cd45-4a05-ba74-60db34591091","lead_id":"91977ab6-dd38-4f8e-8b9f-6c8ce5c16811","step_no":3,"to_phone":"61417004315","body":"3c­ƒÆ¬","scheduled_for":"2026-02-10T08:37:26.964+10:00","status":"failed","provider_message_id":null,"error":null,"created_at":"2026-02-10T08:35:24.748927+10:00","sent_at":null,"origin":"gr8result","available_at":"2026-02-10T08:35:26.964+10:00","provider_id":null,"last_error":"{\"errors\":{\"origin\":{\"errors\":[\"Origin is invalid.\"]}}}","sender_id":null,"updated_at":"2026-02-10T08:35:24.748927+10:00"}],"accounts":[{"user_id":"3c921040-cd45-4a05-ba74-60db34591091","sender_id":"waiteandsea","business_name":"Waite and Sea Health and Fitness","has_api_key":true,"has_api_secret":true}],"profiles":[]}

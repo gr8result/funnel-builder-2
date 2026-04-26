@@ -141,10 +141,15 @@ export default function AutomationsReport() {
       <div style={styles.page}>
         <div style={styles.container}>
           <div style={styles.banner}>
-            <div>
-              <div style={styles.bannerTitle}>Automations</div>
-              <div style={styles.bannerSub}>
-                Delivery, opens, clicks & unsubscribes
+            <div style={styles.bannerLeft}>
+              <div style={styles.bannerIconWrap} aria-hidden="true">
+                <span style={styles.bannerIcon}>⚙️</span>
+              </div>
+              <div>
+                <div style={styles.bannerTitle}>Automations</div>
+                <div style={styles.bannerSub}>
+                  Delivery, opens, clicks & unsubscribes
+                </div>
               </div>
             </div>
             <Link href="/modules/email/reports" style={styles.backBtn}>
@@ -275,8 +280,11 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
   },
-  bannerTitle: { fontSize: 32, fontWeight: 600 },
-  bannerSub: { fontSize: 16, opacity: 0.9 },
+  bannerLeft: { display: "flex", alignItems: "center", gap: 14 },
+  bannerIconWrap: { width: 69, height: 69, display: "grid", placeItems: "center", borderRadius: 10, background: "rgba(0,0,0,0.18)" },
+  bannerIcon: { fontSize: 48, lineHeight: 1 },
+  bannerTitle: { fontSize: 48, fontWeight: 600, lineHeight: 1.05 },
+  bannerSub: { fontSize: 18, opacity: 0.9 },
   backBtn: {
     background: "#111",
     color: "#fff",

@@ -1,33 +1,24 @@
-﻿import { readDB, writeDB, nid, getUserId } from "../../../utils/affdb";
+﻿// pages/api/affiliate/apply.js
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-  const { programId, note = "" } = req.body || {};
-  if (!programId) return res.status(400).json({ error: "programId required" });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const { product_id, affiliate_user_id } = req.body;
+  if (!product_id || !affiliate_user_id) return res.status(400).json({ error: 'Missing product_id or affiliate_user_id' });
 
-  const db = await readDB();
-  const program = db.programs.find(p => p.id === programId && p.status === "active");
-  if (!program) return res.status(404).json({ error: "Program not found" });
+  // Prevent duplicate applications
+  const { data: existing, error: findErr } = await supabaseAdmin
+    .from('affiliate_applications')
+    .select('id')
+    .eq('product_id', product_id)
+    .eq('affiliate_user_id', affiliate_user_id)
+    .maybeSingle();
+  if (existing) return res.status(409).json({ error: 'Already applied for this offer.' });
 
-  const userId = getUserId(req);
-
-  const existing = db.applications.find(a => a.userId === userId && a.programId === programId);
-  if (existing) {
-    return res.status(200).json({ ok: true, application: existing, message: "Existing application found" });
-  }
-
-  const application = {
-    id: nid("app"),
-    userId,
-    programId,
-    status: "pending",
-    note,
-    createdAt: Date.now()
-  };
-  db.applications.push(application);
-  db.approvals.push({ ...application }); // audit trail
-  await writeDB(db);
-
-  res.status(200).json({ ok: true, application });
+  const { error } = await supabaseAdmin
+    .from('affiliate_applications')
+    .insert([{ product_id, affiliate_user_id, status: 'pending', created_at: new Date().toISOString() }]);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true });
 }
 

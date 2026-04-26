@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import ICONS from "../../components/iconMap";
+
 
 export default function DevSpreadsheet() {
   const [data, setData] = useState({
@@ -40,31 +42,46 @@ export default function DevSpreadsheet() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0b0b0b", color: "#e6edf3" }}>
-      <div style={{ width: "92%", margin: "0 auto", padding: "18px 0 36px" }}>
-        {/* Blue Header Banner */}
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "32px 0 48px 0", fontWeight: 600 }}>
+        {/* Modern Full-Width Banner */}
         <div
           style={{
-            background: "#1d4ed8",
-            padding: "14px 18px",
-            borderRadius: "10px 10px 0 0",
+            width: "100%",
+            background: "linear-gradient(90deg, #1d4ed8 60%, #2563eb 100%)",
+            borderRadius: 16,
+            padding: "32px 40px 28px 40px",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 32,
+            boxShadow: "0 4px 24px 0 rgba(30,64,175,0.10)",
           }}
         >
-          <h1 style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>
-            Spreadsheet Dashboard
-          </h1>
+          {/* Icon for Spreadsheet Dashboard */}
+          <div style={{ marginRight: 32 }}>
+            {ICONS.dashboard({ size: 56, style: { verticalAlign: "middle" } })}
+          </div>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 48, fontWeight: 600, margin: 0, color: "#fff" }}>
+              Developer Dashboard
+            </h1>
+            <div style={{ fontSize: 18, fontWeight: 600, opacity: 0.93, marginTop: 8, color: "#dbeafe" }}>
+              Live admin metrics, revenue, and subscriber drill-down
+            </div>
+          </div>
           <Link
             href="/admin/dashboard"
             style={{
-              background: "#111827",
+              background: "#0c121a",
               color: "#fff",
               fontWeight: 700,
-              borderRadius: 8,
-              padding: "6px 14px",
-              border: "1px solid #374151",
+              borderRadius: 10,
+              padding: "12px 28px",
+              border: "1.5px solid #fff",
               textDecoration: "none",
+              fontSize: 18,
+              marginLeft: 32,
+              boxShadow: "0 2px 8px 0 rgba(30,64,175,0.10)",
             }}
           >
             ← Admin Dashboard

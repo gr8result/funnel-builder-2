@@ -19,7 +19,7 @@ const banner = {
 
 const bannerTitle = {
   fontSize: "28px",
-  fontWeight: "900",
+  fontWeight: "600",
   letterSpacing: ".2px",
   color: "#fff",
   margin: 0,

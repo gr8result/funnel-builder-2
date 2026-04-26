@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { token } = req.query;
+  const { token, emailPlan, smsPlan, calendarPlan, selected } = req.query;
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_SECRET;
 
@@ -44,8 +44,15 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "PayPal capture failed" });
     }
 
-    // Redirect to success page
-    res.redirect("/checkout?success=true");
+    // Redirect to success page with selected plan metadata
+    const params = new URLSearchParams();
+    if (typeof emailPlan === "string" && emailPlan) params.set("emailPlan", emailPlan);
+    if (typeof smsPlan === "string" && smsPlan) params.set("smsPlan", smsPlan);
+    if (typeof calendarPlan === "string" && calendarPlan) params.set("calendarPlan", calendarPlan);
+    if (typeof selected === "string" && selected) params.set("selected", selected);
+
+    const suffix = params.toString();
+    res.redirect(`/checkout/success${suffix ? `?${suffix}` : ""}`);
   } catch (err) {
     console.error("PayPal capture failed:", err);
     res.status(500).json({ error: "Internal server error" });

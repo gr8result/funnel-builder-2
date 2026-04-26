@@ -12,10 +12,10 @@ export default function Pipelines() {
         <div style={styles.banner}>
           <div style={styles.bannerLeft}>
             <div style={styles.bannerIconWrap}>
-              {ICONS.subscription({ size: 26 })}
+              {ICONS.subscription({ size: 48 })}
             </div>
             <div>
-              <h1 style={styles.bannerTitle}>Subscription pipeline</h1>
+              <h1 style={styles.bannerTitle}>Subscription Pipeline</h1>
               <p style={styles.bannerDesc}>
                 Track recurring offers, upgrade paths and customer journeys.
               </p>
@@ -26,22 +26,25 @@ export default function Pipelines() {
             <button style={styles.backBtn}>← Back</button>
           </Link>
         </div>
-
-        {/* Coming soon content */}
-        <div style={styles.contentBox}>
-          <p style={{ marginBottom: 8 }}>
-            <strong>Coming soon</strong>
-          </p>
-          <p style={{ marginBottom: 6 }}>
-            This module will let you build subscription flows, manage renewals,
+                  {/* Coming Soon */}
+          <div
+            style={{
+              background: "#111827",
+              border: "1px dashed #06b6d4",
+              borderRadius: 12,
+              padding: 24,
+              fontSize: 24,
+              textAlign: "center",
+              opacity: 0.85,
+            }}
+          >
+            🚧 <strong>Coming Soon</strong> 🚧 <br/> 
+            Expected Delivery date: May/June 2026 <br/><br/>  
+             This module will let you build subscription flows, manage renewals,
             upgrades, churn-winbacks and more — all tied into your CRM and
             billing.
-          </p>
-          <p style={{ opacity: 0.8 }}>
-            For now this is just a placeholder so you don’t see a 404 while the
-            builder and reports are being wired up.
-          </p>
-        </div>
+          </div>
+
       </div>
     </div>
   );
@@ -77,8 +80,8 @@ const styles = {
     gap: 12,
   },
   bannerIconWrap: {
-    width: 48,
-    height: 48,
+    width: 58,
+    height: 58,
     borderRadius: 12,
     background: "rgba(0,0,0,0.25)",
     display: "flex",
@@ -88,12 +91,12 @@ const styles = {
   },
   bannerTitle: {
     margin: 0,
-    fontSize: 24,
-    fontWeight: 800,
+    fontSize: 48,
+    fontWeight: 600,
   },
   bannerDesc: {
     margin: 0,
-    fontSize: 14,
+    fontSize: 18,
     opacity: 0.9,
   },
   backBtn: {

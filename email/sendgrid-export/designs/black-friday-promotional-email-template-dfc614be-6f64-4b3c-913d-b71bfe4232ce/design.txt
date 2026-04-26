@@ -1,0 +1,32 @@
+Email not displaying correctly? View it ( {{Weblink}} ) in your browser.
+
+JUST 5 DAYS UNTIL
+
+The Black
+Friday Sale
+
+40% off everything
+
+Get ready. It only lasts 24 hours.
+
+Find your Black Friday favorites.
+
+Dresses
+
+Tops
+
+Jackets
+
+Accessories
+
+Shoes
+
+Beauty
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )

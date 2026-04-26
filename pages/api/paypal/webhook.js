@@ -1,7 +1,7 @@
 // /pages/api/paypal/webhook.js
 // Handles PayPal payment completions and records affiliate + platform payouts.
 
-import { supabase } from "../../../utils/supabase-client";
+import { supabase } from "../../../lib/supabaseClient";
 
 export const config = {
   api: {

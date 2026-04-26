@@ -7,19 +7,11 @@
 // ✅ Keeps sent rows for audit + analytics (default)
 // ✅ Optional cleanup: ?delete_sent=1 deletes SENT rows after sending (NOT recommended)
 // ✅ Auth: Authorization: Bearer <AUTORESPONDER_CRON_SECRET> OR x-cron-key OR ?key=
-//
-// ENV required:
-//  - NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
-//  - SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE / SUPABASE_SERVICE_KEY)
-//  - SENDGRID_API_KEY (or GR8_MAIL_SEND_ONLY)
-// Optional:
-//  - SENDGRID_FROM_EMAIL
-//  - SENDGRID_FROM_NAME
-//  - AUTORESPONDER_CRON_SECRET (or AUTOMATION_CRON_SECRET)
-//  - EMAIL_ASSETS_BUCKET (optional; default "email-user-assets")
+// ✅ ENFORCES EMAIL LIMITS (ADDED — NON-DESTRUCTIVE)
 
 import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
+import { guardEmailSend, recordEmailSent } from "../../../../lib/emailValidation";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -32,7 +24,9 @@ const SUPABASE_SERVICE_ROLE_KEY =
   "";
 
 const CRON_SECRET =
-  process.env.AUTORESPONDER_CRON_SECRET || process.env.AUTOMATION_CRON_SECRET;
+  process.env.CRON_SECRET ||
+  process.env.AUTORESPONDER_CRON_SECRET ||
+  process.env.AUTOMATION_CRON_SECRET;
 
 const SENDGRID_API_KEY =
   process.env.SENDGRID_API_KEY ||
@@ -41,6 +35,89 @@ const SENDGRID_API_KEY =
   "";
 
 const BUCKET = (process.env.EMAIL_ASSETS_BUCKET || "email-user-assets").trim();
+
+// ==============================
+// ✅ ADDED: LIMIT CHECK FUNCTION
+// ==============================
+async function checkEmailLimits(supabase, userId) {
+  const startOfMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1
+  ).toISOString();
+
+  let { data: usage } = await supabase
+    .from("usage_email")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("period_start", startOfMonth)
+    .maybeSingle();
+
+  if (!usage) {
+    const { data: newRow } = await supabase
+      .from("usage_email")
+      .insert({
+        user_id: userId,
+        emails_sent: 0,
+        period_start: startOfMonth,
+      })
+      .select()
+      .single();
+
+    usage = newRow;
+  }
+
+  const used = usage?.emails_sent || 0;
+
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("plan_id")
+    .eq("account_id", userId)
+    .maybeSingle();
+
+  const plan = sub?.plan_id || "free";
+
+  const { data: limits } = await supabase
+    .from("plan_limits")
+    .select("max_emails_per_month")
+    .eq("plan_id", plan)
+    .single();
+
+  const max = limits?.max_emails_per_month || 0;
+
+  if (max && used >= max) {
+    return { allowed: false, used, max };
+  }
+
+  return { allowed: true, used, max };
+}
+
+// ==============================
+// ✅ ADDED: USAGE INCREMENT
+// ==============================
+async function incrementUsage(supabase, userId) {
+  const startOfMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1
+  ).toISOString();
+
+  const { data: usage } = await supabase
+    .from("usage_email")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("period_start", startOfMonth)
+    .maybeSingle();
+
+  if (!usage) return;
+
+  await supabase
+    .from("usage_email")
+    .update({
+      emails_sent: (usage.emails_sent || 0) + 1,
+    })
+    .eq("id", usage.id);
+}
 
 function getApiKey() {
   return SENDGRID_API_KEY;
@@ -86,9 +163,7 @@ async function loadHtmlFromStorage(supabase, templatePath) {
       const ab = await data.arrayBuffer();
       const html = Buffer.from(ab).toString("utf8");
       if (html && html.length > 5) return html;
-    } catch {
-      // try next
-    }
+    } catch {}
   }
 
   return "";
@@ -99,7 +174,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  // Auth
   if (CRON_SECRET) {
     const k = readAuthKey(req);
     if (!k || k !== CRON_SECRET) {
@@ -129,7 +203,6 @@ export default async function handler(req, res) {
   const limit = Math.max(1, Math.min(200, Number(req.query.limit || 25)));
   const deleteSent = String(req.query.delete_sent || "") === "1";
 
-  // Pull queued/pending rows
   let rows = [];
   try {
     const { data, error } = await supabase
@@ -167,6 +240,24 @@ export default async function handler(req, res) {
     const subject = safeStr(row.subject) || " ";
     const templatePath = safeStr(row.template_path);
 
+    // =========================
+    // ✅ ADDED: LIMIT CHECK
+    // =========================
+    try {
+      await guardEmailSend(row.user_id, 1);
+    } catch (limitErr) {
+      failed += 1;
+      results.push({ id, ok: false, error: limitErr.message || "Email limit reached" });
+      await supabase
+        .from("email_autoresponder_queue")
+        .update({
+          status: "failed",
+          last_error: limitErr.message || "Email limit reached",
+        })
+        .eq("id", id);
+      continue;
+    }
+
     if (!to || !to.includes("@")) {
       failed += 1;
       results.push({ id, ok: false, error: "Missing/invalid to_email" });
@@ -181,7 +272,6 @@ export default async function handler(req, res) {
       continue;
     }
 
-    // ✅ Claim the job safely (only if still queued/pending)
     const { data: claimed, error: claimErr } = await supabase
       .from("email_autoresponder_queue")
       .update({ status: "processing" })
@@ -191,7 +281,6 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (claimErr || !claimed?.id) {
-      // Someone else claimed it (or it changed); skip
       results.push({ id, ok: false, error: "Not claimed (already processing?)" });
       continue;
     }
@@ -204,6 +293,20 @@ export default async function handler(req, res) {
         }
       }
       if (!html) throw new Error("Template HTML not found (template_path)");
+
+      const { data: sendRow } = await supabase
+        .from("email_sends")
+        .insert({
+          user_id: row.user_id,
+          email: to,
+          recipient_email: to,
+          email_type: "autoresponder",
+          subject,
+          status: "processing",
+          created_at: nowIso(),
+        })
+        .select("id")
+        .single();
 
       const msg = {
         to,
@@ -230,6 +333,23 @@ export default async function handler(req, res) {
           last_error: null,
         })
         .eq("id", id);
+
+      if (sendRow?.id) {
+        await supabase
+          .from("email_sends")
+          .update({
+            status: "sent",
+            sent_at: nowIso(),
+            sendgrid_message_id: providerId || null,
+          })
+          .eq("id", sendRow.id);
+      }
+
+      // =========================
+      // ✅ ADDED: USAGE INCREMENT
+      // =========================
+      await recordEmailSent(row.user_id, 1);
+
     } catch (e) {
       failed += 1;
       const errMsg = String(e?.message || e);
@@ -239,7 +359,7 @@ export default async function handler(req, res) {
       await supabase
         .from("email_autoresponder_queue")
         .update({
-          status: "queued", // retry later
+          status: "queued",
           attempts: Number(row.attempts || 0) + 1,
           last_error: errMsg,
         })

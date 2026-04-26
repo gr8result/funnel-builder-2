@@ -1,0 +1,19 @@
+Tis the season
+to be jolly!
+
+Wishing you and your families
+the warmest holiday wishes.
+
+Thank you for being a wonderful client. I hope your holidays are filled with countless blessings.
+
+Lois Lane, Civil Litigation Attorney, State of New York
+
+Request a consultation ( http://www.google.com )
+
+{{Sender_Name}}
+
+{{Sender_Address}} , {{Sender_City}} , {{Sender_State}} {{Sender_Zip}}
+
+Unsubscribe ( {{{unsubscribe}}} ) - Unsubscribe Preferences ( {{{unsubscribe_preferences}}} )
+
+♥ POWERED BY TWILIO SENDGRID ( https://www.sendgrid.com/?utm_source=powered-by&utm_medium=email )
