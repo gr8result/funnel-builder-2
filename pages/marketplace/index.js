@@ -28,7 +28,7 @@ function AffiliateNotice({ approved, affiliateUserId, userEmail, userName }) {
         {isApprovedAffiliate ? '✅ Affiliate Approved!' : '❗You need to complete an Affiliate Application and confirm your email before applying for these offers.'}
       </span>
       <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: 24, fontWeight: 700, color: '#faf603' }}>
+        <div style={{ fontSize: 24, fontWeight: 600, color: '#faf603' }}>
           {userName ? userName : '[No Name Found]'}
         </div>
         <div style={{ fontSize: 18, fontWeight: 600, color: '#17f2fa' }}>
@@ -55,7 +55,7 @@ function AffiliateNotice({ approved, affiliateUserId, userEmail, userName }) {
             background: '#d1fae5',
             padding: '6px 12px',
             borderRadius: 6,
-            fontWeight: 800,
+            fontWeight: 600,
             fontSize: 20,
             color: '#166534',
             display: 'inline-block',
@@ -895,7 +895,7 @@ function VerifyNoticeModal({ open, onClose }) {
       }}>
 
         <div style={{
-          fontWeight: 700,
+          fontWeight: 600,
           fontSize: 24,
           marginBottom: 16
         }}>
@@ -946,7 +946,7 @@ function VerifyNoticeModal({ open, onClose }) {
           <div className="flex items-center gap-4 flex-shrink-0">
             <select
               className="bg-black text-white font-extrabold px-4 py-5 rounded-2xl text-lg shadow focus:outline-none border border-[#0d87f1]"
-              style={{ minWidth: 220, fontWeight: 700 }}
+              style={{ minWidth: 220, fontWeight: 600 }}
               onChange={e => {
                 const val = e.target.value;
                 if (val) {
@@ -1013,7 +1013,7 @@ function VerifyNoticeModal({ open, onClose }) {
             border: '2px solid #dc2626',
             boxShadow: '0 2px 8px 0 rgba(220,38,38,0.10)'
           }}>
-            <span style={{ fontSize: 22, fontWeight: 700 }}>❗User verification pending.</span> Please check your email and SMS to verify your account.
+            <span style={{ fontSize: 22, fontWeight: 600 }}>❗User verification pending.</span> Please check your email and SMS to verify your account.
             {verificationNotice && (
               <div style={{ marginTop: 10, fontSize: 16, color: '#fde68a' }}>{verificationNotice}</div>
             )}
@@ -1088,15 +1088,15 @@ function VerifyNoticeModal({ open, onClose }) {
             boxShadow: '0 2px 8px 0 rgba(34,197,94,0.10)'
           }}>
             {/* User Name (always show) */}
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#166534', marginBottom: 2 }}>
+            <div style={{ fontSize: 28, fontWeight: 600, color: '#166534', marginBottom: 2 }}>
               {userName ? userName : '[No Name Found]'}
             </div>
             {/* User Email (always show) */}
             <div style={{ fontSize: 18, color: '#0d87f1', fontWeight: 600, marginBottom: 8 }}>
               {userEmail ? userEmail : '[No Email Found]'}
             </div>
-            <span style={{ fontSize: 22, fontWeight: 700 }}>✅ User verified!</span>
-            <span style={{ marginLeft: 8 }}>Your User Code: <span style={{ fontFamily: 'monospace', color: '#166534', fontWeight: 700 }}>{userCode}</span></span>
+            <span style={{ fontSize: 22, fontWeight: 600 }}>✅ User verified!</span>
+            <span style={{ marginLeft: 8 }}>Your User Code: <span style={{ fontFamily: 'monospace', color: '#166534', fontWeight: 600 }}>{userCode}</span></span>
           </div>
         )}
         <div style={{ height: 32 }} />
@@ -1368,7 +1368,16 @@ function VerifyNoticeModal({ open, onClose }) {
           </div>
           {/* AffiliateNotice (red dynamic notice) */}
           <AffiliateNotice approved={affiliateApproved} affiliateUserId={affiliateUserId} userEmail={userEmail} userName={userName} />
-          <div className="flex flex-col md:flex-row gap-8 mb-16 justify-center items-stretch">
+          <div
+            className="mb-16"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 420px))',
+              justifyContent: 'center',
+              gap: 32,
+              alignItems: 'stretch'
+            }}
+          >
             {/* Vendor Card */}
             <div className="bg-[#101a2c] rounded-xl border border-blue-600 p-6 flex flex-col justify-between items-center" style={{ boxShadow: "0 0 0 4px #0d87f1 inset", minHeight: 420, width: 420 }}>
               <div className="text-center">
@@ -1455,7 +1464,15 @@ function VerifyNoticeModal({ open, onClose }) {
           </div>
           
           {/* Affiliate Product Cards restored below the two fixed cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
+          <div
+            className="mb-16"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 32,
+              alignItems: 'stretch'
+            }}
+          >
             {loadingAffiliate ? (
               <Loading />
             ) : (
@@ -1491,7 +1508,7 @@ function VerifyNoticeModal({ open, onClose }) {
           }}>
             {showJoinModal === 'already' ? (
               <div style={{ textAlign: 'center', padding: 24 }}>
-                <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 18, color: '#22c55e' }}>Already a Member!</h2>
+                <h2 style={{ fontSize: 28, fontWeight: 600, marginBottom: 18, color: '#22c55e' }}>Already a Member!</h2>
                 <div style={{ fontSize: 20, color: '#fff', marginBottom: 16 }}>
                   You are already a verified member of Xchange.<br />
                   <span style={{ color: '#22c55e', fontWeight: 600 }}>Welcome back!</span>
@@ -1722,7 +1739,15 @@ function SectionBanner({ title, subtitle }) {
 
 function Grid({ children }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
+    <div
+      className="mb-16"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: 32,
+        alignItems: 'stretch'
+      }}
+    >
       {children}
     </div>
   );
