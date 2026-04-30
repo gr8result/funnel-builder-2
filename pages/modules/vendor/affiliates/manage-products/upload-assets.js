@@ -293,7 +293,7 @@ export default function UploadAssets() {
                   flexShrink: 0,
                 }}
               >
-                {DocumentsIcon ? <DocumentsIcon size={46} color="#ffffff" /> : null}
+                {DocumentsIcon ? <DocumentsIcon size={48} color="#ffffff" /> : null}
               </span>
               <div>
                 <h1 style={{ fontSize: 48, fontWeight: 600, margin: 0 }}>Vendor Creative Assets</h1>
