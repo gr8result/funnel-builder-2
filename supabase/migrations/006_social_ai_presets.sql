@@ -17,7 +17,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS social_ai_presets_user_name_idx
 
 ALTER TABLE social_ai_presets ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage their own AI presets"
-  ON social_ai_presets FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'social_ai_presets' AND policyname = 'Users can manage their own AI presets'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Users can manage their own AI presets" ON social_ai_presets FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)';
+  END IF;
+END $$;

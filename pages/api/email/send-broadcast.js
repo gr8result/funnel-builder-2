@@ -124,6 +124,8 @@ export default async function handler(req, res) {
       abSubjectB,
       abEnabled,
       html,
+      audienceType,
+      audience,
       fromEmail,
       fromName,
       replyTo,
@@ -167,6 +169,13 @@ export default async function handler(req, res) {
       });
 
     let finalBroadcastId = broadcastId;
+    const normalizedAudienceType = audienceType === "list" ? "list" : "emails";
+    const normalizedAudienceValue = String(audience || "").trim();
+    const broadcastAudienceFields = {
+      audience_type: normalizedAudienceType,
+      list_id: normalizedAudienceType === "list" && normalizedAudienceValue ? normalizedAudienceValue : null,
+      to_field: normalizedAudienceType === "emails" && normalizedAudienceValue ? normalizedAudienceValue : null,
+    };
 
     // CREATE BROADCAST
     if (!finalBroadcastId) {
@@ -182,6 +191,7 @@ export default async function handler(req, res) {
           ab_subject_a: abSubjectA || null,
           ab_subject_b: abSubjectB || null,
           html_content: html,
+          ...broadcastAudienceFields,
           created_at: new Date().toISOString(),
         })
         .select("id")
@@ -206,6 +216,7 @@ export default async function handler(req, res) {
           ab_subject_a: abSubjectA || null,
           ab_subject_b: abSubjectB || null,
           html_content: html,
+          ...broadcastAudienceFields,
         })
         .eq("id", finalBroadcastId)
         .eq("user_id", user.id);

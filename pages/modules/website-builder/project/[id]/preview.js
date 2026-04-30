@@ -48,7 +48,7 @@ export default function ProjectPreviewPage() {
     if (!id) return;
     let nextProject = getWebsiteProject(id);
     setProject(nextProject);
-  }, [id]);
+  }, [id, page]);
 
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
@@ -58,6 +58,19 @@ export default function ProjectPreviewPage() {
 
   const pageBlocks = active?.name ? (project?.pageBlocks || {})[active.name] || [] : [];
   const pageContent = active?.name ? (project?.pagesContent || {})[active.name] || "" : "";
+
+  const globalNavBlock = project?.globalNavBlock || null;
+  const globalFooterBlock = project?.globalFooterBlock || null;
+
+  // Only inject global nav if this page doesn't already contain that exact block (by id)
+  const injectNav = globalNavBlock && !pageBlocks.some((b) => b.id && b.id === globalNavBlock.id);
+
+  // Only strip existing nav-bar blocks when we ARE replacing them with the global one
+  const blocksWithoutNav = injectNav
+    ? pageBlocks.filter((b) => b.type !== "nav-bar")
+    : pageBlocks;
+
+  const injectFooter = globalFooterBlock && !pageBlocks.some((b) => b.id && b.id === globalFooterBlock.id);
 
   if (!project) {
     return (
@@ -69,6 +82,7 @@ export default function ProjectPreviewPage() {
     <>
       <Head>
         <title>{project.name} | Preview</title>
+        <style>{`html, body { background: transparent !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
       </Head>
       <main style={styles.page}>
         <div style={styles.utilityBar}>
@@ -76,49 +90,63 @@ export default function ProjectPreviewPage() {
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        {!pageBlocks.length ? (
-          <section style={styles.siteHeader}>
-            <div style={styles.wrapWide}>
-              <div style={styles.brandRow}>
-                <p style={styles.brandMark}>{project.name}</p>
-                <nav style={styles.nav}>
-                  {project.pages.map((p) => (
-                    <Link
-                      key={p.name}
-                      href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(p.name)}`}
-                      style={{
-                        ...styles.navLink,
-                        ...(active?.name === p.name ? styles.navLinkActive : {}),
-                      }}
-                    >
-                      {p.name}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-            </div>
-          </section>
+        {/* Global nav — injected above all page content */}
+        {injectNav ? (
+          <Fragment key="__global-nav">
+            {renderWebsiteBlock(globalNavBlock, { compact: false, assets, editor: false })}
+          </Fragment>
         ) : null}
 
+        {/* Page-specific content */}
         {Array.isArray(pageBlocks) && pageBlocks.length ? (
-          <section style={styles.content}>
-            <div style={styles.previewStack}>
-              {pageBlocks.map((block, index) => (
-                <Fragment key={block.id || `${block.type}-${index}`}>
-                  {renderWebsiteBlock(block, { compact: false, assets, editor: false })}
-                </Fragment>
-              ))}
-            </div>
-          </section>
+          <>
+            {blocksWithoutNav.map((block, index) => (
+              <Fragment key={block.id || `${block.type}-${index}`}>
+                {renderWebsiteBlock(block, { compact: false, assets, editor: false })}
+              </Fragment>
+            ))}
+          </>
         ) : pageContent ? (
           <section style={styles.content} dangerouslySetInnerHTML={{ __html: pageContent }} />
         ) : (
-          <section style={styles.content}>
-            <div style={styles.wrap}>
-              <div style={styles.emptyNotice}>No content yet. Open Canvas to add content.</div>
-            </div>
-          </section>
+          <>
+            {!globalNavBlock ? (
+              <section style={styles.siteHeader}>
+                <div style={styles.wrapWide}>
+                  <div style={styles.brandRow}>
+                    <p style={styles.brandMark}>{project.name}</p>
+                    <nav style={styles.nav}>
+                      {project.pages.map((p) => (
+                        <Link
+                          key={p.name}
+                          href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(p.name)}`}
+                          style={{
+                            ...styles.navLink,
+                            ...(active?.name === p.name ? styles.navLinkActive : {}),
+                          }}
+                        >
+                          {p.name}
+                        </Link>
+                      ))}
+                    </nav>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+            <section style={styles.content}>
+              <div style={styles.wrap}>
+                <div style={styles.emptyNotice}>No content yet. Open Canvas to add content.</div>
+              </div>
+            </section>
+          </>
         )}
+
+        {/* Global footer — injected below all page content */}
+        {injectFooter ? (
+          <Fragment key="__global-footer">
+            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets, editor: false })}
+          </Fragment>
+        ) : null}
       </main>
     </>
   );
@@ -127,11 +155,10 @@ export default function ProjectPreviewPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#ffffff",
+    background: "transparent",
     color: "#0f172a",
     fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif",
     paddingBottom: 56,
-    overflowX: "hidden",
   },
   wrap: { maxWidth: 1220, margin: "0 auto", padding: "0 24px" },
   wrapWide: { maxWidth: 1320, margin: "0 auto", padding: "0 24px" },

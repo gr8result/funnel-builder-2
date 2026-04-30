@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../../lib/supabaseClient";
-const supabase = supabaseNamed || supabaseDefault;
 
 /* ---------- helper functions (HOISTED) ---------- */
 function inp() {

@@ -18,19 +18,38 @@ CREATE INDEX IF NOT EXISTS idx_email_blocks_user_created
 ALTER TABLE email_blocks ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see, insert, update, and delete their own blocks
-CREATE POLICY "email_blocks: user select own"
-  ON email_blocks FOR SELECT
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'email_blocks' AND policyname = 'email_blocks: user select own'
+  ) THEN
+    EXECUTE 'CREATE POLICY "email_blocks: user select own" ON email_blocks FOR SELECT USING (auth.uid() = user_id)';
+  END IF;
+END $$;
 
-CREATE POLICY "email_blocks: user insert own"
-  ON email_blocks FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'email_blocks' AND policyname = 'email_blocks: user insert own'
+  ) THEN
+    EXECUTE 'CREATE POLICY "email_blocks: user insert own" ON email_blocks FOR INSERT WITH CHECK (auth.uid() = user_id)';
+  END IF;
+END $$;
 
-CREATE POLICY "email_blocks: user update own"
-  ON email_blocks FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'email_blocks' AND policyname = 'email_blocks: user update own'
+  ) THEN
+    EXECUTE 'CREATE POLICY "email_blocks: user update own" ON email_blocks FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)';
+  END IF;
+END $$;
 
-CREATE POLICY "email_blocks: user delete own"
-  ON email_blocks FOR DELETE
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'email_blocks' AND policyname = 'email_blocks: user delete own'
+  ) THEN
+    EXECUTE 'CREATE POLICY "email_blocks: user delete own" ON email_blocks FOR DELETE USING (auth.uid() = user_id)';
+  END IF;
+END $$;

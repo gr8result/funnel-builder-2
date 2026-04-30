@@ -7,8 +7,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { slugify } from "../utils/transfer";
 
-const supabase = supabaseNamed || supabaseDefault;
-
 export default function ExportFunnelsPage() {
   const [session, setSession] = useState(null);
   const [funnels, setFunnels] = useState([]);

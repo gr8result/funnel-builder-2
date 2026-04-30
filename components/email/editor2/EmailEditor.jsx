@@ -1321,8 +1321,11 @@ function renderEmailBackgroundTable({
   const webBgStyle = bgImageSrc
     ? `background-color:${safeBgColor};background-image:url(${safeImage});background-size:${bgRepeat === "no-repeat" ? "cover" : "auto"};background-position:center;background-repeat:${safeRepeat};`
     : `background-color:${safeBgColor};`;
+  const vmlFillAttrs = bgRepeat === "no-repeat"
+    ? `type="frame" aspect="atleast" focusposition="0.5,0.5"`
+    : `type="tile"`;
   const vmlOpen = bgImageSrc
-    ? `<!--[if gte mso 9]><v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:${safeWidth}px;${safeHeight ? `height:${safeHeight}px;` : ""}"><v:fill type="${bgRepeat === "no-repeat" ? "frame" : "tile"}" src="${safeImage}" color="${safeBgColor}" /><v:textbox inset="${safeMsoInset}" style="${safeHeight ? "mso-fit-shape-to-text:false;v-text-anchor:top;" : "mso-fit-shape-to-text:true;v-text-anchor:top;"}"><div><![endif]-->`
+    ? `<!--[if gte mso 9]><v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:${safeWidth}px;${safeHeight ? `height:${safeHeight}px;` : ""}"><v:fill ${vmlFillAttrs} src="${safeImage}" color="${safeBgColor}" /><v:textbox inset="${safeMsoInset}" style="${safeHeight ? "mso-fit-shape-to-text:false;v-text-anchor:top;" : "mso-fit-shape-to-text:true;v-text-anchor:top;"}"><div><![endif]-->`
     : "";
   const vmlClose = bgImageSrc ? "<!--[if gte mso 9]></div></v:textbox></v:rect><![endif]-->" : "";
 
@@ -1385,28 +1388,54 @@ function blockToHtml(block, emailWidth = 600) {
       const overlayImageSrc = toEmailAssetUrl(p.overlayImageSrc);
       const imageWidthPx = pixelWidthFromPercent(W, p.widthPct || 100, 32);
       const imageHeightPx = clamp(Number(p.heightPx || 220), 60, 900);
+      const overlayTitleColor = ensureReadableColor(p.overlayTitleColor || p.textColor, p.overlayBgColor || "rgba(15,23,42,0.38)", "#ffffff", "#0f172a");
+      const overlayTextColor = ensureReadableColor(p.overlayTextColor || p.textColor, p.overlayBgColor || "rgba(15,23,42,0.38)", "#f8fafc", "#334155");
+      if (imageSrc && p.overlayEnabled) {
+        const contentAlign = Number(p.overlayX ?? 50) <= 38 ? "left" : Number(p.overlayX ?? 50) >= 62 ? "right" : "center";
+        const tableAlignAttr = (align) => (align === "right" ? "right" : align === "left" ? "left" : "center");
+        const overlayImageWidth = Math.min(180, Math.max(56, Math.round((Number(p.overlayImageWidthPct || 24) / 100) * Math.max(220, imageWidthPx - 48))));
+        const topSpacer = Math.max(14, Math.round(imageHeightPx * 0.14));
+        const contentWidth = Math.max(220, Math.min(imageWidthPx - 48, Math.round((imageWidthPx - 48) * 0.82)));
+        const overlayImageHtml = overlayImageSrc
+          ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0 0 18px;text-align:${contentAlign};"><img src="${esc(overlayImageSrc)}" alt="" width="${overlayImageWidth}" height="${Number(p.overlayImageHeightPx || 72)}" style="width:${overlayImageWidth}px;max-width:100%;height:${Number(p.overlayImageHeightPx || 72)}px;object-fit:contain;display:block;margin:${contentAlign === "left" ? "0 auto 0 0" : contentAlign === "right" ? "0 0 0 auto" : "0 auto"};border-radius:${Number(p.overlayImageRadius || 8)}px;" /></td></tr>`
+          : "";
+        const titleHtml = String(p.overlayTitle || "").trim()
+          ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0 0 ${String(p.overlayText || "").trim() ? 10 : 0}px;text-align:${contentAlign};"><div style="font-size:${Number(p.overlayTitleSize || 24)}px;font-weight:800;line-height:1.15;color:${esc(overlayTitleColor)};text-shadow:0 2px 8px rgba(15,23,42,0.4);">${rich(p.overlayTitle || "")}</div></td></tr>`
+          : "";
+        const textHtml = String(p.overlayText || "").trim()
+          ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0;text-align:${contentAlign};"><div style="font-size:${Number(p.overlayTextSize || 14)}px;font-weight:600;line-height:1.5;color:${esc(overlayTextColor)};text-shadow:0 2px 8px rgba(15,23,42,0.35);">${rich(p.overlayText || "")}</div></td></tr>`
+          : "";
+        const innerHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;height:${imageHeightPx}px;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+  <tr>
+    <td valign="middle" style="padding:24px;background:${esc(p.overlayBgColor || "rgba(15,23,42,0.38)")};vertical-align:middle;">
+      <table role="presentation" width="${contentWidth}" cellpadding="0" cellspacing="0" border="0" align="${tableAlignAttr(contentAlign)}" style="width:${contentWidth}px;max-width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+        <tr><td height="${topSpacer}" style="height:${topSpacer}px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        ${overlayImageHtml}
+        ${titleHtml}
+        ${textHtml}
+      </table>
+    </td>
+  </tr>
+</table>`;
+        const blockHtml = renderEmailBackgroundTable({
+          width: imageWidthPx,
+          bgColor: p.bgColor || "#0f172a",
+          bgImageSrc: imageSrc,
+          bgRepeat: "no-repeat",
+          borderRadius: p.borderRadius || 0,
+          fixedHeightPx: imageHeightPx,
+          msoInset: "0,0,0,0",
+          tdStyle: `padding:0;background-color:transparent;color:${esc(p.textColor || "#ffffff")};font-family:Arial,Helvetica,sans-serif;`,
+          innerHtml,
+        });
+        const linkedBlock = p.linkHref ? `<a href="${esc(p.linkHref)}" style="display:block;text-decoration:none;">${blockHtml}</a>` : blockHtml;
+        return wrapEmailBlockTable(`<tr><td style="padding:12px 16px;text-align:${p.align || "center"};">${linkedBlock}</td></tr>`, W);
+      }
+
       const imgTag = imageSrc
         ? `<img src="${esc(imageSrc)}" alt="${esc(p.alt)}" width="${imageWidthPx}" height="${imageHeightPx}" style="width:${imageWidthPx}px;max-width:100%;height:${imageHeightPx}px;object-fit:${esc(p.fitMode || "cover")};object-position:${Number(p.imageX ?? 50)}% ${Number(p.imageY ?? 50)}%;display:block;margin:0 auto;border-radius:${p.borderRadius || 0}px;" />`
         : "";
-      const overlayTitleColor = ensureReadableColor(p.overlayTitleColor || p.textColor, p.overlayBgColor || "rgba(15,23,42,0.38)", "#ffffff", "#0f172a");
-      const overlayTextColor = ensureReadableColor(p.overlayTextColor || p.textColor, p.overlayBgColor || "rgba(15,23,42,0.38)", "#f8fafc", "#334155");
-      const overlay = imageSrc && p.overlayEnabled
-        ? `<div style="position:absolute;inset:0;border-radius:${p.borderRadius || 0}px;overflow:hidden;">
-            <div style="position:absolute;inset:0;background:${esc(p.overlayBgColor || "rgba(15,23,42,0.38)")};"></div>
-            <div style="position:absolute;left:${Number(p.overlayX ?? 50)}%;top:${Number(p.overlayY ?? 50)}%;transform:translate(-50%,-50%);width:82%;max-width:420px;text-align:center;color:${esc(p.textColor || "#ffffff")};font-family:Arial,Helvetica,sans-serif;z-index:2;">
-              <div style="padding:10px 12px;border-radius:14px;background:rgba(15,23,42,0.16);box-shadow:0 10px 24px rgba(15,23,42,0.18);">
-                <div style="font-size:${Number(p.overlayTitleSize || 24)}px;font-weight:800;line-height:1.15;margin-bottom:${p.overlayText ? 8 : 0}px;color:${esc(overlayTitleColor)};text-shadow:0 2px 8px rgba(15,23,42,0.4);">${rich(p.overlayTitle || "")}</div>
-                <div style="font-size:${Number(p.overlayTextSize || 14)}px;font-weight:600;line-height:1.5;color:${esc(overlayTextColor)};text-shadow:0 2px 8px rgba(15,23,42,0.35);">${rich(p.overlayText || "")}</div>
-              </div>
-            </div>
-          </div>`
-        : "";
-      const layerImage = imageSrc && overlayImageSrc
-        ? `<div style="position:absolute;left:${Number(p.overlayImageX ?? 50)}%;top:${Number(p.overlayImageY ?? 22)}%;transform:translate(-50%,-50%);z-index:3;width:${Number(p.overlayImageWidthPct || 24)}%;min-width:56px;max-width:180px;">
-            <img src="${esc(overlayImageSrc)}" alt="" width="${Math.min(180, Math.max(56, Math.round((Number(p.overlayImageWidthPct || 24) / 100) * imageWidthPx)))}" height="${Number(p.overlayImageHeightPx || 72)}" style="width:100%;height:${Number(p.overlayImageHeightPx || 72)}px;object-fit:contain;display:block;border-radius:${Number(p.overlayImageRadius || 8)}px;" />
-          </div>`
-        : "";
-      const wrapped = `<div style="position:relative;display:block;width:${imageWidthPx}px;max-width:100%;margin:0 auto;">${imgTag}${overlay}${layerImage}</div>`;
+      const wrapped = `<div style="position:relative;display:block;width:${imageWidthPx}px;max-width:100%;margin:0 auto;">${imgTag}</div>`;
       const inner = p.linkHref
         ? `<a href="${esc(p.linkHref)}" style="display:block;text-align:${p.align || "center"};">${wrapped}</a>`
         : `<div style="text-align:${p.align || "center"};">${wrapped}</div>`;
@@ -1563,27 +1592,19 @@ function blockToHtml(block, emailWidth = 600) {
     case "imageText": {
       const imageTextBgImage = toEmailAssetUrl(p.imageSrc);
       const imageTextOverlayImage = toEmailAssetUrl(p.overlayImageSrc);
-      const imageTextColor = ensureReadableColor(p.textColor || "#ffffff", p.overlayShade || "rgba(15,23,42,0.45)", "#ffffff", "#0f172a");
-      const imageButtonTextColor = resolvePreferredColor(p.buttonTextColor || "#ffffff", p.buttonBgColor || "#2563eb", "#ffffff", "#0f172a");
       const stagePadding = 28;
-      const msoStageInsetPt = Math.round(stagePadding * 0.75);
-      const stageWidth = Math.max(120, W);
-      const overlayImageWidth = Math.min(180, Math.max(56, Math.round((Number(p.overlayImageWidthPct || 24) / 100) * stageWidth)));
-      const widthFromPct = (value, fallbackPct) => Math.max(120, Math.min(stageWidth, Math.round((Number(value || fallbackPct) / 100) * stageWidth)));
       const stageHeight = Math.max(220, Number(p.height || 320));
-      const blockHeight = stageHeight + (stagePadding * 2);
+      const stageContentWidth = Math.max(220, W - (stagePadding * 2));
+      const overlayImageWidth = Math.min(180, Math.max(56, Math.round((Number(p.overlayImageWidthPct || 24) / 100) * stageContentWidth)));
+      const imageButtonTextColor = resolvePreferredColor(p.buttonTextColor || "#ffffff", p.buttonBgColor || "#2563eb", "#ffffff", "#0f172a");
       const msoOverlayRgb = parseColorToRgb(p.overlayShade || "rgba(15,23,42,0.45)") || { r: 15, g: 23, b: 42 };
       const msoOverlayColor = rgbToHex(msoOverlayRgb);
-      const msoContentBackground = imageTextBgImage ? "transparent" : msoOverlayColor;
-      const alignFromX = (value, fallback = p.align) => {
-        const x = Number(value ?? 50);
-        if (x <= 38) return "left";
-        if (x >= 62) return "right";
-        return fallback === "left" || fallback === "right" ? fallback : "center";
-      };
+      const contentAlign = p.align === "left" || p.align === "right" ? p.align : "center";
       const tableAlignAttr = (align) => (align === "right" ? "right" : align === "left" ? "left" : "center");
-      const rowTableStyle = (widthPx) => `width:${widthPx}px;max-width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;`;
-      const buttonWidthPx = Math.max(144, Math.min(240, Math.round((String(p.buttonText || "Learn More").trim().length * 9) + 52)));
+      const contentWidth = Math.max(240, Math.min(stageContentWidth, Math.round(stageContentWidth * 0.86)));
+      const topSpacer = Math.max(16, Math.round(stageHeight * 0.1));
+      const headlineColor = ensureReadableColor(p.headlineColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#ffffff", "#0f172a");
+      const subtextColor = ensureReadableColor(p.subtextColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#e5e7eb", "#334155");
       const buttonPillHeightPx = 44;
       const buttonHtml = (align) => `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${tableAlignAttr(align)}" style="border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;">
   <tr>
@@ -1592,92 +1613,41 @@ function blockToHtml(block, emailWidth = 600) {
     </td>
   </tr>
 </table>`;
-      const buildRow = ({ y, height, html, edgePadding = 28 }) => {
-        const safeHeight = Math.max(32, Math.round(height));
-        const safeY = clampOverlayCenterPct(y, safeHeight, blockHeight, edgePadding);
-        return {
-          top: clamp(Math.round((blockHeight * (safeY / 100)) - (safeHeight / 2)), 0, Math.max(0, blockHeight - safeHeight)),
-          height: safeHeight,
-          html,
-        };
-      };
-      const items = [];
-
-      if (isEmailRenderableUrl(imageTextOverlayImage)) {
-        const imageAlign = alignFromX(p.overlayImageX, "center");
-        items.push(buildRow({
-          y: Number(p.overlayImageY ?? 18),
-          height: Number(p.overlayImageHeightPx || 72),
-          edgePadding: 18,
-          html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${overlayImageWidth}" align="${tableAlignAttr(imageAlign)}" style="${rowTableStyle(overlayImageWidth)}"><tr><td align="${tableAlignAttr(imageAlign)}" style="padding:0;text-align:${imageAlign};"><img src="${esc(imageTextOverlayImage)}" alt="" width="${overlayImageWidth}" height="${Number(p.overlayImageHeightPx || 72)}" style="width:${overlayImageWidth}px;max-width:100%;height:${Number(p.overlayImageHeightPx || 72)}px;object-fit:contain;display:block;border-radius:${Number(p.overlayImageRadius || 8)}px;" /></td></tr></table>`,
-        }));
-      }
-
-      const headlineAlignRow = alignFromX(p.headlineX, p.align);
-      items.push(buildRow({
-        y: Number(p.headlineY ?? 28),
-        height: Number(p.headlineBoxHeightPx || 84),
-        edgePadding: 22,
-        html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${widthFromPct(p.headlineBoxWidthPct, 78)}" align="${tableAlignAttr(headlineAlignRow)}" style="${rowTableStyle(widthFromPct(p.headlineBoxWidthPct, 78))}"><tr><td align="${tableAlignAttr(headlineAlignRow)}" style="text-align:${headlineAlignRow};color:${esc(imageTextColor)};"><div style="font-size:${Number(p.headlineSize || 30)}px;font-weight:800;line-height:1.15;margin:0;color:${esc(ensureReadableColor(p.headlineColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#ffffff", "#0f172a"))};text-shadow:0 2px 8px rgba(15,23,42,0.35);">${rich(p.headline)}</div></td></tr></table>`,
-      }));
-
-      const subtextAlignRow = alignFromX(p.subtextX, p.align);
-      items.push(buildRow({
-        y: Number(p.subtextY ?? 56),
-        height: Number(p.subtextBoxHeightPx || 92),
-        edgePadding: 24,
-        html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${widthFromPct(p.subtextBoxWidthPct, 84)}" align="${tableAlignAttr(subtextAlignRow)}" style="${rowTableStyle(widthFromPct(p.subtextBoxWidthPct, 84))}"><tr><td align="${tableAlignAttr(subtextAlignRow)}" style="text-align:${subtextAlignRow};color:${esc(imageTextColor)};"><div style="font-size:${Number(p.subtextSize || 15)}px;line-height:1.6;margin:0;color:${esc(ensureReadableColor(p.subtextColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#e5e7eb", "#334155"))};">${rich(p.subtext)}</div></td></tr></table>`,
-      }));
-
-      const buttonAlignRow = alignFromX(p.buttonX, p.align);
-      items.push(buildRow({
-        y: Number(p.buttonY ?? 78),
-        height: Number(p.buttonBoxHeightPx || 84),
-        edgePadding: 42,
-        html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${Math.max(buttonWidthPx, widthFromPct(p.buttonBoxWidthPct, 36))}" align="${tableAlignAttr(buttonAlignRow)}" style="${rowTableStyle(Math.max(buttonWidthPx, widthFromPct(p.buttonBoxWidthPct, 36)))}"><tr><td align="${tableAlignAttr(buttonAlignRow)}" style="text-align:${buttonAlignRow};font-size:0;line-height:0;">${buttonHtml(buttonAlignRow)}</td></tr></table>`,
-      }));
-
-      items.sort((a, b) => a.top - b.top);
-      let cursor = 0;
-      const flowRows = items.map((item) => {
-        const spacer = item.top > cursor
-          ? `<tr><td height="${item.top - cursor}" style="height:${item.top - cursor}px;font-size:0;line-height:0;">&nbsp;</td></tr>`
-          : "";
-        cursor = Math.max(cursor, item.top + item.height);
-        return `${spacer}<tr><td height="${item.height}" valign="middle" style="height:${item.height}px;vertical-align:middle;padding:0;">${item.html}</td></tr>`;
-      }).join("");
-      const trailingSpacer = cursor < blockHeight
-        ? `<tr><td height="${blockHeight - cursor}" style="height:${blockHeight - cursor}px;font-size:0;line-height:0;">&nbsp;</td></tr>`
+      const overlayImageHtml = isEmailRenderableUrl(imageTextOverlayImage)
+        ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0 0 18px;text-align:${contentAlign};"><img src="${esc(imageTextOverlayImage)}" alt="" width="${overlayImageWidth}" height="${Number(p.overlayImageHeightPx || 72)}" style="width:${overlayImageWidth}px;max-width:100%;height:${Number(p.overlayImageHeightPx || 72)}px;object-fit:contain;display:block;margin:${contentAlign === "left" ? "0 auto 0 0" : contentAlign === "right" ? "0 0 0 auto" : "0 auto"};border-radius:${Number(p.overlayImageRadius || 8)}px;" /></td></tr>`
         : "";
-      const msoTopSpacer = Math.max(12, Math.round(stageHeight * 0.14));
-      const msoBottomSpacer = Math.max(18, Math.round(stageHeight * 0.16));
-      const msoHeadlineColor = ensureReadableColor(p.headlineColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#ffffff", "#0f172a");
-      const msoSubtextColor = ensureReadableColor(p.subtextColor || p.textColor, p.overlayShade || "rgba(15,23,42,0.45)", "#e5e7eb", "#334155");
-      const msoInnerHtml = `<!--[if mso]>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
-  <tr><td height="${msoTopSpacer}" style="height:${msoTopSpacer}px;font-size:0;line-height:0;">&nbsp;</td></tr>
-  ${isEmailRenderableUrl(imageTextOverlayImage) ? `<tr><td align="center" style="padding:0 0 18px;">${items[0]?.html || ""}</td></tr>` : ""}
-  <tr><td align="${tableAlignAttr(headlineAlignRow)}" style="padding:0 0 14px;text-align:${headlineAlignRow};"><div style="font-size:${Number(p.headlineSize || 30)}px;font-weight:800;line-height:1.15;color:${esc(msoHeadlineColor)};">${rich(p.headline)}</div></td></tr>
-  <tr><td align="${tableAlignAttr(subtextAlignRow)}" style="padding:0 0 20px;text-align:${subtextAlignRow};"><div style="font-size:${Number(p.subtextSize || 15)}px;line-height:1.6;color:${esc(msoSubtextColor)};">${rich(p.subtext)}</div></td></tr>
-  <tr><td align="${tableAlignAttr(buttonAlignRow)}" style="padding:0;text-align:${buttonAlignRow};font-size:0;line-height:0;">${buttonHtml(buttonAlignRow)}</td></tr>
-  <tr><td height="${msoBottomSpacer}" style="height:${msoBottomSpacer}px;font-size:0;line-height:0;">&nbsp;</td></tr>
-</table>
-<![endif]-->`;
-      const webInnerHtml = `<!--[if !mso]><!-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
-  ${flowRows}${trailingSpacer}
-</table>
-<!--<![endif]-->`;
+      const headlineHtml = String(p.headline || "").trim()
+        ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0 0 ${String(p.subtext || "").trim() ? 12 : 0}px;text-align:${contentAlign};"><div style="font-size:${Number(p.headlineSize || 30)}px;font-weight:800;line-height:1.15;margin:0;color:${esc(headlineColor)};text-shadow:0 2px 8px rgba(15,23,42,0.35);">${rich(p.headline)}</div></td></tr>`
+        : "";
+      const subtextHtml = String(p.subtext || "").trim()
+        ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0 0 ${String(p.buttonText || "").trim() ? 20 : 0}px;text-align:${contentAlign};"><div style="font-size:${Number(p.subtextSize || 15)}px;line-height:1.6;margin:0;color:${esc(subtextColor)};">${rich(p.subtext)}</div></td></tr>`
+        : "";
+      const buttonRowHtml = String(p.buttonText || "").trim()
+        ? `<tr><td align="${tableAlignAttr(contentAlign)}" style="padding:0;text-align:${contentAlign};font-size:0;line-height:0;">${buttonHtml(contentAlign)}</td></tr>`
+        : "";
+      const flowTableHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;height:${stageHeight}px;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+  <tr>
+    <td valign="middle" style="padding:${stagePadding}px;background:${esc(imageTextBgImage ? (p.overlayShade || "rgba(15,23,42,0.45)") : msoOverlayColor)};vertical-align:middle;">
+      <table role="presentation" width="${contentWidth}" cellpadding="0" cellspacing="0" border="0" align="${tableAlignAttr(contentAlign)}" style="width:${contentWidth}px;max-width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+        <tr><td height="${topSpacer}" style="height:${topSpacer}px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        ${overlayImageHtml}
+        ${headlineHtml}
+        ${subtextHtml}
+        ${buttonRowHtml}
+      </table>
+    </td>
+  </tr>
+</table>`;
       return renderEmailBackgroundTable({
         width: W,
-        bgColor: msoContentBackground,
+        bgColor: imageTextBgImage ? (p.bgColor || "#334155") : msoOverlayColor,
         bgImageSrc: imageTextBgImage,
         bgRepeat: "no-repeat",
         borderRadius: 12,
-        fixedHeightPx: blockHeight,
-        msoInset: `${msoStageInsetPt}pt,${msoStageInsetPt}pt,${msoStageInsetPt}pt,${msoStageInsetPt}pt`,
-        tdStyle: `padding:${stagePadding}px;background-color:${esc(imageTextBgImage ? (p.overlayShade || "rgba(15,23,42,0.45)") : msoContentBackground)};color:${esc(imageTextColor)};font-family:Arial,Helvetica,sans-serif;`,
-        innerHtml: `${msoInnerHtml}${webInnerHtml}`,
+        fixedHeightPx: stageHeight,
+        msoInset: "0,0,0,0",
+        tdStyle: `padding:0;background-color:${esc(imageTextBgImage ? "transparent" : msoOverlayColor)};color:${esc(p.textColor || "#ffffff")};font-family:Arial,Helvetica,sans-serif;`,
+        innerHtml: flowTableHtml,
       });
     }
 
@@ -1784,6 +1754,9 @@ export function exportFullHtml(blocks, name = "Email", emailSettings = {}) {
   const settings = normalizeEmailSettings(emailSettings);
   const pageBgColor = esc(settings.outerBgColor);
   const pageBgImage = esc(settings.outerBgImageSrc || "");
+  const effectiveCanvasBgColor = settings.outerBgImageSrc && String(settings.canvasBgColor || "").toLowerCase() === "#ffffff"
+    ? "transparent"
+    : settings.canvasBgColor;
   const bodyBgStyle = settings.outerBgImageSrc
     ? `background-color:${pageBgColor};background-image:url(${pageBgImage});background-position:center top;background-size:${settings.outerBgRepeat === "no-repeat" ? "cover" : "auto"};background-repeat:${esc(settings.outerBgRepeat || "no-repeat")};`
     : `background-color:${pageBgColor};`;
@@ -1801,7 +1774,7 @@ export function exportFullHtml(blocks, name = "Email", emailSettings = {}) {
   </o:OfficeDocumentSettings>
 </xml>
 <v:background xmlns:v="urn:schemas-microsoft-com:vml" fill="t">
-  <v:fill type="${settings.outerBgRepeat === "no-repeat" ? "frame" : "tile"}" src="${pageBgImage}" color="${pageBgColor}" />
+  <v:fill ${settings.outerBgRepeat === "no-repeat" ? 'type="frame" aspect="atleast" focusposition="0.5,0.5"' : 'type="tile"'} src="${pageBgImage}" color="${pageBgColor}" />
 </v:background>
 <![endif]-->`
     : "<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->";
@@ -1820,9 +1793,9 @@ ${msoBackground}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${pageBgColor}" style="width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${bodyBgStyle}">
 <tr><td align="center" style="padding:24px 12px;">
 <!--[if mso]>
-<table role="presentation" width="${settings.canvasWidth}" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${esc(settings.canvasBgColor)}" style="width:${settings.canvasWidth}px;background-color:${esc(settings.canvasBgColor)};border-collapse:separate;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;border-radius:${settings.canvasRadius}px;"><tr><td style="padding:0;">
+<table role="presentation" width="${settings.canvasWidth}" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${esc(effectiveCanvasBgColor)}" style="width:${settings.canvasWidth}px;background-color:${esc(effectiveCanvasBgColor)};border-collapse:separate;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;border-radius:${settings.canvasRadius}px;"><tr><td style="padding:0;">
 <![endif]-->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${esc(settings.canvasBgColor)}" style="width:100%;max-width:${settings.canvasWidth}px;background-color:${esc(settings.canvasBgColor)};border-collapse:separate;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;border-radius:${settings.canvasRadius}px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="${esc(effectiveCanvasBgColor)}" style="width:100%;max-width:${settings.canvasWidth}px;background-color:${esc(effectiveCanvasBgColor)};border-collapse:separate;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;border-radius:${settings.canvasRadius}px;">
 <tr><td style="padding:0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
 ${exportedBlocks}

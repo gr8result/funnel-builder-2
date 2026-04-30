@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { flushSync } from "react-dom";
-import { applyAssetToProps, createStoredAsset, getAssetFromLibrary } from "../../lib/website-builder/mediaAssets";
+import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { BlockTypes, BlockDefinitions } from "../../lib/website-builder/pageBlockComponents";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
@@ -140,6 +140,11 @@ function createTextStackLayer(seed = 0) {
     verticalAlign: "center",
     textColor: "#0f172a",
     background: "transparent",
+    backgroundColor: "transparent",
+    backgroundImage: "",
+    backgroundSize: "cover",
+    backgroundPosition: "center center",
+    backgroundRepeat: "no-repeat",
   };
 }
 
@@ -493,6 +498,12 @@ const BLOCK_STYLE_PRESETS = {
     { id: "nl-split", label: "Split", props: { newsletterVariant: "split", backgroundColor: "#ffffff", textColor: "#0f172a", buttonColor: "#0f172a", buttonTextColor: "#ffffff" } },
     { id: "nl-card", label: "Card Highlight", props: { newsletterVariant: "card-highlight", backgroundColor: "linear-gradient(135deg,#eff6ff,#dbeafe)", textColor: "#0f172a", buttonColor: "#2563eb", buttonTextColor: "#ffffff" } },
   ],
+  [BlockTypes.TRUST_BADGES]: [
+    { id: "trust-pill", label: "Pill Row", props: { trustBadgeVariant: "pill-row", backgroundColor: "linear-gradient(180deg,#ffffff,#f8fafc)", badgeBackgroundColor: "linear-gradient(165deg,#ffffff,#f1f5f9)", textColor: "#0f172a", borderColor: "#cbd5e1" } },
+    { id: "trust-soft", label: "Soft Cards", props: { trustBadgeVariant: "soft-cards", backgroundColor: "linear-gradient(180deg,#f8fbff,#eef6ff)", badgeBackgroundColor: "rgba(255,255,255,0.94)", textColor: "#0f172a", borderColor: "rgba(96,165,250,0.22)" } },
+    { id: "trust-dark", label: "Dark Glass", props: { trustBadgeVariant: "dark-glass", backgroundColor: "linear-gradient(135deg,#020617,#0f172a)", badgeBackgroundColor: "rgba(15,23,42,0.72)", textColor: "#f8fafc", borderColor: "rgba(125,211,252,0.24)" } },
+    { id: "trust-logo", label: "Logo Strip", props: { trustBadgeVariant: "logo-strip", backgroundColor: "linear-gradient(180deg,#fffaf2,#f6ead8)", badgeBackgroundColor: "rgba(255,250,243,0.72)", textColor: "#2f241b", borderColor: "rgba(120,98,67,0.18)" } },
+  ],
   [BlockTypes.PRICING_TABLE]: [
     { id: "price-premium", label: "Premium Pricing", props: { pricingVariant: "premium", spacingScale: "luxury", backgroundColor: "linear-gradient(180deg,#f8fbff,#eef6ff)", borderColor: "rgba(125,211,252,0.35)" } },
     { id: "price-clean", label: "Clean Pricing", props: { pricingVariant: "clean", spacingScale: "normal", backgroundColor: "linear-gradient(180deg,#ffffff,#f8fafc)", borderColor: "rgba(148,163,184,0.28)" } },
@@ -647,6 +658,8 @@ function NavbarPresetPicker({ value, onApply }) {
 
 function NavbarLinksEditor({ links, onChange }) {
   const safeLinks = Array.isArray(links) ? links : [];
+  const makeLinkId = () => `nav-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const makeChildLinkId = () => `nav-child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   function updateLink(idx, patch) {
     const next = safeLinks.map((item, currentIdx) => (
@@ -660,7 +673,7 @@ function NavbarLinksEditor({ links, onChange }) {
   }
 
   function addLink() {
-    onChange([...safeLinks, { label: "New Link", href: "#" }]);
+    onChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "#" }]);
   }
 
   function moveLink(idx, direction) {
@@ -691,7 +704,7 @@ function NavbarLinksEditor({ links, onChange }) {
       if (currentIdx !== parentIdx) return item;
       return {
         ...item,
-        children: [...(Array.isArray(item.children) ? item.children : []), { label: "Dropdown Link", href: "#" }],
+        children: [...(Array.isArray(item.children) ? item.children : []), { id: makeChildLinkId(), label: "Dropdown Link", href: "#" }],
       };
     });
     onChange(next);
@@ -711,7 +724,7 @@ function NavbarLinksEditor({ links, onChange }) {
   return (
     <div style={styles.stackSm}>
       {safeLinks.map((item, idx) => (
-        <div key={`${item?.label || "link"}-${idx}`} style={styles.linkRowCard}>
+        <div key={item?.id || `link-${idx}`} style={styles.linkRowCard}>
           <div style={styles.linkRowHeader}>
             <span style={styles.linkRowTitle}>Link {idx + 1}</span>
             <div style={styles.linkActions}>
@@ -746,7 +759,7 @@ function NavbarLinksEditor({ links, onChange }) {
           </label>
           <div style={styles.subLinkList}>
             {(Array.isArray(item.children) ? item.children : []).map((child, childIdx) => (
-              <div key={`${child?.label || "child"}-${childIdx}`} style={styles.subLinkCard}>
+              <div key={child?.id || `child-${idx}-${childIdx}`} style={styles.subLinkCard}>
                 <div style={styles.linkRowHeader}>
                   <span style={styles.subLinkTitle}>Dropdown {childIdx + 1}</span>
                   <button type="button" style={styles.linkRowDelete} onClick={() => removeChildLink(idx, childIdx)}>
@@ -993,6 +1006,192 @@ function normalizeTestimonialItemForEditor(item, index) {
   return { id: `testimonial-${index}`, text: "", author: "", role: "", rating: 5, avatarUrl: "", avatarAssetId: "" };
 }
 
+function normalizeTrustBadgeItem(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `trust-badge-${index}`,
+      icon: String(item.icon || "✓"),
+      label: String(item.label || `Badge ${index + 1}`),
+    };
+  }
+
+  return {
+    id: `trust-badge-${index}`,
+    icon: "✓",
+    label: String(item || `Badge ${index + 1}`),
+  };
+}
+
+function TrustBadgesEditor({ badges, onChange }) {
+  const safeBadges = (Array.isArray(badges) && badges.length)
+    ? badges.map(normalizeTrustBadgeItem)
+    : [normalizeTrustBadgeItem({}, 0), normalizeTrustBadgeItem({}, 1), normalizeTrustBadgeItem({}, 2)];
+
+  const updateBadge = (index, patch) => {
+    onChange(safeBadges.map((badge, currentIndex) => (
+      currentIndex === index ? { ...badge, ...patch } : badge
+    )));
+  };
+
+  const removeBadge = (index) => {
+    const next = safeBadges.filter((_, currentIndex) => currentIndex !== index);
+    onChange(next.length ? next : [normalizeTrustBadgeItem({}, 0)]);
+  };
+
+  const addBadge = () => {
+    onChange([...safeBadges, normalizeTrustBadgeItem({}, safeBadges.length)]);
+  };
+
+  return (
+    <div style={styles.stackSm}>
+      {safeBadges.map((badge, index) => (
+        <div key={badge.id || `trust-${index}`} style={styles.linkRowCard}>
+          <div style={styles.linkRowHeader}>
+            <span style={styles.linkRowTitle}>Badge {index + 1}</span>
+            <button type="button" style={styles.linkRowDelete} onClick={() => removeBadge(index)}>Remove</button>
+          </div>
+          <div style={styles.colorGrid}>
+            <div>
+              <label style={styles.propertyLabel}>Icon</label>
+              <input
+                type="text"
+                value={badge.icon || ""}
+                onChange={(e) => updateBadge(index, { icon: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="✓"
+              />
+            </div>
+            <div style={{ gridColumn: "span 2" }}>
+              <label style={styles.propertyLabel}>Label</label>
+              <input
+                type="text"
+                value={badge.label || ""}
+                onChange={(e) => updateBadge(index, { label: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Trusted by 2,000+ customers"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button type="button" style={styles.secondaryBtn} onClick={addBadge}>+ Add Badge</button>
+    </div>
+  );
+}
+
+function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+  const savedLogo = brandAssets?.logo || null;
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const variantLabels = {
+    "pill-row": "Pill Row",
+    "soft-cards": "Soft Cards",
+    "dark-glass": "Dark Glass",
+    "logo-strip": "Logo Strip",
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🛡️ Edit: Trust Badges</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Style</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+            {Object.entries(variantLabels).map(([value, label]) => {
+              const active = String(props.trustBadgeVariant || "pill-row") === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => update({ trustBadgeVariant: value })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    justifyContent: "center",
+                    background: active ? "#2563eb" : undefined,
+                    color: active ? "#ffffff" : undefined,
+                    border: active ? "1px solid #2563eb" : undefined,
+                    fontWeight: active ? 700 : undefined,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Badges</label>
+          <TrustBadgesEditor badges={props.badges} onChange={(badges) => update({ badges })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background</label>
+          <ColorSelector label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Badge Background" value={props.badgeBackgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(value) => update({ badgeBackgroundColor: value })} />
+          <ColorSelector label="Badge Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Badge Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Sizing</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Icon Size" value={Number(props.badgeIconSize || 18)} min={10} max={48} onChange={(value) => update({ badgeIconSize: value })} />
+            <NumberField label="Text Size" value={Number(props.badgeFontSize || 15)} min={10} max={32} onChange={(value) => update({ badgeFontSize: value })} />
+            <NumberField label="Pill Padding" value={Number(props.badgePadding || 14)} min={6} max={36} onChange={(value) => update({ badgePadding: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            {savedLogo ? (
+              <button type="button" style={styles.assetChip} onClick={() => onSelectAsset(index, "backgroundImage", savedLogo)}>
+                Use Logo
+              </button>
+            ) : null}
+            {props.backgroundImage ? (
+              <button
+                type="button"
+                style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                onClick={() => update({ backgroundImage: "" })}
+              >
+                Remove Image
+              </button>
+            ) : null}
+            {savedImages.slice(0, 6).map((image) => (
+              <button
+                key={`trust-bg-${image.id}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TestimonialItemsEditor({ items, onChange, brandAssets }) {
   const safeItems = (Array.isArray(items) && items.length)
     ? items.map(normalizeTestimonialItemForEditor)
@@ -1196,23 +1395,31 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
             <CompactColorField label="Button Text" value={props.buttonTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ buttonTextColor: value })} />
           </div>
           <div style={{ marginTop: 10 }}>
+            <label style={styles.propertyLabel}>Button Link / Mailto</label>
+            <input
+              type="text"
+              value={String(props.buttonLink || "")}
+              onChange={(e) => update({ buttonLink: e.target.value })}
+              style={styles.propertyInput}
+              placeholder="mailto:hello@example.com or https://..."
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
             <label style={styles.propertyLabel}>Button Corner Radius</label>
             <input
               type="range"
               min={0}
-              max={999}
+              max={40}
               step={1}
-              value={Number.isFinite(Number(props.buttonRadius)) ? Math.min(Number(props.buttonRadius), 40) : 40}
+              value={Number.isFinite(Number(props.buttonRadius)) ? Math.max(0, Math.min(Number(props.buttonRadius), 40)) : 40}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                update({ buttonRadius: v >= 40 ? 999 : v });
+                update({ buttonRadius: v });
               }}
               style={{ width: "100%", marginTop: 4 }}
             />
             <span style={{ color: "#64748b", fontSize: 12 }}>
-              {Number.isFinite(Number(props.buttonRadius)) && Number(props.buttonRadius) < 999
-                ? `${props.buttonRadius}px`
-                : "Pill (fully rounded)"}
+              {`${Math.max(0, Math.min(Number(props.buttonRadius) || 40, 40))}px`}
             </span>
           </div>
         </div>
@@ -1223,7 +1430,154 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
             <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
           </div>
         </div>
-        <BlockPresetPicker blockType={block.type} onApply={(patch) => update(patch)} />
+      </div>
+    </div>
+  );
+}
+
+function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const updateNavLink = (i, field, value) => {
+    const links = [...(Array.isArray(props.navLinks) ? props.navLinks : [])];
+    links[i] = { ...links[i], [field]: value };
+    update({ navLinks: links });
+  };
+  const addNavLink = () => update({ navLinks: [...(props.navLinks || []), { label: "New Link", href: "#" }] });
+  const removeNavLink = (i) => update({ navLinks: (props.navLinks || []).filter((_, idx) => idx !== i) });
+
+  const updateExtraLink = (i, field, value) => {
+    const links = [...(Array.isArray(props.extraLinks) ? props.extraLinks : [])];
+    links[i] = { ...links[i], [field]: value };
+    update({ extraLinks: links });
+  };
+  const addExtraLink = () => update({ extraLinks: [...(props.extraLinks || []), { label: "New Link", href: "#" }] });
+  const removeExtraLink = (i) => update({ extraLinks: (props.extraLinks || []).filter((_, idx) => idx !== i) });
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🔻 Edit: Footer</h3>
+      <div style={styles.propertyGrid}>
+
+        {/* Background colour */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Background" value={props.backgroundColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ backgroundColor: v })} />
+            <CompactColorField label="Text" value={props.textColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(v) => update({ textColor: v })} />
+            <CompactColorField label="Link / Muted" value={props.linkColor || "#94a3b8"} fallback="#94a3b8" onChange={(v) => update({ linkColor: v })} />
+            <CompactColorField label="Border" value={props.borderColor || "rgba(148,163,184,0.2)"} fallback="rgba(148,163,184,0.2)" onChange={(v) => update({ borderColor: v })} />
+          </div>
+        </div>
+
+        {/* Logo */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Logo / Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Logo
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  onUploadImage?.(index, "logo", file);
+                }}
+              />
+            </label>
+            {brandAssets?.logo ? (
+              <button
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => update({ logo: brandAssets.logo.src, logoWidth: props.logoWidth || 48 })}
+                title="Use brand logo"
+              >
+                <img src={brandAssets.logo.src} alt="Brand logo" style={styles.assetThumbPreview} />
+              </button>
+            ) : null}
+          </div>
+          {props.logo ? (
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, marginTop: 8 }}
+              onClick={() => onOpenSimpleImageEditor?.(index, "logo", props.logo)}
+            >
+              ✂️ Crop / Edit Logo
+            </button>
+          ) : null}
+          <div style={{ marginTop: 8 }}>
+            <NumberField label="Logo Width (px)" value={Number(props.logoWidth) || 48} min={20} max={300} onChange={(v) => update({ logoWidth: v })} />
+          </div>
+        </div>
+
+        {/* Brand & tagline */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Brand Name</label>
+          <input type="text" value={String(props.brand || "")} onChange={(e) => update({ brand: e.target.value })} style={styles.propertyInput} placeholder="Your Brand" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Tagline</label>
+          <input type="text" value={String(props.tagline || "")} onChange={(e) => update({ tagline: e.target.value })} style={styles.propertyInput} placeholder="Your tagline." />
+        </div>
+
+        {/* Navigation links */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Navigation Heading</label>
+          <input type="text" value={String(props.navHeading || "")} onChange={(e) => update({ navHeading: e.target.value })} style={styles.propertyInput} placeholder="Navigation" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Nav Links</label>
+          {(Array.isArray(props.navLinks) ? props.navLinks : []).map((link, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
+              <input type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+              <input type="text" value={link.href || ""} onChange={(e) => updateNavLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeNavLink(i)}>✕</button>
+            </div>
+          ))}
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addNavLink}>+ Add Nav Link</button>
+        </div>
+
+        {/* Extra links */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Extra Column Heading</label>
+          <input type="text" value={String(props.extraHeading || "")} onChange={(e) => update({ extraHeading: e.target.value })} style={styles.propertyInput} placeholder="Company" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Extra Links</label>
+          {(Array.isArray(props.extraLinks) ? props.extraLinks : []).map((link, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
+              <input type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+              <input type="text" value={link.href || ""} onChange={(e) => updateExtraLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeExtraLink(i)}>✕</button>
+            </div>
+          ))}
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addExtraLink}>+ Add Link</button>
+        </div>
+
+        {/* Newsletter */}
+        <div style={styles.sectionCard}>
+          <label style={styles.inlineToggle}>
+            <input type="checkbox" checked={props.showNewsletter !== false} onChange={(e) => update({ showNewsletter: e.target.checked })} />
+            Show newsletter signup column
+          </label>
+          {props.showNewsletter !== false ? (
+            <>
+              <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Newsletter Heading</label>
+              <input type="text" value={String(props.newsletterHeading || "")} onChange={(e) => update({ newsletterHeading: e.target.value })} style={styles.propertyInput} placeholder="Stay Updated" />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
+              <input type="text" value={String(props.newsletterSubtitle || "")} onChange={(e) => update({ newsletterSubtitle: e.target.value })} style={styles.propertyInput} placeholder="Get the latest news." />
+              <div style={{ ...styles.colorGrid, marginTop: 10 }}>
+                <CompactColorField label="Button Background" value={props.newsletterButtonColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ newsletterButtonColor: v })} />
+                <CompactColorField label="Button Text" value={props.newsletterButtonTextColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ newsletterButtonTextColor: v })} />
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* Copyright */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Copyright Text</label>
+          <input type="text" value={String(props.copyrightText || "")} onChange={(e) => update({ copyrightText: e.target.value })} style={styles.propertyInput} placeholder="© 2025 Your Brand." />
+        </div>
+
       </div>
     </div>
   );
@@ -2375,7 +2729,7 @@ function NumberField({ label, value, min = 0, max = 200, onChange }) {
   );
 }
 
-function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor }) {
   const props = block?.props || {};
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
   const update = (patch) => onChange(index, { ...props, ...patch });
@@ -2413,6 +2767,15 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
               </button>
             ))}
           </div>
+          {props.src ? (
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, marginTop: 8 }}
+              onClick={() => onOpenImageEditor?.(index, "src", props.src)}
+            >
+              ✂️ Crop / Edit Image
+            </button>
+          ) : null}
           <div style={styles.colorGrid}>
             <NumberField label="Width" value={parsePixelValue(props.width, 720)} min={160} max={1800} onChange={(value) => update({ width: `${value}px` })} />
             <NumberField label="Height" value={parsePixelValue(props.height, 400)} min={120} max={1400} onChange={(value) => update({ height: `${value}px` })} />
@@ -2977,8 +3340,33 @@ function getSelectionStyleSource(editable, selection) {
   return editable;
 }
 
-function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, blockType, onCommand, onTextColor, onHighlightColor, onFontSize, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
+function getEditableBackgroundTarget(editable) {
+  if (!(editable instanceof Element)) return null;
+  if (editable.hasAttribute?.("data-layer-editor")) {
+    return editable.parentElement instanceof Element ? editable.parentElement : editable;
+  }
+  return editable;
+}
+
+function parseBackgroundImageUrl(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "none") return "";
+  const match = text.match(/url\((['"]?)(.*?)\1\)/i);
+  return match?.[2] || "";
+}
+
+function normalizeToolbarBackgroundColor(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text || text === "transparent") return "transparent";
+  const rgbaMatch = text.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d*\.?\d+)\)$/i);
+  if (rgbaMatch && Number(rgbaMatch[4]) === 0) return "transparent";
+  return text;
+}
+
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   if (!visible) return null;
+
+  const backgroundFileInputRef = useRef(null);
 
   const keepSelection = (event, callback) => {
     event.preventDefault();
@@ -3131,6 +3519,81 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
             ))}
           </div>
         </div>
+        {canStyleBox ? (
+          <>
+            <div style={styles.textToolbarInlineDivider} />
+            <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarColorGroupWrap }}>
+              <label style={styles.textToolbarLabel}>
+                Text Box
+              </label>
+              <div style={styles.textToolbarButtonRow}>
+                <button
+                  type="button"
+                  style={styles.textToolbarActionChip}
+                  onMouseDown={(event) => keepSelection(event, () => onClearBoxBackground?.())}
+                >
+                  Remove Background
+                </button>
+                <button
+                  type="button"
+                  style={styles.textToolbarActionChip}
+                  onMouseDown={(event) => keepSelection(event, () => backgroundFileInputRef.current?.click())}
+                >
+                  Background Image
+                </button>
+                {boxBackgroundImage ? (
+                  <button
+                    type="button"
+                    style={styles.textToolbarActionChip}
+                    onMouseDown={(event) => keepSelection(event, () => onClearBoxBackgroundImage?.())}
+                  >
+                    Remove Image
+                  </button>
+                ) : null}
+              </div>
+              <label style={styles.textToolbarLabel}>
+                Block Width
+                <input
+                  type="number"
+                  min={120}
+                  max={1800}
+                  value={Number(boxWidth || 360)}
+                  style={{ ...styles.textToolbarSelect, minWidth: 112, marginTop: 6 }}
+                  onMouseDownCapture={() => onPreserveSelection?.()}
+                  onChange={(event) => onBoxWidthChange?.(Number(event.target.value))}
+                />
+              </label>
+              <input
+                ref={backgroundFileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onMouseDownCapture={() => onPreserveSelection?.()}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onBoxBackgroundImageUpload?.(file);
+                }}
+              />
+              <div style={styles.textToolbarSwatchesInline}>
+                {STANDARD_COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={`toolbar-box-${swatch}`}
+                    type="button"
+                    title={swatch}
+                    onMouseDown={(event) => keepSelection(event, () => onBoxBackgroundColor?.(swatch))}
+                    style={{
+                      ...styles.textToolbarSwatch,
+                      background: swatch,
+                      borderColor: String(boxBackgroundColor || "").toLowerCase() === swatch.toLowerCase() ? "#0f172a" : "rgba(121,85,0,0.28)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -3372,6 +3835,7 @@ const BlockLibraryPanel = ({ onDragStart }) => {
   const categories = useMemo(() => {
     const cats = {};
     Object.entries(BlockDefinitions).forEach(([key, def]) => {
+      if (def?.hiddenInLibrary) return;
       if (!cats[def.category]) cats[def.category] = [];
       cats[def.category].push({ type: key, ...def });
     });
@@ -3473,8 +3937,9 @@ function PageSectionsPanel({ blocks, selectedIndex, onSelect, onMove }) {
   );
 }
 
-const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, replayToken }) {
+const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, replayToken, compact }) {
   return renderBlockPreview(block, brandAssets, {
+    compact,
     onChangeBlock: (nextProps) => onChange(index, nextProps),
     onUploadImage: (key, file) => onUploadImage?.(index, key, file),
     onUploadLayerImage: (layerIndex, file) => onUploadLayerImage?.(index, layerIndex, file),
@@ -3484,12 +3949,15 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.index === next.index
   && prev.brandAssets === next.brandAssets
   && prev.replayToken === next.replayToken
+  && prev.compact === next.compact
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, compactPreview }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
+  const stickyMode = String(block?.props?.stickyMode || "normal");
+  const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
 
   useEffect(() => {
     const handlePointerMove = (event) => {
@@ -3528,7 +3996,11 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
     <div
       style={{
         ...styles.canvasBlock,
-        ...(selected ? styles.canvasBlockSelected : {}),
+        ...(isStickyNavBlock ? styles.canvasStickyNavBlock : {}),
+        ...((block?.type === "columns-2" || block?.type === "columns-3") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
+        ...(block?.type === "space" ? { padding: 0, background: "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px", border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(block?.props?.height || "40").replace("px", "")) || 40, boxShadow: "none" } : {}),
+        ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
+        ...(selected && (block?.type === "columns-2" || block?.type === "columns-3") ? { outline: "2px solid #0ea5e9" } : {}),
       }}
       data-canvas-block-index={index}
       onClick={() => onSelect(index)}
@@ -3626,6 +4098,32 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             >
               🗑
             </button>
+            {onSaveAsGlobal ? (
+              <>
+                <button
+                  type="button"
+                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSaveAsGlobal(block, "nav");
+                  }}
+                  title="Pin as global navigation (shows on every page)"
+                >
+                  📌 Nav
+                </button>
+                <button
+                  type="button"
+                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSaveAsGlobal(block, "footer");
+                  }}
+                  title="Pin as global footer (shows on every page)"
+                >
+                  📌 Footer
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -3633,12 +4131,13 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         <div style={styles.blockInfoPill}>
           <span style={styles.blockIcon}>{def?.icon || "📦"}</span>
         </div>
-        <div style={styles.blockPreview}>
+        <div style={{ ...styles.blockPreview, ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}) }}>
           <CanvasBlockPreview
             key={`${block.id || index}-${animationReplayToken || 0}`}
             block={block}
             index={index}
             brandAssets={brandAssets}
+            compact={compactPreview}
             onChange={onChange}
             onUploadImage={onUploadImage}
             onUploadLayerImage={onUploadLayerImage}
@@ -3673,6 +4172,75 @@ function DropInsertZone({ active, onDragOver, onDrop }) {
       }}
     >
       <div style={{ ...styles.dropLine, ...(active ? styles.dropLineActive : {}) }} />
+    </div>
+  );
+}
+
+function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected = false, onSelect, onChange, onSaveAsGlobal }) {
+  if (!block) return null;
+  const [hovered, setHovered] = useState(false);
+  const showOverlay = selected || hovered;
+
+  return (
+    <div
+      style={{
+        ...styles.globalBlockPreviewWrap,
+        ...(selected ? styles.globalBlockPreviewWrapSelected : {}),
+      }}
+      onPointerDownCapture={() => {
+        onSelect?.();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onSelect?.();
+        }
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {showOverlay ? (
+        <div style={styles.blockActionBar}>
+          <div style={styles.blockActionLeft}>
+            <span style={styles.blockActionLabel}>{label}</span>
+          </div>
+          <div style={styles.blockActionButtons}>
+            <button
+              type="button"
+              style={styles.blockActionBtn}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect?.();
+              }}
+              title="Edit global block"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSaveAsGlobal?.(block, role);
+              }}
+              title={`Save as global ${role === "nav" ? "navigation" : "footer"}`}
+            >
+              📌 {role === "nav" ? "Nav" : "Footer"}
+            </button>
+            <span style={{ ...styles.blockActionBtn, cursor: "default", background: "rgba(59,130,246,0.18)", color: "#bfdbfe", border: "1px solid rgba(96,165,250,0.35)" }}>
+              Global block
+            </span>
+          </div>
+        </div>
+      ) : null}
+      <div style={styles.globalBlockPreviewSurface}>
+        
+        {renderWebsiteBlock(block, {
+          compact,
+          assets: brandAssets,
+          editor: true,
+          onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
+        })}
+      </div>
     </div>
   );
 }
@@ -3971,19 +4539,42 @@ function getColumnEditorConfigs(blockType) {
   return [];
 }
 
-function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor }) {
   const props = block?.props || {};
   const columnConfigs = getColumnEditorConfigs(block?.type);
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
   const update = (patch) => onChange(index, { ...props, ...patch });
+
+  async function applyUploadedAsset(fieldKey, file) {
+    const asset = await Promise.resolve(onUploadImage?.(index, fieldKey, file));
+    if (!asset?.src) return;
+
+    const nextProps = applyAssetToProps(props, fieldKey, asset);
+    onChange(index, {
+      ...nextProps,
+      [fieldKey]: String(asset.src || "").startsWith("data:") ? "" : asset.src,
+    });
+  }
 
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🧱 Edit: Columns</h3>
       <div style={styles.propertyGrid}>
         <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Section Layout</label>
+          <label style={styles.propertyLabel}>Section Background</label>
           <div style={styles.colorGrid}>
+            <ColorSelector label="Background Color" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ backgroundColor: value })} />
+            <ColorSelector label="Border Color" value={props.borderColor || "rgba(148,163,184,0.28)"} fallback="rgba(148,163,184,0.28)" onChange={(value) => update({ borderColor: value })} />
+          </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Gradient</label>
+          <input type="text" value={String(props.backgroundColor || "")} onChange={(e) => update({ backgroundColor: e.target.value })} style={styles.propertyInput} placeholder="e.g. linear-gradient(135deg,#0f172a,#1e3a5f)" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Layout</label>
+          <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Section Heading (leave blank to hide)</label>
+          <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="Leave blank for no heading" />
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
             {block.type === BlockTypes.COLUMNS_2 ? (
               <div style={styles.propertyField}>
                 <label style={styles.propertyLabel}>Column Ratio</label>
@@ -3995,6 +4586,7 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
               </div>
             ) : null}
             <NumberField label="Section Height" value={parsePixelValue(props.minHeight, 280)} min={160} max={1200} onChange={(value) => update({ minHeight: `${value}px` })} />
+            <NumberField label="Block Max Width" value={Number(props.blockMaxWidth) || 1200} min={320} max={1800} onChange={(value) => update({ blockMaxWidth: value })} />
             <NumberField label="Columns Gap" value={Number(props.columnGap ?? 18)} min={0} max={120} onChange={(value) => update({ columnGap: value })} />
             <NumberField label="Top Margin" value={Number(props.columnsTopMargin ?? 16)} min={0} max={240} onChange={(value) => update({ columnsTopMargin: value })} />
           </div>
@@ -4057,48 +4649,202 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
         </div>
 
         {columnConfigs.map((column) => {
-          const imageValue = props?.[column.imageKey] || "";
+          const imageValue = resolveAssetField(props, column.imageKey, brandAssets) || props?.[column.imageKey] || "";
+          const colContentType = String(props?.[`${column.prefix}ContentType`] || "text");
+          const isNewsletter = colContentType === "newsletter";
           return (
             <div key={column.id} style={styles.sectionCard}>
               <label style={styles.propertyLabel}>{column.label}</label>
-              <input type="text" value={String(props?.[column.titleKey] || "")} onChange={(e) => update({ [column.titleKey]: e.target.value })} style={styles.propertyInput} placeholder="Column title" />
-              <textarea value={String(props?.[column.contentKey] || "")} onChange={(e) => update({ [column.contentKey]: e.target.value })} style={{ ...styles.propertyInput, minHeight: 96 }} placeholder="Column content" />
-              <div style={styles.assetPicker}>
-                <label style={styles.assetUploadCta}>
-                  Upload Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={styles.hiddenInput}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = "";
-                      if (!file) return;
-                      onUploadImage(index, column.imageKey, file);
-                    }}
-                  />
-                </label>
-                {savedImages.map((asset) => (
-                  <button
-                    key={`${column.id}-${asset.id || asset.src}`}
-                    type="button"
-                    style={styles.assetThumbBtn}
-                    title={asset.name || column.label}
-                    onClick={() => {
-                      const nextProps = applyAssetToProps(props, column.imageKey, asset);
-                      onChange(index, { ...nextProps, [column.imageKey]: asset.src || "" });
-                      onSelectAsset?.(index, column.imageKey, asset);
-                    }}
-                  >
-                    <img src={asset.src} alt={asset.name || column.label} style={styles.assetThumbPreview} />
-                  </button>
-                ))}
-                {imageValue ? (
-                  <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }} onClick={() => update({ [column.imageKey]: "" })}>
-                    Remove Image
-                  </button>
-                ) : null}
+
+              {/* Card width */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <NumberField label="Card Width (fr)" value={Number(props[`${column.prefix}Width`]) || 1} min={1} max={10} onChange={(value) => update({ [`${column.prefix}Width`]: value })} />
               </div>
+
+              {/* Column type selector */}
+              <div style={styles.inlineChipRow}>
+                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }].map((opt) => (
+                  <button key={opt.value} type="button"
+                    style={{ ...styles.presetChip, ...(colContentType === opt.value ? styles.presetChipActive : {}) }}
+                    onClick={() => update({ [`${column.prefix}ContentType`]: opt.value })}
+                  >{opt.label}</button>
+                ))}
+              </div>
+
+              {isNewsletter ? (
+                /* Newsletter column config */
+                <>
+                  <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Image Above Form</label>
+                  <div style={styles.assetPicker}>
+                    <label style={styles.assetUploadCta}>
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={styles.hiddenInput}
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (!file) return;
+                          await applyUploadedAsset(`${column.prefix}NewsletterImage`, file);
+                        }}
+                      />
+                    </label>
+                    {savedImages.map((asset) => (
+                      <button
+                        key={`nl-img-${column.id}-${asset.id || asset.src}`}
+                        type="button"
+                        style={styles.assetThumbBtn}
+                        title={asset.name || "Image"}
+                        onClick={() => {
+                          const nextProps = applyAssetToProps(props, `${column.prefix}NewsletterImage`, asset);
+                          onChange(index, { ...nextProps, [`${column.prefix}NewsletterImage`]: asset.src || "" });
+                        }}
+                      >
+                        <img src={asset.src} alt={asset.name || "Image"} style={styles.assetThumbPreview} />
+                      </button>
+                    ))}
+                    {resolveAssetField(props, `${column.prefix}NewsletterImage`, brandAssets) ? (
+                      <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }} onClick={() => update({ [`${column.prefix}NewsletterImage`]: "", [`${column.prefix}NewsletterImageAssetId`]: undefined })}>
+                        Remove Image
+                      </button>
+                    ) : null}
+                  </div>
+                  <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Heading</label>
+                  <input type="text" value={String(props?.[`${column.prefix}NewsletterHeading`] || "")} onChange={(e) => update({ [`${column.prefix}NewsletterHeading`]: e.target.value })} style={styles.propertyInput} placeholder="Stay Updated" />
+                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
+                  <input type="text" value={String(props?.[`${column.prefix}NewsletterSubtitle`] || "")} onChange={(e) => update({ [`${column.prefix}NewsletterSubtitle`]: e.target.value })} style={styles.propertyInput} placeholder="Get the latest news." />
+
+                  {/* Form Fields */}
+                  <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Form Fields</label>
+                  {(() => {
+                    const fields = Array.isArray(props?.[`${column.prefix}NewsletterFields`]) ? props[`${column.prefix}NewsletterFields`] : [{ type: "email", placeholder: "Email address" }];
+                    const fieldTypes = [
+                      { value: "name", label: "Name" },
+                      { value: "firstName", label: "First Name" },
+                      { value: "lastName", label: "Last Name" },
+                      { value: "email", label: "Email" },
+                      { value: "phone", label: "Phone" },
+                      { value: "company", label: "Company" },
+                      { value: "message", label: "Message" },
+                    ];
+                    const setFields = (next) => update({ [`${column.prefix}NewsletterFields`]: next });
+                    return (
+                      <>
+                        {fields.map((field, fi) => (
+                          <div key={fi} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                            <select
+                              value={field.type || "email"}
+                              onChange={(e) => { const next = [...fields]; next[fi] = { ...next[fi], type: e.target.value, placeholder: fieldTypes.find(f => f.value === e.target.value)?.label || e.target.value }; setFields(next); }}
+                              style={{ ...styles.propertyInput, flex: 1, margin: 0 }}
+                            >
+                              {fieldTypes.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
+                            </select>
+                            <input
+                              type="text"
+                              value={field.placeholder || ""}
+                              placeholder="Placeholder"
+                              onChange={(e) => { const next = [...fields]; next[fi] = { ...next[fi], placeholder: e.target.value }; setFields(next); }}
+                              style={{ ...styles.propertyInput, flex: 1, margin: 0 }}
+                            />
+                            <button
+                              type="button"
+                              style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca", flexShrink: 0, padding: "4px 8px" }}
+                              onClick={() => setFields(fields.filter((_, i) => i !== fi))}
+                            >✕</button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          style={{ ...styles.secondaryBtn, width: "100%", marginTop: 4 }}
+                          onClick={() => setFields([...fields, { type: "email", placeholder: "Email address" }])}
+                        >+ Add Field</button>
+                      </>
+                    );
+                  })()}
+
+                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Button Text</label>
+                  <input type="text" value={String(props?.[`${column.prefix}NewsletterButtonText`] || "")} onChange={(e) => update({ [`${column.prefix}NewsletterButtonText`]: e.target.value })} style={styles.propertyInput} placeholder="Subscribe" />
+                  <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+                    <CompactColorField label="Button Bg" value={props?.[`${column.prefix}NewsletterButtonColor`] || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ [`${column.prefix}NewsletterButtonColor`]: v })} />
+                    <CompactColorField label="Button Text" value={props?.[`${column.prefix}NewsletterButtonTextColor`] || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ [`${column.prefix}NewsletterButtonTextColor`]: v })} />
+                  </div>
+                </>
+              ) : (
+                /* Text/Image column config */
+                <>
+                  <input type="text" value={String(props?.[column.titleKey] || "")} onChange={(e) => update({ [column.titleKey]: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Column title" />
+                  <textarea value={String(props?.[column.contentKey] || "")} onChange={(e) => update({ [column.contentKey]: e.target.value })} style={{ ...styles.propertyInput, minHeight: 96 }} placeholder="Column content" />
+                  <div style={styles.assetPicker}>
+                    <label style={styles.assetUploadCta}>
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={styles.hiddenInput}
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (!file) return;
+                          await applyUploadedAsset(column.imageKey, file);
+                        }}
+                      />
+                    </label>
+                    {savedImages.map((asset) => (
+                      <button
+                        key={`${column.id}-${asset.id || asset.src}`}
+                        type="button"
+                        style={styles.assetThumbBtn}
+                        title={asset.name || column.label}
+                        onClick={() => {
+                          const nextProps = applyAssetToProps(props, column.imageKey, asset);
+                          onChange(index, { ...nextProps, [column.imageKey]: asset.src || "" });
+                          onSelectAsset?.(index, column.imageKey, asset);
+                        }}
+                      >
+                        <img src={asset.src} alt={asset.name || column.label} style={styles.assetThumbPreview} />
+                      </button>
+                    ))}
+                    {imageValue ? (
+                      <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }} onClick={() => update({ [column.imageKey]: "" })}>
+                        Remove Image
+                      </button>
+                    ) : null}
+                  </div>
+                  {imageValue ? (
+                    <button
+                      type="button"
+                      style={{ ...styles.secondaryBtn, marginTop: 8 }}
+                      onClick={() => onOpenImageEditor?.(index, column.imageKey, imageValue)}
+                    >
+                      ✂️ Crop / Edit Image
+                    </button>
+                  ) : null}
+                  {imageValue ? (
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                      <label style={styles.label}>Image Height (px)</label>
+                      <input
+                        type="number"
+                        min={60}
+                        max={1200}
+                        step={10}
+                        value={props?.[`${column.prefix}ImageHeight`] || ""}
+                        placeholder="Auto"
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? undefined : Number(e.target.value);
+                          update({ [`${column.prefix}ImageHeight`]: val });
+                        }}
+                        style={{ ...styles.input, width: 90 }}
+                      />
+                      {props?.[`${column.prefix}ImageHeight`] ? (
+                        <button type="button" style={{ ...styles.assetChip, fontSize: 11, padding: "2px 8px" }} onClick={() => update({ [`${column.prefix}ImageHeight`]: undefined })}>Auto</button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
+
+              {/* Per-column style options (shared between both types) */}
               <div style={styles.colorGrid}>
                 <NumberField label="Top Margin" value={Number(props?.[`${column.prefix}MarginTop`] ?? 0)} min={0} max={240} onChange={(value) => update({ [`${column.prefix}MarginTop`]: value })} />
                 <NumberField label="Padding" value={Number(props?.[`${column.prefix}Padding`] ?? props.columnPadding ?? 18)} min={0} max={96} onChange={(value) => update({ [`${column.prefix}Padding`]: value })} />
@@ -4352,7 +5098,7 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, project, activePage, currentObjective }) => {
+const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, project, activePage, currentObjective }) => {
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenError, setRegenError] = useState("");
   const [regenTone, setRegenTone] = useState("balanced");
@@ -4468,6 +5214,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
         onUploadImage={onUploadImage}
         onSelectAsset={onSelectAsset}
+        onOpenImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
       />
     );
   }
@@ -4543,12 +5290,38 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.TRUST_BADGES) {
+    return (
+      <TrustBadgesPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+        brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
+        onSelectAsset={onSelectAsset}
+      />
+    );
+  }
+
   if (block.type === BlockTypes.STATS) {
     return (
       <StatsPropertiesPanel
         block={block}
         index={index}
         onChange={onChange}
+      />
+    );
+  }
+
+  if (block.type === BlockTypes.FOOTER) {
+    return (
+      <FooterPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+        brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
+        onOpenSimpleImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
       />
     );
   }
@@ -4589,6 +5362,20 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.SPACE) {
+    const spacerPx = parsePixelValue(block.props?.height, 40);
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>⬆️ Edit: Spacer</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <NumberField label="Height (px)" value={spacerPx} min={4} max={600} onChange={(value) => onChange(index, { ...block.props, height: `${value}px` })} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if ([BlockTypes.COLUMNS_2, BlockTypes.COLUMNS_3].includes(block.type)) {
     return (
       <ColumnsPropertiesPanel
@@ -4598,6 +5385,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
         onUploadImage={onUploadImage}
         onSelectAsset={onSelectAsset}
+        onOpenImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
       />
     );
   }
@@ -4691,7 +5479,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           blockType={block.type}
           onApply={(patch) => onChange(index, { ...block.props, ...patch })}
         />
-        {![BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.STATS].includes(block.type) && textContentKeys.length ? (
+        {![BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.STATS, BlockTypes.CTA_BUTTON].includes(block.type) && textContentKeys.length ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Text Content</label>
             <div style={{ display: "grid", gap: 12, marginTop: 8 }}>
@@ -4795,37 +5583,38 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           // Skip internal/layout-only fields and long text fields (shown at top)
           if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "contentBackground"].includes(key)) return null;
           if (isLongTextField(key)) return null;
+          if (block.type === BlockTypes.CTA_BUTTON && key === "link") {
+            return (
+              <div key={key} style={styles.propertyField}>
+                <label style={styles.propertyLabel}>{formatLabel(key)}</label>
+                <input
+                  type="text"
+                  value={value}
+                  onChange={(e) =>
+                    onChange(index, { ...block.props, [key]: e.target.value })
+                  }
+                  style={styles.propertyInput}
+                />
+              </div>
+            );
+          }
+          if (isColorField(key)) {
+            return (
+              <ColorSelector
+                key={key}
+                label={formatLabel(key)}
+                value={String(value || "")}
+                fallback="#0f172a"
+                allowTransparent={key.toLowerCase().includes("background")}
+                onChange={(nextValue) => onChange(index, { ...block.props, [key]: nextValue })}
+              />
+            );
+          }
 
           return (
             <div key={key} style={styles.propertyField}>
               <label style={styles.propertyLabel}>{formatLabel(key)}</label>
-              {isColorField(key) ? (
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    type="color"
-                    value={normalizeColorInput(value, "#000000")}
-                    onChange={(e) =>
-                      onChange(index, { ...block.props, [key]: e.target.value })
-                    }
-                    style={{
-                      width: 50,
-                      height: 40,
-                      border: "1px solid #2b3650",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    value={String(value || "")}
-                    onChange={(e) =>
-                      onChange(index, { ...block.props, [key]: e.target.value })
-                    }
-                    style={{ ...styles.propertyInput, flex: 1, fontFamily: "monospace", fontSize: 12 }}
-                    placeholder="#000000"
-                  />
-                </div>
-              ) : getSelectOptions(key) ? (
+              {getSelectOptions(key) ? (
                 <select
                   value={String(value || "")}
                   onChange={(e) => onChange(index, { ...block.props, [key]: e.target.value })}
@@ -4948,9 +5737,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
 const renderBlockPreview = (block, assets, options = {}) => renderWebsiteBlock(block, { compact: false, assets, editor: true, ...options });
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, showHeader = true }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onUpdateGlobalBlock, showHeader = true }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const [showLibrary, setShowLibrary] = useState(true);
@@ -4966,6 +5756,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     fontFamily: "Arial",
     fontSize: 18,
     blockType: "P",
+    canStyleBox: false,
+    boxBackgroundColor: "transparent",
+    boxBackgroundImage: "",
+    boxWidth: 360,
     textAnimation: "none",
     textAnimationSpeed: 0.8,
     textAnimationDelay: 0,
@@ -4985,6 +5779,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const saveNoticeTimerRef = useRef(null);
 
   const selectedBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
+  const selectedGlobalBlock = selectedGlobalRole === "nav"
+    ? (project?.globalNavBlock || null)
+    : selectedGlobalRole === "footer"
+      ? (project?.globalFooterBlock || null)
+      : null;
   const imageEditorUserId = project?.userId || project?.user_id || project?.ownerId || project?.owner_id || undefined;
   latestBlocksRef.current = blocks;
 
@@ -4992,8 +5791,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     latestBlocksRef.current = Array.isArray(pageBlocks) ? pageBlocks : [];
     setBlocks(Array.isArray(pageBlocks) ? pageBlocks : []);
     setSelectedIndex(null);
+    setSelectedGlobalRole(null);
     setDropIndex(null);
   }, [pageBlocks]);
+
+  useEffect(() => {
+    if (selectedGlobalRole === "nav" && !project?.globalNavBlock) {
+      setSelectedGlobalRole(null);
+      return;
+    }
+    if (selectedGlobalRole === "footer" && !project?.globalFooterBlock) {
+      setSelectedGlobalRole(null);
+    }
+  }, [project?.globalFooterBlock, project?.globalNavBlock, selectedGlobalRole]);
 
   useEffect(() => {
     showTextToolbarRef.current = showTextToolbar;
@@ -5026,6 +5836,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const blockRoot = editable.closest?.("[data-canvas-block-index]");
     const blockIndex = Number(blockRoot?.getAttribute?.("data-canvas-block-index"));
     if (Number.isInteger(blockIndex)) {
+      setSelectedGlobalRole(null);
       setSelectedIndex((prev) => (prev === blockIndex ? prev : blockIndex));
     }
 
@@ -5039,6 +5850,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
     const computed = window.getComputedStyle(styleSource);
+    const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
+    const backgroundComputed = window.getComputedStyle(backgroundTarget);
     const tagName = String(editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
@@ -5046,6 +5859,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .trim() || "Arial";
     const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
     const currentBlock = Number.isInteger(blockIndex) ? blocks[blockIndex] || null : null;
+    const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
+    const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
     const motionBinding = getTextAnimationBinding(currentBlock, editable);
     setTextToolbarState({
       color: rgbToHex(computed.color, "#111827"),
@@ -5053,6 +5868,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : "P",
+      canStyleBox: editable.hasAttribute?.("data-layer-editor"),
+      boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
+      boxBackgroundImage: parseBackgroundImageUrl(backgroundComputed.backgroundImage),
+      boxWidth: Number(activeLayer?.width || 360),
       textAnimation: motionBinding ? String(currentBlock?.props?.[motionBinding.animationKey] || "none") : "none",
       textAnimationSpeed: motionBinding ? Number(currentBlock?.props?.[motionBinding.speedKey] || 0.8) : 0.8,
       textAnimationDelay: motionBinding ? Number(currentBlock?.props?.[motionBinding.delayKey] || 0) : 0,
@@ -5062,7 +5881,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const openTextEditorForBlock = (index, triggerNode) => {
     if (typeof document === "undefined" || typeof window === "undefined") return;
-    setSelectedIndex(index);
+    selectCanvasBlock(index);
     setShowProperties(true);
     setRightPanelMode("block");
     setAnimationPopover((prev) => ({ ...prev, visible: false }));
@@ -5097,7 +5916,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       ? Math.max(12, Math.min(rect.top + 46, (window.innerHeight || 900) - 300))
       : 120;
 
-    setSelectedIndex(index);
+    selectCanvasBlock(index);
     setShowProperties(true);
     setAnimationPopover({ visible: true, index, x: nextX, y: nextY, width: panelWidth });
   };
@@ -5230,7 +6049,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const updated = [...blocks];
       updated.splice(safeIndex, 0, newBlock);
       setBlocks(updated);
-      setSelectedIndex(safeIndex);
+      selectCanvasBlock(safeIndex);
       return;
     }
   };
@@ -5272,6 +6091,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = blocks.filter((_, i) => i !== index);
     setBlocks(updated);
     setSelectedIndex(null);
+    setSelectedGlobalRole(null);
+  };
+
+  const selectCanvasBlock = (index) => {
+    setSelectedGlobalRole(null);
+    setSelectedIndex(index);
+  };
+
+  const selectGlobalBlock = (role) => {
+    setSelectedIndex(null);
+    setShowProperties(true);
+    setRightPanelMode("block");
+    setSelectedGlobalRole(role);
   };
 
   const handleDuplicate = (index) => {
@@ -5282,7 +6114,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     };
     const updated = [...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)];
     setBlocks(updated);
-    setSelectedIndex(index + 1);
+    selectCanvasBlock(index + 1);
   };
 
   const moveBlockByStep = (index, direction) => {
@@ -5292,7 +6124,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const [moved] = updated.splice(index, 1);
     updated.splice(nextIndex, 0, moved);
     setBlocks(updated);
-    setSelectedIndex(nextIndex);
+    selectCanvasBlock(nextIndex);
   };
 
   const moveBlockToTop = (index) => {
@@ -5301,7 +6133,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const [moved] = updated.splice(index, 1);
     updated.unshift(moved);
     setBlocks(updated);
-    setSelectedIndex(0);
+    selectCanvasBlock(0);
   };
 
   const handleUpdateBlock = (index, newProps) => {
@@ -5344,6 +6176,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     onSelectAsset?.(index, key, asset, updated);
   };
 
+  const handleGlobalAssetSelect = (role, key, asset) => {
+    if (!asset?.src) return;
+    const block = role === "nav" ? project?.globalNavBlock : project?.globalFooterBlock;
+    if (!block) return;
+
+    const nextProps = applyAssetToProps(block.props || {}, key, asset);
+    nextProps[key] = String(asset.src || "").startsWith("data:") ? "" : asset.src;
+    onUpdateGlobalBlock?.(role, {
+      ...block,
+      props: nextProps,
+    });
+  };
+
   const handleCanvasImageUpload = async (index, key, file) => {
     const asset = await Promise.resolve(onUploadImage?.(index, key, file));
     if (!asset?.src) return asset;
@@ -5357,16 +6202,50 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return asset;
   };
 
+  const handleGlobalImageUpload = async (role, key, file) => {
+    const asset = await Promise.resolve(onUploadImage?.(-1, key, file));
+    if (!asset?.src) return asset;
+    handleGlobalAssetSelect(role, key, asset);
+    return asset;
+  };
+
   const openStructuredImageEditor = (blockIndex, collectionKey, itemIndex, imageKey, src) => {
     const cleanSrc = String(src || "").trim();
     if (!cleanSrc) return;
     setImageEditState({ blockIndex, collectionKey, itemIndex, imageKey, src: cleanSrc });
   };
 
+  const openSimpleImageEditor = (blockIndex, propKey, src) => {
+    const cleanSrc = String(src || "").trim();
+    if (!cleanSrc) return;
+    setImageEditState({ blockIndex, propKey, src: cleanSrc });
+  };
+
   const applyEditedStructuredImage = (nextSrc) => {
     const state = imageEditState;
     setImageEditState(null);
-    if (!state?.collectionKey || typeof state.blockIndex !== "number" || typeof state.itemIndex !== "number" || !state.imageKey || !nextSrc) return;
+    if (!nextSrc || typeof state?.blockIndex !== "number") return;
+
+    // Simple top-level prop (e.g. IMAGE block's src field)
+    if (state.propKey && !state.collectionKey) {
+      const updated = latestBlocksRef.current.map((block, blockIndex) => {
+        if (blockIndex !== state.blockIndex) return block;
+        return {
+          ...block,
+          props: {
+            ...(block?.props || {}),
+            [state.propKey]: nextSrc,
+            [`${state.propKey}AssetId`]: "",
+          },
+        };
+      });
+      latestBlocksRef.current = updated;
+      setBlocks(updated);
+      onSave?.(updated);
+      return;
+    }
+
+    if (!state?.collectionKey || typeof state.itemIndex !== "number" || !state.imageKey) return;
 
     const updated = latestBlocksRef.current.map((block, blockIndex) => {
       if (blockIndex !== state.blockIndex) return block;
@@ -5470,6 +6349,18 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const previewWidth = previewMode === "mobile" ? 430 : previewMode === "tablet" ? 920 : "100%";
+  const canvasBlockEntries = useMemo(() => {
+    const hasGlobalNav = !!project?.globalNavBlock;
+    const hasGlobalFooter = !!project?.globalFooterBlock;
+
+    return blocks
+      .map((block, index) => ({ block, index }))
+      .filter(({ block }) => {
+        if (hasGlobalNav && block?.type === BlockTypes.NAV_BAR) return false;
+        if (hasGlobalFooter && block?.type === BlockTypes.FOOTER) return false;
+        return true;
+      });
+  }, [blocks, project?.globalFooterBlock, project?.globalNavBlock]);
 
   const applyGlobalStyles = (patch = {}) => {
     setBlocks((prev) => prev.map((block) => {
@@ -5653,6 +6544,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const fontWeight = String(computed?.fontWeight || "400");
     const textColor = rgbToHex(computed?.color, "#111827");
     const textAlign = String(computed?.textAlign || "left");
+    const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
+    const backgroundComputed = typeof window !== "undefined" ? window.getComputedStyle(backgroundTarget) : null;
+    const boxBackgroundColor = normalizeToolbarBackgroundColor(backgroundComputed?.backgroundColor);
+    const boxBackgroundImage = parseBackgroundImageUrl(backgroundComputed?.backgroundImage);
 
     if (editable.hasAttribute?.("data-layer-editor") && currentBlock?.type === BlockTypes.IMAGE_STACK) {
       const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex)
@@ -5677,6 +6572,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                   textColor,
                   textAlign,
                   fontFamily,
+                  background: boxBackgroundImage ? `url("${boxBackgroundImage}") center center / cover no-repeat` : boxBackgroundColor,
+                  backgroundColor: boxBackgroundColor,
+                  backgroundImage: boxBackgroundImage,
+                  backgroundSize: boxBackgroundImage ? "cover" : (layer.backgroundSize || "cover"),
+                  backgroundPosition: boxBackgroundImage ? "center center" : (layer.backgroundPosition || "center center"),
+                  backgroundRepeat: boxBackgroundImage ? "no-repeat" : (layer.backgroundRepeat || "no-repeat"),
                 }
               : layer
           )),
@@ -5813,9 +6714,70 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const applyStyleToActiveEditable = (stylePatch = {}) => {
     const editable = activeEditableRef.current;
     if (!editable) return false;
+    const target = getEditableBackgroundTarget(editable) || editable;
     Object.entries(stylePatch).forEach(([key, val]) => {
-      editable.style[key] = val;
+      if (key === "background" || key === "backgroundColor" || key === "backgroundImage" || key === "backgroundSize" || key === "backgroundPosition" || key === "backgroundRepeat") {
+        target.style[key] = val;
+      } else {
+        editable.style[key] = val;
+      }
     });
+    return true;
+  };
+
+  const applyTextBoxBackground = (patch = {}) => {
+    const editable = activeEditableRef.current;
+    if (!editable || !editable.hasAttribute?.("data-layer-editor")) return false;
+
+    const target = getEditableBackgroundTarget(editable);
+    if (!target) return false;
+
+    const backgroundColor = patch.backgroundColor !== undefined
+      ? String(patch.backgroundColor || "transparent")
+      : (target.style.backgroundColor || "transparent");
+    const backgroundImage = patch.backgroundImage !== undefined
+      ? String(patch.backgroundImage || "")
+      : parseBackgroundImageUrl(target.style.backgroundImage);
+
+    target.style.backgroundColor = backgroundColor;
+    target.style.backgroundImage = backgroundImage ? `url("${backgroundImage}")` : "none";
+    target.style.backgroundSize = backgroundImage ? "cover" : "";
+    target.style.backgroundPosition = backgroundImage ? "center center" : "";
+    target.style.backgroundRepeat = backgroundImage ? "no-repeat" : "";
+
+    syncActiveEditableToBlock(latestBlocksRef.current);
+    preserveCurrentSelection();
+    refreshToolbarFromEditable();
+    return true;
+  };
+
+  const updateActiveTextLayer = (patch = {}) => {
+    if (typeof selectedIndex !== "number") return false;
+    const currentBlock = blocks[selectedIndex];
+    if (!currentBlock || currentBlock.type !== BlockTypes.IMAGE_STACK) return false;
+
+    const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex)
+      ? currentBlock.props.selectedLayerIndex
+      : null;
+
+    if (layerIndex == null || !Array.isArray(currentBlock?.props?.images)) return false;
+
+    const nextImages = currentBlock.props.images.map((layer, idx) => (
+      idx === layerIndex ? { ...layer, ...patch } : layer
+    ));
+
+    handleUpdateBlock(selectedIndex, {
+      ...(currentBlock.props || {}),
+      images: nextImages,
+    });
+
+    const editable = activeEditableRef.current;
+    const target = getEditableBackgroundTarget(editable);
+    if (target && patch.width !== undefined) {
+      target.style.width = `${Math.max(120, Math.min(1800, Number(patch.width) || 360))}px`;
+    }
+
+    refreshToolbarFromEditable();
     return true;
   };
 
@@ -5856,6 +6818,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const selection = window.getSelection?.();
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
     const computed = window.getComputedStyle(styleSource);
+    const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
+    const backgroundComputed = window.getComputedStyle(backgroundTarget);
     const tagName = String(editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
@@ -5863,6 +6827,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .trim() || "Arial";
     const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
     const currentBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
+    const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
+    const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
     const motionBinding = getTextAnimationBinding(currentBlock, editable);
     setTextToolbarState((prev) => ({
       ...prev,
@@ -5871,6 +6837,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : prev.blockType || "P",
+      canStyleBox: editable.hasAttribute?.("data-layer-editor"),
+      boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
+      boxBackgroundImage: parseBackgroundImageUrl(backgroundComputed.backgroundImage),
+      boxWidth: Number(activeLayer?.width || prev.boxWidth || 360),
       textAnimation: motionBinding ? String(currentBlock?.props?.[motionBinding.animationKey] || "none") : prev.textAnimation || "none",
       textAnimationSpeed: motionBinding ? Number(currentBlock?.props?.[motionBinding.speedKey] || 0.8) : (prev.textAnimationSpeed || 0.8),
       textAnimationDelay: motionBinding ? Number(currentBlock?.props?.[motionBinding.delayKey] || 0) : (prev.textAnimationDelay || 0),
@@ -6038,6 +7008,30 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     } catch {}
 
     finishTextCommand();
+  };
+
+  const handleTextBoxBackgroundColorChange = (value) => {
+    applyTextBoxBackground({ backgroundColor: value, backgroundImage: "" });
+  };
+
+  const handleClearTextBoxBackground = () => {
+    applyTextBoxBackground({ backgroundColor: "transparent", backgroundImage: "" });
+  };
+
+  const handleClearTextBoxBackgroundImage = () => {
+    applyTextBoxBackground({ backgroundImage: "" });
+  };
+
+  const handleTextBoxWidthChange = (value) => {
+    const nextWidth = Math.max(120, Math.min(1800, Number(value) || 360));
+    updateActiveTextLayer({ width: nextWidth });
+  };
+
+  const handleTextBoxBackgroundImageUpload = async (file) => {
+    if (!file || typeof selectedIndex !== "number") return;
+    const asset = await Promise.resolve(onUploadImage?.(selectedIndex, "__text_layer_background__", file));
+    if (!asset?.src) return;
+    applyTextBoxBackground({ backgroundImage: asset.src, backgroundColor: "transparent" });
   };
 
   const startTextToolbarDrag = (event) => {
@@ -6264,6 +7258,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         fontFamily={textToolbarState.fontFamily}
         fontSize={textToolbarState.fontSize}
         blockType={textToolbarState.blockType}
+        canStyleBox={textToolbarState.canStyleBox}
+        boxBackgroundColor={textToolbarState.boxBackgroundColor}
+        boxBackgroundImage={textToolbarState.boxBackgroundImage}
+        boxWidth={textToolbarState.boxWidth}
+        onClearBoxBackground={handleClearTextBoxBackground}
+        onBoxBackgroundColor={handleTextBoxBackgroundColorChange}
+        onBoxBackgroundImageUpload={handleTextBoxBackgroundImageUpload}
+        onClearBoxBackgroundImage={handleClearTextBoxBackgroundImage}
+        onBoxWidthChange={handleTextBoxWidthChange}
         onCommand={runTextCommand}
         onTextColor={(value) => runTextCommand("foreColor", value)}
         onHighlightColor={(value) => runTextCommand("hiliteColor", value)}
@@ -6332,35 +7335,49 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         >
           <div style={styles.canvasLabel}>Drag widgets here • {previewMode}</div>
           <div style={{ ...styles.blocksList, width: previewWidth, maxWidth: "100%", margin: "0 auto" }}>
-            {blocks.length === 0 ? (
+            {project?.globalNavBlock ? (
+              <GlobalBlockPreview
+                label="🌐 Global Navigation"
+                role="nav"
+                block={project.globalNavBlock}
+                brandAssets={brandAssets}
+                compact={previewMode === "mobile"}
+                selected={selectedGlobalRole === "nav"}
+                onSelect={() => selectGlobalBlock("nav")}
+                onChange={(nextBlock) => onUpdateGlobalBlock?.("nav", nextBlock)}
+                onSaveAsGlobal={onSaveAsGlobal}
+              />
+            ) : null}
+            {canvasBlockEntries.length === 0 ? (
               <div style={styles.emptyState}>
                 📭 No widgets yet. Drag one in from the widgets panel to start building!
               </div>
             ) : (
               <>
-                {blocks.map((block, idx) => (
-                  <React.Fragment key={block.id}>
+                {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => (
+                  <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
                     <DropInsertZone
-                      active={dropIndex === idx}
+                      active={dropIndex === blockIndex}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.dataTransfer.dropEffect = "copy";
-                        if (dropIndex !== idx) setDropIndex(idx);
+                        if (dropIndex !== blockIndex) setDropIndex(blockIndex);
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        handleInsertAt(idx, e.dataTransfer);
+                        handleInsertAt(blockIndex, e.dataTransfer);
                         setDropIndex(null);
                       }}
                     />
                     <CanvasBlock
                       block={block}
-                      index={idx}
+                      index={blockIndex}
                       brandAssets={brandAssets}
-                      animationReplayToken={animationReplayState.index === idx ? animationReplayState.tick : 0}
-                      selected={selectedIndex === idx}
-                      hovered={hoveredIndex === idx}
-                      onSelect={setSelectedIndex}
+                      compactPreview={previewMode === "mobile"}
+                      animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
+                      selected={selectedIndex === blockIndex}
+                      hovered={hoveredIndex === blockIndex}
+                      onSelect={selectCanvasBlock}
                       onHover={(value) => setHoveredIndex(value)}
                       onDelete={handleDelete}
                       onDuplicate={handleDuplicate}
@@ -6374,6 +7391,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       onUploadLayerImage={handleLayerImageUpload}
                       onBlockDragOver={handleBlockDragOver}
                       onBlockDrop={handleBlockDrop}
+                      onSaveAsGlobal={onSaveAsGlobal}
                     />
                   </React.Fragment>
                 ))}
@@ -6390,6 +7408,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                     setDropIndex(null);
                   }}
                 />
+                {project?.globalFooterBlock ? (
+                  <GlobalBlockPreview
+                    label="🌐 Global Footer"
+                    role="footer"
+                    block={project.globalFooterBlock}
+                    brandAssets={brandAssets}
+                    compact={previewMode === "mobile"}
+                    selected={selectedGlobalRole === "footer"}
+                    onSelect={() => selectGlobalBlock("footer")}
+                    onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
+                    onSaveAsGlobal={onSaveAsGlobal}
+                  />
+                ) : null}
                 <div style={styles.canvasEndSpacer} aria-hidden="true" />
               </>
             )}
@@ -6400,16 +7431,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           rightPanelMode === "global" ? (
             <GlobalStylePanel blocks={blocks} onApplyGlobal={applyGlobalStyles} />
           ) : rightPanelMode === "sections" ? (
-            <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={setSelectedIndex} onMove={moveBlockByStep} />
+            <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
           ) : (
             <PropertiesPanel
-              block={blocks[selectedIndex] || null}
-              index={selectedIndex}
-              onChange={handleUpdateBlock}
+              block={selectedGlobalBlock || blocks[selectedIndex] || null}
+              index={selectedGlobalBlock ? -1 : selectedIndex}
+              onChange={selectedGlobalBlock
+                ? (_index, nextProps) => {
+                    if (!selectedGlobalRole || !selectedGlobalBlock) return;
+                    onUpdateGlobalBlock?.(selectedGlobalRole, {
+                      ...selectedGlobalBlock,
+                      props: nextProps,
+                    });
+                  }
+                : handleUpdateBlock}
               brandAssets={brandAssets}
-              onUploadImage={handleCanvasImageUpload}
-              onSelectAsset={handleCanvasAssetSelect}
+              onUploadImage={selectedGlobalBlock
+                ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
+                : handleCanvasImageUpload}
+              onSelectAsset={selectedGlobalBlock
+                ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
+                : handleCanvasAssetSelect}
               onOpenImageEditor={openStructuredImageEditor}
+              onOpenSimpleImageEditor={openSimpleImageEditor}
               project={project}
               activePage={activePage}
               currentObjective={currentObjective}
@@ -6455,22 +7499,24 @@ const styles = {
     marginLeft: 6,
   },
   previewBtn: {
-    background: "linear-gradient(135deg,#7c3aed,#2563eb)",
+    background: "linear-gradient(135deg,#8b5cf6,#3b82f6)",
     color: "#ffffff",
     border: "1px solid rgba(255,255,255,0.18)",
     borderRadius: 8,
     padding: "10px 16px",
-    fontWeight: 800,
+    fontSize: 14,
+    fontWeight: 600,
     cursor: "pointer",
     boxShadow: "0 10px 22px rgba(59,130,246,0.28)",
   },
   saveBtn: {
-    background: "#7df9a1",
+    background: "#86efac",
     color: "#04202e",
     border: "none",
     borderRadius: 8,
     padding: "10px 16px",
-    fontWeight: 700,
+    fontSize: 14,
+    fontWeight: 600,
     cursor: "pointer",
   },
   headerActions: {
@@ -6748,9 +7794,9 @@ const styles = {
     border: "1px solid #2b3650",
     color: "#cde5ff",
     borderRadius: 999,
-    padding: "7px 10px",
-    fontSize: 12,
-    fontWeight: 700,
+    padding: "8px 12px",
+    fontSize: 14,
+    fontWeight: 600,
     cursor: "pointer",
   },
   tabChipActive: {
@@ -6759,18 +7805,19 @@ const styles = {
     color: "#04202e",
   },
   panelToggleBtn: {
-    background: "#102036",
-    border: "1px solid #2b3650",
-    color: "#cde5ff",
+    background: "#18314f",
+    border: "1px solid #40628d",
+    color: "#eff6ff",
     borderRadius: 8,
     padding: "9px 12px",
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 14,
+    fontWeight: 600,
+    lineHeight: 1.2,
     cursor: "pointer",
   },
   panelToggleBtnActive: {
-    background: "#1b3354",
-    borderColor: "#3c5f8e",
+    background: "#27507f",
+    borderColor: "#7dd3fc",
     color: "#ffffff",
   },
   workspace: {
@@ -6809,8 +7856,9 @@ const styles = {
   },
   librarySubtitle: {
     margin: 0,
-    fontSize: 12,
-    color: "#9fb0c5",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#bfd4ea",
     marginBottom: 12,
   },
   categoryList: {
@@ -6823,8 +7871,8 @@ const styles = {
   },
   categoryTitle: {
     margin: 0,
-    fontSize: 11,
-    fontWeight: 700,
+    fontSize: 12,
+    fontWeight: 600,
     textTransform: "uppercase",
     color: "#64748b",
     letterSpacing: 0.5,
@@ -6836,18 +7884,19 @@ const styles = {
     marginBottom: 10,
   },
   widgetFilterChip: {
-    background: "#152238",
-    border: "1px solid #2b3650",
-    color: "#dbeafe",
+    background: "#1b3354",
+    border: "1px solid #4c6f9d",
+    color: "#f8fbff",
     borderRadius: 999,
-    padding: "6px 10px",
-    fontSize: 12,
-    fontWeight: 700,
+    padding: "7px 11px",
+    fontSize: 13,
+    fontWeight: 600,
+    lineHeight: 1.15,
     cursor: "pointer",
   },
   widgetFilterChipActive: {
-    background: "#7df9a1",
-    borderColor: "#7df9a1",
+    background: "#86efac",
+    borderColor: "#86efac",
     color: "#04202e",
   },
   blocksList: {
@@ -6919,6 +7968,45 @@ const styles = {
     minHeight: 280,
     pointerEvents: "none",
   },
+  globalBlockBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#0c1e38",
+    border: "1px solid #2563eb",
+    borderRadius: 8,
+    color: "#7dd3fc",
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "7px 14px",
+    margin: "6px 0",
+    userSelect: "none",
+    pointerEvents: "none",
+  },
+  globalBlockPreviewWrap: {
+    display: "grid",
+    gap: 10,
+    margin: "6px 0 10px",
+    cursor: "pointer",
+  },
+  globalBlockPreviewWrapSelected: {
+    borderRadius: 20,
+    boxShadow: "0 0 0 2px rgba(14,165,233,0.38)",
+  },
+  globalBlockPreviewSurface: {
+    borderRadius: 18,
+    overflow: "visible",
+    border: "1px solid rgba(148,163,184,0.22)",
+    background: "#ffffff",
+    boxShadow: "0 16px 34px rgba(15,23,42,0.08)",
+  },
+  globalBlockBannerHint: {
+    marginLeft: "auto",
+    fontSize: 11,
+    opacity: 0.55,
+    fontWeight: 400,
+    fontStyle: "normal",
+  },
   canvasBlock: {
     background: "linear-gradient(180deg,#f8fbff,#eef4fb)",
     border: "1px solid #c9d7ea",
@@ -6929,6 +8017,11 @@ const styles = {
     minWidth: 0,
     position: "relative",
     boxShadow: "0 14px 28px rgba(15,23,42,0.08)",
+  },
+  canvasStickyNavBlock: {
+    position: "sticky",
+    top: 0,
+    zIndex: 14,
   },
   blockActionBar: {
     position: "absolute",
@@ -7099,6 +8192,10 @@ const styles = {
     maxWidth: "100%",
     overflowX: "auto",
     paddingTop: 42,
+  },
+  blockPreviewStickyNav: {
+    paddingTop: 0,
+    overflowX: "visible",
   },
   animationPopover: {
     position: "fixed",

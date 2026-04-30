@@ -1,4 +1,4 @@
--- Migration 005: Per-user social platform app credentials
+-- Migration 0051: Per-user social platform app credentials
 -- Each user stores their own app_id + encrypted secret per platform.
 -- Run in Supabase SQL editor.
 

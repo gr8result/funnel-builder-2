@@ -130,6 +130,16 @@ export default async function handler(req, res) {
         .map((x) => x.trim());
     }
 
+    if (!recipients.length) {
+      const { data: priorSends } = await supabase
+        .from("email_sends")
+        .select("recipient_email,email")
+        .eq("broadcast_id", broadcastId)
+        .limit(20000);
+
+      recipients = (priorSends || []).map((row) => row.recipient_email || row.email || "");
+    }
+
     recipients = recipients.filter(isEmail);
 
     if (!recipients.length) {

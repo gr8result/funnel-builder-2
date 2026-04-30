@@ -34,7 +34,9 @@ function buildMissingStepPreview(name = "Your funnel") {
 
 export default function PublicFunnelPage() {
   const router = useRouter();
-  const { slug, step: stepParam, ok, funnelId, preview } = router.query;
+  const { slug, step: stepParam, ok, funnelId, preview, canvasWidth: canvasWidthParam, device } = router.query;
+  const isPreviewMode = `${preview || ""}` === "1";
+  const isMobilePreview = isPreviewMode && `${device || ""}` === "mobile";
 
   const [state, setState] = useState("loading"); // loading | ok | notfound | empty | error
   const [funnel, setFunnel] = useState(null);
@@ -117,35 +119,47 @@ export default function PublicFunnelPage() {
 
     function syncShapeBlocks() {
       document.querySelectorAll("[data-shape-block]").forEach((shape) => {
-        const host = shape.parentElement || shape.closest("section");
-        if (host && window.getComputedStyle(host).position === "static") {
-          host.style.position = "relative";
-        }
-
-        const shapeZ = parseInt(window.getComputedStyle(shape).zIndex || shape.style.zIndex || "0", 10);
-        const safeShapeZ = Number.isFinite(shapeZ) ? Math.max(0, shapeZ) : 0;
-
-        if (host) {
-          Array.from(host.children).forEach((child) => {
-            if (child === shape) return;
-            const childStyles = window.getComputedStyle(child);
-            if (childStyles.position === "static") {
-              child.style.position = "relative";
-            }
-            const existingZ = parseInt(childStyles.zIndex || child.style.zIndex || "1", 10);
-            child.style.zIndex = `${Math.max(Number.isFinite(existingZ) ? existingZ : 1, safeShapeZ + 1)}`;
-          });
-        }
-
-        if (!shape.style.position) {
-          shape.style.position = "absolute";
-        }
-        if (!shape.style.maxWidth) {
-          shape.style.maxWidth = "100%";
-        }
-
-        shape.style.zIndex = `${safeShapeZ}`;
+        if (!(shape instanceof HTMLElement)) return;
         shape.style.pointerEvents = "none";
+
+        const parent = shape.parentElement;
+        const baseParentWidth = parseFloat(shape.dataset.shapeBaseParentWidth || "0") || 0;
+        const baseParentHeight = parseFloat(shape.dataset.shapeBaseParentHeight || "0") || 0;
+        const baseLeft = parseFloat(shape.dataset.shapeBaseLeft || "0") || 0;
+        const baseTop = parseFloat(shape.dataset.shapeBaseTop || "0") || 0;
+        const baseWidth = parseFloat(shape.dataset.shapeBaseWidth || shape.style.width || "0") || 0;
+        const baseHeight = parseFloat(shape.dataset.shapeBaseHeight || shape.style.height || "0") || 0;
+        const leftPct = parseFloat(shape.dataset.shapeLeftPct || "") || null;
+        const topPct = parseFloat(shape.dataset.shapeTopPct || "") || null;
+        const widthPct = parseFloat(shape.dataset.shapeWidthPct || "") || null;
+        const heightPct = parseFloat(shape.dataset.shapeHeightPct || "") || null;
+
+        if (!(parent instanceof HTMLElement) || !baseParentWidth || !baseWidth || !baseHeight) return;
+
+        const parentRect = parent.getBoundingClientRect();
+        const currentParentWidth = parentRect.width || parent.clientWidth || baseParentWidth;
+        const currentParentHeight = parentRect.height || parent.clientHeight || baseParentHeight || baseHeight;
+        const widthScale = Math.max(0.2, currentParentWidth / baseParentWidth);
+        const heightScale = baseParentHeight > 0 ? Math.max(0.2, currentParentHeight / baseParentHeight) : widthScale;
+
+        const nextLeft = leftPct != null
+          ? currentParentWidth * leftPct
+          : baseLeft * widthScale;
+        const nextTop = topPct != null
+          ? currentParentHeight * topPct
+          : baseTop * heightScale;
+        const nextWidth = widthPct != null
+          ? currentParentWidth * widthPct
+          : baseWidth * widthScale;
+        const nextHeight = heightPct != null
+          ? currentParentHeight * heightPct
+          : baseHeight * heightScale;
+
+        shape.style.left = `${Math.round(nextLeft * 100) / 100}px`;
+        shape.style.top = `${Math.round(nextTop * 100) / 100}px`;
+        shape.style.width = `${Math.round(nextWidth * 100) / 100}px`;
+        shape.style.height = `${Math.round(nextHeight * 100) / 100}px`;
+        shape.style.maxWidth = "none";
       });
     }
 
@@ -156,7 +170,7 @@ export default function PublicFunnelPage() {
       window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", syncShapeBlocks);
     };
-  }, [currentStep?.id]);
+  }, [currentStep?.id, canvasWidthParam, isPreviewMode]);
 
   useEffect(() => {
     if (!currentStep) return;
@@ -299,6 +313,17 @@ export default function PublicFunnelPage() {
 
   const stepIndex = steps.findIndex((s) => s.id === currentStep.id);
   const totalSteps = steps.length;
+  const previewShellStyle = isMobilePreview
+    ? {
+        width: 390,
+        maxWidth: "100%",
+        margin: "0 auto",
+        minHeight: "100vh",
+        background: "#ffffff",
+        boxShadow: "0 24px 64px rgba(15, 23, 42, 0.18)",
+        overflow: "hidden",
+      }
+    : null;
 
   return (
     <>
@@ -309,37 +334,19 @@ export default function PublicFunnelPage() {
           *, *::before, *::after { box-sizing: border-box; }
           body { margin: 0; padding: 0; background: #0c121a; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
           .fb-preview-root, .fb-preview-root * { box-sizing: border-box; }
-          .fb-preview-root [style*="display:grid"] > *,
-          .fb-preview-root [style*="display: grid"] > *,
-          .fb-preview-root [style*="display:flex"] > *,
-          .fb-preview-root [style*="display: flex"] > * {
+          .fb-preview-root [style*="display:grid"] > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display: grid"] > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display:flex"] > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display: flex"] > :not([style*="position:absolute"]):not([style*="position: absolute"]) {
             min-width: 0 !important;
             max-width: 100% !important;
           }
-          .fb-preview-root [style*="display:grid"] > * > *,
-          .fb-preview-root [style*="display: grid"] > * > *,
-          .fb-preview-root [style*="display:flex"] > * > *,
-          .fb-preview-root [style*="display: flex"] > * > * {
+          .fb-preview-root [style*="display:grid"] > :not([style*="position:absolute"]):not([style*="position: absolute"]) > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display: grid"] > :not([style*="position:absolute"]):not([style*="position: absolute"]) > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display:flex"] > :not([style*="position:absolute"]):not([style*="position: absolute"]) > :not([style*="position:absolute"]):not([style*="position: absolute"]),
+          .fb-preview-root [style*="display: flex"] > :not([style*="position:absolute"]):not([style*="position: absolute"]) > :not([style*="position:absolute"]):not([style*="position: absolute"]) {
             min-width: 0 !important;
             max-width: 100% !important;
-          }
-          .fb-preview-root h1,
-          .fb-preview-root h2,
-          .fb-preview-root h3,
-          .fb-preview-root h4,
-          .fb-preview-root h5,
-          .fb-preview-root h6,
-          .fb-preview-root p,
-          .fb-preview-root span,
-          .fb-preview-root li,
-          .fb-preview-root a,
-          .fb-preview-root blockquote,
-          .fb-preview-root strong,
-          .fb-preview-root em {
-            max-width: 100% !important;
-            white-space: normal !important;
-            overflow-wrap: anywhere !important;
-            word-break: break-word !important;
           }
           .fb-preview-root img,
           .fb-preview-root svg,
@@ -358,11 +365,13 @@ export default function PublicFunnelPage() {
       )}
 
       {/* Rendered page content */}
-      <div
-        dangerouslySetInnerHTML={{ __html: currentStep.content || "" }}
-        className="fb-preview-root"
-        style={{ minHeight: "100vh" }}
-      />
+      <div style={previewShellStyle || undefined}>
+        <div
+          dangerouslySetInnerHTML={{ __html: currentStep.content || "" }}
+          className="fb-preview-root"
+          style={{ minHeight: "100vh" }}
+        />
+      </div>
 
       {/* Step navigation for multi-step funnels */}
       {totalSteps > 1 && (

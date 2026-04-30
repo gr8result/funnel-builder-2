@@ -218,6 +218,9 @@ export default function WebsiteBuilderDashboard() {
               >
                 Browse Imported Themes
               </button>
+              <button type="button" onClick={() => router.push("/modules/website-builder/domains")} className={s.secondaryAction}>
+                Manage Domains
+              </button>
             </div>
           </section>
 

@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import PageBuilderCanvas from "../../../components/website-builder/PageBuilderCanvas";
 import { applyAssetToProps, createStoredAsset } from "../../../lib/website-builder/mediaAssets";
 import { applyChaiThemePreset, buildStarterChaiData, renderChaiHtml } from "../../../lib/website-builder/chaiStudio";
+import { supabase } from "../../../lib/supabaseClient";
+import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
 import {
   createWebsiteProject,
   getWebsiteBuilderAssets,
@@ -21,6 +23,20 @@ function slugify(value) {
     .replace(/(^-|-$)/g, "");
 }
 
+function sanitizeSlugInput(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function sanitizeDomainInput(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/^https?:\/\//, "");
+}
+
 export default function VisualBuilderPage() {
   const router = useRouter();
   const { projectId, page, name, mode, type, template } = router.query;
@@ -28,17 +44,40 @@ export default function VisualBuilderPage() {
   const [activePage, setActivePage] = useState("Home");
   const [newPageName, setNewPageName] = useState("");
   const [notice, setNotice] = useState("");
+  const [noticeTone, setNoticeTone] = useState("info");
+  const [noticeDuration, setNoticeDuration] = useState(2400);
   const [brandAssets, setBrandAssets] = useState({ logo: null, images: [] });
+  const [session, setSession] = useState(null);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [siteSlug, setSiteSlug] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
 
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
   }, []);
 
   useEffect(() => {
+    let subscription;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data?.session || null);
+      const sub = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        setSession(nextSession || null);
+      });
+      subscription = sub.data.subscription;
+    })();
+
+    return () => subscription?.unsubscribe?.();
+  }, []);
+
+  useEffect(() => {
     if (!notice) return undefined;
-    const timer = window.setTimeout(() => setNotice(""), 2400);
+    const timer = window.setTimeout(() => {
+      setNotice("");
+      setNoticeTone("info");
+    }, noticeDuration);
     return () => window.clearTimeout(timer);
-  }, [notice]);
+  }, [notice, noticeDuration]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -71,13 +110,133 @@ export default function VisualBuilderPage() {
     setActivePage(resolvedPage);
   }, [router.isReady, projectId, page, name, mode, type, template]);
 
+  useEffect(() => {
+    const fallbackSlug = slugify(project?.publication?.slug || project?.slug || project?.name || "site");
+    if (fallbackSlug && fallbackSlug !== siteSlug) {
+      setSiteSlug(fallbackSlug);
+    }
+    const savedCustomDomain = normalizeDomain(project?.publication?.customDomain || project?.publication?.custom_domain || "");
+    if (savedCustomDomain !== customDomain) {
+      setCustomDomain(savedCustomDomain);
+    }
+  }, [project?.id, project?.publication?.customDomain, project?.publication?.custom_domain]);
+
   const currentObjective = useMemo(() => {
     const pageEntry = project?.pages?.find((entry) => entry.name === activePage || slugify(entry.name) === slugify(activePage));
     return pageEntry?.objective || "Build this page in the visual editor.";
   }, [project, activePage]);
 
-  function flashNotice(message) {
+  function flashNotice(message, tone = "info", duration = null) {
     setNotice(String(message || ""));
+    setNoticeTone(tone);
+    setNoticeDuration(duration ?? (tone === "error" ? 6500 : 2400));
+  }
+
+  async function handleCopyPublishedUrl(url) {
+    const value = String(url || "").trim();
+    if (!value) {
+      flashNotice("No published URL is available yet.", "error");
+      return;
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = value;
+        input.setAttribute("readonly", "readonly");
+        input.style.position = "absolute";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+
+      flashNotice("Published URL copied", "success");
+    } catch (_error) {
+      flashNotice("Could not copy the published URL.", "error");
+    }
+  }
+
+  async function handlePublishWebsite() {
+    if (!project?.id) {
+      flashNotice("Save the project before publishing.", "error");
+      return;
+    }
+
+    if (!session?.access_token) {
+      flashNotice("Please log in again before publishing.", "error");
+      return;
+    }
+
+    const normalizedSlug = slugify(siteSlug || project.name || "site");
+    if (!normalizedSlug) {
+      flashNotice("Add a valid site slug before publishing.", "error");
+      return;
+    }
+
+    setPublishBusy(true);
+
+    try {
+      const response = await fetch("/api/websites/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          slug: normalizedSlug,
+          customDomain: normalizeDomain(customDomain),
+          project: {
+            ...project,
+            name: displayName,
+            publication: undefined,
+          },
+        }),
+      });
+
+      const responseText = await response.text();
+      let payload = {};
+      try {
+        payload = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        payload = {};
+      }
+
+      if (!response.ok || !payload?.ok) {
+        const detailedMessage = payload?.error
+          || (responseText && !responseText.trim().startsWith("<") ? responseText.trim() : "")
+          || `Could not publish website (HTTP ${response.status})`;
+        throw new Error(detailedMessage);
+      }
+
+      const nextPublication = {
+        id: payload.publication?.id || "",
+        slug: payload.publication?.slug || normalizedSlug,
+        primaryDomain: payload.publication?.primary_domain || buildDefaultSiteDomain(normalizedSlug),
+        customDomain: payload.publication?.custom_domain || normalizeDomain(customDomain),
+        domainStatus: payload.publication?.domain_status || "generated",
+        publishedAt: payload.publication?.published_at || new Date().toISOString(),
+        sitePath: payload.sitePath || buildWebsitePath(normalizedSlug),
+        liveUrl: payload.liveUrl || (payload.publication?.custom_domain
+          ? buildWebsiteUrl({ slug: normalizedSlug, domain: payload.publication?.custom_domain })
+          : buildHostedWebsiteUrl({ slug: normalizedSlug })),
+        defaultUrl: payload.defaultUrl || buildHostedWebsiteUrl({ slug: normalizedSlug }),
+        customDomainInstructions: payload.customDomainInstructions || null,
+      };
+
+      const updated = saveProjectPatch({ publication: nextPublication }, "Website published");
+      if (!updated) {
+        setProject((current) => current ? { ...current, publication: nextPublication } : current);
+        flashNotice("Website published", "success");
+      }
+    } catch (error) {
+      flashNotice(error?.message || "Could not publish website", "error");
+    } finally {
+      setPublishBusy(false);
+    }
   }
 
   function saveProjectPatch(patch, successMessage = "Saved changes") {
@@ -180,6 +339,26 @@ export default function VisualBuilderPage() {
     }, successMessage);
   }
 
+  function saveGlobalBlock(block, role) {
+    if (!project?.id || !block) return;
+    const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
+    const updated = updateWebsiteProject(project.id, { [field]: block });
+    if (updated) {
+      setProject(updated);
+      flashNotice(`Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`);
+    }
+  }
+
+  function updateGlobalBlock(role, block) {
+    if (!project?.id || !block) return;
+    const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
+    const updated = updateWebsiteProject(project.id, { [field]: block });
+    if (updated) {
+      setProject(updated);
+      flashNotice(`Updated global ${role === "nav" ? "navigation" : "footer"}`);
+    }
+  }
+
   function applyDesignPreset(presetName) {
     const currentData = project?.chaiData?.[activePage] || buildStarterChaiData(project, activePage);
     const nextData = applyChaiThemePreset(currentData, presetName);
@@ -242,6 +421,17 @@ export default function VisualBuilderPage() {
   }
 
   const displayName = String(name || project?.name || "GR8 Website");
+  const predictedDefaultDomain = buildDefaultSiteDomain(siteSlug || displayName || "site");
+  const predictedHostedUrl = buildHostedWebsiteUrl({ slug: siteSlug || displayName || "site" });
+  const hasDedicatedRootDomain = !!getSiteRootDomain();
+  const predictedSitePath = buildWebsitePath(siteSlug || displayName || "site");
+  const publication = project?.publication || null;
+  const resolvedPublicationLiveUrl = publication
+    ? (publication.customDomain
+      ? buildWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site", domain: publication.customDomain })
+      : buildHostedWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site" }))
+    : "";
+  const liveUrl = publication?.liveUrl || publication?.defaultUrl || buildHostedWebsiteUrl({ slug: siteSlug || displayName || "site" });
 
   if (!router.isReady || !project) {
     return (
@@ -276,14 +466,22 @@ export default function VisualBuilderPage() {
               <div style={styles.bannerActions}>
                 {project?.id ? (
                   <>
-                    <Link href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(activePage)}`} style={styles.secondaryLink}>
+                    <Link href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(activePage)}`} style={styles.secondaryLink} target="_blank" rel="noopener noreferrer">
                       Preview Page
                     </Link>
-                    <Link href={`/modules/website-builder/project/${project.id}/preview`} style={styles.secondaryLink}>
+                    <Link href={`/modules/website-builder/project/${project.id}/preview`} style={styles.secondaryLink} target="_blank" rel="noopener noreferrer">
                       Preview Site
                     </Link>
                   </>
                 ) : null}
+                {resolvedPublicationLiveUrl ? (
+                  <a href={resolvedPublicationLiveUrl} style={styles.secondaryLink} target="_blank" rel="noopener noreferrer">
+                    Live Site
+                  </a>
+                ) : null}
+                <Link href="/modules/website-builder/domains" style={styles.secondaryLink}>
+                  Domains
+                </Link>
                 <Link href="/modules/website-builder" style={styles.primaryBackLink}>
                   Back
                 </Link>
@@ -295,34 +493,113 @@ export default function VisualBuilderPage() {
             <section style={styles.navPanel}>
             <div style={styles.navPanelHead}>
               <div>
-                <strong style={{ display: "block", fontSize: 15 }}>Site Pages</strong>
+                <strong style={styles.sectionTitle}>Website Setup</strong>
                 <span style={styles.mutedText}>{currentObjective}</span>
               </div>
-              {notice ? <span style={styles.notice}>{notice}</span> : null}
+              {notice ? <span style={noticeTone === "error" ? styles.noticeError : noticeTone === "success" ? styles.noticeSuccess : styles.notice}>{notice}</span> : null}
             </div>
 
-            <div style={styles.pagePills}>
-              {(project?.pages || [{ name: activePage }]).map((entry) => (
-                <button
-                  key={entry.name}
-                  type="button"
-                  onClick={() => setActivePage(entry.name)}
-                  style={{
-                    ...styles.pagePill,
-                    ...(activePage === entry.name ? styles.pagePillActive : {}),
-                  }}
-                >
-                  {entry.name}
+            <div style={styles.publishPanel}>
+              <div style={styles.publishHead}>
+                <strong style={styles.sectionTitle}>Publish Website</strong>
+                <span style={styles.publishStatus}>{publication?.publishedAt ? "Published" : "Draft only"}</span>
+              </div>
+
+              <label style={styles.fieldLabel}>
+                Site slug
+                <input
+                  value={siteSlug}
+                  onChange={(event) => setSiteSlug(sanitizeSlugInput(event.target.value))}
+                  placeholder="my-business"
+                  style={styles.publishInput}
+                />
+                <span style={styles.fieldHelp}>
+                  This is the short name used in your hosted website URL. For example, if you enter <span style={styles.inlineHighlightBlue}>"my-business"</span>, the live URL becomes <span style={styles.inlineHighlightMint}>{buildHostedWebsiteUrl({ slug: "my-business" })}</span>.
+                </span>
+                <span style={styles.fieldHelpMuted}>
+                  This is your website's live address. You can add your own custom domain later if you want a branded URL.
+                </span>
+              </label>
+
+              <label style={styles.fieldLabel}>
+                Custom domain (optional)
+                <input
+                  value={customDomain}
+                  onChange={(event) => setCustomDomain(sanitizeDomainInput(event.target.value))}
+                  placeholder="www.example.com"
+                  style={styles.publishInput}
+                />
+              </label>
+
+              <div style={styles.publishHintWrap}>
+                <span style={styles.publishHint}>Hosted website URL: <span style={styles.inlineHighlightMint}>{predictedHostedUrl}</span></span>
+                {hasDedicatedRootDomain ? <span style={styles.publishHint}>Branded subdomain: <span style={styles.inlineHighlightBlue}>{predictedDefaultDomain || "Add a site slug to generate one"}</span></span> : null}
+                <span style={styles.publishHint}>Published route path: <span style={styles.inlineHighlightGold}>{predictedSitePath}</span></span>
+              </div>
+
+              <div style={styles.publishActionRow}>
+                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || !session}>
+                  {publishBusy ? "Publishing..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
                 </button>
-              ))}
+
+                {resolvedPublicationLiveUrl ? (
+                  <div style={styles.publishUrlCard}>
+                    <span style={styles.publishUrlLabel}>Published URL</span>
+                    <div style={styles.publishUrlRow}>
+                      <input value={resolvedPublicationLiveUrl} readOnly style={styles.publishUrlInput} aria-label="Published website URL" />
+                      <button type="button" onClick={() => handleCopyPublishedUrl(resolvedPublicationLiveUrl)} style={styles.publishUrlButton}>
+                        Copy URL
+                      </button>
+                      <a href={resolvedPublicationLiveUrl} style={styles.publishUrlOpenLink} target="_blank" rel="noopener noreferrer">
+                        Open
+                      </a>
+                    </div>
+                    <a href={resolvedPublicationLiveUrl} style={styles.publishLiveLink} target="_blank" rel="noopener noreferrer">
+                        {publication.customDomain ? `Live on ${publication.customDomain}` : `Open live website`}
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+
+              {publication?.customDomainInstructions ? (
+                <div style={styles.publishDnsCard}>
+                  <strong style={styles.sectionLabel}>DNS setup</strong>
+                  <p style={styles.publishDnsText}>Point your custom domain to {publication.customDomainInstructions.value}.</p>
+                  <p style={styles.publishDnsText}>Preferred: CNAME the host to {publication.customDomainInstructions.value}.</p>
+                  <p style={styles.publishDnsText}>Apex/root domains usually need ALIAS or ANAME support at your DNS provider.</p>
+                </div>
+              ) : null}
+
+              {!session ? <span style={styles.publishAuthHint}>Log in to publish this website.</span> : null}
             </div>
 
-            <div style={styles.themePanel}>
-              <strong style={{ fontSize: 13, color: "#f8fafc" }}>Site Theme</strong>
-              <div style={styles.themeRow}>
-                <button type="button" onClick={() => applyDesignPreset("premium")} style={styles.themeBtn}>Premium</button>
-                <button type="button" onClick={() => applyDesignPreset("minimal")} style={styles.themeBtn}>Minimal</button>
-                <button type="button" onClick={() => applyDesignPreset("bold")} style={styles.themeBtn}>Bold</button>
+            <div style={styles.controlsPanel}>
+              <div style={styles.controlGroup}>
+                <strong style={styles.sectionLabel}>Site Pages</strong>
+                <div style={styles.pagePills}>
+                  {(project?.pages || [{ name: activePage }]).map((entry) => (
+                    <button
+                      key={entry.name}
+                      type="button"
+                      onClick={() => setActivePage(entry.name)}
+                      style={{
+                        ...styles.pagePill,
+                        ...(activePage === entry.name ? styles.pagePillActive : {}),
+                      }}
+                    >
+                      {entry.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={styles.themePanel}>
+                <strong style={styles.sectionLabel}>Site Theme</strong>
+                <div style={styles.themeRow}>
+                  <button type="button" onClick={() => applyDesignPreset("premium")} style={styles.themeBtn}>Premium</button>
+                  <button type="button" onClick={() => applyDesignPreset("minimal")} style={styles.themeBtn}>Minimal</button>
+                  <button type="button" onClick={() => applyDesignPreset("bold")} style={styles.themeBtn}>Bold</button>
+                </div>
               </div>
             </div>
 
@@ -349,6 +626,8 @@ export default function VisualBuilderPage() {
                 onSave={(blocks) => saveBlockPage(blocks, `Saved ${activePage}`)}
                 onUploadImage={handleUploadImage}
                 onSelectAsset={handleSelectAsset}
+                onSaveAsGlobal={saveGlobalBlock}
+                onUpdateGlobalBlock={updateGlobalBlock}
                 showHeader={true}
               />
             </div>
@@ -364,6 +643,8 @@ const styles = {
     background: "linear-gradient(180deg, #0b1016 0%, #0d1420 100%)",
     color: "#e6eef5",
     fontFamily: "system-ui, sans-serif",
+    fontSize: 16,
+    fontWeight: 600,
     display: "grid",
     gridTemplateRows: "auto 1fr",
     alignContent: "stretch",
@@ -382,7 +663,8 @@ const styles = {
     padding: "18px 22px",
     background: "#111827",
     color: "#fff",
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
   },
   emptyCard: {
     display: "grid",
@@ -468,7 +750,7 @@ const styles = {
     background: "rgba(2,6,23,.16)",
     backdropFilter: "blur(8px)",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   primaryBackLink: {
     color: "#082032",
@@ -477,8 +759,8 @@ const styles = {
     borderRadius: 10,
     border: "1px solid rgba(255,255,255,.34)",
     background: "#f8fafc",
-    fontSize: 18,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     boxShadow: "0 10px 24px rgba(8,32,50,0.16)",
   },
   backBtn: {
@@ -488,7 +770,8 @@ const styles = {
     background: "rgba(255,255,255,.1)",
     border: "1px solid rgba(255,255,255,.22)",
     color: "#fff",
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     justifySelf: "start",
   },
   contentWrap: {
@@ -517,13 +800,213 @@ const styles = {
     flexWrap: "wrap",
   },
   mutedText: {
-    fontSize: 13,
+    fontSize: 16,
+    fontWeight: 600,
     opacity: 0.75,
   },
+  sectionTitle: {
+    display: "block",
+    fontSize: 16,
+    color: "#f8fafc",
+    fontWeight: 600,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    color: "#f8fafc",
+    fontWeight: 600,
+  },
   notice: {
-    fontSize: 13,
+    fontSize: 16,
+    color: "#bae6fd",
+    fontWeight: 600,
+  },
+  noticeSuccess: {
+    fontSize: 16,
     color: "#86efac",
-    fontWeight: 700,
+    fontWeight: 600,
+  },
+  noticeError: {
+    fontSize: 16,
+    color: "#fca5a5",
+    fontWeight: 600,
+  },
+  publishPanel: {
+    display: "grid",
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    background: "rgba(15,23,42,0.72)",
+    border: "1px solid rgba(56,189,248,0.18)",
+  },
+  publishHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  publishStatus: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#bae6fd",
+  },
+  fieldLabel: {
+    display: "grid",
+    gap: 6,
+    fontSize: 16,
+    color: "#e2e8f0",
+    fontWeight: 600,
+  },
+  publishInput: {
+    width: "100%",
+    background: "#020617",
+    color: "#e6eef5",
+    border: "1px solid rgba(255,255,255,.15)",
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 16,
+    fontWeight: 600,
+  },
+  fieldHelp: {
+    fontSize: 16,
+    color: "#dbeafe",
+    lineHeight: 1.5,
+    fontWeight: 600,
+  },
+  fieldHelpMuted: {
+    fontSize: 16,
+    color: "#c4b5fd",
+    lineHeight: 1.5,
+    fontWeight: 600,
+  },
+  publishHintWrap: {
+    display: "grid",
+    gap: 4,
+  },
+  publishHint: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#cbd5e1",
+  },
+  publishActionRow: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+    alignItems: "stretch",
+  },
+  inlineHighlightBlue: {
+    color: "#7dd3fc",
+  },
+  inlineHighlightMint: {
+    color: "#86efac",
+  },
+  inlineHighlightLavender: {
+    color: "#c4b5fd",
+  },
+  inlineHighlightGold: {
+    color: "#fcd34d",
+  },
+  publishBtn: {
+    flex: "1 1 320px",
+    maxWidth: "50%",
+    minHeight: 72,
+    padding: "18px 20px",
+    borderRadius: 10,
+    border: 0,
+    background: "linear-gradient(135deg, #38bdf8 0%, #22c55e 100%)",
+    color: "#04111d",
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  publishLiveLink: {
+    color: "#7dd3fc",
+    textDecoration: "none",
+    fontSize: 16,
+    fontWeight: 600,
+  },
+  publishUrlCard: {
+    flex: "1 1 420px",
+    display: "grid",
+    gap: 8,
+    padding: 10,
+    borderRadius: 12,
+    background: "rgba(2,6,23,0.55)",
+    border: "1px solid rgba(148,163,184,0.16)",
+  },
+  publishUrlLabel: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#f8fafc",
+  },
+  publishUrlRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  publishUrlInput: {
+    flex: "1 1 320px",
+    minWidth: 0,
+    background: "#020617",
+    color: "#e6eef5",
+    border: "1px solid rgba(255,255,255,.15)",
+    borderRadius: 8,
+    padding: "10px 12px",
+    fontSize: 16,
+    fontWeight: 600,
+  },
+  publishUrlButton: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(56,189,248,0.28)",
+    background: "rgba(14,165,233,0.16)",
+    color: "#e0f2fe",
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  publishUrlOpenLink: {
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(34,197,94,0.24)",
+    background: "rgba(34,197,94,0.14)",
+    color: "#dcfce7",
+    fontSize: 16,
+    fontWeight: 600,
+    textDecoration: "none",
+  },
+  publishDnsCard: {
+    display: "grid",
+    gap: 4,
+    padding: 10,
+    borderRadius: 12,
+    background: "rgba(2,6,23,0.55)",
+    border: "1px solid rgba(148,163,184,0.16)",
+  },
+  publishDnsText: {
+    margin: 0,
+    fontSize: 16,
+    color: "#cbd5e1",
+    lineHeight: 1.5,
+    fontWeight: 600,
+  },
+  publishAuthHint: {
+    fontSize: 16,
+    color: "#fca5a5",
+    fontWeight: 600,
+  },
+  controlsPanel: {
+    display: "grid",
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    background: "rgba(15,23,42,0.55)",
+    border: "1px solid rgba(148,163,184,0.16)",
+  },
+  controlGroup: {
+    display: "grid",
+    gap: 10,
   },
   pagePills: {
     display: "flex",
@@ -544,21 +1027,23 @@ const styles = {
     flexWrap: "wrap",
   },
   themeBtn: {
-    padding: "8px 12px",
+    padding: "10px 14px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,.15)",
     background: "#111827",
     color: "#fff",
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
   },
   pagePill: {
-    padding: "8px 12px",
+    padding: "10px 14px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,.15)",
     background: "#111827",
     color: "#fff",
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
   },
   pagePillActive: {
@@ -578,6 +1063,8 @@ const styles = {
     border: "1px solid rgba(255,255,255,.15)",
     borderRadius: 8,
     padding: "10px 12px",
+    fontSize: 16,
+    fontWeight: 600,
   },
   addBtn: {
     padding: "10px 14px",
@@ -585,7 +1072,8 @@ const styles = {
     border: 0,
     background: "#0ea5e9",
     color: "#04111d",
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
   },
 };

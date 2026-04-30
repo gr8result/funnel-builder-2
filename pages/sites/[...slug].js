@@ -5,7 +5,12 @@
 // ✅ Responsive by default (stacks columns on small screens)
 
 import Head from "next/head";
+import Link from "next/link";
+import { Fragment } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { renderWebsiteBlock } from "../../components/website-builder/WebsiteBlockRenderer";
+import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
+import { buildWebsitePath } from "../../lib/website-builder/publishConfig";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -15,6 +20,18 @@ const supabase = createClient(SUPABASE_URL || "", SUPABASE_ANON_KEY || "", {
 });
 
 const CONTENT_WIDTH = 1440;
+
+function slugifyPage(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function resolvePublishedPageName(page) {
+  return slugifyPage(page?.slug || page?.name || page?.title || "");
+}
 
 function FullBleed({ bg, children }) {
   return (
@@ -266,6 +283,23 @@ function Section({ s }) {
 
 export async function getServerSideProps(ctx) {
   const slugArr = ctx.params?.slug || [];
+  const isHostLookup = slugArr[0] === "__host__";
+  const siteHost = isHostLookup ? String(ctx.req.headers["x-site-host"] || "") : "";
+  const publication = isHostLookup
+    ? await getPublishedWebsiteByDomain(siteHost)
+    : await getPublishedWebsiteBySlug(slugArr[0] || "");
+
+  if (publication) {
+    return {
+      props: {
+        mode: "published-website",
+        publication,
+        requestedPath: slugArr.slice(1),
+        isDomainRequest: isHostLookup,
+      },
+    };
+  }
+
   const slug = slugArr.join("/").replace(/^\/+/, "");
 
   const { data, error } = await supabase
@@ -281,13 +315,101 @@ export async function getServerSideProps(ctx) {
   const sections = row?.content_json?.sections || [];
   return {
     props: {
+      mode: "legacy-site-page",
       title: row.title || slug,
       sections: Array.isArray(sections) ? sections : [],
     },
   };
 }
 
-export default function SitePage({ title, sections }) {
+function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
+  const project = publication?.site_data || {};
+  const pages = Array.isArray(project.pages) ? project.pages : [];
+  const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
+  const activePage = pages.find((page) => resolvePublishedPageName(page) === slugifyPage(requested)) || pages[0] || null;
+  const pageBlocks = activePage?.name ? (project?.pageBlocks || {})[activePage.name] || [] : [];
+  const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";
+  const globalNavBlock = project?.globalNavBlock || null;
+  const globalFooterBlock = project?.globalFooterBlock || null;
+  const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
+  const injectFooter = globalFooterBlock && !pageBlocks.some((block) => block.id && block.id === globalFooterBlock.id);
+  const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
+  const basePath = isDomainRequest ? "" : buildWebsitePath(publication?.slug || project?.name || "site");
+  const navigationContext = {
+    basePath,
+    currentPageKey: resolvePublishedPageName(activePage) || "home",
+    pageMap: Object.fromEntries(
+      pages.map((page) => {
+        const pageSlug = resolvePublishedPageName(page);
+        const href = pageSlug && pageSlug !== "home"
+          ? `${basePath}/${pageSlug}` || `/${pageSlug}`
+          : (basePath || "/");
+        return [slugifyPage(page.name || page.title || pageSlug), href];
+      })
+    ),
+  };
+
+  return (
+    <>
+      <Head>
+        <title>{publication?.name || project?.name || "Website"}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+      <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif" }}>
+        {injectNav ? (
+          <Fragment key="global-nav">
+            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+          </Fragment>
+        ) : null}
+
+        {Array.isArray(blocksWithoutNav) && blocksWithoutNav.length ? (
+          <>
+            {blocksWithoutNav.map((block, index) => (
+              <Fragment key={block.id || `${block.type}-${index}`}>
+                {renderWebsiteBlock(block, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+              </Fragment>
+            ))}
+          </>
+        ) : pageContent ? (
+          <section dangerouslySetInnerHTML={{ __html: pageContent }} />
+        ) : (
+          <section style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24 }}>
+            <div style={{ width: "min(640px, 100%)", borderRadius: 18, border: "1px solid rgba(148,163,184,0.35)", padding: 24, background: "#ffffff", boxShadow: "0 20px 40px rgba(15,23,42,0.08)" }}>
+              <strong style={{ display: "block", marginBottom: 8, fontSize: 18 }}>This site is published, but this page has no content yet.</strong>
+              <p style={{ margin: 0, color: "#475569" }}>Open Website Studio, edit the page, and publish again.</p>
+            </div>
+          </section>
+        )}
+
+        {injectFooter ? (
+          <Fragment key="global-footer">
+            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+          </Fragment>
+        ) : null}
+
+        {!globalNavBlock && pages.length > 1 ? (
+          <nav style={{ position: "fixed", right: 14, bottom: 14, display: "flex", gap: 8, flexWrap: "wrap", maxWidth: "min(92vw, 640px)", padding: 10, borderRadius: 14, background: "rgba(255,255,255,0.92)", boxShadow: "0 12px 30px rgba(15,23,42,0.14)", backdropFilter: "blur(10px)" }}>
+            {pages.map((page) => {
+              const pageSlug = resolvePublishedPageName(page);
+              const href = pageSlug ? `${basePath}/${pageSlug}` || `/${pageSlug}` : (basePath || "/");
+              return (
+                <Link key={page.name || pageSlug} href={href} style={{ textDecoration: "none", color: "#0f172a", padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(148,163,184,0.35)", fontWeight: 700, background: "#ffffff" }}>
+                  {page.name || page.title || "Page"}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
+      </main>
+    </>
+  );
+}
+
+export default function SitePage({ mode, title, sections, publication, requestedPath, isDomainRequest }) {
+  if (mode === "published-website") {
+    return <PublishedWebsiteRenderer publication={publication} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
+  }
+
   return (
     <>
       <Head>

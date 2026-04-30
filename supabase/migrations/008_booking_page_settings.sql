@@ -26,8 +26,23 @@ CREATE TABLE IF NOT EXISTS bookings (
 
 -- Allow providers to read their own bookings
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS bookings_provider_read  ON bookings FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS bookings_public_insert  ON bookings FOR INSERT WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'bookings' AND policyname = 'bookings_provider_read'
+  ) THEN
+    EXECUTE 'CREATE POLICY bookings_provider_read ON bookings FOR SELECT USING (auth.uid() = user_id)';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'bookings' AND policyname = 'bookings_public_insert'
+  ) THEN
+    EXECUTE 'CREATE POLICY bookings_public_insert ON bookings FOR INSERT WITH CHECK (true)';
+  END IF;
+END $$;
 
 -- Allow public (unauthenticated) reads of profiles so the booking page can load
 -- Skip this if the policy already exists — just ensure it is present

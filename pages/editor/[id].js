@@ -3,8 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../lib/supabaseClient";
 
-const supabase = supabaseNamed || supabaseDefault;
-
 // If you don’t have this bucket, create a **public** bucket named “public-assets”
 const STORAGE_BUCKET = "public-assets";
 

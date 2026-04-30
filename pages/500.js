@@ -59,3 +59,5 @@ export default function Custom500() {
     </div>
   );
 }
+
+Custom500.disableLayout = true;

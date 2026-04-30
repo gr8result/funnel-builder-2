@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 
 const MIN_TEXT_SIZE = 16;
@@ -10,6 +11,68 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function slugifyText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function resolveCurrentPageKey() {
+  if (typeof window === "undefined") return "";
+
+  const url = new URL(window.location.href);
+  const pageParam = slugifyText(url.searchParams.get("page") || "");
+  if (pageParam) return pageParam;
+
+  const hashKey = slugifyText(url.hash.replace(/^#/, ""));
+  if (hashKey) return hashKey;
+
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  return slugifyText(pathParts[pathParts.length - 1] || "");
+}
+
+function isCurrentNavLink(link, currentPageKey) {
+  const pageKey = slugifyText(currentPageKey);
+  if (!pageKey) return false;
+
+  const href = String(link?.href || "").trim();
+  const labelKey = slugifyText(link?.label || "");
+  if (labelKey && labelKey === pageKey) return true;
+
+  if (!href) return false;
+
+  const normalizedHref = href.toLowerCase();
+  return normalizedHref.includes(`page=${pageKey}`)
+    || normalizedHref === `#${pageKey}`
+    || normalizedHref.endsWith(`/${pageKey}`);
+}
+
+function shouldHighlightNavLink(link, currentPageKey) {
+  if (isCurrentNavLink(link, currentPageKey)) return true;
+  return !slugifyText(currentPageKey) && !!link?.highlighted;
+}
+
+function resolvePublishedNavHref(link, navigationContext) {
+  const rawHref = String(link?.href || "").trim();
+  const pageMap = navigationContext?.pageMap || {};
+  const basePath = String(navigationContext?.basePath || "").replace(/\/$/, "");
+  const labelKey = slugifyText(link?.label || "");
+
+  if (rawHref && rawHref !== "#") {
+    if (/^(https?:|mailto:|tel:)/i.test(rawHref)) return rawHref;
+    if (rawHref.startsWith("#")) return rawHref;
+    if (rawHref.startsWith("/")) return rawHref;
+  }
+
+  if (labelKey && pageMap[labelKey]) {
+    return pageMap[labelKey];
+  }
+
+  return basePath || "/";
+}
+
 function asRichHtml(value) {
   const text = String(value || "");
   if (!text.trim()) return "";
@@ -17,10 +80,33 @@ function asRichHtml(value) {
   return text.replace(/\n/g, "<br />");
 }
 
+function textLayerBackgroundStyle(layer) {
+  const backgroundImage = String(layer?.backgroundImage || "").trim();
+  if (backgroundImage) {
+    return {
+      backgroundColor: String(layer?.backgroundColor || "transparent") || "transparent",
+      backgroundImage: `url("${backgroundImage}")`,
+      backgroundSize: layer?.backgroundSize || "cover",
+      backgroundPosition: layer?.backgroundPosition || "center center",
+      backgroundRepeat: layer?.backgroundRepeat || "no-repeat",
+    };
+  }
+
+  if (typeof layer?.background === "string" && layer.background.trim()) {
+    return { background: layer.background };
+  }
+
+  return { background: String(layer?.backgroundColor || "transparent") || "transparent" };
+}
+
 function textSizePx(textSize, compact, explicitSize) {
   const numeric = Number(explicitSize);
   if (Number.isFinite(numeric) && numeric > 0) {
-    return Math.max(MIN_TEXT_SIZE, compact ? Math.max(14, numeric - 4) : numeric);
+    if (compact) {
+      const scaled = Math.round(numeric * 0.72);
+      return Math.max(MIN_TEXT_SIZE, Math.min(26, Math.max(14, scaled)));
+    }
+    return Math.max(MIN_TEXT_SIZE, numeric);
   }
 
   const map = {
@@ -1837,8 +1923,132 @@ function resolveContactBookingUrl(value) {
   return raw;
 }
 
-function buildNavLinkStyle(props, theme, link) {
-  const highlighted = !!link?.highlighted;
+function trustBadgeVariantStyles(props, compact, backgroundImage) {
+  const variant = String(props?.trustBadgeVariant || "pill-row");
+  const textColor = props?.textColor || "#0f172a";
+  const borderColor = props?.borderColor || "#cbd5e1";
+  const badgeBackground = props?.badgeBackgroundColor || "linear-gradient(165deg,#ffffff,#f1f5f9)";
+  const iconSize = Math.max(10, Number(props?.badgeIconSize) || 18);
+  const fontSize = Math.max(10, Number(props?.badgeFontSize) || 15);
+  const badgePadding = Math.max(6, Number(props?.badgePadding) || 14);
+
+  const rowJustify = variant === "logo-strip" ? "center" : variant === "soft-cards" ? "flex-start" : "center";
+  const rowDisplay = variant === "soft-cards" ? "grid" : "flex";
+  const rowColumns = variant === "soft-cards"
+    ? `repeat(auto-fit, minmax(${compact ? 160 : 210}px, max-content))`
+    : undefined;
+
+  const base = {
+    section: {
+      ...sharedStyles.cardSection(compact, props),
+      background: backgroundImage
+        ? `linear-gradient(rgba(15,23,42,0.18), rgba(15,23,42,0.18)), url(${backgroundImage}) center / cover no-repeat`
+        : (props?.backgroundColor || undefined),
+    },
+    row: {
+      display: rowDisplay,
+      gap: compact ? 10 : 12,
+      flexWrap: "wrap",
+      justifyContent: rowJustify,
+      gridTemplateColumns: rowColumns,
+      alignItems: "stretch",
+    },
+    badge: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: variant === "soft-cards" ? 22 : variant === "logo-strip" ? 14 : 999,
+      padding: compact ? `${Math.max(6, badgePadding - 2)}px ${Math.max(8, badgePadding)}px` : `${Math.max(8, badgePadding)}px ${Math.max(10, badgePadding + 4)}px`,
+      background: badgeBackground,
+      border: `1px solid ${borderColor}`,
+      color: textColor,
+      fontWeight: 700,
+      fontSize,
+      boxShadow:
+        variant === "dark-glass"
+          ? "0 18px 30px rgba(15,23,42,0.34)"
+          : variant === "soft-cards"
+            ? "0 16px 26px rgba(15,23,42,0.14)"
+            : variant === "logo-strip"
+              ? "none"
+              : "0 10px 20px rgba(15,23,42,0.1)",
+      backdropFilter: variant === "dark-glass" ? "blur(10px)" : "none",
+      minWidth: variant === "logo-strip" ? (compact ? 140 : 180) : variant === "soft-cards" ? (compact ? 150 : 200) : undefined,
+      justifyContent: variant === "logo-strip" ? "center" : variant === "soft-cards" ? "flex-start" : undefined,
+      flexDirection: variant === "soft-cards" ? "column" : "row",
+      textAlign: variant === "soft-cards" ? "center" : "left",
+      backgroundClip: "padding-box",
+      opacity: variant === "logo-strip" ? 0.96 : 1,
+    },
+    icon: {
+      fontSize: variant === "logo-strip" ? Math.max(iconSize, compact ? 18 : 22) : iconSize,
+      opacity: variant === "dark-glass" ? 0.96 : 1,
+    },
+  };
+
+  if (variant === "pill-row") {
+    return {
+      ...base,
+      badge: {
+        ...base.badge,
+        background: badgeBackground,
+        borderRadius: 999,
+      },
+    };
+  }
+
+  if (variant === "soft-cards") {
+    return {
+      ...base,
+      badge: {
+        ...base.badge,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: compact ? `${Math.max(10, badgePadding)}px` : `${Math.max(14, badgePadding + 4)}px`,
+      },
+    };
+  }
+
+  if (variant === "dark-glass") {
+    return {
+      ...base,
+      section: {
+        ...base.section,
+        background: backgroundImage
+          ? `linear-gradient(rgba(2,6,23,0.52), rgba(2,6,23,0.58)), url(${backgroundImage}) center / cover no-repeat`
+          : (props?.backgroundColor || "linear-gradient(135deg,#020617,#0f172a)"),
+      },
+      badge: {
+        ...base.badge,
+        background: props?.badgeBackgroundColor || "rgba(15,23,42,0.68)",
+      },
+    };
+  }
+
+  if (variant === "logo-strip") {
+    return {
+      ...base,
+      badge: {
+        ...base.badge,
+        background: props?.badgeBackgroundColor || "rgba(255,255,255,0.72)",
+        borderRadius: 14,
+        boxShadow: "none",
+      },
+    };
+  }
+
+  return base;
+}
+
+function resolveNewsletterButtonUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(mailto:|https?:|tel:|#|\/)/i.test(raw)) return raw;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) return `mailto:${raw}`;
+  return raw;
+}
+
+function buildNavLinkStyle(props, theme, highlighted = false) {
   if (!highlighted) return { ...theme.link };
 
   return {
@@ -1879,7 +2089,7 @@ function applyNavHoverEffect(event, props, active) {
 }
 
 function resetNavHoverEffect(event, props, link) {
-  if (link?.highlighted) return;
+  if (link?.highlighted || link?.__isCurrentPage) return;
   const node = event.currentTarget;
   node.style.background = "transparent";
   node.style.color = props.textColor || "#e2e8f0";
@@ -1889,44 +2099,158 @@ function resetNavHoverEffect(event, props, link) {
   node.style.textUnderlineOffset = "0px";
 }
 
-function NavBarBlock({ blockProps, compact, logoSrc }) {
+function findScrollParent(node) {
+  if (typeof window === "undefined") return null;
+  let current = node?.parentElement || null;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = `${style.overflowY || ""} ${style.overflow || ""}`;
+    if (/(auto|scroll|overlay)/i.test(overflowY)) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return window;
+}
+
+function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
+  const wrapperRef = React.useRef(null);
+  const shellRef = React.useRef(null);
   const navTheme = navVariantTheme(blockProps, compact);
+  const stickyMode = blockProps.stickyMode || "normal";
+  const isAlwaysMode = stickyMode === "always";
+  const isStickyMode = stickyMode === "sticky" || stickyMode === "sticky-transparent";
+  const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [openDropdown, setOpenDropdown] = React.useState(null);
-  const [isMobile, setIsMobile] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(!!compact);
   const [scrolled, setScrolled] = React.useState(false);
+  const [browserPageKey, setBrowserPageKey] = React.useState("");
+  const [navHeight, setNavHeight] = React.useState(0);
+  const [stickyPinned, setStickyPinned] = React.useState(false);
+  const [fixedFrame, setFixedFrame] = React.useState({ top: 0, left: 0, width: 0 });
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const onResize = () => setIsMobile(window.innerWidth < 900);
-    const onScroll = () => setScrolled(window.scrollY > 18);
+    const onResize = () => setIsMobile(!!compact || window.innerWidth < 900);
 
     onResize();
-    onScroll();
     window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [compact]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const node = shellRef.current;
+    if (!node) return undefined;
+
+    const updateHeight = () => {
+      setNavHeight(Math.ceil(node.getBoundingClientRect().height || 0));
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(updateHeight);
+      resizeObserver.observe(node);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      resizeObserver?.disconnect?.();
+    };
+  }, [compact, blockProps, mobileOpen]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const wrapperNode = wrapperRef.current;
+    const scrollTarget = findScrollParent(wrapperNode || shellRef.current);
+    const readScrollTop = () => {
+      const usesWindowScroll = !scrollTarget || scrollTarget === window;
+      const scrollAmount = usesWindowScroll ? (window.scrollY || 0) : (scrollTarget?.scrollTop || 0);
+      const wrapperRect = wrapperNode?.getBoundingClientRect?.();
+      const containerTop = usesWindowScroll ? 0 : (scrollTarget?.getBoundingClientRect?.().top || 0);
+
+      setScrolled(scrollAmount > 18);
+
+      if (isStickyMode) {
+        setStickyPinned((wrapperRect?.top || 0) <= containerTop && scrollAmount > 0);
+      }
+
+      if ((isAlwaysMode || isStickyMode) && wrapperRect) {
+        setFixedFrame((current) => {
+          const next = {
+            top: usesWindowScroll ? 0 : containerTop,
+            left: wrapperRect.left,
+            width: wrapperRect.width,
+          };
+
+          if (current.top === next.top && current.left === next.left && current.width === next.width) {
+            return current;
+          }
+
+          return next;
+        });
+      }
+    };
+
+    readScrollTop();
+    scrollTarget?.addEventListener?.("scroll", readScrollTop, { passive: true });
+    window.addEventListener("resize", readScrollTop);
+
+    return () => {
+      scrollTarget?.removeEventListener?.("scroll", readScrollTop);
+      window.removeEventListener("resize", readScrollTop);
+    };
+  }, [compact, isAlwaysMode, isStickyMode]);
 
   React.useEffect(() => {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
 
-  const stickyMode = blockProps.stickyMode || "normal";
-  const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
-  const shouldUseMobileMenu = isMobile && mobileMenuStyle === "hamburger";
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncCurrentPage = () => setBrowserPageKey(resolveCurrentPageKey());
+    syncCurrentPage();
+
+    window.addEventListener("popstate", syncCurrentPage);
+    window.addEventListener("hashchange", syncCurrentPage);
+
+    return () => {
+      window.removeEventListener("popstate", syncCurrentPage);
+      window.removeEventListener("hashchange", syncCurrentPage);
+    };
+  }, []);
+
+  const currentPageKey = slugifyText(navigationContext?.currentPageKey || browserPageKey || "");
+
+  const shouldUseMobileMenu = (compact || isMobile) && mobileMenuStyle === "hamburger";
   const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : asArray(blockProps.links);
+  const useFixedSticky = isStickyMode && stickyPinned;
+  const shouldPortalFixedNav = typeof document !== "undefined" && editor && (isAlwaysMode || useFixedSticky);
+  const fixedTop = editor ? fixedFrame.top : 0;
+  const fixedLeft = editor ? fixedFrame.left : 0;
+  const fixedWidth = editor ? (fixedFrame.width || undefined) : "100vw";
+  const shouldUseNativeSticky = !editor && (isAlwaysMode || isStickyMode);
 
   const shellStyle = {
     ...navTheme.shell,
-    position: stickyMode === "normal" ? navTheme.shell.position : "sticky",
-    top: stickyMode === "normal" ? navTheme.shell.top : 0,
-    zIndex: stickyMode === "normal" ? navTheme.shell.zIndex : 12,
+    width: shouldPortalFixedNav ? fixedWidth : "100%",
+    maxWidth: shouldPortalFixedNav ? fixedWidth : undefined,
+    boxSizing: "border-box",
+    position: isAlwaysMode || useFixedSticky ? "fixed" : shouldUseNativeSticky ? "sticky" : navTheme.shell.position,
+    top: isAlwaysMode || useFixedSticky ? fixedTop : shouldUseNativeSticky ? 0 : navTheme.shell.top,
+    left: isAlwaysMode || useFixedSticky ? fixedLeft : navTheme.shell.left,
+    right: isAlwaysMode || useFixedSticky ? (editor ? "auto" : 0) : navTheme.shell.right,
+    zIndex: isAlwaysMode ? (editor ? 18 : 120) : isStickyMode ? (editor ? 12 : 80) : navTheme.shell.zIndex,
     backdropFilter: stickyMode === "sticky-transparent" ? "blur(14px)" : navTheme.shell.backdropFilter,
     background:
       stickyMode === "sticky-transparent" && !scrolled
@@ -1940,6 +2264,8 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
       stickyMode !== "normal" && scrolled
         ? "0 18px 38px rgba(15,23,42,0.14)"
         : "none",
+    isolation: stickyMode === "normal" ? navTheme.shell.isolation : "isolate",
+    margin: isAlwaysMode || useFixedSticky ? 0 : navTheme.shell.margin,
   };
 
   const menuWrapStyle = shouldUseMobileMenu
@@ -1951,8 +2277,8 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
       }
     : navTheme.links;
 
-  return (
-    <section style={shellStyle}>
+  const renderNavSection = () => (
+    <section ref={shellRef} style={shellStyle}>
       <div style={navTheme.brandRow}>
         {blockProps.showLogo && logoSrc ? (
           <img src={logoSrc} alt={blockProps.brand || "Brand logo"} style={navTheme.logo} />
@@ -1985,6 +2311,9 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
         {visibleLinks.map((item, idx) => {
           const hasChildren = asArray(item?.children).length > 0;
           const isOpen = openDropdown === idx;
+          const isCurrentPage = isCurrentNavLink(item, currentPageKey);
+          const isHighlighted = shouldHighlightNavLink(item, currentPageKey);
+          const linkState = { ...item, __isCurrentPage: isHighlighted };
 
           return (
             <div
@@ -1999,10 +2328,10 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 <a
-                  href={item?.href || "#"}
-                  style={buildNavLinkStyle(blockProps, navTheme, item)}
-                  onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, !!item?.highlighted)}
-                  onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, item)}
+                  href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
+                  style={buildNavLinkStyle(blockProps, navTheme, isHighlighted)}
+                  onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                  onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
                 >
                   {item?.label || "Link"}
                 </a>
@@ -2047,7 +2376,7 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
                   {asArray(item.children).map((child, childIdx) => (
                     <a
                       key={`${child?.label || "child"}-${childIdx}`}
-                      href={child?.href || "#"}
+                      href={editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext)}
                       style={{
                         color: blockProps.textColor || "#e2e8f0",
                         textDecoration: "none",
@@ -2079,6 +2408,17 @@ function NavBarBlock({ blockProps, compact, logoSrc }) {
       ) : null}
     </section>
   );
+
+  if (editor && (isAlwaysMode || isStickyMode)) {
+    return (
+      <div ref={wrapperRef} style={{ position: "relative", width: "100%", minHeight: navHeight || undefined, paddingTop: isAlwaysMode || useFixedSticky ? (navHeight || 0) : 0 }}>
+        {shouldPortalFixedNav ? null : renderNavSection()}
+        {shouldPortalFixedNav ? createPortal(renderNavSection(), document.body) : null}
+      </div>
+    );
+  }
+
+  return renderNavSection();
 }
 
 function clampValue(value, min, max) {
@@ -2509,7 +2849,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
               border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
               boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
               transform: `rotate(${layer.rotation}deg)`,
-              background: layer.kind === "text" ? (layer.background || "transparent") : "transparent",
+              ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
               touchAction: "none",
               userSelect: "none",
             }}
@@ -3061,36 +3401,288 @@ function ColumnEditorCard({
   overlay,
   onTitleChange,
   onContentChange,
+  contentType,
+  newsletterHeading,
+  newsletterSubtitle,
+  newsletterButtonText,
+  newsletterButtonColor,
+  newsletterButtonTextColor,
+  onPatchNewsletter,
+  imageHeight,
+  onImageHeightChange,
+  imageWidth,
+  onImageWidthChange,
+  newsletterImage,
+  newsletterImageHeight,
+  onNewsletterImageHeightChange,
+  newsletterImageWidth,
+  onNewsletterImageWidthChange,
+  newsletterFields,
 }) {
   const resolvedAlign = contentAlign || "left";
+  const isNewsletter = contentType === "newsletter";
+  const normalizedTitle = String(title || "").trim();
+  const normalizedContent = String(content || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  const [isImageHovered, setIsImageHovered] = React.useState(false);
+  const [activeDrag, setActiveDrag] = React.useState(null);
+  const imgContainerRef = React.useRef(null);
+  const [isImageHoveredNL, setIsImageHoveredNL] = React.useState(false);
+  const [activeDragNL, setActiveDragNL] = React.useState(null);
+  const nlImgContainerRef = React.useRef(null);
+
+  const startResizeNL = React.useCallback((e, dir) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startH = newsletterImageHeight || (nlImgContainerRef.current?.querySelector("img")?.offsetHeight || 180);
+    const startW = newsletterImageWidth != null ? newsletterImageWidth : 100;
+    const colW = nlImgContainerRef.current?.offsetWidth || 300;
+    setActiveDragNL(dir);
+    const onMove = (e2) => {
+      const dx = e2.clientX - startX;
+      const dy = e2.clientY - startY;
+      if (dir.includes("s")) onNewsletterImageHeightChange?.(Math.max(40, Math.round(startH + dy)));
+      if (dir.includes("n")) onNewsletterImageHeightChange?.(Math.max(40, Math.round(startH - dy)));
+      if (dir.includes("e")) onNewsletterImageWidthChange?.(Math.round(Math.max(20, Math.min(100, startW + (dx / colW) * 100))));
+      if (dir.includes("w")) onNewsletterImageWidthChange?.(Math.round(Math.max(20, Math.min(100, startW - (dx / colW) * 100))));
+    };
+    const onUp = () => {
+      setActiveDragNL(null);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [newsletterImageHeight, newsletterImageWidth, onNewsletterImageHeightChange, onNewsletterImageWidthChange]);
+
+  const startResize = React.useCallback((e, dir) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startH = imageHeight || (imgContainerRef.current?.querySelector("img")?.offsetHeight || 200);
+    const startW = imageWidth != null ? imageWidth : 100;
+    const colW = imgContainerRef.current?.offsetWidth || 300;
+    setActiveDrag(dir);
+
+    const onMove = (e2) => {
+      const dx = e2.clientX - startX;
+      const dy = e2.clientY - startY;
+      if (dir.includes("s")) {
+        onImageHeightChange?.(Math.max(40, Math.round(startH + dy)));
+      }
+      if (dir.includes("n")) {
+        onImageHeightChange?.(Math.max(40, Math.round(startH - dy)));
+      }
+      if (dir.includes("e")) {
+        const pct = Math.round(Math.max(20, Math.min(100, startW + (dx / colW) * 100)));
+        onImageWidthChange?.(pct);
+      }
+      if (dir.includes("w")) {
+        const pct = Math.round(Math.max(20, Math.min(100, startW - (dx / colW) * 100)));
+        onImageWidthChange?.(pct);
+      }
+    };
+    const onUp = () => {
+      setActiveDrag(null);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [imageHeight, imageWidth, onImageHeightChange, onImageWidthChange]);
+
+  const HANDLE_SIZE = 10;
+  const HANDLE_BASE = {
+    position: "absolute", width: HANDLE_SIZE, height: HANDLE_SIZE,
+    background: "#fff", border: "2px solid #0ea5e9", borderRadius: 2,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 10,
+  };
+  const handles = [
+    { dir: "n",  style: { top: -HANDLE_SIZE/2, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" } },
+    { dir: "s",  style: { bottom: -HANDLE_SIZE/2, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" } },
+    { dir: "e",  style: { right: -HANDLE_SIZE/2, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" } },
+    { dir: "w",  style: { left: -HANDLE_SIZE/2, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" } },
+    { dir: "ne", style: { top: -HANDLE_SIZE/2, right: -HANDLE_SIZE/2, cursor: "nesw-resize" } },
+    { dir: "nw", style: { top: -HANDLE_SIZE/2, left: -HANDLE_SIZE/2, cursor: "nwse-resize" } },
+    { dir: "se", style: { bottom: -HANDLE_SIZE/2, right: -HANDLE_SIZE/2, cursor: "nwse-resize" } },
+    { dir: "sw", style: { bottom: -HANDLE_SIZE/2, left: -HANDLE_SIZE/2, cursor: "nesw-resize" } },
+  ];
+
+  const nlBtnBg = newsletterButtonColor || "#2563eb";
+  const nlBtnText = newsletterButtonTextColor || "#ffffff";
+
+  const inlineEditStyle = (base) => ({
+    ...base,
+    outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none",
+    borderRadius: 6,
+    padding: editor ? "2px 4px" : 0,
+  });
+
   return (
     <article style={{ borderRadius: 18, border: PREMIUM_BORDER, background: cardBackgroundColor || "#f8fafc", padding: compact ? 14 : 18, boxShadow: "0 10px 24px rgba(15,23,42,0.08)", textAlign: resolvedAlign, ...cardStyle }}>
       {overlay}
       <div style={{ position: "relative", zIndex: 1 }}>
-      {image ? (
-        <img src={image} alt={title || "Column image"} style={{ width: "100%", aspectRatio: "16 / 10", objectFit: "cover", borderRadius: 14, marginBottom: 12 }} />
+      {isNewsletter ? (
+        <>
+          {(newsletterImage || editor) ? (
+            <div
+              ref={nlImgContainerRef}
+              onMouseEnter={() => editor && setIsImageHoveredNL(true)}
+              onMouseLeave={() => { if (!activeDragNL) setIsImageHoveredNL(false); }}
+              style={{ position: "relative", marginBottom: 12, display: "inline-block", width: newsletterImageWidth != null ? `${newsletterImageWidth}%` : "100%" }}
+            >
+              {newsletterImage ? (
+                <img
+                  src={newsletterImage}
+                  alt="Newsletter image"
+                  draggable={false}
+                  style={{ width: "100%", height: newsletterImageHeight ? `${newsletterImageHeight}px` : undefined, aspectRatio: newsletterImageHeight ? undefined : "16 / 9", objectFit: "cover", borderRadius: 12, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+                />
+              ) : (
+                editor ? <div style={{ ...sharedStyles.galleryPlaceholder, borderRadius: 12, marginBottom: 0, minHeight: 80, fontSize: 12, opacity: 0.6 }}>Upload image above form</div> : null
+              )}
+              {editor && newsletterImage && (isImageHoveredNL || activeDragNL) && (
+                <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 12, pointerEvents: "none" }} />
+              )}
+              {editor && newsletterImage && (isImageHoveredNL || activeDragNL) && handles.map(({ dir, style }) => (
+                <div key={dir} onMouseDown={(e) => startResizeNL(e, dir)} style={{ ...HANDLE_BASE, ...style }} />
+              ))}
+            </div>
+          ) : null}
+          <h3
+            contentEditable={editor} suppressContentEditableWarning
+            onBlur={(e) => onPatchNewsletter?.({ newsletterHeading: e.currentTarget.textContent })}
+            style={inlineEditStyle({ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 17 : 20, fontWeight: 800 })}
+          >{newsletterHeading || (editor ? "Newsletter Heading" : "Stay Updated")}</h3>
+          {(newsletterSubtitle || editor) ? (
+            <p
+              contentEditable={editor} suppressContentEditableWarning
+              onBlur={(e) => onPatchNewsletter?.({ newsletterSubtitle: e.currentTarget.textContent })}
+              style={inlineEditStyle({ margin: "6px 0 0", color: bodyTextColor || "#475569", fontSize: compact ? 13 : 14, lineHeight: 1.5 })}
+            >{newsletterSubtitle || (editor ? "Your subtitle here." : "")}</p>
+          ) : null}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            {(newsletterFields && newsletterFields.length > 0 ? newsletterFields : [{ type: "email", placeholder: "Email address" }]).map((field, fi) => (
+              editor ? (
+                <div key={fi} style={{ borderRadius: 10, minHeight: 40, border: "1px solid #cbd5e1", background: "#ffffff", display: "flex", alignItems: "center", paddingLeft: 12, color: "#94a3b8", fontSize: 13 }}>
+                  {field.placeholder || field.label || field.type}
+                </div>
+              ) : String(field?.type || "").toLowerCase() === "textarea" ? (
+                <textarea
+                  key={fi}
+                  name={field?.name || `newsletter-field-${fi}`}
+                  placeholder={field?.placeholder || field?.label || "Enter details"}
+                  required={!!field?.required}
+                  rows={4}
+                  style={{ borderRadius: 10, minHeight: 108, border: "1px solid #cbd5e1", background: "#ffffff", display: "block", width: "100%", padding: "12px", color: "#0f172a", fontSize: 13, font: "inherit", boxSizing: "border-box", resize: "vertical" }}
+                />
+              ) : (
+                <input
+                  key={fi}
+                  type={String(field?.type || "text").toLowerCase()}
+                  name={field?.name || `newsletter-field-${fi}`}
+                  placeholder={field?.placeholder || field?.label || "Enter details"}
+                  required={!!field?.required}
+                  style={{ borderRadius: 10, minHeight: 40, border: "1px solid #cbd5e1", background: "#ffffff", display: "block", width: "100%", padding: "0 12px", color: "#0f172a", fontSize: 13, font: "inherit", boxSizing: "border-box" }}
+                />
+              )
+            ))}
+            {editor ? (
+              <div
+                style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: 10, padding: "0 12px", minHeight: 40, fontWeight: 700, fontSize: 13, cursor: "text", whiteSpace: "nowrap", alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <div
+                  data-website-inline-editor="true"
+                  data-text-prop="newsletterButtonText"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                    if (event.key === " ") {
+                      event.preventDefault();
+                      try {
+                        document.execCommand("insertText", false, " ");
+                      } catch {}
+                    }
+                  }}
+                  onBlur={(e) => onPatchNewsletter?.({ newsletterButtonText: e.currentTarget.textContent })}
+                  style={{
+                    outline: "1px dashed rgba(255,255,255,0.45)",
+                    borderRadius: 6,
+                    padding: "2px 4px",
+                    minWidth: 36,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {newsletterButtonText || "Subscribe"}
+                </div>
+              </div>
+            ) : (
+              <button type="button" style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: 10, padding: "0 12px", minHeight: 40, fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap", alignSelf: "stretch" }}>
+                {newsletterButtonText || "Subscribe"}
+              </button>
+            )}
+          </div>
+        </>
       ) : (
-        <div style={{ ...sharedStyles.galleryPlaceholder, borderRadius: 14, marginBottom: 12, minHeight: 120 }}>Add image from the editor</div>
+        <>
+          {image ? (
+            <div
+              ref={imgContainerRef}
+              onMouseEnter={() => editor && setIsImageHovered(true)}
+              onMouseLeave={() => { if (!activeDrag) setIsImageHovered(false); }}
+              style={{ position: "relative", marginBottom: (normalizedTitle || normalizedContent) ? 12 : 0, display: "inline-block", width: imageWidth != null ? `${imageWidth}%` : "100%" }}
+            >
+              <img
+                src={image}
+                alt={title || "Column image"}
+                draggable={false}
+                style={{ width: "100%", height: imageHeight ? `${imageHeight}px` : undefined, aspectRatio: imageHeight ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+              />
+              {editor && (isImageHovered || activeDrag) && (
+                <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 14, pointerEvents: "none" }} />
+              )}
+              {editor && (isImageHovered || activeDrag) && handles.map(({ dir, style }) => (
+                <div
+                  key={dir}
+                  onMouseDown={(e) => startResize(e, dir)}
+                  style={{ ...HANDLE_BASE, ...style }}
+                />
+              ))}
+            </div>
+          ) : null}
+          {normalizedTitle ? (
+            <h3
+              data-website-inline-editor="true"
+              data-text-prop={titleProp}
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onBlur={(event) => onTitleChange?.(event.currentTarget.innerText)}
+              style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 800, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+            >
+              {title}
+            </h3>
+          ) : null}
+          {normalizedContent ? (
+            <div
+              data-website-inline-editor="true"
+              data-text-prop={contentProp}
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
+              style={{ marginTop: normalizedTitle ? 8 : 0, color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0 }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(content) }}
+            />
+          ) : null}
+        </>
       )}
-      <h3
-        data-website-inline-editor="true"
-        data-text-prop={titleProp}
-        contentEditable={editor}
-        suppressContentEditableWarning
-        onBlur={(event) => onTitleChange?.(event.currentTarget.innerText)}
-        style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 800, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
-      >
-        {title || "Column Title"}
-      </h3>
-      <div
-        data-website-inline-editor="true"
-        data-text-prop={contentProp}
-        contentEditable={editor}
-        suppressContentEditableWarning
-        onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
-        style={{ marginTop: 8, color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0 }}
-        dangerouslySetInnerHTML={{ __html: asRichHtml(content || "Add content") }}
-      />
       </div>
     </article>
   );
@@ -3788,7 +4380,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, imageSrc
   );
 }
 
-export function renderWebsiteBlock(block, { compact = false, assets, editor = false, onChangeBlock, onUploadImage, onUploadLayerImage } = {}) {
+export function renderWebsiteBlock(block, { compact = false, assets, editor = false, onChangeBlock, onUploadImage, onUploadLayerImage, navigationContext = null } = {}) {
   const props = block?.props || {};
   const sectionAnimationStyle = getAnimationStyle(props.sectionAnimation, props.sectionAnimationDelay || 0, props.sectionAnimationSpeed);
   const spacingScale = spacingMultiplier(props);
@@ -3803,7 +4395,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
   switch (block?.type) {
     case "nav-bar":
-      return <NavBarBlock blockProps={props} compact={compact} logoSrc={logoSrc} />;
+      return <NavBarBlock blockProps={props} compact={compact} logoSrc={logoSrc} editor={editor} navigationContext={navigationContext} />;
 
     case "hero":
     case "parallax": {
@@ -4109,10 +4701,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const textBackground = props.backgroundColor || "#111827";
       const hasBorder = textBackground && textBackground !== "transparent";
       const hasBoxShadow = hasBorder;
+      const textOverlayEnabled = !!props.enableParallax && !compact;
       
       return (
         <section
           style={{
+            position: "relative",
             borderRadius: compact ? 16 : 22,
             ...textFullWidth,
             minHeight: props.minHeight || "220px",
@@ -4128,6 +4722,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             color: props.textColor || "#e6eef5",
             border: hasBorder ? PREMIUM_BORDER : "none",
             boxShadow: hasBoxShadow ? PREMIUM_SHADOW : "none",
+            overflow: textOverlayEnabled ? "hidden" : undefined,
             ...sectionAnimationStyle,
           }}
         >
@@ -4137,7 +4732,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.min(72, Number(props.textFontSize || 18) + 2) })} style={sharedStyles.editorChip}>A+</button>
             </div>
           ) : null}
-          <DraggableContentOverlay props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={props.alignment || "left"} vertical={props.verticalAlign || "center"}>
+          <DraggableContentOverlay props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={props.alignment || "left"} vertical={props.verticalAlign || "center"} overlayEnabled={textOverlayEnabled}>
             <p
               data-website-inline-editor="true"
               data-text-prop="text"
@@ -4165,15 +4760,104 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       return (
         <section style={{ ...ctaVariant.section, ...getAnimationStyle("fade-up", 0.06) }}>
           <div style={ctaVariant.content}>
-            {props.eyebrow ? <p style={ctaVariant.eyebrow}>{props.eyebrow}</p> : null}
-            {props.title ? <h2 style={ctaVariant.title}>{props.title}</h2> : null}
-            {props.description ? <p style={ctaVariant.description}>{props.description}</p> : null}
+            {(props.eyebrow || editor) ? (
+              <p
+                data-website-inline-editor="true"
+                data-text-prop="eyebrow"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, eyebrow: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  ...ctaVariant.eyebrow,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.eyebrow || (editor ? "Launch label" : "")) }}
+              />
+            ) : null}
+            {(props.title || editor) ? (
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="title"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  ...ctaVariant.title,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Guide visitors to one next step" : "")) }}
+              />
+            ) : null}
+            {(props.description || editor) ? (
+              <p
+                data-website-inline-editor="true"
+                data-text-prop="description"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, description: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  ...ctaVariant.description,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.description || (editor ? "Add a short supporting line for the action." : "")) }}
+              />
+            ) : null}
           </div>
           <div style={ctaVariant.actionWrap}>
             <a href={editor ? "#" : (props.link || "#")} onClick={(event) => { if (editor) event.preventDefault(); }} style={{ ...ctaVariant.action, ...bodyTypography(props) }}>
-              {props.text || "Get Started"}
+              <span
+                data-website-inline-editor="true"
+                data-text-prop="text"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  display: "inline-block",
+                  minWidth: editor ? 36 : undefined,
+                  outline: editor ? "1px dashed rgba(255,255,255,0.45)" : "none",
+                  borderRadius: 6,
+                  padding: editor ? "2px 4px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.text || (editor ? "Get Started" : "")) }}
+              />
             </a>
-            {props.note ? <p style={ctaVariant.note}>{props.note}</p> : null}
+            {(props.note || editor) ? (
+              <p
+                data-website-inline-editor="true"
+                data-text-prop="note"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, note: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  ...ctaVariant.note,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.note || (editor ? "Optional reassurance line" : "")) }}
+              />
+            ) : null}
           </div>
         </section>
       );
@@ -4652,40 +5336,68 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: props.subtleTextColor || "#475569", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "") }}
           />
-          <div style={sharedStyles.formGrid}>
-            {asArray(props.fields).map((field, idx) => (
-              <div key={`${field.name}-${idx}`} style={sharedStyles.formField}>
-                <label
-                  data-website-inline-editor="true"
-                  data-text-prop={`fields.${idx}.label`}
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onBlur={(event) => patchContactField(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                  style={{ ...sharedStyles.formLabel, color: props.textColor || "#0f172a", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(field.label || field.name || "Field") }}
-                />
-                {field.type === "textarea"
-                  ? <div
+          {editor ? (
+            <div style={sharedStyles.formGrid}>
+              {asArray(props.fields).map((field, idx) => (
+                <div key={`${field.name}-${idx}`} style={sharedStyles.formField}>
+                  <label
                     data-website-inline-editor="true"
-                    data-text-prop={`fields.${idx}.placeholder`}
+                    data-text-prop={`fields.${idx}.label`}
                     contentEditable={editor}
                     suppressContentEditableWarning
-                    onBlur={(event) => patchContactField(idx, { placeholder: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                    style={{ ...sharedStyles.inputShell, minHeight: 120, padding: "12px 14px", color: props.inputTextColor || props.subtleTextColor || "#94a3b8", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
-                    dangerouslySetInnerHTML={{ __html: asRichHtml(field.placeholder || "Message") }}
+                    onBlur={(event) => patchContactField(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                    style={{ ...sharedStyles.formLabel, color: props.textColor || "#0f172a", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(field.label || field.name || "Field") }}
                   />
-                  : <div
-                    data-website-inline-editor="true"
-                    data-text-prop={`fields.${idx}.placeholder`}
-                    contentEditable={editor}
-                    suppressContentEditableWarning
-                    onBlur={(event) => patchContactField(idx, { placeholder: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                    style={{ ...sharedStyles.inputShell, padding: "12px 14px", color: props.inputTextColor || props.subtleTextColor || "#94a3b8", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, display: "flex", alignItems: "center", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
-                    dangerouslySetInnerHTML={{ __html: asRichHtml(field.placeholder || field.label || field.name) }}
-                  />}
-              </div>
-            ))}
-          </div>
+                  {field.type === "textarea"
+                    ? <div
+                      data-website-inline-editor="true"
+                      data-text-prop={`fields.${idx}.placeholder`}
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onBlur={(event) => patchContactField(idx, { placeholder: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                      style={{ ...sharedStyles.inputShell, minHeight: 120, padding: "12px 14px", color: props.inputTextColor || props.subtleTextColor || "#94a3b8", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(field.placeholder || "Message") }}
+                    />
+                    : <div
+                      data-website-inline-editor="true"
+                      data-text-prop={`fields.${idx}.placeholder`}
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onBlur={(event) => patchContactField(idx, { placeholder: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                      style={{ ...sharedStyles.inputShell, padding: "12px 14px", color: props.inputTextColor || props.subtleTextColor || "#94a3b8", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, display: "flex", alignItems: "center", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(field.placeholder || field.label || field.name) }}
+                    />}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <form style={sharedStyles.formGrid} onSubmit={(event) => event.preventDefault()}>
+              {asArray(props.fields).map((field, idx) => (
+                <div key={`${field.name}-${idx}`} style={sharedStyles.formField}>
+                  <label style={{ ...sharedStyles.formLabel, color: props.textColor || "#0f172a" }}>
+                    {htmlToPlainText(field.label || field.name || "Field")}
+                  </label>
+                  {field.type === "textarea" ? (
+                    <textarea
+                      name={field.name || `field-${idx}`}
+                      placeholder={htmlToPlainText(field.placeholder || "Message")}
+                      required={field.required !== false}
+                      style={{ ...sharedStyles.inputShell, minHeight: 120, padding: "12px 14px", color: props.inputTextColor || "#0f172a", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, width: "100%", boxSizing: "border-box", resize: "vertical", font: "inherit" }}
+                    />
+                  ) : (
+                    <input
+                      type={field.type || "text"}
+                      name={field.name || `field-${idx}`}
+                      placeholder={htmlToPlainText(field.placeholder || field.label || field.name || "")}
+                      required={field.required !== false}
+                      style={{ ...sharedStyles.inputShell, padding: "12px 14px", color: props.inputTextColor || "#0f172a", background: props.inputBackgroundColor || "#ffffff", border: `1px solid ${props.inputBorderColor || "#cbd5e1"}`, display: "block", width: "100%", boxSizing: "border-box", font: "inherit" }}
+                    />
+                  )}
+                </div>
+              ))}
+            </form>
+          )}
           {submitAction === "calendar-booking" && bookingUrl ? (
             editor ? (
               <div
@@ -4774,10 +5486,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const rightImage = resolveAssetField(props, "rightImage", assets);
       const leftCard = resolveColumnCardStyle(props, "leftColumn", compact);
       const rightCard = resolveColumnCardStyle(props, "rightColumn", compact);
+      const col2LeftW = Number(props.leftColumnWidth) || 0;
+      const col2RightW = Number(props.rightColumnWidth) || 0;
+      const col2GridCols = (col2LeftW || col2RightW) ? `${col2LeftW || 1}fr ${col2RightW || 1}fr` : (ratioMap[props.ratio] || "1fr 1fr");
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+        <section style={{ ...sharedStyles.cardSection(compact, props), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+          <div style={{ maxWidth: props.blockMaxWidth ? `${props.blockMaxWidth}px` : "100%", margin: "0 auto", padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
-          <div style={{ ...sharedStyles.columns(2), gridTemplateColumns: compact ? "1fr" : (ratioMap[props.ratio] || "1fr 1fr"), marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
+          <div style={{ ...sharedStyles.columns(2), gridTemplateColumns: compact ? "1fr" : col2GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
             <ColumnEditorCard
               title={props.leftTitle}
               content={props.leftContent}
@@ -4792,8 +5508,25 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={leftCard.style}
               contentAlign={leftCard.align}
               overlay={leftCard.overlay}
+              contentType={props.leftColumnContentType || "text"}
+              newsletterHeading={props.leftColumnNewsletterHeading}
+              newsletterSubtitle={props.leftColumnNewsletterSubtitle}
+              newsletterButtonText={props.leftColumnNewsletterButtonText}
+              newsletterButtonColor={props.leftColumnNewsletterButtonColor}
+              newsletterButtonTextColor={props.leftColumnNewsletterButtonTextColor}
+              onPatchNewsletter={(patch) => onChangeBlock?.({ ...props, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [`leftColumn${k.charAt(0).toUpperCase() + k.slice(1)}`, v])) })}
               onTitleChange={(value) => onChangeBlock?.({ ...props, leftTitle: value })}
               onContentChange={(value) => onChangeBlock?.({ ...props, leftContent: value })}
+              imageHeight={props.leftImageHeight}
+              onImageHeightChange={(h) => onChangeBlock?.({ ...props, leftImageHeight: h })}
+              imageWidth={props.leftImageWidth}
+              onImageWidthChange={(w) => onChangeBlock?.({ ...props, leftImageWidth: w })}
+              newsletterImage={resolveAssetField(props, "leftColumnNewsletterImage", assets)}
+              newsletterImageHeight={props.leftColumnNewsletterImageHeight}
+              onNewsletterImageHeightChange={(h) => onChangeBlock?.({ ...props, leftColumnNewsletterImageHeight: h })}
+              newsletterImageWidth={props.leftColumnNewsletterImageWidth}
+              onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, leftColumnNewsletterImageWidth: w })}
+              newsletterFields={props.leftColumnNewsletterFields}
             />
             <ColumnEditorCard
               title={props.rightTitle}
@@ -4809,22 +5542,45 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={rightCard.style}
               contentAlign={rightCard.align}
               overlay={rightCard.overlay}
+              contentType={props.rightColumnContentType || "text"}
+              newsletterHeading={props.rightColumnNewsletterHeading}
+              newsletterSubtitle={props.rightColumnNewsletterSubtitle}
+              newsletterButtonText={props.rightColumnNewsletterButtonText}
+              newsletterButtonColor={props.rightColumnNewsletterButtonColor}
+              newsletterButtonTextColor={props.rightColumnNewsletterButtonTextColor}
+              onPatchNewsletter={(patch) => onChangeBlock?.({ ...props, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [`rightColumn${k.charAt(0).toUpperCase() + k.slice(1)}`, v])) })}
               onTitleChange={(value) => onChangeBlock?.({ ...props, rightTitle: value })}
               onContentChange={(value) => onChangeBlock?.({ ...props, rightContent: value })}
+              imageHeight={props.rightImageHeight}
+              onImageHeightChange={(h) => onChangeBlock?.({ ...props, rightImageHeight: h })}
+              imageWidth={props.rightImageWidth}
+              onImageWidthChange={(w) => onChangeBlock?.({ ...props, rightImageWidth: w })}
+              newsletterImage={resolveAssetField(props, "rightColumnNewsletterImage", assets)}
+              newsletterImageHeight={props.rightColumnNewsletterImageHeight}
+              onNewsletterImageHeightChange={(h) => onChangeBlock?.({ ...props, rightColumnNewsletterImageHeight: h })}
+              newsletterImageWidth={props.rightColumnNewsletterImageWidth}
+              onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, rightColumnNewsletterImageWidth: w })}
+              newsletterFields={props.rightColumnNewsletterFields}
             />
+          </div>
           </div>
         </section>
       );
     }
 
-    case "columns-3":
+    case "columns-3": {
       const column1Card = resolveColumnCardStyle(props, "column1", compact);
       const column2Card = resolveColumnCardStyle(props, "column2", compact);
       const column3Card = resolveColumnCardStyle(props, "column3", compact);
+      const col3W1 = Number(props.column1Width) || 0;
+      const col3W2 = Number(props.column2Width) || 0;
+      const col3W3 = Number(props.column3Width) || 0;
+      const col3GridCols = (col3W1 || col3W2 || col3W3) ? `${col3W1 || 1}fr ${col3W2 || 1}fr ${col3W3 || 1}fr` : "1fr 1fr 1fr";
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+        <section style={{ ...sharedStyles.cardSection(compact, props), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+          <div style={{ maxWidth: props.blockMaxWidth ? `${props.blockMaxWidth}px` : "100%", margin: "0 auto", padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
-          <div style={{ ...sharedStyles.columns(compact ? 1 : 3), marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
+          <div style={{ ...sharedStyles.columns(compact ? 1 : 3), gridTemplateColumns: compact ? "1fr" : col3GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
             <ColumnEditorCard
               title={props.column1Title}
               content={props.column1}
@@ -4839,8 +5595,25 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={column1Card.style}
               contentAlign={column1Card.align}
               overlay={column1Card.overlay}
+              contentType={props.column1ContentType || "text"}
+              newsletterHeading={props.column1NewsletterHeading}
+              newsletterSubtitle={props.column1NewsletterSubtitle}
+              newsletterButtonText={props.column1NewsletterButtonText}
+              newsletterButtonColor={props.column1NewsletterButtonColor}
+              newsletterButtonTextColor={props.column1NewsletterButtonTextColor}
+              onPatchNewsletter={(patch) => onChangeBlock?.({ ...props, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [`column1${k.charAt(0).toUpperCase() + k.slice(1)}`, v])) })}
               onTitleChange={(value) => onChangeBlock?.({ ...props, column1Title: value })}
               onContentChange={(value) => onChangeBlock?.({ ...props, column1: value })}
+              imageHeight={props.column1ImageHeight}
+              onImageHeightChange={(h) => onChangeBlock?.({ ...props, column1ImageHeight: h })}
+              imageWidth={props.column1ImageWidth}
+              onImageWidthChange={(w) => onChangeBlock?.({ ...props, column1ImageWidth: w })}
+              newsletterImage={resolveAssetField(props, "column1NewsletterImage", assets)}
+              newsletterImageHeight={props.column1NewsletterImageHeight}
+              onNewsletterImageHeightChange={(h) => onChangeBlock?.({ ...props, column1NewsletterImageHeight: h })}
+              newsletterImageWidth={props.column1NewsletterImageWidth}
+              onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, column1NewsletterImageWidth: w })}
+              newsletterFields={props.column1NewsletterFields}
             />
             <ColumnEditorCard
               title={props.column2Title}
@@ -4856,8 +5629,25 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={column2Card.style}
               contentAlign={column2Card.align}
               overlay={column2Card.overlay}
+              contentType={props.column2ContentType || "text"}
+              newsletterHeading={props.column2NewsletterHeading}
+              newsletterSubtitle={props.column2NewsletterSubtitle}
+              newsletterButtonText={props.column2NewsletterButtonText}
+              newsletterButtonColor={props.column2NewsletterButtonColor}
+              newsletterButtonTextColor={props.column2NewsletterButtonTextColor}
+              onPatchNewsletter={(patch) => onChangeBlock?.({ ...props, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [`column2${k.charAt(0).toUpperCase() + k.slice(1)}`, v])) })}
               onTitleChange={(value) => onChangeBlock?.({ ...props, column2Title: value })}
               onContentChange={(value) => onChangeBlock?.({ ...props, column2: value })}
+              imageHeight={props.column2ImageHeight}
+              onImageHeightChange={(h) => onChangeBlock?.({ ...props, column2ImageHeight: h })}
+              imageWidth={props.column2ImageWidth}
+              onImageWidthChange={(w) => onChangeBlock?.({ ...props, column2ImageWidth: w })}
+              newsletterImage={resolveAssetField(props, "column2NewsletterImage", assets)}
+              newsletterImageHeight={props.column2NewsletterImageHeight}
+              onNewsletterImageHeightChange={(h) => onChangeBlock?.({ ...props, column2NewsletterImageHeight: h })}
+              newsletterImageWidth={props.column2NewsletterImageWidth}
+              onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, column2NewsletterImageWidth: w })}
+              newsletterFields={props.column2NewsletterFields}
             />
             <ColumnEditorCard
               title={props.column3Title}
@@ -4873,12 +5663,31 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={column3Card.style}
               contentAlign={column3Card.align}
               overlay={column3Card.overlay}
+              contentType={props.column3ContentType || "text"}
+              newsletterHeading={props.column3NewsletterHeading}
+              newsletterSubtitle={props.column3NewsletterSubtitle}
+              newsletterButtonText={props.column3NewsletterButtonText}
+              newsletterButtonColor={props.column3NewsletterButtonColor}
+              newsletterButtonTextColor={props.column3NewsletterButtonTextColor}
+              onPatchNewsletter={(patch) => onChangeBlock?.({ ...props, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [`column3${k.charAt(0).toUpperCase() + k.slice(1)}`, v])) })}
               onTitleChange={(value) => onChangeBlock?.({ ...props, column3Title: value })}
               onContentChange={(value) => onChangeBlock?.({ ...props, column3: value })}
+              imageHeight={props.column3ImageHeight}
+              onImageHeightChange={(h) => onChangeBlock?.({ ...props, column3ImageHeight: h })}
+              imageWidth={props.column3ImageWidth}
+              onImageWidthChange={(w) => onChangeBlock?.({ ...props, column3ImageWidth: w })}
+              newsletterImage={resolveAssetField(props, "column3NewsletterImage", assets)}
+              newsletterImageHeight={props.column3NewsletterImageHeight}
+              onNewsletterImageHeightChange={(h) => onChangeBlock?.({ ...props, column3NewsletterImageHeight: h })}
+              newsletterImageWidth={props.column3NewsletterImageWidth}
+              onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, column3NewsletterImageWidth: w })}
+              newsletterFields={props.column3NewsletterFields}
             />
+          </div>
           </div>
         </section>
       );
+    }
 
     case "accordion":
     case "faq":
@@ -5090,6 +5899,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const nlBtnBg = props.buttonColor || "#2563eb";
       const nlBtnText = props.buttonTextColor || "#ffffff";
       const nlBtnRadius = Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999;
+      const nlButtonHref = resolveNewsletterButtonUrl(props.buttonLink || "");
 
       // shared inline-edit style helper
       const inlineStyle = (base) => ({
@@ -5104,17 +5914,79 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         onChangeBlock({ ...props, ...patch });
       };
 
-      const renderEmailRow = () => (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16, alignItems: "stretch" }}>
-          <div style={{ ...sharedStyles.inputShell, flex: 1, minWidth: 180, display: "flex", alignItems: "center", paddingLeft: 14, color: "#94a3b8", fontSize: 15 }}>
-            {editor ? "Email address field" : ""}
-          </div>
-          <button type="button" style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: nlBtnRadius, padding: compact ? "10px 18px" : "13px 24px", fontWeight: 700, fontSize: compact ? 14 : 16, cursor: editor ? "text" : "default", whiteSpace: "nowrap" }}
-            contentEditable={editor}
+      const newsletterButtonShellStyle = {
+        background: nlBtnBg,
+        color: nlBtnText,
+        border: "none",
+        borderRadius: nlBtnRadius,
+        padding: compact ? "10px 18px" : "13px 24px",
+        fontWeight: 700,
+        fontSize: compact ? 14 : 16,
+        whiteSpace: "nowrap",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textDecoration: "none",
+      };
+
+      const renderEditableNewsletterButtonLabel = () => (
+        <div style={{ ...newsletterButtonShellStyle, cursor: "text" }}>
+          <div
+            data-website-inline-editor="true"
+            data-text-prop="buttonText"
+            contentEditable
             suppressContentEditableWarning
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              if (event.key === " ") {
+                event.preventDefault();
+                try {
+                  document.execCommand("insertText", false, " ");
+                } catch {}
+              }
+            }}
             onBlur={(e) => patchNl({ buttonText: htmlToPlainText(cleanInlineEditorHtml(e.currentTarget.innerHTML)) })}
+            style={{
+              outline: "1px dashed rgba(255,255,255,0.45)",
+              borderRadius: 6,
+              padding: "2px 4px",
+              minWidth: 36,
+              whiteSpace: "pre-wrap",
+            }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.buttonText || "Subscribe") }}
           />
+        </div>
+      );
+
+      const renderStaticNewsletterButton = () => (
+        nlButtonHref ? (
+          <a href={nlButtonHref} style={newsletterButtonShellStyle}>
+            {props.buttonText || "Subscribe"}
+          </a>
+        ) : (
+          <button type="button" style={{ ...newsletterButtonShellStyle, cursor: "default" }}>
+            {props.buttonText || "Subscribe"}
+          </button>
+        )
+      );
+
+      const renderEmailRow = () => (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16, alignItems: "stretch" }}>
+          {editor ? (
+            <div style={{ ...sharedStyles.inputShell, flex: 1, minWidth: 180, display: "flex", alignItems: "center", paddingLeft: 14, color: "#94a3b8", fontSize: 15 }}>
+              Email address field
+            </div>
+          ) : (
+            <input
+              type="email"
+              name="email"
+              placeholder="Email address"
+              style={{ ...sharedStyles.inputShell, flex: 1, minWidth: 180, padding: "0 14px", color: "#0f172a", fontSize: 15, font: "inherit" }}
+            />
+          )}
+          {editor ? renderEditableNewsletterButtonLabel() : renderStaticNewsletterButton()}
         </div>
       );
 
@@ -5183,11 +6055,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 <div style={{ ...sharedStyles.inputShell, flex: 1, display: "flex", alignItems: "center", paddingLeft: 14, color: "#94a3b8", fontSize: 15 }}>
                   {editor ? "Email address field" : ""}
                 </div>
-                <button type="button" style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: nlBtnRadius, padding: "13px 20px", fontWeight: 700, fontSize: 15, cursor: editor ? "text" : "default", whiteSpace: "nowrap" }}
-                  contentEditable={editor} suppressContentEditableWarning
-                  onBlur={(e) => patchNl({ buttonText: htmlToPlainText(cleanInlineEditorHtml(e.currentTarget.innerHTML)) })}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(props.buttonText || "Subscribe") }}
-                />
+                {editor ? renderEditableNewsletterButtonLabel() : renderStaticNewsletterButton()}
               </div>
             </div>
           </section>
@@ -5226,12 +6094,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     }
 
     case "trust-badges":
+      const trustBadgeBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
+      const trustBadgeSty = trustBadgeVariantStyles(props, compact, trustBadgeBackgroundImage);
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...sectionAnimationStyle }}>
-          <div style={sharedStyles.badgesRow}>
+        <section style={{ ...trustBadgeSty.section, ...sectionAnimationStyle }}>
+          <div style={trustBadgeSty.row}>
             {asArray(props.badges).map((badge, idx) => (
-              <div key={`${badge.label}-${idx}`} style={sharedStyles.badge}>
-                <span>{badge.icon || "✓"}</span>
+              <div key={`${badge.label}-${idx}`} style={trustBadgeSty.badge}>
+                <span style={trustBadgeSty.icon}>{badge.icon || "✓"}</span>
                 <span>{badge.label || "Badge"}</span>
               </div>
             ))}
@@ -5243,7 +6113,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       return <div style={sharedStyles.divider(props.color)} />;
 
     case "space":
-      return <div style={{ height: props.height || 40 }} />;
+      return <div style={{ height: props.height || 40, background: "transparent", width: "100%" }} />;
 
     case "video-embed":
       return (
@@ -5252,6 +6122,141 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <div style={sharedStyles.videoShell}>Video URL: {props.url || "Add video URL"}</div>
         </section>
       );
+
+    case "footer": {
+      const ftBg = props.backgroundColor || "#0f172a";
+      const ftText = props.textColor || "#e2e8f0";
+      const ftLink = props.linkColor || "#94a3b8";
+      const ftBorder = props.borderColor || "rgba(148,163,184,0.2)";
+      const ftBtnBg = props.newsletterButtonColor || "#2563eb";
+      const ftBtnText = props.newsletterButtonTextColor || "#ffffff";
+      const navLinks = Array.isArray(props.navLinks) ? props.navLinks : [];
+      const extraLinks = Array.isArray(props.extraLinks) ? props.extraLinks : [];
+
+      const patchFt = (patch) => {
+        if (!editor || typeof onChangeBlock !== "function") return;
+        onChangeBlock({ ...props, ...patch });
+      };
+
+      const inlineStyle = (base) => ({
+        ...base,
+        outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none",
+        borderRadius: 6,
+        padding: editor ? "2px 4px" : 0,
+      });
+
+      return (
+        <footer style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...sectionAnimationStyle }}>
+          {/* Top grid */}
+          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : `1fr 1fr${props.showNewsletter !== false ? " 1fr" : ""}`, gap: compact ? 28 : 40, marginBottom: compact ? 24 : 36 }}>
+
+            {/* Col 1: Brand */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {props.logo ? (
+                <img
+                  src={props.logo}
+                  alt={props.brand || "Logo"}
+                  style={{ width: Number(props.logoWidth) || 48, height: "auto", objectFit: "contain", display: "block", borderRadius: 6 }}
+                />
+              ) : null}
+              <span
+                contentEditable={editor} suppressContentEditableWarning
+                onBlur={(e) => patchFt({ brand: e.currentTarget.textContent })}
+                style={inlineStyle({ fontSize: compact ? 18 : 22, fontWeight: 800, color: ftText })}
+              >{props.brand || (editor ? "Your Brand" : "")}</span>
+              {(props.tagline || editor) ? (
+                <span
+                  contentEditable={editor} suppressContentEditableWarning
+                  onBlur={(e) => patchFt({ tagline: e.currentTarget.textContent })}
+                  style={inlineStyle({ fontSize: 14, color: ftLink, lineHeight: 1.5 })}
+                >{props.tagline || (editor ? "Your tagline here." : "")}</span>
+              ) : null}
+            </div>
+
+            {/* Col 2: Nav links */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(props.navHeading || editor) ? (
+                <span
+                  contentEditable={editor} suppressContentEditableWarning
+                  onBlur={(e) => patchFt({ navHeading: e.currentTarget.textContent })}
+                  style={inlineStyle({ fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: ftText, marginBottom: 4 })}
+                >{props.navHeading || "Navigation"}</span>
+              ) : null}
+              {navLinks.map((link, i) => (
+                <a
+                  key={i}
+                  href={editor ? undefined : (link.href || "#")}
+                  style={{ color: ftLink, fontSize: 14, textDecoration: "none", lineHeight: 1.6 }}
+                >{link.label || "Link"}</a>
+              ))}
+              {extraLinks.length > 0 ? (
+                <>
+                  {(props.extraHeading || editor) ? (
+                    <span
+                      contentEditable={editor} suppressContentEditableWarning
+                      onBlur={(e) => patchFt({ extraHeading: e.currentTarget.textContent })}
+                      style={inlineStyle({ fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: ftText, marginTop: 12, marginBottom: 4 })}
+                    >{props.extraHeading || "Company"}</span>
+                  ) : null}
+                  {extraLinks.map((link, i) => (
+                    <a
+                      key={i}
+                      href={editor ? undefined : (link.href || "#")}
+                      style={{ color: ftLink, fontSize: 14, textDecoration: "none", lineHeight: 1.6 }}
+                    >{link.label || "Link"}</a>
+                  ))}
+                </>
+              ) : null}
+            </div>
+
+            {/* Col 3: Newsletter */}
+            {props.showNewsletter !== false ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span
+                  contentEditable={editor} suppressContentEditableWarning
+                  onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })}
+                  style={inlineStyle({ fontSize: compact ? 15 : 17, fontWeight: 800, color: ftText })}
+                >{props.newsletterHeading || "Stay Updated"}</span>
+                {(props.newsletterSubtitle || editor) ? (
+                  <span
+                    contentEditable={editor} suppressContentEditableWarning
+                    onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })}
+                    style={inlineStyle({ fontSize: 13, color: ftLink, lineHeight: 1.5 })}
+                  >{props.newsletterSubtitle || "Get the latest news."}</span>
+                ) : null}
+                <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                  {editor ? (
+                    <div style={{ flex: 1, minWidth: 140, borderRadius: 10, minHeight: 40, border: `1px solid ${ftBorder}`, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 13 }}>
+                      Email address
+                    </div>
+                  ) : (
+                    <input
+                      type="email"
+                      name="footer-newsletter-email"
+                      placeholder="Email address"
+                      style={{ flex: 1, minWidth: 140, borderRadius: 10, minHeight: 40, border: `1px solid ${ftBorder}`, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 13, font: "inherit", boxSizing: "border-box" }}
+                    />
+                  )}
+                  <button type="button" style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 10, padding: "0 16px", minHeight: 40, fontWeight: 700, fontSize: 13, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap" }}
+                    contentEditable={editor} suppressContentEditableWarning
+                    onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}
+                  >{props.newsletterButtonText || "Subscribe"}</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Bottom row: divider + copyright */}
+          <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span
+              contentEditable={editor} suppressContentEditableWarning
+              onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })}
+              style={inlineStyle({ fontSize: 12, color: ftLink })}
+            >{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
+          </div>
+        </footer>
+      );
+    }
 
     default:
       return (

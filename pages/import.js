@@ -7,8 +7,6 @@ import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { validateImportJson, slugify } from "../utils/transfer";
 
-const supabase = supabaseNamed || supabaseDefault;
-
 export default function ImportFunnelPage() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);

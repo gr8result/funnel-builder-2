@@ -244,7 +244,7 @@ function ensureShapeEditingCapabilities(component) {
     position: "absolute",
     display: "block",
     cursor: "move",
-    "max-width": "100%",
+    "max-width": "none",
     "box-sizing": "border-box",
   });
 }
@@ -314,6 +314,7 @@ function Editor() {
     backgroundSize: "cover",
     backgroundPosition: "center center",
     backgroundRepeat: "no-repeat",
+    minHeight: "0",
     paddingTop: "0",
     paddingBottom: "0",
     backgroundImageOpacity: "100",
@@ -501,6 +502,22 @@ function Editor() {
       return component;
     }
 
+    let cursor = component;
+    while (cursor) {
+      const cursorAttrs = cursor.getAttributes?.() || {};
+      if (`${cursorAttrs["data-blank-canvas-stage"] || ""}`.toLowerCase() === "true") {
+        return cursor.parent?.() || cursor;
+      }
+
+      const parent = cursor.parent?.();
+      const parentAttrs = parent?.getAttributes?.() || {};
+      if (`${parentAttrs["data-blank-canvas-stage"] || ""}`.toLowerCase() === "true") {
+        return parent.parent?.() || parent;
+      }
+
+      cursor = parent || null;
+    }
+
     return component;
   }
 
@@ -597,6 +614,7 @@ function Editor() {
       backgroundSize: `${resolvedStyle("background-size", "cover")}`,
       backgroundPosition: `${resolvedStyle("background-position", "center center")}`,
       backgroundRepeat: `${resolvedStyle("background-repeat", "no-repeat")}`,
+      minHeight: stylePxToNumber(resolvedStyle("min-height", "0px"), "0"),
       paddingTop: stylePxToNumber(resolvedStyle("padding-top", "0px"), "0"),
       paddingBottom: stylePxToNumber(resolvedStyle("padding-bottom", "0px"), "0"),
       backgroundImageOpacity,
@@ -623,6 +641,150 @@ function Editor() {
     });
   }
 
+  function isBlankCanvasRoot(component) {
+    if (!component) return false;
+    const attrs = component.getAttributes?.() || {};
+    return `${attrs["data-blank-canvas-root"] || ""}`.toLowerCase() === "true";
+  }
+
+  function getBlankCanvasRoot(component) {
+    let cursor = component;
+    while (cursor) {
+      if (isBlankCanvasRoot(cursor)) return cursor;
+      cursor = cursor.parent?.() || null;
+    }
+    return null;
+  }
+
+  function findComponentByElement(component, element) {
+    if (!component || !element) return null;
+    if (component.view?.el === element) return component;
+
+    let found = null;
+    const children = typeof component.components === "function" ? component.components() : null;
+    children?.forEach?.((child) => {
+      if (found) return;
+      found = findComponentByElement(child, element);
+    });
+    return found;
+  }
+
+  function stripEditorOnlyMarkup(html = "") {
+    const rawHtml = String(html || "");
+    if (typeof DOMParser === "undefined") {
+      return rawHtml
+        .replace(/<div[^>]*data-editor-only="true"[^>]*>[\s\S]*?<\/div>/gi, "")
+        .replace(/(<[^>]*data-blank-canvas-stage="true"[^>]*style=")([^"]*)(")/gi, (_match, before, styleText, after) => {
+          const cleanedStyle = styleText
+            .replace(/border\s*:\s*[^;]+;?/gi, "")
+            .replace(/outline\s*:\s*[^;]+;?/gi, "")
+            .replace(/;;+/g, ";")
+            .trim();
+          return `${before}${cleanedStyle}${after}`;
+        });
+    }
+
+    const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+    doc.querySelectorAll('[data-editor-only="true"]').forEach((node) => node.remove());
+    doc.querySelectorAll('[data-blank-canvas-stage="true"]').forEach((node) => {
+      node.style.border = "none";
+      node.style.outline = "none";
+    });
+    return doc.body.innerHTML;
+  }
+
+  function ensureBlankCanvasEditorStyles(doc) {
+    if (!doc || doc.getElementById("blank-canvas-editor-styles")) return;
+
+    const styleEl = doc.createElement("style");
+    styleEl.id = "blank-canvas-editor-styles";
+    styleEl.textContent = `
+      [data-blank-canvas-stage="true"] {
+        border: 2px dashed rgba(255,255,255,0.22) !important;
+      }
+    `;
+    doc.head?.appendChild(styleEl);
+  }
+
+  function bindBlankCanvasResizeHandles(editor) {
+    const doc = editor?.Canvas?.getDocument?.();
+    const win = editor?.Canvas?.getWindow?.();
+    if (!doc || !win || doc.__blankCanvasHandleBound) return;
+    ensureBlankCanvasEditorStyles(doc);
+    doc.__blankCanvasHandleBound = true;
+
+    doc.addEventListener("mousedown", (event) => {
+      const handle = event.target?.closest?.('[data-blank-canvas-handle="true"]');
+      if (!handle) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const rootEl = handle.closest('[data-blank-canvas-root="true"]');
+      if (!rootEl) return;
+
+      const wrapper = editor.getWrapper?.();
+      const rootComp = findComponentByElement(wrapper, rootEl);
+      if (!rootComp) return;
+
+      const stageEl = rootEl.querySelector('[data-blank-canvas-stage="true"]');
+      const stageComp = stageEl ? findComponentByElement(wrapper, stageEl) : null;
+
+      editor.select?.(rootComp);
+
+      const rootStyles = win.getComputedStyle(rootEl);
+      const padTop = parseFloat(rootStyles.paddingTop || "0") || 0;
+      const padBottom = parseFloat(rootStyles.paddingBottom || "0") || 0;
+      const startY = event.clientY;
+      const startHeight = Math.max(rootEl.getBoundingClientRect().height, parseFloat(rootStyles.minHeight || "0") || 0);
+
+      const onMove = (moveEvent) => {
+        const nextHeight = Math.max(220, Math.round(startHeight + (moveEvent.clientY - startY)));
+        rootComp.addStyle?.({ "min-height": `${nextHeight}px` });
+        if (stageComp) {
+          stageComp.addAttributes?.({ "data-blank-canvas-stage": "true" });
+          stageComp.addStyle?.({ "min-height": `${Math.max(160, nextHeight - padTop - padBottom)}px` });
+        }
+        setBlockControls((prev) => ({ ...prev, minHeight: `${nextHeight}` }));
+      };
+
+      const onUp = () => {
+        doc.removeEventListener("mousemove", onMove);
+        doc.removeEventListener("mouseup", onUp);
+        editor.refresh?.();
+      };
+
+      doc.addEventListener("mousemove", onMove);
+      doc.addEventListener("mouseup", onUp);
+    });
+  }
+
+  function ensureBlankCanvasEditingCapabilities(component) {
+    const root = getBlankCanvasRoot(component);
+    if (!root) return;
+    root.set?.({
+      draggable: true,
+      droppable: true,
+      selectable: true,
+      hoverable: true,
+      layerable: true,
+      copyable: true,
+      removable: true,
+      stylable: true,
+      resizable: {
+        tl: 0,
+        tc: 0,
+        tr: 0,
+        cl: 0,
+        cr: 0,
+        bl: 0,
+        bc: 1,
+        br: 0,
+        keyHeight: "min-height",
+      },
+    });
+  }
+
   function applyBlockControlsPatch(patch) {
     const comp = selectedCompRef.current || lastBlockCompRef.current;
     if (!comp) return;
@@ -646,11 +808,29 @@ function Editor() {
       "background-size": `${next.backgroundSize || "cover"}`,
       "background-position": `${next.backgroundPosition || "center center"}`,
       "background-repeat": `${next.backgroundRepeat || "no-repeat"}`,
+      "min-height": `${Math.max(0, parseInt(next.minHeight || "0", 10) || 0)}px`,
       "padding-top": `${next.paddingTop || 0}px`,
       "padding-bottom": `${next.paddingBottom || 0}px`,
       filter: bgImage ? filterValue : "none",
       animation: next.backgroundImageFadeIn ? "bgImageFadeIn 1.5s ease-in-out" : "none",
     };
+
+    let canvasStage = null;
+    if (comp && typeof comp.components === "function") {
+      comp.components().forEach?.((child) => {
+        if (canvasStage) return;
+        const attrs = child.getAttributes?.() || {};
+        if (`${attrs["data-blank-canvas-stage"] || ""}`.toLowerCase() === "true") {
+          canvasStage = child;
+          return;
+        }
+        const childStyle = child.getStyle?.() || {};
+        const position = `${childStyle.position || ""}`.trim().toLowerCase();
+        if (position !== "absolute") {
+          canvasStage = child;
+        }
+      });
+    }
 
     if (isShape) {
       ensureShapeEditingCapabilities(comp);
@@ -670,6 +850,13 @@ function Editor() {
         "box-sizing": "border-box",
       });
       comp.addAttributes({ "data-shape-block": "true" });
+    } else if ((comp.get?.("tagName") || "").toLowerCase() === "section" && canvasStage) {
+      const minHeight = Math.max(0, parseInt(next.minHeight || "0", 10) || 0);
+      const paddingTop = Math.max(0, parseInt(next.paddingTop || "0", 10) || 0);
+      const paddingBottom = Math.max(0, parseInt(next.paddingBottom || "0", 10) || 0);
+      const stageMinHeight = Math.max(160, minHeight - paddingTop - paddingBottom);
+      canvasStage.addAttributes?.({ "data-blank-canvas-stage": "true" });
+      canvasStage.addStyle?.({ "min-height": `${stageMinHeight}px` });
     }
 
     comp.addStyle(stylePatch);
@@ -719,10 +906,18 @@ function Editor() {
     if (!component) return;
 
     const attrs = component.getAttributes?.() || {};
-    if (`${attrs["data-shape-block"] || ""}`.toLowerCase() === "true" && !isShapeLikeComponent(component)) {
+    const isMarkedShape = `${attrs["data-shape-block"] || ""}`.toLowerCase() === "true";
+    if (isMarkedShape && !isShapeLikeComponent(component)) {
       const nextAttrs = { ...attrs };
       delete nextAttrs["data-shape-block"];
       component.setAttributes?.(nextAttrs);
+    }
+
+    if (isMarkedShape) {
+      component.addStyle?.({
+        "max-width": "none",
+        width: `${component.getStyle?.()?.width || component.view?.el?.offsetWidth || ""}`,
+      });
     }
 
     const style = component.getStyle?.() || {};
@@ -798,6 +993,142 @@ function Editor() {
     }
 
     children.forEach((child) => normalizeShapeLayeringForSave(child));
+  }
+
+  function normalizeResponsiveShapeMetricsForSave(component) {
+    if (!component) return;
+
+    const collection = typeof component.components === "function" ? component.components() : null;
+    const children = [];
+    collection?.forEach?.((child) => children.push(child));
+
+    children.forEach((child) => {
+      if (!isShapeLikeComponent(child)) {
+        normalizeResponsiveShapeMetricsForSave(child);
+        return;
+      }
+
+      const parent = child.parent?.();
+      const parentEl = parent?.view?.el;
+      const parentRect = parentEl?.getBoundingClientRect?.();
+      const shapeBox = measureComponentBox(child);
+      const parentWidth = Math.round((parentRect?.width || parentEl?.clientWidth || 0) * 100) / 100;
+      const parentHeight = Math.round((parentRect?.height || parentEl?.clientHeight || 0) * 100) / 100;
+
+      if (!parentWidth || !parentHeight) {
+        normalizeResponsiveShapeMetricsForSave(child);
+        return;
+      }
+
+      child.addAttributes?.({
+        "data-shape-responsive": "true",
+        "data-shape-base-parent-width": `${parentWidth}`,
+        "data-shape-base-parent-height": `${parentHeight}`,
+        "data-shape-base-left": `${Math.round(shapeBox.left * 100) / 100}`,
+        "data-shape-base-top": `${Math.round(shapeBox.top * 100) / 100}`,
+        "data-shape-base-width": `${Math.round(shapeBox.width * 100) / 100}`,
+        "data-shape-base-height": `${Math.round(shapeBox.height * 100) / 100}`,
+        "data-shape-left-pct": `${Math.round((shapeBox.left / parentWidth) * 10000) / 10000}`,
+        "data-shape-top-pct": `${Math.round((shapeBox.top / parentHeight) * 10000) / 10000}`,
+        "data-shape-width-pct": `${Math.round((shapeBox.width / parentWidth) * 10000) / 10000}`,
+        "data-shape-height-pct": `${Math.round((shapeBox.height / parentHeight) * 10000) / 10000}`,
+      });
+
+      normalizeResponsiveShapeMetricsForSave(child);
+    });
+  }
+
+  function findCenteredContentAnchor(section) {
+    if (!section) return null;
+    const sectionEl = section.view?.el;
+    if (!sectionEl) return null;
+
+    const sectionRect = sectionEl.getBoundingClientRect();
+    const collection = typeof section.components === "function" ? section.components() : null;
+    const children = [];
+    collection?.forEach?.((child) => children.push(child));
+
+    let best = null;
+    children.forEach((child) => {
+      if (!child || isShapeLikeComponent(child)) return;
+      const childEl = child.view?.el;
+      if (!childEl) return;
+
+      const childStyle = child.getStyle?.() || {};
+      const position = `${childStyle.position || ""}`.trim().toLowerCase();
+      if (position === "absolute" || position === "fixed") return;
+
+      const rect = childEl.getBoundingClientRect();
+      if (!rect.width || rect.width >= sectionRect.width - 8) return;
+
+      const computed = typeof window !== "undefined" ? window.getComputedStyle(childEl) : null;
+      const centeredByMargin = computed?.marginLeft === "auto" && computed?.marginRight === "auto";
+      const centeredByPosition = Math.abs((rect.left - sectionRect.left) - ((sectionRect.width - rect.width) / 2)) < 6;
+      if (!centeredByMargin && !centeredByPosition) return;
+
+      if (!best || rect.width > best.rect.width) {
+        best = { component: child, rect };
+      }
+    });
+
+    return best;
+  }
+
+  function normalizeSectionAnchoredShapesForSave(component) {
+    if (!component) return;
+
+    const collection = typeof component.components === "function" ? component.components() : null;
+    const children = [];
+    collection?.forEach?.((child) => children.push(child));
+    if (!children.length) return;
+
+    const tag = `${component?.get?.("tagName") || ""}`.toLowerCase();
+    if (tag === "section") {
+      const anchor = findCenteredContentAnchor(component);
+      if (anchor?.component && anchor?.rect && component.view?.el) {
+        const sectionRect = component.view.el.getBoundingClientRect();
+        const directShapeChildren = children.filter((child) => isShapeLikeComponent(child) && child.parent?.() === component);
+
+        if (directShapeChildren.length) {
+          const anchorComponent = anchor.component;
+          const anchorStyle = anchorComponent.getStyle?.() || {};
+          anchorComponent.addStyle?.({
+            position: anchorStyle.position && anchorStyle.position !== "static" ? anchorStyle.position : "relative",
+          });
+
+          directShapeChildren.forEach((shape) => {
+            const shapeBox = measureComponentBox(shape);
+            const nextLeft = Math.round((shapeBox.left - (anchor.rect.left - sectionRect.left)) * 100) / 100;
+            const nextTop = Math.round((shapeBox.top - (anchor.rect.top - sectionRect.top)) * 100) / 100;
+            const shapeJson = shape.toJSON ? shape.toJSON() : null;
+            const liveShapeStyle = shape.getStyle?.() || {};
+            if (!shapeJson) return;
+
+            shape.remove();
+            const added = anchorComponent.components().add({
+              ...shapeJson,
+              style: {
+                ...liveShapeStyle,
+                ...(shapeJson.style || {}),
+                position: "absolute",
+                left: `${nextLeft}px`,
+                top: `${nextTop}px`,
+                margin: "0",
+                "max-width": "none",
+              },
+            }, { at: 0 });
+
+            const nextShape = Array.isArray(added) ? added[0] : added;
+            if (nextShape && isShapeLikeComponent(nextShape)) {
+              ensureShapeEditingCapabilities(nextShape);
+            }
+          });
+        }
+      }
+    }
+
+    const nextChildren = typeof component.components === "function" ? component.components() : null;
+    nextChildren?.forEach?.((child) => normalizeSectionAnchoredShapesForSave(child));
   }
 
   function measureComponentBox(component) {
@@ -1283,6 +1614,8 @@ function Editor() {
           assetManager: { assets: [], upload: false, autoAdd: false },
         });
 
+        bindBlankCanvasResizeHandles(e);
+
         const textTags = new Set(["p", "span", "a", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote", "small", "label", "button"]);
         const formTags = new Set(["input", "textarea", "select", "option", "button", "label"]);
 
@@ -1298,10 +1631,16 @@ function Editor() {
             });
           };
 
+          const normalizeBlankCanvas = () => {
+            ensureBlankCanvasEditingCapabilities(component);
+          };
+
           if (typeof window !== "undefined") {
             requestAnimationFrame(normalizeShape);
+            requestAnimationFrame(normalizeBlankCanvas);
           } else {
             normalizeShape();
+            normalizeBlankCanvas();
           }
         });
 
@@ -1320,14 +1659,17 @@ function Editor() {
             const isText = type === "text" || textTags.has(tag);
             const isImage = tag === "img";
             const isShape = isShapeLikeComponent(component) || isShapeLikeComponent(blockTarget);
+            const isFloatingObject = isFreeformArrangeTarget(component) || isFreeformArrangeTarget(blockTarget);
             setBlockKind(isImage ? "image" : isShape ? "shape" : "block");
 
             if (typeof e.setDragMode === "function") {
-              const useAbsoluteDrag = isShape || isImage;
+              const useAbsoluteDrag = isShape || isImage || isFloatingObject;
               e.setDragMode(useAbsoluteDrag ? "absolute" : "translate");
             }
             if (isShape && blockTarget) {
               ensureShapeEditingCapabilities(blockTarget);
+            } else if (getBlankCanvasRoot(blockTarget)) {
+              ensureBlankCanvasEditingCapabilities(blockTarget);
             } else if (blockTarget) {
               ensureForegroundLayer(blockTarget);
             }
@@ -1422,6 +1764,23 @@ function Editor() {
           </div>`,
           category: "🔧 Layout",
           content: `<pre style="background:#18181b;color:#f4f4f5;padding:18px 20px;border-radius:10px;font-size:15px;overflow:auto;">// Your code here\nconsole.log('Hello, world!');</pre>`,
+        });
+        bm.add("blank-canvas", {
+          label: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+            <span style="font-size:2.2em;line-height:1;">🧱</span>
+            <span style="font-size:1.1em;">Blank Canvas</span>
+          </div>`,
+          category: "🔧 Layout",
+          content: `<section data-blank-canvas-root="true" style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;position:relative;min-height:560px;padding:72px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);overflow:hidden;">
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,23,42,0.18),rgba(15,23,42,0.44));"></div>
+            <div data-blank-canvas-stage="true" style="position:relative;z-index:1;max-width:1120px;margin:0 auto;min-height:416px;border:none;border-radius:28px;padding:36px;display:flex;align-items:center;justify-content:center;text-align:center;">
+              <div style="max-width:620px;">
+                <p style="margin:0 0 12px;color:#f8fafc;font-size:34px;line-height:1.1;font-weight:800;">Blank Canvas Section</p>
+                <p style="margin:0;color:rgba(255,255,255,0.78);font-size:18px;line-height:1.7;">Use the block editor to add a background image on this section, drop in shapes for overlays, and place text blocks exactly where you want them.</p>
+              </div>
+            </div>
+            <div data-editor-only="true" data-blank-canvas-handle="true" style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:3;background:rgba(15,23,42,0.86);color:#e2e8f0;border:1px solid rgba(148,163,184,0.38);border-radius:999px;padding:8px 14px;cursor:ns-resize;font-size:12px;font-weight:800;letter-spacing:0.04em;user-select:none;box-shadow:0 10px 24px rgba(2,6,23,0.28);">Drag to resize</div>
+          </section>`,
         });
         const SHAPE_CATEGORY = "🎨 Shapes";
         bm.add("shape-block", {
@@ -1531,24 +1890,66 @@ function Editor() {
     return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   }
 
-  function getActiveStepPublicUrl() {
+  function getActiveStepPublicUrl(options = {}) {
+    const { device = "desktop", canvasWidthOverride = null } = options;
     const slug = `${funnel?.slug || "preview"}`.trim() || "preview";
     const idx = Math.max(0, steps.findIndex((s) => s.id === activeStepId));
     const params = new URLSearchParams({ step: `${idx + 1}` });
     if (funnel?.id) {
       params.set("preview", "1");
       params.set("funnelId", funnel.id);
+      const measuredCanvasWidth = Math.round(
+        editorRef.current?.Canvas?.getFrameEl?.()?.parentElement?.clientWidth
+        || editorRef.current?.Canvas?.getFrameEl?.()?.clientWidth
+        || editorDivRef.current?.clientWidth
+        || 0
+      );
+      const canvasWidth = Number.isFinite(Number(canvasWidthOverride)) && Number(canvasWidthOverride) > 0
+        ? Math.round(Number(canvasWidthOverride))
+        : measuredCanvasWidth;
+      if (canvasWidth > 0) {
+        params.set("canvasWidth", `${canvasWidth}`);
+      }
+      if (device && device !== "desktop") {
+        params.set("device", device);
+      }
     }
     return `/p/${slug}?${params.toString()}`;
+  }
+
+  function getPublishedFunnelPath() {
+    const normalizedSlug = slugify((funnel?.slug || "").trim() || funnel?.name || "");
+    return normalizedSlug ? `/p/${normalizedSlug}` : "";
+  }
+
+  function getPublishedFunnelUrl() {
+    const path = getPublishedFunnelPath();
+    if (!path) return "";
+    if (typeof window === "undefined") return path;
+    return `${window.location.origin}${path}`;
+  }
+
+  async function copyPublishedUrl() {
+    const url = getPublishedFunnelUrl();
+    if (!url) return alert("Add a funnel name or slug first.");
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert("Public URL copied.");
+        return;
+      }
+    } catch {}
+    alert(url);
   }
 
   async function saveBasics() {
     if (!funnel) return;
     setSavingBasics(true);
+    const normalizedSlug = slugify((funnel.slug || "").trim());
     const payload = {
       name: funnel.name || "",
       description: funnel.description || "",
-      slug: (funnel.slug || "").trim() || null,
+      slug: normalizedSlug || null,
       notify_email: notifyEmail || null,
       default_list_id: defaultListId || null,
     };
@@ -1558,17 +1959,21 @@ function Editor() {
       if (/duplicate key|slug/i.test(error.message)) return alert("Slug already in use. Pick another.");
       return alert(error.message);
     }
+    setFunnel((prev) => ({ ...prev, slug: payload.slug || "" }));
     alert("Saved.");
   }
 
   async function publish() {
     if (!funnel) return;
-    const slug = (funnel.slug || "").trim();
-    if (!slug) return alert("Add a slug first, then publish.");
+    const slug = slugify((funnel.slug || "").trim() || funnel.name || "");
+    if (!slug) return alert("Add a funnel name or slug first, then publish.");
+    setPublishing(true);
     const { error } = await supabase.from("funnels").update({ status: "published", slug }).eq("id", funnel.id);
+    setPublishing(false);
     if (error) return alert(error.message);
     setFunnel({ ...funnel, status: "published", slug });
-    alert("Published.");
+    const publicUrl = typeof window === "undefined" ? `/p/${slug}` : `${window.location.origin}/p/${slug}`;
+    alert(`Published.\n${publicUrl}`);
   }
 
   async function unpublish() {
@@ -1650,12 +2055,14 @@ function Editor() {
       if (!step) throw new Error("Could not create the first page.");
 
       normalizeAbsoluteComponentForSave(e.getWrapper?.());
+      normalizeSectionAnchoredShapesForSave(e.getWrapper?.());
       normalizeShapeLayeringForSave(e.getWrapper?.());
+      normalizeResponsiveShapeMetricsForSave(e.getWrapper?.());
       if (typeof e.refresh === "function") {
         e.refresh();
       }
 
-      const html = e.getHtml();
+      const html = stripEditorOnlyMarkup(e.getHtml());
       const css = e.getCss();
       const combined = injectHiddenFields(inlineHTML(html, css), {
         funnel_id: funnel.id,
@@ -1699,13 +2106,13 @@ function Editor() {
     }
   }
 
-  async function handleViewPage() {
+  async function handleViewPage(options = {}) {
     const saved = await saveActiveStep({ silent: true });
     if (!saved) {
       alert("Please save the page first.");
       return;
     }
-    window.open(getActiveStepPublicUrl(), "_blank", "noopener,noreferrer");
+    window.open(getActiveStepPublicUrl(options), "_blank", "noopener,noreferrer");
   }
 
   async function uploadImageFile(file, mode = "insert") {
@@ -1915,7 +2322,7 @@ function Editor() {
               </h1>
               <p style={{ margin: "4px 0 0", fontSize: 18, color: "#94a3b8" }}>
                 {funnel.status === "published" && funnel.slug
-                  ? <span>Published at <a href={`/p/${funnel.slug}`} target="_blank" rel="noreferrer" style={{ color: "#60a5fa" }}>/p/{funnel.slug}</a></span>
+                  ? <span>Published at <a href={getPublishedFunnelPath()} target="_blank" rel="noreferrer" style={{ color: "#60a5fa" }}>{getPublishedFunnelPath()}</a></span>
                   : "Draft — add a slug and publish when ready"}
               </p>
             </div>
@@ -1944,12 +2351,29 @@ function Editor() {
                 style={slugInput}
                 placeholder="public-url-slug"
                 value={funnel.slug || ""}
-                onChange={(e) => setFunnel({ ...funnel, slug: e.target.value })}
+                onChange={(e) => setFunnel({ ...funnel, slug: slugify(e.target.value) })}
               />
               <button style={miniBtn} onClick={() => setFunnel((x) => ({ ...x, slug: slugify(x.name) }))}>
                 Auto
               </button>
             </div>
+            {(funnel.slug || funnel.name) ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ color: "#94a3b8", fontSize: 14 }}>
+                  Public URL: <span style={{ color: "#60a5fa" }}>{getPublishedFunnelPath() || "Add a slug to publish"}</span>
+                </span>
+                {getPublishedFunnelPath() ? (
+                  <>
+                    <a href={getPublishedFunnelPath()} target="_blank" rel="noreferrer" style={miniLink}>
+                      Open
+                    </a>
+                    <button style={miniBtn} onClick={copyPublishedUrl}>
+                      Copy URL
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
 
             <div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 1fr" }}>
               <div>
@@ -2087,22 +2511,40 @@ function Editor() {
                   <button onClick={() => { setImageUploadMode("insert"); imageInputRef.current?.click(); }} style={btn}>🖼 Upload Image</button>
                   <a href="/assets" target="_blank" rel="noreferrer" style={{ ...btn, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>📁 Media Library</a>
                   {funnel?.id ? (
-                    <button
-                      type="button"
-                      onClick={handleViewPage}
-                      style={{
-                        ...btn,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                        borderColor: "#16a34a",
-                        color: "#ffffff",
-                        boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
-                      }}
-                      title="Save and open the page currently selected in the editor"
-                    >
-                      👁 View This Page
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleViewPage()}
+                        style={{
+                          ...btn,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                          borderColor: "#16a34a",
+                          color: "#ffffff",
+                          boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
+                        }}
+                        title="Save and open the page currently selected in the editor"
+                      >
+                        👁 View This Page
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleViewPage({ device: "mobile", canvasWidthOverride: 390 })}
+                        style={{
+                          ...btn,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                          borderColor: "#1d4ed8",
+                          color: "#ffffff",
+                          boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
+                        }}
+                        title="Save and open a mobile-width preview of the current page"
+                      >
+                        📱 Mobile Preview
+                      </button>
+                    </>
                   ) : null}
                   <button onClick={() => deleteStep(activeStepId)} style={btnDanger} disabled={!activeStepId}>🗑 Delete Page</button>
                 </div>
@@ -2840,6 +3282,18 @@ function Editor() {
                             />
                             Transparent Background
                           </label>
+                        </div>
+                        <div>
+                          <label style={ctlLabel}>Section Height</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="2000"
+                            value={blockControls.minHeight}
+                            onChange={(e) => applyBlockControlsPatch({ minHeight: e.target.value })}
+                            placeholder="auto"
+                            style={ctlInput}
+                          />
                         </div>
                         <div style={ctlRow2}>
                           <div>

@@ -13,6 +13,8 @@ import { useRouter } from "next/router";
 
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
+  const actualPath = String(router.asPath || "").split("?")[0];
+  const isErrorRoute = router.pathname === "/404" || router.pathname === "/500" || router.pathname === "/_error";
 
   const noLayoutRoutes = [
     "/account",
@@ -23,11 +25,17 @@ export default function MyApp({ Component, pageProps }) {
     "/reset-password",
     "/u/",
     "/p/",
+    "/sites",
+    "/404",
+    "/500",
+    "/_error",
     "/modules/website-builder/project/[id]/preview",
   ];
-  const hideLayout = noLayoutRoutes.some((path) =>
-    router.pathname.startsWith(path)
-  );
+  const hideLayout = Boolean(Component.disableLayout)
+    || isErrorRoute
+    || noLayoutRoutes.some((path) =>
+      router.pathname.startsWith(path) || actualPath.startsWith(path)
+    );
 
   const Root = ({ children }) => (
     <div style={{ fontSize: 16, lineHeight: 1.4 }}>

@@ -18,11 +18,29 @@ create index if not exists idx_social_image_library_user on social_image_library
 -- RLS: users can only see/insert their own images
 alter table social_image_library enable row level security;
 
-create policy "Users can view own images" on social_image_library
-  for select using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'social_image_library' AND policyname = 'Users can view own images'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Users can view own images" ON social_image_library FOR SELECT USING (auth.uid() = user_id)';
+  END IF;
+END $$;
 
-create policy "Users can insert own images" on social_image_library
-  for insert with check (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'social_image_library' AND policyname = 'Users can insert own images'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Users can insert own images" ON social_image_library FOR INSERT WITH CHECK (auth.uid() = user_id)';
+  END IF;
+END $$;
 
-create policy "Users can delete own images" on social_image_library
-  for delete using (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'social_image_library' AND policyname = 'Users can delete own images'
+  ) THEN
+    EXECUTE 'CREATE POLICY "Users can delete own images" ON social_image_library FOR DELETE USING (auth.uid() = user_id)';
+  END IF;
+END $$;

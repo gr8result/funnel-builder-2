@@ -31,13 +31,6 @@ const modeMeta = {
   },
 };
 
-const stylePackOptions = [
-  { value: "executive", label: "Executive Blue" },
-  { value: "vibrant", label: "Vibrant Gradient" },
-  { value: "editorial", label: "Editorial Studio" },
-  { value: "minimal", label: "Minimal Mono" },
-];
-
 function safeMode(mode) {
   const m = String(mode || "ai").toLowerCase();
   if (m === "ai" || m === "blank" || m === "import") return m;
@@ -131,6 +124,7 @@ export default function WebsiteBuilderNewPage() {
   const mode = safeMode(router.query.mode);
   const buildType = safeBuildType(router.query.type);
   const meta = modeMeta[mode];
+  const [isMobile, setIsMobile] = useState(false);
 
   
   const [form, setForm] = useState({
@@ -152,12 +146,21 @@ export default function WebsiteBuilderNewPage() {
   const [importUrl, setImportUrl] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState("");
-  const [projectStylePack, setProjectStylePack] = useState("executive");
+  const projectStylePack = "executive";
   const [importCrawl, setImportCrawl] = useState(true);
   const [importMaxPages, setImportMaxPages] = useState(4);
   const [launchBusy, setLaunchBusy] = useState(false);
 
   const inferredBusinessName = useMemo(() => inferBusinessNameFromUser(user), [user]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncViewport = () => setIsMobile(window.innerWidth <= 720);
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
+  }, []);
 
   useEffect(() => {
     if (!inferredBusinessName) return;
@@ -393,27 +396,27 @@ export default function WebsiteBuilderNewPage() {
         <title>{meta.title} | Website Builder</title>
       </Head>
 
-      <main style={styles.page}>
-        <div style={styles.container}>
-          <section style={styles.banner(meta)}>
-            <div style={styles.bannerLeft}>
-              <div style={styles.bannerIcon(meta)} aria-hidden>{meta.icon}</div>
+      <main style={styles.page(isMobile)}>
+        <div style={styles.container(isMobile)}>
+          <section style={styles.banner(meta, isMobile)}>
+            <div style={styles.bannerLeft(isMobile)}>
+              <div style={styles.bannerIcon(meta, isMobile)} aria-hidden>{meta.icon}</div>
               <div>
-                <h1 style={styles.title}>{meta.title}</h1>
-                <p style={styles.subtitle}>{meta.subtitle}</p>
+                <h1 style={styles.title(isMobile)}>{meta.title}</h1>
+                <p style={styles.subtitle(isMobile)}>{meta.subtitle}</p>
               </div>
             </div>
-            <Link href="/modules/website-builder" style={styles.backBtn}>Back</Link>
+            <Link href="/modules/website-builder" style={styles.backBtn(isMobile)}>Back</Link>
           </section>
 
           {mode === "ai" && (
-            <section style={styles.card}>
+            <section style={styles.card(isMobile)}>
               <h2 style={styles.cardTitle}>AI Setup Questions</h2>
               <p style={styles.typeHint}>
                 Building: <strong>{buildType === "landing" ? "Landing Page (Single Page)" : "Website (Multiple Pages)"}</strong>
               </p>
 
-              <div style={styles.grid2}>
+              <div style={styles.grid2(isMobile)}>
                 <VoiceInput
                   label="Business Name"
                   placeholder={inferredBusinessName || "Your business name"}
@@ -438,18 +441,6 @@ export default function WebsiteBuilderNewPage() {
                   value={form.goal}
                   onChange={(v) => setForm((prev) => ({ ...prev, goal: v }))}
                 />
-                <label style={styles.labelWrap}>
-                  <span style={styles.label}>Style Pack</span>
-                  <select
-                    style={styles.input}
-                    value={projectStylePack}
-                    onChange={(e) => setProjectStylePack(e.target.value)}
-                  >
-                    {stylePackOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </label>
               </div>
               <VoiceInput
                 textarea
@@ -459,25 +450,25 @@ export default function WebsiteBuilderNewPage() {
                 onChange={(v) => setForm((prev) => ({ ...prev, notes: v }))}
                 style={styles.textarea}
               />
-              <div style={styles.subActions}>
+              <div style={styles.subActions(isMobile)}>
                 <button type="button" style={styles.aiGhostBtn} onClick={generateDescription} disabled={aiDescBusy}>
                   {aiDescBusy ? "Generating description..." : "AI Generate Description"}
                 </button>
                 {aiDescError ? <p style={styles.aiError}>{aiDescError}</p> : null}
               </div>
-              <div style={styles.actions}>
+              <div style={styles.actions(isMobile)}>
                 <button
                   type="button"
-                  style={styles.primary(meta.accent)}
+                  style={styles.primary(meta.accent, isMobile)}
                   onClick={generateSitePlan}
                 >
                   {aiPlanBusy ? "Generating AI Site Plan..." : "Generate Site Plan"}
                 </button>
-                <Link href="/modules/website-builder/new?mode=blank" style={styles.secondary}>Start Blank Instead</Link>
+                <Link href="/modules/website-builder/new?mode=blank" style={styles.secondary(isMobile)}>Start Blank Instead</Link>
               </div>
               {buildType !== "landing" ? (
                 <>
-                  <div style={styles.addPageRowGlobal}>
+                  <div style={styles.addPageRowGlobal(isMobile)}>
                     <input
                       style={styles.addPageInput}
                       placeholder="Add extra page (e.g. Portfolio, Results, Team)"
@@ -490,7 +481,7 @@ export default function WebsiteBuilderNewPage() {
                         }
                       }}
                     />
-                    <button type="button" style={styles.addPageBtn} onClick={addCustomPage}>Add Extra Page</button>
+                    <button type="button" style={styles.addPageBtn(isMobile)} onClick={addCustomPage}>Add Extra Page</button>
                   </div>
                   <p style={styles.mutedHint}>You can add pages before or after generating the plan.</p>
                 </>
@@ -505,16 +496,16 @@ export default function WebsiteBuilderNewPage() {
                   <p style={styles.planStrap}>{generatedPlan.strap}</p>
                   <p style={styles.planTemplate}>Recommended template: {generatedPlan.templateSlug || "starter"}</p>
 
-                  <div style={styles.planGrid}>
+                  <div style={styles.planGrid(isMobile)}>
                     <div style={styles.planCardCol}>
                       <p style={styles.planLabel}>Page Plan</p>
-                      <div style={styles.subActions}>
+                      <div style={styles.subActions(isMobile)}>
                         <button type="button" style={styles.aiGhostBtn} onClick={generatePageObjectives} disabled={aiObjBusy}>
                           {aiObjBusy ? "Generating page objectives..." : "AI Generate Page Objectives"}
                         </button>
                         {aiObjError ? <p style={styles.aiError}>{aiObjError}</p> : null}
                       </div>
-                      <div style={styles.addPageRow}>
+                      <div style={styles.addPageRow(isMobile)}>
                         <input
                           style={styles.addPageInput}
                           placeholder="Add page (e.g. Pricing, FAQ, Portfolio)"
@@ -527,12 +518,12 @@ export default function WebsiteBuilderNewPage() {
                             }
                           }}
                         />
-                        <button type="button" style={styles.addPageBtn} onClick={addCustomPage}>+ Add</button>
+                        <button type="button" style={styles.addPageBtn(isMobile)} onClick={addCustomPage}>+ Add</button>
                       </div>
                       <div style={styles.planList}>
                         {normalizePagePlan(generatedPlan.pagePlan).map((p) => (
                           <div key={p.name} style={styles.planItem}>
-                            <div style={styles.planItemHead}>
+                            <div style={styles.planItemHead(isMobile)}>
                               <p style={styles.planItemTitle}>{p.name}</p>
                               {!["Home", "About", "Contact"].includes(p.name) ? (
                                 <button type="button" style={styles.pageRemoveBtn} onClick={() => removeCustomPage(p.name)}>
@@ -555,10 +546,10 @@ export default function WebsiteBuilderNewPage() {
                     </div>
                   </div>
 
-                  <div style={styles.actions}>
+                  <div style={styles.actions(isMobile)}>
                     <button
                       type="button"
-                      style={styles.primary(meta.accent)}
+                      style={styles.primary(meta.accent, isMobile)}
                       onClick={() =>
                         openProject({
                           name: generatedPlan.headline || `${form.businessName || "New"} Website`,
@@ -574,7 +565,7 @@ export default function WebsiteBuilderNewPage() {
                     >
                       {launchBusy ? "Opening Visual Builder..." : "Open in Visual Builder"}
                     </button>
-                    <Link href="/modules/website-builder/new?mode=import" style={styles.secondary}>Open Template Import</Link>
+                    <Link href="/modules/website-builder/new?mode=import" style={styles.secondary(isMobile)}>Open Template Import</Link>
                   </div>
                 </div>
               ) : null}
@@ -582,7 +573,7 @@ export default function WebsiteBuilderNewPage() {
           )}
 
           {mode === "blank" && (
-            <section style={styles.card}>
+            <section style={styles.card(isMobile)}>
               <h2 style={styles.cardTitle}>Opening Website Studio</h2>
               <p style={styles.note}>
                 {blankRedirecting
@@ -590,10 +581,10 @@ export default function WebsiteBuilderNewPage() {
                   : "If redirect did not happen, use the button below."}
               </p>
               {!blankRedirecting ? (
-                <div style={styles.actions}>
+                <div style={styles.actions(isMobile)}>
                   <button
                     type="button"
-                    style={styles.primary(meta.accent)}
+                    style={styles.primary(meta.accent, isMobile)}
                     onClick={() => {
                       openProject({
                         name: `${form.businessName || "Starter"} Website`,
@@ -618,17 +609,17 @@ export default function WebsiteBuilderNewPage() {
           )}
 
           {mode === "import" && (
-            <section style={styles.card}>
+            <section style={styles.card(isMobile)}>
               <h2 style={styles.cardTitle}>Template Import</h2>
               <p style={styles.note}>Browse the imported templates below, or use a local starter template if needed.</p>
 
-              <div style={styles.actions}>
-                <Link href="/modules/website-builder" style={styles.primary(meta.accent)}>
+              <div style={styles.actions(isMobile)}>
+                <Link href="/modules/website-builder" style={styles.primary(meta.accent, isMobile)}>
                   Back to Template Library
                 </Link>
                 <button
                   type="button"
-                  style={styles.secondary}
+                  style={styles.secondary(isMobile)}
                   onClick={() => openProject({ name: `${form.businessName || "Blank"} Website` })}
                 >
                   Open Full Editor
@@ -640,20 +631,7 @@ export default function WebsiteBuilderNewPage() {
                 <p style={styles.wpImportText}>
                   Paste a public page URL and we will convert key content into editable Website Builder blocks.
                 </p>
-                <div style={styles.wpImportControls}>
-                  <label style={styles.wpImportLabel}>
-                    Style Pack
-                    <select
-                      style={styles.wpImportSelect}
-                      value={projectStylePack}
-                      onChange={(e) => setProjectStylePack(e.target.value)}
-                    >
-                      {stylePackOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </label>
-
+                <div style={styles.wpImportControls(isMobile)}>
                   <label style={styles.wpImportLabel}>
                     Max Pages
                     <input
@@ -675,7 +653,7 @@ export default function WebsiteBuilderNewPage() {
                     Crawl Internal Pages
                   </label>
                 </div>
-                <div style={styles.wpImportRow}>
+                <div style={styles.wpImportRow(isMobile)}>
                   <input
                     style={styles.wpImportInput}
                     placeholder="https://example.com"
@@ -684,7 +662,7 @@ export default function WebsiteBuilderNewPage() {
                   />
                   <button
                     type="button"
-                    style={styles.primary(meta.accent)}
+                    style={styles.primary(meta.accent, isMobile)}
                     onClick={importFromExternalUrl}
                     disabled={importBusy}
                   >
@@ -694,7 +672,7 @@ export default function WebsiteBuilderNewPage() {
                 {importError ? <p style={styles.aiError}>{importError}</p> : null}
               </div>
 
-              <div style={styles.templateGrid}>
+              <div style={styles.templateGrid(isMobile)}>
                 {picks.map((tpl) => {
                   const full = getTemplate(tpl.slug);
                   const preview = full.thumb || tpl.thumb || "";
@@ -709,7 +687,7 @@ export default function WebsiteBuilderNewPage() {
                       <p style={styles.tplDesc}>{summary}</p>
                       <button
                         type="button"
-                        style={styles.primary(meta.accent)}
+                        style={styles.primary(meta.accent, isMobile)}
                         onClick={() => {
                           const built = full.build?.("modern-blue");
                           const pages = Array.isArray(built?.pages) && built.pages.length
@@ -772,84 +750,87 @@ function TemplatePreview({ preview, name, slug }) {
 }
 
 const styles = {
-  page: {
+  page: (isMobile) => ({
     minHeight: "100vh",
     background: "#0c121a",
     color: "#e6eef5",
-    padding: "24px 16px",
+    padding: isMobile ? "14px 10px 28px" : "24px 16px",
     fontFamily: "system-ui,-apple-system,sans-serif",
-  },
-  container: {
+  }),
+  container: (isMobile) => ({
     maxWidth: 1120,
     margin: "0 auto",
     display: "grid",
-    gap: 18,
-  },
-  banner: (meta) => ({
+    gap: isMobile ? 14 : 18,
+  }),
+  banner: (meta, isMobile) => ({
     border: `1px solid ${meta.accent}77`,
     background: meta.gradient,
     borderRadius: 14,
-    padding: "20px 24px",
+    padding: isMobile ? "16px 14px" : "20px 24px",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: 16,
-    flexWrap: "wrap",
+    flexWrap: isMobile ? "nowrap" : "wrap",
     boxShadow: `0 10px 28px rgba(0,0,0,0.34), 0 0 0 1px ${meta.accent}55 inset`,
   }),
-  bannerLeft: {
+  bannerLeft: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
-    gap: 16,
+    alignItems: isMobile ? "flex-start" : "center",
+    gap: isMobile ? 12 : 16,
     minWidth: 0,
-  },
-  bannerIcon: (meta) => ({
-    width: 72,
-    height: 72,
+  }),
+  bannerIcon: (meta, isMobile) => ({
+    width: isMobile ? 56 : 72,
+    height: isMobile ? 56 : 72,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    fontSize: 36,
+    fontSize: isMobile ? 28 : 36,
     color: "#fff",
     background: `linear-gradient(135deg, rgba(255,255,255,0.28), ${meta.accent}55)`,
     border: "1px solid rgba(255,255,255,0.2)",
   }),
-  title: {
+  title: (isMobile) => ({
     margin: 0,
-    fontSize: 48,
+    fontSize: isMobile ? 28 : 48,
     lineHeight: 1.08,
     fontWeight: 600,
     color: "#fff",
     textWrap: "balance",
-  },
-  subtitle: {
+  }),
+  subtitle: (isMobile) => ({
     margin: "4px 0 0",
     color: "#9fb0c5",
-    fontSize: 18,
+    fontSize: isMobile ? 15 : 18,
     lineHeight: 1.35,
     fontWeight: 600,
-  },
-  backBtn: {
+  }),
+  backBtn: (isMobile) => ({
     border: "1px solid #2d3e61",
     background: "#16233a",
     color: "#dbeafe",
     borderRadius: 10,
     padding: "10px 18px",
     textDecoration: "none",
-    fontSize: 18,
+    fontSize: isMobile ? 16 : 18,
     fontWeight: 600,
     whiteSpace: "nowrap",
-  },
-  card: {
+    width: isMobile ? "100%" : "auto",
+    textAlign: "center",
+  }),
+  card: (isMobile) => ({
     border: "1px solid #1e2d45",
     background: "#111827",
     borderRadius: 14,
-    padding: 20,
+    padding: isMobile ? 14 : 20,
     display: "grid",
     gap: 14,
-  },
+  }),
   cardTitle: {
     margin: 0,
     fontSize: 22,
@@ -863,11 +844,11 @@ const styles = {
     color: "#cbd5e1",
     fontSize: 14,
   },
-  grid2: {
+  grid2: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
+    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit,minmax(240px,1fr))",
     gap: 12,
-  },
+  }),
   labelWrap: {
     display: "grid",
     gap: 6,
@@ -897,17 +878,20 @@ const styles = {
     resize: "vertical",
     outline: "none",
   },
-  actions: {
+  actions: (isMobile) => ({
     display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    alignItems: isMobile ? "stretch" : "center",
     flexWrap: "wrap",
     gap: 10,
-  },
-  subActions: {
+  }),
+  subActions: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "stretch" : "center",
+    flexDirection: isMobile ? "column" : "row",
     gap: 10,
     flexWrap: "wrap",
-  },
+  }),
   aiGhostBtn: {
     border: "1px solid #2b3650",
     borderRadius: 10,
@@ -922,7 +906,7 @@ const styles = {
     color: "#fca5a5",
     fontSize: 16,
   },
-  primary: (accent) => ({
+  primary: (accent, isMobile) => ({
     border: "none",
     borderRadius: 10,
     padding: "10px 14px",
@@ -930,8 +914,10 @@ const styles = {
     background: `linear-gradient(135deg, ${accent}, #2d6cdf)`,
     color: "#fff",
     cursor: "pointer",
+    width: isMobile ? "100%" : "auto",
+    textAlign: "center",
   }),
-  secondary: {
+  secondary: (isMobile) => ({
     border: "1px solid #2b3650",
     borderRadius: 10,
     padding: "9px 14px",
@@ -939,12 +925,14 @@ const styles = {
     color: "#cbd5e1",
     textDecoration: "none",
     background: "#152038",
-  },
-  templateGrid: {
+    width: isMobile ? "100%" : "auto",
+    textAlign: "center",
+  }),
+  templateGrid: (isMobile) => ({
     display: "grid",
     gap: 12,
-    gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
-  },
+    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit,minmax(240px,1fr))",
+  }),
   wpImportCard: {
     border: "1px solid #274f3c",
     background: "linear-gradient(135deg,#0e1f19,#101a2c)",
@@ -965,18 +953,18 @@ const styles = {
     fontSize: 14,
     lineHeight: 1.5,
   },
-  wpImportRow: {
+  wpImportRow: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
     gap: 10,
     alignItems: "center",
-  },
-  wpImportControls: {
+  }),
+  wpImportControls: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
+    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit,minmax(170px,1fr))",
     gap: 10,
     alignItems: "end",
-  },
+  }),
   wpImportLabel: {
     display: "grid",
     gap: 6,
@@ -1097,11 +1085,11 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  planGrid: {
+  planGrid: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
+    gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit,minmax(260px,1fr))",
     gap: 10,
-  },
+  }),
   planCardCol: {
     border: "1px solid #22314c",
     borderRadius: 10,
@@ -1120,18 +1108,18 @@ const styles = {
     display: "grid",
     gap: 8,
   },
-  addPageRow: {
+  addPageRow: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
     gap: 8,
     marginBottom: 8,
-  },
-  addPageRowGlobal: {
+  }),
+  addPageRowGlobal: (isMobile) => ({
     display: "grid",
-    gridTemplateColumns: "1fr auto",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr auto",
     gap: 8,
     marginTop: 2,
-  },
+  }),
   mutedHint: {
     margin: "-2px 0 0",
     color: "#94a3b8",
@@ -1148,7 +1136,7 @@ const styles = {
     outline: "none",
     fontSize: 16,
   },
-  addPageBtn: {
+  addPageBtn: (isMobile) => ({
     border: "1px solid #2b3650",
     background: "#16233a",
     color: "#dbeafe",
@@ -1157,19 +1145,21 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     fontSize: 16,
-  },
+    width: isMobile ? "100%" : "auto",
+  }),
   planItem: {
     border: "1px solid #1e2d45",
     borderRadius: 8,
     padding: "8px 10px",
     background: "#0b1018",
   },
-  planItemHead: {
+  planItemHead: (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: isMobile ? "flex-start" : "center",
+    flexDirection: isMobile ? "column" : "row",
     justifyContent: "space-between",
     gap: 8,
-  },
+  }),
   planItemTitle: {
     margin: 0,
     fontSize: 16,
