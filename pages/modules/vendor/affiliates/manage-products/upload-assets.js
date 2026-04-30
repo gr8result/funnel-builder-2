@@ -11,6 +11,7 @@ import VendorUserBanner from "../../../../../components/vendor/VendorUserBanner"
 
 
 export default function UploadAssets() {
+  const DocumentsIcon = ICONS.documents;
   const [assets, setAssets] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
@@ -280,11 +281,26 @@ export default function UploadAssets() {
       <main style={page.wrap}>
         <div style={page.inner}>
           <div style={page.banner}>
-            <div>
-              <h1 style={{ fontSize: 48, fontWeight: 600, margin: 0 }}>Vendor Creative Assets</h1>
-              <p style={{ fontSize: 18, opacity: 0.9, margin: 0 }}>
-                Upload banners, ad copy, and resources for your affiliates.
-              </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(15,23,42,0.18)",
+                  borderRadius: 12,
+                  padding: 10,
+                  flexShrink: 0,
+                }}
+              >
+                {DocumentsIcon ? <DocumentsIcon size={46} color="#ffffff" /> : null}
+              </span>
+              <div>
+                <h1 style={{ fontSize: 48, fontWeight: 600, margin: 0 }}>Vendor Creative Assets</h1>
+                <p style={{ fontSize: 18, opacity: 0.9, margin: 0 }}>
+                  Upload banners, ad copy, and resources for your affiliates.
+                </p>
+              </div>
             </div>
             <Link href="/modules/vendor">
               <button
