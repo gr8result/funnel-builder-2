@@ -29,6 +29,10 @@ function getMetaRedirectUri(req) {
   return process.env.META_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/meta/callback`;
 }
 
+function getTikTokRedirectUri(req) {
+  return process.env.TIKTOK_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/tiktok/callback`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -41,6 +45,7 @@ export default async function handler(req, res) {
 
   const linkedin = await getPlatformCredentials(auth.admin, auth.user.id, "linkedin");
   const meta = await getPlatformCredentials(auth.admin, auth.user.id, "meta");
+  const tiktok = await getPlatformCredentials(auth.admin, auth.user.id, "tiktok");
 
   return res.status(200).json({
     ok: true,
@@ -54,6 +59,10 @@ export default async function handler(req, res) {
       meta: {
         appId: meta?.appId || "",
         redirectUri: getMetaRedirectUri(req),
+      },
+      tiktok: {
+        clientKey: tiktok?.appId || "",
+        redirectUri: getTikTokRedirectUri(req),
       },
     },
   });

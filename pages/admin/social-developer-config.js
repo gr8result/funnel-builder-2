@@ -255,12 +255,16 @@ export default function SocialDeveloperConfig() {
               ? runtime?.linkedin?.redirectUri
               : key === 'meta'
                 ? runtime?.meta?.redirectUri
+                : key === 'tiktok'
+                  ? runtime?.tiktok?.redirectUri
                 : '';
             const callbackUrl = runtimeCallbackUrl || `${siteUrl}${meta.callbackPath}`;
             const runtimeClientId = key === 'linkedin'
               ? runtime?.linkedin?.clientId
               : key === 'meta'
                 ? runtime?.meta?.appId
+                : key === 'tiktok'
+                  ? runtime?.tiktok?.clientKey
                 : '';
 
             return (
