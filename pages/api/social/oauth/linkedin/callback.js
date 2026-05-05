@@ -1,6 +1,45 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
+async function saveSocialAccount(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    account_id: payload.account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("social_accounts")
+    .select("id")
+    .match(match)
+    .limit(1);
+
+  if (lookupError) {
+    throw new Error(`Failed checking existing ${payload.platform} connection: ${lookupError.message}`);
+  }
+
+  if (existing?.length) {
+    const { error: updateError } = await admin
+      .from("social_accounts")
+      .update(payload)
+      .match(match);
+
+    if (updateError) {
+      throw new Error(`Failed updating ${payload.platform} connection: ${updateError.message}`);
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await admin
+    .from("social_accounts")
+    .insert(payload);
+
+  if (insertError) {
+    throw new Error(`Failed creating ${payload.platform} connection: ${insertError.message}`);
+  }
+}
+
 function getRequestOrigin(req) {
   const forwardedProto = req.headers["x-forwarded-proto"];
   const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
@@ -94,21 +133,16 @@ export default async function handler(req, res) {
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
       : null;
 
-    const { error: upsertErr } = await admin.from("social_accounts").upsert(
-      {
-        user_id: oauthState.user_id,
-        platform: "linkedin",
-        account_id: String(accountId),
-        account_name: accountName,
-        access_token: tokenData.access_token,
-        token_expires_at: expiresAt,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,platform,account_id" }
-    );
-
-    if (upsertErr) throw upsertErr;
+    await saveSocialAccount(admin, {
+      user_id: oauthState.user_id,
+      platform: "linkedin",
+      account_id: String(accountId),
+      account_name: accountName,
+      access_token: tokenData.access_token,
+      token_expires_at: expiresAt,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
 
     await admin
       .from("social_oauth_states")
