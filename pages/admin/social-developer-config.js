@@ -123,6 +123,7 @@ async function getToken(retries = 0) {
 
 export default function SocialDeveloperConfig() {
   const [status, setStatus] = useState({});   // { meta: { configured: true }, ... }
+  const [runtime, setRuntime] = useState(null);
   const [expanded, setExpanded] = useState('meta');
   const [editingPlatform, setEditingPlatform] = useState('');
   const [form, setForm] = useState({ appId: '', appSecret: '', configId: '' });
@@ -161,6 +162,10 @@ export default function SocialDeveloperConfig() {
       const res = await fetch('/api/admin/social-credential-status', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.ok) setStatus(json.status || {});
+
+      const runtimeRes = await fetch('/api/admin/social-oauth-debug', { headers: { Authorization: `Bearer ${token}` } });
+      const runtimeJson = await runtimeRes.json();
+      if (runtimeJson.ok) setRuntime(runtimeJson.runtime || null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -262,7 +267,17 @@ export default function SocialDeveloperConfig() {
           {Object.entries(PLATFORMS).map(([key, meta]) => {
             const isOpen = expanded === key;
             const isCfg = status[key]?.configured;
-            const callbackUrl = `${siteUrl}${meta.callbackPath}`;
+            const runtimeCallbackUrl = key === 'linkedin'
+              ? runtime?.linkedin?.redirectUri
+              : key === 'meta'
+                ? runtime?.meta?.redirectUri
+                : '';
+            const callbackUrl = runtimeCallbackUrl || `${siteUrl}${meta.callbackPath}`;
+            const runtimeClientId = key === 'linkedin'
+              ? runtime?.linkedin?.clientId
+              : key === 'meta'
+                ? runtime?.meta?.appId
+                : '';
 
             return (
               <div key={key} style={{ ...S.card, borderLeft: `5px solid ${isCfg ? '#10B981' : 'rgba(255,255,255,0.08)'}` }}>
@@ -307,6 +322,11 @@ export default function SocialDeveloperConfig() {
                     <div style={S.callbackBox}>
                       <div style={S.callbackLabel}>Your OAuth Callback URL (copy this into your developer app):</div>
                       <div style={S.callbackUrl}>{callbackUrl}</div>
+                      {!!runtimeClientId && (
+                        <div style={{ ...S.callbackLabel, marginTop: 10 }}>
+                          Effective runtime {key === 'meta' ? 'App ID' : 'Client ID'}: <span style={S.callbackUrl}>{runtimeClientId}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Credentials form or saved state */}
