@@ -1,16 +1,21 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getLinkedInRedirectUri() {
-  return (
-    process.env.LINKEDIN_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/linkedin/callback`
-  );
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
 }
 
-function doneRedirectUrl(path, status, message) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const u = new URL(path || "/modules/social_media", site);
+function getLinkedInRedirectUri(req) {
+  return process.env.LINKEDIN_OAUTH_REDIRECT_URI || `${getRequestOrigin(req)}/api/social/oauth/linkedin/callback`;
+}
+
+function doneRedirectUrl(req, path, status, message) {
+  const site = getRequestOrigin(req);
+  const u = new URL(path || "/modules/social_media/setup", site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
   return u.toString();
@@ -21,11 +26,11 @@ export default async function handler(req, res) {
   const admin = createSupabaseAdmin();
 
   if (error || error_description) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", error_description || error));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", error_description || error));
   }
 
   if (!code || !state) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "Missing OAuth code/state"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", "Missing OAuth code/state"));
   }
 
   const { data: oauthState, error: stateErr } = await admin
@@ -38,12 +43,13 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (stateErr || !oauthState) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "OAuth state expired or invalid"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", "OAuth state expired or invalid"));
   }
 
   try {
     const creds = await getPlatformCredentials(admin, oauthState.user_id, "linkedin");
     if (!creds?.appId) throw new Error("LinkedIn credentials not configured.");
+    if (!creds?.appSecret) throw new Error("LinkedIn Client Secret not configured. Open Platform Setup to add your credentials.");
 
     // Exchange code for tokens
     const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
@@ -52,7 +58,7 @@ export default async function handler(req, res) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code: String(code),
-        redirect_uri: getLinkedInRedirectUri(),
+        redirect_uri: getLinkedInRedirectUri(req),
         client_id: creds.appId,
         client_secret: creds.appSecret,
       }),
@@ -97,9 +103,9 @@ export default async function handler(req, res) {
       .update({ used_at: new Date().toISOString() })
       .eq("id", oauthState.id);
 
-    return res.redirect(doneRedirectUrl(oauthState.redirect_path, "ok", `LinkedIn connected as ${accountName}`));
+    return res.redirect(doneRedirectUrl(req, oauthState.redirect_path, "ok", `LinkedIn connected as ${accountName}`));
   } catch (err) {
     console.error("[LinkedIn OAuth callback]", err);
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", err.message || "LinkedIn connection failed"));
+    return res.redirect(doneRedirectUrl(req, oauthState?.redirect_path || "/modules/social_media/setup", "error", err.message || "LinkedIn connection failed"));
   }
 }

@@ -37,22 +37,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, error: scheduleError.message });
     }
 
-    // Get platform for queue row
-    const { data: post } = await supabase
-      .from('social_posts')
-      .select('platform')
-      .eq('id', post_id)
-      .single();
-
-    // Insert into queue
-    const { error: queueError } = await supabase
-      .from('social_queue')
-      .insert({ user_id, post_id, platform: post?.platform || 'facebook', scheduled_for, status: 'queued' });
-
-    if (queueError) {
-      return res.status(500).json({ ok: false, error: queueError.message });
-    }
-
     // Update post status to scheduled
     await supabase
       .from('social_posts')

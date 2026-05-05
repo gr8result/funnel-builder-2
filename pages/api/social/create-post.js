@@ -85,24 +85,6 @@ export default async function handler(req, res) {
           error: scheduleError.message
         });
       }
-
-      const { error: queueError } = await admin
-        .from('social_queue')
-        .insert({
-          user_id: userId,
-          post_id: data.id,
-          platform,
-          scheduled_for: normalizedScheduledFor,
-          status: 'queued'
-        });
-
-      if (queueError) {
-        console.error('QUEUE ERROR:', queueError);
-        return res.status(500).json({
-          success: false,
-          error: queueError.message
-        });
-      }
     }
 
     // Log usage — never deleted even if the post is deleted

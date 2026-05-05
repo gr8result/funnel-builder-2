@@ -29,6 +29,63 @@ function pm(platform) {
   return PLATFORM_META[String(platform || '').toLowerCase()] || DEFAULT_META;
 }
 
+function clamp(value, min, max) {
+  const n = Number(value);
+  return Number.isNaN(n) ? min : Math.min(max, Math.max(min, n));
+}
+
+function buildBulkScheduleQueue(posts, start, scheduleMode, secondTime) {
+  const grouped = new Map();
+  for (const post of posts || []) {
+    const platform = String(post.platform || '').toLowerCase();
+    if (!grouped.has(platform)) grouped.set(platform, []);
+    grouped.get(platform).push(post);
+  }
+
+  const parseTime = (value, fallbackDate) => {
+    const [hh, mm] = String(value || '').split(':');
+    return {
+      hours: clamp(parseInt(hh, 10), 0, 23),
+      minutes: clamp(parseInt(mm, 10), 0, 59),
+      fallbackHours: fallbackDate.getHours(),
+      fallbackMinutes: fallbackDate.getMinutes(),
+    };
+  };
+
+  const secondSlot = secondTime
+    ? parseTime(secondTime, start)
+    : { hours: clamp(start.getHours() + 12, 0, 23), minutes: start.getMinutes() };
+
+  const scheduled = [];
+  for (const [platform, platformPosts] of grouped.entries()) {
+    platformPosts.forEach((post, index) => {
+      const scheduledFor = new Date(start);
+      if (scheduleMode === 'daily') {
+        scheduledFor.setDate(start.getDate() + index);
+        scheduledFor.setHours(start.getHours(), start.getMinutes(), 0, 0);
+      } else {
+        const dayOffset = Math.floor(index / 2);
+        const slotOffset = index % 2;
+        scheduledFor.setDate(start.getDate() + dayOffset);
+        if (slotOffset === 0) {
+          scheduledFor.setHours(start.getHours(), start.getMinutes(), 0, 0);
+        } else {
+          scheduledFor.setHours(secondSlot.hours, secondSlot.minutes, 0, 0);
+        }
+      }
+      scheduled.push({ post, platform, scheduledFor });
+    });
+  }
+
+  scheduled.sort((a, b) => {
+    const timeDiff = a.scheduledFor.getTime() - b.scheduledFor.getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return a.platform.localeCompare(b.platform);
+  });
+
+  return scheduled;
+}
+
 function StatusBadge({ status }) {
   const map = {
     draft:     { bg: 'rgba(75,85,99,0.4)',    color: '#9CA3AF', label: 'Draft' },
@@ -56,11 +113,13 @@ const S = {
   inner:      { padding: '24px 20px 24px', maxWidth: '100%' },
   banner:     { maxWidth: 1620, margin: '16px auto 0', background: 'rgba(194, 7, 169, 0.99)', border: '1px solid rgba(167,169,250,0.2)', borderRadius: 16, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 },
   bannerLeft: { display: 'flex', alignItems: 'center', gap: 16 },
+  bannerRight:{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, maxWidth: '100%' },
   bannerIcon: { width: 48, height: 48, borderRadius: 16, background: 'rgb(166, 44, 248)', border: '1px solid rgba(167,169,250,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 },
   bannerTitle:{ fontSize: 48, fontWeight: 600, color: '#F3F0FF', margin: 0 },
   bannerSub:  { fontSize: 18, color: '#ffffff', marginTop: 2 },
-  bannerNav:  { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  bannerBtn:  { padding: '8px 16px', borderRadius: 9, border: '1px solid rgba(164,58,237,0.4)', background: 'rgb(240, 233, 233)', color: '#4c32b3', fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap' },
+  bannerNav:  { display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative', zIndex: 2 },
+  bannerBtn:  { padding: '8px 16px', borderRadius: 9, border: '1px solid rgba(164,58,237,0.4)', background: 'rgb(240, 233, 233)', color: '#4c32b3', fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap', position: 'relative', zIndex: 2 },
+  bannerFilters:{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', position: 'relative', zIndex: 1, maxWidth: '100%' },
   notice:     { marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: 'rgba(164,58,237,0.2)', border: '1px solid rgba(167,169,250,0.4)', fontSize: 16, color: '#2f1c86' },
   createBox:  { background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 16, padding: '18px 20px', marginBottom: 20 },
   createTitle:{ fontSize: 16, fontWeight: 600, color: '#E9D5FF', marginBottom: 16 },
@@ -119,6 +178,11 @@ export default function ReviewPosts() {
   const [selected, setSelected]     = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkScheduling, setBulkScheduling] = useState(false);
+  const [bulkRescheduling, setBulkRescheduling] = useState(false);
+  const [bulkRescheduleStartDate, setBulkRescheduleStartDate] = useState('');
+  const [bulkRescheduleTime, setBulkRescheduleTime] = useState('09:00');
+  const [bulkRescheduleSecondTime, setBulkRescheduleSecondTime] = useState('21:00');
+  const [bulkRescheduleMode, setBulkRescheduleMode] = useState('daily');
   const [postSchedule, setPostSchedule] = useState({}); // { [postId]: { date, time } }
 
   // Image picker state
@@ -276,11 +340,19 @@ export default function ReviewPosts() {
 
   useEffect(() => { loadPosts(); }, []);
 
+  async function advanceDuePosts() {
+    try {
+      await fetch('/api/social/process-schedule', { method: 'POST' });
+      await fetch('/api/social/process-queue', { method: 'POST' });
+    } catch {}
+  }
+
   async function loadPosts() {
     setLoading(true); setNotice('');
     try {
       const token = await getToken();
       if (!token) { setNotice('Sign in to view posts.'); setLoading(false); return; }
+      await advanceDuePosts();
       const res  = await fetch('/api/social/calendar-board', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Failed to load posts');
@@ -441,6 +513,73 @@ export default function ReviewPosts() {
     }
   }
 
+  async function bulkReschedule(targetPosts = null) {
+    const postsToReschedule = Array.isArray(targetPosts)
+      ? targetPosts
+      : posts.filter(post => selected.has(post.postId));
+    if (!postsToReschedule.length) return;
+    if (!bulkRescheduleStartDate || !bulkRescheduleTime) {
+      setNotice('Set a start date and time for bulk reschedule first.');
+      return;
+    }
+
+    const start = new Date(bulkRescheduleStartDate);
+    const startYear = start.getFullYear();
+    if (Number.isNaN(start.getTime()) || startYear < 2024 || startYear > 2035) {
+      setNotice(`Invalid start date (year ${startYear}). Please re-enter the date.`);
+      return;
+    }
+
+    const [hh, mm] = String(bulkRescheduleTime || '09:00').split(':');
+    start.setHours(clamp(parseInt(hh, 10), 0, 23), clamp(parseInt(mm, 10), 0, 59), 0, 0);
+
+    const queue = buildBulkScheduleQueue(postsToReschedule, start, bulkRescheduleMode, bulkRescheduleSecondTime);
+    const token = await getToken();
+    setBulkRescheduling(true);
+    setNotice('');
+
+    let ok = 0;
+    let failed = 0;
+    const updatedTimes = new Map();
+
+    for (const item of queue) {
+      try {
+        const iso = item.scheduledFor.toISOString();
+        const res = await fetch('/api/social/calendar-board', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ postId: item.post.postId, scheduledFor: iso }),
+        });
+        const json = await res.json();
+        if (!json.ok) {
+          failed++;
+          continue;
+        }
+        ok++;
+        updatedTimes.set(item.post.postId, iso);
+      } catch {
+        failed++;
+      }
+    }
+
+    if (updatedTimes.size > 0) {
+      setPosts(prev => prev.map(post => updatedTimes.has(post.postId)
+        ? { ...post, scheduledFor: updatedTimes.get(post.postId), status: 'scheduled' }
+        : post));
+      setPostSchedule(prev => {
+        const next = { ...prev };
+        for (const postId of updatedTimes.keys()) delete next[postId];
+        return next;
+      });
+    }
+
+    setSelected(new Set());
+    setBulkRescheduling(false);
+    setNotice(failed > 0
+      ? `Rescheduled ${ok} post${ok !== 1 ? 's' : ''}, ${failed} failed.`
+      : `Rescheduled ${ok} post${ok !== 1 ? 's' : ''}.`);
+  }
+
   async function schedulePost(postId, date, time) {
     if (!date || !time) { setNotice('Please set both a date and time.'); return; }
     try {
@@ -498,15 +637,17 @@ export default function ReviewPosts() {
     finally { setPublishing(''); }
   }
 
-  const PUBLISHED_STATUSES = new Set(['published', 'posted', 'scheduled', 'queued']);
+  const PUBLISHED_STATUSES = new Set(['published', 'posted']);
+  const SCHEDULED_STATUSES = new Set(['scheduled', 'queued']);
   const activePosts    = posts.filter(p => !PUBLISHED_STATUSES.has(p.status));
   const counts = { all: activePosts.length, draft: 0, scheduled: 0, published: 0, failed: 0 };
   posts.forEach(p => {
-    if (p.status === 'queued') counts.scheduled++;
+    if (SCHEDULED_STATUSES.has(p.status)) counts.scheduled++;
+    else if (PUBLISHED_STATUSES.has(p.status)) counts.published++;
     else if (p.status in counts) counts[p.status]++;
   });
   const statusFiltered = filter === 'all'       ? activePosts
-    : filter === 'scheduled' ? posts.filter(p => p.status === 'scheduled' || p.status === 'queued')
+    : filter === 'scheduled' ? posts.filter(p => SCHEDULED_STATUSES.has(p.status))
     : filter === 'published' ? posts.filter(p => PUBLISHED_STATUSES.has(p.status))
     : posts.filter(p => p.status === filter);
   const filtered = platFilter === 'all' ? statusFiltered : statusFiltered.filter(p => p.platform === platFilter);
@@ -533,15 +674,15 @@ export default function ReviewPosts() {
               <div style={S.bannerSub}>Edit, approve, publish or schedule your posts</div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+          <div style={S.bannerRight}>
             <div style={S.bannerNav}>
-              <button style={S.bannerBtn} onClick={() => router.push('/modules/social_media/create')}>+ Create Posts</button>
-              <button style={S.bannerBtn} onClick={() => router.push('/modules/social_media/images')}>🖼️ Image Library</button>
-              <button style={S.bannerBtn} onClick={() => router.push('/modules/social_media/calendar')}>📅 Calendar</button>
-              <button style={S.bannerBtn} onClick={() => router.push('/modules/social_media/dashboard')}>Back to Dashboard</button>
+              <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/create')}>+ Create Posts</button>
+              <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/images')}>🖼️ Image Library</button>
+              <button type="button" style={S.bannerBtn} onClick={goToCalendar}>📅 Calendar</button>
+              <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/dashboard')}>Back to Dashboard</button>
             </div>
             {/* Platform filter chips */}
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={S.bannerFilters}>
               <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginRight: 2 }}>Filter:</span>
               <button onClick={() => setPlatFilter('all')}
                 style={{ padding: '5px 16px', borderRadius: 20, border: platFilter === 'all' ? '2px solid #A78BFA' : '1px solid rgba(167,169,250,0.25)', background: platFilter === 'all' ? 'rgba(164,58,237,0.45)' : 'rgba(255,255,255,0.04)', color: platFilter === 'all' ? '#F3F0FF' : '#9CA3AF', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>
@@ -613,6 +754,38 @@ export default function ReviewPosts() {
               </button>
             ))}
             <div style={{ display: 'flex', gap: 7, marginLeft: 'auto', alignItems: 'center', flexWrap: 'wrap' }}>
+              {selected.size > 0 && (
+                <>
+                  <input
+                    type="date"
+                    value={bulkRescheduleStartDate}
+                    onChange={e => setBulkRescheduleStartDate(e.target.value)}
+                    style={{ ...S.input, width: 'auto', fontSize: 16, padding: '6px 10px' }}
+                  />
+                  <input
+                    type="time"
+                    value={bulkRescheduleTime}
+                    onChange={e => setBulkRescheduleTime(e.target.value)}
+                    style={{ ...S.input, width: 'auto', fontSize: 16, padding: '6px 10px' }}
+                  />
+                  {bulkRescheduleMode === 'twice' && (
+                    <input
+                      type="time"
+                      value={bulkRescheduleSecondTime}
+                      onChange={e => setBulkRescheduleSecondTime(e.target.value)}
+                      style={{ ...S.input, width: 'auto', fontSize: 16, padding: '6px 10px' }}
+                    />
+                  )}
+                  <select
+                    value={bulkRescheduleMode}
+                    onChange={e => setBulkRescheduleMode(e.target.value)}
+                    style={{ ...S.input, width: 'auto', fontSize: 16, padding: '6px 10px' }}
+                  >
+                    <option value="daily">1 post per day</option>
+                    <option value="twice">2 posts per day</option>
+                  </select>
+                </>
+              )}
               {filtered.length > 0 && (
                 <button onClick={toggleSelectAll}
                   style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid rgba(167,169,250,0.35)', background: selected.size === filtered.length ? 'rgba(164,58,237,0.4)' : 'rgba(255,255,255,0.04)', color: selected.size === filtered.length ? '#F3F0FF' : '#A78BFA', fontWeight: 600, fontSize: 16, cursor: 'pointer' }}>
@@ -621,6 +794,10 @@ export default function ReviewPosts() {
               )}
               {selected.size > 0 && (
                 <>
+                  <button onClick={bulkReschedule} disabled={bulkRescheduling}
+                    style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
+                    {bulkRescheduling ? 'Rescheduling…' : `⟳ Reschedule (${selected.size})`}
+                  </button>
                   <button onClick={bulkSchedule} disabled={bulkScheduling}
                     style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkScheduling ? 'rgba(37,99,235,0.25)' : 'linear-gradient(90deg,#7C3AED,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkScheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(124,58,237,0.3)' }}>
                     {bulkScheduling ? 'Scheduling…' : `📅 Schedule to Calendar (${selected.size})`}
@@ -630,6 +807,12 @@ export default function ReviewPosts() {
                     {bulkDeleting ? 'Deleting…' : `🗑 Delete (${selected.size})`}
                   </button>
                 </>
+              )}
+              {selected.size === 0 && filtered.length > 0 && (
+                <button onClick={() => bulkReschedule(filtered)} disabled={bulkRescheduling}
+                  style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
+                  {bulkRescheduling ? 'Rescheduling…' : `⟳ Reschedule Filtered (${filtered.length})`}
+                </button>
               )}
               <button style={{ ...S.tab(false) }} onClick={loadPosts}>↻ Refresh</button>
             </div>

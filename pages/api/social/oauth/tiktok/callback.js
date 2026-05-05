@@ -9,8 +9,16 @@ function getTikTokRedirectUri() {
   );
 }
 
-function doneRedirectUrl(path, status, message) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function doneRedirectUrl(req, path, status, message) {
+  const site = getRequestOrigin(req);
   const u = new URL(path || "/modules/social_media", site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
@@ -22,11 +30,11 @@ export default async function handler(req, res) {
   const admin = createSupabaseAdmin();
 
   if (error || error_description) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", error_description || error));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", error_description || error));
   }
 
   if (!code || !state) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "Missing OAuth code/state"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "Missing OAuth code/state"));
   }
 
   const { data: oauthState, error: stateErr } = await admin
@@ -39,7 +47,7 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (stateErr || !oauthState) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "OAuth state expired"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "OAuth state expired"));
   }
 
   try {
@@ -120,8 +128,8 @@ export default async function handler(req, res) {
       .update({ used_at: new Date().toISOString() })
       .eq("id", oauthState.id);
 
-    return res.redirect(doneRedirectUrl(oauthState.redirect_path, "ok", "TikTok connected"));
+    return res.redirect(doneRedirectUrl(req, oauthState.redirect_path, "ok", "TikTok connected"));
   } catch (err) {
-    return res.redirect(doneRedirectUrl(oauthState.redirect_path, "error", err.message));
+    return res.redirect(doneRedirectUrl(req, oauthState.redirect_path, "error", err.message));
   }
 }

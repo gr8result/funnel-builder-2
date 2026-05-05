@@ -11,21 +11,43 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   try {
+    const now = new Date().toISOString();
     const { data: jobs, error: jobError } = await supabase
       .from('social_queue')
       .select('*')
       .eq('status', 'queued')
+      .lte('scheduled_for', now)
       .limit(10);
 
     if (jobError) throw jobError;
 
     for (const job of jobs) {
       try {
+        const { data: claimedJobs } = await supabase
+          .from('social_queue')
+          .update({ status: 'processing' })
+          .eq('id', job.id)
+          .eq('status', 'queued')
+          .select('id');
+
+        if (!claimedJobs?.length) continue;
+
         const { data: post } = await supabase
           .from('social_posts')
           .select('*')
           .eq('id', job.post_id)
           .single();
+
+        if (String(post?.status || '').toLowerCase() === 'published') {
+          await supabase
+            .from('social_queue')
+            .update({
+              status: 'completed',
+              processed_at: new Date().toISOString()
+            })
+            .eq('id', job.id);
+          continue;
+        }
 
         const { data: accounts } = await supabase
           .from('social_accounts')
@@ -44,7 +66,8 @@ export default async function handler(req, res) {
             result = await postToFacebook({
               pageId: acc.account_id,
               accessToken: acc.access_token,
-              message: post.content
+              message: post.content,
+              imageUrl: post.media_url || null
             });
           }
 
@@ -62,11 +85,21 @@ export default async function handler(req, res) {
           await supabase
             .from('social_posts')
             .update({
-              platform_post_id: result.id,
+              platform_post_id: result?.post_id || result?.id || null,
               status: 'published',
               published_at: new Date().toISOString()
             })
             .eq('id', post.id);
+
+          await supabase
+            .from('social_schedule')
+            .update({
+              status: 'processed',
+              processed_at: new Date().toISOString()
+            })
+            .eq('post_id', post.id)
+            .eq('user_id', job.user_id)
+            .in('status', ['scheduled', 'queued']);
 
           published = true;
         }
@@ -88,9 +121,17 @@ export default async function handler(req, res) {
           .from('social_queue')
           .update({
             status: 'failed',
+            processed_at: new Date().toISOString(),
             last_error: err.message
           })
           .eq('id', job.id);
+
+        await supabase
+          .from('social_schedule')
+          .update({ status: 'scheduled', processed_at: null })
+          .eq('post_id', job.post_id)
+          .eq('user_id', job.user_id)
+          .in('status', ['scheduled', 'queued']);
       }
     }
 

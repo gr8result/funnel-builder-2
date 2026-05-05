@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabaseClient";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://yourdomain.com";
 const CALENDAR_COLOR_STORAGE_KEY = "calendar.booking.savedColors";
+const BOOKING_CONFIG_SYSTEM_PREFIX = "__system";
 
 const S = {
   page:        { minHeight: "100vh", background: "#0c121a", color: "#fff", padding: "0 20px 60px", fontFamily: "system-ui,sans-serif" },
@@ -50,6 +51,32 @@ function normalizeHexColor(input) {
   }
   const full = value.match(/^#([0-9a-f]{6})$/i);
   return full ? `#${full[1]}` : "";
+}
+
+function bookingConfigPath(uid) {
+  return `${BOOKING_CONFIG_SYSTEM_PREFIX}/${uid}/booking-page-config.json`;
+}
+
+function legacyBookingConfigPath(uid) {
+  return `${uid}/booking-page-config.json`;
+}
+
+async function fetchJsonConfig(path) {
+  try {
+    const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(path);
+    const res = await fetch(`${publicUrl}?t=${Date.now()}`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function removeLegacyBookingConfig(uid) {
+  try {
+    await supabase.storage.from("assets").remove([legacyBookingConfigPath(uid)]);
+  } catch {
+    // Ignore cleanup failures. The media library also hides known system files.
+  }
 }
 
 export default function BookingPageEditor() {
@@ -115,16 +142,23 @@ export default function BookingPageEditor() {
   }
 
   async function loadConfig(uid) {
-    try {
-      const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(`${uid}/booking-page-config.json`);
-      const res = await fetch(publicUrl + "?t=" + Date.now());
-      return res.ok ? await res.json() : null;
-    } catch { return null; }
+    const hiddenConfig = await fetchJsonConfig(bookingConfigPath(uid));
+    if (hiddenConfig) return hiddenConfig;
+
+    const legacyConfig = await fetchJsonConfig(legacyBookingConfigPath(uid));
+    if (!legacyConfig) return null;
+
+    await writeConfig(uid, legacyConfig);
+    await removeLegacyBookingConfig(uid);
+    return legacyConfig;
   }
 
   async function writeConfig(uid, config) {
     const blob = new Blob([JSON.stringify(config)], { type: "application/json" });
-    const { error } = await supabase.storage.from("assets").upload(`${uid}/booking-page-config.json`, blob, { upsert: true });
+    const { error } = await supabase.storage.from("assets").upload(bookingConfigPath(uid), blob, { upsert: true });
+    if (!error) {
+      await removeLegacyBookingConfig(uid);
+    }
     return !error;
   }
 
@@ -308,8 +342,14 @@ export default function BookingPageEditor() {
                           if (!file) return;
                           setLogoUploading(true);
                           const { data: { session } } = await supabase.auth.getSession();
-                          const path = `${session.user.id}/booking-logo-${Date.now()}`;
-                          const { error: upErr } = await supabase.storage.from("assets").upload(path, file, { upsert: true });
+                          const safeName = (file.name || "booking-logo")
+                            .replace(/[^a-zA-Z0-9._-]/g, "-")
+                            .replace(/-+/g, "-");
+                          const path = `${session.user.id}/booking-logo-${Date.now()}-${safeName}`;
+                          const { error: upErr } = await supabase.storage.from("assets").upload(path, file, {
+                            upsert: true,
+                            contentType: file.type || "application/octet-stream",
+                          });
                           if (!upErr) {
                             const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(path);
                             setLogoUrl(publicUrl);

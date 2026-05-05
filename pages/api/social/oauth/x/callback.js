@@ -8,8 +8,16 @@ function getXRedirectUri() {
   );
 }
 
-function doneRedirectUrl(path, status, message) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function doneRedirectUrl(req, path, status, message) {
+  const site = getRequestOrigin(req);
   const u = new URL(path || "/modules/social_media", site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
@@ -21,11 +29,11 @@ export default async function handler(req, res) {
   const admin = createSupabaseAdmin();
 
   if (error || error_description) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", error_description || error));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", error_description || error));
   }
 
   if (!code || !state) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "Missing OAuth code/state"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "Missing OAuth code/state"));
   }
 
   const { data: oauthState, error: stateErr } = await admin
@@ -38,7 +46,7 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (stateErr || !oauthState) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "OAuth state expired or invalid"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "OAuth state expired or invalid"));
   }
 
   if (!oauthState.code_verifier) {
@@ -123,7 +131,7 @@ export default async function handler(req, res) {
             user_id: oauthState.user_id,
             social_account_id: account.id,
             platform: "x",
-            encrypted_refresh_token: encrypted.ciphertext,
+            encrypted_refresh_token: encrypted.cipherText,
             refresh_token_iv: encrypted.iv,
             refresh_token_tag: encrypted.tag,
             refresh_expires_at: refreshExp,
@@ -141,9 +149,9 @@ export default async function handler(req, res) {
       .update({ used_at: new Date().toISOString() })
       .eq("id", oauthState.id);
 
-    return res.redirect(doneRedirectUrl(oauthState.redirect_path, "ok", `X connected as ${accountName}`));
+    return res.redirect(doneRedirectUrl(req, oauthState.redirect_path, "ok", `X connected as ${accountName}`));
   } catch (err) {
     console.error("[X OAuth callback]", err);
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", err.message || "X connection failed"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", err.message || "X connection failed"));
   }
 }

@@ -69,7 +69,7 @@ function getSelectOptions(key) {
     teamVariant: ["studio-cards", "editorial-split", "spotlight-strip", "minimal-list", "hierarchy-layout"],
     style: ["spotlight-pill", "split-banner", "editorial-outline", "stacked-card"],
     variant: ["split-dark", "centered-light", "minimal-line", "boxed-brand"],
-    stickyMode: ["normal", "sticky", "always"],
+    stickyMode: ["normal", "sticky", "sticky-solid", "sticky-transparent", "always"],
     mobileMenuStyle: ["hamburger", "drawer", "inline"],
     linkHoverEffect: ["fill", "underline", "glow", "lift"],
   };
@@ -82,7 +82,7 @@ function supportsSectionHeight(blockType) {
 }
 
 function supportsFullWidthBackground(blockType) {
-  return [BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE].includes(blockType);
+  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE].includes(blockType);
 }
 
 function supportsCopyRegeneration(blockType) {
@@ -135,7 +135,7 @@ function createTextStackLayer(seed = 0) {
     radius: 16,
     zIndex: seed + 1,
     fontSize: 40,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
     verticalAlign: "center",
     textColor: "#0f172a",
@@ -754,6 +754,7 @@ function NavbarLinksEditor({ links, onChange }) {
               type="checkbox"
               checked={!!item?.highlighted}
               onChange={(e) => updateLink(idx, { highlighted: e.target.checked })}
+              style={styles.checkboxInput}
             />
             Highlight this link
           </label>
@@ -1111,7 +1112,7 @@ function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUpl
                     background: active ? "#2563eb" : undefined,
                     color: active ? "#ffffff" : undefined,
                     border: active ? "1px solid #2563eb" : undefined,
-                    fontWeight: active ? 700 : undefined,
+                    fontWeight: active ? 600 : undefined,
                   }}
                 >
                   {label}
@@ -1309,7 +1310,7 @@ function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
                     background: active ? "#2563eb" : undefined,
                     color: active ? "#ffffff" : undefined,
                     border: active ? "1px solid #2563eb" : undefined,
-                    fontWeight: active ? 700 : undefined,
+                    fontWeight: active ? 600 : undefined,
                   }}
                 >{variantLabels[v]}</button>
               );
@@ -1381,7 +1382,7 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
                     background: active ? "#2563eb" : undefined,
                     color: active ? "#ffffff" : undefined,
                     border: active ? "1px solid #2563eb" : undefined,
-                    fontWeight: active ? 700 : undefined,
+                    fontWeight: active ? 600 : undefined,
                   }}
                 >{variantLabels[v]}</button>
               );
@@ -1520,6 +1521,14 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
           <input type="text" value={String(props.brand || "")} onChange={(e) => update({ brand: e.target.value })} style={styles.propertyInput} placeholder="Your Brand" />
           <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Tagline</label>
           <input type="text" value={String(props.tagline || "")} onChange={(e) => update({ tagline: e.target.value })} style={styles.propertyInput} placeholder="Your tagline." />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Heading</label>
+          <input type="text" value={String(props.contactHeading || "")} onChange={(e) => update({ contactHeading: e.target.value })} style={styles.propertyInput} placeholder="Contact" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Email</label>
+          <input type="text" value={String(props.contactEmail || "")} onChange={(e) => update({ contactEmail: e.target.value })} style={styles.propertyInput} placeholder="hello@yourbrand.com" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Phone</label>
+          <input type="text" value={String(props.contactPhone || "")} onChange={(e) => update({ contactPhone: e.target.value })} style={styles.propertyInput} placeholder="(555) 010-2026" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Address</label>
+          <input type="text" value={String(props.contactAddress || "")} onChange={(e) => update({ contactAddress: e.target.value })} style={styles.propertyInput} placeholder="Your city, state" />
         </div>
 
         {/* Navigation links */}
@@ -1555,7 +1564,7 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
         {/* Newsletter */}
         <div style={styles.sectionCard}>
           <label style={styles.inlineToggle}>
-            <input type="checkbox" checked={props.showNewsletter !== false} onChange={(e) => update({ showNewsletter: e.target.checked })} />
+            <input type="checkbox" checked={props.showNewsletter !== false} onChange={(e) => update({ showNewsletter: e.target.checked })} style={styles.checkboxInput} />
             Show newsletter signup column
           </label>
           {props.showNewsletter !== false ? (
@@ -1564,6 +1573,31 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
               <input type="text" value={String(props.newsletterHeading || "")} onChange={(e) => update({ newsletterHeading: e.target.value })} style={styles.propertyInput} placeholder="Stay Updated" />
               <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
               <input type="text" value={String(props.newsletterSubtitle || "")} onChange={(e) => update({ newsletterSubtitle: e.target.value })} style={styles.propertyInput} placeholder="Get the latest news." />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Signup Destination</label>
+              <input
+                type="text"
+                value={String(props.newsletterActionUrl || "")}
+                onChange={(e) => update({ newsletterActionUrl: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="https://..., /api/subscribe, or hello@example.com"
+              />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Submit Method</label>
+              <select
+                value={String(props.newsletterSubmitMethod || "post")}
+                onChange={(e) => update({ newsletterSubmitMethod: e.target.value })}
+                style={styles.propertyInput}
+              >
+                <option value="post">POST</option>
+                <option value="get">GET</option>
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Fallback Email</label>
+              <input
+                type="text"
+                value={String(props.newsletterFallbackEmail || "")}
+                onChange={(e) => update({ newsletterFallbackEmail: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Defaults to Contact Email if blank"
+              />
               <div style={{ ...styles.colorGrid, marginTop: 10 }}>
                 <CompactColorField label="Button Background" value={props.newsletterButtonColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ newsletterButtonColor: v })} />
                 <CompactColorField label="Button Text" value={props.newsletterButtonTextColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ newsletterButtonTextColor: v })} />
@@ -1618,6 +1652,7 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
               type="checkbox"
               checked={!!props.fullWidthBackground}
               onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+              style={styles.checkboxInput}
             />
             Full width background
           </label>
@@ -1626,6 +1661,7 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
               type="checkbox"
               checked={props.enableParallax !== false}
               onChange={(e) => update({ enableParallax: e.target.checked })}
+              style={styles.checkboxInput}
             />
             Parallax / free-move text
           </label>
@@ -1714,7 +1750,7 @@ function StatsPropertiesPanel({ block, index, onChange }) {
                     background: active ? "#dbeafe" : "#ffffff",
                     borderColor: active ? "#2563eb" : "rgba(148,163,184,0.24)",
                     color: active ? "#0f172a" : "#334155",
-                    fontWeight: active ? 800 : 600,
+                    fontWeight: active ? 600 : 600,
                   }}
                 >
                   {statsStyleLabels[option] || option}
@@ -1813,7 +1849,7 @@ function TeamMembersEditor({ members, onChange, brandAssets, onOpenImageEditor, 
     const fallbackAsset = await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
     const existingImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
     const dedupedImages = existingImages.filter((img) => img?.src && img.src !== fallbackAsset.src && img.name !== fallbackAsset.name);
-    saveWebsiteBuilderAssets({ ...brandAssets, images: [fallbackAsset, ...dedupedImages].slice(0, 12) });
+    saveWebsiteBuilderAssets({ ...brandAssets, images: [fallbackAsset, ...dedupedImages] });
     updateMember(memberIndex, { image: fallbackAsset.src || "", imageAssetId: fallbackAsset.id || "" });
   }
 
@@ -1829,7 +1865,7 @@ function TeamMembersEditor({ members, onChange, brandAssets, onOpenImageEditor, 
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={styles.linkRowTitle}>Member {index + 1}</span>
                 {isHierarchyLayout ? (
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#475569", fontSize: 12, fontWeight: 700 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#475569", fontSize: 16, fontWeight: 600 }}>
                     Row
                     <input
                       type="number"
@@ -1923,7 +1959,7 @@ function TeamPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageE
               <option key={option} value={option}>{teamStyleLabels[option] || option}</option>
             ))}
           </select>
-          {isHierarchyLayout ? <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>Set the row number on each team member card.</p> : null}
+          {isHierarchyLayout ? <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>Set the row number on each team member card.</p> : null}
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Team Members</label>
@@ -2452,6 +2488,7 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
                         type="checkbox"
                         checked={!!plan.highlighted}
                         onChange={(e) => setHighlightedPlan(planIndex, e.target.checked)}
+                        style={styles.checkboxInput}
                       />
                       Highlighted
                     </label>
@@ -2647,6 +2684,7 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
               type="checkbox"
               checked={!!props.faqStartCollapsed}
               onChange={(e) => update({ faqStartCollapsed: e.target.checked })}
+              style={styles.checkboxInput}
             />
             Collapse all items by default
           </label>
@@ -2655,6 +2693,7 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
               type="checkbox"
               checked={!!props.faqAllowMultipleOpen}
               onChange={(e) => update({ faqAllowMultipleOpen: e.target.checked })}
+              style={styles.checkboxInput}
             />
             Allow multiple items open
           </label>
@@ -2794,6 +2833,7 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
                 headline: e.target.checked ? (props.headline || "Add image headline") : props.headline,
                 subheadline: e.target.checked ? (props.subheadline || "Add supporting text") : props.subheadline,
               })}
+              style={styles.checkboxInput}
             />
             Show headline over image
           </label>
@@ -2868,6 +2908,7 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
           type="checkbox"
           checked={!!props.showLogo}
           onChange={(e) => update({ showLogo: e.target.checked })}
+          style={styles.checkboxInput}
         />
         Show logo in navbar
       </label>
@@ -3290,9 +3331,9 @@ const ANIMATION_DELAY_OPTIONS = [0, 0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.2];
 const ANIMATION_SPEED_OPTIONS = [0.5, 0.7, 0.8, 1, 1.2, 1.5];
 const BLOCK_TYPE_STYLE_PRESETS = {
   P: { fontSize: "18px", fontWeight: "400", lineHeight: "1.7" },
-  H1: { fontSize: "48px", fontWeight: "800", lineHeight: "1.08" },
-  H2: { fontSize: "36px", fontWeight: "800", lineHeight: "1.14" },
-  H3: { fontSize: "28px", fontWeight: "700", lineHeight: "1.2" },
+  H1: { fontSize: "48px", fontWeight: "600", lineHeight: "1.08" },
+  H2: { fontSize: "36px", fontWeight: "600", lineHeight: "1.14" },
+  H3: { fontSize: "28px", fontWeight: "600", lineHeight: "1.2" },
 };
 
 function getTextAnimationBinding(block, editable) {
@@ -3726,13 +3767,30 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
   const primaryColor = pickGlobalStyleValue(blocks, ["buttonColor", "activeLinkBackgroundColor"], "#f59e0b");
   const headingColor = pickGlobalStyleValue(blocks, ["headlineColor"], "#ffffff");
   const bodyColor = pickGlobalStyleValue(blocks, ["textColor"], "#e2e8f0");
+  const pageBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const sectionBackground = pickGlobalStyleValue(blocks, ["backgroundColor"], "#0f172a");
   const buttonTextColor = pickGlobalStyleValue(blocks, ["buttonTextColor"], "#ffffff");
   const cardBackgroundColor = pickGlobalStyleValue(blocks, ["cardBackgroundColor", "itemBackgroundColor"], "#f8fafc");
   const buttonRadius = Number(pickGlobalStyleValue(blocks, ["buttonRadius"], 999));
-  const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1100));
+  const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500));
   const layoutMode = blocks.some((block) => !!block?.props?.fullWidthBackground) ? "full" : "contained";
   const textAlign = pickGlobalStyleValue(blocks, ["headlineAlignment", "alignment"], "left");
+  const colorSchemes = [
+    { id: "coastal", label: "Coastal Blue", patch: { primaryColor: "#0ea5e9", headingColor: "#082f49", bodyColor: "#164e63", pageBackground: "linear-gradient(180deg,#f0f9ff 0%,#dbeafe 48%,#eff6ff 100%)", cardBackgroundColor: "rgba(255,255,255,0.82)", buttonTextColor: "#ffffff" } },
+    { id: "graphite", label: "Graphite Gold", patch: { primaryColor: "#d4a017", headingColor: "#f8fafc", bodyColor: "#cbd5e1", pageBackground: "linear-gradient(180deg,#020617 0%,#111827 52%,#1f2937 100%)", cardBackgroundColor: "rgba(15,23,42,0.76)", buttonTextColor: "#111827" } },
+    { id: "forest", label: "Forest Sage", patch: { primaryColor: "#2f855a", headingColor: "#16311f", bodyColor: "#355244", pageBackground: "linear-gradient(180deg,#f0fdf4 0%,#dcfce7 46%,#bbf7d0 100%)", cardBackgroundColor: "rgba(255,255,255,0.72)", buttonTextColor: "#ffffff" } },
+    { id: "terracotta", label: "Terracotta Sand", patch: { primaryColor: "#c2410c", headingColor: "#431407", bodyColor: "#7c5a4a", pageBackground: "linear-gradient(180deg,#fff7ed 0%,#fed7aa 55%,#fdba74 100%)", cardBackgroundColor: "rgba(255,247,237,0.78)", buttonTextColor: "#fff7ed" } },
+    { id: "ink", label: "Ink Cyan", patch: { primaryColor: "#06b6d4", headingColor: "#ecfeff", bodyColor: "#bae6fd", pageBackground: "radial-gradient(circle at top,#164e63 0%,#082f49 42%,#020617 100%)", cardBackgroundColor: "rgba(8,47,73,0.72)", buttonTextColor: "#083344" } },
+    { id: "rose", label: "Rose Linen", patch: { primaryColor: "#e11d48", headingColor: "#4c0519", bodyColor: "#881337", pageBackground: "linear-gradient(180deg,#fff1f2 0%,#ffe4e6 52%,#fecdd3 100%)", cardBackgroundColor: "rgba(255,255,255,0.68)", buttonTextColor: "#fff1f2" } },
+  ];
+  const quickThemePresets = [
+    { id: "midnight-editorial", label: "Midnight Editorial", patch: { primaryColor: "#f59e0b", headingColor: "#f8fafc", bodyColor: "#cbd5e1", pageBackground: "linear-gradient(135deg,#09111f,#14253d 58%,#1d4ed8)", cardBackgroundColor: "rgba(15,23,42,0.86)", buttonTextColor: "#0f172a" } },
+    { id: "linen-studio", label: "Linen Studio", patch: { primaryColor: "#9a3412", headingColor: "#2f241b", bodyColor: "#6b5a4c", pageBackground: "linear-gradient(180deg,#fff8ef,#f3e4cf)", cardBackgroundColor: "#fffaf2", buttonTextColor: "#fffaf2" } },
+    { id: "electric-cyan", label: "Electric Cyan", patch: { primaryColor: "#22d3ee", headingColor: "#ecfeff", bodyColor: "#bae6fd", pageBackground: "radial-gradient(circle at top,#164e63 0%,#082f49 45%,#020617 100%)", cardBackgroundColor: "rgba(8,47,73,0.84)", buttonTextColor: "#083344" } },
+    { id: "terracotta-sun", label: "Terracotta Sun", patch: { primaryColor: "#ea580c", headingColor: "#431407", bodyColor: "#7c2d12", pageBackground: "linear-gradient(180deg,#fff7ed,#fed7aa)", cardBackgroundColor: "#ffedd5", buttonTextColor: "#fff7ed" } },
+    { id: "emerald-brand", label: "Emerald Brand", patch: { primaryColor: "#15803d", headingColor: "#052e16", bodyColor: "#14532d", pageBackground: "linear-gradient(180deg,#ecfdf5,#bbf7d0)", cardBackgroundColor: "#dcfce7", buttonTextColor: "#f0fdf4" } },
+    { id: "mono-minimal", label: "Mono Minimal", patch: { primaryColor: "#111827", headingColor: "#0f172a", bodyColor: "#334155", pageBackground: "#e5e7eb", cardBackgroundColor: "#ffffff", buttonTextColor: "#ffffff" } },
+  ];
   const sections = [
     { id: "text", label: "Text Styling" },
     { id: "colors", label: "Color Palette" },
@@ -3790,8 +3848,18 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
             <ColorSelector label="Primary Accent" value={primaryColor} fallback="#f59e0b" onChange={(value) => onApplyGlobal({ primaryColor: value })} />
             <ColorSelector label="Heading Colour" value={headingColor} fallback="#ffffff" onChange={(value) => onApplyGlobal({ headingColor: value })} />
             <ColorSelector label="Body Text Colour" value={bodyColor} fallback="#e2e8f0" onChange={(value) => onApplyGlobal({ bodyColor: value })} />
-            <ColorSelector label="Section Background" value={sectionBackground} fallback="#0f172a" allowTransparent onChange={(value) => onApplyGlobal({ sectionBackground: value })} />
+            <ColorSelector label="Whole Site Background" value={pageBackground} fallback="#ffffff" allowTransparent onChange={(value) => onApplyGlobal({ pageBackground: value })} />
             <ColorSelector label="Button Text Colour" value={buttonTextColor} fallback="#ffffff" onChange={(value) => onApplyGlobal({ buttonTextColor: value })} />
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Standard Colour Schemes</label>
+              <div style={styles.presetGrid}>
+                {colorSchemes.map((scheme) => (
+                  <button key={scheme.id} type="button" style={styles.presetChip} onClick={() => onApplyGlobal(scheme.patch)}>
+                    {scheme.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         ) : null}
 
@@ -3804,7 +3872,7 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
               <option value="contained">Contained</option>
             </select>
             <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <NumberField label="Page Width" value={pageWidth} min={720} max={1600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
+              <NumberField label="Page Width" value={pageWidth} min={720} max={1800} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
               <NumberField label="Button Radius" value={buttonRadius >= 999 ? 32 : buttonRadius} min={0} max={40} onChange={(value) => onApplyGlobal({ buttonRadius: value >= 32 ? 999 : value })} />
             </div>
           </div>
@@ -3812,14 +3880,14 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
 
         {section === "page" ? (
           <>
-            <ColorSelector label="Card Background" value={cardBackgroundColor} fallback="#f8fafc" onChange={(value) => onApplyGlobal({ cardBackgroundColor: value })} />
+            <ColorSelector label="Whole Page Background" value={pageBackground} fallback="#ffffff" allowTransparent onChange={(value) => onApplyGlobal({ pageBackground: value })} />
+            <ColorSelector label="Site Surface" value={cardBackgroundColor} fallback="#f8fafc" onChange={(value) => onApplyGlobal({ cardBackgroundColor: value })} />
             <div style={styles.sectionCard}>
               <label style={styles.propertyLabel}>Quick Theme Presets</label>
               <div style={styles.presetGrid}>
-                <button type="button" style={styles.presetChip} onClick={() => onApplyGlobal({ primaryColor: "#f59e0b", headingColor: "#ffffff", bodyColor: "#e2e8f0", sectionBackground: "#354f52", cardBackgroundColor: "#ffffff" })}>Modern Dark</button>
-                <button type="button" style={styles.presetChip} onClick={() => onApplyGlobal({ primaryColor: "#2563eb", headingColor: "#0f172a", bodyColor: "#334155", sectionBackground: "#ffffff", cardBackgroundColor: "#eff6ff" })}>Clean Light</button>
-                <button type="button" style={styles.presetChip} onClick={() => onApplyGlobal({ primaryColor: "#22c55e", headingColor: "#052e16", bodyColor: "#14532d", sectionBackground: "#f0fdf4", cardBackgroundColor: "#dcfce7" })}>Fresh Green</button>
-                <button type="button" style={styles.presetChip} onClick={() => onApplyGlobal({ primaryColor: "#a855f7", headingColor: "#ffffff", bodyColor: "#ede9fe", sectionBackground: "#312e81", cardBackgroundColor: "#4c1d95" })}>Bold Brand</button>
+                {quickThemePresets.map((preset) => (
+                  <button key={preset.id} type="button" style={styles.presetChip} onClick={() => onApplyGlobal(preset.patch)}>{preset.label}</button>
+                ))}
               </div>
             </div>
           </>
@@ -3937,12 +4005,14 @@ function PageSectionsPanel({ blocks, selectedIndex, onSelect, onMove }) {
   );
 }
 
-const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, replayToken, compact }) {
+const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected }) {
   return renderBlockPreview(block, brandAssets, {
     compact,
+    isSelected: selected,
     onChangeBlock: (nextProps) => onChange(index, nextProps),
     onUploadImage: (key, file) => onUploadImage?.(index, key, file),
     onUploadLayerImage: (layerIndex, file) => onUploadLayerImage?.(index, layerIndex, file),
+    onSelectAsset: (key, asset) => onSelectAsset?.(index, key, asset),
   });
 }, (prev, next) => (
   prev.block === next.block
@@ -3950,14 +4020,17 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.brandAssets === next.brandAssets
   && prev.replayToken === next.replayToken
   && prev.compact === next.compact
+  && prev.selected === next.selected
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, compactPreview }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, compactPreview, pageCanvasWidth }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
   const stickyMode = String(block?.props?.stickyMode || "normal");
   const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
+  const canStretchFullWidth = supportsFullWidthBackground(block?.type);
+  const isFullWidthBlock = !compactPreview && canStretchFullWidth && !!block?.props?.fullWidthBackground;
 
   useEffect(() => {
     const handlePointerMove = (event) => {
@@ -3996,7 +4069,9 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
     <div
       style={{
         ...styles.canvasBlock,
-        ...(isStickyNavBlock ? styles.canvasStickyNavBlock : {}),
+        width: "100%",
+        maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
+        margin: "0 auto",
         ...((block?.type === "columns-2" || block?.type === "columns-3") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? { padding: 0, background: "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px", border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(block?.props?.height || "40").replace("px", "")) || 40, boxShadow: "none" } : {}),
         ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
@@ -4131,16 +4206,18 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         <div style={styles.blockInfoPill}>
           <span style={styles.blockIcon}>{def?.icon || "📦"}</span>
         </div>
-        <div style={{ ...styles.blockPreview, ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}) }}>
+        <div style={{ ...styles.blockPreview, ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
           <CanvasBlockPreview
             key={`${block.id || index}-${animationReplayToken || 0}`}
             block={block}
             index={index}
             brandAssets={brandAssets}
             compact={compactPreview}
+            selected={selected}
             onChange={onChange}
             onUploadImage={onUploadImage}
             onUploadLayerImage={onUploadLayerImage}
+            onSelectAsset={onSelectAsset}
             replayToken={animationReplayToken}
           />
         </div>
@@ -4183,6 +4260,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
 
   return (
     <div
+      data-global-block-preview="true"
       style={{
         ...styles.globalBlockPreviewWrap,
         ...(selected ? styles.globalBlockPreviewWrapSelected : {}),
@@ -4545,6 +4623,50 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
   const update = (patch) => onChange(index, { ...props, ...patch });
 
+  function swapColumns() {
+    if (block?.type !== BlockTypes.COLUMNS_2) return;
+    onChange(index, {
+      ...props,
+      ratio: props.ratio === "60-40" ? "40-60" : props.ratio === "40-60" ? "60-40" : props.ratio,
+      leftTitle: props.rightTitle,
+      leftContent: props.rightContent,
+      leftImage: props.rightImage,
+      leftImageAssetId: props.rightImageAssetId,
+      leftImageHeight: props.rightImageHeight,
+      leftImageWidth: props.rightImageWidth,
+      leftColumnContentType: props.rightColumnContentType,
+      leftColumnNewsletterHeading: props.rightColumnNewsletterHeading,
+      leftColumnNewsletterSubtitle: props.rightColumnNewsletterSubtitle,
+      leftColumnNewsletterFields: props.rightColumnNewsletterFields,
+      leftColumnNewsletterButtonText: props.rightColumnNewsletterButtonText,
+      leftColumnNewsletterButtonColor: props.rightColumnNewsletterButtonColor,
+      leftColumnNewsletterButtonTextColor: props.rightColumnNewsletterButtonTextColor,
+      leftColumnNewsletterImage: props.rightColumnNewsletterImage,
+      leftColumnNewsletterImageAssetId: props.rightColumnNewsletterImageAssetId,
+      leftColumnNewsletterImageHeight: props.rightColumnNewsletterImageHeight,
+      leftColumnNewsletterImageWidth: props.rightColumnNewsletterImageWidth,
+      leftColumnWidth: props.rightColumnWidth,
+      rightTitle: props.leftTitle,
+      rightContent: props.leftContent,
+      rightImage: props.leftImage,
+      rightImageAssetId: props.leftImageAssetId,
+      rightImageHeight: props.leftImageHeight,
+      rightImageWidth: props.leftImageWidth,
+      rightColumnContentType: props.leftColumnContentType,
+      rightColumnNewsletterHeading: props.leftColumnNewsletterHeading,
+      rightColumnNewsletterSubtitle: props.leftColumnNewsletterSubtitle,
+      rightColumnNewsletterFields: props.leftColumnNewsletterFields,
+      rightColumnNewsletterButtonText: props.leftColumnNewsletterButtonText,
+      rightColumnNewsletterButtonColor: props.leftColumnNewsletterButtonColor,
+      rightColumnNewsletterButtonTextColor: props.leftColumnNewsletterButtonTextColor,
+      rightColumnNewsletterImage: props.leftColumnNewsletterImage,
+      rightColumnNewsletterImageAssetId: props.leftColumnNewsletterImageAssetId,
+      rightColumnNewsletterImageHeight: props.leftColumnNewsletterImageHeight,
+      rightColumnNewsletterImageWidth: props.leftColumnNewsletterImageWidth,
+      rightColumnWidth: props.leftColumnWidth,
+    });
+  }
+
   async function applyUploadedAsset(fieldKey, file) {
     const asset = await Promise.resolve(onUploadImage?.(index, fieldKey, file));
     if (!asset?.src) return;
@@ -4574,6 +4696,9 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
           <label style={styles.propertyLabel}>Section Layout</label>
           <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Section Heading (leave blank to hide)</label>
           <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="Leave blank for no heading" />
+          {block.type === BlockTypes.COLUMNS_2 ? (
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={swapColumns}>Swap Left / Right Columns</button>
+          ) : null}
           <div style={{ ...styles.colorGrid, marginTop: 8 }}>
             {block.type === BlockTypes.COLUMNS_2 ? (
               <div style={styles.propertyField}>
@@ -4806,7 +4931,7 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                       </button>
                     ))}
                     {imageValue ? (
-                      <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }} onClick={() => update({ [column.imageKey]: "" })}>
+                      <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }} onClick={() => update({ [column.imageKey]: "", [`${column.imageKey}AssetId`]: undefined })}>
                         Remove Image
                       </button>
                     ) : null}
@@ -4961,7 +5086,7 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
                     background: active ? "#2563eb" : undefined,
                     color: active ? "#ffffff" : undefined,
                     border: active ? "1px solid #2563eb" : undefined,
-                    fontWeight: active ? 700 : undefined,
+                    fontWeight: active ? 600 : undefined,
                   }}
                 >{template.label}</button>
               );
@@ -5085,7 +5210,7 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
                   </select>
                 </div>
                 <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
-                  <input type="checkbox" checked={field.required !== false} onChange={(e) => updateField(fieldIndex, { required: e.target.checked })} />
+                  <input type="checkbox" checked={field.required !== false} onChange={(e) => updateField(fieldIndex, { required: e.target.checked })} style={styles.checkboxInput} />
                   Required field
                 </label>
               </div>
@@ -5423,6 +5548,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 type="checkbox"
                 checked={!!block?.props?.fullWidthBackground}
                 onChange={(e) => onChange(index, { ...block.props, fullWidthBackground: e.target.checked })}
+                style={styles.checkboxInput}
               />
               Full width background
             </label>
@@ -5441,13 +5567,93 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     ...block.props,
                     enableParallax: nextEnabled,
                     ...(nextEnabled ? {
-                      backgroundImage: block?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/e2e8f0?text=Parallax+Section",
+                      backgroundImage: block?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/1e293b?text=%20",
                     } : {}),
                   });
                 }}
+                style={styles.checkboxInput}
               />
               Enable parallax and free-move text
             </label>
+          </div>
+        ) : null}
+        {isHero ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>{block.type === BlockTypes.PARALLAX ? "Section Background Image" : "Hero Background Image"}</label>
+            <p style={styles.aiHint}>Use an actual hero image, not just the draggable overlay.</p>
+            <div style={styles.assetPicker}>
+              <label style={styles.assetUploadCta}>
+                Upload Background
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={styles.hiddenInput}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    onChange(index, { ...block.props, backgroundStyle: "image" });
+                    onUploadImage(index, "backgroundImage", file);
+                  }}
+                />
+              </label>
+              {savedImages.slice(0, 6).map((image) => (
+                <button
+                  key={`hero-bg-${image.id}`}
+                  type="button"
+                  style={styles.assetThumbBtn}
+                  onClick={() => {
+                    const nextProps = applyAssetToProps(block.props || {}, "backgroundImage", image);
+                    onChange(index, { ...nextProps, backgroundStyle: "image", backgroundImage: image.src || "" });
+                    onSelectAsset(index, "backgroundImage", image);
+                  }}
+                >
+                  <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+                </button>
+              ))}
+              {block?.props?.backgroundImage ? (
+                <button
+                  type="button"
+                  style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                  onClick={() => onChange(index, { ...block.props, backgroundImage: "", backgroundImageAssetId: undefined, backgroundStyle: "gradient" })}
+                >
+                  Remove Background
+                </button>
+              ) : null}
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Mode</label>
+            <select
+              value={String(block?.props?.backgroundStyle || "gradient")}
+              onChange={(e) => onChange(index, { ...block.props, backgroundStyle: e.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="gradient">Gradient</option>
+              <option value="solid">Solid</option>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
+            <select
+              value={String(block?.props?.backgroundPosition || "center center")}
+              onChange={(e) => onChange(index, { ...block.props, backgroundPosition: e.target.value, backgroundStyle: block?.props?.backgroundStyle || "image" })}
+              style={styles.propertyInput}
+            >
+              <option value="top center">Top</option>
+              <option value="center center">Middle</option>
+              <option value="bottom center">Bottom</option>
+              <option value="center left">Left</option>
+              <option value="center right">Right</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Size</label>
+            <select
+              value={String(block?.props?.backgroundSize || "cover")}
+              onChange={(e) => onChange(index, { ...block.props, backgroundSize: e.target.value, backgroundStyle: block?.props?.backgroundStyle || "image" })}
+              style={styles.propertyInput}
+            >
+              <option value="cover">Cover</option>
+              <option value="contain">Contain</option>
+              <option value="auto">Auto</option>
+            </select>
           </div>
         ) : null}
         {supportsCopyRegeneration(block.type) ? (
@@ -5538,7 +5744,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   style={styles.assetChip}
                   onClick={() => onChange(index, {
                     ...withHeroOverlayDefaults(block.props || {}),
-                    floatingImage: "https://placehold.co/640x640/f8fafc/0f172a?text=Overlay+Image",
+                    floatingImage: "https://placehold.co/640x640/e2e8f0/475569?text=%20",
                   })}
                 >
                   Add Placeholder
@@ -5581,7 +5787,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         ) : null}
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "contentBackground"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           if (block.type === BlockTypes.CTA_BUTTON && key === "link") {
             return (
@@ -5631,7 +5837,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   onChange={(e) =>
                     onChange(index, { ...block.props, [key]: e.target.checked })
                   }
-                  style={styles.propertyInput}
+                  style={styles.checkboxInput}
                 />
               ) : typeof value === "number" ? (
                 <input
@@ -6048,6 +6254,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const newBlock = createNewBlock(newBlockType);
       const updated = [...blocks];
       updated.splice(safeIndex, 0, newBlock);
+      latestBlocksRef.current = updated;
       setBlocks(updated);
       selectCanvasBlock(safeIndex);
       return;
@@ -6089,6 +6296,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handleDelete = (index) => {
     const updated = blocks.filter((_, i) => i !== index);
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     setSelectedIndex(null);
     setSelectedGlobalRole(null);
@@ -6097,6 +6305,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const selectCanvasBlock = (index) => {
     setSelectedGlobalRole(null);
     setSelectedIndex(index);
+  };
+
+  const clearCanvasSelection = () => {
+    setSelectedIndex(null);
+    setSelectedGlobalRole(null);
+    setHoveredIndex(null);
   };
 
   const selectGlobalBlock = (role) => {
@@ -6113,6 +6327,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       id: Date.now(),
     };
     const updated = [...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)];
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(index + 1);
   };
@@ -6123,6 +6338,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.splice(nextIndex, 0, moved);
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(nextIndex);
   };
@@ -6132,6 +6348,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.unshift(moved);
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(0);
   };
@@ -6159,13 +6376,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (!target) return null;
 
     const nextProps = applyAssetToProps(target.props || {}, key, asset);
-    nextProps[key] = String(asset.src || "").startsWith("data:") ? "" : asset.src;
+    nextProps[key] = asset.src || "";
 
     updated[index] = {
       ...target,
       props: nextProps,
     };
 
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     return updated;
   };
@@ -6182,7 +6400,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (!block) return;
 
     const nextProps = applyAssetToProps(block.props || {}, key, asset);
-    nextProps[key] = String(asset.src || "").startsWith("data:") ? "" : asset.src;
+    nextProps[key] = asset.src || "";
     onUpdateGlobalBlock?.(role, {
       ...block,
       props: nextProps,
@@ -6321,17 +6539,17 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         enableParallax: nextEnabled,
         ...(nextEnabled ? {
           backgroundStyle: selectedBlock?.props?.backgroundStyle || "image",
-          backgroundImage: selectedBlock?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/e2e8f0?text=Parallax+Section",
+          backgroundImage: selectedBlock?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/1e293b?text=%20",
         } : {}),
       });
       return;
     }
 
-    insertPresetBlock(BlockTypes.HERO, {
+    insertPresetBlock(BlockTypes.PARALLAX, {
       headline: "Parallax Section",
       subheadline: "Add a moving background section and customize it from the toolbar.",
       backgroundStyle: "image",
-      backgroundImage: "https://placehold.co/1600x900/0f172a/e2e8f0?text=Parallax+Section",
+      backgroundImage: "https://placehold.co/1600x900/0f172a/1e293b?text=%20",
       enableParallax: true,
       minHeight: "480px",
     });
@@ -6344,11 +6562,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const insertAt = typeof selectedIndex === "number" ? selectedIndex + 1 : blocks.length;
     const updated = [...blocks];
     updated.splice(insertAt, 0, newBlock);
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     setSelectedIndex(insertAt);
   };
 
   const previewWidth = previewMode === "mobile" ? 430 : previewMode === "tablet" ? 920 : "100%";
+  const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
+  const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const canvasBlockEntries = useMemo(() => {
     const hasGlobalNav = !!project?.globalNavBlock;
     const hasGlobalFooter = !!project?.globalFooterBlock;
@@ -6366,13 +6587,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setBlocks((prev) => prev.map((block) => {
       const props = { ...(block?.props || {}) };
 
+      if (Object.prototype.hasOwnProperty.call(patch, "pageBackground")) {
+        props.pageBackground = String(patch.pageBackground || "");
+      }
+
       if (patch.headingFontFamily) {
         props.headlineFontFamily = patch.headingFontFamily;
         props.headingFontFamily = patch.headingFontFamily;
       }
 
       if (patch.textAlign) {
-        props.alignment = patch.textAlign;
         props.headlineAlignment = patch.textAlign;
       }
 
@@ -6654,19 +6878,26 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handlePreviewPage = async () => {
     if (!project?.id) return;
+    const previewWindow = window.open("about:blank", "_blank");
+    if (!previewWindow) {
+      showSavePopup("Enable popups to open the preview in a new tab", "error");
+      return;
+    }
+    previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
     const saved = await Promise.resolve(onSave?.(committedBlocks));
     if (!saved) {
+      previewWindow.close();
       showSavePopup("Could not save before preview", "error");
       return;
     }
     const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
     const pageSlug = pageName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "home";
-    const previewUrl = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageSlug)}`;
-    const previewWindow = window.open(previewUrl, "_blank", "noopener,noreferrer");
-    if (!previewWindow) {
-      window.location.assign(previewUrl);
-    }
+    const previewUrl = new URL(
+      `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageSlug)}&viewport=${encodeURIComponent(previewMode)}`,
+      window.location.origin,
+    ).toString();
+    previewWindow.location.replace(previewUrl);
   };
 
   const restoreSavedSelection = () => {
@@ -6962,7 +7193,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       if (hasTextSelection) {
         try { document.execCommand("bold", false, null); } catch {}
       } else {
-        applyStyleToActiveEditable({ fontWeight: editable.style.fontWeight === "700" ? "400" : "700" });
+        applyStyleToActiveEditable({ fontWeight: editable.style.fontWeight === "600" ? "400" : "600" });
       }
       finishTextCommand();
       return;
@@ -7244,8 +7475,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           color: "#ffffff",
           border: `1px solid ${saveNotice.tone === "error" ? "#ef4444" : saveNotice.tone === "info" ? "#38bdf8" : "#22c55e"}`,
           boxShadow: "0 14px 28px rgba(15,23,42,0.28)",
-          fontSize: 13,
-          fontWeight: 800,
+          fontSize: 16,
+          fontWeight: 600,
         }}>
           {saveNotice.message}
         </div>
@@ -7325,6 +7556,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           style={{
             ...styles.canvas,
             ...(showCanvasGrid ? styles.canvasGridBg : {}),
+            background: pageCanvasBackground,
+          }}
+          onPointerDown={(event) => {
+            if (event.target?.closest?.("[data-canvas-block-index], [data-global-block-preview='true']")) return;
+            clearCanvasSelection();
           }}
           onDragOver={handleCanvasDragOver}
           onDrop={handleCanvasDrop}
@@ -7334,7 +7570,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           }}
         >
           <div style={styles.canvasLabel}>Drag widgets here • {previewMode}</div>
-          <div style={{ ...styles.blocksList, width: previewWidth, maxWidth: "100%", margin: "0 auto" }}>
+          <div style={{ ...styles.blocksList, width: previewMode === "desktop" ? "100%" : previewWidth, maxWidth: "100%", margin: "0 auto" }}>
             {project?.globalNavBlock ? (
               <GlobalBlockPreview
                 label="🌐 Global Navigation"
@@ -7372,6 +7608,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                     <CanvasBlock
                       block={block}
                       index={blockIndex}
+                      pageCanvasWidth={pageCanvasWidth}
                       brandAssets={brandAssets}
                       compactPreview={previewMode === "mobile"}
                       animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
@@ -7389,6 +7626,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       onResizeHeight={handleResizeBlockHeight}
                       onUploadImage={handleCanvasImageUpload}
                       onUploadLayerImage={handleLayerImageUpload}
+                      onSelectAsset={handleCanvasAssetSelect}
                       onBlockDragOver={handleBlockDragOver}
                       onBlockDrop={handleBlockDrop}
                       onSaveAsGlobal={onSaveAsGlobal}
@@ -7480,12 +7718,16 @@ const styles = {
   },
   keyframesNote: {},
   header: {
+    position: "sticky",
+    top: 0,
+    zIndex: 40,
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: "16px 20px",
     background: "linear-gradient(135deg,#153052,#10243e)",
     borderBottom: "1px solid #2c3f62",
+    boxShadow: "0 12px 28px rgba(2,6,23,0.28)",
   },
   headerTitle: {
     margin: 0,
@@ -7504,7 +7746,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.18)",
     borderRadius: 8,
     padding: "10px 16px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     boxShadow: "0 10px 22px rgba(59,130,246,0.28)",
@@ -7515,7 +7757,7 @@ const styles = {
     border: "none",
     borderRadius: 8,
     padding: "10px 16px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -7556,7 +7798,7 @@ const styles = {
     color: "#ffffff",
     borderRadius: 10,
     padding: "10px 14px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -7564,7 +7806,7 @@ const styles = {
   },
   textToolbarSubtitle: {
     color: "#33536f",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 500,
     cursor: "move",
     userSelect: "none",
@@ -7593,7 +7835,7 @@ const styles = {
     color: "#16324f",
     borderRadius: 10,
     padding: "10px 14px",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 500,
     cursor: "pointer",
     minHeight: 44,
@@ -7605,7 +7847,7 @@ const styles = {
     color: "#0f2f4d",
     borderRadius: 10,
     padding: "10px 12px",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 500,
     cursor: "pointer",
     minHeight: 42,
@@ -7618,7 +7860,7 @@ const styles = {
     color: "#0f2f4d",
     borderRadius: 10,
     padding: "9px 12px",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 500,
     cursor: "pointer",
     minHeight: 38,
@@ -7649,8 +7891,8 @@ const styles = {
     color: "#5b4100",
     borderRadius: 10,
     padding: "9px 12px",
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
     textAlign: "center",
   },
@@ -7660,8 +7902,8 @@ const styles = {
     color: "#5b4100",
     borderRadius: 10,
     padding: "8px 0",
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
     minWidth: 0,
   },
@@ -7795,7 +8037,7 @@ const styles = {
     color: "#cde5ff",
     borderRadius: 999,
     padding: "8px 12px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -7810,7 +8052,7 @@ const styles = {
     color: "#eff6ff",
     borderRadius: 8,
     padding: "9px 12px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     lineHeight: 1.2,
     cursor: "pointer",
@@ -7850,13 +8092,13 @@ const styles = {
   libraryTitle: {
     margin: 0,
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 4,
     color: "#7dd3fc",
   },
   librarySubtitle: {
     margin: 0,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     color: "#bfd4ea",
     marginBottom: 12,
@@ -7871,7 +8113,7 @@ const styles = {
   },
   categoryTitle: {
     margin: 0,
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     textTransform: "uppercase",
     color: "#64748b",
@@ -7889,7 +8131,7 @@ const styles = {
     color: "#f8fbff",
     borderRadius: 999,
     padding: "7px 11px",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     lineHeight: 1.15,
     cursor: "pointer",
@@ -7961,7 +8203,7 @@ const styles = {
     textAlign: "center",
     padding: 40,
     color: "#64748b",
-    fontSize: 14,
+    fontSize: 16,
   },
   canvasEndSpacer: {
     height: "42vh",
@@ -7976,7 +8218,7 @@ const styles = {
     border: "1px solid #2563eb",
     borderRadius: 8,
     color: "#7dd3fc",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     padding: "7px 14px",
     margin: "6px 0",
@@ -8018,11 +8260,6 @@ const styles = {
     position: "relative",
     boxShadow: "0 14px 28px rgba(15,23,42,0.08)",
   },
-  canvasStickyNavBlock: {
-    position: "sticky",
-    top: 0,
-    zIndex: 14,
-  },
   blockActionBar: {
     position: "absolute",
     left: 14,
@@ -8049,8 +8286,8 @@ const styles = {
     background: "rgba(15,23,42,0.86)",
     border: "1px solid rgba(148,163,184,0.28)",
     color: "#f8fafc",
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     letterSpacing: "0.05em",
     textTransform: "uppercase",
     backdropFilter: "blur(10px)",
@@ -8070,8 +8307,8 @@ const styles = {
     background: "rgba(255,255,255,0.96)",
     border: "1px solid rgba(148,163,184,0.32)",
     color: "#0f172a",
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
     boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
   },
@@ -8085,7 +8322,7 @@ const styles = {
     background: "rgba(255,255,255,0.96)",
     border: "1px solid rgba(148,163,184,0.32)",
     color: "#0f172a",
-    fontSize: 13,
+    fontSize: 16,
     cursor: "pointer",
     boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
   },
@@ -8125,8 +8362,8 @@ const styles = {
     padding: "10px 18px",
     minWidth: 124,
     minHeight: 40,
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
     cursor: "ns-resize",
@@ -8139,7 +8376,7 @@ const styles = {
     borderRadius: 6,
     width: 24,
     height: 24,
-    fontSize: 12,
+    fontSize: 16,
     lineHeight: 1,
     cursor: "grab",
     display: "inline-grid",
@@ -8178,7 +8415,7 @@ const styles = {
   miniBtn: {
     background: "none",
     border: "none",
-    fontSize: 14,
+    fontSize: 16,
     cursor: "pointer",
     padding: 4,
     opacity: 0.7,
@@ -8192,6 +8429,10 @@ const styles = {
     maxWidth: "100%",
     overflowX: "auto",
     paddingTop: 42,
+  },
+  blockPreviewFullWidth: {
+    maxWidth: "none",
+    overflowX: "visible",
   },
   blockPreviewStickyNav: {
     paddingTop: 0,
@@ -8231,12 +8472,12 @@ const styles = {
   },
   animationPopoverTitle: {
     color: "#0f172a",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 600,
   },
   animationPopoverSubtitle: {
     color: "#64748b",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 500,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
@@ -8247,7 +8488,7 @@ const styles = {
     color: "#ffffff",
     borderRadius: 10,
     padding: "10px 14px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -8279,7 +8520,7 @@ const styles = {
     color: "#f8fbff",
     borderRadius: 10,
     padding: "10px 12px",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     textAlign: "center",
@@ -8300,7 +8541,7 @@ const styles = {
   },
   animationMiniLabel: {
     display: "block",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     color: "#244868",
     textTransform: "uppercase",
@@ -8317,7 +8558,7 @@ const styles = {
     color: "#f8fbff",
     borderRadius: 10,
     padding: "9px 10px",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     textAlign: "center",
@@ -8364,7 +8605,7 @@ const styles = {
   propertiesTitle: {
     margin: 0,
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 12,
     color: "#7dd3fc",
   },
@@ -8407,6 +8648,20 @@ const styles = {
     color: "#dbeafe",
     minHeight: 24,
   },
+  checkboxInput: {
+    width: 18,
+    height: 18,
+    margin: 0,
+    flexShrink: 0,
+    cursor: "pointer",
+    appearance: "auto",
+    WebkitAppearance: "checkbox",
+    accentColor: "#38bdf8",
+    colorScheme: "dark",
+    backgroundColor: "#0f172a",
+    border: "1px solid rgba(148,163,184,0.55)",
+    borderRadius: 4,
+  },
   propertyLabel: {
     fontSize: 16,
     fontWeight: 600,
@@ -8432,7 +8687,7 @@ const styles = {
     borderRadius: 10,
     padding: "9px 10px",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
   },
@@ -8499,12 +8754,12 @@ const styles = {
     minWidth: 28,
     minHeight: 24,
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   linkRowTitle: {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#dbeafe",
     minWidth: 0,
     overflowWrap: "anywhere",
@@ -8523,7 +8778,7 @@ const styles = {
   },
   subLinkTitle: {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#93c5fd",
   },
   linkRowDelete: {
@@ -8533,7 +8788,7 @@ const styles = {
     borderRadius: 999,
     padding: "4px 8px",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
     minWidth: 24,
@@ -8548,7 +8803,7 @@ const styles = {
     padding: 0,
     fontSize: 18,
     lineHeight: 1,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -8562,7 +8817,7 @@ const styles = {
     borderRadius: 10,
     padding: "10px 12px",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
   },
@@ -8573,7 +8828,7 @@ const styles = {
     borderRadius: 10,
     padding: "10px 12px",
     fontSize: 16,
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
   },
@@ -8607,7 +8862,7 @@ const styles = {
   },
   compactColorLabel: {
     fontSize: 11,
-    fontWeight: 700,
+    fontWeight: 600,
     textTransform: "uppercase",
     color: "#9db3c2",
     letterSpacing: 0.4,
@@ -8642,7 +8897,7 @@ const styles = {
   },
   colorLabel: {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#94a3b8",
   },
   colorInput: {
@@ -8681,7 +8936,7 @@ const styles = {
     borderRadius: 999,
     padding: "6px 10px",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
     minWidth: 24,
@@ -8692,7 +8947,7 @@ const styles = {
     borderRadius: 999,
     padding: "6px 10px",
     fontSize: 16,
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -8710,7 +8965,8 @@ const styles = {
     borderRadius: 10,
     overflow: "hidden",
     border: "1px solid #2b3650",
-    background: "#0d1522",
+    background: "linear-gradient(45deg, rgba(148,163,184,0.16) 25%, transparent 25%, transparent 50%, rgba(148,163,184,0.16) 50%, rgba(148,163,184,0.16) 75%, transparent 75%, transparent), #0d1522",
+    backgroundSize: "12px 12px",
     cursor: "pointer",
   },
   assetThumbPreview: {

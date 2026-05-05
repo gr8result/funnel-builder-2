@@ -12,6 +12,76 @@ const DEFAULT_POSTS_PER_PLATFORM = 28;
 // platforms you want
 const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'pinterest', 'x', 'tiktok'];
 
+const COMMON_TYPO_REPLACEMENTS = {
+  absolutly: 'absolutely',
+  apporach: 'approach',
+  bale: 'able',
+  becuase: 'because',
+  buisness: 'business',
+  busienss: 'business',
+  comepltion: 'completion',
+  conected: 'connected',
+  designe: 'designed',
+  diferent: 'different',
+  differnt: 'different',
+  dot: 'to',
+  erxorbatant: 'exorbitant',
+  exciteing: 'exciting',
+  ge: 'get',
+  genrated: 'generated',
+  grammer: 'grammar',
+  hte: 'the',
+  int: 'in',
+  looka: 'look',
+  nearign: 'nearing',
+  platfomr: 'platform',
+  platfomrs: 'platforms',
+  realyl: 'really',
+  relaly: 'really',
+  relvenat: 'relevant',
+  scalingg: 'scaling',
+  searcher: 'searches',
+  selct: 'select',
+  sestup: 'setup',
+  spellign: 'spelling',
+  teh: 'the',
+  therg: 'there',
+  thisg: 'thing',
+  tshi: 'this',
+  toe: 'to',
+  tthe: 'the',
+  usefull: 'useful',
+  wanta: 'want',
+  wtih: 'with',
+};
+
+const STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'at', 'be', 'because', 'becomes', 'been', 'being', 'but', 'by',
+  'can', 'for', 'from', 'has', 'have', 'here', 'how', 'i', 'if', 'in', 'into', 'is', 'it',
+  'its', 'just', 'more', 'much', 'new', 'of', 'on', 'one', 'or', 'our', 'so', 'that', 'the',
+  'their', 'them', 'there', 'these', 'they', 'this', 'those', 'to', 'up', 'using', 'we',
+  'what', 'when', 'with', 'without', 'would', 'your'
+]);
+
+const HASHTAG_CATEGORY_RULES = [
+  { match: /(social media|social posts?|instagram|facebook|linkedin|x |twitter|pinterest|tiktok)/i, tags: ['#socialmediamarketing', '#socialmediastrategy', '#contentmarketing'] },
+  { match: /marketing/i, tags: ['#digitalmarketing', '#marketingstrategy'] },
+  { match: /email/i, tags: ['#emailmarketing', '#emailautomation'] },
+  { match: /crm/i, tags: ['#crm', '#customerrelationshipmanagement'] },
+  { match: /automation/i, tags: ['#marketingautomation', '#businessautomation'] },
+  { match: /community/i, tags: ['#communitymarketing', '#customerengagement'] },
+  { match: /sms|text/i, tags: ['#smsmarketing', '#mobilemarketing'] },
+  { match: /website/i, tags: ['#websitedesign', '#websitebuilder'] },
+  { match: /funnel/i, tags: ['#salesfunnels', '#funnelbuilder'] },
+  { match: /affiliate/i, tags: ['#affiliatemarketing', '#partnermarketing'] },
+  { match: /marketplace/i, tags: ['#marketplace', '#digitalplatform'] },
+  { match: /lead/i, tags: ['#leadgeneration', '#leadnurturing'] },
+  { match: /sales/i, tags: ['#salesautomation', '#salesgrowth'] },
+  { match: /small business|business/i, tags: ['#smallbusiness', '#businessgrowth'] },
+  { match: /ai|artificial intelligence/i, tags: ['#aimarketing', '#aiforbusiness'] },
+  { match: /platform|software|system/i, tags: ['#businesssoftware', '#allinoneplatform'] },
+];
+
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
 }
@@ -28,43 +98,83 @@ function parseHashtagLevel(level) {
   return { min: 7, max: 10 };
 }
 
+function repairCommonTypos(text) {
+  let result = String(text || '');
+  Object.entries(COMMON_TYPO_REPLACEMENTS).forEach(([wrong, right]) => {
+    result = result.replace(new RegExp(`\\b${wrong}\\b`, 'gi'), right);
+  });
+  return result;
+}
+
+function cleanSourceText(text) {
+  return repairCommonTypos(String(text || ''))
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;!?])/g, '$1')
+    .trim();
+}
+
+function normaliseKeyword(value) {
+  return cleanSourceText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length >= 4 && !STOP_WORDS.has(word));
+}
+
+function normaliseHashtag(tag) {
+  const bare = String(tag || '').toLowerCase().replace(/^#+/, '').replace(/[^a-z0-9]/g, '');
+  return bare ? `#${bare}` : '';
+}
+
+function isUsefulHashtag(tag) {
+  const bare = String(tag || '').toLowerCase().replace(/^#+/, '');
+  return bare.length >= 4 && !STOP_WORDS.has(bare);
+}
+
 function extractHashtags(text) {
   const matches = String(text || '').match(/#[a-z0-9_]+/gi) || [];
   const deduped = [];
   matches.forEach((tag) => {
-    const lower = tag.toLowerCase();
-    if (!deduped.some((t) => t.toLowerCase() === lower)) deduped.push(tag);
+    const normalized = normaliseHashtag(tag);
+    if (!normalized || !isUsefulHashtag(normalized)) return;
+    if (!deduped.some((t) => t.toLowerCase() === normalized.toLowerCase())) deduped.push(normalized);
   });
   return deduped;
 }
 
 function fallbackHashtagPool(topic) {
-  const topicWords = String(topic || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
+  const cleanedTopic = cleanSourceText(topic);
+  const keywordTags = normaliseKeyword(cleanedTopic)
     .slice(0, 6)
-    .map((w) => `#${w}`);
-  return [
-    ...topicWords,
-    '#socialmedia',
-    '#marketing',
-    '#contentcreator',
-    '#smallbusiness',
-    '#growth',
-    '#brandawareness',
+    .map((word) => normaliseHashtag(word));
+  const categoryTags = HASHTAG_CATEGORY_RULES
+    .filter((rule) => rule.match.test(cleanedTopic))
+    .flatMap((rule) => rule.tags);
+  const pool = [
+    ...categoryTags,
+    ...keywordTags,
     '#digitalmarketing',
-    '#businesstips',
-    '#audiencegrowth',
-    '#onlinebusiness',
-    '#entrepreneur'
+    '#contentmarketing',
+    '#businessgrowth',
+    '#smallbusinessmarketing',
+    '#brandstrategy',
+    '#leadgeneration'
   ];
+
+  const deduped = [];
+  pool.forEach((tag) => {
+    const normalized = normaliseHashtag(tag);
+    if (!normalized || !isUsefulHashtag(normalized)) return;
+    if (!deduped.some((item) => item.toLowerCase() === normalized.toLowerCase())) {
+      deduped.push(normalized);
+    }
+  });
+  return deduped;
 }
 
 function withHashtags(text, topic, hashtagLevel) {
   const { min, max } = parseHashtagLevel(hashtagLevel);
-  const content = String(text || '').trim();
+  const content = cleanSourceText(text);
   const found = extractHashtags(content);
   const pool = fallbackHashtagPool(topic);
 
@@ -101,11 +211,226 @@ function parseAiJson(raw) {
   return [];
 }
 
+function isQuotaError(error) {
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('insufficient_quota') || msg.includes('exceeded your current quota') || msg.includes('billing') || msg.includes('429');
+}
+
+function sentenceCase(value) {
+  const text = cleanSourceText(value);
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function splitSentences(value) {
+  return String(value || '')
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => cleanSourceText(part))
+    .filter(Boolean);
+}
+
+function lowerFirst(value) {
+  const text = cleanSourceText(value);
+  if (!text) return '';
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function topicSubject(topic) {
+  const lowered = cleanSourceText(topic).toLowerCase();
+  if (lowered.includes('platform')) return 'the platform';
+  if (lowered.includes('system')) return 'the system';
+  if (lowered.includes('software')) return 'the software';
+  if (lowered.includes('service')) return 'the service';
+  return 'this solution';
+}
+
+function resolveTopicReference(text, topic) {
+  const cleaned = cleanSourceText(text);
+  if (!cleaned) return '';
+  const subject = topicSubject(topic);
+  return cleaned.replace(/^it\b/i, subject);
+}
+
+function topicTerms(topic) {
+  return normaliseKeyword(topic).slice(0, 8);
+}
+
+function topicLead(topic) {
+  const cleaned = sentenceCase(resolveTopicReference(topic, topic)).replace(/[.!?]+$/g, '');
+  if (!cleaned) return 'We are sharing an update designed to make day-to-day marketing easier for growing businesses.';
+  if (/^(our|we)\b/i.test(cleaned)) return `${cleaned}.`;
+  return `This update focuses on ${lowerFirst(cleaned)}.`;
+}
+
+function benefitSentence(topic, variant = 0) {
+  const lowered = cleanSourceText(topic).toLowerCase();
+  const options = [];
+
+  if (/(marketing|campaign)/i.test(lowered) && /(lead|crm|customer)/i.test(lowered)) {
+    options.push('It is built to bring your marketing, leads, and customer follow-up into one clearer workflow so less time is wasted jumping between tools.');
+  }
+  if (/(website|site)/i.test(lowered) && /(funnel|conversion|lead)/i.test(lowered)) {
+    options.push('That makes it easier to connect your website and funnels so visitors can move from first click to enquiry without the usual gaps.');
+  }
+  if (/(automation|automate|system|platform|software)/i.test(lowered)) {
+    options.push('The aim is to reduce manual admin, keep the process organised, and give your business a setup that is easier to manage as you grow.');
+  }
+
+  options.push(
+    'The focus is on making the process easier to manage, easier to repeat, and easier for customers to move to the next step.',
+    'For a growing business, that means less friction behind the scenes and a smoother experience for the people dealing with you.'
+  );
+
+  return options[variant % options.length];
+}
+
+function detailSentence(topic, variant = 0) {
+  const idea = resolveTopicReference(topic, topic);
+  const lowered = cleanSourceText(idea).toLowerCase();
+
+  if (/(launch|launching|nearing completion|coming soon|roll out|rollout)/i.test(lowered)) {
+    return 'As the launch gets closer, the most important thing is explaining the value clearly so people immediately understand what problem it solves for them.';
+  }
+  if (/(marketing|lead|website|funnel|automation|crm)/i.test(lowered)) {
+    return `In practical terms, ${lowerFirst(idea)} should help your team work faster while giving customers a clearer and more consistent journey.`;
+  }
+  return 'A strong post should spell out the benefit, show why it matters, and make the next step obvious instead of relying on vague filler lines.';
+}
+
+function engagementSentence(topic, variant = 0, platform) {
+  const p = sanitizePlatform(platform);
+  if (p === 'x' || p === 'pinterest') return '';
+
+  const prompts = [
+    'If this would make your day-to-day work easier, have a look at our website and see what is coming.',
+    'If you want a simpler way to manage this in your business, visit our website and take a closer look.',
+    'If this is the kind of system your business has been missing, visit our website to see how it all fits together.'
+  ];
+
+  return prompts[variant % prompts.length];
+}
+
+function buildTopicDrivenPost(topic, platform, variant = 0) {
+  const sentences = [
+    topicLead(topic),
+    benefitSentence(topic, variant),
+    detailSentence(topic, variant),
+    engagementSentence(topic, variant, platform),
+  ].filter(Boolean);
+
+  if (sanitizePlatform(platform) === 'x') {
+    return sentences.slice(0, 2).join(' ');
+  }
+
+  if (sanitizePlatform(platform) === 'pinterest') {
+    return sentences.slice(0, 3).join(' ');
+  }
+
+  return sentences.join(' ');
+}
+
+const GENERIC_POST_PATTERNS = [
+  /^here is one practical way to improve /i,
+  /^a smarter approach to /i,
+  /^small changes in /i,
+  /^if .* feels messy right now/i,
+  /what part of this would help your business most right now\?/i,
+  /would this make things easier in your business\?/i,
+  /what would you improve first\?/i,
+  /which step would you want to automate first\?/i,
+  /where is the biggest bottleneck for you at the moment\?/i,
+];
+
+function looksGenericPost(text, topic) {
+  const cleaned = cleanSourceText(text);
+  if (!cleaned) return true;
+  if (GENERIC_POST_PATTERNS.some((pattern) => pattern.test(cleaned))) return true;
+
+  const terms = topicTerms(topic);
+  if (!terms.length) return false;
+
+  const lowered = cleaned.toLowerCase();
+  const matchCount = terms.filter((term) => lowered.includes(term)).length;
+  return matchCount === 0;
+}
+
+function websiteCta(platform) {
+  const p = sanitizePlatform(platform);
+  if (p === 'pinterest') return 'Visit our website to learn more and see how it can work for your business.';
+  if (p === 'x') return 'Visit our website to learn more.';
+  return 'Visit our website to learn more about how this can help your business.';
+}
+
+function minimumSentenceCount(platform) {
+  const p = sanitizePlatform(platform);
+  if (p === 'x') return 2;
+  if (p === 'pinterest') return 2;
+  return 3;
+}
+
+function ensureWebsiteCta(text, platform) {
+  const cleaned = cleanSourceText(text);
+  if (!cleaned) return websiteCta(platform);
+  if (/(visit|check out|see|learn more on|have a look at|look at).{0,30}website/i.test(cleaned)) {
+    return cleaned;
+  }
+  return `${cleaned} ${websiteCta(platform)}`.trim();
+}
+
+function expandPostContent(text, topic, platform) {
+  const baseText = looksGenericPost(text, topic) ? buildTopicDrivenPost(topic, platform) : text;
+  const sentences = splitSentences(baseText);
+  const minSentences = minimumSentenceCount(platform);
+  let variant = 0;
+  while (sentences.length < minSentences) {
+    const extra = [benefitSentence(topic, variant), detailSentence(topic, variant), engagementSentence(topic, variant, platform)]
+      .map((part) => cleanSourceText(part))
+      .find((part) => part && !sentences.includes(part));
+    if (!sentences.includes(extra)) sentences.push(extra);
+    variant += 1;
+    if (variant > 6) break;
+  }
+  return ensureWebsiteCta(sentences.join(' '), platform);
+}
+
+function finalizePostContent(text, topic, platform, hashtagLevel) {
+  return withHashtags(expandPostContent(text, topic, platform), topic, hashtagLevel);
+}
+
+function extractTopicIdeas(topic) {
+  const bits = String(topic || '')
+    .split(/\n|\.|;|\||,/)
+    .map((part) => cleanSourceText(part))
+    .filter((part) => part.length > 8);
+
+  const deduped = [];
+  bits.forEach((bit) => {
+    const lower = bit.toLowerCase();
+    if (!deduped.some((item) => item.toLowerCase() === lower)) deduped.push(bit);
+  });
+  return deduped.length ? deduped : [cleanSourceText(topic) || 'your offer'];
+}
+
+function platformTemplate(platform, variant, idea, style, contentLength) {
+  return buildTopicDrivenPost(idea, platform, variant);
+}
+
+function generateFallbackPosts({ topic, platform, count, style, contentLength, hashtagLevel }) {
+  return Array.from({ length: count }, (_, index) => {
+    const variant = index;
+    return {
+      content: withHashtags(platformTemplate(platform, variant, topic, style, contentLength), topic, hashtagLevel),
+      platform: sanitizePlatform(platform),
+      tone: `${style || 'engaging'}-fallback`,
+    };
+  });
+}
+
 function platformRules(platform, contentLength) {
   const p = sanitizePlatform(platform);
 
   const longRule = 'Write 3-5 clear sentences. Make it practical, specific, and helpful.';
-  const shortRule = 'Write 1-2 short, punchy sentences. Keep it high-impact and easy to skim.';
+  const shortRule = 'Write 3 concise but complete sentences. Keep it easy to skim, but still specific and useful.';
   const baseLengthRule = contentLength === 'long' ? longRule : shortRule;
 
   if (p === 'x') {
@@ -122,6 +447,7 @@ function platformRules(platform, contentLength) {
       'Professional tone. No hype.',
       'Use short paragraphs or bullets when helpful.',
       'Use 0-5 hashtags max.',
+      'Write at least 3 well-formed sentences plus a clear CTA to visit our website.',
       baseLengthRule
     ].join('\n');
   }
@@ -131,6 +457,7 @@ function platformRules(platform, contentLength) {
       'Make it visually readable: short lines, strong hook.',
       'Encourage saves/shares.',
       'Hashtags are okay (moderate to high).',
+      'Write at least 3 clear sentences plus a CTA telling people to visit our website.',
       baseLengthRule
     ].join('\n');
   }
@@ -138,8 +465,9 @@ function platformRules(platform, contentLength) {
   if (p === 'pinterest') {
     return [
       'Write like a Pin description: SEO-friendly keywords, clear benefit.',
-      'End with a “click to learn more” line.',
+      'End with a CTA inviting people to visit our website or click to learn more.',
       'Use 0-3 hashtags (optional).',
+      'Write at least 2 useful sentences that explain the benefit clearly.',
       baseLengthRule
     ].join('\n');
   }
@@ -147,6 +475,7 @@ function platformRules(platform, contentLength) {
   return [
     'Conversational tone.',
     'End with a question to drive comments when appropriate.',
+    'Write at least 3 clear sentences plus a CTA asking people to visit our website.',
     baseLengthRule
   ].join('\n');
 }
@@ -194,7 +523,19 @@ Each item MUST include:
 - "platform": "${p}"
 - "tone": concise descriptor matching requested style
 
+Every post must:
+- clearly explain what the post is about
+- use more than one sentence
+- include a CTA that tells people to visit our website
+- read naturally and make sense from start to finish
+- avoid generic filler openings like "Here is one practical way", "A smarter approach", or vague business-coach language
+- mention the actual product, update, offer, or business outcome from the brief instead of talking in generalities
+
 ${exclusionText}
+
+Before writing, fix any spelling, grammar, punctuation, spacing, and wording errors in the source brief. Never copy obvious typos, malformed hashtags, or broken words from the input.
+
+Use only relevant, searchable hashtags people would genuinely look for. Never use filler hashtags like #our, #this, #new, #the, or hashtags copied from broken input.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -216,7 +557,7 @@ async function requestPostsFromOpenAI(openaiKey, prompt) {
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'Return only strict JSON with a posts array. Use Australian English spelling.' },
+        { role: 'system', content: 'Return only strict JSON with a posts array. Use Australian English spelling. Correct spelling and grammar errors from the user brief before writing. Use only relevant searchable hashtags. Every post must be coherent, longer than one sentence, explain the point clearly, include a CTA to visit our website, and avoid generic filler openings or vague marketing-coach phrasing.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
@@ -247,6 +588,10 @@ async function generateForPlatform({
 }) {
   const requestedCount = clamp(Number(count) || DEFAULT_POSTS_PER_PLATFORM, 1, 60);
 
+  if (!openaiKey) {
+    return generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel });
+  }
+
   const firstPrompt = buildPromptForPlatform({
     topic,
     platform,
@@ -257,7 +602,15 @@ async function generateForPlatform({
     excludeSamples: []
   });
 
-  let posts = await requestPostsFromOpenAI(openaiKey, firstPrompt);
+  let posts;
+  try {
+    posts = await requestPostsFromOpenAI(openaiKey, firstPrompt);
+  } catch (error) {
+    if (isQuotaError(error)) {
+      return generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel });
+    }
+    throw error;
+  }
 
   if (posts.length < requestedCount) {
     const missing = requestedCount - posts.length;
@@ -270,13 +623,23 @@ async function generateForPlatform({
       hashtagLevel,
       excludeSamples: posts.slice(0, 10).map((p) => String(p?.content || '').slice(0, 180))
     });
-    const topUp = await requestPostsFromOpenAI(openaiKey, secondPrompt);
+    let topUp;
+    try {
+      topUp = await requestPostsFromOpenAI(openaiKey, secondPrompt);
+    } catch (error) {
+      if (isQuotaError(error)) {
+        const needed = requestedCount - posts.length;
+        topUp = generateFallbackPosts({ topic, platform, count: needed, style, contentLength, hashtagLevel });
+      } else {
+        throw error;
+      }
+    }
     posts = [...posts, ...topUp];
   }
 
   const normalized = posts
     .map((p) => ({
-      content: withHashtags(p?.content || '', topic, hashtagLevel),
+      content: finalizePostContent(p?.content || '', topic, platform, hashtagLevel),
       platform: sanitizePlatform(platform),
       tone: String(p?.tone || style || 'engaging').trim() || 'engaging'
     }))
@@ -331,21 +694,20 @@ export default async function handler(req, res) {
       // across platforms so every platform gets the same content.
       const paragraphs = topic
         .split(/\n\s*\n/)
-        .map(p => p.trim())
+        .map((p) => cleanSourceText(p))
         .filter(p => p.length > 0);
-      const pool = paragraphs.length > 0 ? paragraphs : [topic.trim()];
+      const pool = paragraphs.length > 0 ? paragraphs : [cleanSourceText(topic)];
 
       for (const platform of safePlatforms) {
         const posts = Array.from({ length: count }, (_, i) => ({
-          content: pool[i % pool.length],
+          content: finalizePostContent(pool[i % pool.length], topic, platform, hashtagLevel),
           platform,
-          tone: 'verbatim',
+          tone: 'lightly-polished',
         }));
         postsByPlatform[platform] = posts;
       }
     } else {
       const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) return res.status(500).json({ error: 'OpenAI API key not configured' });
 
       for (const platform of safePlatforms) {
         postsByPlatform[platform] = await generateForPlatform({
@@ -358,6 +720,13 @@ export default async function handler(req, res) {
           hashtagLevel
         });
       }
+    }
+
+    for (const platform of safePlatforms) {
+      postsByPlatform[platform] = (postsByPlatform[platform] || []).map((post) => ({
+        ...post,
+        content: finalizePostContent(post?.content || '', topic, platform, hashtagLevel),
+      }));
     }
 
     // flatten so your current frontend can still work

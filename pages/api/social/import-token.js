@@ -8,6 +8,38 @@ import { requireUser } from '../../../lib/social/auth';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
+async function saveSocialAccount(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    account_id: payload.account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from('social_accounts')
+    .select('id')
+    .match(match)
+    .limit(1);
+
+  if (lookupError) throw new Error(lookupError.message);
+
+  if (existing?.length) {
+    const { error: updateError } = await admin
+      .from('social_accounts')
+      .update(payload)
+      .match(match);
+
+    if (updateError) throw new Error(updateError.message);
+    return;
+  }
+
+  const { error: insertError } = await admin
+    .from('social_accounts')
+    .insert(payload);
+
+  if (insertError) throw new Error(insertError.message);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
@@ -19,19 +51,16 @@ export default async function handler(req, res) {
   try {
     // Mode A: direct page token supplied
     if (pageId && pageToken) {
-      await auth.admin.from('social_accounts').upsert(
-        {
-          user_id: auth.user.id,
-          platform: 'facebook',
-          account_id: String(pageId),
-          account_name: pageName || `Page ${pageId}`,
-          access_token: pageToken,
-          token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // ~60 days
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,platform,account_id' }
-      );
+      await saveSocialAccount(auth.admin, {
+        user_id: auth.user.id,
+        platform: 'facebook',
+        account_id: String(pageId),
+        account_name: pageName || `Page ${pageId}`,
+        access_token: pageToken,
+        token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      });
       return res.status(200).json({ ok: true, imported: [{ id: pageId, name: pageName || pageId }] });
     }
 
@@ -54,35 +83,29 @@ export default async function handler(req, res) {
     const imported = [];
 
     for (const page of pages) {
-      await auth.admin.from('social_accounts').upsert(
-        {
+      await saveSocialAccount(auth.admin, {
+        user_id: auth.user.id,
+        platform: 'facebook',
+        account_id: String(page.id),
+        account_name: page.name || 'Facebook Page',
+        access_token: page.access_token,
+        token_expires_at: exp,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      });
+      imported.push({ id: page.id, name: page.name });
+
+      if (page.instagram_business_account?.id) {
+        await saveSocialAccount(auth.admin, {
           user_id: auth.user.id,
-          platform: 'facebook',
-          account_id: String(page.id),
-          account_name: page.name || 'Facebook Page',
+          platform: 'instagram',
+          account_id: String(page.instagram_business_account.id),
+          account_name: page.instagram_business_account.name || page.name || 'Instagram',
           access_token: page.access_token,
           token_expires_at: exp,
           is_active: true,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,platform,account_id' }
-      );
-      imported.push({ id: page.id, name: page.name });
-
-      if (page.instagram_business_account?.id) {
-        await auth.admin.from('social_accounts').upsert(
-          {
-            user_id: auth.user.id,
-            platform: 'instagram',
-            account_id: String(page.instagram_business_account.id),
-            account_name: page.instagram_business_account.name || page.name || 'Instagram',
-            access_token: page.access_token,
-            token_expires_at: exp,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,platform,account_id' }
-        );
+        });
         imported.push({ id: page.instagram_business_account.id, name: page.instagram_business_account.name || 'Instagram' });
       }
     }

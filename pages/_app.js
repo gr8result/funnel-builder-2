@@ -29,6 +29,7 @@ export default function MyApp({ Component, pageProps }) {
     "/404",
     "/500",
     "/_error",
+    "/modules/website-builder/preview",
     "/modules/website-builder/project/[id]/preview",
   ];
   const hideLayout = Boolean(Component.disableLayout)

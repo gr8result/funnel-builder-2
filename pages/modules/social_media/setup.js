@@ -17,14 +17,21 @@ const PLATFORMS = {
   tiktok: {
     label: 'TikTok',
     icon: '🎵',
-    description: 'Connect your TikTok Business or Creator account to publish videos and posts.',
-    note: 'Requires a TikTok Business or Creator account.',
+    description: 'Connect your TikTok Business or Creator account to publish direct TikTok posts.',
+    note: 'Requires a TikTok Business or Creator account. Direct posting is wired; the full video-upload workflow still needs more work.',
   },
   linkedin: {
     label: 'LinkedIn',
     icon: '💼',
     description: 'Connect your LinkedIn profile or Company Page to share posts and articles.',
-    note: 'You can connect a personal profile or a Company Page you manage.',
+    note: 'Personal profile posting is wired in this build. Company Page publishing still needs its own page-selection flow.',
+  },
+  pinterest: {
+    label: 'Pinterest',
+    icon: '📌',
+    description: 'Connect your Pinterest business account to publish pins and manage board content.',
+    note: 'Pinterest OAuth has been added to settings, but the posting flow is not wired yet in this build.',
+    unsupported: true,
   },
   x: {
     label: 'X (Twitter)',
@@ -36,13 +43,37 @@ const PLATFORMS = {
     label: 'YouTube',
     icon: '▶️',
     description: 'Connect your YouTube channel to upload videos and manage content.',
-    note: 'Requires a Google account with a YouTube channel.',
+    note: 'OAuth connection is wired, but YouTube publishing is not yet implemented in the posting queue.',
   },
 };
 
 async function getToken() {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token || '';
+}
+
+function getAccountsForPlatform(platformKey, connected) {
+  if (platformKey === 'meta') {
+    return [
+      ...(connected.facebook || []),
+      ...(connected.instagram || []),
+    ];
+  }
+
+  return connected[platformKey] || [];
+}
+
+function getGroupedConnectedCount(connected) {
+  return Object.keys(PLATFORMS).filter((platformKey) => getAccountsForPlatform(platformKey, connected).length > 0).length;
+}
+
+function getAccountDisplayName(platformKey, account) {
+  if (platformKey !== 'meta') {
+    return account.account_name || account.account_id;
+  }
+
+  const prefix = account.platform === 'instagram' ? 'Instagram' : 'Facebook';
+  return `${prefix}: ${account.account_name || account.account_id}`;
 }
 
 export default function SetupPage() {
@@ -58,13 +89,15 @@ export default function SetupPage() {
   // Show success/error from OAuth callback redirect
   useEffect(() => {
     if (!router.isReady) return;
-    const { connect, message } = router.query;
-    if (connect === 'success') {
+    const params = new URLSearchParams(window.location.search);
+    const connect = router.query.connect || params.get('connect');
+    const message = router.query.message || params.get('message');
+    if (connect === 'success' || connect === 'ok') {
       setGlobalNotice({ type: 'success', message: 'Account connected successfully!' });
+      loadConnections();
       router.replace('/modules/social_media/setup', undefined, { shallow: true });
     } else if (connect === 'error') {
       setGlobalNotice({ type: 'error', message: message || 'Connection failed.' });
-      router.replace('/modules/social_media/setup', undefined, { shallow: true });
     }
   }, [router.isReady, router.query.connect]);
 
@@ -102,24 +135,7 @@ export default function SetupPage() {
       const data = await res.json();
       if (!res.ok || !data.authUrl) throw new Error(data.error || `Could not start ${platform} login`);
 
-      let authUrl = data.authUrl;
-      if (platform === 'meta') {
-        try {
-          const u = new URL(authUrl);
-          // Only use approved scopes — pages_messaging requires Meta App Review
-          const approvedScope = [
-            'pages_show_list',
-            'pages_read_engagement',
-            'pages_manage_posts',
-          ].join(',');
-          u.searchParams.set('response_type', 'code');
-          u.searchParams.delete('display');
-          u.searchParams.set('scope', approvedScope);
-          authUrl = u.toString();
-        } catch (e) {
-          console.warn('Meta OAuth URL normalization skipped:', e?.message || e);
-        }
-      }
+      const authUrl = data.authUrl;
 
       const popup = window.open(authUrl, 'oauth-popup', 'width=640,height=720,top=80,left=200,resizable=yes,scrollbars=yes');
       if (!popup) { window.location.href = authUrl; return; }
@@ -145,7 +161,7 @@ export default function SetupPage() {
     await loadConnections();
   }
 
-  const connectedCount = Object.values(connected).filter(a => a?.length > 0).length;
+  const connectedCount = getGroupedConnectedCount(connected);
 
   return (
     <div style={S.page}>
@@ -188,6 +204,9 @@ export default function SetupPage() {
               Click <strong>Connect</strong> on any platform below. You'll be taken to that platform's login page
               to approve access — then you're done. It only takes a minute.
             </div>
+            <div style={S.introCallout}>
+              Meta note: Facebook and Instagram now use Meta Business Login so you can reconnect with the app's saved Business configuration.
+            </div>
           </div>
           {connectedCount > 0 && (
             <button style={S.doneBtn} onClick={() => { window.location.href = '/modules/social_media/dashboard'; }}>
@@ -199,10 +218,11 @@ export default function SetupPage() {
         {/* PLATFORM CARDS */}
         <div style={S.cardList}>
           {Object.entries(PLATFORMS).map(([key, meta]) => {
-            const accounts = connected[key] || [];
+            const accounts = getAccountsForPlatform(key, connected);
             const isConnected = accounts.length > 0;
             const isBusy = busyPlatform === key;
             const err = notice[key];
+            const isUnsupported = !!meta.unsupported;
 
             return (
               <div key={key} style={{ ...S.card, borderLeft: `5px solid ${isConnected ? '#10B981' : 'rgba(255,255,255,0.08)'}` }}>
@@ -219,8 +239,8 @@ export default function SetupPage() {
                         {accounts.map(acc => (
                           <div key={acc.id} style={S.accountRow}>
                             <span style={S.connectedDot}>●</span>
-                            <span style={S.accountName}>{acc.account_name || acc.account_id}</span>
-                            <button style={S.disconnectBtn} onClick={() => disconnectAccount(key, acc.account_id)}>
+                            <span style={S.accountName}>{getAccountDisplayName(key, acc)}</span>
+                            <button style={S.disconnectBtn} onClick={() => disconnectAccount(acc.platform || key, acc.account_id)}>
                               Disconnect
                             </button>
                           </div>
@@ -239,10 +259,10 @@ export default function SetupPage() {
                     }
                     <button
                       style={{ ...S.connectBtn, opacity: isBusy ? 0.6 : 1 }}
-                      disabled={isBusy}
-                      onClick={() => key === 'meta' ? window.location.href = '/modules/social_media/import-token' : connectOAuth(key)}
+                      disabled={isBusy || isUnsupported}
+                      onClick={() => connectOAuth(key)}
                     >
-                      {isBusy ? 'Opening…' : isConnected ? '+ Add Another Account' : `Connect ${meta.label}`}
+                      {isUnsupported ? 'Not Available Yet' : isBusy ? 'Opening…' : key === 'meta' ? 'Start Meta Setup' : isConnected ? '+ Add Another Account' : `Connect ${meta.label}`}
                     </button>
                   </div>
                 </div>
@@ -292,6 +312,11 @@ const S = {
   introIcon: { fontSize: 48, flexShrink: 0 },
   introTitle: { fontSize: 24, fontWeight: 700, marginBottom: 8 },
   introText: { fontSize: 18, opacity: 0.7, lineHeight: 1.7 },
+  introCallout: {
+    marginTop: 14, fontSize: 15, lineHeight: 1.6, color: '#FCD34D',
+    background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+    borderRadius: 10, padding: '12px 14px',
+  },
 
   cardList: { display: 'flex', flexDirection: 'column', gap: 14 },
   card: {

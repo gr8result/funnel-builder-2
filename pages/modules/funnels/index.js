@@ -382,30 +382,31 @@ function FunnelsInner() {
               </button>
             </div>
             {latestAiUrl ? (
-              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 62, height: 62, borderRadius: 10, overflow: "hidden", border: "1px solid #2b3650", background: "#0b1220" }}>
-                  <img src={latestAiUrl} alt="Latest AI generated" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ color: "#cbd5e1", fontSize: 15 }}>Latest AI image generated successfully.</span>
                 <a href="/assets" style={mediaLink}>View in Media Library</a>
+                <a href={latestAiUrl} target="_blank" rel="noreferrer" style={mediaLink}>Open Generated Image</a>
               </div>
             ) : null}
           </div>
 
           {assetMsg ? <p style={{ color: "#cbd5e1", margin: "0 0 10px", fontSize: 16 }}>{assetMsg}</p> : null}
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(110px,1fr))", gap: 10 }}>
-            {assetFiles.slice(0, 10).map((f) => {
-              const url = assetPublicUrl(session?.user?.id, f.name);
-              return (
-                <div key={f.name} style={{ border: "1px solid #2b3650", borderRadius: 10, padding: 6, background: "#0c121a" }}>
-                  <div style={{ height: 72, borderRadius: 8, overflow: "hidden", background: "#09101b", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src={url} alt={f.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-                  <p style={{ margin: "6px 0 0", color: "#94a3b8", fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</p>
-                </div>
-              );
-            })}
-            {assetFiles.length === 0 ? <p style={{ color: "#64748b", margin: 0, fontSize: 16 }}>No images uploaded yet.</p> : null}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: "12px 14px",
+            border: "1px solid #2b3650",
+            borderRadius: 12,
+            background: "#0c121a",
+          }}>
+            <p style={{ color: "#94a3b8", margin: 0, fontSize: 16 }}>
+              {assetFiles.length > 0 ? `${assetFiles.length} asset${assetFiles.length === 1 ? "" : "s"} available in the shared media library.` : "No assets uploaded yet."}
+            </p>
+            <Link href="/assets" style={mediaLink}>Open Media Library</Link>
           </div>
 
           <input ref={logoInputRef} type="file" accept="image/*" onChange={onUploadLogo} style={{ display: "none" }} />
@@ -416,7 +417,7 @@ function FunnelsInner() {
         <div style={{
           background: "linear-gradient(135deg, #1a2236 0%, #141b27 100%)",
           border: "1px solid #2b3650", borderRadius: 14, padding: "24px 24px",
-          marginBottom: 28, display: "flex", gap: 14, alignItems: "center",
+          marginBottom: 28, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
         }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: "block", color: "#94a3b8", fontSize: 16, marginBottom: 8, fontWeight: 600 }}>
@@ -434,6 +435,24 @@ function FunnelsInner() {
               }}
             />
           </div>
+          <Link href="/modules/funnels/new">
+            <button
+              style={{
+                padding: "14px 24px",
+                borderRadius: 10,
+                border: "1px solid #34517c",
+                background: "#112036",
+                color: "#93c5fd",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 18,
+                whiteSpace: "nowrap",
+                marginTop: 28,
+              }}
+            >
+              Start with Template
+            </button>
+          </Link>
             <button
               onClick={createFunnel}
               disabled={creating}

@@ -10,7 +10,13 @@ import {
   updateWebsiteProject,
 } from "../../../../../lib/website-builder/projectStore";
 import PageBuilderCanvas from "../../../../../components/website-builder/PageBuilderCanvas";
-import { applyAssetToProps, createStoredAsset } from "../../../../../lib/website-builder/mediaAssets";
+import {
+  applyAssetToProps,
+  createStoredAsset,
+  mergeWebsiteBuilderAssetSources,
+  syncWebsiteBuilderSharedAssetCache,
+  uploadSharedMediaLibraryAsset,
+} from "../../../../../lib/website-builder/mediaAssets";
 
 import { supabase } from "../../../../../lib/supabaseClient";
 
@@ -72,6 +78,32 @@ export default function ProjectCanvasPage() {
   useEffect(() => {
     if (!session?.user?.id) return;
     setBrandAssets(getWebsiteBuilderAssets());
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return undefined;
+
+    let cancelled = false;
+
+    const syncSharedAssets = async () => {
+      const mergedAssets = await syncWebsiteBuilderSharedAssetCache({
+        supabase,
+        userId: session.user.id,
+        currentAssets: getWebsiteBuilderAssets(),
+      });
+
+      if (cancelled) return;
+      saveWebsiteBuilderAssets(mergedAssets);
+      setBrandAssets(mergedAssets);
+    };
+
+    syncSharedAssets().catch((error) => {
+      console.warn("Could not sync shared website builder assets", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -201,14 +233,16 @@ export default function ProjectCanvasPage() {
   async function handleUploadImage(_blockIndex, fieldKey, file) {
     if (!file) return null;
 
-    const asset = await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
+    const asset = session?.user?.id
+      ? await uploadSharedMediaLibraryAsset(supabase, session.user.id, file, { tag: fieldKey === "logo" ? "logo" : "web" })
+      : await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
     const existingImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
     const dedupedImages = existingImages.filter((image) => image?.src && image.src !== asset.src && image.name !== asset.name);
     const nextAssets = fieldKey === "logo"
       ? { ...brandAssets, logo: asset }
-      : { ...brandAssets, images: [asset, ...dedupedImages].slice(0, 12) };
+      : { ...brandAssets, images: [asset, ...dedupedImages] };
 
-    persistAssets(nextAssets);
+    persistAssets(mergeWebsiteBuilderAssetSources(nextAssets));
     return asset;
   }
 
@@ -381,7 +415,7 @@ export default function ProjectCanvasPage() {
                 <div style={styles.aiPanel}>
                   <p style={styles.aiPanelTitle}>Tips for Building</p>
                   <p style={styles.aiPanelSub}>Use the blank visual builder to:</p>
-                  <ul style={{ fontSize: "14px", lineHeight: "1.6", color: "#cbd5e1" }}>
+                  <ul style={{ fontSize: "16px", lineHeight: "1.6", color: "#cbd5e1" }}>
                     <li>Add sections onto a fully blank canvas</li>
                     <li>Drag, reorder, and edit blocks visually</li>
                     <li>Adjust copy, colors, spacing, and layout on each page</li>
@@ -489,13 +523,13 @@ const styles = {
     flexWrap: "wrap",
   },
   pageInfoLabel: {
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     color: "#7dd3fc",
     whiteSpace: "nowrap",
   },
   pageInfoObjective: {
-    fontSize: 12,
+    fontSize: 16,
     color: "#9fb0c5",
   },
   topBar: {
@@ -535,7 +569,7 @@ const styles = {
     color: "#9fb0c5",
     borderRadius: 8,
     padding: "6px 12px",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.2s",
@@ -551,7 +585,7 @@ const styles = {
     color: "#dbeafe",
     borderRadius: 8,
     padding: "8px 12px",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     textDecoration: "none",
     cursor: "pointer",
@@ -562,8 +596,8 @@ const styles = {
     color: "#04202e",
     borderRadius: 8,
     padding: "8px 12px",
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     textDecoration: "none",
     cursor: "pointer",
   },
@@ -604,8 +638,8 @@ const styles = {
     color: "#dbeafe",
     borderRadius: 8,
     padding: "8px 12px",
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
   },
   modalBody: {
@@ -630,8 +664,8 @@ const styles = {
   },
   pageInfoTitle: {
     margin: 0,
-    fontSize: 14,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     color: "#dbeafe",
     marginBottom: 6,
   },
@@ -653,7 +687,7 @@ const styles = {
   aiPanelTitle: {
     margin: 0,
     fontSize: 18,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#c4f1ff",
   },
   aiPanelSub: {
@@ -706,7 +740,7 @@ const styles = {
     borderRadius: 10,
     padding: "10px 12px",
     fontSize: 16,
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     minHeight: 24,
   },
@@ -763,7 +797,7 @@ const styles = {
   title: {
     margin: "0 0 12px",
     fontSize: 28,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   btn: {
     display: "inline-flex",

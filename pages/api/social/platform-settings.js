@@ -4,9 +4,9 @@
 // DELETE — remove credentials for one platform
 
 import { requireUser } from "../../../lib/social/auth";
-import { savePlatformCredentials, deletePlatformCredentials } from "../../../lib/social/platformCredentials";
+import { savePlatformCredentials, deletePlatformCredentials, getPlatformCredentials } from "../../../lib/social/platformCredentials";
 
-const SUPPORTED_PLATFORMS = ["meta", "tiktok", "linkedin", "x", "youtube"];
+const SUPPORTED_PLATFORMS = ["meta", "tiktok", "linkedin", "pinterest", "x", "youtube"];
 
 export default async function handler(req, res) {
   const auth = await requireUser(req);
@@ -16,25 +16,24 @@ export default async function handler(req, res) {
 
   // ── GET — list configured platforms ──────────────────────────────────
   if (req.method === "GET") {
-    const { data, error } = await admin
-      .from("social_app_credentials")
-      .select("platform, app_id, updated_at")
-      .eq("user_id", user.id)
-      .in("platform", SUPPORTED_PLATFORMS);
-
-    if (error) return res.status(500).json({ ok: false, error: error.message });
-
-    const configured = (data || []).reduce((acc, row) => {
-      acc[row.platform] = { appId: row.app_id, updatedAt: row.updated_at };
-      return acc;
-    }, {});
+    const configured = {};
+    for (const platform of SUPPORTED_PLATFORMS) {
+      const creds = await getPlatformCredentials(admin, user.id, platform);
+      if (creds?.appId) {
+        configured[platform] = {
+          appId: creds.appId,
+          configId: creds.configId || "",
+          updatedAt: null,
+        };
+      }
+    }
 
     return res.status(200).json({ ok: true, configured });
   }
 
   // ── POST — save credentials ───────────────────────────────────────────
   if (req.method === "POST") {
-    const { platform, appId, appSecret } = req.body || {};
+    const { platform, appId, appSecret, configId } = req.body || {};
 
     if (!platform || !SUPPORTED_PLATFORMS.includes(platform)) {
       return res.status(400).json({ ok: false, error: "Invalid platform" });
@@ -44,7 +43,14 @@ export default async function handler(req, res) {
     }
 
     try {
-      await savePlatformCredentials(admin, user.id, platform, String(appId), String(appSecret || ""));
+      await savePlatformCredentials(
+        admin,
+        user.id,
+        platform,
+        String(appId),
+        String(appSecret || ""),
+        String(configId || "")
+      );
       return res.status(200).json({ ok: true });
     } catch (err) {
       return res.status(500).json({ ok: false, error: err.message });

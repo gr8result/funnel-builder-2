@@ -2,11 +2,16 @@ import crypto from "crypto";
 import { requireUser } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getMetaRedirectUri() {
-  return (
-    process.env.META_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/meta/callback`
-  );
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function getMetaRedirectUri(req) {
+  return `${getRequestOrigin(req)}/api/social/oauth/meta/callback`;
 }
 
 export default async function handler(req, res) {
@@ -22,6 +27,9 @@ export default async function handler(req, res) {
   const creds = await getPlatformCredentials(auth.admin, auth.user.id, "meta");
   if (!creds?.appId) {
     return res.status(400).json({ ok: false, error: "Meta App ID not configured. Open Platform Setup to add your credentials." });
+  }
+  if (!creds?.configId) {
+    return res.status(400).json({ ok: false, error: "Meta Configuration ID not configured. Add your Facebook Login for Business Configuration ID in Platform Setup." });
   }
 
   const state = crypto.randomUUID();
@@ -39,20 +47,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message });
   }
 
-  const scope = [
-    "pages_show_list",
-    "pages_read_engagement",
-    "pages_manage_posts",
-    // "pages_messaging",  // Advanced permission — requires Meta App Review to use publicly.
-    //                     // Re-enable after App Review approval in Meta dashboard.
-  ].join(",");
-
   const params = new URLSearchParams({
     client_id: creds.appId,
-    redirect_uri: getMetaRedirectUri(),
+    redirect_uri: getMetaRedirectUri(req),
     state,
     response_type: "code",
-    scope,
+    config_id: creds.configId,
   });
 
   return res.status(200).json({

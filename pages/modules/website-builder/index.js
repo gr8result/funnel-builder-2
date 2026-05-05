@@ -2,9 +2,22 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { deleteWebsiteProject, listWebsiteProjects } from "../../../lib/website-builder/projectStore";
+import { getWebsiteTemplatePreview } from "../../../lib/website-builder/projectStore";
 import { TEMPLATES } from "../../../lib/website-builder/templates";
 import { openSelfHostedBuilder } from "../../../lib/website-builder/launchSelfHostedBuilder";
+import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
+import { supabase } from "../../../lib/supabaseClient";
 import s from "./website-builder.module.css";
+
+const PREVIEW_IMAGE_KEYS = [
+  "backgroundImage",
+  "imageUrl",
+  "image",
+  "src",
+  "mediaUrl",
+  "photo",
+  "poster",
+];
 
 function humanizeThemeName(value = "") {
   const raw = String(value || "")
@@ -15,28 +28,158 @@ function humanizeThemeName(value = "") {
   return raw.replace(/\b\w/g, (m) => m.toUpperCase()) || "Template";
 }
 
+function pickPageBackground(blocks, fallback = "#ffffff") {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = String(block?.props?.pageBackground || "").trim();
+    if (value) return value;
+  }
+  return fallback;
+}
+
+function isPreviewImageUrl(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  return /^(https?:)?\/\//i.test(raw) || /^data:image\//i.test(raw) || /^\//.test(raw);
+}
+
+function collectPreviewImages(value, bucket) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectPreviewImages(entry, bucket));
+    return;
+  }
+
+  if (typeof value !== "object") return;
+
+  Object.entries(value).forEach(([key, entry]) => {
+    if (typeof entry === "string" && PREVIEW_IMAGE_KEYS.includes(key) && isPreviewImageUrl(entry)) {
+      bucket.push(entry.trim());
+      return;
+    }
+
+    if (entry && typeof entry === "object") {
+      collectPreviewImages(entry, bucket);
+    }
+  });
+}
+
+function resolveThemePreviewImages(preview) {
+  const collected = [];
+  for (const block of Array.isArray(preview?.blocks) ? preview.blocks : []) {
+    collectPreviewImages(block?.props, collected);
+  }
+
+  const unique = Array.from(new Set(collected.filter(Boolean)));
+  return {
+    primary: unique[0] || "",
+    secondary: unique.find((url) => url !== unique[0]) || "",
+  };
+}
+
 function ThemePreview({ theme }) {
+  const preview = useMemo(() => getWebsiteTemplatePreview(String(theme?.slug || theme?.name || "")), [theme?.slug, theme?.name]);
+  const blocks = Array.isArray(preview?.blocks) ? preview.blocks : [];
+  const pageBackground = pickPageBackground(blocks, "#ffffff");
+  const previewImages = useMemo(() => resolveThemePreviewImages(preview), [preview]);
+  const pageCount = Array.isArray(preview?.pages) ? preview.pages.length : 1;
+
   return (
     <div
       style={{
         marginBottom: 12,
         borderRadius: 14,
         overflow: "hidden",
-        background: "linear-gradient(135deg, rgba(37,99,235,.20), rgba(15,23,42,.96))",
+        background: pageBackground,
         border: "1px solid rgba(255,255,255,.12)",
-        minHeight: 220,
+        aspectRatio: "4 / 3",
+        minHeight: 260,
         position: "relative",
-        display: "grid",
-        placeItems: "center",
-        padding: 18,
-        textAlign: "center",
+        display: "block",
+        padding: 0,
+        textAlign: "left",
       }}
     >
-      <div style={{ display: "grid", placeItems: "center", gap: 8 }}>
-        <div style={{ fontSize: 42 }}>🎨</div>
-        <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>{theme.title}</div>
-        <div style={{ color: "#cbd5e1", fontSize: 13 }}>Generic starter website theme</div>
-      </div>
+      {previewImages.primary ? (
+        <div
+          aria-label={`${theme.title} preview`}
+          style={{
+            position: "absolute",
+            inset: 0,
+            overflow: "hidden",
+            background: pageBackground,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: `linear-gradient(180deg, rgba(8,15,29,0.08) 0%, rgba(8,15,29,0.14) 28%, rgba(8,15,29,0.74) 100%), url(${previewImages.primary})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center top",
+              transform: "scale(1.02)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  padding: "7px 12px",
+                  borderRadius: 999,
+                  background: "rgba(15,23,42,0.72)",
+                  color: "#e0f2fe",
+                  border: "1px solid rgba(125,211,252,0.28)",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {pageCount} pages
+              </span>
+              {previewImages.secondary ? (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    padding: "7px 12px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.14)",
+                    color: "#f8fafc",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: ".08em",
+                    textTransform: "uppercase",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  image-rich
+                </span>
+              ) : null}
+            </div>
+            <div style={{ maxWidth: "100%" }}>
+              <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 18, lineHeight: 1.1, textShadow: "0 6px 24px rgba(15,23,42,0.38)" }}>{theme.title}</div>
+              <div style={{ color: "rgba(226,232,240,0.92)", fontSize: 13, marginTop: 8, lineHeight: 1.45, textShadow: "0 4px 18px rgba(15,23,42,0.32)" }}>{theme.desc || "Built-in GR8 website template."}</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ height: "100%", display: "grid", placeItems: "center", gap: 8, padding: 18 }}>
+          <div style={{ fontSize: 42 }}>🎨</div>
+          <div style={{ color: "#fff", fontWeight: 600, fontSize: 16 }}>{theme.title}</div>
+          <div style={{ color: "#cbd5e1", fontSize: 16 }}>{theme.desc || "Built-in GR8 website template."}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -45,6 +188,7 @@ export default function WebsiteBuilderDashboard() {
   const router = useRouter();
   const [websites, setWebsites] = useState([]);
   const [themes, setThemes] = useState([]);
+  const [session, setSession] = useState(null);
   const [selectedWebsiteId, setSelectedWebsiteId] = useState("");
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState("");
@@ -54,6 +198,26 @@ export default function WebsiteBuilderDashboard() {
   const selectedWebsite = useMemo(() => {
     return websites.find((site) => String(site.id) === String(selectedWebsiteId)) || websites[0] || null;
   }, [selectedWebsiteId, websites]);
+
+  useEffect(() => {
+    let subscription;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data?.session || null);
+      ({
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession || null)));
+    })();
+
+    return () => subscription?.unsubscribe?.();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    seedWebsiteBuilderSharedLibrary(supabase, session.user.id).catch(() => {
+      // Keep the dashboard responsive even if shared library sync fails.
+    });
+  }, [session?.user?.id]);
 
   async function refreshDashboard() {
     setLoading(true);
@@ -70,7 +234,9 @@ export default function WebsiteBuilderDashboard() {
         slug: item.slug,
         name: item.name,
         title: humanizeThemeName(item.name || item.slug),
-        desc: item.description || "Built-in GR8 website template.",
+        desc: item.blurb || item.description || "Built-in GR8 website template.",
+        thumb: item.thumb || "",
+        pageCount: Array.isArray(item.build?.("modern-blue")?.pages) ? item.build("modern-blue").pages.length : 1,
         state: "installed",
       }));
 
@@ -118,11 +284,6 @@ export default function WebsiteBuilderDashboard() {
         mode: "import",
         buildType: "website",
         templateSlug: "website-generic-premium",
-        pages: [
-          { name: "Home", objective: "Establish trust and present the core offer" },
-          { name: "About", objective: "Build authority and personal connection" },
-          { name: "Contact", objective: "Capture qualified inquiries" },
-        ],
       });
     } catch (err) {
       setError(err?.message || "Could not open the website studio.");
@@ -187,7 +348,7 @@ export default function WebsiteBuilderDashboard() {
               </div>
               <div>
                 <h1 className={s.bannerTitle}>Website Builder</h1>
-                <p className={s.bannerSubtitle}>Launch the native website studio with clean starter templates fully inside GR8.</p>
+                <p className={s.bannerSubtitle}>Launch the native website studio with clean starter templates </p>
               </div>
             </div>
             <button type="button" className={s.secondaryAction} onClick={() => router.push("/dashboard")}>
@@ -233,7 +394,7 @@ export default function WebsiteBuilderDashboard() {
 
           <section className={s.wizardCard}>
             <h3 className={s.wizardTitle}>Saved Websites</h3>
-            <p className={s.wizardText}>Select from your saved GR8 website projects and reopen them in the visual block builder.</p>
+            <p className={s.wizardText}>Select from your saved website projects and reopen them in the visual block builder.</p>
             {loading ? <p className={s.wizardText}>Loading sites...</p> : null}
             {!loading && websites.length === 0 ? <p className={s.wizardText}>No sites found yet. Open the visual block builder to create one.</p> : null}
             <div className={s.grid}>
@@ -275,7 +436,7 @@ export default function WebsiteBuilderDashboard() {
 
           <section id="gr8-theme-library" className={s.wizardCard}>
             <h3 className={s.wizardTitle}>Imported Theme Library</h3>
-            <p className={s.wizardText}>Open a built-in GR8 template directly in the local visual builder for {selectedWebsite?.name || "your next site"}.</p>
+            <p className={s.wizardText}>Open a template directly in the local visual builder for {selectedWebsite?.name || "your next site"}.</p>
             {!loading && themes.length === 0 ? <p className={s.wizardText}>No imported themes were returned by the local builder yet.</p> : null}
             <div className={s.grid}>
               {themes.map((theme) => (
@@ -284,6 +445,7 @@ export default function WebsiteBuilderDashboard() {
                   <div className={s.modeIcon}>🎨</div>
                   <h3 className={s.modeTitle}>{theme.title}</h3>
                   <p className={s.modeDesc}>{theme.desc}</p>
+                  <p className={s.modeDesc}>{theme.pageCount} starter pages included.</p>
                   <div className={s.heroActions}>
                     <button
                       type="button"

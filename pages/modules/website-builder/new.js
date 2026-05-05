@@ -842,7 +842,7 @@ const styles = {
   typeHint: {
     margin: "-4px 0 2px",
     color: "#cbd5e1",
-    fontSize: 14,
+    fontSize: 16,
   },
   grid2: (isMobile) => ({
     display: "grid",
@@ -945,12 +945,12 @@ const styles = {
     margin: 0,
     color: "#d1fae5",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   wpImportText: {
     margin: 0,
     color: "#9fb0c5",
-    fontSize: 14,
+    fontSize: 16,
     lineHeight: 1.5,
   },
   wpImportRow: (isMobile) => ({
@@ -969,7 +969,7 @@ const styles = {
     display: "grid",
     gap: 6,
     color: "#cbd5e1",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
   },
   wpImportSelect: {
@@ -986,7 +986,7 @@ const styles = {
     alignItems: "center",
     gap: 8,
     color: "#d1fae5",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     minHeight: 42,
   },
@@ -1123,7 +1123,7 @@ const styles = {
   mutedHint: {
     margin: "-2px 0 0",
     color: "#94a3b8",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 500,
   },
   addPageInput: {

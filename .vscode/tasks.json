@@ -7,6 +7,34 @@
 			"problemMatcher": [],
 			"label": "npm: dev",
 			"detail": "next dev"
+		},
+		{
+			"label": "noop",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"noop"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "cleanup-shared-library-duplicates",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"-e",
+				"require('dotenv').config({path:'.env.local'}); const {createClient}=require('@supabase/supabase-js'); const crypto=require('crypto'); const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY); const userId='35ab846e-0764-498b-b1f8-7d2cf27d85a5'; const prefix=`${userId}/`; const listAll=async()=>{let offset=0; const out=[]; while(true){ const {data,error}=await supabase.storage.from('assets').list(prefix,{limit:1000,offset,sortBy:{column:'created_at',order:'asc'}}); if(error) throw error; const batch=data||[]; out.push(...batch); if(batch.length<1000) break; offset+=batch.length; } return out.filter((entry)=>/\\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)$/i.test(String(entry.name||''))); }; (async()=>{ const {data:rows,error:rowError}=await supabase.from('social_image_library').select('id,url,storage_path,created_at').eq('user_id',userId).order('created_at',{ascending:true}); if(rowError) throw rowError; const files=await listAll(); const rowByPath=new Map((rows||[]).filter((row)=>row.storage_path).map((row)=>[row.storage_path,row])); const keepByHash=new Map(); const duplicatePaths=[]; const duplicateRowIds=[]; for(const entry of files){ const objectPath=`${prefix}${entry.name}`; const storagePath=`assets:${objectPath}`; const {data:publicData}=supabase.storage.from('assets').getPublicUrl(objectPath); const url=publicData?.publicUrl||''; const response=await fetch(url); if(!response.ok) continue; const buffer=Buffer.from(await response.arrayBuffer()); const hash=crypto.createHash('sha256').update(buffer).digest('hex'); if(!keepByHash.has(hash)){ keepByHash.set(hash,{storagePath,row:rowByPath.get(storagePath)||null}); continue; } duplicatePaths.push(objectPath); const row=rowByPath.get(storagePath); if(row?.id) duplicateRowIds.push(row.id); } if(duplicatePaths.length){ const {error:removeError}=await supabase.storage.from('assets').remove([...new Set(duplicatePaths)]); if(removeError) throw removeError; } if(duplicateRowIds.length){ const {error:deleteError}=await supabase.from('social_image_library').delete().in('id',[...new Set(duplicateRowIds)]); if(deleteError) throw deleteError; } console.log(JSON.stringify({removedStorage:[...new Set(duplicatePaths)].length, removedRows:[...new Set(duplicateRowIds)].length, kept:keepByHash.size},null,2)); })().catch((error)=>{ console.error(error); process.exit(1); });"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "cleanup-shared-library-duplicates-script",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"scripts/cleanup-shared-library-duplicates.cjs"
+			],
+			"isBackground": false
 		}
 	]
 }

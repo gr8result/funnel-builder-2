@@ -11,8 +11,13 @@ Write-Host "Stopping any running Node.js dev servers..."
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # Step 2: Remove cache folders
-Write-Host "Cleaning .next and node_modules folders..."
-Remove-Item -Recurse -Force .next, node_modules -ErrorAction SilentlyContinue
+Write-Host "Cleaning Next.js cache folders and node_modules..."
+$pathsToRemove = @('.next', '.next-dev', '.next-build', 'node_modules')
+foreach ($path in $pathsToRemove) {
+	if (Test-Path $path) {
+		Remove-Item -Recurse -Force $path
+	}
+}
 
 # Step 3: Clean npm cache
 Write-Host "Cleaning npm cache..."

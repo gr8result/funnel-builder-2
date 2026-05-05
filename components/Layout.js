@@ -2,6 +2,7 @@
 import { ensureUserFolders } from "../utils/storage-init";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { isDeveloperEmail } from "../lib/adminUsers";
 import SideNav from "./SideNav";
 import ICONS from "./iconMap";
 import { supabase } from "../utils/supabase-client";
@@ -42,6 +43,11 @@ function isApprovedVendor(account) {
   return account.is_approved === true || account.approved === true;
 }
 
+function isInternalGr8ResultAccount(account) {
+  const businessName = String(account?.business_name || '').trim().toLowerCase();
+  return businessName === 'gr8 result' || businessName === 'gr8 result digital solutions';
+}
+
 export default function Layout({ children }) {
   const router = useRouter();
   const path = router.pathname;
@@ -65,6 +71,7 @@ export default function Layout({ children }) {
   });
   const [avatar, setAvatar] = useState("");
   const [marketplaceVendorAllowed, setMarketplaceVendorAllowed] = useState(false);
+  const [developerAccess, setDeveloperAccess] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +84,7 @@ export default function Layout({ children }) {
         } = await supabase.auth.getSession();
         const user = session?.user;
         if (!user) {
+          setDeveloperAccess(false);
           if (isVendorOnlyRoute && !isAdminRoute) {
             try {
               const code =
@@ -129,14 +137,11 @@ export default function Layout({ children }) {
 
         await ensureUserFolders();
 
-        const adminEmails = [
-          "admin@gr8result.com",
-          "developer@gr8result.com",
-          "grant@gr8result.com",
-        ];
+        const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email);
+        setDeveloperAccess(hasDeveloperAccess);
 
         // 🧱 Admin branding
-        if (isAdminRoute || adminEmails.includes(user.email)) {
+        if (hasDeveloperAccess) {
           setHeader({
             nameLine1: "GR8 RESULT",
             nameLine2: "Digital Solutions",
@@ -160,6 +165,17 @@ export default function Layout({ children }) {
         setAccount(data);
 
         console.log("[Layout.js] Loaded account row:", data);
+
+        if (isInternalGr8ResultAccount(data)) {
+          setHeader({
+            nameLine1: "GR8 RESULT",
+            nameLine2: "Digital Solutions",
+            logo: "",
+          });
+          setAvatar("");
+          setLoading(false);
+          return;
+        }
 
         const verifiedPlatformUser = isMainPlatformVerified(data);
         setMarketplaceVendorAllowed(false);
@@ -287,11 +303,12 @@ export default function Layout({ children }) {
     );
   }
   const isVerifiedPlatformUser = isMainPlatformVerified(account);
+  const hasPlatformAccess = developerAccess || isVerifiedPlatformUser;
   const vendorRouteAllowed =
     isVendorOnlyRoute &&
     marketplaceVendorAllowed;
 
-  if (!loading && isProtectedPlatformRoute && !isAdminRoute && !isVerifiedPlatformUser && !vendorRouteAllowed) {
+  if (!loading && isProtectedPlatformRoute && !isAdminRoute && !hasPlatformAccess && !vendorRouteAllowed) {
     return (
       <main
         style={{
@@ -309,7 +326,7 @@ export default function Layout({ children }) {
   }
 
   // Hide nav and business branding if user is not verified for the main platform
-  const showNav = showNavDefault && isVerifiedPlatformUser;
+  const showNav = showNavDefault && hasPlatformAccess;
   // Use single-column layout if nav is hidden
   const layoutStyle = showNav
     ? wrap
@@ -328,7 +345,7 @@ export default function Layout({ children }) {
 
       <section style={sectionStyle}>
         {/* Only show branding header and avatar for verified platform users */}
-        {isVerifiedPlatformUser && (
+        {hasPlatformAccess && (
           <header style={topbar}>
             <div style={brandBox}>
               <div style={logoWrap}>

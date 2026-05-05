@@ -5,7 +5,7 @@
 import { requireUser } from '../../../lib/social/auth';
 import { getPlatformCredentials } from '../../../lib/social/platformCredentials';
 
-const PLATFORMS = ['meta', 'tiktok', 'linkedin', 'x', 'youtube'];
+const PLATFORMS = ['meta', 'tiktok', 'linkedin', 'pinterest', 'x', 'youtube'];
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -16,7 +16,12 @@ export default async function handler(req, res) {
   const status = {};
   for (const platform of PLATFORMS) {
     const creds = await getPlatformCredentials(auth.admin, auth.user.id, platform);
-    status[platform] = { configured: !!(creds?.appId) };
+    const configured = platform === 'meta'
+      ? !!(creds?.appId && creds?.configId)
+      : platform === 'linkedin'
+        ? !!(creds?.appId && creds?.appSecret)
+        : !!(creds?.appId);
+    status[platform] = { configured };
   }
 
   return res.status(200).json({ ok: true, status });

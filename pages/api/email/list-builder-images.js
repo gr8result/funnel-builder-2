@@ -5,6 +5,7 @@
 // ============================================
 
 import { createClient } from "@supabase/supabase-js";
+import { listMergedSharedMediaLibrary } from "../../../lib/sharedMediaLibrary";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -26,21 +27,21 @@ export default async function handler(req, res) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const folder = `${userId}/email-images`;
-    const { data, error } = await supabase.storage
+    const sharedImages = await listMergedSharedMediaLibrary({ admin: supabase, userId });
+
+    const { data: emailData } = await supabase.storage
       .from(BUCKET_USER)
-      .list(folder, { limit: 500 });
+      .list(`${userId}/email-images`, { limit: 500 });
 
-    if (error) return res.status(200).json({ ok: true, urls: [] });
+    const emailUrls = (emailData || [])
+      .filter((entry) => /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(String(entry?.name || '')))
+      .map((entry) => {
+        const { data } = supabase.storage.from(BUCKET_USER).getPublicUrl(`${userId}/email-images/${entry.name}`);
+        return data?.publicUrl ? `${data.publicUrl}?v=${Date.now()}` : '';
+      })
+      .filter(Boolean);
 
-    const urls = (data || [])
-      .filter((f) => /\.(png|jpg|jpeg|webp|gif)$/i.test(String(f.name || "")))
-      .map(
-        (f) =>
-          `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_USER}/${folder}/${encodeURIComponent(
-            f.name
-          )}?v=${Date.now()}`
-      );
+    const urls = Array.from(new Set([...(sharedImages || []).map((image) => image.url).filter(Boolean), ...emailUrls]));
 
     return res.status(200).json({ ok: true, urls });
   } catch (e) {

@@ -9,11 +9,21 @@ const PLATFORM_OPTIONS = [
   { key: 'facebook',  label: 'Facebook',       videoOnly: false },
   { key: 'instagram', label: 'Instagram',       videoOnly: false },
   { key: 'linkedin',  label: 'LinkedIn',        videoOnly: false },
-  { key: 'pinterest', label: 'Pinterest',       videoOnly: false },
+  { key: 'pinterest', label: 'Pinterest',       videoOnly: false, unsupported: true, unsupportedLabel: 'Publishing not wired yet' },
   { key: 'x',        label: 'X (Twitter)',     videoOnly: false },
-  { key: 'tiktok',   label: 'TikTok',          videoOnly: true  },
-  { key: 'youtube',  label: 'YouTube',          videoOnly: true  },
+  { key: 'tiktok',   label: 'TikTok',          videoOnly: false },
+  { key: 'youtube',  label: 'YouTube',          videoOnly: true, unsupported: true, unsupportedLabel: 'Connection only for now' },
 ];
+
+const DEFAULT_SELECTED_PLATFORMS = {
+  facebook: true,
+  instagram: true,
+  linkedin: true,
+  pinterest: false,
+  x: true,
+  tiktok: false,
+  youtube: false,
+};
 
 const PLATFORM_THEME = {
   facebook:  { color: '#1877F2', lightBg: 'rgba(24,119,242,0.1)',   border: 'rgba(24,119,242,0.35)',  icon: '📘', name: 'Facebook',  actions: ['👍 Like', '💬 Comment', '↗ Share'] },
@@ -42,6 +52,53 @@ const WEEKS = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
 function clamp(value, min, max) {
   const n = Number(value);
   return isNaN(n) ? min : Math.min(max, Math.max(min, n));
+}
+
+function buildScheduledQueue(postsByPlatform, start, scheduleMode, secondTime) {
+  const scheduled = [];
+
+  const parseTime = (value, fallbackDate) => {
+    const [hh, mm] = String(value || '').split(':');
+    return {
+      hours: clamp(parseInt(hh, 10), 0, 23),
+      minutes: clamp(parseInt(mm, 10), 0, 59),
+      fallbackHours: fallbackDate.getHours(),
+      fallbackMinutes: fallbackDate.getMinutes(),
+    };
+  };
+
+  const secondSlot = secondTime
+    ? parseTime(secondTime, start)
+    : { hours: clamp(start.getHours() + 12, 0, 23), minutes: start.getMinutes() };
+
+  for (const [platform, posts] of Object.entries(postsByPlatform || {})) {
+    const approvedPosts = (posts || []).filter(p => p.approved);
+    approvedPosts.forEach((post, index) => {
+      const scheduledFor = new Date(start);
+      if (scheduleMode === 'daily') {
+        scheduledFor.setDate(start.getDate() + index);
+        scheduledFor.setHours(start.getHours(), start.getMinutes(), 0, 0);
+      } else {
+        const dayOffset = Math.floor(index / 2);
+        const slotOffset = index % 2;
+        scheduledFor.setDate(start.getDate() + dayOffset);
+        if (slotOffset === 0) {
+          scheduledFor.setHours(start.getHours(), start.getMinutes(), 0, 0);
+        } else {
+          scheduledFor.setHours(secondSlot.hours, secondSlot.minutes, 0, 0);
+        }
+      }
+      scheduled.push({ post, scheduledFor });
+    });
+  }
+
+  scheduled.sort((a, b) => {
+    const timeDiff = a.scheduledFor.getTime() - b.scheduledFor.getTime();
+    if (timeDiff !== 0) return timeDiff;
+    return String(a.post.platform).localeCompare(String(b.post.platform));
+  });
+
+  return scheduled;
 }
 
 async function getSessionData() {
@@ -97,26 +154,71 @@ function scoreImage(postContent, imageMeta) {
   let n = 0; pt.forEach(t => { if (it.has(t)) n++; }); return n;
 }
 
-function assignImages(posts, images) {
-  if (!images?.length || !posts?.length) return posts;
-  const usage = new Map(images.map((_, i) => [i, 0]));
-  return posts.map(post => {
-    let bestIdx = 0, bestScore = -1, bestUsage = Infinity;
-    images.forEach((img, i) => {
-      const score = scoreImage(post.content, img);
-      const used  = usage.get(i) || 0;
-      if (score > bestScore || (score === bestScore && used < bestUsage)) {
-        bestIdx = i; bestScore = score; bestUsage = used;
-      }
-    });
-    usage.set(bestIdx, (usage.get(bestIdx) || 0) + 1);
-    return { ...post, image: images[bestIdx]?.url || null };
+function dedupeAssignedImages(images) {
+  const seen = new Set();
+  return (images || []).filter((image) => {
+    const key = String(image?.url || '').trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
-function normalizePlatformPosts(data, style) {
+function assignImages(posts, images) {
+  const uniqueImages = dedupeAssignedImages(images);
+  if (!uniqueImages.length || !posts?.length) return posts;
+  const usage = new Map(uniqueImages.map((_, i) => [i, 0]));
+  const maxUsagePerImage = Math.max(1, Math.ceil(posts.length / uniqueImages.length));
+  let previousImageIndex = -1;
+  return posts.map(post => {
+    let bestIdx = 0, bestScore = -1, bestUsage = Infinity, bestWithinLimit = false;
+    uniqueImages.forEach((img, i) => {
+      const score = scoreImage(post.content, img);
+      const used  = usage.get(i) || 0;
+      const repeatsPrevious = i === previousImageIndex;
+      const withinUsageLimit = used < maxUsagePerImage;
+      const shouldReplace =
+        (withinUsageLimit && !bestWithinLimit) ||
+        (withinUsageLimit === bestWithinLimit && score > bestScore) ||
+        (withinUsageLimit === bestWithinLimit && score === bestScore && used < bestUsage) ||
+        (withinUsageLimit === bestWithinLimit && score === bestScore && used === bestUsage && !repeatsPrevious);
+      if (shouldReplace) {
+        bestIdx = i;
+        bestScore = score;
+        bestUsage = used;
+        bestWithinLimit = withinUsageLimit;
+      }
+    });
+    usage.set(bestIdx, (usage.get(bestIdx) || 0) + 1);
+    previousImageIndex = bestIdx;
+    return { ...post, image: uniqueImages[bestIdx]?.url || null };
+  });
+}
+
+function assignImagesAcrossPlatforms(postsByPlatform, images) {
+  if (!images?.length || !postsByPlatform || typeof postsByPlatform !== 'object') return postsByPlatform;
+  const entries = Object.entries(postsByPlatform);
+  const flattened = entries.flatMap(([platform, posts]) =>
+    (posts || []).map((post, index) => ({ platform, index, post }))
+  );
+  if (!flattened.length) return postsByPlatform;
+
+  const assigned = assignImages(flattened.map(({ post }) => post), images);
+  const next = Object.fromEntries(entries.map(([platform, posts]) => [platform, [...(posts || [])]]));
+
+  assigned.forEach((post, flatIndex) => {
+    const target = flattened[flatIndex];
+    if (!target) return;
+    next[target.platform][target.index] = post;
+  });
+
+  return next;
+}
+
+function normalizePlatformPosts(data, style, targetCount) {
   const result = {};
   const source = data?.postsByPlatform;
+  const desiredCount = Math.max(1, Number(targetCount) || 28);
   let counter = 0;
   if (source && typeof source === 'object') {
     const ts = Date.now();
@@ -134,11 +236,11 @@ function normalizePlatformPosts(data, style) {
         .filter(p => p.content.length > 0);
       if (!cleaned.length) continue;
       const base = [...cleaned];
-      while (cleaned.length < 28) {
+      while (cleaned.length < desiredCount) {
         const seed = base[cleaned.length % base.length];
         cleaned.push({ ...seed, id: `${platform}-pad-${counter++}`, approved: false, image: null });
       }
-      result[platform] = cleaned.slice(0, 28);
+      result[platform] = cleaned.slice(0, desiredCount);
     }
   }
   return result;
@@ -342,7 +444,7 @@ export default function CreateContent() {
   const [aiImages,        setAiImages]        = useState(() => {
     try { const s = localStorage.getItem('sm_draft_images'); return s ? JSON.parse(s) : []; } catch { return []; }
   });
-  const [viewPlatform,    setViewPlatform]    = useState('facebook');
+  const [viewPlatform,    setViewPlatform]    = useState('all');
 
   // Campaign presets
   const [aiCampaignName,       setAiCampaignName]       = useState('');
@@ -358,9 +460,14 @@ export default function CreateContent() {
   const [aiScheduleMode, setAiScheduleMode] = useState('daily');
   const [aiImageCount,   setAiImageCount]   = useState(10);
   const [aiContentType,  setAiContentType]  = useState('standard');
-  const [aiSelectedPlatforms, setAiSelectedPlatforms] = useState({
-    facebook: true, instagram: true, linkedin: true, pinterest: true,
-    x: true, tiktok: false, youtube: false,
+  const [aiSelectedPlatforms, setAiSelectedPlatforms] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sm_selected_platforms');
+      if (!saved) return DEFAULT_SELECTED_PLATFORMS;
+      return { ...DEFAULT_SELECTED_PLATFORMS, ...JSON.parse(saved) };
+    } catch {
+      return DEFAULT_SELECTED_PLATFORMS;
+    }
   });
 
   // Video
@@ -390,12 +497,132 @@ export default function CreateContent() {
   // Schedule
   const [aiScheduleStartDate, setAiScheduleStartDate] = useState('');
   const [aiScheduleTime,      setAiScheduleTime]      = useState('09:00');
+  const [aiScheduleSecondTime, setAiScheduleSecondTime] = useState('21:00');
 
   useEffect(() => { loadSavedCampaigns(); loadSavedForms(); }, []);
+  useEffect(() => {
+    try { localStorage.setItem('sm_selected_platforms', JSON.stringify(aiSelectedPlatforms)); } catch {}
+  }, [aiSelectedPlatforms]);
 
   function getSelectedPlatforms() {
     const sel = Object.entries(aiSelectedPlatforms).filter(([, v]) => v).map(([k]) => k);
-    return aiContentType !== 'video' ? sel.filter(p => p !== 'tiktok' && p !== 'youtube') : sel;
+    return sel.filter((platform) => !['pinterest', 'youtube'].includes(platform));
+  }
+
+  function getPostsPerDay() {
+    return aiScheduleMode === 'twice' ? 2 : 1;
+  }
+
+  function getPostsPerPlatformCount() {
+    return campaignWeeks * campaignDays * getPostsPerDay();
+  }
+
+  function getDefaultViewPlatform(platforms = []) {
+    if (!platforms.length) return 'all';
+    return platforms.length > 1 ? 'all' : platforms[0];
+  }
+
+  function normalizePostsForSave(posts) {
+    return Object.fromEntries(
+      Object.entries(posts || {}).map(([plat, items]) => [
+        plat,
+        (items || []).map((p) => ({
+          id: p.id,
+          content: p.content,
+          platform: p.platform,
+          tone: p.tone,
+          approved: p.approved,
+          image: p.image?.startsWith('data:') ? null : (p.image || null),
+        }))
+      ])
+    );
+  }
+
+  function buildCampaignSettings(postsOverride = postsByPlatform) {
+    return {
+      topic: aiTopic,
+      style: aiStyle,
+      length: aiLength,
+      hashtagLevel: aiHashtagLevel,
+      contentType: aiContentType,
+      platforms: aiSelectedPlatforms,
+      ingredients: aiIngredients,
+      leadForm: aiLeadForm,
+      scheduleMode: aiScheduleMode,
+      imageCount: aiImageCount,
+      campaignWeeks,
+      campaignDays,
+      scheduleTime: aiScheduleTime,
+      scheduleSecondTime: aiScheduleSecondTime,
+      posts: normalizePostsForSave(postsOverride),
+    };
+  }
+
+  function persistDraftPosts(nextPosts) {
+    try { localStorage.setItem('sm_draft_posts', JSON.stringify(nextPosts)); } catch {}
+  }
+
+  function clearDraftImages() {
+    try { localStorage.removeItem('sm_draft_images'); } catch {}
+  }
+
+  function formatImageError(imageResult) {
+    const code = String(imageResult?.errorCode || '').toLowerCase();
+    const base = imageResult?.error || 'Image generation failed.';
+    if (code.includes('billing_hard_limit_reached')) return `OpenAI image billing limit reached. ${base}`;
+    if (code.includes('insufficient_quota')) return `OpenAI image quota exceeded. ${base}`;
+    if (code.includes('missing_openai_key')) return base;
+    return base;
+  }
+
+  function imageFallbackLabel(imageResult) {
+    if (imageResult?.fallbackSource === 'library') return 'your Image Library';
+    if (imageResult?.fallbackSource === 'stock') return 'the built-in stock image set';
+    return 'fallback images';
+  }
+
+  function countSelectedWithinLimit(posts, limit) {
+    return (posts || []).slice(0, limit).filter((post) => post.approved).length;
+  }
+
+  function buildSelectionSummary(postsByPlat, limit) {
+    return Object.entries(postsByPlat || {})
+      .map(([platform, posts]) => ({ platform, count: countSelectedWithinLimit(posts, limit) }))
+      .filter((item) => item.count > 0);
+  }
+
+  function formatSelectionSummary(items) {
+    if (!items.length) return 'No posts selected.';
+    return items
+      .map(({ platform, count }) => `${PLATFORM_THEME[platform]?.name || platform} ${count}`)
+      .join(' · ');
+  }
+
+  async function syncCampaignPosts(nextPosts) {
+    const campaignName = aiCampaignName.trim();
+    if (!campaignName) return;
+
+    const settings = buildCampaignSettings(nextPosts);
+    setSavedCampaigns((prev) => prev.map((campaign) => (
+      campaign.name === campaignName ? { ...campaign, ...settings } : campaign
+    )));
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data: existing } = await supabase.from('social_ai_presets')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('name', campaignName)
+      .maybeSingle();
+
+    if (!existing?.id) return;
+
+    const { error } = await supabase.from('social_ai_presets')
+      .update({ settings, updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+
+    if (error) setNotice(`Campaign sync failed: ${error.message}`);
   }
 
   // ── Campaign CRUD ───────────────────────────────────────────────────────
@@ -460,18 +687,7 @@ export default function CreateContent() {
     if (!aiCampaignName.trim()) { setNotice('Enter a campaign name first.'); return; }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const settings = {
-      topic: aiTopic, style: aiStyle, length: aiLength, hashtagLevel: aiHashtagLevel,
-      contentType: aiContentType, platforms: aiSelectedPlatforms, ingredients: aiIngredients,
-      leadForm: aiLeadForm, scheduleMode: aiScheduleMode, imageCount: aiImageCount,
-      campaignWeeks, campaignDays, scheduleTime: aiScheduleTime,
-      posts: Object.fromEntries(
-        Object.entries(postsByPlatform).map(([plat, posts]) => [
-          plat,
-          posts.map(p => ({ id: p.id, content: p.content, platform: p.platform, tone: p.tone, approved: p.approved, image: p.image?.startsWith('data:') ? null : (p.image || null) }))
-        ])
-      ),
-    };
+    const settings = buildCampaignSettings();
     const { data: existing } = await supabase.from('social_ai_presets')
       .select('id').eq('user_id', session.user.id).eq('name', aiCampaignName.trim()).maybeSingle();
     let error;
@@ -495,7 +711,7 @@ export default function CreateContent() {
     setAiLength(campaign.length || 'short');
     setAiHashtagLevel(campaign.hashtagLevel || 'high');
     setAiContentType(campaign.contentType || 'standard');
-    setAiSelectedPlatforms(campaign.platforms || { facebook: true, instagram: true, linkedin: true, pinterest: true, x: true, tiktok: false, youtube: false });
+    setAiSelectedPlatforms({ ...DEFAULT_SELECTED_PLATFORMS, ...(campaign.platforms || {}) });
     if (campaign.ingredients)              setAiIngredients(campaign.ingredients);
     if (campaign.leadForm)                 setAiLeadForm(campaign.leadForm);
     setAiScheduleMode(campaign.scheduleMode || 'daily');
@@ -503,11 +719,11 @@ export default function CreateContent() {
     if (campaign.campaignWeeks)            setCampaignWeeks(campaign.campaignWeeks);
     if (campaign.campaignDays)             setCampaignDays(campaign.campaignDays);
     if (campaign.scheduleTime)             setAiScheduleTime(campaign.scheduleTime);
+    setAiScheduleSecondTime(campaign.scheduleSecondTime || '21:00');
     if (campaign.posts && Object.keys(campaign.posts).length) {
       setPostsByPlatform(campaign.posts);
       try { localStorage.setItem('sm_draft_posts', JSON.stringify(campaign.posts)); } catch {}
-      const firstPlatform = Object.keys(campaign.posts)[0];
-      if (firstPlatform) setViewPlatform(firstPlatform);
+      setViewPlatform(getDefaultViewPlatform(Object.keys(campaign.posts)));
     }
     setShowCampaignDropdown(false);
     setNotice(`Campaign "${campaign.name}" loaded — all settings restored.`);
@@ -534,7 +750,7 @@ export default function CreateContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          topic: aiTopic, postsPerPlatform: 28, platforms,
+          topic: aiTopic, postsPerPlatform: getPostsPerPlatformCount(), platforms,
           style: aiStyle, contentLength: aiLength, hashtagLevel: aiHashtagLevel,
           userId, saveDrafts: false, doNotRewrite,
         }),
@@ -542,7 +758,7 @@ export default function CreateContent() {
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || 'AI generation failed');
 
-      const byPlatform = normalizePlatformPosts(data, aiStyle);
+      const byPlatform = normalizePlatformPosts(data, aiStyle, getPostsPerPlatformCount());
       if (!Object.keys(byPlatform).length) throw new Error('AI returned no usable posts. Try a more specific topic.');
 
       let msg = '';
@@ -558,32 +774,35 @@ export default function CreateContent() {
           if (imgRes.ok && imgData.ok && imgData.images?.length) {
             setAiImages(imgData.images);
             try { localStorage.setItem('sm_draft_images', JSON.stringify(imgData.images)); } catch {}
-            const allPosts = Object.values(byPlatform).flat();
-            const withImages = assignImages(allPosts, imgData.images);
-            const imgById = {};
-            withImages.forEach(p => { imgById[p.id] = p.image; });
-            for (const plat of Object.keys(byPlatform)) {
-              byPlatform[plat] = byPlatform[plat].map(p => ({ ...p, image: imgById[p.id] || null }));
+            Object.assign(byPlatform, assignImagesAcrossPlatforms(byPlatform, imgData.images));
+            if (imgData.fallback) {
+              msg = `Generated posts and ${imgData.images.length} fallback real images from ${imageFallbackLabel(imgData)}. Saved to your shared Media Library. ${formatImageError(imgData)}`;
+            } else if (imgData.partial) {
+              msg = `Generated posts and ${imgData.images.length} real images. Saved to your shared Media Library. Some images failed: ${formatImageError(imgData)}`;
+            } else {
+              msg = `Generated posts for ${Object.keys(byPlatform).length} platforms and ${imgData.images.length} images. Saved to your shared Media Library.`;
             }
-            msg = `Generated posts for ${Object.keys(byPlatform).length} platforms and ${imgData.images.length} images.`;
           } else {
             setAiImages([]);
-            msg = `Posts generated. Image generation failed: ${imgData.error || 'no data'}.`;
+            clearDraftImages();
+            msg = `Posts generated. No images were created. ${formatImageError(imgData)}`;
           }
         } catch (e) {
           setAiImages([]);
+          clearDraftImages();
           msg = `Posts generated. Image error: ${e.message}.`;
         }
       } else {
         setAiImages([]);
+        clearDraftImages();
         const total = Object.values(byPlatform).reduce((s, arr) => s + arr.length, 0);
         msg = `Generated ${total} posts across ${Object.keys(byPlatform).length} platforms.`;
       }
 
       setPostsByPlatform(byPlatform);
-      try { localStorage.setItem('sm_draft_posts', JSON.stringify(byPlatform)); } catch {}
-      const firstPlatform = Object.keys(byPlatform)[0];
-      if (firstPlatform) setViewPlatform(firstPlatform);
+      persistDraftPosts(byPlatform);
+      await syncCampaignPosts(byPlatform);
+      setViewPlatform(getDefaultViewPlatform(Object.keys(byPlatform)));
       setNotice(msg);
     } catch (err) {
       setNotice(err.message || 'Failed to generate content');
@@ -606,20 +825,20 @@ export default function CreateContent() {
         body: JSON.stringify({ descriptions: buildImageDescriptions(postsByPlatform, aiImageCount), style: aiStyle, count: aiImageCount }),
       });
       const data = await res.json();
-      if (!res.ok || !data.ok || !data.images?.length) { setNotice(`Images unavailable: ${data.error || 'no data'}.`); return; }
+      if (!res.ok || !data.ok || !data.images?.length) {
+        setAiImages([]);
+        clearDraftImages();
+        setNotice(`No images were created. ${formatImageError(data)}`);
+        return;
+      }
       setAiImages(data.images);
-      setPostsByPlatform(prev => {
-        const allPosts = Object.values(prev).flat();
-        const withImages = assignImages(allPosts, data.images);
-        const imgById = {};
-        withImages.forEach(p => { imgById[p.id] = p.image; });
-        const next = {};
-        for (const [plat, posts] of Object.entries(prev)) {
-          next[plat] = posts.map(p => ({ ...p, image: imgById[p.id] || null }));
-        }
-        return next;
-      });
-      setNotice(`Generated ${data.images.length} images and distributed across all platforms.`);
+      try { localStorage.setItem('sm_draft_images', JSON.stringify(data.images)); } catch {}
+      setPostsByPlatform(prev => assignImagesAcrossPlatforms(prev, data.images));
+      setNotice(data.fallback
+        ? `Generated ${data.images.length} fallback real images from ${imageFallbackLabel(data)}. Saved to your shared Media Library. ${formatImageError(data)}`
+        : data.partial
+          ? `Generated ${data.images.length} real images. Saved to your shared Media Library. Some image requests failed: ${formatImageError(data)}`
+          : `Generated ${data.images.length} images, distributed across all platforms, and saved to your shared Media Library.`);
     } catch (err) {
       setNotice(err.message || 'Failed');
     } finally {
@@ -629,38 +848,82 @@ export default function CreateContent() {
 
   // ── Post management ─────────────────────────────────────────────────────
   function toggleApproval(platform, id) {
-    setPostsByPlatform(prev => ({
-      ...prev,
-      [platform]: prev[platform].map(p => p.id === id ? { ...p, approved: !p.approved } : p),
-    }));
+    setPostsByPlatform(prev => {
+      const next = {
+        ...prev,
+        [platform]: prev[platform].map(p => p.id === id ? { ...p, approved: !p.approved } : p),
+      };
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      return next;
+    });
   }
 
   function updatePost(platform, id, field, val) {
-    setPostsByPlatform(prev => ({
-      ...prev,
-      [platform]: prev[platform].map(p => p.id === id ? { ...p, [field]: val } : p),
-    }));
+    setPostsByPlatform(prev => {
+      const next = {
+        ...prev,
+        [platform]: prev[platform].map(p => p.id === id ? { ...p, [field]: val } : p),
+      };
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      return next;
+    });
   }
 
   function approveAllView() {
-    const limit = campaignWeeks * campaignDays;
-    setPostsByPlatform(prev => ({ ...prev, [viewPlatform]: (prev[viewPlatform] || []).map((p, i) => i < limit ? { ...p, approved: true } : p) }));
+    if (viewPlatform === 'all') {
+      approveAll();
+      return;
+    }
+    const limit = getPostsPerPlatformCount();
+    setPostsByPlatform(prev => {
+      const next = {
+        ...prev,
+        [viewPlatform]: (prev[viewPlatform] || []).map((p, i) => ({ ...p, approved: i < limit })),
+      };
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      const selected = countSelectedWithinLimit(next[viewPlatform], limit);
+      setNotice(`Selected ${selected} ${PLATFORM_THEME[viewPlatform]?.name || viewPlatform} posts.`);
+      return next;
+    });
   }
 
   function approveAll() {
-    const limit = campaignWeeks * campaignDays;
+    const limit = getPostsPerPlatformCount();
     setPostsByPlatform(prev => {
       const next = {};
-      for (const [plat, posts] of Object.entries(prev)) next[plat] = posts.map((p, i) => i < limit ? { ...p, approved: true } : p);
+      for (const [plat, posts] of Object.entries(prev)) {
+        next[plat] = posts.map((p, i) => ({ ...p, approved: i < limit }));
+      }
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      setNotice(`Selected all campaign posts across platforms. ${formatSelectionSummary(buildSelectionSummary(next, limit))}`);
       return next;
     });
+  }
+
+  function deleteSelected() {
+    const selectedCount = buildSelectionSummary(postsByPlatform, getPostsPerPlatformCount()).reduce((sum, item) => sum + item.count, 0);
+    if (!selectedCount) { setNotice('Select at least one post first.'); return; }
+    setPostsByPlatform(prev => {
+      const next = {};
+      for (const [plat, posts] of Object.entries(prev)) next[plat] = posts.filter(p => !p.approved);
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      return next;
+    });
+    setNotice(`Deleted ${selectedCount} selected post${selectedCount === 1 ? '' : 's'}.`);
   }
 
   function clearAll() {
     setPostsByPlatform(prev => {
       const next = {};
       for (const [plat, posts] of Object.entries(prev)) next[plat] = posts.map(p => ({ ...p, approved: false }));
-      try { localStorage.setItem('sm_draft_posts', JSON.stringify(next)); } catch {}
+      persistDraftPosts(next);
+      void syncCampaignPosts(next);
+      setNotice('Cleared all selected posts across platforms.');
       return next;
     });
   }
@@ -758,13 +1021,11 @@ export default function CreateContent() {
       }
       const [hh, mm] = String(aiScheduleTime || '09:00').split(':');
       start.setHours(clamp(parseInt(hh, 10), 0, 23), clamp(parseInt(mm, 10), 0, 59), 0, 0);
+      const scheduledQueue = buildScheduledQueue(postsByPlatform, start, aiScheduleMode, aiScheduleSecondTime);
       let ok = 0;
       let lastError = '';
-      for (let i = 0; i < allApproved.length; i++) {
-        const post = allApproved[i];
-        const scheduledFor = new Date(start);
-        if (aiScheduleMode === 'daily') scheduledFor.setDate(start.getDate() + i);
-        else scheduledFor.setHours(start.getHours() + i * 12);
+      for (let i = 0; i < scheduledQueue.length; i++) {
+        const { post, scheduledFor } = scheduledQueue[i];
         // Upload base64 image to storage first
         let mediaUrl = null;
         if (post.image) {
@@ -822,14 +1083,27 @@ export default function CreateContent() {
   // ── Computed ────────────────────────────────────────────────────────────
   const allPlatforms    = Object.keys(postsByPlatform);
   const hasGenerated    = allPlatforms.length > 0;
-  const viewPosts       = (postsByPlatform[viewPlatform] || []).slice(0, campaignWeeks * campaignDays);
-  const viewTheme       = PLATFORM_THEME[viewPlatform] || PLATFORM_THEME.facebook;
-  const campaignSlice  = campaignWeeks * campaignDays;
+  const isAllView       = viewPlatform === 'all';
+  const postsPerDay     = getPostsPerDay();
+  const postsPerPlatformCount = getPostsPerPlatformCount();
+  const viewPosts       = isAllView
+    ? allPlatforms.flatMap((platform) =>
+        (postsByPlatform[platform] || [])
+          .slice(0, postsPerPlatformCount)
+          .map((post) => ({ ...post, _viewPlatform: platform }))
+      )
+    : (postsByPlatform[viewPlatform] || [])
+        .slice(0, postsPerPlatformCount)
+        .map((post) => ({ ...post, _viewPlatform: viewPlatform }));
+  const viewTheme       = isAllView
+    ? { name: 'All Platforms', color: '#475569', lightBg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.28)', icon: '◉' }
+    : (PLATFORM_THEME[viewPlatform] || PLATFORM_THEME.facebook);
+  const campaignSlice  = postsPerPlatformCount;
   const totalApproved   = Object.values(postsByPlatform).reduce((s, posts) => s + posts.slice(0, campaignSlice).filter(p => p.approved).length, 0);
   const totalPosts      = Object.values(postsByPlatform).reduce((s, posts) => s + Math.min(posts.length, campaignSlice), 0);
   const viewApproved    = viewPosts.filter(p => p.approved).length;
   const selPlatforms    = getSelectedPlatforms();
-  const totalPostCount  = campaignWeeks * campaignDays;
+  const totalPostCount  = postsPerPlatformCount;
   const isError         = notice.toLowerCase().includes('fail') || notice.toLowerCase().includes('error') || notice.toLowerCase().includes('openai');
   const isDraftSaved    = notice.toLowerCase().includes('saved') && notice.toLowerCase().includes('draft');
   const activeWeeks     = Array.from({ length: campaignWeeks }, (_, i) => i);
@@ -847,7 +1121,7 @@ export default function CreateContent() {
               <div style={S.bannerIcon}>{ICONS.social({ size: 48 })}</div>
               <div>
                 <h1 style={{ fontSize: 48, margin: 0, fontWeight: 600 }}>AI Content Generator</h1>
-                <p style={{ margin: 0, opacity: 0.8, fontSize: 18 }}>Generate 28 platform-specific posts per platform — a full month in one click.</p>
+                <p style={{ margin: 0, opacity: 0.8, fontSize: 18 }}>Generate platform-specific posts based on your campaign duration and daily posting rate.</p>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
@@ -966,17 +1240,52 @@ export default function CreateContent() {
                     <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 10 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         {PLATFORM_OPTIONS.map(opt => {
-                          const disabled = opt.videoOnly && aiContentType !== 'video';
+                          const disabled = !!opt.unsupported || (opt.videoOnly && aiContentType !== 'video');
                           const theme = PLATFORM_THEME[opt.key];
+                          const selected = !!aiSelectedPlatforms[opt.key];
                           return (
-                            <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 16, opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
-                              <input type="checkbox" checked={!!aiSelectedPlatforms[opt.key]} disabled={disabled} onChange={e => setAiSelectedPlatforms(prev => ({ ...prev, [opt.key]: e.target.checked }))} style={{ accentColor: theme?.color, width: 22, height: 22, cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0 }} />
+                            <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative' }}>
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                disabled={disabled}
+                                onChange={e => setAiSelectedPlatforms(prev => ({ ...prev, [opt.key]: e.target.checked }))}
+                                style={{
+                                  position: 'absolute',
+                                  opacity: 0,
+                                  inset: 0,
+                                  margin: 0,
+                                  cursor: disabled ? 'not-allowed' : 'pointer',
+                                }}
+                              />
+                              <span
+                                aria-hidden="true"
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: 4,
+                                  border: `2px solid ${selected ? (theme?.color || '#fff') : 'rgba(255,255,255,0.45)'}`,
+                                  background: selected ? (theme?.color || '#fff') : 'transparent',
+                                  color: '#fff',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 14,
+                                  fontWeight: 900,
+                                  lineHeight: 1,
+                                  flexShrink: 0,
+                                  boxSizing: 'border-box',
+                                }}
+                              >
+                                {selected ? '✓' : ''}
+                              </span>
                               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              {PLATFORM_LOGO[opt.key]
-                                ? <img src={PLATFORM_LOGO[opt.key]} alt={opt.label} style={{ width: 20, height: 20, borderRadius: 4, opacity: disabled ? 0.35 : 1 }} />
-                                : <span>{theme?.icon}</span>}
-                              {opt.label}
-                            </span>
+                                {PLATFORM_LOGO[opt.key]
+                                  ? <img src={PLATFORM_LOGO[opt.key]} alt={opt.label} style={{ width: 20, height: 20, borderRadius: 4, opacity: disabled ? 0.35 : 1 }} />
+                                  : <span>{theme?.icon}</span>}
+                                {opt.label}
+                                {opt.unsupported && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>({opt.unsupportedLabel || 'Unavailable'})</span>}
+                              </span>
                             </label>
                           );
                         })}
@@ -1052,7 +1361,7 @@ export default function CreateContent() {
                     </div>
                   </div>
                   <div style={{ marginTop: 10, fontSize: 16, color: 'rgba(255,255,255,0.55)' }}>
-                    {campaignWeeks} week{campaignWeeks > 1 ? 's' : ''} &times; {campaignDays} posts = <strong style={{ color: '#c084fc' }}>{campaignWeeks * campaignDays} posts</strong> per platform
+                    {campaignWeeks} week{campaignWeeks > 1 ? 's' : ''} × {campaignDays} day{campaignDays > 1 ? 's' : ''} × {postsPerDay} post{postsPerDay > 1 ? 's' : ''} per day = <strong style={{ color: '#c084fc' }}>{postsPerPlatformCount} posts</strong> per platform
                   </div>
                 </div>
               </div>
@@ -1172,7 +1481,7 @@ export default function CreateContent() {
               disabled={aiGenerating}
               style={{ ...S.primaryBtn, flex: 3, fontSize: 16, padding: 16, opacity: aiGenerating ? 0.6 : 1 }}
             >
-              {aiGenerating ? 'Generating...' : `Generate ${selPlatforms.length * totalPostCount} Posts — ${selPlatforms.length} platform${selPlatforms.length !== 1 ? 's' : ''} × ${totalPostCount} posts (${campaignWeeks}w × ${campaignDays}/wk)`}
+              {aiGenerating ? 'Generating...' : `Generate ${selPlatforms.length * totalPostCount} Posts — ${selPlatforms.length} platform${selPlatforms.length !== 1 ? 's' : ''} × ${totalPostCount} posts (${campaignWeeks}w × ${campaignDays}d × ${postsPerDay}/day)`}
             </button>
             <button
               onClick={generateAIImagesOnly}
@@ -1191,10 +1500,36 @@ export default function CreateContent() {
               {/* Platform tab selector */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ fontSize: 16, opacity: 0.7, marginRight: 4 }}>Platform:</span>
+                {allPlatforms.length > 1 && (
+                  <button
+                    onClick={() => setViewPlatform('all')}
+                    style={{
+                      background: isAllView ? '#475569' : 'rgba(148,163,184,0.12)',
+                      border: `1.5px solid ${isAllView ? '#475569' : 'rgba(148,163,184,0.28)'}`,
+                      color: '#fff',
+                      padding: '6px 14px',
+                      borderRadius: 20,
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      fontWeight: isAllView ? 600 : 400,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>◉</span>
+                    All Platforms
+                    {isAllView && viewApproved > 0 && (
+                      <span style={{ background: 'rgba(34,197,94,0.25)', border: '1px solid rgba(34,197,94,0.5)', borderRadius: 10, padding: '1px 6px', fontSize: 16 }}>
+                        {viewApproved}
+                      </span>
+                    )}
+                  </button>
+                )}
                 {allPlatforms.map(plat => {
                   const t = PLATFORM_THEME[plat] || PLATFORM_THEME.facebook;
                   const logo = PLATFORM_LOGO[plat];
-                  const approved = (postsByPlatform[plat] || []).filter(p => p.approved).length;
+                  const approved = countSelectedWithinLimit(postsByPlatform[plat] || [], postsPerPlatformCount);
                   const isActive = viewPlatform === plat;
                   return (
                     <button
@@ -1231,68 +1566,119 @@ export default function CreateContent() {
               {/* Action + schedule bar */}
               <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>
-                  <strong style={{ color: totalApproved > 0 ? '#86efac' : 'inherit' }}>{totalApproved}</strong> of {totalPosts} approved total
-                  {viewApproved > 0 && <span style={{ opacity: 0.55 }}> · {viewApproved} on {viewTheme.name}</span>}
+                  <strong style={{ color: totalApproved > 0 ? '#86efac' : 'inherit' }}>{totalApproved}</strong> of {totalPosts} selected total
+                  {viewApproved > 0 && <span style={{ opacity: 0.55 }}> · {viewApproved} selected in {viewTheme.name}</span>}
                 </div>
-                <button onClick={approveAllView} style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px' }}>Approve {viewTheme.name}</button>
-                <button onClick={approveAll}     style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px' }}>All Platforms</button>
-                <button onClick={clearAll}       style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px', opacity: 0.55 }}>Clear All</button>
+                <button onClick={approveAllView} style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px' }}>{isAllView ? 'Select Visible Posts' : `Select ${viewTheme.name}`}</button>
+                <button onClick={approveAll}     style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px' }}>Select All Platforms</button>
+                <button onClick={clearAll}       style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px', opacity: 0.75 }}>Clear Selection</button>
+                <button onClick={deleteSelected} disabled={totalApproved === 0} style={{ ...S.slimBtn, fontSize: 16, padding: '5px 10px', borderColor: 'rgba(248,113,113,0.4)', color: '#fca5a5', opacity: totalApproved === 0 ? 0.45 : 1 }}>Delete Selected</button>
                 <div style={{ flex: 1 }} />
                 <label style={S.label}>Start date</label>
                 <input type="date" value={aiScheduleStartDate} onChange={e => setAiScheduleStartDate(e.target.value)} style={{ ...S.input, width: 'auto', fontSize: 16, padding: '7px 10px' }} />
+                <label style={S.label}>First post</label>
                 <input type="time" value={aiScheduleTime}      onChange={e => setAiScheduleTime(e.target.value)}      style={{ ...S.input, width: 'auto', fontSize: 16, padding: '7px 10px' }} />
+                {aiScheduleMode === 'twice' && (
+                  <>
+                    <label style={S.label}>Second post</label>
+                    <input type="time" value={aiScheduleSecondTime} onChange={e => setAiScheduleSecondTime(e.target.value)} style={{ ...S.input, width: 'auto', fontSize: 16, padding: '7px 10px' }} />
+                  </>
+                )}
                 <button
                   onClick={saveDrafts}
                   disabled={aiGenerating || totalApproved === 0}
                   style={{ ...S.primaryBtn, width: 'auto', padding: '9px 20px', fontSize: 16, background: 'rgba(59,130,246,0.18)', borderColor: 'rgba(59,130,246,0.4)', color: '#93C5FD', opacity: (aiGenerating || totalApproved === 0) ? 0.4 : 1 }}
                 >
-                  {aiGenerating ? 'Saving...' : `💾 Save ${totalApproved} as Drafts`}
+                  {aiGenerating ? 'Saving...' : `💾 Save ${totalApproved} Selected`}
                 </button>
                 <button
                   onClick={scheduleApproved}
                   disabled={aiGenerating || !aiScheduleStartDate || totalApproved === 0}
                   style={{ ...S.primaryBtn, width: 'auto', padding: '9px 20px', fontSize: 16, background: 'rgba(34,197,94,0.18)', borderColor: 'rgba(34,197,94,0.4)', color: '#86efac', opacity: (!aiScheduleStartDate || totalApproved === 0) ? 0.4 : 1 }}
                 >
-                  {aiGenerating ? 'Scheduling...' : `Schedule ${totalApproved} Posts`}
+                  {aiGenerating ? 'Scheduling...' : `Schedule ${totalApproved} Selected`}
                 </button>
               </div>
 
-              {/* Day column headers */}
-              <div style={{ display: 'grid', gridTemplateColumns: `50px repeat(7, 1fr)`, gap: 5, marginBottom: 4 }}>
-                <div />
-                {DAYS.map(d => (
-                  <div key={d} style={{ textAlign: 'center', fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', padding: '5px 0', background: viewTheme.lightBg, borderRadius: 4 }}>
-                    {d}
+              {isAllView ? (
+                <div>
+                  <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', marginBottom: 10 }}>
+                    Showing every generated post together across all selected platforms.
                   </div>
-                ))}
-              </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 180px))', justifyContent: 'start', gap: 10 }}>
+                    {viewPosts.map(post => {
+                      const postTheme = PLATFORM_THEME[post._viewPlatform] || PLATFORM_THEME.facebook;
+                      const logo = PLATFORM_LOGO[post._viewPlatform];
+                      return (
+                        <div key={`${post._viewPlatform}-${post.id}`}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '0 4px' }}>
+                            {logo
+                              ? <img src={logo} alt={postTheme.name} style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                              : <span style={{ fontSize: 16 }}>{postTheme.icon}</span>}
+                            <span style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0' }}>{postTheme.name}</span>
+                          </div>
+                          <PostCard
+                            post={post}
+                            theme={postTheme}
+                            brandName={aiCampaignName || 'Your Brand'}
+                            onToggle={() => toggleApproval(post._viewPlatform, post.id)}
+                            onEdit={text => updatePost(post._viewPlatform, post.id, 'content', text)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Day column headers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: `50px repeat(7, 1fr)`, gap: 5, marginBottom: 4 }}>
+                    <div />
+                    {DAYS.map(d => (
+                      <div key={d} style={{ textAlign: 'center', fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.55)', padding: '5px 0', background: viewTheme.lightBg, borderRadius: 4 }}>
+                        {d}
+                      </div>
+                    ))}
+                  </div>
 
-              {/* Week rows driven by campaignWeeks × campaignDays */}
-              {activeWeeks.map(wIdx => {
-                const weekPosts = viewPosts.slice(wIdx * campaignDays, (wIdx + 1) * campaignDays);
-                return (
-                  <div key={wIdx} style={{ display: 'grid', gridTemplateColumns: `50px repeat(7, 1fr)`, gap: 5, marginBottom: 5 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
-                      <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                        Wk {wIdx + 1}
-                      </span>
-                    </div>
-                    {weekPosts.map(post => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        theme={viewTheme}
-                        brandName={aiCampaignName || 'Your Brand'}
-                        onToggle={() => toggleApproval(viewPlatform, post.id)}
-                        onEdit={text => updatePost(viewPlatform, post.id, 'content', text)}
-                      />
-                    ))}
-                    {Array.from({ length: 7 - weekPosts.length }).map((_, i) => (
-                      <div key={`empty-${i}`} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.05)', minHeight: 140 }} />
-                    ))}
-                  </div>
-                );
-              })}
+                  {/* Week rows driven by campaign duration and posts-per-day */}
+                  {activeWeeks.map(wIdx => {
+                    const weekPosts = viewPosts.slice(wIdx * campaignDays * postsPerDay, (wIdx + 1) * campaignDays * postsPerDay);
+                    return (
+                      <div key={wIdx} style={{ display: 'grid', gridTemplateColumns: `50px repeat(7, 1fr)`, gap: 5, marginBottom: 5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
+                          <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            Wk {wIdx + 1}
+                          </span>
+                        </div>
+                        {Array.from({ length: campaignDays }).flatMap((_, dayIdx) => {
+                          const dayPosts = weekPosts.slice(dayIdx * postsPerDay, (dayIdx + 1) * postsPerDay);
+                          return [
+                            <div key={`day-${wIdx}-${dayIdx}`} style={{ display: 'grid', gap: 5 }}>
+                              {dayPosts.map(post => (
+                                <PostCard
+                                  key={post.id}
+                                  post={post}
+                                  theme={viewTheme}
+                                  brandName={aiCampaignName || 'Your Brand'}
+                                  onToggle={() => toggleApproval(viewPlatform, post.id)}
+                                  onEdit={text => updatePost(viewPlatform, post.id, 'content', text)}
+                                />
+                              ))}
+                              {Array.from({ length: postsPerDay - dayPosts.length }).map((_, slotIdx) => (
+                                <div key={`empty-slot-${wIdx}-${dayIdx}-${slotIdx}`} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.05)', minHeight: 140 }} />
+                              ))}
+                            </div>
+                          ];
+                        })}
+                        {Array.from({ length: 7 - campaignDays }).map((_, i) => (
+                          <div key={`empty-${i}`} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.05)', minHeight: 140 }} />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
 
               {/* Image strip */}
               {aiImages.length > 0 && (

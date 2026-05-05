@@ -3,7 +3,13 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import PageBuilderCanvas from "../../../components/website-builder/PageBuilderCanvas";
-import { applyAssetToProps, createStoredAsset } from "../../../lib/website-builder/mediaAssets";
+import {
+  applyAssetToProps,
+  createStoredAsset,
+  mergeWebsiteBuilderAssetSources,
+  syncWebsiteBuilderSharedAssetCache,
+  uploadSharedMediaLibraryAsset,
+} from "../../../lib/website-builder/mediaAssets";
 import { applyChaiThemePreset, buildStarterChaiData, renderChaiHtml } from "../../../lib/website-builder/chaiStudio";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
@@ -55,6 +61,32 @@ export default function VisualBuilderPage() {
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
   }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) return undefined;
+
+    let cancelled = false;
+
+    const syncSharedAssets = async () => {
+      const mergedAssets = await syncWebsiteBuilderSharedAssetCache({
+        supabase,
+        userId: session.user.id,
+        currentAssets: getWebsiteBuilderAssets(),
+      });
+
+      if (cancelled) return;
+      saveWebsiteBuilderAssets(mergedAssets);
+      setBrandAssets(mergedAssets);
+    };
+
+    syncSharedAssets().catch((error) => {
+      console.warn("Could not sync shared website builder assets", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     let subscription;
@@ -191,6 +223,7 @@ export default function VisualBuilderPage() {
           customDomain: normalizeDomain(customDomain),
           project: {
             ...project,
+            brandAssets,
             name: displayName,
             publication: undefined,
           },
@@ -402,17 +435,19 @@ export default function VisualBuilderPage() {
     if (!file) return;
 
     try {
-      const asset = await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
+      const asset = session?.user?.id
+        ? await uploadSharedMediaLibraryAsset(supabase, session.user.id, file, { tag: fieldKey === "logo" ? "logo" : "web" })
+        : await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
       const existingImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
       const dedupedImages = existingImages.filter((image) => image?.src && image.src !== asset.src && image.name !== asset.name);
       const nextAssets = fieldKey === "logo"
         ? { ...brandAssets, logo: asset }
         : {
             ...brandAssets,
-            images: [asset, ...dedupedImages].slice(0, 12),
+            images: [asset, ...dedupedImages],
           };
 
-      persistAssets(nextAssets);
+      persistAssets(mergeWebsiteBuilderAssetSources(nextAssets));
       flashNotice(`${file.name} added`);
       return asset;
     } catch (error) {

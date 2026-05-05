@@ -7,9 +7,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/run-next-clean.mjs dev",
+    "dev:fresh": "node scripts/run-next-clean.mjs dev --clean",
+    "build": "node scripts/run-next-clean.mjs build",
+    "build:fresh": "node scripts/run-next-clean.mjs build --clean",
+    "start": "node scripts/run-next-clean.mjs start",
+    "start:fresh": "node scripts/run-next-clean.mjs start --clean",
     "lint": "next lint",
     "autoresponder:cron": "node scripts/local-autoresponder-cron.js",
     "sms:flush": "node scripts/flush-sms-queue.js",

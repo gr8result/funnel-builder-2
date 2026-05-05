@@ -2,11 +2,16 @@
 import { requireUser } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getLinkedInRedirectUri() {
-  return (
-    process.env.LINKEDIN_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/linkedin/callback`
-  );
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function getLinkedInRedirectUri(req) {
+  return process.env.LINKEDIN_OAUTH_REDIRECT_URI || `${getRequestOrigin(req)}/api/social/oauth/linkedin/callback`;
 }
 
 export default async function handler(req, res) {
@@ -23,9 +28,12 @@ export default async function handler(req, res) {
   if (!creds?.appId) {
     return res.status(400).json({ ok: false, error: "LinkedIn Client ID not configured. Open Platform Setup to add your credentials." });
   }
+  if (!creds?.appSecret) {
+    return res.status(400).json({ ok: false, error: "LinkedIn Client Secret not configured. Open Platform Setup to add your credentials." });
+  }
 
   const state = crypto.randomUUID();
-  const redirectPath = req.body?.redirectPath || "/modules/social_media";
+  const redirectPath = req.body?.redirectPath || "/modules/social_media/setup";
 
   const { error } = await auth.admin.from("social_oauth_states").insert({
     state,
@@ -42,7 +50,7 @@ export default async function handler(req, res) {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: creds.appId,
-    redirect_uri: getLinkedInRedirectUri(),
+    redirect_uri: getLinkedInRedirectUri(req),
     state,
     scope: "openid profile email w_member_social",
   });

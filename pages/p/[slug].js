@@ -313,9 +313,13 @@ export default function PublicFunnelPage() {
 
   const stepIndex = steps.findIndex((s) => s.id === currentStep.id);
   const totalSteps = steps.length;
-  const previewShellStyle = isMobilePreview
+  const parsedCanvasWidth = parseInt(`${canvasWidthParam || ""}`, 10);
+  const previewCanvasWidth = Number.isFinite(parsedCanvasWidth) && parsedCanvasWidth > 0
+    ? parsedCanvasWidth
+    : 1002;
+  const previewShellStyle = isPreviewMode
     ? {
-        width: 390,
+        width: isMobilePreview ? 390 : previewCanvasWidth,
         maxWidth: "100%",
         margin: "0 auto",
         minHeight: "100vh",

@@ -51,6 +51,7 @@ export default async function handler(req, res) {
         pageId: account.account_id,
         accessToken: account.access_token,
         message: post.content,
+        imageUrl: post.media_url || null,
       });
     } else if (post.platform === "instagram") {
       if (!post.media_url) {
@@ -87,10 +88,30 @@ export default async function handler(req, res) {
       .from("social_posts")
       .update({
         status: "published",
-        platform_post_id: result?.id || null,
+        platform_post_id: result?.post_id || result?.id || null,
         published_at: new Date().toISOString(),
       })
       .eq("id", post.id);
+
+    await auth.admin
+      .from('social_schedule')
+      .update({
+        status: 'processed',
+        processed_at: new Date().toISOString(),
+      })
+      .eq('post_id', post.id)
+      .eq('user_id', auth.user.id)
+      .in('status', ['scheduled', 'queued']);
+
+    await auth.admin
+      .from('social_queue')
+      .update({
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+      })
+      .eq('post_id', post.id)
+      .eq('user_id', auth.user.id)
+      .in('status', ['queued', 'processing', 'failed']);
 
     return res.status(200).json({ ok: true, result });
   } catch (err) {

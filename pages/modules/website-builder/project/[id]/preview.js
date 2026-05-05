@@ -7,6 +7,7 @@ import {
   getWebsiteBuilderAssets,
   getWebsiteProject,
 } from "../../../../../lib/website-builder/projectStore";
+import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
 import { supabase } from "../../../../../lib/supabaseClient";
 
 function slugify(v) {
@@ -17,9 +18,25 @@ function slugify(v) {
     .replace(/(^-|-$)/g, "");
 }
 
+function pickLayoutWidth(blocks, fallback = 1500) {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = Number(block?.props?.baseLayoutWidth || 0);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return fallback;
+}
+
+function pickPageBackground(blocks, fallback = "#ffffff") {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = String(block?.props?.pageBackground || "").trim();
+    if (value) return value;
+  }
+  return fallback;
+}
+
 export default function ProjectPreviewPage() {
   const router = useRouter();
-  const { id, page } = router.query;
+  const { id, page, viewport } = router.query;
 
   const [session, setSession] = useState(null);
   const [project, setProject] = useState(null);
@@ -45,6 +62,32 @@ export default function ProjectPreviewPage() {
   }, []);
 
   useEffect(() => {
+    if (!session?.user?.id) return undefined;
+
+    let cancelled = false;
+
+    const syncSharedAssets = async () => {
+      const mergedAssets = await syncWebsiteBuilderSharedAssetCache({
+        supabase,
+        userId: session.user.id,
+        currentAssets: getWebsiteBuilderAssets(),
+      });
+
+      if (!cancelled) {
+        setAssets(mergedAssets);
+      }
+    };
+
+    syncSharedAssets().catch((error) => {
+      console.warn("Could not sync preview assets from shared media library", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     if (!id) return;
     let nextProject = getWebsiteProject(id);
     setProject(nextProject);
@@ -55,6 +98,26 @@ export default function ProjectPreviewPage() {
     const requested = String(page || "");
     return project.pages.find((p) => slugify(p.name) === requested) || project.pages[0];
   }, [project, page]);
+  const previewViewport = ["mobile", "tablet", "desktop"].includes(String(viewport || "").toLowerCase())
+    ? String(viewport).toLowerCase()
+    : "desktop";
+
+  const navigationContext = useMemo(() => {
+    if (!project?.id || !project?.pages?.length) return null;
+
+    const pageMap = project.pages.reduce((acc, entry) => {
+      const key = slugify(entry?.name || "");
+      if (!key) return acc;
+      acc[key] = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(key)}&viewport=${encodeURIComponent(previewViewport)}`;
+      return acc;
+    }, {});
+
+    return {
+      basePath: `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewViewport)}`,
+      currentPageKey: slugify(active?.name || page || "home"),
+      pageMap,
+    };
+  }, [project, active, page, previewViewport]);
 
   const pageBlocks = active?.name ? (project?.pageBlocks || {})[active.name] || [] : [];
   const pageContent = active?.name ? (project?.pagesContent || {})[active.name] || "" : "";
@@ -71,10 +134,23 @@ export default function ProjectPreviewPage() {
     : pageBlocks;
 
   const injectFooter = globalFooterBlock && !pageBlocks.some((b) => b.id && b.id === globalFooterBlock.id);
+  const shellBlocks = [
+    globalNavBlock,
+    ...blocksWithoutNav,
+    globalFooterBlock,
+  ].filter(Boolean);
+  const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
+  const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
+  const compactPreview = previewViewport === "mobile";
+  const previewShellWidth = previewViewport === "mobile"
+    ? 430
+    : previewViewport === "tablet"
+      ? Math.min(920, layoutWidth)
+      : layoutWidth;
 
   if (!project) {
     return (
-      <main style={styles.page}><div style={styles.wrap}><h1 style={styles.h1}>Project not found</h1></div></main>
+      <main style={styles.page("#ffffff")}><div style={styles.wrap}><h1 style={styles.h1}>Project not found</h1></div></main>
     );
   }
 
@@ -82,84 +158,86 @@ export default function ProjectPreviewPage() {
     <>
       <Head>
         <title>{project.name} | Preview</title>
-        <style>{`html, body { background: transparent !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
+        <style>{`html, body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
       </Head>
-      <main style={styles.page}>
+      <main style={styles.page(pageBackground)}>
         <div style={styles.utilityBar}>
           <div style={styles.utilityStatus}>{(project.status || "draft").toUpperCase()}</div>
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        {/* Global nav — injected above all page content */}
-        {injectNav ? (
-          <Fragment key="__global-nav">
-            {renderWebsiteBlock(globalNavBlock, { compact: false, assets, editor: false })}
-          </Fragment>
-        ) : null}
+        <div style={{ ...styles.previewStack, width: "100%", maxWidth: `${previewShellWidth}px`, margin: "0 auto" }}>
+          {/* Global nav — injected above all page content */}
+          {injectNav ? (
+            <Fragment key="__global-nav">
+              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, navigationContext })}
+            </Fragment>
+          ) : null}
 
-        {/* Page-specific content */}
-        {Array.isArray(pageBlocks) && pageBlocks.length ? (
-          <>
-            {blocksWithoutNav.map((block, index) => (
-              <Fragment key={block.id || `${block.type}-${index}`}>
-                {renderWebsiteBlock(block, { compact: false, assets, editor: false })}
-              </Fragment>
-            ))}
-          </>
-        ) : pageContent ? (
-          <section style={styles.content} dangerouslySetInnerHTML={{ __html: pageContent }} />
-        ) : (
-          <>
-            {!globalNavBlock ? (
-              <section style={styles.siteHeader}>
-                <div style={styles.wrapWide}>
-                  <div style={styles.brandRow}>
-                    <p style={styles.brandMark}>{project.name}</p>
-                    <nav style={styles.nav}>
-                      {project.pages.map((p) => (
-                        <Link
-                          key={p.name}
-                          href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(p.name)}`}
-                          style={{
-                            ...styles.navLink,
-                            ...(active?.name === p.name ? styles.navLinkActive : {}),
-                          }}
-                        >
-                          {p.name}
-                        </Link>
-                      ))}
-                    </nav>
+          {/* Page-specific content */}
+          {Array.isArray(pageBlocks) && pageBlocks.length ? (
+            <>
+              {blocksWithoutNav.map((block, index) => (
+                <Fragment key={block.id || `${block.type}-${index}`}>
+                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext })}
+                </Fragment>
+              ))}
+            </>
+          ) : pageContent ? (
+            <section style={styles.content} dangerouslySetInnerHTML={{ __html: pageContent }} />
+          ) : (
+            <>
+              {!globalNavBlock ? (
+                <section style={styles.siteHeader}>
+                  <div style={styles.wrapWide}>
+                    <div style={styles.brandRow}>
+                      <p style={styles.brandMark}>{project.name}</p>
+                      <nav style={styles.nav}>
+                        {project.pages.map((p) => (
+                          <Link
+                            key={p.name}
+                            href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(p.name)}&viewport=${encodeURIComponent(previewViewport)}`}
+                            style={{
+                              ...styles.navLink,
+                              ...(active?.name === p.name ? styles.navLinkActive : {}),
+                            }}
+                          >
+                            {p.name}
+                          </Link>
+                        ))}
+                      </nav>
+                    </div>
                   </div>
+                </section>
+              ) : null}
+              <section style={styles.content}>
+                <div style={styles.wrap}>
+                  <div style={styles.emptyNotice}>No content yet. Open Canvas to add content.</div>
                 </div>
               </section>
-            ) : null}
-            <section style={styles.content}>
-              <div style={styles.wrap}>
-                <div style={styles.emptyNotice}>No content yet. Open Canvas to add content.</div>
-              </div>
-            </section>
-          </>
-        )}
+            </>
+          )}
 
-        {/* Global footer — injected below all page content */}
-        {injectFooter ? (
-          <Fragment key="__global-footer">
-            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets, editor: false })}
-          </Fragment>
-        ) : null}
+          {/* Global footer — injected below all page content */}
+          {injectFooter ? (
+            <Fragment key="__global-footer">
+              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, navigationContext })}
+            </Fragment>
+          ) : null}
+        </div>
       </main>
     </>
   );
 }
 
 const styles = {
-  page: {
+  page: (background) => ({
     minHeight: "100vh",
-    background: "transparent",
+    background,
     color: "#0f172a",
     fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif",
     paddingBottom: 56,
-  },
+  }),
   wrap: { maxWidth: 1220, margin: "0 auto", padding: "0 24px" },
   wrapWide: { maxWidth: 1320, margin: "0 auto", padding: "0 24px" },
   h1: { margin: 0, paddingTop: 32, fontSize: 28 },
@@ -169,7 +247,7 @@ const styles = {
     right: 14,
     display: "flex",
     gap: 8,
-    zIndex: 30,
+    zIndex: 240,
     background: "rgba(15,23,42,0.82)",
     border: "1px solid rgba(148,163,184,0.4)",
     borderRadius: 12,
@@ -181,9 +259,9 @@ const styles = {
     background: "rgba(30,41,59,0.9)",
     color: "#e2e8f0",
     padding: "7px 10px",
-    fontSize: 11,
+    fontSize: 16,
     letterSpacing: "0.08em",
-    fontWeight: 800,
+    fontWeight: 600,
     alignSelf: "center",
   },
   backBtn: {
@@ -193,7 +271,7 @@ const styles = {
     color: "#1e293b",
     padding: "8px 12px",
     textDecoration: "none",
-    fontWeight: 700,
+    fontWeight: 600,
   },
   siteHeader: {
     paddingTop: 70,
@@ -223,7 +301,7 @@ const styles = {
     margin: 0,
     color: "#f8fafc",
     fontSize: 22,
-    fontWeight: 800,
+    fontWeight: 600,
     letterSpacing: "-0.02em",
   },
   nav: { display: "flex", gap: 8, flexWrap: "wrap" },
@@ -233,8 +311,8 @@ const styles = {
     padding: "8px 12px",
     borderRadius: 999,
     border: "1px solid rgba(148,163,184,0.28)",
-    fontWeight: 700,
-    fontSize: 13,
+    fontWeight: 600,
+    fontSize: 16,
   },
   navLinkActive: {
     background: "#ffffff",
@@ -248,7 +326,7 @@ const styles = {
     background: "#fff",
     color: "#475569",
     padding: "16px 18px",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 600,
   },
 };

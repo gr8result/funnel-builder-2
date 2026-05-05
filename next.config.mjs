@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 
 const nextConfig = {
   reactStrictMode: false,
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 
   eslint: {
     ignoreDuringBuilds: true,

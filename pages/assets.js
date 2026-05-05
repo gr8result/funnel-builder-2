@@ -5,6 +5,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
+import { getFunnelTemplateLibraryAssets } from "../lib/funnelSections";
+import { getWebsiteTemplateLibraryAssets } from "../lib/website-builder/templateLibraryAssets";
+import ImageEditorCard from "../components/image-editor/ImageEditorCard";
+
+const SHARED_LIBRARY_SYNC_VERSION = "generic-library-v6";
 
 export default function Assets() {
   const router = useRouter();
@@ -13,7 +18,14 @@ export default function Assets() {
   const [files, setFiles] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [deletingName, setDeletingName] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [editingFile, setEditingFile] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [permissions, setPermissions] = useState({ canManageTemplateImages: false });
 
   useEffect(() => {
     let subscription;
@@ -34,21 +46,91 @@ export default function Assets() {
     if (!session) return;
     const p = `${session.user.id}/`;
     setPrefix(p);
-    listFiles(p);
+    listFiles();
+
+    let cancelled = false;
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        if (cancelled) return;
+        seedGenericLibrary().then((didSeed) => {
+          if (didSeed && !cancelled) {
+            listFiles({ showLoader: false });
+          }
+        });
+      }, 0);
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
 
-  async function listFiles(p) {
-    setLoading(true);
-    const { data, error } = await supabase.storage
-      .from("assets")
-      .list(p, { limit: 200, offset: 0, sortBy: { column: "name", order: "asc" } });
-    if (!error) setFiles(data || []);
-    setLoading(false);
+  async function seedGenericLibrary() {
+    if (!session?.user?.id || !session?.access_token) return false;
+    try {
+      const syncKey = `gr8:shared-media-sync:${session.user.id}:${SHARED_LIBRARY_SYNC_VERSION}`;
+      if (typeof window !== "undefined" && window.localStorage.getItem(syncKey)) return false;
+      setSyncing(true);
+
+      const genericAssets = [...getFunnelTemplateLibraryAssets(), ...getWebsiteTemplateLibraryAssets()];
+      const dedupedAssets = Array.from(new Map(genericAssets.map((asset) => [String(asset?.src || '').trim(), asset])).values());
+
+      for (let index = 0; index < dedupedAssets.length; index += 20) {
+        const chunk = dedupedAssets.slice(index, index + 20).map((asset) => ({
+          assetKey: asset.id,
+          name: asset.name,
+          imageUrl: asset.src,
+        }));
+
+        const response = await fetch("/api/assets/import-library", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ assets: chunk }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || "Could not seed the shared media library");
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(syncKey, `${Date.now()}`);
+      }
+      return true;
+    } catch (error) {
+      console.warn("Could not seed generic media library assets", error);
+      setStatusMessage(error.message || "Could not sync the shared media library.");
+      return false;
+    } finally {
+      setSyncing(false);
+    }
   }
 
-  function publicUrl(name) {
-    const { data } = supabase.storage.from("assets").getPublicUrl(`${prefix}${name}`);
-    return data.publicUrl;
+  async function listFiles(options = {}) {
+    const { showLoader = true } = options;
+    if (showLoader) setLoading(true);
+    if (!session?.access_token) {
+      setFiles([]);
+      if (showLoader) setLoading(false);
+      return [];
+    }
+    const response = await fetch("/api/assets/list-library", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) {
+      setStatusMessage(payload?.error || "Could not load assets.");
+      if (showLoader) setLoading(false);
+      return [];
+    }
+    setFiles(payload.images || []);
+    setPermissions(payload.permissions || { canManageTemplateImages: false });
+    if (showLoader) setLoading(false);
+    return payload.images || [];
   }
 
   function safeName(name = "") {
@@ -72,7 +154,7 @@ export default function Assets() {
     setUploadingLogo(true);
     try {
       await uploadSingle(file, "logo");
-      await listFiles(prefix);
+      await listFiles({ showLoader: false });
     } catch (error) {
       alert(error.message || "Logo upload failed");
     } finally {
@@ -89,7 +171,7 @@ export default function Assets() {
       for (const file of selected) {
         await uploadSingle(file, "web");
       }
-      await listFiles(prefix);
+      await listFiles({ showLoader: false });
     } catch (error) {
       alert(error.message || "Image upload failed");
     } finally {
@@ -109,15 +191,108 @@ export default function Assets() {
     alert("Set as logo.");
   }
 
-  async function deleteFile(name) {
+  async function deleteFile(file) {
     if (!session) return;
+    const name = file?.name || file?.description || 'this image';
     const ok = confirm(`Delete "${name}"? This cannot be undone.`);
     if (!ok) return;
-    const path = `${prefix}${name}`; // path relative to bucket root
-    const { error } = await supabase.storage.from("assets").remove([path]);
-    if (error) return alert(error.message);
-    // Refresh list
-    await listFiles(prefix);
+    setDeletingName(file?.id || name);
+    setStatusMessage("");
+    try {
+      const response = await fetch(`/api/social/delete-image?id=${encodeURIComponent(file?.id || '')}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || `Could not delete "${name}".`);
+
+      const refreshed = await listFiles();
+      const stillExists = (refreshed || []).some((entry) => entry.id === file?.id);
+      if (stillExists) throw new Error(`"${name}" still exists after delete.`);
+
+      setStatusMessage(`Deleted "${name}".`);
+    } catch (error) {
+      setStatusMessage(error.message || `Could not delete "${name}".`);
+    } finally {
+      setDeletingName("");
+    }
+  }
+
+  async function cleanupLibrary() {
+    if (!session?.access_token) return;
+    if (!permissions.canManageTemplateImages) {
+      setStatusMessage("Only developer accounts can remove shared library duplicates.");
+      return;
+    }
+    const ok = confirm("Remove duplicate saved images from the shared media library? This keeps one copy of each image and deletes the extras.");
+    if (!ok) return;
+    setCleaning(true);
+    setStatusMessage("");
+    try {
+      const response = await fetch("/api/social/cleanup-image-library", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not clean duplicate shared images");
+      }
+      setStatusMessage(`Cleanup finished. Removed ${payload.removedLegacyGenericFiles || 0} legacy generic files, ${payload.removedInvalidFiles || 0} invalid files, ${payload.removedStorageDuplicates || 0} duplicate files, and ${payload.removedIndexDuplicates || 0} duplicate library entries.`);
+      await listFiles({ showLoader: false });
+    } catch (error) {
+      setStatusMessage(error.message || "Could not clean duplicate shared images.");
+    } finally {
+      setCleaning(false);
+    }
+  }
+
+  async function saveEditedImage(imageUrl) {
+    if (!session?.access_token || !editingFile) return;
+    setSavingEdit(true);
+    setStatusMessage("");
+    try {
+      const saveResponse = await fetch("/api/social/save-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          imageUrl,
+          description: editingFile.description || editingFile.name || "Edited image",
+        }),
+      });
+      const savePayload = await saveResponse.json();
+      if (!saveResponse.ok || !savePayload?.ok) {
+        throw new Error(savePayload?.error || "Could not save edited image.");
+      }
+
+      if (editingFile?.canManageOriginal && editingFile.id) {
+        const deleteResponse = await fetch(`/api/social/delete-image?id=${encodeURIComponent(editingFile.id)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const deletePayload = await deleteResponse.json();
+        if (!deleteResponse.ok || !deletePayload?.ok) {
+          throw new Error(deletePayload?.error || "Could not replace the original image.");
+        }
+        setStatusMessage("Image updated.");
+      } else {
+        setStatusMessage("Edited image saved as a new copy.");
+      }
+
+      setEditingFile(null);
+      await listFiles({ showLoader: false });
+    } catch (error) {
+      setStatusMessage(error.message || "Could not save edited image.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  function canManageOriginalFile(file) {
+    if (!file) return false;
+    return !file.is_template || permissions.canManageTemplateImages;
   }
 
   if (!session) {
@@ -173,7 +348,7 @@ export default function Assets() {
               Media Library
             </h1>
             <p style={{ margin: "4px 0 0", fontSize: 18, color: "rgba(255,255,255,0.9)" }}>
-              Shared logos and website images for Funnels and Website Builder.
+              Shared logos and images across Funnels, Website Builder, Social Media, Email, and other modules.
             </p>
           </div>
         </div>
@@ -199,6 +374,26 @@ export default function Assets() {
       <p style={{ color: "#94a3b8", marginTop: 0 }}>
         Uploads go to <code>/{prefix}filename.ext</code>. Public read is enabled.
       </p>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+        {syncing ? <span style={{ color: "#cbd5e1", fontSize: 13 }}>Syncing shared library in the background…</span> : null}
+        <button onClick={() => listFiles()} style={miniBtn}>Refresh</button>
+        {permissions.canManageTemplateImages ? (
+          <button
+            onClick={cleanupLibrary}
+            disabled={cleaning}
+            style={{ ...miniBtn, background: "#3a0f12", border: "1px solid #5b1a1f", color: "#ffd7db" }}
+          >
+            {cleaning ? "Cleaning..." : "Clean Duplicates"}
+          </button>
+        ) : null}
+      </div>
+
+      {statusMessage ? (
+        <p style={{ color: statusMessage.startsWith("Deleted") || statusMessage.startsWith("Removed") ? "#86efac" : "#fca5a5", marginTop: 0 }}>
+          {statusMessage}
+        </p>
+      ) : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 12 }}>
         <label style={uploadCard}>
@@ -229,10 +424,11 @@ export default function Assets() {
           }}
         >
           {files.map((f) => {
-            const url = publicUrl(f.name);
+            const url = f.url;
+            const canManageOriginal = canManageOriginalFile(f);
             return (
               <div
-                key={f.name}
+                key={f.id}
                 style={{
                   background: "#151515",
                   border: "1px solid #222",
@@ -249,7 +445,9 @@ export default function Assets() {
                     background: "#0f0f0f",
                     borderRadius: 8,
                     overflow: "hidden",
+                    cursor: "pointer",
                   }}
+                    onClick={() => setEditingFile({ ...f, canManageOriginal })}
                 >
                   <img src={url} alt={f.name} style={{ maxWidth: "100%", maxHeight: "100%" }} />
                 </div>
@@ -293,18 +491,21 @@ export default function Assets() {
                   >
                     Set as logo
                   </button>
-                  <button
-                    onClick={() => deleteFile(f.name)}
-                    style={{
-                      ...miniBtn,
-                      background: "#3a0f12",
-                      border: "1px solid #5b1a1f",
-                      color: "#ffd7db",
-                    }}
-                    title="Delete this image"
-                  >
-                    Delete
-                  </button>
+                  {canManageOriginal ? (
+                    <button
+                      onClick={() => deleteFile(f)}
+                      style={{
+                        ...miniBtn,
+                        background: "#3a0f12",
+                        border: "1px solid #5b1a1f",
+                        color: "#ffd7db",
+                      }}
+                      title="Delete this image"
+                      disabled={deletingName === f.id}
+                    >
+                      {deletingName === f.id ? "Deleting..." : "Delete"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );
@@ -312,6 +513,22 @@ export default function Assets() {
           {files.length === 0 ? <p>No assets yet.</p> : null}
         </div>
       )}
+
+      {editingFile ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(2,6,23,0.9)", padding: 20, overflowY: "auto" }}>
+          <div style={{ maxWidth: 1380, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 600, color: "#f8fafc" }}>Edit Image</div>
+                <div style={{ fontSize: 13, color: "#cbd5e1" }}>{editingFile.canManageOriginal ? "Saving replaces the current image." : "Template images stay locked for other users. Saving creates an edited copy instead."}</div>
+              </div>
+              <button onClick={() => !savingEdit && setEditingFile(null)} style={miniBtn}>Close</button>
+            </div>
+            {savingEdit ? <div style={{ marginBottom: 12, color: "#cbd5e1" }}>Saving edited image...</div> : null}
+            <ImageEditorCard initialSrc={editingFile.url} onSave={saveEditedImage} />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -350,3 +567,4 @@ const uploadState = {
   color: "#94a3b8",
   fontSize: 12,
 };
+

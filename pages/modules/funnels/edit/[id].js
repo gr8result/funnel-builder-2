@@ -110,6 +110,72 @@ function createShapeComponent(style = {}) {
   };
 }
 
+const STACK_LAYER_PLACEHOLDER_SRC = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='360' viewBox='0 0 520 360'%3E%3Crect width='520' height='360' rx='24' fill='%23e2e8f0'/%3E%3Cpath d='M96 250l84-86 64 62 76-92 104 116H96z' fill='%2394a3b8'/%3E%3Ccircle cx='194' cy='126' r='26' fill='%23cbd5e1'/%3E%3Ctext x='260' y='322' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' fill='%23475569'%3EUpload image%3C/text%3E%3C/svg%3E";
+
+function createFunnelStackImageLayer(seed = 0) {
+  return {
+    type: "image",
+    tagName: "img",
+    attributes: {
+      src: STACK_LAYER_PLACEHOLDER_SRC,
+      alt: `Stack image ${seed + 1}`,
+      "data-stack-layer": "true",
+      "data-stack-layer-kind": "image",
+    },
+    style: {
+      position: "absolute",
+      left: `${40 + (seed * 24)}px`,
+      top: `${40 + (seed * 24)}px`,
+      width: "260px",
+      height: "180px",
+      display: "block",
+      margin: "0",
+      "max-width": "none",
+      "object-fit": "cover",
+      "border-radius": "18px",
+      transform: `rotate(${seed % 2 === 0 ? -4 : 4}deg)`,
+      "z-index": `${seed + 1}`,
+      cursor: "move",
+      "box-shadow": "0 16px 40px rgba(15,23,42,0.18)",
+      background: "rgba(226,232,240,0.45)",
+    },
+  };
+}
+
+function createFunnelStackTextLayer(seed = 0) {
+  return {
+    type: "text",
+    tagName: "div",
+    content: "Type text here",
+    attributes: {
+      "data-stack-layer": "true",
+      "data-stack-layer-kind": "text",
+    },
+    style: {
+      position: "absolute",
+      left: `${420 + (seed * 18)}px`,
+      top: `${96 + (seed * 18)}px`,
+      width: "360px",
+      height: "140px",
+      display: "flex",
+      "align-items": "center",
+      "justify-content": "center",
+      padding: "18px",
+      margin: "0",
+      color: "#0f172a",
+      "font-size": "40px",
+      "font-weight": "700",
+      "line-height": "1.1",
+      "text-align": "center",
+      "border-radius": "16px",
+      background: "transparent",
+      "z-index": `${seed + 1}`,
+      cursor: "move",
+      "box-sizing": "border-box",
+    },
+  };
+}
+
 function detectShapePreset(component) {
   const style = component?.getStyle?.() || {};
   const clipPath = `${style["clip-path"] || ""}`.replace(/\s+/g, "").toLowerCase();
@@ -286,6 +352,7 @@ function Editor() {
   const [aiImageSize, setAiImageSize] = useState("1024x1024");
   const [aiImageStyle, setAiImageStyle] = useState("clean");
   const [aiImageLoading, setAiImageLoading] = useState(false);
+  const [aiImageStatus, setAiImageStatus] = useState("");
   const [textControls, setTextControls] = useState({
     tagName: "",
     content: "",
@@ -361,8 +428,11 @@ function Editor() {
   const lastTextCompRef = useRef(null);
   const lastFormCompRef = useRef(null);
   const lastBlockCompRef = useRef(null);
+  const lastImageCompRef = useRef(null);
   const lastSelectedTagRef = useRef("");
   const groupSelectionRef = useRef([]);
+  const imageNormalizeInFlightRef = useRef(false);
+  const imageSelectionRedirectRef = useRef(false);
 
   useEffect(() => {
     stepsRef.current = steps;
@@ -452,6 +522,7 @@ function Editor() {
       // For templates without explicit <style> blocks, Grapes parses inline styles;
       // calling setStyle("") afterwards would wipe those parsed styles.
       editor.setComponents(html || blankHTML());
+      normalizeImageBlocksInTree(editor.getWrapper?.());
       if (css.trim()) {
         editor.setStyle(css);
       }
@@ -459,6 +530,7 @@ function Editor() {
       // If parsing split HTML/CSS fails, try rendering source directly as a last resort.
       editor.setStyle("");
       editor.setComponents(src || blankHTML());
+      normalizeImageBlocksInTree(editor.getWrapper?.());
     }
   }
 
@@ -497,9 +569,33 @@ function Editor() {
     const isImage = tag === "img";
     const isMarkedShape = `${attrs["data-shape-block"] || ""}`.toLowerCase() === "true";
     const isMarkedGroup = `${attrs["data-group-block"] || ""}`.toLowerCase() === "true";
+    const isStackRoot = `${attrs["data-stack-box"] || ""}`.toLowerCase() === "true";
 
-    if (isText || isFormField || isImage || isMarkedShape || isMarkedGroup) {
+    if (isText || isFormField || isImage || isMarkedShape || isMarkedGroup || isStackRoot) {
       return component;
+    }
+
+    const nestedImage = findNestedImageComponent(component);
+    if (nestedImage) {
+      return nestedImage;
+    }
+
+    let semanticCursor = component;
+    while (semanticCursor) {
+      const semanticTag = `${semanticCursor?.get?.("tagName") || ""}`.toLowerCase();
+      if (["section", "header", "footer", "article", "main"].includes(semanticTag)) {
+        return semanticCursor;
+      }
+
+      const semanticParent = semanticCursor.parent?.();
+      if (!semanticParent) break;
+
+      const parentTag = `${semanticParent?.get?.("tagName") || ""}`.toLowerCase();
+      if (["section", "header", "footer", "article", "main"].includes(parentTag)) {
+        return semanticParent;
+      }
+
+      semanticCursor = semanticParent;
     }
 
     let cursor = component;
@@ -656,6 +752,105 @@ function Editor() {
     return null;
   }
 
+  function isStackBoxRoot(component) {
+    if (!component) return false;
+    const attrs = component.getAttributes?.() || {};
+    return `${attrs["data-stack-box"] || ""}`.toLowerCase() === "true";
+  }
+
+  function getStackBoxRoot(component) {
+    let cursor = component;
+    while (cursor) {
+      if (isStackBoxRoot(cursor)) return cursor;
+      cursor = cursor.parent?.() || null;
+    }
+    return null;
+  }
+
+  function isStackLayerComponent(component) {
+    if (!component) return false;
+    const attrs = component.getAttributes?.() || {};
+    return `${attrs["data-stack-layer"] || ""}`.toLowerCase() === "true";
+  }
+
+  function getStackLayerComponents(root) {
+    if (!root || typeof root.components !== "function") return [];
+    const layers = [];
+    root.components().forEach?.((child) => {
+      if (isStackLayerComponent(child)) layers.push(child);
+    });
+    return layers;
+  }
+
+  function normalizeStackLayerOrder(root) {
+    const layers = getStackLayerComponents(root);
+    layers.forEach((layer, index) => {
+      layer.addStyle?.({ "z-index": `${index + 1}` });
+    });
+  }
+
+  function ensureStackBoxEditingCapabilities(root) {
+    if (!root) return;
+    try {
+      root.set?.({
+        draggable: true,
+        droppable: true,
+        selectable: true,
+        hoverable: true,
+        layerable: true,
+        copyable: true,
+        removable: true,
+        stylable: true,
+        resizable: {
+          tl: 0, tc: 0, tr: 0,
+          cl: 0, cr: 0,
+          bl: 0, bc: 1, br: 0,
+          keyHeight: "min-height",
+        },
+      });
+    } catch {
+      // ignore Grapes model capability errors
+    }
+
+    root.addStyle?.({
+      position: "relative",
+      overflow: "visible",
+    });
+
+    getStackLayerComponents(root).forEach((layer) => {
+      if (isStackLayerComponent(layer)) {
+        ensureAbsolutePlacement(layer);
+      }
+    });
+    normalizeStackLayerOrder(root);
+  }
+
+  function addStackBoxLayer(kind = "image") {
+    const root = getStackBoxRoot(editorRef.current?.getSelected?.() || lastBlockCompRef.current || null);
+    if (!root) return;
+
+    ensureStackBoxEditingCapabilities(root);
+    const layers = getStackLayerComponents(root);
+    const nextDefinition = kind === "text"
+      ? createFunnelStackTextLayer(layers.length)
+      : createFunnelStackImageLayer(layers.length);
+    const added = root.components().add(nextDefinition);
+    const nextLayer = Array.isArray(added) ? added[0] : added;
+    if (!nextLayer) return;
+
+    ensureAbsolutePlacement(nextLayer);
+    normalizeStackLayerOrder(root);
+    editorRef.current?.select?.(nextLayer);
+    selectedCompRef.current = nextLayer;
+    lastBlockCompRef.current = nextLayer;
+    lastSelectedTagRef.current = kind === "text" ? `${nextLayer.get?.("tagName") || "div"}`.toLowerCase() : "img";
+    if (kind !== "text") {
+      lastImageCompRef.current = nextLayer;
+      setBlockKind("image");
+      setBlockPanelOpen(true);
+    }
+  }
+
   function findComponentByElement(component, element) {
     if (!component || !element) return null;
     if (component.view?.el === element) return component;
@@ -667,6 +862,138 @@ function Editor() {
       found = findComponentByElement(child, element);
     });
     return found;
+  }
+
+  function findNestedImageComponent(component, depth = 0) {
+    if (!component || depth > 4) return null;
+
+    const tag = `${component?.get?.("tagName") || ""}`.toLowerCase();
+    const type = `${component?.get?.("type") || ""}`.toLowerCase();
+    if (tag === "img" || type === "image" || component.is?.("image")) {
+      return component;
+    }
+
+    const children = typeof component?.components === "function" ? component.components() : null;
+    const meaningfulChildren = [];
+    children?.forEach?.((child) => {
+      const childTag = `${child?.get?.("tagName") || ""}`.toLowerCase();
+      const childType = `${child?.get?.("type") || ""}`.toLowerCase();
+      const childContent = `${child?.get?.("content") || ""}`.trim();
+      const isEmptyTextNode = !childTag && (childType === "text" || childType === "textnode") && !childContent;
+      if (!isEmptyTextNode) meaningfulChildren.push(child);
+    });
+
+    if (meaningfulChildren.length !== 1) return null;
+    return findNestedImageComponent(meaningfulChildren[0], depth + 1);
+  }
+
+  function getMeaningfulChildComponents(component) {
+    const children = typeof component?.components === "function" ? component.components() : null;
+    const meaningfulChildren = [];
+    children?.forEach?.((child) => {
+      const childTag = `${child?.get?.("tagName") || ""}`.toLowerCase();
+      const childType = `${child?.get?.("type") || ""}`.toLowerCase();
+      const childContent = `${child?.get?.("content") || ""}`.trim();
+      const isEmptyTextNode = !childTag && (childType === "text" || childType === "textnode") && !childContent;
+      if (!isEmptyTextNode) meaningfulChildren.push(child);
+    });
+    return meaningfulChildren;
+  }
+
+  function findImageBlockContainer(component) {
+    if (!component || isFreeformArrangeTarget(component)) return null;
+
+    let cursor = component.parent?.() || null;
+    let depth = 0;
+    while (cursor && depth < 3) {
+      const tag = `${cursor?.get?.("tagName") || ""}`.toLowerCase();
+      const attrs = cursor.getAttributes?.() || {};
+      if (tag === "a") {
+        cursor = cursor.parent?.() || null;
+        depth += 1;
+        continue;
+      }
+      if (tag === "section" || tag === "main" || tag === "article") return null;
+      if (`${attrs["data-blank-canvas-root"] || ""}`.toLowerCase() === "true") return null;
+      if (`${attrs["data-blank-canvas-stage"] || ""}`.toLowerCase() === "true") return null;
+      if (isFreeformArrangeTarget(cursor)) return null;
+
+      const meaningfulChildren = getMeaningfulChildComponents(cursor);
+      if (meaningfulChildren.length === 1) return cursor;
+      return null;
+    }
+    return null;
+  }
+
+  function normalizeImageBlockLayout(component) {
+    if (!component) return;
+
+    const attrs = component.getAttributes?.() || {};
+    if (`${attrs["data-floating-image"] || ""}`.toLowerCase() === "true") return;
+    if (isFreeformArrangeTarget(component)) return;
+
+    const liveStyle = component.getStyle?.() || {};
+    const currentWidth = `${liveStyle.width || ""}`.trim();
+    const nextImageStyle = {
+      display: "block",
+      position: "relative",
+      float: "none",
+      left: "auto",
+      top: "auto",
+      right: "auto",
+      bottom: "auto",
+      "margin-left": `${liveStyle["margin-left"] || "auto"}`,
+      "margin-right": `${liveStyle["margin-right"] || "auto"}`,
+      "max-width": "100%",
+      height: `${liveStyle.height && liveStyle.height !== "0px" ? liveStyle.height : "auto"}`,
+      "box-sizing": "border-box",
+      "object-fit": `${liveStyle["object-fit"] || "contain"}`,
+    };
+
+    if (!currentWidth || currentWidth === "auto") {
+      nextImageStyle.width = "100%";
+    }
+
+    component.addStyle?.(nextImageStyle);
+
+    const container = findImageBlockContainer(component);
+    if (container) {
+      const containerStyle = container.getStyle?.() || {};
+      try {
+        container.set?.({
+          selectable: false,
+          hoverable: false,
+          layerable: false,
+          resizable: false,
+        });
+      } catch {
+        // ignore Grapes model capability errors on legacy wrappers
+      }
+      container.addStyle?.({
+        display: `${containerStyle.display && containerStyle.display !== "inline" ? containerStyle.display : "flex"}`,
+        "justify-content": `${containerStyle["justify-content"] || "center"}`,
+        "align-items": `${containerStyle["align-items"] || "center"}`,
+        "text-align": `${containerStyle["text-align"] || "center"}`,
+        width: `${containerStyle.width || "100%"}`,
+        "max-width": `${containerStyle["max-width"] || "100%"}`,
+        overflow: `${containerStyle.overflow || "visible"}`,
+        "margin-left": `${containerStyle["margin-left"] || "auto"}`,
+        "margin-right": `${containerStyle["margin-right"] || "auto"}`,
+        "box-sizing": "border-box",
+      });
+    }
+  }
+
+  function normalizeImageBlocksInTree(component) {
+    if (!component) return;
+
+    const imageComponent = findNestedImageComponent(component);
+    if (imageComponent) {
+      normalizeImageBlockLayout(imageComponent);
+    }
+
+    const children = typeof component?.components === "function" ? component.components() : null;
+    children?.forEach?.((child) => normalizeImageBlocksInTree(child));
   }
 
   function stripEditorOnlyMarkup(html = "") {
@@ -801,13 +1128,20 @@ function Editor() {
     const filterValue = `opacity(${backgroundOpacity})`;
     const backgroundColor = next.backgroundTransparent ? "transparent" : `${next.backgroundColor || "transparent"}`;
     const isShape = blockKind === "shape" || isShapeLikeComponent(comp);
+    const backgroundSize = `${next.backgroundSize || "cover"}`;
+    const backgroundPosition = `${next.backgroundPosition || "center center"}`;
+    const backgroundRepeat = `${next.backgroundRepeat || "no-repeat"}`;
+    const backgroundShorthand = bgImage
+      ? `${backgroundColor} url("${bgImage}") ${backgroundPosition} / ${backgroundSize} ${backgroundRepeat}`
+      : backgroundColor;
 
     const stylePatch = {
+      background: backgroundShorthand,
       "background-color": backgroundColor,
       "background-image": bgImage ? `url(${bgImage})` : "none",
-      "background-size": `${next.backgroundSize || "cover"}`,
-      "background-position": `${next.backgroundPosition || "center center"}`,
-      "background-repeat": `${next.backgroundRepeat || "no-repeat"}`,
+      "background-size": backgroundSize,
+      "background-position": backgroundPosition,
+      "background-repeat": backgroundRepeat,
       "min-height": `${Math.max(0, parseInt(next.minHeight || "0", 10) || 0)}px`,
       "padding-top": `${next.paddingTop || 0}px`,
       "padding-bottom": `${next.paddingBottom || 0}px`,
@@ -893,11 +1227,39 @@ function Editor() {
     const parent = component.parent?.();
     parent?.addStyle?.({ position: "relative" });
     const style = component.getStyle?.() || {};
+    const resizeOptions = {
+      tl: 1, tc: 1, tr: 1,
+      cl: 1, cr: 1,
+      bl: 1, bc: 1, br: 1,
+      keyWidth: "width",
+      keyHeight: "height",
+    };
+
+    try {
+      component.set({
+        draggable: true,
+        droppable: false,
+        selectable: true,
+        hoverable: true,
+        layerable: true,
+        copyable: true,
+        removable: true,
+        stylable: true,
+        resizable: resizeOptions,
+      });
+    } catch {
+      // ignore Grapes model capability errors
+    }
+
     component.addStyle?.({
       position: "absolute",
       left: `${style.left || "24px"}`,
       top: `${style.top || "24px"}`,
       margin: "0",
+      cursor: "move",
+      display: `${style.display || "block"}`,
+      "max-width": "none",
+      "box-sizing": "border-box",
     });
     return component;
   }
@@ -1647,13 +2009,30 @@ function Editor() {
         e.on("component:selected", (component) => {
           try {
             const blockTarget = resolveBlockStyleTarget(component, textTags, formTags);
+
+            if (
+              !imageSelectionRedirectRef.current
+              && blockTarget
+              && blockTarget !== component
+              && `${blockTarget?.get?.("tagName") || ""}`.toLowerCase() === "img"
+            ) {
+              imageSelectionRedirectRef.current = true;
+              requestAnimationFrame(() => {
+                e.select?.(blockTarget);
+                requestAnimationFrame(() => {
+                  imageSelectionRedirectRef.current = false;
+                });
+              });
+              return;
+            }
+
             selectedCompRef.current = blockTarget;
             lastBlockCompRef.current = blockTarget;
             setBlockControls(extractBlockControlsFromComponent(blockTarget));
             setBlockPanelOpen(true);
 
-            const tag = `${component?.get?.("tagName") || ""}`.toLowerCase();
-            const type = `${component?.get?.("type") || ""}`.toLowerCase();
+            const tag = `${blockTarget?.get?.("tagName") || component?.get?.("tagName") || ""}`.toLowerCase();
+            const type = `${blockTarget?.get?.("type") || component?.get?.("type") || ""}`.toLowerCase();
             lastSelectedTagRef.current = tag;
             const isFormField = formTags.has(tag);
             const isText = type === "text" || textTags.has(tag);
@@ -1663,11 +2042,13 @@ function Editor() {
             setBlockKind(isImage ? "image" : isShape ? "shape" : "block");
 
             if (typeof e.setDragMode === "function") {
-              const useAbsoluteDrag = isShape || isImage || isFloatingObject;
+              const useAbsoluteDrag = isShape || isFloatingObject;
               e.setDragMode(useAbsoluteDrag ? "absolute" : "translate");
             }
             if (isShape && blockTarget) {
               ensureShapeEditingCapabilities(blockTarget);
+            } else if (getStackBoxRoot(blockTarget)) {
+              ensureStackBoxEditingCapabilities(getStackBoxRoot(blockTarget));
             } else if (getBlankCanvasRoot(blockTarget)) {
               ensureBlankCanvasEditingCapabilities(blockTarget);
             } else if (blockTarget) {
@@ -1675,9 +2056,15 @@ function Editor() {
             }
 
             if (isImage) {
+              if (!isFloatingObject) {
+                normalizeInlineImagePlacement(blockTarget);
+                normalizeImageBlockLayout(blockTarget);
+              }
               // For image elements, stay in block panel but track image link
-              const existingHref = component?.parent?.()?.get?.("tagName") === "a"
-                ? (component.parent().getAttributes()?.href || "")
+              const imageTarget = blockTarget || component;
+              lastImageCompRef.current = imageTarget;
+              const existingHref = imageTarget?.parent?.()?.get?.("tagName") === "a"
+                ? (imageTarget.parent().getAttributes()?.href || "")
                 : "";
               setImageLink(existingHref);
               selectedTextCompRef.current = null;
@@ -1719,6 +2106,45 @@ function Editor() {
           }
         });
 
+        e.on("component:update", (component) => {
+          if (imageNormalizeInFlightRef.current) return;
+
+          const imageTarget = findNestedImageComponent(component);
+          if (!imageTarget || isFreeformArrangeTarget(imageTarget)) return;
+
+          imageNormalizeInFlightRef.current = true;
+          const syncImageState = () => {
+            try {
+              normalizeInlineImagePlacement(imageTarget);
+              normalizeImageBlockLayout(imageTarget);
+
+              const selectedImage = getSelectedImageComponent();
+              if (selectedImage === imageTarget) {
+                const liveControls = extractBlockControlsFromComponent(imageTarget);
+                setBlockControls((prev) => ({ ...prev, ...liveControls }));
+                selectedCompRef.current = imageTarget;
+                lastBlockCompRef.current = imageTarget;
+                lastImageCompRef.current = imageTarget;
+                lastSelectedTagRef.current = "img";
+              }
+
+              if (typeof e.refresh === "function") {
+                requestAnimationFrame(() => e.refresh());
+              }
+            } finally {
+              requestAnimationFrame(() => {
+                imageNormalizeInFlightRef.current = false;
+              });
+            }
+          };
+
+          if (typeof window !== "undefined") {
+            requestAnimationFrame(syncImageState);
+          } else {
+            syncImageState();
+          }
+        });
+
         e.on("component:deselected", () => {
           // Clear current refs but keep last* refs so right-panel controls can
           // still apply changes even after the canvas loses focus on button click.
@@ -1755,7 +2181,37 @@ function Editor() {
             <span style="font-size:1.1em;">Image</span>
           </div>`,
           category: "🔧 Layout",
-          content: `<div style="padding:24px;text-align:center;background:#fff;"><img src="" alt="" style="max-width:100%;border-radius:12px;"/></div>`,
+          content: `<div style="padding:24px;background:#fff;display:flex;justify-content:center;align-items:center;overflow:visible;"><img src="" alt="" style="display:block;width:100%;max-width:100%;height:auto;margin:0 auto;border-radius:12px;object-fit:contain;"/></div>`,
+        });
+        bm.add("content-stack-box", {
+          label: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+            <span style="font-size:2.2em;line-height:1;">🗂️</span>
+            <span style="font-size:1.05em;">Stack Box</span>
+          </div>`,
+          category: "🔧 Layout",
+          content: {
+            type: "default",
+            tagName: "div",
+            attributes: { "data-stack-box": "true" },
+            style: {
+              position: "relative",
+              width: "100%",
+              "max-width": "1000px",
+              margin: "0 auto",
+              "min-height": "560px",
+              padding: "24px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              "border-radius": "24px",
+              overflow: "visible",
+              "box-shadow": "0 18px 40px rgba(15,23,42,0.08)",
+            },
+            components: [
+              createFunnelStackImageLayer(0),
+              createFunnelStackTextLayer(0),
+              createFunnelStackImageLayer(1),
+            ],
+          },
         });
         bm.add("raw-code", {
           label: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
@@ -2054,6 +2510,7 @@ function Editor() {
       }
       if (!step) throw new Error("Could not create the first page.");
 
+      normalizeImageBlocksInTree(e.getWrapper?.());
       normalizeAbsoluteComponentForSave(e.getWrapper?.());
       normalizeSectionAnchoredShapesForSave(e.getWrapper?.());
       normalizeShapeLayeringForSave(e.getWrapper?.());
@@ -2142,8 +2599,291 @@ function Editor() {
 
     const editor = editorRef.current;
     if (editor) {
+      await loadSupabaseAssetsIntoGrapes(editor, session?.user?.id);
       insertImageUrlIntoEditor(publicUrl, mode, file.name);
     }
+  }
+
+  async function persistExternalImageToAssets(sourceUrl, fileName = "AI-generated image") {
+    if (!sourceUrl || !session?.user?.id) return { publicUrl: sourceUrl, persisted: false };
+
+    try {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error("Could not download generated image");
+
+      const blob = await response.blob();
+      const safeBaseName = `${fileName || "AI-generated image"}`
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/(^-|-$)/g, "") || "ai-generated-image";
+      const extension = (blob.type || "image/png").split("/")[1] || "png";
+      const storagePath = `${session.user.id}/funnels/${Date.now()}-${safeBaseName}.${extension}`;
+      const { error } = await supabase.storage.from("assets").upload(storagePath, blob, {
+        upsert: true,
+        contentType: blob.type || "image/png",
+      });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from("assets").getPublicUrl(storagePath);
+      return { publicUrl: data?.publicUrl || sourceUrl, persisted: true };
+    } catch (error) {
+      console.warn("Could not persist generated image to assets bucket", error);
+      return { publicUrl: sourceUrl, persisted: false };
+    }
+  }
+
+  function openMediaLibrary() {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const selected = editor.getSelected?.() || selectedCompRef.current || lastBlockCompRef.current || null;
+    if (typeof editor.AssetManager?.open === "function") {
+      editor.AssetManager.open({ target: selected || undefined });
+      return;
+    }
+    if (typeof editor.runCommand === "function") {
+      editor.runCommand("open-assets", { target: selected || undefined });
+    }
+  }
+
+  function getSelectedImageComponent() {
+    const component = editorRef.current?.getSelected?.() || lastImageCompRef.current || lastBlockCompRef.current || null;
+    return findNestedImageComponent(component);
+  }
+
+  function syncImageComponentSource(component, publicUrl, fileName = "Image") {
+    if (!component || !publicUrl) return false;
+
+    try {
+      component.set?.("src", publicUrl);
+    } catch {
+      // ignore model setter differences across GrapesJS image component versions
+    }
+
+    component.addAttributes?.({ src: publicUrl, alt: fileName });
+
+    try {
+      const attrs = component.getAttributes?.() || {};
+      component.setAttributes?.({ ...attrs, src: publicUrl, alt: fileName });
+    } catch {
+      // ignore if component does not expose setAttributes
+    }
+
+    try {
+      const el = component.view?.el;
+      if (el) {
+        el.setAttribute("src", publicUrl);
+        el.setAttribute("alt", fileName);
+      }
+    } catch {
+      // ignore DOM sync failures; model attrs above remain authoritative
+    }
+
+    return true;
+  }
+
+  function replaceSelectedImageSource(publicUrl, fileName = "Image") {
+    const editor = editorRef.current;
+    const target = getSelectedImageComponent();
+    if (!editor || !target || !publicUrl) return false;
+
+    syncImageComponentSource(target, publicUrl, fileName);
+    editor.select?.(target);
+    selectedCompRef.current = target;
+    lastBlockCompRef.current = target;
+    lastSelectedTagRef.current = "img";
+    setBlockKind("image");
+    setBlockPanelOpen(true);
+    return true;
+  }
+
+  function normalizeInlineImagePlacement(component) {
+    if (!component || isFreeformArrangeTarget(component)) return;
+
+    component.addStyle?.({
+      display: "block",
+      float: "none",
+      position: "relative",
+      visibility: "visible",
+      left: "auto",
+      top: "auto",
+      right: "auto",
+      bottom: "auto",
+      "margin-left": "auto",
+      "margin-right": "auto",
+      "max-width": "100%",
+      "box-sizing": "border-box",
+    });
+  }
+
+  function applyImageControlsPatch(patch = {}) {
+    const component = getSelectedImageComponent();
+    if (!component) return;
+
+    const liveControls = extractBlockControlsFromComponent(component);
+    const next = { ...liveControls, ...patch };
+    const safeWidth = parseInt(`${next.width || liveControls.width || "0"}`, 10);
+    const safeHeight = parseInt(`${next.height || liveControls.height || "0"}`, 10);
+    const safeOpacity = Math.max(0, Math.min(100, parseInt(`${next.opacity || liveControls.opacity || "100"}`, 10) || 100));
+    const safeRadius = Math.max(0, parseInt(`${next.borderRadius || liveControls.borderRadius || "0"}`, 10) || 0);
+    const safeOffsetX = parseInt(`${next.offsetX || liveControls.offsetX || "0"}`, 10) || 0;
+    const safeOffsetY = parseInt(`${next.offsetY || liveControls.offsetY || "0"}`, 10) || 0;
+    const safeZIndex = Math.max(0, parseInt(`${next.zIndex || liveControls.zIndex || "0"}`, 10) || 0);
+    const isFloatingImage = isFreeformArrangeTarget(component);
+
+    setBlockControls((prev) => ({
+      ...prev,
+      ...next,
+      opacity: `${safeOpacity}`,
+      borderRadius: `${safeRadius}`,
+      offsetX: `${safeOffsetX}`,
+      offsetY: `${safeOffsetY}`,
+      zIndex: `${safeZIndex}`,
+    }));
+
+    const stylePatch = {
+      width: Number.isFinite(safeWidth) && safeWidth > 0 ? `${safeWidth}px` : "auto",
+      opacity: `${safeOpacity / 100}`,
+      "border-radius": `${safeRadius}px`,
+      display: "block",
+      "box-sizing": "border-box",
+      "max-width": isFloatingImage ? "none" : "100%",
+    };
+
+    if (Number.isFinite(safeHeight) && safeHeight > 0) {
+      stylePatch.height = `${safeHeight}px`;
+    } else if (Object.prototype.hasOwnProperty.call(patch, "height")) {
+      stylePatch.height = "auto";
+    }
+
+    if (isFloatingImage) {
+      stylePatch.position = "absolute";
+      stylePatch.left = `${safeOffsetX}px`;
+      stylePatch.top = `${safeOffsetY}px`;
+      stylePatch["z-index"] = `${safeZIndex}`;
+      ensureAbsolutePlacement(component);
+    } else {
+      stylePatch.float = "none";
+      stylePatch.left = "auto";
+      stylePatch.top = "auto";
+      stylePatch.right = "auto";
+      stylePatch.bottom = "auto";
+      normalizeInlineImagePlacement(component);
+    }
+
+    component.addStyle?.(stylePatch);
+    if (typeof editorRef.current?.refresh === "function") {
+      requestAnimationFrame(() => editorRef.current.refresh());
+    }
+  }
+
+  function applyImageAlignment(alignment = "center") {
+    const component = getSelectedImageComponent();
+    if (!component || isFreeformArrangeTarget(component)) return;
+
+    const stylePatch = {
+      display: "block",
+      float: "none",
+    };
+
+    if (alignment === "left") {
+      stylePatch["margin-left"] = "0";
+      stylePatch["margin-right"] = "auto";
+    } else if (alignment === "right") {
+      stylePatch["margin-left"] = "auto";
+      stylePatch["margin-right"] = "0";
+    } else {
+      stylePatch["margin-left"] = "auto";
+      stylePatch["margin-right"] = "auto";
+    }
+
+    component.addStyle?.(stylePatch);
+    if (typeof editorRef.current?.refresh === "function") {
+      requestAnimationFrame(() => editorRef.current.refresh());
+    }
+  }
+
+  function insertFloatingImageComponent(hostComponent, publicUrl, fileName) {
+    if (!hostComponent || !publicUrl) return null;
+
+    hostComponent.addStyle?.({ position: "relative" });
+    const added = hostComponent.components().add({
+      type: "image",
+      tagName: "img",
+      attributes: {
+        src: publicUrl,
+        alt: fileName,
+        "data-floating-image": "true",
+      },
+      style: {
+        position: "absolute",
+        left: "24px",
+        top: "24px",
+        width: "320px",
+        height: "auto",
+        display: "block",
+        "max-width": "none",
+        cursor: "move",
+        margin: "0",
+        "z-index": "2",
+        "border-radius": "12px",
+        "box-shadow": "0 10px 30px rgba(15,23,42,0.18)",
+      },
+    }, { at: 0 });
+    const imageComp = Array.isArray(added) ? added[0] : added;
+    if (imageComp) {
+      ensureAbsolutePlacement(imageComp);
+      selectedCompRef.current = imageComp;
+      lastBlockCompRef.current = imageComp;
+      lastSelectedTagRef.current = "img";
+      setBlockKind("image");
+      setImageLink("");
+      setBlockPanelOpen(true);
+    }
+    return imageComp;
+  }
+
+  function resolveImageInsertTarget() {
+    const editor = editorRef.current;
+    const wrapper = editor?.getWrapper?.() || null;
+    const selected = editor?.getSelected?.() || selectedCompRef.current || lastBlockCompRef.current || wrapper || null;
+    if (!selected) return { mode: "floating", component: wrapper };
+
+    if (selected.is?.("image")) {
+      return { mode: "replace", component: selected };
+    }
+
+    const blankCanvasRoot = getBlankCanvasRoot(selected);
+    if (blankCanvasRoot) {
+      let stage = null;
+      blankCanvasRoot.components?.().forEach?.((child) => {
+        if (stage) return;
+        const attrs = child.getAttributes?.() || {};
+        if (`${attrs["data-blank-canvas-stage"] || ""}`.toLowerCase() === "true") {
+          stage = child;
+        }
+      });
+      return { mode: "floating", component: stage || blankCanvasRoot };
+    }
+
+    if (isFreeformArrangeTarget(selected)) {
+      return { mode: "floating", component: selected.parent?.() || selected };
+    }
+
+    let cursor = selected;
+    while (cursor) {
+      const tag = `${cursor?.get?.("tagName") || ""}`.toLowerCase();
+      const type = `${cursor?.get?.("type") || ""}`.toLowerCase();
+      const isTextLike = ["p", "span", "a", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote", "small", "label", "button"].includes(tag) || type === "text";
+      const isFormLike = ["input", "textarea", "select", "option"].includes(tag);
+      const hasChildren = typeof cursor?.components === "function";
+      if (!isTextLike && !isFormLike && hasChildren) {
+        return { mode: "floating", component: cursor };
+      }
+      cursor = cursor.parent?.() || null;
+    }
+
+    return { mode: "floating", component: selected.parent?.() || wrapper || selected };
   }
 
   function insertImageUrlIntoEditor(publicUrl, mode = "insert", fileName = "Generated image") {
@@ -2154,13 +2894,32 @@ function Editor() {
 
     if (mode === "background" && selectedCompRef.current) {
       applyBackgroundImageUrl(publicUrl);
+    } else if (mode === "replace") {
+      const replaced = replaceSelectedImageSource(publicUrl, fileName);
+      if (!replaced) {
+        const insertTarget = resolveImageInsertTarget();
+        if (insertTarget?.mode === "replace" && insertTarget.component) {
+          syncImageComponentSource(insertTarget.component, publicUrl, fileName);
+          editor.select?.(insertTarget.component);
+        } else {
+          const hostComponent = insertTarget?.component || editor.getWrapper?.() || null;
+          const imageComp = insertFloatingImageComponent(hostComponent, publicUrl, fileName);
+          if (imageComp) {
+            editor.select?.(imageComp);
+          }
+        }
+      }
     } else {
-      const selected = editor.getSelected();
-      const isImage = selected?.is && selected.is("image");
-      if (isImage) {
-        selected.addAttributes({ src: publicUrl, alt: fileName });
+      const insertTarget = resolveImageInsertTarget();
+      if (insertTarget?.mode === "replace" && insertTarget.component) {
+        syncImageComponentSource(insertTarget.component, publicUrl, fileName);
+        editor.select?.(insertTarget.component);
       } else {
-        editor.addComponents(`<img src="${publicUrl}" alt="${esc(fileName)}" style="max-width:100%;height:auto;border-radius:12px;display:block;" />`);
+        const hostComponent = insertTarget?.component || editor.getWrapper?.() || null;
+        const imageComp = insertFloatingImageComponent(hostComponent, publicUrl, fileName);
+        if (imageComp) {
+          editor.select?.(imageComp);
+        }
       }
     }
 
@@ -2172,10 +2931,11 @@ function Editor() {
   async function generateAiImage(mode = "insert") {
     const prompt = `${aiImagePrompt || ""}`.trim();
     if (!prompt) {
-      alert("Add an image prompt first.");
+      alert("Type an image description in the 'Image prompt' box first, then click Generate. Example: 'glowing pink diamond shape background'.");
       return;
     }
 
+    setAiImageStatus("");
     setAiImageLoading(true);
     try {
       const res = await fetch("/api/ai/generate-image", {
@@ -2193,11 +2953,23 @@ function Editor() {
         throw new Error(json?.error || "AI image generation failed");
       }
 
-      insertImageUrlIntoEditor(json.url, mode, "AI-generated image");
-      if (mode === "background") {
-        setBlockControls((prev) => ({ ...prev, backgroundImage: json.url }));
+      const savedAsset = await persistExternalImageToAssets(json.url, prompt.slice(0, 48) || "AI-generated image");
+      const savedUrl = savedAsset?.publicUrl || json.url;
+      if (savedAsset?.persisted && editorRef.current) {
+        await loadSupabaseAssetsIntoGrapes(editorRef.current, session?.user?.id);
       }
+
+      insertImageUrlIntoEditor(savedUrl, mode, "AI-generated image");
+      if (mode === "background") {
+        setBlockControls((prev) => ({ ...prev, backgroundImage: savedUrl }));
+      }
+      setAiImageStatus(
+        savedAsset?.persisted
+          ? "Saved to Assets and added to your media library. Use Open Media Library to reuse it later."
+          : "Inserted on the page. It could not be saved to Assets, so it may not appear in your media library yet."
+      );
     } catch (e) {
+      setAiImageStatus("");
       alert(e?.message || "Could not generate image.");
     } finally {
       setAiImageLoading(false);
@@ -2441,7 +3213,10 @@ function Editor() {
                 <div style={{ color: "#93c5fd", fontSize: 13, fontWeight: 700 }}>DALL-E Icon/Image Generator</div>
                 <textarea
                   value={aiImagePrompt}
-                  onChange={(e) => setAiImagePrompt(e.target.value)}
+                  onChange={(e) => {
+                    setAiImagePrompt(e.target.value);
+                    if (aiImageStatus) setAiImageStatus("");
+                  }}
                   placeholder="Describe the icon or image you want..."
                   style={{ ...ctlTextarea, minHeight: 70 }}
                 />
@@ -2480,7 +3255,11 @@ function Editor() {
                   >
                     {aiImageLoading ? "Generating..." : "Generate for Background"}
                   </button>
+                  <button type="button" onClick={openMediaLibrary} style={btn}>
+                    Open Media Library
+                  </button>
                 </div>
+                {aiImageStatus ? <div style={{ color: "#bfdbfe", fontSize: 12, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
               </div>
             </div>
           )}
@@ -2514,7 +3293,7 @@ function Editor() {
                     <>
                       <button
                         type="button"
-                        onClick={() => handleViewPage()}
+                        onClick={() => handleViewPage({ device: "desktop", canvasWidthOverride: 1500 })}
                         style={{
                           ...btn,
                           display: "inline-flex",
@@ -2524,9 +3303,9 @@ function Editor() {
                           color: "#ffffff",
                           boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
                         }}
-                        title="Save and open the page currently selected in the editor"
+                        title="Save and open a desktop-width preview of the current page"
                       >
-                        👁 View This Page
+                        🖥 Desktop Preview
                       </button>
                       <button
                         type="button"
@@ -3055,8 +3834,172 @@ function Editor() {
                       <div style={{ display: "grid", gap: 10 }}>
                         <div style={rightHint}>Click text to edit text. Click a shape or block to adjust colour, opacity, size, and layering.</div>
 
+                        {getStackBoxRoot(lastBlockCompRef.current) ? (() => {
+                          const stackRoot = getStackBoxRoot(lastBlockCompRef.current);
+                          const stackLayers = getStackLayerComponents(stackRoot);
+                          const selectedLayer = isStackLayerComponent(lastBlockCompRef.current) ? lastBlockCompRef.current : null;
+                          const selectedLayerIndex = selectedLayer ? stackLayers.indexOf(selectedLayer) : -1;
+                          return (
+                            <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10, display: "grid", gap: 10 }}>
+                              <label style={ctlLabel}>Layer Stack</label>
+                              <div style={ctlBtnRow}>
+                                <button type="button" style={ctlBtn} onClick={() => addStackBoxLayer("image")}>+ Add Image Layer</button>
+                                <button type="button" style={ctlBtnGhost} onClick={() => addStackBoxLayer("text")}>+ Add Text Layer</button>
+                              </div>
+
+                              {stackLayers.length ? (
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  {stackLayers.map((layer, layerIndex) => {
+                                    const attrs = layer.getAttributes?.() || {};
+                                    const kind = `${attrs["data-stack-layer-kind"] || layer.get?.("tagName") || "div"}`.toLowerCase() === "text" ? "text" : "image";
+                                    const isActive = selectedLayerIndex === layerIndex;
+                                    return (
+                                      <button
+                                        key={`${kind}-stack-layer-${layerIndex}`}
+                                        type="button"
+                                        style={{
+                                          ...ctlBtnGhost,
+                                          padding: "7px 10px",
+                                          borderColor: isActive ? "#7df9a1" : "#34507a",
+                                          color: isActive ? "#7df9a1" : ctlBtnGhost.color,
+                                        }}
+                                        onClick={() => {
+                                          editorRef.current?.select?.(layer);
+                                          lastBlockCompRef.current = layer;
+                                          if (kind === "image") lastImageCompRef.current = layer;
+                                        }}
+                                      >
+                                        {kind === "text" ? `Text ${layerIndex + 1}` : `Image ${layerIndex + 1}`}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+
+                              {selectedLayer ? (
+                                <div style={{ fontSize: 12, color: "#93a4bf", lineHeight: 1.5 }}>
+                                  {selectedLayer.get?.("tagName") === "img"
+                                    ? "Selected image layer. Use the image tools below to upload, replace, resize, and position it."
+                                    : "Selected text layer. Edit the text directly on canvas, then use the text controls above for styling."}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 12, color: "#93a4bf", lineHeight: 1.5 }}>
+                                  Select a layer chip to edit that layer directly inside the stack canvas.
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })() : null}
+
                         {lastSelectedTagRef.current === "img" ? (
                           <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10 }}>
+                            <label style={ctlLabel}>Image Tools</label>
+                            <div style={ctlBtnRow}>
+                              <button
+                                type="button"
+                                style={ctlBtn}
+                                onClick={() => {
+                                  setImageUploadMode("replace");
+                                  imageInputRef.current?.click();
+                                }}
+                              >
+                                Upload / Replace
+                              </button>
+                              <button type="button" style={ctlBtnGhost} onClick={openMediaLibrary}>
+                                Open Media Library
+                              </button>
+                            </div>
+
+                            <div style={ctlRow2}>
+                              <div>
+                                <label style={ctlLabel}>Width</label>
+                                <input
+                                  type="number"
+                                  min="40"
+                                  max="1200"
+                                  value={blockControls.width}
+                                  onChange={(e) => applyImageControlsPatch({ width: e.target.value })}
+                                  style={ctlInput}
+                                />
+                              </div>
+                              <div>
+                                <label style={ctlLabel}>Height</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="1200"
+                                  value={blockControls.height}
+                                  onChange={(e) => applyImageControlsPatch({ height: e.target.value })}
+                                  style={ctlInput}
+                                />
+                              </div>
+                            </div>
+
+                            <div style={ctlRow2}>
+                              <div>
+                                <label style={ctlLabel}>Opacity: {blockControls.opacity}%</label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  step="5"
+                                  value={blockControls.opacity}
+                                  onChange={(e) => applyImageControlsPatch({ opacity: e.target.value })}
+                                  style={{ width: "100%", cursor: "pointer" }}
+                                />
+                              </div>
+                              <div>
+                                <label style={ctlLabel}>Corner Radius</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="400"
+                                  value={blockControls.borderRadius}
+                                  onChange={(e) => applyImageControlsPatch({ borderRadius: e.target.value })}
+                                  style={ctlInput}
+                                />
+                              </div>
+                            </div>
+
+                            {isFreeformArrangeTarget(lastBlockCompRef.current) ? (
+                              <div style={ctlRow2}>
+                                <div>
+                                  <label style={ctlLabel}>X Position</label>
+                                  <input
+                                    type="number"
+                                    value={blockControls.offsetX}
+                                    onChange={(e) => applyImageControlsPatch({ offsetX: e.target.value })}
+                                    style={ctlInput}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={ctlLabel}>Y Position</label>
+                                  <input
+                                    type="number"
+                                    value={blockControls.offsetY}
+                                    onChange={(e) => applyImageControlsPatch({ offsetY: e.target.value })}
+                                    style={ctlInput}
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <label style={ctlLabel}>Image Alignment</label>
+                                <div style={ctlBtnRow}>
+                                  <button type="button" style={ctlBtnGhost} onClick={() => applyImageAlignment("left")}>
+                                    Left
+                                  </button>
+                                  <button type="button" style={ctlBtnGhost} onClick={() => applyImageAlignment("center")}>
+                                    Center
+                                  </button>
+                                  <button type="button" style={ctlBtnGhost} onClick={() => applyImageAlignment("right")}>
+                                    Right
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10, marginTop: 10 }}>
                             <label style={ctlLabel}>Image Link URL</label>
                             <input
                               type="url"
@@ -3110,50 +4053,31 @@ function Editor() {
                               >
                                 Clear
                               </button>
+                              <button
+                                type="button"
+                                style={ctlBtnGhost}
+                                onClick={() => {
+                                  const target = editorRef.current?.getSelected?.() || lastBlockCompRef.current;
+                                  if (!target) return;
+                                  const parent = target.parent?.() || null;
+                                  target.remove?.();
+                                  selectedCompRef.current = parent;
+                                  lastBlockCompRef.current = parent;
+                                  lastSelectedTagRef.current = parent ? `${parent.get?.("tagName") || ""}`.toLowerCase() : "";
+                                  if (parent) {
+                                    editorRef.current?.select?.(parent);
+                                  } else {
+                                    editorRef.current?.select?.();
+                                    setBlockPanelOpen(false);
+                                  }
+                                }}
+                              >
+                                Remove Image
+                              </button>
                             </div>
-                          </div>
-                        ) : null}
-
-                        <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10, marginTop: 10 }}>
-                          <label style={ctlLabel}>AI Image Generator (DALL-E)</label>
-                          <textarea
-                            value={aiImagePrompt}
-                            onChange={(e) => setAiImagePrompt(e.target.value)}
-                            placeholder="Describe the icon or image you want..."
-                            style={{ ...ctlTextarea, minHeight: 80 }}
-                          />
-                          <div style={ctlRow2}>
-                            <div>
-                              <label style={ctlLabel}>Style</label>
-                              <select value={aiImageStyle} onChange={(e) => setAiImageStyle(e.target.value)} style={ctlInput}>
-                                <option value="clean">Clean Graphic</option>
-                                <option value="icon">Icon / Flat</option>
-                                <option value="photo">Photo Real</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label style={ctlLabel}>Size</label>
-                              <select value={aiImageSize} onChange={(e) => setAiImageSize(e.target.value)} style={ctlInput}>
-                                <option value="1024x1024">Square</option>
-                                <option value="1536x1024">Landscape</option>
-                                <option value="1024x1536">Portrait</option>
-                              </select>
-                            </div>
-                          </div>
-                          <div style={ctlBtnRow}>
-                            <button type="button" style={ctlBtn} onClick={() => generateAiImage("insert")} disabled={aiImageLoading}>
-                              {aiImageLoading ? "Generating..." : "Generate + Insert"}
-                            </button>
-                            <button
-                              type="button"
-                              style={ctlBtnGhost}
-                              onClick={() => generateAiImage("background")}
-                              disabled={aiImageLoading}
-                            >
-                              {aiImageLoading ? "Generating..." : "Generate for Background"}
-                            </button>
                           </div>
                         </div>
+                        ) : null}
 
                         {(blockKind === "shape" || isShapeLikeComponent(lastBlockCompRef.current)) ? (
                           <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10, marginTop: 10, display: "grid", gap: 10 }}>
@@ -3327,6 +4251,34 @@ function Editor() {
                             placeholder="https://..."
                             style={ctlInput}
                           />
+                          <label style={{ ...ctlLabel, color: "#93c5fd", marginTop: 10 }}>Generate Background</label>
+                          <textarea
+                            value={aiImagePrompt}
+                            onChange={(e) => {
+                              setAiImagePrompt(e.target.value);
+                              if (aiImageStatus) setAiImageStatus("");
+                            }}
+                            placeholder="Example: modern home renovation hero photo, natural light, premium editorial look"
+                            style={{ ...ctlTextarea, minHeight: 80 }}
+                          />
+                          <div style={ctlRow2}>
+                            <div>
+                              <label style={ctlLabel}>Style</label>
+                              <select value={aiImageStyle} onChange={(e) => setAiImageStyle(e.target.value)} style={ctlInput}>
+                                <option value="clean">Clean Graphic</option>
+                                <option value="icon">Icon / Flat</option>
+                                <option value="photo">Photo Real</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label style={ctlLabel}>Size</label>
+                              <select value={aiImageSize} onChange={(e) => setAiImageSize(e.target.value)} style={ctlInput}>
+                                <option value="1024x1024">Square</option>
+                                <option value="1536x1024">Landscape</option>
+                                <option value="1024x1536">Portrait</option>
+                              </select>
+                            </div>
+                          </div>
                           <div style={ctlBtnRow}>
                             <button
                               type="button"
@@ -3345,7 +4297,19 @@ function Editor() {
                             >
                               Clear
                             </button>
+                            <button
+                              type="button"
+                              style={ctlBtnGhost}
+                              onClick={() => generateAiImage("background")}
+                              disabled={aiImageLoading}
+                            >
+                              {aiImageLoading ? "Generating..." : "Generate"}
+                            </button>
+                            <button type="button" style={ctlBtnGhost} onClick={openMediaLibrary}>
+                              Media Library
+                            </button>
                           </div>
+                          {aiImageStatus ? <div style={{ color: "#93c5fd", fontSize: 12, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
                         </div>
                         <div style={ctlRow2}>
                           <div>
@@ -3462,18 +4426,28 @@ function Editor() {
 /* ---------- Supabase Assets → GrapesJS ---------- */
 async function loadSupabaseAssetsIntoGrapes(editor, userId) {
   try {
-    if (!userId) return;
-    const prefix = `${userId}/`;
-    const { data, error } = await supabase.storage
-      .from("assets")
-      .list(prefix, { limit: 200, offset: 0, sortBy: { column: "name", order: "asc" } });
-    if (error) return;
-    const urls = [];
-    for (const f of data || []) {
-      const { data: pub } = supabase.storage.from("assets").getPublicUrl(`${prefix}${f.name}`);
-      if (pub?.publicUrl) urls.push(pub.publicUrl);
+    if (!editor || !userId) return;
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token || '';
+    if (!token) return;
+
+    const response = await fetch('/api/assets/list-library', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) return;
+
+    const urls = (payload.images || []).map((image) => image.url).filter(Boolean);
+    if (!urls.length) return;
+
+    const existingUrls = new Set(
+      (editor.AssetManager?.getAll?.()?.map?.((asset) => asset?.get?.("src") || asset?.attributes?.src || asset?.src) || [])
+        .filter(Boolean)
+    );
+    const nextAssets = urls.filter((url) => !existingUrls.has(url)).map((url) => ({ src: url, name: url.split("/").pop() || "Asset" }));
+    if (nextAssets.length) {
+      editor.AssetManager.add(nextAssets);
     }
-    if (urls.length) editor.AssetManager.add(urls);
   } catch (e) {
     // ignore
   }

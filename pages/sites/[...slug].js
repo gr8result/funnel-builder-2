@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { renderWebsiteBlock } from "../../components/website-builder/WebsiteBlockRenderer";
+import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath } from "../../lib/website-builder/publishConfig";
 
@@ -324,6 +325,7 @@ export async function getServerSideProps(ctx) {
 
 function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
   const project = publication?.site_data || {};
+  const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
   const activePage = pages.find((page) => resolvePublishedPageName(page) === slugifyPage(requested)) || pages[0] || null;
@@ -358,7 +360,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
       <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif" }}>
         {injectNav ? (
           <Fragment key="global-nav">
-            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
           </Fragment>
         ) : null}
 
@@ -366,7 +368,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
           <>
             {blocksWithoutNav.map((block, index) => (
               <Fragment key={block.id || `${block.type}-${index}`}>
-                {renderWebsiteBlock(block, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+                {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
               </Fragment>
             ))}
           </>
@@ -383,7 +385,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
 
         {injectFooter ? (
           <Fragment key="global-footer">
-            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: { logo: null, images: [] }, editor: false, navigationContext })}
+            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
           </Fragment>
         ) : null}
 

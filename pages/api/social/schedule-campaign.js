@@ -58,8 +58,6 @@ export default async function handler(req, res) {
 
     const userId = auth.user.id;
     const scheduleRows = [];
-    const queueRows = [];
-
     posts.forEach((p, i) => {
       const scheduled_for = dates[i];
 
@@ -69,18 +67,9 @@ export default async function handler(req, res) {
         scheduled_for,
         status: "scheduled",
       });
-
-      queueRows.push({
-        user_id: userId,
-        post_id: p.post_id,
-        platform: p.social_posts?.platform || "facebook",
-        scheduled_for,
-        status: "queued",
-      });
     });
 
     await auth.admin.from("social_schedule").insert(scheduleRows);
-    await auth.admin.from("social_queue").insert(queueRows);
 
     return res.status(200).json({
       ok: true,

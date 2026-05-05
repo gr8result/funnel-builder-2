@@ -1,16 +1,26 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMemo } from "react";
-import { getTemplate } from "../../../lib/website-builder/templates";
+import { useEffect, useMemo, useState } from "react";
+import { renderWebsiteBlock } from "../../../components/website-builder/WebsiteBlockRenderer";
+import { getWebsiteTemplatePreview } from "../../../lib/website-builder/projectStore";
+import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
+import { supabase } from "../../../lib/supabaseClient";
 
-function humanizeThemeName(value = "") {
-  const raw = String(value || "")
-    .replace(/^theme[_-]?/i, "")
-    .replace(/[_-]+/g, " ")
-    .trim();
+function pickLayoutWidth(blocks, fallback = 1500) {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = Number(block?.props?.baseLayoutWidth || 0);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return fallback;
+}
 
-  return raw.replace(/\b\w/g, (m) => m.toUpperCase()) || "Visual Theme";
+function pickPageBackground(blocks, fallback = "#ffffff") {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = String(block?.props?.pageBackground || "").trim();
+    if (value) return value;
+  }
+  return fallback;
 }
 
 function getThemeAccent(slug = "") {
@@ -18,119 +28,142 @@ function getThemeAccent(slug = "") {
   if (raw.includes("coach")) return { bg: "linear-gradient(160deg, #24170a 0%, #6b3f12 45%, #0f172a 100%)", chip: "#f59e0b" };
   if (raw.includes("local")) return { bg: "linear-gradient(160deg, #062a24 0%, #0f766e 45%, #0f172a 100%)", chip: "#14b8a6" };
   if (raw.includes("portfolio")) return { bg: "linear-gradient(160deg, #1e1b4b 0%, #4f46e5 45%, #0f172a 100%)", chip: "#818cf8" };
+  if (raw.includes("restaurant") || raw.includes("cafe")) return { bg: "linear-gradient(160deg, #2f1707 0%, #8a3f14 45%, #0f172a 100%)", chip: "#fb923c" };
   return { bg: "linear-gradient(160deg, #07111f 0%, #0b4aa2 45%, #0b1628 100%)", chip: "#38bdf8" };
-}
-
-function buildPreviewModel(templateSlug) {
-  const template = getTemplate(templateSlug || "website-business-agency");
-  const built = template?.build?.("modern-blue") || { pages: [{ sections: [] }] };
-  const sections = built?.pages?.[0]?.sections || [];
-  const hero = sections.find((section) => ["hero", "optin_hero", "sales_hero"].includes(section?.type))?.props || {};
-  const info = sections.find((section) => ["services", "features", "pricing"].includes(section?.type))?.props || {};
-  const testimonial = sections.find((section) => section?.type === "testimonials")?.props || {};
-
-  let cards = [];
-  if (Array.isArray(info?.items) && info.items.length) {
-    cards = info.items.slice(0, 3).map((item) => ({
-      title: item?.title || item?.name || "Feature",
-      text: item?.text || item?.description || "Customize this section in the builder.",
-    }));
-  } else if (Array.isArray(info?.plans) && info.plans.length) {
-    cards = info.plans.slice(0, 3).map((plan) => ({
-      title: plan?.name || "Plan",
-      text: Array.isArray(plan?.bullets) ? plan.bullets.slice(0, 2).join(" • ") : "Flexible package",
-    }));
-  }
-
-  if (!cards.length) {
-    cards = [
-      { title: "Multi-page", text: "Build a real website, not just a landing page." },
-      { title: "Open source", text: "Self-hosted and fully improvable by you." },
-      { title: "Visual editing", text: "Edit content, sections, and layout directly." },
-    ];
-  }
-
-  return {
-    template,
-    heroTitle: hero?.title || humanizeThemeName(template?.name || templateSlug),
-    heroText: hero?.subtitle || template?.blurb || "Editable website template preview.",
-    primaryCta: hero?.primaryLabel || hero?.buttonLabel || "Use This Template",
-    cards,
-    quotes: Array.isArray(testimonial?.items) ? testimonial.items.slice(0, 2) : [],
-  };
 }
 
 export default function ThemePreviewPage() {
   const router = useRouter();
-  const templateSlug = String(router.query.theme || router.query.template || "").trim();
-  const title = humanizeThemeName(templateSlug || "Template Preview");
+  const [session, setSession] = useState(null);
+  const routeParams = useMemo(() => {
+    const query = router.query || {};
+    const search = String(router.asPath || "").split("?")[1] || "";
+    const params = new URLSearchParams(search);
+
+    return {
+      templateSlug: String(query.theme || query.template || params.get("theme") || params.get("template") || "").trim(),
+      pageKey: String(query.page || params.get("page") || "").trim(),
+      viewport: String(query.viewport || params.get("viewport") || "").toLowerCase(),
+    };
+  }, [router.asPath, router.query]);
+
+  const templateSlug = routeParams.templateSlug;
+  const pageKey = routeParams.pageKey;
+  const previewRouteReady = router.isReady;
+  const previewViewport = ["mobile", "tablet", "desktop"].includes(routeParams.viewport)
+    ? routeParams.viewport
+    : "desktop";
+  const compactPreview = previewViewport === "mobile";
   const accent = getThemeAccent(templateSlug);
-  const preview = useMemo(() => buildPreviewModel(templateSlug), [templateSlug]);
+  const preview = useMemo(() => getWebsiteTemplatePreview(templateSlug, pageKey), [templateSlug, pageKey]);
+  const assets = useMemo(() => ({ logo: null, images: [] }), []);
+  const layoutWidth = pickLayoutWidth(preview?.blocks || [], 1500);
+  const previewShellWidth = previewViewport === "mobile" ? 430 : previewViewport === "tablet" ? 920 : layoutWidth;
+  const pageBackground = pickPageBackground(preview?.blocks || [], accent.bg);
+  const activePageSlug = preview?.activePage?.slug || "";
+  const navigationContext = useMemo(() => {
+    if (!preview || !templateSlug) return null;
+
+    const pageMap = Object.fromEntries(
+      preview.pages.map((page) => [
+        String(page.slug || "").toLowerCase(),
+        `/modules/website-builder/preview?template=${encodeURIComponent(templateSlug)}&page=${encodeURIComponent(page.slug)}&viewport=${encodeURIComponent(previewViewport)}`,
+      ])
+    );
+
+    return {
+      pageMap,
+      currentPageKey: activePageSlug,
+      basePath: `/modules/website-builder/preview?template=${encodeURIComponent(templateSlug)}&viewport=${encodeURIComponent(previewViewport)}`,
+    };
+  }, [preview, templateSlug, activePageSlug, previewViewport]);
+
+  useEffect(() => {
+    let subscription;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data?.session || null);
+      ({
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession || null)));
+    })();
+
+    return () => subscription?.unsubscribe?.();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    seedWebsiteBuilderSharedLibrary(supabase, session.user.id).catch(() => {
+      // Template previews should still load even if background library sync fails.
+    });
+  }, [session?.user?.id]);
 
   return (
     <>
       <Head>
-        <title>{title} Preview | GR8</title>
+        <title>{preview?.template?.name || "Template Preview"} Preview | GR8</title>
+        <style>{`html, body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
       </Head>
 
-      <main style={styles.page(accent.bg)}>
+      <main style={styles.page(pageBackground)}>
         <section style={styles.shell}>
-          <div style={styles.topBar}>
-            <div>
-              <p style={{ ...styles.kicker, color: accent.chip }}>GR8 TEMPLATE PREVIEW</p>
-              <h1 style={styles.title}>{preview.template?.name || title}</h1>
+          {!previewRouteReady ? (
+            <div style={styles.emptyState}>
+              <h2 style={styles.emptyTitle}>Loading preview</h2>
+              <p style={styles.emptyText}>Resolving the selected website template.</p>
             </div>
-            <div style={styles.topActions}>
-              <Link href="/modules/website-builder" style={styles.backBtn}>
-                Back to Templates
-              </Link>
-              <Link href="/modules/website-builder" style={{ ...styles.backBtn, background: accent.chip, color: "#08101a", borderColor: accent.chip }}>
-                Use Theme in Builder
-              </Link>
-            </div>
-          </div>
+          ) : null}
 
-          <div style={styles.previewFrame}>
-            <header style={styles.siteNav}>
-              <strong style={styles.siteBrand}>{preview.template?.name || title}</strong>
-              <nav style={styles.siteLinks}>
-                <span>Home</span>
-                <span>About</span>
-                <span>Services</span>
-                <span>Contact</span>
-              </nav>
-            </header>
-
-            <section style={styles.hero}>
-              <div style={styles.heroBadge}>{preview.template?.type || "website"}</div>
-              <h2 style={styles.heroTitle}>{preview.heroTitle}</h2>
-              <p style={styles.heroText}>{preview.heroText}</p>
-              <div style={styles.heroButtons}>
-                <span style={{ ...styles.primaryBtn, background: accent.chip }}>{preview.primaryCta}</span>
-                <span style={styles.secondaryBtn}>Preview Sections</span>
+          {previewRouteReady && preview ? (
+            <>
+              <div style={styles.floatingToolbarWrap}>
+                <div style={styles.floatingToolbar}>
+                  <div style={styles.floatingIntro}>
+                    <p style={{ ...styles.kicker, color: accent.chip, marginBottom: 4 }}>GR8 TEMPLATE PREVIEW</p>
+                    <div style={styles.floatingTitleRow}>
+                      <h1 style={styles.floatingTitle}>{preview?.template?.name || "Template Preview"}</h1>
+                      <span style={styles.floatingMeta}>{preview.activePage?.title || "Home"}</span>
+                    </div>
+                  </div>
+                  <div style={styles.topActions}>
+                    <Link href="/modules/website-builder" style={styles.backBtn}>
+                      Back to Templates
+                    </Link>
+                    <Link href="/modules/website-builder" style={{ ...styles.backBtn, background: accent.chip, color: "#08101a", borderColor: accent.chip }}>
+                      Use Theme in Builder
+                    </Link>
+                  </div>
+                </div>
+                <section style={styles.pageTabsFloating}>
+                  {preview.pages.map((page) => (
+                    <Link
+                      key={page.slug}
+                      href={`/modules/website-builder/preview?template=${encodeURIComponent(templateSlug)}&page=${encodeURIComponent(page.slug)}&viewport=${encodeURIComponent(previewViewport)}`}
+                      style={{
+                        ...styles.pageTab,
+                        ...(page.slug === activePageSlug ? styles.siteLinkActive(accent.chip) : {}),
+                      }}
+                    >
+                      {page.title}
+                    </Link>
+                  ))}
+                </section>
               </div>
-            </section>
 
-            <section style={styles.cardGrid}>
-              {preview.cards.map((card) => (
-                <article key={card.title} style={styles.card}>
-                  <h3 style={styles.cardTitle}>{card.title}</h3>
-                  <p style={styles.cardText}>{card.text}</p>
-                </article>
-              ))}
-            </section>
-
-            {preview.quotes.length ? (
-              <section style={styles.quoteWrap}>
-                {preview.quotes.map((item, index) => (
-                  <blockquote key={`${item?.name || "quote"}-${index}`} style={styles.quoteCard}>
-                    <p style={styles.quoteText}>“{item?.quote || "Real customer proof lives here."}”</p>
-                    <footer style={styles.quoteAuthor}>{item?.name || "Client"}</footer>
-                  </blockquote>
+              <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
+                {preview.blocks.map((block, index) => (
+                  <div key={block.id || `${block.type}-${index}`}>
+                    {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext })}
+                  </div>
                 ))}
-              </section>
-            ) : null}
-          </div>
+              </div>
+            </>
+          ) : previewRouteReady ? (
+            <div style={styles.emptyState}>
+              <h2 style={styles.emptyTitle}>Template preview unavailable</h2>
+              <p style={styles.emptyText}>This template could not be rendered for preview.</p>
+            </div>
+          ) : null}
         </section>
       </main>
     </>
@@ -140,176 +173,137 @@ export default function ThemePreviewPage() {
 const styles = {
   page: (background) => ({
     minHeight: "100vh",
-    padding: "24px",
-    display: "grid",
-    placeItems: "center",
+    padding: 0,
     background,
   }),
   shell: {
-    width: "min(1400px, 100%)",
+    width: "100%",
     display: "grid",
-    gap: "18px",
+    gap: 0,
+    margin: 0,
   },
-  topBar: {
+  floatingToolbarWrap: {
+    position: "fixed",
+    top: 18,
+    left: 18,
+    right: 18,
+    zIndex: 220,
+    display: "grid",
+    gap: 10,
+    pointerEvents: "none",
+  },
+  floatingToolbar: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "16px",
     flexWrap: "wrap",
+    padding: "14px 16px",
+    borderRadius: 18,
+    background: "rgba(8,15,29,.72)",
+    border: "1px solid rgba(255,255,255,.14)",
+    backdropFilter: "blur(16px)",
+    boxShadow: "0 18px 50px rgba(2,6,23,.22)",
+    pointerEvents: "auto",
+  },
+  floatingIntro: {
+    display: "grid",
+    gap: 2,
+  },
+  floatingTitleRow: {
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  floatingTitle: {
+    margin: 0,
+    color: "#fff",
+    fontSize: "22px",
+    lineHeight: 1.1,
+  },
+  floatingMeta: {
+    display: "inline-flex",
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,.08)",
+    border: "1px solid rgba(255,255,255,.14)",
+    color: "#dbeafe",
+    fontSize: 13,
+    fontWeight: 600,
   },
   topActions: {
     display: "flex",
     gap: 10,
     flexWrap: "wrap",
+    pointerEvents: "auto",
   },
   kicker: {
     margin: 0,
-    fontSize: "12px",
-    fontWeight: 800,
+    fontSize: "16px",
+    fontWeight: 600,
     letterSpacing: ".16em",
-  },
-  title: {
-    margin: "6px 0 0",
-    color: "#fff",
-    fontSize: "36px",
-    lineHeight: 1.1,
   },
   backBtn: {
     textDecoration: "none",
     borderRadius: "12px",
-    padding: "12px 16px",
+    padding: "10px 14px",
     background: "rgba(255,255,255,.1)",
     border: "1px solid rgba(255,255,255,.22)",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 600,
   },
-  previewFrame: {
-    minHeight: "78vh",
-    borderRadius: "20px",
-    padding: "22px",
-    background: "rgba(8,15,29,.82)",
-    border: "1px solid rgba(255,255,255,.08)",
-    display: "grid",
-    gap: 18,
-  },
-  siteNav: {
+  pageTabsFloating: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-    padding: "14px 16px",
-    borderRadius: 14,
-    background: "rgba(255,255,255,.05)",
-    border: "1px solid rgba(255,255,255,.08)",
-    color: "#e2e8f0",
-  },
-  siteBrand: {
-    fontSize: 18,
-    fontWeight: 800,
-    color: "#fff",
-  },
-  siteLinks: {
-    display: "flex",
-    gap: 14,
-    flexWrap: "wrap",
-    fontSize: 14,
-  },
-  hero: {
-    borderRadius: 18,
-    padding: "48px 24px",
-    background: "linear-gradient(135deg, rgba(37,99,235,.30), rgba(15,23,42,.95))",
-    border: "1px solid rgba(255,255,255,.12)",
-    color: "#fff",
-    textAlign: "center",
-    display: "grid",
-    gap: 12,
-  },
-  heroBadge: {
-    justifySelf: "center",
-    padding: "6px 12px",
-    borderRadius: 999,
-    background: "rgba(255,255,255,.12)",
-    fontSize: 12,
-    fontWeight: 800,
-    letterSpacing: ".12em",
-    textTransform: "uppercase",
-  },
-  heroTitle: {
-    margin: 0,
-    fontSize: "44px",
-    lineHeight: 1.08,
-  },
-  heroText: {
-    margin: "0 auto",
-    maxWidth: 760,
-    color: "#dbeafe",
-    fontSize: "18px",
-    lineHeight: 1.6,
-  },
-  heroButtons: {
-    display: "flex",
-    justifyContent: "center",
     gap: 10,
     flexWrap: "wrap",
-    marginTop: 8,
+    alignItems: "center",
+    pointerEvents: "auto",
   },
-  primaryBtn: {
-    display: "inline-flex",
-    padding: "12px 18px",
+  pageTab: {
+    textDecoration: "none",
+    color: "#dbeafe",
     borderRadius: 999,
-    color: "#08101a",
-    fontWeight: 800,
-  },
-  secondaryBtn: {
-    display: "inline-flex",
-    padding: "12px 18px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,.25)",
-    color: "#fff",
-    fontWeight: 700,
-  },
-  cardGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 14,
-  },
-  card: {
-    borderRadius: 16,
-    padding: "18px 16px",
-    background: "#ffffff",
-    border: "1px solid #dbe5f1",
-  },
-  cardTitle: {
-    margin: "0 0 8px",
-    color: "#0f172a",
-    fontSize: 18,
-  },
-  cardText: {
-    margin: 0,
-    color: "#475569",
-    lineHeight: 1.6,
-  },
-  quoteWrap: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: 14,
-  },
-  quoteCard: {
-    margin: 0,
-    borderRadius: 16,
-    padding: "18px 16px",
-    background: "rgba(255,255,255,.08)",
+    padding: "8px 12px",
     border: "1px solid rgba(255,255,255,.12)",
-    color: "#fff",
+    background: "rgba(8,15,29,.72)",
+    backdropFilter: "blur(14px)",
+    fontSize: 14,
+    fontWeight: 600,
   },
-  quoteText: {
-    margin: "0 0 10px",
-    lineHeight: 1.7,
-    color: "#e2e8f0",
+  siteLinkActive: (chip) => ({
+    background: chip,
+    color: "#08101a",
+    borderColor: chip,
+  }),
+  previewViewport: (viewport, previewShellWidth) => ({
+    width: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
+    maxWidth: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
+    margin: viewport === "desktop" ? "0" : "0 auto",
+    marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
+    marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
+    borderRadius: viewport === "desktop" ? 0 : 24,
+    overflow: viewport === "desktop" ? "visible" : "hidden",
+    boxShadow: viewport === "desktop" ? "none" : "0 24px 60px rgba(15,23,42,0.22)",
+    background: viewport === "desktop" ? "transparent" : "#ffffff",
+    paddingTop: viewport === "desktop" ? 112 : 126,
+    minHeight: "100vh",
+  }),
+  emptyState: {
+    borderRadius: 20,
+    padding: "40px 28px",
+    background: "rgba(8,15,29,.82)",
+    border: "1px solid rgba(255,255,255,.08)",
+    color: "#ffffff",
   },
-  quoteAuthor: {
-    color: "#93c5fd",
-    fontWeight: 800,
+  emptyTitle: {
+    margin: 0,
+    fontSize: 28,
+  },
+  emptyText: {
+    margin: "12px 0 0",
+    color: "#cbd5e1",
+    fontSize: 17,
+    lineHeight: 1.6,
   },
 };

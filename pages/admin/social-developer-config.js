@@ -12,17 +12,19 @@ const PLATFORMS = {
     icon: '📘',
     envAppId: 'META_APP_ID',
     envSecret: 'META_APP_SECRET',
+    envConfigId: 'META_CONFIG_ID',
     appIdLabel: 'App ID',
     secretLabel: 'App Secret',
+    configIdLabel: 'Configuration ID',
     devUrl: 'https://developers.facebook.com/apps',
     callbackPath: '/api/social/oauth/meta/callback',
     steps: [
-      'Go to developers.facebook.com → My Apps → Create App.',
-      'Choose "Authenticate and request data from users with Facebook Login" use case.',
-      'In Facebook Login → Settings, add the Callback URL below to "Valid OAuth Redirect URIs".',
-      'In App Settings → Basic, add your domain to "App Domains".',
-      'In Use Cases → Permissions, add: pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish.',
-      'Keep the app in Development mode while testing. Switch to Live when ready for real users.',
+      'Go to developers.facebook.com → My Apps → Create a Business app.',
+      'Add Facebook Login for Business to the app.',
+      'Open Configurations and create a User Access Token configuration for your Pages and Instagram permissions.',
+      'Copy the Configuration ID and store it here with the App ID and App Secret.',
+      'In Facebook Login Settings, add the Callback URL below to Valid OAuth Redirect URIs.',
+      'In App Settings → Basic, add your app domain to App Domains.',
     ],
   },
   tiktok: {
@@ -54,6 +56,22 @@ const PLATFORMS = {
       'Go to linkedin.com/developers/apps → Create App.',
       'Under Auth → OAuth 2.0 → Authorized Redirect URLs, add the Callback URL below.',
       'Under Products, request "Share on LinkedIn" and "Sign In with LinkedIn using OpenID Connect".',
+    ],
+  },
+  pinterest: {
+    label: 'Pinterest',
+    icon: '📌',
+    envAppId: 'PINTEREST_APP_ID',
+    envSecret: 'PINTEREST_APP_SECRET',
+    appIdLabel: 'App ID',
+    secretLabel: 'App Secret',
+    devUrl: 'https://developers.pinterest.com/apps/',
+    callbackPath: '/api/social/oauth/pinterest/callback',
+    steps: [
+      'Go to developers.pinterest.com → Apps → Create app.',
+      'Add the Callback URL below to your Pinterest app redirect URIs.',
+      'Copy the Pinterest App ID and App Secret and store them here.',
+      'Pinterest is scaffolded in this build, but the full publish flow still needs implementation.',
     ],
   },
   x: {
@@ -99,14 +117,19 @@ async function getToken() {
 export default function SocialDeveloperConfig() {
   const [status, setStatus] = useState({});   // { meta: { configured: true }, ... }
   const [expanded, setExpanded] = useState('meta');
-  const [form, setForm] = useState({ appId: '', appSecret: '' });
+  const [editingPlatform, setEditingPlatform] = useState('');
+  const [form, setForm] = useState({ appId: '', appSecret: '', configId: '' });
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://yoursite.com';
 
   useEffect(() => { loadStatus(); }, []);
-  useEffect(() => { setForm({ appId: '', appSecret: '' }); setNotice(''); }, [expanded]);
+  useEffect(() => {
+    setForm({ appId: '', appSecret: '', configId: '' });
+    setNotice('');
+    setEditingPlatform('');
+  }, [expanded]);
 
   async function loadStatus() {
     setLoading(true);
@@ -121,18 +144,25 @@ export default function SocialDeveloperConfig() {
 
   async function saveCredentials(platform) {
     if (!form.appId.trim()) { setNotice('App ID / Client ID is required.'); return; }
+    if (platform === 'meta' && !form.configId.trim()) { setNotice('Meta Configuration ID is required.'); return; }
     setSaving(true); setNotice('');
     try {
       const token = await getToken();
       const res = await fetch('/api/social/platform-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ platform, appId: form.appId.trim(), appSecret: form.appSecret.trim() }),
+        body: JSON.stringify({
+          platform,
+          appId: form.appId.trim(),
+          appSecret: form.appSecret.trim(),
+          configId: platform === 'meta' ? form.configId.trim() : '',
+        }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Save failed');
       setNotice('saved');
-      setForm({ appId: '', appSecret: '' });
+      setForm({ appId: '', appSecret: '', configId: '' });
+      setEditingPlatform('');
       await loadStatus();
     } catch (err) {
       setNotice(err.message);
@@ -221,7 +251,7 @@ export default function SocialDeveloperConfig() {
                     <div>
                       <div style={S.platformName}>{meta.label}</div>
                       <div style={{ fontSize: 15, opacity: 0.45, marginTop: 3 }}>
-                        Env vars: <code style={S.envName}>{meta.envAppId}</code> / <code style={S.envName}>{meta.envSecret}</code>
+                        Env vars: <code style={S.envName}>{meta.envAppId}</code> / <code style={S.envName}>{meta.envSecret}</code>{meta.envConfigId ? <> / <code style={S.envName}>{meta.envConfigId}</code></> : null}
                       </div>
                     </div>
                   </div>
@@ -260,13 +290,27 @@ export default function SocialDeveloperConfig() {
                     <div style={S.credSection}>
                       <div style={S.stepsTitle}>Store Credentials</div>
                       <div style={{ fontSize: 16, opacity: 0.6, marginBottom: 20, lineHeight: 1.6 }}>
-                        You can set credentials as env vars (<code style={S.envName}>{meta.envAppId}</code> / <code style={S.envName}>{meta.envSecret}</code>)
+                        You can set credentials as env vars (<code style={S.envName}>{meta.envAppId}</code> / <code style={S.envName}>{meta.envSecret}</code>{meta.envConfigId ? <> / <code style={S.envName}>{meta.envConfigId}</code></> : null})
                         in your <code style={S.envName}>.env.local</code> file, or save them here and they'll be encrypted and stored in the database.
                       </div>
+                      {notice === 'Missing SOCIAL_TOKEN_ENCRYPTION_KEY' && (
+                        <div style={S.warningMsg}>
+                          Secret storage is disabled until <code style={S.envName}>SOCIAL_TOKEN_ENCRYPTION_KEY</code> is set on the server. If this site is on Vercel, add the platform credentials as project environment variables instead of saving them here.
+                        </div>
+                      )}
 
-                      {isCfg ? (
+                      {isCfg && editingPlatform !== key ? (
                         <div style={S.savedRow}>
-                          <div style={{ fontSize: 17, color: '#10B981', fontWeight: 600 }}>✓ Credentials are configured</div>
+                          <div style={{ flex: 1, minWidth: 260 }}>
+                            <div style={{ fontSize: 17, color: '#10B981', fontWeight: 600 }}>✓ Credentials are configured</div>
+                            <div style={S.savedHelpText}>
+                              If these credentials are coming from env vars, removing DB credentials will not change the status here.
+                              Use Replace Credentials to save the new App ID, App Secret, and Meta Configuration ID for this account.
+                            </div>
+                          </div>
+                          <button style={S.secondaryBtn} onClick={() => { setEditingPlatform(key); setNotice(''); }}>
+                            Replace Credentials
+                          </button>
                           <button style={S.removeBtn} onClick={() => removeCredentials(key)}>Remove DB credentials</button>
                         </div>
                       ) : (
@@ -280,6 +324,17 @@ export default function SocialDeveloperConfig() {
                               placeholder={`Your ${meta.appIdLabel}`}
                             />
                           </div>
+                          {key === 'meta' && (
+                            <div style={S.fieldGroup}>
+                              <label style={S.label}>{meta.configIdLabel} <span style={{ color: '#f87171' }}>*</span></label>
+                              <input
+                                style={S.input}
+                                value={form.configId}
+                                onChange={e => setForm(f => ({ ...f, configId: e.target.value }))}
+                                placeholder="Meta Business Login Configuration ID"
+                              />
+                            </div>
+                          )}
                           <div style={S.fieldGroup}>
                             <label style={S.label}>{meta.secretLabel} <span style={{ fontSize: 13, opacity: 0.5 }}>(saved encrypted)</span></label>
                             <input
@@ -297,8 +352,13 @@ export default function SocialDeveloperConfig() {
                               disabled={saving || !form.appId.trim()}
                               onClick={() => saveCredentials(key)}
                             >
-                              {saving ? 'Saving…' : `Save ${meta.appIdLabel}`}
+                              {saving ? 'Saving…' : 'Save Credentials'}
                             </button>
+                            {isCfg && (
+                              <button style={S.secondaryBtn} onClick={() => { setEditingPlatform(''); setForm({ appId: '', appSecret: '', configId: '' }); setNotice(''); }}>
+                                Cancel
+                              </button>
+                            )}
                             {notice === 'saved' && <span style={{ color: '#10B981', fontSize: 16 }}>✓ Saved</span>}
                           </div>
                         </div>
@@ -322,6 +382,7 @@ export default function SocialDeveloperConfig() {
             '# Meta (Facebook + Instagram)',
             'META_APP_ID=your_meta_app_id',
             'META_APP_SECRET=your_meta_app_secret',
+            'META_CONFIG_ID=your_meta_business_login_config_id',
             '',
             '# TikTok',
             'TIKTOK_CLIENT_KEY=your_tiktok_client_key',
@@ -418,11 +479,27 @@ const S = {
     border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
     color: '#fff', fontSize: 16, boxSizing: 'border-box',
   },
-  savedRow: { display: 'flex', alignItems: 'center', gap: 16, padding: '8px 0' },
+  savedRow: { display: 'flex', alignItems: 'center', gap: 16, padding: '8px 0', flexWrap: 'wrap' },
+  savedHelpText: { fontSize: 14, opacity: 0.58, lineHeight: 1.55, marginTop: 6 },
   errorMsg: { width: '100%', color: '#f87171', fontSize: 16, padding: '6px 0' },
+  warningMsg: {
+    width: '100%',
+    marginBottom: 12,
+    padding: '12px 14px',
+    borderRadius: 10,
+    border: '1px solid rgba(251,191,36,0.35)',
+    background: 'rgba(251,191,36,0.08)',
+    color: '#FCD34D',
+    fontSize: 14,
+    lineHeight: 1.5,
+  },
   saveBtn: {
     padding: '12px 28px', background: '#1d4ed8', border: 'none',
     borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 17, cursor: 'pointer',
+  },
+  secondaryBtn: {
+    background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.35)',
+    color: '#93C5FD', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 15,
   },
   removeBtn: {
     background: 'none', border: '1px solid rgba(248,113,113,0.4)',

@@ -46,12 +46,26 @@ function basicPersonalizeHtml(html, brand = {}) {
   const price = (brand.price || '$49').trim();
   const description = (brand.offerDescription || `${product} is designed to help you get results faster and more consistently.`).trim();
   const shortDesc = description.split('.').slice(0, 2).join('.').trim() || description;
+  const audience = (brand.audience || 'people like you').trim();
+  const primaryResult = (brand.primaryResult || 'get better results').trim();
+  const leadHeadline = headline || `Get Started With ${product}`;
+  const leadSubheadline = subheadline || `${product} is built for ${audience} who want ${primaryResult}.`;
   const benefit1 = `Get faster, more consistent results with ${product}.`;
-  const benefit2 = `Reduce frustration and finally follow a proven path that works.`;
-  const benefit3 = `Use a simple system you can actually stick with long-term.`;
+  const benefit2 = `Make the offer feel clear, credible, and easy to act on.`;
+  const benefit3 = `See exactly how ${product} helps ${audience} ${primaryResult}.`;
   const ingredient1 = `${product} Core Method`;
   const ingredient2 = `Execution Framework`;
   const ingredient3 = `Optimization Layer`;
+  const trialLabel = `Built for ${audience}`;
+  const previewLabel = `See what makes ${product} different`;
+  const insideLabel = `${product} at a glance`;
+  const insideText = `${product} is designed to help ${audience} ${primaryResult}.`;
+  const secondaryCardTitle = `What you need to know first`;
+  const secondaryCardText = `Use this section to show the core benefits, proof, and next step for ${product}.`;
+  const finalCardTitle = `Make the next step obvious`;
+  const finalCardText = `Keep the copy focused on ${audience}, the promised result, and why ${product} is worth acting on now.`;
+  const formIntro = `Enter your details below to get started with ${product}.`;
+  const formNote = `We will use your details to send the next steps and follow-up information related to ${product}.`;
 
   const map = [
     [/Your Headline That Stops People Dead<br\/>In Their Tracks!/gi, escHtml(headline)],
@@ -59,14 +73,14 @@ function basicPersonalizeHtml(html, brand = {}) {
     [/A compelling subheadline that hooks them emotionally and makes them desperate to read on\./gi, escHtml(subheadline)],
     [/Without \[common objection\]\. Even if you've \[tried before and failed\]\./gi, escHtml(subheadline)],
     [/Your Product\s*Name Here™/gi, escHtml(product)],
-    [/Get Your Free \[Lead Magnet Name\] Now/gi, escHtml(headline || `Start Your ${product} Free Trial`)],
-    [/Enter your details below and we'll deliver it straight to your inbox within seconds/gi, escHtml(subheadline || `Create your free 14-day account and explore ${product} before you decide to continue.`)],
+    [/Get Your Free \[Lead Magnet Name\] Now/gi, escHtml(leadHeadline)],
+    [/Enter your details below and we'll deliver it straight to your inbox within seconds/gi, escHtml(leadSubheadline)],
     [/Describe what they get and how it changes their life\. Make it specific and tangible\./gi, escHtml(description)],
     [/Describe another key benefit\. Focus on the emotion and the outcome, not the feature\./gi, escHtml(benefit2)],
     [/Third benefit goes here\. Always connect to a core desire or pain point of your audience\./gi, escHtml(benefit3)],
-    [/Benefit One/gi, 'Fast, Measurable Progress'],
-    [/Benefit Two/gi, 'Simple, Repeatable Process'],
-    [/Benefit Three/gi, 'Long-Term Results'],
+    [/Benefit One/gi, 'Clear Benefit'],
+    [/Benefit Two/gi, 'Real-World Value'],
+    [/Benefit Three/gi, 'Why It Matters'],
     [/YES! I WANT ACCESS NOW →/gi, `${escHtml(cta)} →`],
     [/SEND ME FREE ACCESS NOW →/gi, `${escHtml(cta)} →`],
     [/START MY FREE 14-DAY TRIAL →/gi, `${escHtml(cta)} →`],
@@ -92,6 +106,37 @@ function basicPersonalizeHtml(html, brand = {}) {
     [/Describe what this bonus does and why it's incredibly valuable\. What specific result will they get\?/gi, escHtml(`Get a step-by-step quickstart so you can implement ${product} correctly from day one.`)],
     [/Describe the second bonus and the transformation it creates\. Why is this alone worth more than the price\?/gi, escHtml(`Get proven fixes for common mistakes so your results stay on track.`)],
     [/This is ideal for anyone who \[target audience description\] and wants to \[primary result\] without \[common objection\]\. If you're ready to finally do something that works, this is for you\./gi, escHtml(shortDesc)],
+    [/✨ Start your free 14-day trial and explore the platform before you commit/gi, escHtml(`${product} was built for ${audience} who want ${primaryResult}.`)],
+    [/🔒 100% Free\. No Credit Card\. Instant Delivery\./gi, escHtml(`Clear next steps. Focused benefits. A stronger pitch for ${product}.`)],
+    [/WHY TEAMS START HERE/gi, escHtml(`WHY ${audience.toUpperCase()} CARE`)],
+    [/What You Can Explore In Your Trial/gi, escHtml(`Why ${product} Stands Out`)],
+    [/Show the parts of the platform that matter most so the page feels grounded in a real product, not a generic offer\./gi, escHtml(`Show the benefits, differentiators, and proof points that make ${product} relevant to ${audience}.`)],
+    [/Built for modern operators:/gi, escHtml(`Made for ${audience}:`)],
+    [/📈 Campaigns/gi, escHtml('Key benefits')],
+    [/🧩 Automations/gi, escHtml('How it works')],
+    [/📨 Email/gi, escHtml('Offer details')],
+    [/🤝 CRM/gi, escHtml('Proof points')],
+    [/🌏 Australian business/gi, escHtml('Simple next step')],
+    [/Create your free 14-day account and take a proper look around the platform before you decide to continue\./gi, escHtml(leadSubheadline)],
+    [/14-day free trial/gi, escHtml(trialLabel)],
+    [/Digital platform access/gi, escHtml(primaryResult)],
+    [/Preview/gi, escHtml(previewLabel)],
+    [/A cleaner look at the offer/gi, escHtml(`A clearer picture of ${product}`)],
+    [/Inside/gi, escHtml(insideLabel)],
+    [/Funnels, CRM, email, and automation in one place\./gi, escHtml(insideText)],
+    [/The visual panel is there to make the platform feel like a real product, not a vague promise\./gi, escHtml(`Use the space to show what ${product} does, who it is for, and why it is worth trying.`)],
+    [/See the platform first/gi, escHtml(secondaryCardTitle)],
+    [/Use generic product-style visuals so the page looks designed, not empty\./gi, escHtml(secondaryCardText)],
+    [/Make the next step obvious/gi, escHtml(finalCardTitle)],
+    [/Use visuals and clear benefits so the page feels intentional, not generic\./gi, escHtml(finalCardText)],
+    [/Start here/gi, escHtml(`Get ${product}`)],
+    [/Create your free 14-day account/gi, escHtml(leadHeadline)],
+    [/Sign up now and start exploring the platform straight away\./gi, escHtml(formIntro)],
+    [/Platform access/gi, escHtml('What you get')],
+    [/Create an account and start exploring immediately inside the app\./gi, escHtml(`Get the next step for ${product} and see how it helps ${audience}.`)],
+    [/No download claim/gi, escHtml('Focused offer')],
+    [/This page is for signing up to a trial account, not promising a file delivery\./gi, escHtml(`This page should stay focused on ${product}, the promised result, and what happens next.`)],
+    [/Your details are used to create your trial and send account-related follow-up for this platform\./gi, escHtml(formNote)],
     [/The choice is yours/gi, 'The Choice Is Yours'],
     [/\[Audience\]/gi, 'your audience'],
     [/\[Result\]/gi, 'better results'],

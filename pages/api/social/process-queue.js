@@ -30,10 +30,14 @@ async function processQueue() {
 
   for (const row of rows) {
     try {
-      await supabase
+      const { data: claimedRows } = await supabase
         .from("social_queue")
         .update({ status: "processing" })
-        .eq("id", row.id);
+        .eq("id", row.id)
+        .eq('status', 'queued')
+        .select('id');
+
+      if (!claimedRows?.length) continue;
 
       const { data: post } = await supabase
         .from("social_posts")
@@ -42,6 +46,13 @@ async function processQueue() {
         .single();
 
       if (!post) throw new Error("Post not found");
+      if (String(post.status || '').toLowerCase() === 'published') {
+        await supabase
+          .from('social_queue')
+          .update({ status: 'completed', processed_at: new Date().toISOString() })
+          .eq('id', row.id);
+        continue;
+      }
 
       const { data: account } = await supabase
         .from("social_accounts")
@@ -52,37 +63,39 @@ async function processQueue() {
 
       if (!account) throw new Error("No connected account");
 
-      // 🔥 PLATFORM HANDLING
+      let result;
+
       if (row.platform === "facebook") {
-        await postToFacebook({
+        result = await postToFacebook({
           pageId: account.account_id,
           accessToken: account.access_token,
           message: post.content,
+          imageUrl: post.media_url || null,
         });
       } else if (row.platform === "instagram") {
         if (!post.media_url) {
           throw new Error("Instagram requires a media_url — post skipped");
         }
-        await postToInstagram({
+        result = await postToInstagram({
           igUserId: account.account_id,
           accessToken: account.access_token,
           caption: post.content,
           imageUrl: post.media_url,
         });
       } else if (row.platform === "linkedin") {
-        await postToLinkedIn({
+        result = await postToLinkedIn({
           accessToken: account.access_token,
           personUrn: `urn:li:person:${account.account_id}`,
           text: post.content,
           mediaUrl: post.media_url || null,
         });
       } else if (row.platform === "x") {
-        await postToX({
+        result = await postToX({
           accessToken: account.access_token,
           text: post.content,
         });
       } else if (row.platform === "tiktok") {
-        await postToTikTok({
+        result = await postToTikTok({
           accessToken: account.access_token,
           text: post.content,
         });
@@ -92,8 +105,22 @@ async function processQueue() {
 
       await supabase
         .from("social_posts")
-        .update({ status: "posted" })
+        .update({
+          status: "published",
+          platform_post_id: result?.post_id || result?.id || null,
+          published_at: new Date().toISOString(),
+        })
         .eq("id", post.id);
+
+      await supabase
+        .from('social_schedule')
+        .update({
+          status: 'processed',
+          processed_at: new Date().toISOString(),
+        })
+        .eq('post_id', post.id)
+        .eq('user_id', row.user_id)
+        .in('status', ['scheduled', 'queued']);
 
       await supabase
         .from("social_queue")
@@ -105,9 +132,17 @@ async function processQueue() {
         .from("social_queue")
         .update({
           status: "failed",
+          processed_at: new Date().toISOString(),
           last_error: err.message,
         })
         .eq("id", row.id);
+
+      await supabase
+        .from('social_schedule')
+        .update({ status: 'scheduled', processed_at: null })
+        .eq('post_id', row.post_id)
+        .eq('user_id', row.user_id)
+        .in('status', ['scheduled', 'queued']);
     }
   }
 }
