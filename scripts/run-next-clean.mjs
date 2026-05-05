@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 
 const mode = String(process.argv[2] || "dev").toLowerCase();
 const cleanDist = process.argv.includes("--clean");
+const isVercelBuild = Boolean(process.env.VERCEL) || process.env.CI === "true";
 
 if (!["dev", "build", "start"].includes(mode)) {
   console.error(`Unsupported mode: ${mode}`);
@@ -12,7 +13,7 @@ if (!["dev", "build", "start"].includes(mode)) {
 
 const workspaceRoot = process.cwd();
 const nextBin = path.join(workspaceRoot, "node_modules", "next", "dist", "bin", "next");
-const distDir = mode === "dev" ? ".next-dev" : ".next-build";
+const distDir = mode === "dev" ? ".next-dev" : (isVercelBuild ? ".next" : ".next-build");
 const nextDir = path.join(workspaceRoot, distDir);
 const lockFile = path.join(workspaceRoot, `${distDir}.lock.json`);
 
