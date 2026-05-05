@@ -30,8 +30,7 @@ const PLATFORMS = {
     label: 'Pinterest',
     icon: '📌',
     description: 'Connect your Pinterest business account to publish pins and manage board content.',
-    note: 'Pinterest OAuth has been added to settings, but the posting flow is not wired yet in this build.',
-    unsupported: true,
+    note: 'Account connection is wired. Publishing and board-specific workflows still need more work in this build.',
   },
   x: {
     label: 'X (Twitter)',

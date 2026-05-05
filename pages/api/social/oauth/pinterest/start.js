@@ -1,5 +1,39 @@
 import { requireUser } from '../../../../../lib/social/auth';
 import { getPlatformCredentials } from '../../../../../lib/social/platformCredentials';
+import crypto from 'crypto';
+
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  return `${proto || (String(host).includes('localhost') ? 'http' : 'https')}://${host}`;
+}
+
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, '');
+    }
+  }
+  return getRequestOrigin(req);
+}
+
+function getPinterestRedirectUri(req) {
+  return process.env.PINTEREST_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/pinterest/callback`;
+}
+
+function getPostAuthRedirectUrl(req, redirectPath) {
+  const fallbackPath = redirectPath || '/modules/social_media/setup';
+  try {
+    return new URL(fallbackPath, getRequestOrigin(req)).toString();
+  } catch {
+    return `${getRequestOrigin(req)}/modules/social_media/setup`;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,9 +49,35 @@ export default async function handler(req, res) {
   if (!creds?.appId) {
     return res.status(400).json({ ok: false, error: 'Pinterest App ID not configured. Open Platform Setup to add your credentials.' });
   }
+  if (!creds?.appSecret) {
+    return res.status(400).json({ ok: false, error: 'Pinterest App Secret not configured. Open Platform Setup to add your credentials.' });
+  }
 
-  return res.status(501).json({
-    ok: false,
-    error: 'Pinterest has been added to settings, but OAuth is not implemented yet in this build.',
+  const state = crypto.randomUUID();
+  const redirectPath = getPostAuthRedirectUrl(req, req.body?.redirectPath);
+
+  const { error } = await auth.admin.from('social_oauth_states').insert({
+    state,
+    user_id: auth.user.id,
+    platform: 'pinterest',
+    redirect_path: redirectPath,
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  });
+
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+
+  const params = new URLSearchParams({
+    client_id: creds.appId,
+    redirect_uri: getPinterestRedirectUri(req),
+    response_type: 'code',
+    scope: 'user_accounts:read,boards:read,boards:write,pins:read,pins:write',
+    state,
+  });
+
+  return res.status(200).json({
+    ok: true,
+    authUrl: `https://www.pinterest.com/oauth/?${params.toString()}`,
   });
 }
