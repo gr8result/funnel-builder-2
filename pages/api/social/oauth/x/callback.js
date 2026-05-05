@@ -1,11 +1,88 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getXRedirectUri() {
-  return (
-    process.env.X_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/x/callback`
-  );
+async function saveSocialAccount(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    account_id: payload.account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("social_accounts")
+    .select("id")
+    .match(match)
+    .limit(1);
+
+  if (lookupError) {
+    throw new Error(`Failed checking existing ${payload.platform} connection: ${lookupError.message}`);
+  }
+
+  if (existing?.length) {
+    const { data: updated, error: updateError } = await admin
+      .from("social_accounts")
+      .update(payload)
+      .match(match)
+      .select("id")
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed updating ${payload.platform} connection: ${updateError.message}`);
+    }
+
+    return updated;
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from("social_accounts")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed creating ${payload.platform} connection: ${insertError.message}`);
+  }
+
+  return inserted;
+}
+
+async function saveRefreshToken(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    social_account_id: payload.social_account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("social_oauth_tokens")
+    .select("id")
+    .match(match)
+    .limit(1);
+
+  if (lookupError) {
+    throw new Error(`Failed checking existing ${payload.platform} refresh token: ${lookupError.message}`);
+  }
+
+  if (existing?.length) {
+    const { error: updateError } = await admin
+      .from("social_oauth_tokens")
+      .update(payload)
+      .match(match);
+
+    if (updateError) {
+      throw new Error(`Failed updating ${payload.platform} refresh token: ${updateError.message}`);
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await admin
+    .from("social_oauth_tokens")
+    .insert(payload);
+
+  if (insertError) {
+    throw new Error(`Failed creating ${payload.platform} refresh token: ${insertError.message}`);
+  }
 }
 
 function getRequestOrigin(req) {
@@ -16,9 +93,25 @@ function getRequestOrigin(req) {
   return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
 }
 
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
+function getXRedirectUri(req) {
+  return process.env.X_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/x/callback`;
+}
+
 function doneRedirectUrl(req, path, status, message) {
   const site = getRequestOrigin(req);
-  const u = new URL(path || "/modules/social_media", site);
+  const u = new URL(path || "/modules/social_media/setup", site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
   return u.toString();
@@ -29,11 +122,11 @@ export default async function handler(req, res) {
   const admin = createSupabaseAdmin();
 
   if (error || error_description) {
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", error_description || error));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", error_description || error));
   }
 
   if (!code || !state) {
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "Missing OAuth code/state"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", "Missing OAuth code/state"));
   }
 
   const { data: oauthState, error: stateErr } = await admin
@@ -46,11 +139,11 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (stateErr || !oauthState) {
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "OAuth state expired or invalid"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", "OAuth state expired or invalid"));
   }
 
   if (!oauthState.code_verifier) {
-    return res.redirect(doneRedirectUrl("/modules/social_media", "error", "Missing PKCE verifier — please try connecting again"));
+    return res.redirect(doneRedirectUrl(req, oauthState.redirect_path || "/modules/social_media/setup", "error", "Missing PKCE verifier - please try connecting again"));
   }
 
   try {
@@ -64,7 +157,7 @@ export default async function handler(req, res) {
     const tokenBody = new URLSearchParams({
       grant_type: "authorization_code",
       code: String(code),
-      redirect_uri: getXRedirectUri(),
+      redirect_uri: getXRedirectUri(req),
       client_id: creds.appId,
       code_verifier: oauthState.code_verifier,
     });
@@ -97,25 +190,16 @@ export default async function handler(req, res) {
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
       : null;
 
-    const { data: account, error: upsertErr } = await admin
-      .from("social_accounts")
-      .upsert(
-        {
-          user_id: oauthState.user_id,
-          platform: "x",
-          account_id: String(accountId),
-          account_name: accountName,
-          access_token: tokenData.access_token,
-          token_expires_at: expiresAt,
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,platform,account_id" }
-      )
-      .select("id")
-      .single();
-
-    if (upsertErr) throw upsertErr;
+    const account = await saveSocialAccount(admin, {
+      user_id: oauthState.user_id,
+      platform: "x",
+      account_id: String(accountId),
+      account_name: accountName,
+      access_token: tokenData.access_token,
+      token_expires_at: expiresAt,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
 
     // Store refresh token if provided
     if (tokenData.refresh_token && account?.id) {
@@ -126,19 +210,16 @@ export default async function handler(req, res) {
           ? new Date(Date.now() + Number(tokenData.refresh_token_expires_in) * 1000).toISOString()
           : null;
 
-        await admin.from("social_oauth_tokens").upsert(
-          {
-            user_id: oauthState.user_id,
-            social_account_id: account.id,
-            platform: "x",
-            encrypted_refresh_token: encrypted.cipherText,
-            refresh_token_iv: encrypted.iv,
-            refresh_token_tag: encrypted.tag,
-            refresh_expires_at: refreshExp,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,platform,social_account_id" }
-        );
+        await saveRefreshToken(admin, {
+          user_id: oauthState.user_id,
+          social_account_id: account.id,
+          platform: "x",
+          encrypted_refresh_token: encrypted.cipherText,
+          refresh_token_iv: encrypted.iv,
+          refresh_token_tag: encrypted.tag,
+          refresh_expires_at: refreshExp,
+          updated_at: new Date().toISOString(),
+        });
       } catch (encErr) {
         console.error("[X OAuth] refresh token store failed:", encErr.message);
       }
@@ -152,6 +233,6 @@ export default async function handler(req, res) {
     return res.redirect(doneRedirectUrl(req, oauthState.redirect_path, "ok", `X connected as ${accountName}`));
   } catch (err) {
     console.error("[X OAuth callback]", err);
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", err.message || "X connection failed"));
+    return res.redirect(doneRedirectUrl(req, oauthState?.redirect_path || "/modules/social_media/setup", "error", err.message || "X connection failed"));
   }
 }

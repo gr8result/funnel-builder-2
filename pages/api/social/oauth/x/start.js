@@ -2,11 +2,37 @@
 import { requireUser } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getXRedirectUri() {
-  return (
-    process.env.X_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/x/callback`
-  );
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
+function getXRedirectUri(req) {
+  return process.env.X_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/x/callback`;
+}
+
+function getPostAuthRedirectUrl(req, redirectPath) {
+  const fallbackPath = redirectPath || "/modules/social_media/setup";
+  try {
+    return new URL(fallbackPath, getRequestOrigin(req)).toString();
+  } catch {
+    return `${getRequestOrigin(req)}/modules/social_media/setup`;
+  }
 }
 
 function generatePKCE() {
@@ -32,7 +58,7 @@ export default async function handler(req, res) {
 
   const { verifier, challenge } = generatePKCE();
   const state = crypto.randomUUID();
-  const redirectPath = req.body?.redirectPath || "/modules/social_media";
+  const redirectPath = getPostAuthRedirectUrl(req, req.body?.redirectPath);
 
   const { error } = await auth.admin.from("social_oauth_states").insert({
     state,
@@ -50,7 +76,7 @@ export default async function handler(req, res) {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: creds.appId,
-    redirect_uri: getXRedirectUri(),
+    redirect_uri: getXRedirectUri(req),
     scope: "tweet.read tweet.write users.read offline.access",
     state,
     code_challenge: challenge,
