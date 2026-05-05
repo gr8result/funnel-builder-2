@@ -5,7 +5,7 @@
 import { requireUser } from '../../../lib/social/auth';
 import { getPlatformCredentials } from '../../../lib/social/platformCredentials';
 
-const PLATFORMS = ['meta', 'tiktok', 'linkedin', 'pinterest', 'x', 'youtube'];
+const PLATFORMS = ['meta', 'tiktok', 'linkedin', 'pinterest', 'youtube'];
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });

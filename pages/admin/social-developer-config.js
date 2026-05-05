@@ -74,22 +74,6 @@ const PLATFORMS = {
       'Pinterest is scaffolded in this build, but the full publish flow still needs implementation.',
     ],
   },
-  x: {
-    label: 'X (Twitter)',
-    icon: '𝕏',
-    envAppId: 'X_CLIENT_ID',
-    envSecret: 'X_CLIENT_SECRET',
-    appIdLabel: 'Client ID',
-    secretLabel: 'Client Secret',
-    devUrl: 'https://developer.twitter.com/en/portal/dashboard',
-    callbackPath: '/api/social/oauth/x/callback',
-    steps: [
-      'Go to developer.twitter.com → Projects & Apps → Create an App.',
-      'Set App permissions to "Read and Write".',
-      'Under "User authentication settings", enable OAuth 2.0 and add the Callback URL below.',
-      'Note: X requires a paid developer account ($100/month) for posting.',
-    ],
-  },
   youtube: {
     label: 'YouTube (Google)',
     icon: '▶️',

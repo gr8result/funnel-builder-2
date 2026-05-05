@@ -6,7 +6,7 @@
 import { requireUser } from "../../../lib/social/auth";
 import { savePlatformCredentials, deletePlatformCredentials, getPlatformCredentials } from "../../../lib/social/platformCredentials";
 
-const SUPPORTED_PLATFORMS = ["meta", "tiktok", "linkedin", "pinterest", "x", "youtube"];
+const SUPPORTED_PLATFORMS = ["meta", "tiktok", "linkedin", "pinterest", "youtube"];
 
 export default async function handler(req, res) {
   const auth = await requireUser(req);

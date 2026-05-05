@@ -10,7 +10,6 @@ const PLATFORM_OPTIONS = [
   { key: 'instagram', label: 'Instagram',       videoOnly: false },
   { key: 'linkedin',  label: 'LinkedIn',        videoOnly: false },
   { key: 'pinterest', label: 'Pinterest',       videoOnly: false, unsupported: true, unsupportedLabel: 'Publishing not wired yet' },
-  { key: 'x',        label: 'X (Twitter)',     videoOnly: false },
   { key: 'tiktok',   label: 'TikTok',          videoOnly: false },
   { key: 'youtube',  label: 'YouTube',          videoOnly: true, unsupported: true, unsupportedLabel: 'Connection only for now' },
 ];
@@ -20,7 +19,6 @@ const DEFAULT_SELECTED_PLATFORMS = {
   instagram: true,
   linkedin: true,
   pinterest: false,
-  x: true,
   tiktok: false,
   youtube: false,
 };
@@ -30,7 +28,6 @@ const PLATFORM_THEME = {
   instagram: { color: '#E1306C', lightBg: 'rgba(225,48,108,0.1)',  border: 'rgba(225,48,108,0.35)', icon: '📷', name: 'Instagram', actions: ['❤️', '💬', '✈️', '🔖'] },
   linkedin:  { color: '#0A66C2', lightBg: 'rgba(10,102,194,0.1)',  border: 'rgba(10,102,194,0.35)', icon: '💼', name: 'LinkedIn',  actions: ['👍 Like', '💬 Comment', '🔁 Repost'] },
   pinterest: { color: '#E60023', lightBg: 'rgba(230,0,35,0.1)',    border: 'rgba(230,0,35,0.35)',   icon: '📌', name: 'Pinterest', actions: ['📌 Save', '↗ Share'] },
-  x:         { color: '#1d9bf0', lightBg: 'rgba(29,155,240,0.1)',  border: 'rgba(29,155,240,0.35)', icon: '𝕏',  name: 'X',         actions: ['💬', '🔁', '❤️', '📊'] },
   tiktok:    { color: '#ff0050', lightBg: 'rgba(255,0,80,0.1)',    border: 'rgba(255,0,80,0.35)',   icon: '🎵', name: 'TikTok',    actions: ['❤️', '💬', '🔁', '⬆️'] },
   youtube:   { color: '#FF0000', lightBg: 'rgba(255,0,0,0.1)',     border: 'rgba(255,0,0,0.35)',    icon: '▶️', name: 'YouTube',   actions: ['👍', '👎', '↗ Share', '💬'] },
 };
@@ -40,7 +37,6 @@ const PLATFORM_LOGO = {
   instagram: '/email-assets/social/instagram.svg',
   linkedin:  '/email-assets/social/linkedin.svg',
   pinterest: '/email-assets/social/pinterest.svg',
-  x:         '/email-assets/social/x.svg',
   tiktok:    null,
   youtube:   '/email-assets/social/youtube.svg',
 };

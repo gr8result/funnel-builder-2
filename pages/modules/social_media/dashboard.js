@@ -320,7 +320,7 @@ export default function SocialDashboard() {
             { icon: '📬', label: 'Smart Inbox',        desc: 'Review comments and replies from all platforms',        href: '/modules/social_media/inbox' },
             { icon: '📊', label: 'ROI Analytics',      desc: 'Track reach, engagement and performance over time',     href: '/modules/social_media/roi' },
             { icon: '📣', label: 'Paid Ads',           desc: 'Create and launch Facebook & Instagram ad campaigns',   href: '/modules/social_media/ads' },
-            { icon: '⚙️', label: 'Platform Setup',     desc: 'Connect Facebook, TikTok, LinkedIn, X and more',       href: '/modules/social_media/setup' },
+            { icon: '⚙️', label: 'Platform Setup',     desc: 'Connect Facebook, TikTok, LinkedIn, Pinterest and more', href: '/modules/social_media/setup' },
           ].map(n => (
             <button key={n.label} style={S.navCard} onClick={() => { window.location.href = n.href; }}>
               <div style={S.navIcon}>{n.icon}</div>

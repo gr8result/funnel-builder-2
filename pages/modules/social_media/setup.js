@@ -32,12 +32,6 @@ const PLATFORMS = {
     description: 'Connect your Pinterest business account to publish pins and manage board content.',
     note: 'Account connection is wired. Publishing and board-specific workflows still need more work in this build.',
   },
-  x: {
-    label: 'X (Twitter)',
-    icon: '𝕏',
-    description: 'Connect your X account to post tweets and threads.',
-    note: null,
-  },
   youtube: {
     label: 'YouTube',
     icon: '▶️',
