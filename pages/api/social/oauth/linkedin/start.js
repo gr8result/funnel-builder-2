@@ -14,6 +14,15 @@ function getLinkedInRedirectUri(req) {
   return process.env.LINKEDIN_OAUTH_REDIRECT_URI || `${getRequestOrigin(req)}/api/social/oauth/linkedin/callback`;
 }
 
+function getPostAuthRedirectUrl(req, redirectPath) {
+  const fallbackPath = redirectPath || "/modules/social_media/setup";
+  try {
+    return new URL(fallbackPath, getRequestOrigin(req)).toString();
+  } catch {
+    return `${getRequestOrigin(req)}/modules/social_media/setup`;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -33,7 +42,7 @@ export default async function handler(req, res) {
   }
 
   const state = crypto.randomUUID();
-  const redirectPath = req.body?.redirectPath || "/modules/social_media/setup";
+  const redirectPath = getPostAuthRedirectUrl(req, req.body?.redirectPath);
 
   const { error } = await auth.admin.from("social_oauth_states").insert({
     state,
