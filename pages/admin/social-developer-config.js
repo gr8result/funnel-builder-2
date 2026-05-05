@@ -109,9 +109,16 @@ const PLATFORMS = {
   },
 };
 
-async function getToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+async function getToken(retries = 0) {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || '';
+    if (token) return token;
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  return '';
 }
 
 export default function SocialDeveloperConfig() {
@@ -124,7 +131,19 @@ export default function SocialDeveloperConfig() {
   const [loading, setLoading] = useState(true);
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://yoursite.com');
 
-  useEffect(() => { loadStatus(); }, []);
+  useEffect(() => {
+    loadStatus();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) {
+        loadStatus();
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
   useEffect(() => {
     setForm({ appId: '', appSecret: '', configId: '' });
     setNotice('');
@@ -134,7 +153,11 @@ export default function SocialDeveloperConfig() {
   async function loadStatus() {
     setLoading(true);
     try {
-      const token = await getToken();
+      const token = await getToken(4);
+      if (!token) {
+        setNotice('Session not ready yet. Refresh once if credential status does not appear.');
+        return;
+      }
       const res = await fetch('/api/admin/social-credential-status', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.ok) setStatus(json.status || {});

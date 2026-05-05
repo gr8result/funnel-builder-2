@@ -47,9 +47,16 @@ const PLATFORMS = {
   },
 };
 
-async function getToken() {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+async function getToken(retries = 0) {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || '';
+    if (token) return token;
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+  return '';
 }
 
 function getAccountsForPlatform(platformKey, connected) {
@@ -84,7 +91,19 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(true);
   const [globalNotice, setGlobalNotice] = useState(null); // { type: 'success'|'error', message }
 
-  useEffect(() => { loadConnections(); }, []);
+  useEffect(() => {
+    loadConnections();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) {
+        loadConnections();
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Show success/error from OAuth callback redirect
   useEffect(() => {
@@ -104,8 +123,11 @@ export default function SetupPage() {
   async function loadConnections() {
     setLoading(true);
     try {
-      const token = await getToken();
-      if (!token) return;
+      const token = await getToken(4);
+      if (!token) {
+        setGlobalNotice((current) => current || { type: 'error', message: 'Your session is not ready yet. Refresh once if connections do not appear.' });
+        return;
+      }
       const res = await fetch('/api/social/connections', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (json.ok) {
@@ -117,7 +139,10 @@ export default function SetupPage() {
         }
         setConnected(byPlatform);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setGlobalNotice({ type: 'error', message: 'Could not load connected accounts.' });
+    }
     finally { setLoading(false); }
   }
 
