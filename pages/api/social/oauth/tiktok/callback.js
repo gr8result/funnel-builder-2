@@ -2,11 +2,65 @@ import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { encryptToken } from "../../../../../lib/social/tokenCrypto";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getTikTokRedirectUri() {
-  return (
-    process.env.TIKTOK_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/tiktok/callback`
-  );
+async function saveSocialAccount(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    account_id: payload.account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("social_accounts")
+    .select("id")
+    .match(match)
+    .limit(1);
+
+  if (lookupError) {
+    throw new Error(`Failed checking existing ${payload.platform} connection: ${lookupError.message}`);
+  }
+
+  if (existing?.length) {
+    const { data: updated, error: updateError } = await admin
+      .from("social_accounts")
+      .update(payload)
+      .match(match)
+      .select("id")
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed updating ${payload.platform} connection: ${updateError.message}`);
+    }
+
+    return updated;
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from("social_accounts")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed creating ${payload.platform} connection: ${insertError.message}`);
+  }
+
+  return inserted;
+}
+
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
+function getTikTokRedirectUri(req) {
+  return process.env.TIKTOK_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/tiktok/callback`;
 }
 
 function getRequestOrigin(req) {
@@ -53,13 +107,14 @@ export default async function handler(req, res) {
   try {
     const creds = await getPlatformCredentials(admin, oauthState.user_id, "tiktok");
     if (!creds?.appId) throw new Error("TikTok credentials not configured.");
+    if (!creds?.appSecret) throw new Error("TikTok Client Secret not configured. Open Platform Setup to add your credentials.");
 
     const body = new URLSearchParams({
       client_key: creds.appId,
       client_secret: creds.appSecret,
       code: String(code),
       grant_type: "authorization_code",
-      redirect_uri: getTikTokRedirectUri(),
+      redirect_uri: getTikTokRedirectUri(req),
     });
 
     const tokenRes = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
@@ -76,27 +131,16 @@ export default async function handler(req, res) {
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
       : null;
 
-    const { data: account, error: accountErr } = await admin
-      .from("social_accounts")
-      .upsert(
-        {
-          user_id: oauthState.user_id,
-          platform: "tiktok",
-          account_id: tokenData.open_id,
-          account_name: "TikTok Account",
-          access_token: tokenData.access_token,
-          token_expires_at: accessExp,
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,platform,account_id" }
-      )
-      .select("id")
-      .single();
-
-    if (accountErr) {
-      throw accountErr;
-    }
+    const account = await saveSocialAccount(admin, {
+      user_id: oauthState.user_id,
+      platform: "tiktok",
+      account_id: String(tokenData.open_id || Date.now()),
+      account_name: "TikTok Account",
+      access_token: tokenData.access_token,
+      token_expires_at: accessExp,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
 
     if (tokenData.refresh_token) {
       const encrypted = encryptToken(tokenData.refresh_token);
