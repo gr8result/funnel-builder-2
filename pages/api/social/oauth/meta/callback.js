@@ -48,13 +48,25 @@ function getRequestOrigin(req) {
   return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
 }
 
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
 function getMetaRedirectUri(req) {
-  return `${getRequestOrigin(req)}/api/social/oauth/meta/callback`;
+  return `${getCanonicalAppOrigin(req)}/api/social/oauth/meta/callback`;
 }
 
 function doneRedirectUrl(req, path, status, message) {
   const site = getRequestOrigin(req);
-  const u = new URL(path || "/modules/social_media", site);
+  const u = new URL(path || "/modules/social_media/setup", site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
   return u.toString();
@@ -66,13 +78,13 @@ export default async function handler(req, res) {
 
   if (error || error_reason || error_description) {
     const msg = error_description || error_reason || error || 'Facebook returned an error';
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", msg));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", msg));
   }
 
   if (!code || !state) {
     // Log all query params to help debug
     const params = JSON.stringify(req.query);
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", `Missing OAuth code/state. Received: ${params}`));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", `Missing OAuth code/state. Received: ${params}`));
   }
 
   const { data: oauthState, error: stateErr } = await admin
@@ -85,7 +97,7 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (stateErr || !oauthState) {
-    return res.redirect(doneRedirectUrl(req, "/modules/social_media", "error", "OAuth state expired"));
+    return res.redirect(doneRedirectUrl(req, "/modules/social_media/setup", "error", "OAuth state expired"));
   }
 
   try {

@@ -122,7 +122,7 @@ export default function SocialDeveloperConfig() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://yoursite.com';
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://yoursite.com');
 
   useEffect(() => { loadStatus(); }, []);
   useEffect(() => {

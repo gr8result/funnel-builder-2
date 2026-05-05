@@ -9,8 +9,20 @@ function getRequestOrigin(req) {
   return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
 }
 
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
 function getLinkedInRedirectUri(req) {
-  return process.env.LINKEDIN_OAUTH_REDIRECT_URI || `${getRequestOrigin(req)}/api/social/oauth/linkedin/callback`;
+  return process.env.LINKEDIN_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/linkedin/callback`;
 }
 
 function doneRedirectUrl(req, path, status, message) {

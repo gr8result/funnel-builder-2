@@ -10,8 +10,29 @@ function getRequestOrigin(req) {
   return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
 }
 
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
 function getMetaRedirectUri(req) {
-  return `${getRequestOrigin(req)}/api/social/oauth/meta/callback`;
+  return `${getCanonicalAppOrigin(req)}/api/social/oauth/meta/callback`;
+}
+
+function getPostAuthRedirectUrl(req, redirectPath) {
+  const fallbackPath = redirectPath || "/modules/social_media/setup";
+  try {
+    return new URL(fallbackPath, getRequestOrigin(req)).toString();
+  } catch {
+    return `${getRequestOrigin(req)}/modules/social_media/setup`;
+  }
 }
 
 export default async function handler(req, res) {
@@ -33,7 +54,7 @@ export default async function handler(req, res) {
   }
 
   const state = crypto.randomUUID();
-  const redirectPath = req.body?.redirectPath || "/modules/social_media";
+  const redirectPath = getPostAuthRedirectUrl(req, req.body?.redirectPath);
 
   const { error } = await auth.admin.from("social_oauth_states").insert({
     state,
