@@ -143,27 +143,33 @@ export default async function handler(req, res) {
     });
 
     if (tokenData.refresh_token) {
-      const encrypted = encryptToken(tokenData.refresh_token);
-      const refreshExp = tokenData.refresh_expires_in
-        ? new Date(Date.now() + Number(tokenData.refresh_expires_in) * 1000).toISOString()
-        : null;
+      try {
+        const encrypted = encryptToken(tokenData.refresh_token);
+        const refreshExp = tokenData.refresh_expires_in
+          ? new Date(Date.now() + Number(tokenData.refresh_expires_in) * 1000).toISOString()
+          : null;
 
-      const { error: tokenErr } = await admin.from("social_oauth_tokens").upsert(
-        {
-          user_id: oauthState.user_id,
-          social_account_id: account.id,
-          platform: "tiktok",
-          encrypted_refresh_token: encrypted.cipherText,
-          refresh_token_iv: encrypted.iv,
-          refresh_token_tag: encrypted.tag,
-          refresh_expires_at: refreshExp,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,platform,social_account_id" }
-      );
+        const { error: tokenErr } = await admin.from("social_oauth_tokens").upsert(
+          {
+            user_id: oauthState.user_id,
+            social_account_id: account.id,
+            platform: "tiktok",
+            encrypted_refresh_token: encrypted.cipherText,
+            refresh_token_iv: encrypted.iv,
+            refresh_token_tag: encrypted.tag,
+            refresh_expires_at: refreshExp,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,platform,social_account_id" }
+        );
 
-      if (tokenErr) {
-        throw tokenErr;
+        if (tokenErr) {
+          throw tokenErr;
+        }
+      } catch (tokenError) {
+        if (!String(tokenError?.message || "").includes("Missing SOCIAL_TOKEN_ENCRYPTION_KEY")) {
+          throw tokenError;
+        }
       }
     }
 
