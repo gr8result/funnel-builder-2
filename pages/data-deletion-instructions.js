@@ -9,7 +9,7 @@ export default function DataDeletionInstructions() {
       <h2 style={{ fontSize: 20, fontWeight: 600, marginTop: 32 }}>Option 1 — Remove via Facebook</h2>
       <ol style={{ paddingLeft: 20 }}>
         <li>Go to your <a href="https://www.facebook.com/settings?tab=applications" style={{ color: '#2563eb' }}>Facebook App Settings</a></li>
-        <li>Find <strong>Gr8 Bot App</strong> in the list</li>
+        <li>Find our application in the list</li>
         <li>Click <strong>Remove</strong></li>
       </ol>
       <p>This immediately revokes our access to your Facebook and Instagram data.</p>
