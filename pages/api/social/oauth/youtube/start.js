@@ -2,11 +2,28 @@
 import { requireUser } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
-function getGoogleRedirectUri() {
-  return (
-    process.env.GOOGLE_OAUTH_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/social/oauth/youtube/callback`
-  );
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return `${proto || (String(host).includes("localhost") ? "http" : "https")}://${host}`;
+}
+
+function getCanonicalAppOrigin(req) {
+  const explicitBase = process.env.NEXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicitBase) {
+    try {
+      return new URL(explicitBase).origin;
+    } catch {
+      return explicitBase.replace(/\/$/, "");
+    }
+  }
+  return getRequestOrigin(req);
+}
+
+function getGoogleRedirectUri(req) {
+  return process.env.GOOGLE_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/youtube/callback`;
 }
 
 export default async function handler(req, res) {
@@ -41,7 +58,7 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams({
     client_id: creds.appId,
-    redirect_uri: getGoogleRedirectUri(),
+    redirect_uri: getGoogleRedirectUri(req),
     response_type: "code",
     scope: [
       "https://www.googleapis.com/auth/youtube.upload",
