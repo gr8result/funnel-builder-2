@@ -39,7 +39,7 @@ const PLATFORMS = {
     steps: [
       'Go to developers.tiktok.com → Manage Apps → Create an app.',
       'Under "Login Kit", add the Callback URL below.',
-      'Request scopes: user.info.basic, video.publish.',
+      'Request scopes: user.info.basic.',
       'Submit for review (TikTok requires app review before real users can connect).',
     ],
   },

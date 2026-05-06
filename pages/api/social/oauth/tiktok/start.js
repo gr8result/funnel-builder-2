@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams({
     client_key: creds.appId,
-    scope: "user.info.basic,video.publish",
+    scope: "user.info.basic",
     response_type: "code",
     redirect_uri: getTikTokRedirectUri(req),
     state,
