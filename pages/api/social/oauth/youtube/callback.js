@@ -1,6 +1,51 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
 
+async function saveSocialAccount(admin, payload) {
+  const match = {
+    user_id: payload.user_id,
+    platform: payload.platform,
+    account_id: payload.account_id,
+  };
+
+  const { data: existing, error: lookupError } = await admin
+    .from("social_accounts")
+    .select("id")
+    .match(match)
+    .limit(1);
+
+  if (lookupError) {
+    throw new Error(`Failed checking existing ${payload.platform} connection: ${lookupError.message}`);
+  }
+
+  if (existing?.length) {
+    const { data: updated, error: updateError } = await admin
+      .from("social_accounts")
+      .update(payload)
+      .match(match)
+      .select("id")
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed updating ${payload.platform} connection: ${updateError.message}`);
+    }
+
+    return updated;
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from("social_accounts")
+    .insert(payload)
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(`Failed creating ${payload.platform} connection: ${insertError.message}`);
+  }
+
+  return inserted;
+}
+
 function getGoogleRedirectUri() {
   return (
     process.env.GOOGLE_OAUTH_REDIRECT_URI ||
@@ -100,25 +145,16 @@ export default async function handler(req, res) {
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
       : null;
 
-    const { data: account, error: upsertErr } = await admin
-      .from("social_accounts")
-      .upsert(
-        {
-          user_id: oauthState.user_id,
-          platform: "youtube",
-          account_id: String(channelId),
-          account_name: channelName,
-          access_token: tokenData.access_token,
-          token_expires_at: expiresAt,
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,platform,account_id" }
-      )
-      .select("id")
-      .single();
-
-    if (upsertErr) throw upsertErr;
+    const account = await saveSocialAccount(admin, {
+      user_id: oauthState.user_id,
+      platform: "youtube",
+      account_id: String(channelId),
+      account_name: channelName,
+      access_token: tokenData.access_token,
+      token_expires_at: expiresAt,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
 
     // Store refresh token
     if (tokenData.refresh_token && account?.id) {
