@@ -8,6 +8,9 @@ import ICONS from "./iconMap";
 import { supabase } from "../utils/supabase-client";
 import UsageWarning from "./UsageWarning";
 
+const DEFAULT_BRAND_NAME = "Gr8 Result Digital Solutions";
+const DEFAULT_BRAND_LOGO = "/logo/gr8result-logo.png";
+
 const NAV_WIDTH = 300;
 const PROTECTED_ROUTE_PREFIXES = [
   "/dashboard",
@@ -46,6 +49,87 @@ function isApprovedVendor(account) {
 function isInternalGr8ResultAccount(account) {
   const businessName = String(account?.business_name || '').trim().toLowerCase();
   return businessName === 'gr8 result' || businessName === 'gr8 result digital solutions';
+}
+
+async function buildBrandingState(account) {
+  const businessName = String(account?.business_name || "").trim();
+  const resolvedLogo = await resolveBrandingAssetUrl(account?.business_logo || account?.business_logo_url);
+  const resolvedAvatar = await resolveBrandingAssetUrl(
+    account?.business_avatar || account?.business_avatar_url || account?.business_logo || account?.business_logo_url
+  );
+  const logo = resolvedLogo || DEFAULT_BRAND_LOGO;
+  const avatar = resolvedAvatar || logo;
+
+  return {
+    header: {
+      nameLine1: businessName || DEFAULT_BRAND_NAME,
+      nameLine2: businessName ? "" : "Digital Solutions",
+      logo,
+    },
+    avatar,
+  };
+}
+
+function extractStoragePath(pathOrUrl, bucketName) {
+  if (!pathOrUrl) return null;
+
+  const raw = String(pathOrUrl).trim();
+  if (!raw) return null;
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw);
+      const signMarker = `/storage/v1/object/sign/${bucketName}/`;
+      const publicMarker = `/storage/v1/object/public/${bucketName}/`;
+
+      if (url.pathname.includes(signMarker)) {
+        return decodeURIComponent(url.pathname.split(signMarker)[1] || "");
+      }
+      if (url.pathname.includes(publicMarker)) {
+        return decodeURIComponent(url.pathname.split(publicMarker)[1] || "");
+      }
+
+      return raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  const normalized = raw.replace(/\\/g, "/").replace(/^\/+/, "");
+  if (normalized.toLowerCase().startsWith(`${bucketName.toLowerCase()}/`)) {
+    return normalized.slice(bucketName.length + 1);
+  }
+
+  return normalized;
+}
+
+async function resolveBrandingAssetUrl(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "";
+
+  let current = raw;
+  if (current.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(current);
+      if (parsed?.url) current = String(parsed.url).trim();
+    } catch {}
+  }
+
+  const privatePath = extractStoragePath(current, "Private-assets");
+  if (privatePath && !/^https?:\/\//i.test(privatePath)) {
+    const { data, error } = await supabase.storage
+      .from("Private-assets")
+      .createSignedUrl(privatePath, 3600);
+    if (!error && data?.signedUrl) return data.signedUrl;
+  }
+
+  const publicPath = extractStoragePath(current, "public-assets");
+  if (publicPath && !/^https?:\/\//i.test(publicPath)) {
+    const { data } = supabase.storage.from("public-assets").getPublicUrl(publicPath);
+    if (data?.publicUrl) return data.publicUrl;
+  }
+
+  return /^https?:\/\//i.test(current) ? current : "";
 }
 
 export default function Layout({ children }) {
@@ -140,23 +224,11 @@ export default function Layout({ children }) {
         const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email);
         setDeveloperAccess(hasDeveloperAccess);
 
-        // 🧱 Admin branding
-        if (hasDeveloperAccess) {
-          setHeader({
-            nameLine1: "GR8 RESULT",
-            nameLine2: "Digital Solutions",
-            logo: "",
-          });
-          setAvatar("");
-          setLoading(false);
-          return;
-        }
-
         // 🧾 Load user data from Supabase
         const { data, error } = await supabase
           .from("accounts")
           .select(
-            "business_name, business_logo, business_avatar, approved, is_approved, status, subscription_status"
+            "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status"
           )
           .eq("user_id", user.id)
           .single();
@@ -166,13 +238,10 @@ export default function Layout({ children }) {
 
         console.log("[Layout.js] Loaded account row:", data);
 
-        if (isInternalGr8ResultAccount(data)) {
-          setHeader({
-            nameLine1: "GR8 RESULT",
-            nameLine2: "Digital Solutions",
-            logo: "",
-          });
-          setAvatar("");
+        if ((hasDeveloperAccess || isInternalGr8ResultAccount(data)) && data) {
+          const branding = await buildBrandingState(data);
+          setHeader(branding.header);
+          setAvatar(branding.avatar);
           setLoading(false);
           return;
         }
@@ -205,68 +274,22 @@ export default function Layout({ children }) {
 
         // 🏢 Update user-specific logo + name only for verified platform users
         if (data?.business_name && verifiedPlatformUser) {
-          // Robust logo logic: parse JSON, clean path, always get public URL
-          let logoUrl = "";
-          if (data.business_logo && data.business_logo.trim() !== "") {
-            let logoPath = data.business_logo.trim();
-            // If stored as JSON string { url: "..." }
-            if (logoPath.startsWith("{")) {
-              try {
-                const parsed = JSON.parse(logoPath);
-                if (parsed?.url) logoPath = parsed.url;
-              } catch {}
-            }
-            // If it's a full URL, use as is
-            if (/^https?:\/\//i.test(logoPath)) {
-              logoUrl = logoPath;
-            } else {
-              // Clean path: remove bucket and domain if present
-              const cleanPath = String(logoPath)
-                .replace(/^https:\/\/[^/]+\/storage\/v1\/object\/public\//, "")
-                .replace(/^public-assets\//i, "")
-                .replace(/^\/+/, "");
-              const { data: pub } = supabase.storage.from("public-assets").getPublicUrl(cleanPath);
-              logoUrl = pub?.publicUrl || "";
-            }
-          }
+          const branding = await buildBrandingState(data);
           setHeader({
-            nameLine1: data.business_name,
-            nameLine2: "",
-            logo: logoUrl,
+            ...branding.header,
           });
         } else {
           setHeader({
-            nameLine1: "GR8 RESULT",
+            nameLine1: DEFAULT_BRAND_NAME,
             nameLine2: "Digital Solutions",
-            logo: "",
+            logo: DEFAULT_BRAND_LOGO,
           });
         }
 
         // 👤 Avatar logic — prefers avatar, falls back to logo, then default
-        let finalAvatar = data?.business_avatar && data.business_avatar.trim() !== ""
-          ? (() => {
-              let avatarPath = data.business_avatar.trim();
-              // If stored as JSON string { url: "..." }
-              if (avatarPath.startsWith("{")) {
-                try {
-                  const parsed = JSON.parse(avatarPath);
-                  if (parsed?.url) avatarPath = parsed.url;
-                } catch {}
-              }
-              if (/^https?:\/\//i.test(avatarPath)) {
-                return avatarPath;
-              } else {
-                // Clean path: remove bucket and domain if present
-                const cleanPath = String(avatarPath)
-                  .replace(/^https:\/\/[^/]+\/storage\/v1\/object\/public\//, "")
-                  .replace(/^public-assets\//i, "")
-                  .replace(/^\/+/, "");
-                const { data: pub } = supabase.storage.from("public-assets").getPublicUrl(cleanPath);
-                return pub?.publicUrl || "";
-              }
-            })()
-          : "";
-        setAvatar(verifiedPlatformUser ? finalAvatar : "");
+        const branding = await buildBrandingState(data || {});
+        const finalAvatar = branding.avatar;
+        setAvatar(verifiedPlatformUser ? finalAvatar : DEFAULT_BRAND_LOGO);
 
         const vendorAllowed = isVendorOnlyRoute && localMarketplaceAllowed;
         if (!verifiedPlatformUser && !vendorAllowed && isProtectedPlatformRoute && !isAdminRoute) {
@@ -472,6 +495,8 @@ const brandBox = {
   display: "flex",
   alignItems: "center",
   gap: 18,
+  flex: 1,
+  minWidth: 0,
   color: "#fff",
   fontWeight: 600,
   fontSize: 38,
@@ -497,7 +522,9 @@ const brandLogo = {
 };
 
 const brandName = {
-  maxWidth: 400,
+  maxWidth: 720,
+  minWidth: 0,
+  flex: "1 1 auto",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
