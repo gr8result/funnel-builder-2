@@ -1,0 +1,2635 @@
+{
+  "templateOverrides": {
+    "website-generic-premium": {
+      "updatedAt": "2026-05-06T02:25:52.148Z",
+      "pageBlocks": {
+        "Home": [
+          {
+            "id": "7db4a858-46e3-4e88-a9e3-ab46eedfa142",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": false,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 200,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 48,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 24,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 24,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1800
+            }
+          },
+          {
+            "id": "39c0f95c-554e-4549-b78c-358072098b57",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "Premium websites built to make established businesses look ascredible online as they are in person",
+              "subheadline": "Northstar Studio designs conversion-focused websites for service brands, consultants, and growing companies that need stronger positioning, clearer offers, and a digital presence that feels commercially sharp from the first scroll.",
+              "ctaText": "Start project",
+              "ctaLink": "?page=contact",
+              "headlineAlignment": "left",
+              "headlineColor": "#f8fafc",
+              "headlineFontFamily": "system-ui",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 56,
+              "subheadlineFontSize": 21,
+              "textColor": "#cbd5e1",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "fullWidthBackground": false,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "linear-gradient(135deg,#081120,#10213a 58%,#17304d)",
+              "backgroundImage": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "1405px",
+              "baseLayoutWidth": 1800,
+              "eyebrow": "PREMIUM DIGITAL PRESENCE",
+              "secondaryCtaText": "See services",
+              "secondaryCtaLink": "/services",
+              "contentWidth": 540,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "fade-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-in",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/social-images/35ab846e-0764-498b-b1f8-7d2cf27d85a5/1775506939851.png",
+              "contentX": 31,
+              "contentY": 52,
+              "contentHeight": 300,
+              "floatingX": 78,
+              "floatingY": 52,
+              "floatingWidth": 441,
+              "floatingHeight": 348,
+              "spacingScale": "luxury",
+              "contentBackground": "rgba(15,23,42,0.18)",
+              "verticalAlign": "center",
+              "borderColor": "rgba(203,213,225,0.88)",
+              "floatingImageAssetId": "e0a440a0-e794-473d-817b-8ce7dd349581",
+              "backgroundImageAssetId": "funnel-template-mechanic-3",
+              "backgroundSize": "cover"
+            }
+          },
+          {
+            "id": "a23bac6b-43a2-4ded-b1f6-ba6455caaea6",
+            "type": "parallax",
+            "props": {
+              "headline": "A production-quality starter should feel intentionally art-directed from the first scroll",
+              "subheadline": "This section adds pacing, visual authority, and a sense of premium depth before the proof and offer sections begin.",
+              "ctaText": "See capabilities",
+              "ctaLink": "?page=services",
+              "headlineAlignment": "left",
+              "verticalAlign": "center",
+              "contentX": 28,
+              "contentY": 50,
+              "contentWidth": 600,
+              "contentHeight": 220,
+              "floatingImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "floatingX": 76,
+              "floatingY": 56,
+              "floatingWidth": 260,
+              "floatingHeight": 260,
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 52,
+              "subheadlineFontSize": 20,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "68vh",
+              "baseLayoutWidth": 1800,
+              "textAnimation": "fade-up",
+              "eyebrow": "Section label"
+            }
+          },
+          {
+            "id": 1778032217309,
+            "type": "parallax",
+            "props": {
+              "headline": "Parallax Headline",
+              "subheadline": "Drag this text box anywhere over the background.",
+              "ctaText": "Get Started",
+              "ctaLink": "#",
+              "headlineAlignment": "center",
+              "verticalAlign": "center",
+              "contentX": 50,
+              "contentY": 58,
+              "contentWidth": 680,
+              "contentHeight": 220,
+              "floatingImage": "",
+              "floatingX": 76,
+              "floatingY": 58,
+              "floatingWidth": 220,
+              "floatingHeight": 220,
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 52,
+              "subheadlineFontSize": 20,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#2563eb",
+              "buttonTextColor": "#ffffff",
+              "fullWidthBackground": false,
+              "enableParallax": false,
+              "backgroundStyle": "image",
+              "backgroundColor": "#0f172a",
+              "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1778032229580-Split-Level-Undercroft-Garage-Mount-Barker.jpg",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "480px",
+              "backgroundImageAssetId": "88e25249-578f-436e-b673-750370007d80",
+              "eyebrow": "Section label",
+              "baseLayoutWidth": 1800
+            }
+          },
+          {
+            "id": 1778023264558,
+            "type": "image-stack",
+            "props": {
+              "title": "Layered Visual Canvas",
+              "minHeight": "72vh",
+              "backgroundColor": "transparent",
+              "showGrid": true,
+              "snapToGrid": true,
+              "images": [
+                {
+                  "id": "layer-1",
+                  "kind": "image",
+                  "src": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%22800%22%20viewBox%3D%220%200%201200%20800%22%3E%3Cdefs%3E%3CradialGradient%20id%3D%22g%22%20cx%3D%2250%25%22%20cy%3D%2250%25%22%20r%3D%2250%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237dd3fc%22%20stop-opacity%3D%220.95%22%2F%3E%3Cstop%20offset%3D%2258%25%22%20stop-color%3D%22%2338bdf8%22%20stop-opacity%3D%220.42%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23ffffff%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221200%22%20height%3D%22800%22%20fill%3D%22%230f172a%22%2F%3E%3Ccircle%20cx%3D%22820%22%20cy%3D%22340%22%20r%3D%22310%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22310%22%20cy%3D%22540%22%20r%3D%22180%22%20fill%3D%22%2338bdf8%22%20opacity%3D%220.12%22%2F%3E%3C%2Fsvg%3E",
+                  "assetId": "builtin-deco-gradient-orb",
+                  "x": 40,
+                  "y": 40,
+                  "width": 280,
+                  "height": 190,
+                  "rotation": -6,
+                  "radius": 18,
+                  "zIndex": 1
+                },
+                {
+                  "id": "text-layer-1",
+                  "kind": "text",
+                  "content": "Headline Text",
+                  "x": 420,
+                  "y": 96,
+                  "width": 360,
+                  "height": 140,
+                  "rotation": 0,
+                  "radius": 16,
+                  "zIndex": 2,
+                  "fontSize": 40,
+                  "fontWeight": "700",
+                  "textAlign": "center",
+                  "verticalAlign": "center",
+                  "textColor": "#0f172a",
+                  "background": "rgba(255,255,255,0.92)"
+                },
+                {
+                  "id": "layer-2",
+                  "kind": "image",
+                  "src": "",
+                  "assetId": "",
+                  "x": 240,
+                  "y": 220,
+                  "width": 250,
+                  "height": 180,
+                  "rotation": 6,
+                  "radius": 18,
+                  "zIndex": 3
+                }
+              ],
+              "baseLayoutWidth": 2,
+              "selectedLayerIndex": 0,
+              "fullWidthBackground": false
+            }
+          },
+          {
+            "id": "0d97a63e-1a19-4273-888e-80e4ebb658a4",
+            "type": "trust-badges",
+            "props": {
+              "badges": [
+                {
+                  "icon": "✓",
+                  "label": "Fast turnaround"
+                },
+                {
+                  "icon": "✓",
+                  "label": "Clear process"
+                },
+                {
+                  "icon": "✓",
+                  "label": "Launch-ready starter"
+                },
+                {
+                  "icon": "✓",
+                  "label": "Editable in builder"
+                }
+              ],
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.02
+            }
+          },
+          {
+            "id": "9853ca47-af4d-4df0-bf82-222bd587ff4a",
+            "type": "divider",
+            "props": {
+              "style": "dots",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false
+            }
+          },
+          {
+            "id": "6cd302d3-92d7-463d-85d2-d1cbe0adfb5d",
+            "type": "stats",
+            "props": {
+              "title": "Built to create confidence quickly",
+              "subtitle": "Add a short supporting line for the stats section.",
+              "statsVariant": "split-scoreboard",
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.92)",
+              "cardBackgroundColor": "rgba(255,255,255,0.9)",
+              "accentColor": "#0ea5e9",
+              "stats": [
+                {
+                  "number": "4",
+                  "label": "core pages mapped",
+                  "detail": "Add a short line of context."
+                },
+                {
+                  "number": "1",
+                  "label": "clear buyer journey",
+                  "detail": "Add a short line of context."
+                },
+                {
+                  "number": "100%",
+                  "label": "editable after launch",
+                  "detail": "Add a short line of context."
+                }
+              ],
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.04
+            }
+          },
+          {
+            "id": "2da090bd-f19c-463b-94d6-276dc88a03f4",
+            "type": "image-stack",
+            "props": {
+              "title": "Northstar Studio storyboard",
+              "minHeight": "72vh",
+              "backgroundColor": "transparent",
+              "showGrid": true,
+              "snapToGrid": true,
+              "images": [
+                {
+                  "id": "website-generic-premium-home-image-a",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "x": 15,
+                  "y": 16,
+                  "width": 320,
+                  "height": 230,
+                  "rotation": -6,
+                  "radius": 24,
+                  "zIndex": 1
+                },
+                {
+                  "id": "website-generic-premium-home-copy",
+                  "kind": "text",
+                  "content": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+                  "x": 46,
+                  "y": 24,
+                  "width": 420,
+                  "height": 180,
+                  "rotation": 0,
+                  "radius": 22,
+                  "zIndex": 2,
+                  "fontSize": 30,
+                  "fontWeight": "700",
+                  "textAlign": "left",
+                  "verticalAlign": "center",
+                  "textColor": "#0f172a",
+                  "background": "rgba(255,255,255,0.93)"
+                },
+                {
+                  "id": "website-generic-premium-home-image-c",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+                  "x": 34,
+                  "y": 66,
+                  "width": 248,
+                  "height": 184,
+                  "rotation": -10,
+                  "radius": 20,
+                  "zIndex": 2
+                },
+                {
+                  "id": "website-generic-premium-home-image-b",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+                  "x": 68,
+                  "y": 58,
+                  "width": 300,
+                  "height": 220,
+                  "rotation": 8,
+                  "radius": 24,
+                  "zIndex": 3
+                }
+              ],
+              "baseLayoutWidth": 2,
+              "fullWidthBackground": false,
+              "sectionAnimation": "zoom",
+              "sectionAnimationDelay": 0.05
+            }
+          },
+          {
+            "id": "4ef98abe-7928-4690-a583-ca7dc8ad3677",
+            "type": "columns-2",
+            "props": {
+              "title": "",
+              "leftTitle": "What the site is designed to do",
+              "leftContent": "Every section is there to help the business sound clearer, stronger, and easier to buy from.",
+              "leftImage": "",
+              "rightTitle": "Why it works",
+              "rightContent": "A real page hierarchy: Home, about, services, and contact pages each do a distinct job in the buyer journey instead of repeating the same message.<br><br>Stronger visual pacing: Content, imagery, proof, and calls to action are layered deliberately so the site feels designed rather than assembled.<br><br>Ready to tailor: The structure is polished enough to present well now, while still being simple for the client to rewrite around their own brand and offer.",
+              "rightImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "ratio": "60-40",
+              "backgroundColor": "transparent",
+              "cardBackgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "leftColumnContentType": "text",
+              "rightColumnContentType": "image",
+              "columnGap": 18
+            }
+          },
+          {
+            "id": "e546e235-a9f0-4a5b-b14f-079ea47d8610",
+            "type": "divider",
+            "props": {
+              "style": "line",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false
+            }
+          },
+          {
+            "id": "9c0cea12-f713-4f36-8976-d17eb8b052b2",
+            "type": "feature-list",
+            "props": {
+              "title": "What the site is designed to do",
+              "items": [
+                {
+                  "title": "Clarify the offer",
+                  "body": "Turn vague capability into a sharper message that tells the right buyer exactly what the business does and why it matters.",
+                  "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                  "title": "Build trust early",
+                  "body": "Use proof, positioning, and stronger page structure to make the company feel credible before the enquiry form ever appears.",
+                  "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                  "title": "Move people forward",
+                  "body": "Guide visitors into the next step with cleaner calls to action, better pacing, and sections that support a real decision.",
+                  "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80"
+                }
+              ],
+              "layout": "columns",
+              "featureVariant": "editorial-cards",
+              "featureCardWidth": 320,
+              "bulletStyle": "check",
+              "spacingScale": "normal",
+              "backgroundColor": "#ffffff",
+              "itemBackgroundColor": "#eff6ff",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0
+            }
+          },
+          {
+            "id": "21dfd464-ef51-4937-8263-f6cf4530aa9b",
+            "type": "divider",
+            "props": {
+              "style": "dashes",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false
+            }
+          },
+          {
+            "id": "3c1430c3-0f56-4ac9-a887-804d80efc60c",
+            "type": "feature-list",
+            "props": {
+              "title": "Why businesses choose this style of site",
+              "items": [
+                {
+                  "title": "A real page hierarchy",
+                  "body": "Home, about, services, and contact pages each do a distinct job in the buyer journey instead of repeating the same message.",
+                  "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80"
+                },
+                {
+                  "title": "Stronger visual pacing",
+                  "body": "Content, imagery, proof, and calls to action are layered deliberately so the site feels designed rather than assembled.",
+                  "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                  "title": "Ready to tailor",
+                  "body": "The structure is polished enough to present well now, while still being simple for the client to rewrite around their own brand and offer.",
+                  "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80"
+                }
+              ],
+              "layout": "columns",
+              "featureVariant": "glass-cards",
+              "featureCardWidth": 320,
+              "bulletStyle": "check",
+              "spacingScale": "normal",
+              "backgroundColor": "#ffffff",
+              "itemBackgroundColor": "#eff6ff",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0
+            }
+          },
+          {
+            "id": "23c473c6-3e4e-4992-9502-5f986a40bd45",
+            "type": "image-gallery",
+            "props": {
+              "title": "Presentation highlights",
+              "galleryVariant": "balanced-grid",
+              "images": [
+                {
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Workspace",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Team strategy",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Meeting room",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Gallery image 4",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Gallery image 5",
+                  "caption": ""
+                }
+              ],
+              "columns": 3,
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.9)",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.06
+            }
+          },
+          {
+            "id": "aace077f-c17d-4756-a249-aec60896e57a",
+            "type": "testimonial",
+            "props": {
+              "text": "This is a great product/service!",
+              "author": "Customer Name",
+              "role": "CEO at Company",
+              "avatar": "",
+              "rating": 5,
+              "testimonialVariant": "wall",
+              "spacingScale": "normal",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.08,
+              "title": "What clients say after launch",
+              "items": [
+                {
+                  "text": "The finished site finally matched the level of the business. It felt more premium, more focused, and much easier for prospects to understand.",
+                  "author": "Mason Lee",
+                  "role": "Consulting Founder",
+                  "rating": 5
+                },
+                {
+                  "text": "We stopped sounding generic online. The site now gives people confidence before the first conversation even starts.",
+                  "author": "Ava Grant",
+                  "role": "Service Business Owner",
+                  "rating": 5
+                }
+              ]
+            }
+          },
+          {
+            "id": "025bb4f5-2fb6-41f7-be71-e7ddc06b519d",
+            "type": "faq",
+            "props": {
+              "title": "Common questions before starting",
+              "faqMaxWidth": 980,
+              "faqStartCollapsed": false,
+              "faqAllowMultipleOpen": false,
+              "items": [
+                {
+                  "question": "Can this be tailored to a specific industry?",
+                  "answer": "Yes. The structure is intentionally broad, but the copy, imagery, service framing, and proof sections can be rewritten around a specific market very quickly.",
+                  "heading": "Can this be tailored to a specific industry?",
+                  "content": "Yes. The structure is intentionally broad, but the copy, imagery, service framing, and proof sections can be rewritten around a specific market very quickly."
+                },
+                {
+                  "question": "Is this just a one-page design stretched across multiple pages?",
+                  "answer": "No. Each page has a separate job, which is why the site feels more complete and more commercially useful from the start.",
+                  "heading": "Is this just a one-page design stretched across multiple pages?",
+                  "content": "No. Each page has a separate job, which is why the site feels more complete and more commercially useful from the start."
+                }
+              ],
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.1
+            }
+          },
+          {
+            "id": "0e4ef684-bc50-490b-8dcf-2911fdc255ef",
+            "type": "cta-button",
+            "props": {
+              "eyebrow": "READY WHEN YOU ARE",
+              "title": "Need a site that feels sharper, clearer, and easier to trust?",
+              "description": "Use this foundation to shape a premium business website around your brand, offer, proof, and ideal buyer journey.",
+              "text": "Open in builder",
+              "link": "?page=contact",
+              "note": "Fast setup, clearer offer, better conversion.",
+              "style": "split-banner",
+              "size": "large",
+              "alignment": "center",
+              "backgroundColor": "linear-gradient(135deg,#eff6ff,#ffffff)",
+              "textColor": "#0f172a",
+              "buttonColor": "linear-gradient(135deg,#0ea5e9,#2563eb)",
+              "buttonTextColor": "#ffffff",
+              "borderColor": "rgba(191,219,254,0.9)",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false
+            }
+          },
+          {
+            "id": "4edf4689-b159-41ec-b8f4-25542f350373",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1800,
+              "fullWidthBackground": false,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ],
+        "About": [
+          {
+            "id": "30c329c0-a352-402f-96fd-fa537f3d0d53",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": true,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 44,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 18,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 16,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 16,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "b87babf2-c7e3-45af-9857-7ca9c9541dc0",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "A studio built for businesses that need more than a nicer-looking homepage",
+              "subheadline": "Northstar Studio works with businesses that have already outgrown generic websites, fragmented messaging, and low-trust first impressions. We design digital experiences that clarify the offer, sharpen the positioning, and help the company feel more established at every stage of the buyer journey.",
+              "ctaText": "See services",
+              "ctaLink": "?page=services",
+              "headlineAlignment": "center",
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 72,
+              "subheadlineFontSize": 21,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "76vh",
+              "baseLayoutWidth": 1500,
+              "eyebrow": "",
+              "secondaryCtaText": "",
+              "secondaryCtaLink": "",
+              "contentWidth": 760,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "slide-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-up",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": ""
+            }
+          },
+          {
+            "id": "f15f22f3-3bbb-463d-ba14-0b6ebb8e6a45",
+            "type": "parallax",
+            "props": {
+              "headline": "The Northstar Studio story should feel visual and substantial, not hidden behind one plain text block.",
+              "subheadline": "Build trust by showing the studio's thinking, standards, and commercial approach behind the work.",
+              "ctaText": "See services",
+              "ctaLink": "?page=services",
+              "headlineAlignment": "left",
+              "verticalAlign": "center",
+              "contentX": 28,
+              "contentY": 50,
+              "contentWidth": 560,
+              "contentHeight": 220,
+              "floatingImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "floatingX": 76,
+              "floatingY": 56,
+              "floatingWidth": 260,
+              "floatingHeight": 260,
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 52,
+              "subheadlineFontSize": 20,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "62vh",
+              "baseLayoutWidth": 1500,
+              "textAnimation": "fade-up"
+            }
+          },
+          {
+            "id": "ce5961bd-4cd5-4f63-be32-bbbaf62fcf8e",
+            "type": "columns-2",
+            "props": {
+              "title": "",
+              "leftTitle": "Core strengths",
+              "leftContent": "Strategy-led messaging\n\nSenior design direction\n\nCommercially focused execution",
+              "leftImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "rightTitle": "What clients should understand",
+              "rightContent": "Northstar Studio works with businesses that have already outgrown generic websites, fragmented messaging, and low-trust first impressions. We design digital experiences that clarify the offer, sharpen the positioning, and help the company feel more established at every stage of the buyer journey.",
+              "rightImage": "",
+              "ratio": "40-60",
+              "backgroundColor": "transparent",
+              "cardBackgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "leftColumnContentType": "text",
+              "rightColumnContentType": "text",
+              "columnGap": 18
+            }
+          },
+          {
+            "id": "026e8021-f158-4e6a-b8ea-e6f1b2cdc2e7",
+            "type": "image-gallery",
+            "props": {
+              "title": "About visuals",
+              "galleryVariant": "balanced-grid",
+              "images": [
+                {
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio about image 1",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio about image 2",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio about image 3",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio about image 4",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio about image 5",
+                  "caption": ""
+                }
+              ],
+              "columns": 3,
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.9)",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.06
+            }
+          },
+          {
+            "id": "c92f37d6-e841-4ddd-a7ad-ab3d53782912",
+            "type": "divider",
+            "props": {
+              "style": "dots",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "a46f2b56-3915-4997-bc1f-f2b22a30f4f7",
+            "type": "stats",
+            "props": {
+              "title": "What this page should reinforce",
+              "subtitle": "",
+              "statsVariant": "split-scoreboard",
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.92)",
+              "cardBackgroundColor": "rgba(255,255,255,0.9)",
+              "accentColor": "#0ea5e9",
+              "stats": [
+                {
+                  "number": "Senior",
+                  "label": "thinking behind the work",
+                  "detail": ""
+                },
+                {
+                  "number": "Clear",
+                  "label": "market positioning",
+                  "detail": ""
+                },
+                {
+                  "number": "Trusted",
+                  "label": "delivery process",
+                  "detail": ""
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.04
+            }
+          },
+          {
+            "id": "a08e4a8d-3795-4e3d-9242-5956193d80eb",
+            "type": "team",
+            "props": {
+              "title": "Who clients work with",
+              "subtitle": "Introduce the people clients will trust with the work.",
+              "teamVariant": "studio-cards",
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.9)",
+              "members": [
+                {
+                  "name": "Alex Morgan",
+                  "role": "Founder",
+                  "bio": "Leads brand positioning, page direction, and the overall commercial story behind each project.",
+                  "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80",
+                  "imageX": 50,
+                  "imageY": 28
+                },
+                {
+                  "name": "Jordan Patel",
+                  "role": "Strategy Lead",
+                  "bio": "Shapes user flow, service framing, and the structure that turns interest into qualified enquiries.",
+                  "image": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80",
+                  "imageX": 50,
+                  "imageY": 28
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true
+            }
+          },
+          {
+            "id": "8eb64b58-5f1a-4eb4-918c-057ade474e64",
+            "type": "cta-button",
+            "props": {
+              "eyebrow": "READY WHEN YOU ARE",
+              "title": "Ready to work with Northstar Studio?",
+              "description": "Use the contact page to turn interest into a real enquiry.",
+              "text": "Start Project",
+              "link": "?page=contact",
+              "note": "Fast setup, clearer offer, better conversion.",
+              "style": "split-banner",
+              "size": "large",
+              "alignment": "center",
+              "backgroundColor": "linear-gradient(135deg,#eff6ff,#ffffff)",
+              "textColor": "#0f172a",
+              "buttonColor": "linear-gradient(135deg,#0ea5e9,#2563eb)",
+              "buttonTextColor": "#ffffff",
+              "borderColor": "rgba(191,219,254,0.9)",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true
+            }
+          },
+          {
+            "id": "e3189cf0-59a8-4478-af95-83e72b6ea7a0",
+            "type": "columns-2",
+            "props": {
+              "title": "",
+              "leftTitle": "How this site should read",
+              "leftContent": "Confident, commercially clear, and well-structured enough to feel like an already-established business rather than a starter kit.",
+              "leftImage": "",
+              "rightTitle": "What to customise first",
+              "rightContent": "Replace the proof, sharpen the positioning, and update the offer hierarchy before you touch visual polish. Better structure compounds faster than surface tweaks.",
+              "rightImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "ratio": "50-50",
+              "backgroundColor": "transparent",
+              "cardBackgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "leftColumnContentType": "text",
+              "rightColumnContentType": "image",
+              "columnGap": 18
+            }
+          },
+          {
+            "id": "c90a414c-881b-4fad-a433-e18e8784d5c8",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ],
+        "Services": [
+          {
+            "id": "a58f3c11-3b18-4eb7-a53a-37982cbe6c1b",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": true,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 44,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 18,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 16,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 16,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "6904b2c5-85f4-4d0c-b7e3-35e82366c000",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "Website projects shaped around clarity, credibility, and conversion",
+              "subheadline": "Northstar Studio helps businesses tighten their positioning, present their offer more convincingly, and launch websites that feel more commercially complete from day one.",
+              "ctaText": "Book a consult",
+              "ctaLink": "?page=contact",
+              "headlineAlignment": "center",
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 72,
+              "subheadlineFontSize": 21,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "76vh",
+              "baseLayoutWidth": 1500,
+              "eyebrow": "SERVICES",
+              "secondaryCtaText": "See pricing",
+              "secondaryCtaLink": "/contact",
+              "contentWidth": 760,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "slide-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-up",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": ""
+            }
+          },
+          {
+            "id": "25794a8b-dd1f-47eb-b5f1-f918c8918caa",
+            "type": "parallax",
+            "props": {
+              "headline": "Services should feel like a visual offer deck, not a dry list of service cards.",
+              "subheadline": "Explain the studio's core services clearly enough that buyers can understand what they need and how the engagement moves forward.",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "headlineAlignment": "left",
+              "verticalAlign": "center",
+              "contentX": 28,
+              "contentY": 50,
+              "contentWidth": 620,
+              "contentHeight": 220,
+              "floatingImage": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80",
+              "floatingX": 76,
+              "floatingY": 56,
+              "floatingWidth": 260,
+              "floatingHeight": 260,
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 52,
+              "subheadlineFontSize": 20,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "62vh",
+              "baseLayoutWidth": 1500,
+              "textAnimation": "fade-up"
+            }
+          },
+          {
+            "id": "d0afb3c7-d248-4f12-bd2e-7b1306930b8d",
+            "type": "image-stack",
+            "props": {
+              "title": "Services storyboard",
+              "minHeight": "72vh",
+              "backgroundColor": "transparent",
+              "showGrid": true,
+              "snapToGrid": true,
+              "images": [
+                {
+                  "id": "website-generic-premium-services-image-a",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+                  "x": 15,
+                  "y": 16,
+                  "width": 320,
+                  "height": 230,
+                  "rotation": -6,
+                  "radius": 24,
+                  "zIndex": 1
+                },
+                {
+                  "id": "website-generic-premium-services-copy",
+                  "kind": "text",
+                  "content": "Explain the studio's core services clearly enough that buyers can understand what they need and how the engagement moves forward.",
+                  "x": 46,
+                  "y": 24,
+                  "width": 420,
+                  "height": 180,
+                  "rotation": 0,
+                  "radius": 22,
+                  "zIndex": 2,
+                  "fontSize": 30,
+                  "fontWeight": "700",
+                  "textAlign": "left",
+                  "verticalAlign": "center",
+                  "textColor": "#0f172a",
+                  "background": "rgba(255,255,255,0.93)"
+                },
+                {
+                  "id": "website-generic-premium-services-image-c",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+                  "x": 34,
+                  "y": 66,
+                  "width": 248,
+                  "height": 184,
+                  "rotation": -10,
+                  "radius": 20,
+                  "zIndex": 2
+                },
+                {
+                  "id": "website-generic-premium-services-image-b",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80",
+                  "x": 68,
+                  "y": 58,
+                  "width": 300,
+                  "height": 220,
+                  "rotation": 8,
+                  "radius": 24,
+                  "zIndex": 3
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "zoom",
+              "sectionAnimationDelay": 0.05
+            }
+          },
+          {
+            "id": "5de8d1bc-d24f-4ceb-81d0-1da58591b2ff",
+            "type": "divider",
+            "props": {
+              "style": "line",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "cf30d810-dd6d-4ece-9603-0cfe41495d00",
+            "type": "feature-list",
+            "props": {
+              "title": "Core services",
+              "items": [
+                {
+                  "title": "Positioning and planning",
+                  "body": "Clarify the offer, buyer journey, service architecture, and page structure before design begins so the site communicates with more precision.",
+                  "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                  "title": "Full website design and build",
+                  "body": "Create polished multi-page websites with stronger visual hierarchy, sharper messaging, and a cleaner path from first impression to enquiry.",
+                  "image": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80"
+                },
+                {
+                  "title": "Refinement and optimisation",
+                  "body": "Improve existing sites through structural edits, clearer calls to action, tighter page pacing, and conversion-focused content upgrades.",
+                  "image": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=1200&q=80"
+                }
+              ],
+              "layout": "columns",
+              "featureVariant": "cards",
+              "featureCardWidth": 320,
+              "bulletStyle": "check",
+              "spacingScale": "normal",
+              "backgroundColor": "#ffffff",
+              "itemBackgroundColor": "#eff6ff",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0
+            }
+          },
+          {
+            "id": "9ad47d00-11b5-4ac5-99ac-5afe419c0e18",
+            "type": "columns-2",
+            "props": {
+              "title": "",
+              "leftTitle": "How projects run",
+              "leftContent": "The delivery process is built to feel organised, deliberate, and easy for the client to follow.",
+              "leftImage": "",
+              "rightTitle": "Execution rhythm",
+              "rightContent": "Discovery and direction: We review the business, audience, current positioning, and commercial goals before shaping the first pass of the site.\n\nDesign and build: Pages, visuals, messaging, and conversion flow are developed together so the final result feels consistent instead of pieced together.\n\nRefine and launch: Feedback is folded into the live build, then the project is polished into a finished site that is ready to present confidently.",
+              "rightImage": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80",
+              "ratio": "50-50",
+              "backgroundColor": "transparent",
+              "cardBackgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "leftColumnContentType": "text",
+              "rightColumnContentType": "image",
+              "columnGap": 18
+            }
+          },
+          {
+            "id": "bcaf379a-e400-4a4c-87f9-58b4dc10d393",
+            "type": "image-gallery",
+            "props": {
+              "title": "Services visuals",
+              "galleryVariant": "balanced-grid",
+              "images": [
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio services image 1",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio services image 2",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio services image 3",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio services image 4",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio services image 5",
+                  "caption": ""
+                }
+              ],
+              "columns": 3,
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.9)",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.06
+            }
+          },
+          {
+            "id": "bc823a3a-b0d8-42db-a742-da7965c15578",
+            "type": "divider",
+            "props": {
+              "style": "dots",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "21188609-c3a2-4bf8-a6e9-2f80c0b9249b",
+            "type": "pricing-table",
+            "props": {
+              "title": "Typical engagement paths",
+              "pricingVariant": "premium",
+              "spacingScale": "normal",
+              "plans": [
+                {
+                  "id": "plan-1",
+                  "name": "Foundation Site",
+                  "price": "$1,500",
+                  "description": "",
+                  "includedFeatures": [
+                    "Core page structure",
+                    "Messaging direction",
+                    "Launch-ready layout"
+                  ],
+                  "features": [
+                    "Core page structure",
+                    "Messaging direction",
+                    "Launch-ready layout"
+                  ],
+                  "extras": [],
+                  "cta": "Choose Plan",
+                  "highlighted": false
+                },
+                {
+                  "id": "plan-2",
+                  "name": "Growth Website",
+                  "price": "$3,900",
+                  "description": "",
+                  "includedFeatures": [
+                    "Full multi-page build",
+                    "Positioning support",
+                    "Conversion-focused refinement"
+                  ],
+                  "features": [
+                    "Full multi-page build",
+                    "Positioning support",
+                    "Conversion-focused refinement"
+                  ],
+                  "extras": [],
+                  "cta": "Choose Plan",
+                  "highlighted": true
+                },
+                {
+                  "id": "plan-3",
+                  "name": "Ongoing Support",
+                  "price": "$650/mo",
+                  "description": "",
+                  "includedFeatures": [
+                    "Monthly improvements",
+                    "Campaign page support",
+                    "Priority updates"
+                  ],
+                  "features": [
+                    "Monthly improvements",
+                    "Campaign page support",
+                    "Priority updates"
+                  ],
+                  "extras": [],
+                  "cta": "Choose Plan",
+                  "highlighted": false
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.08
+            }
+          },
+          {
+            "id": "91022abd-3afd-4ce4-a749-df0d0a09818f",
+            "type": "faq",
+            "props": {
+              "title": "Before you enquire",
+              "faqMaxWidth": 980,
+              "faqStartCollapsed": false,
+              "faqAllowMultipleOpen": false,
+              "items": [
+                {
+                  "question": "Do you help with copy as well as design?",
+                  "answer": "Yes. Projects can include copy guidance, page messaging support, and structural rewrites where the current wording is weakening the site."
+                },
+                {
+                  "question": "Can the finished site still be edited later?",
+                  "answer": "Yes. The site is built to feel finished in the preview, but the client can still change copy, services, imagery, and calls to action after handover."
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.1
+            }
+          },
+          {
+            "id": "8d3b5c2a-077f-48e3-99fc-96e54c0b7e6a",
+            "type": "cta-button",
+            "props": {
+              "eyebrow": "READY WHEN YOU ARE",
+              "title": "Want to discuss the right package?",
+              "description": "Push prospects into a call or quote request.",
+              "text": "Start Project",
+              "link": "?page=contact",
+              "note": "Fast setup, clearer offer, better conversion.",
+              "style": "split-banner",
+              "size": "large",
+              "alignment": "center",
+              "backgroundColor": "linear-gradient(135deg,#eff6ff,#ffffff)",
+              "textColor": "#0f172a",
+              "buttonColor": "linear-gradient(135deg,#0ea5e9,#2563eb)",
+              "buttonTextColor": "#ffffff",
+              "borderColor": "rgba(191,219,254,0.9)",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true
+            }
+          },
+          {
+            "id": "8347c70a-1ed6-439c-aa7d-456c52127934",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ],
+        "Contact": [
+          {
+            "id": "ea355a67-af3b-487f-b51c-cf9a1f1c540e",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": true,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 44,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 18,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 16,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 16,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "11f7363b-886c-4cf8-84f0-d511697d6155",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "Use the contact page as a real conversion page",
+              "subheadline": "Invite the right prospects to enquire, apply, or request a proposal with confidence.",
+              "ctaText": "Send enquiry",
+              "ctaLink": "#contact",
+              "headlineAlignment": "center",
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 72,
+              "subheadlineFontSize": 21,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "76vh",
+              "baseLayoutWidth": 1500,
+              "eyebrow": "GET STARTED",
+              "secondaryCtaText": "Back to home",
+              "secondaryCtaLink": "/",
+              "contentWidth": 760,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "slide-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-up",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": ""
+            }
+          },
+          {
+            "id": "d929498b-9ca7-42c6-b6e0-8cbec4766470",
+            "type": "parallax",
+            "props": {
+              "headline": "The Contact page should still feel designed, image-led, and premium while collecting the enquiry.",
+              "subheadline": "Capture serious enquiries and make the next step feel clear.",
+              "ctaText": "Start Project",
+              "ctaLink": "#contact",
+              "headlineAlignment": "left",
+              "verticalAlign": "center",
+              "contentX": 28,
+              "contentY": 50,
+              "contentWidth": 620,
+              "contentHeight": 220,
+              "floatingImage": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=1200&q=80",
+              "floatingX": 76,
+              "floatingY": 56,
+              "floatingWidth": 260,
+              "floatingHeight": 260,
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 52,
+              "subheadlineFontSize": 20,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "58vh",
+              "baseLayoutWidth": 1500,
+              "textAnimation": "fade-up"
+            }
+          },
+          {
+            "id": "aadcd119-f6bb-41bb-9608-16da60906df6",
+            "type": "columns-2",
+            "props": {
+              "title": "",
+              "leftTitle": "What happens next",
+              "leftContent": "How quickly do you reply?: Most businesses use this section to set expectations around response time and next steps.\n\nCan I request a quote?: Yes. Frame the form around proposal, booking, or discovery call requests.",
+              "leftImage": "",
+              "rightTitle": "Tell us about the project",
+              "rightContent": "Ask for business goals, current site gaps, timeline, and budget so better leads qualify themselves.",
+              "rightImage": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=1200&q=80",
+              "ratio": "40-60",
+              "backgroundColor": "transparent",
+              "cardBackgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "borderColor": "#dbeafe",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "leftColumnContentType": "text",
+              "rightColumnContentType": "image",
+              "columnGap": 18
+            }
+          },
+          {
+            "id": "bca9eafd-425a-489a-8911-2d13afa2883d",
+            "type": "image-stack",
+            "props": {
+              "title": "Contact storyboard",
+              "minHeight": "64vh",
+              "backgroundColor": "transparent",
+              "showGrid": true,
+              "snapToGrid": true,
+              "images": [
+                {
+                  "id": "website-generic-premium-contact-image-a",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+                  "x": 15,
+                  "y": 16,
+                  "width": 320,
+                  "height": 230,
+                  "rotation": -6,
+                  "radius": 24,
+                  "zIndex": 1
+                },
+                {
+                  "id": "website-generic-premium-contact-copy",
+                  "kind": "text",
+                  "content": "Ask for business goals, current site gaps, timeline, and budget so better leads qualify themselves.",
+                  "x": 46,
+                  "y": 24,
+                  "width": 420,
+                  "height": 180,
+                  "rotation": 0,
+                  "radius": 22,
+                  "zIndex": 2,
+                  "fontSize": 30,
+                  "fontWeight": "700",
+                  "textAlign": "left",
+                  "verticalAlign": "center",
+                  "textColor": "#0f172a",
+                  "background": "rgba(255,255,255,0.93)"
+                },
+                {
+                  "id": "website-generic-premium-contact-image-c",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "x": 34,
+                  "y": 66,
+                  "width": 248,
+                  "height": 184,
+                  "rotation": -10,
+                  "radius": 20,
+                  "zIndex": 2
+                },
+                {
+                  "id": "website-generic-premium-contact-image-b",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=1200&q=80",
+                  "x": 68,
+                  "y": 58,
+                  "width": 300,
+                  "height": 220,
+                  "rotation": 8,
+                  "radius": 24,
+                  "zIndex": 3
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "zoom",
+              "sectionAnimationDelay": 0.05
+            }
+          },
+          {
+            "id": "fe878913-8150-4d69-aa87-49442f3c7b17",
+            "type": "image-gallery",
+            "props": {
+              "title": "Contact visuals",
+              "galleryVariant": "balanced-grid",
+              "images": [
+                {
+                  "src": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio contact image 1",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio contact image 2",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+                  "alt": "Northstar Studio contact image 3",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio contact image 4",
+                  "caption": ""
+                },
+                {
+                  "src": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1600&q=80",
+                  "alt": "Northstar Studio contact image 5",
+                  "caption": ""
+                }
+              ],
+              "columns": 3,
+              "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(226,232,240,0.9)",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.06
+            }
+          },
+          {
+            "id": "fe00f2c6-4158-450b-b9e3-a05aba5bf36c",
+            "type": "contact-form",
+            "props": {
+              "title": "Tell us about the project",
+              "subtitle": "Ask for business goals, current site gaps, timeline, and budget so better leads qualify themselves.",
+              "formVariant": "minimal-soft",
+              "formMaxWidth": 760,
+              "backgroundColor": "#ffffff",
+              "sectionGradient": "linear-gradient(180deg,#ffffff,#f8fafc)",
+              "cardBackgroundColor": "#ffffff",
+              "textColor": "#0f172a",
+              "subtleTextColor": "#475569",
+              "buttonBackgroundColor": "#0f172a",
+              "buttonTextColor": "#ffffff",
+              "inputBackgroundColor": "#ffffff",
+              "inputBorderColor": "#cbd5e1",
+              "inputTextColor": "#0f172a",
+              "submitAction": "none",
+              "bookingUrl": "https://nonfat-ungored-buford.ngrok-free.dev/u/gr8result?service=f775fc69-f59e-4fd8-ae4a-1e9bb7ecfe4f",
+              "mediaPosition": "right",
+              "mediaImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "mediaAlt": "Contact form image",
+              "fields": [
+                {
+                  "name": "name",
+                  "label": "Full Name",
+                  "type": "text",
+                  "required": true,
+                  "placeholder": "Jane Smith"
+                },
+                {
+                  "name": "email",
+                  "label": "Email",
+                  "type": "email",
+                  "required": true,
+                  "placeholder": "jane@example.com"
+                },
+                {
+                  "name": "project",
+                  "label": "Project or Goal",
+                  "type": "textarea",
+                  "required": false,
+                  "placeholder": "What do you want this site to help you achieve?"
+                },
+                {
+                  "name": "timeline",
+                  "label": "Timeline",
+                  "type": "text",
+                  "required": false,
+                  "placeholder": "When do you want to launch?"
+                }
+              ],
+              "submitText": "Send Details",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true
+            }
+          },
+          {
+            "id": "431e6ec3-f6f0-47cd-813e-73540464badf",
+            "type": "faq",
+            "props": {
+              "title": "What happens next",
+              "faqMaxWidth": 980,
+              "faqStartCollapsed": false,
+              "faqAllowMultipleOpen": false,
+              "items": [
+                {
+                  "question": "How quickly do you reply?",
+                  "answer": "Most businesses use this section to set expectations around response time and next steps."
+                },
+                {
+                  "question": "Can I request a quote?",
+                  "answer": "Yes. Frame the form around proposal, booking, or discovery call requests."
+                }
+              ],
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "sectionAnimation": "fade-up",
+              "sectionAnimationDelay": 0.1
+            }
+          },
+          {
+            "id": "2b12d85c-9381-49d5-bcfa-5ca5634060e0",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ],
+        "Privacy Policy": [
+          {
+            "id": "d7274ccc-a3b2-4094-8842-b125b243666a",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": true,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 44,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 18,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 16,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 16,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "fc85b601-4aa2-411b-b2cf-30bc08520d9b",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "Privacy Policy",
+              "subheadline": "Explain how visitor, enquiry, and customer information is collected, used, stored, and protected.",
+              "ctaText": "Contact us",
+              "ctaLink": "?page=contact",
+              "headlineAlignment": "center",
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 72,
+              "subheadlineFontSize": 21,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "540px",
+              "baseLayoutWidth": 1500,
+              "eyebrow": "",
+              "secondaryCtaText": "",
+              "secondaryCtaLink": "",
+              "contentWidth": 760,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "fade-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-in",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "floatingX": 77,
+              "floatingY": 52,
+              "floatingWidth": 320,
+              "floatingHeight": 320
+            }
+          },
+          {
+            "id": "dbb5d7f6-ce5c-47f9-945e-646a1dbfa66e",
+            "type": "divider",
+            "props": {
+              "style": "dots",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "abf3e7b1-9a70-442a-999f-84c7faf908a5",
+            "type": "text",
+            "props": {
+              "text": "<strong>Privacy Policy</strong><br/><br/>Effective Date: [Effective Date]<br/>Last Updated: [Last Updated Date]<br/><br/>This Privacy Policy applies to [Business Legal Name], trading as Northstar Studio, together with its affiliates, contractors, and service providers where applicable. It explains how Northstar Studio collects, uses, stores, discloses, and protects personal information when a person visits this website, submits an enquiry, requests a quote, books a service, subscribes to marketing communications, purchases a product or service, or otherwise interacts with the business online or offline.<br/><br/><strong>1. Who We Are</strong><br/><br/>For the purposes of privacy and data protection laws, the data controller or business responsible for handling personal information is [Business Legal Name], located at [Business Address], with a primary privacy contact available at [Privacy Contact Email] and [Privacy Contact Phone]. If the business operates in more than one jurisdiction, insert the appropriate legal entity and compliance contact details for each region where customers are served.<br/><br/><strong>2. Information We Collect</strong><br/><br/>Northstar Studio may collect personal information that a person provides directly, including name, email address, phone number, company name, billing details, job title, service requirements, appointment preferences, uploaded files, payment information, and any message content submitted through forms, bookings, checkout pages, support channels, or account creation flows. The business may also collect technical and usage information automatically, including IP address, browser type, device information, operating system, referral URLs, pages viewed, actions taken on the website, approximate location, cookies, and analytics data. Where relevant, the business may also receive information from social platforms, payment processors, CRM systems, booking systems, ad platforms, or other third-party tools used to operate the website and deliver services.<br/><br/><strong>3. How We Use Personal Information</strong><br/><br/>Northstar Studio uses personal information to respond to enquiries, prepare proposals, provide booked or purchased services, process payments, send transactional communications, verify identity where required, manage accounts, maintain records, deliver customer support, improve website performance, personalise user experience, carry out analytics, protect the website from misuse, comply with legal obligations, and send marketing communications where permitted by law or consent. Personal information may also be used for internal reporting, service improvement, fraud prevention, complaint handling, and enforcing contractual rights.<br/><br/><strong>4. Legal Bases for Processing</strong><br/><br/>Where privacy law requires a legal basis for processing, Northstar Studio relies on one or more of the following: consent, where a person has opted in to receive marketing or agreed to the use of optional cookies; performance of a contract, where the information is needed to provide requested services or fulfil an order; legitimate interests, where the business uses information to improve operations, maintain security, analyse demand, or respond to general business enquiries; and compliance with legal obligations, where records must be kept or disclosures must be made to regulators, courts, taxation authorities, or other lawful bodies.<br/><br/><strong>5. Cookies, Analytics, and Tracking Technologies</strong><br/><br/>This website may use cookies, pixels, tags, session storage, and related technologies to keep the site functioning, remember user preferences, measure performance, understand traffic sources, and support advertising or remarketing. Insert a list of the technologies actually used on the website, such as Google Analytics, Meta Pixel, Hotjar, Microsoft Clarity, Stripe, booking widgets, chat tools, or CRM tracking scripts. If regional laws require cookie consent banners or opt-out tools, those mechanisms should be implemented and described here. A person can usually control cookies through browser settings, but doing so may affect how some features work.<br/><br/><strong>6. When We Share Information</strong><br/><br/>Northstar Studio does not sell personal information in the ordinary course of business. Personal information may be shared with trusted third parties only where reasonably necessary to run the business or meet legal requirements. These third parties may include website hosts, cloud storage providers, payment processors, banks, accountants, lawyers, email service providers, CRM providers, advertising partners, booking systems, analytics vendors, contractors, subcontractors, and customer support tools. Information may also be disclosed where required by law, to respond to lawful requests, to protect rights and safety, to investigate suspected fraud or abuse, or in connection with a sale, merger, restructuring, or transfer of the business.<br/><br/><strong>7. International Transfers</strong><br/><br/>If Northstar Studio uses software, contractors, or service providers located outside the country in which a person is based, personal information may be transferred to and processed in other jurisdictions. Where required by law, Northstar Studio will use appropriate safeguards for those transfers, such as contractual protections, vendor due diligence, or equivalent lawful transfer mechanisms. Insert the relevant transfer language here if the business collects information from residents of jurisdictions with cross-border data transfer restrictions.<br/><br/><strong>8. Data Retention</strong><br/><br/>Northstar Studio keeps personal information only for as long as reasonably necessary to fulfil the purposes described in this Privacy Policy, including delivering services, resolving disputes, maintaining business and tax records, meeting legal requirements, enforcing agreements, and protecting the business from fraud or complaints. Retention periods should reflect the actual systems used by the business. Once information is no longer needed, it should be securely deleted, anonymised, or archived in accordance with internal record-keeping requirements and applicable law.<br/><br/><strong>9. Security Measures</strong><br/><br/>Northstar Studio takes reasonable administrative, technical, and physical steps to protect personal information from unauthorised access, misuse, interference, loss, disclosure, or alteration. These measures may include access controls, password protections, software updates, encryption, restricted staff access, vendor screening, and secure payment handling. No online system can be guaranteed completely secure, so the business cannot promise absolute security, but it will take commercially reasonable steps to protect the information it handles.<br/><br/><strong>10. Individual Rights</strong><br/><br/>Depending on the laws that apply, a person may have the right to request access to personal information, correction of inaccurate data, deletion of information, restriction of processing, objection to certain uses, portability of eligible data, withdrawal of consent, or a complaint to a privacy regulator. Northstar Studio will assess and respond to rights requests in accordance with applicable law. To exercise a privacy right, a person should contact [Privacy Contact Email] and provide enough information for identity verification and request handling.<br/><br/><strong>11. Marketing Communications</strong><br/><br/>If a person subscribes to updates or otherwise consents to marketing, Northstar Studio may send promotional emails, SMS, newsletters, offers, launch announcements, or service-related campaigns. A person can opt out of marketing at any time by using the unsubscribe mechanism in the message or by contacting the business directly. Operational emails about active services, invoices, bookings, legal notices, or account matters may still be sent where necessary even if marketing preferences are withdrawn.<br/><br/><strong>12. Children’s Privacy</strong><br/><br/>This website is not intended for children under [Minimum Age Required by Applicable Law], and Northstar Studio does not knowingly collect personal information from children without lawful authority or parental consent where required. If the business becomes aware that personal information has been collected from a child contrary to law, it will take appropriate steps to delete that information.<br/><br/><strong>13. Third-Party Websites and Services</strong><br/><br/>This website may contain links to third-party websites, booking tools, payment providers, social media platforms, embedded content, or external applications. Northstar Studio is not responsible for the privacy or security practices of those third parties. Users should review the privacy policies of any external platform they interact with through this website.<br/><br/><strong>14. Changes to This Privacy Policy</strong><br/><br/>Northstar Studio may update this Privacy Policy from time to time to reflect changes in business operations, technology, legal requirements, or data practices. The updated version should be published on this page with a revised effective date. Where required by law, users will be given additional notice or asked for fresh consent before material changes take effect.<br/><br/><strong>15. Contact Us</strong><br/><br/>Questions, concerns, access requests, correction requests, deletion requests, and privacy complaints should be directed to:<br/><br/>[Business Legal Name]<br/>Trading as Northstar Studio<br/>[Business Address]<br/>[Privacy Contact Email]<br/>[Privacy Contact Phone]<br/><br/>If the business is subject to a specific privacy regulator or supervisory authority, insert the relevant jurisdiction and complaint escalation details here.",
+              "alignment": "left",
+              "textSize": "medium",
+              "textFontSize": 16,
+              "fontFamily": "system-ui",
+              "fontWeight": "400",
+              "minHeight": "auto",
+              "fullWidthBackground": true,
+              "enableParallax": false,
+              "textColor": "#0f172a",
+              "backgroundColor": "#ffffff",
+              "backgroundImage": "",
+              "paddingTop": 40,
+              "paddingBottom": 40,
+              "textAnimation": "fade-in",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "bb0b2ef1-11e9-46b0-b104-7f839294dd17",
+            "type": "divider",
+            "props": {
+              "style": "line",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "e24d9453-5bb8-4d10-972e-022a62890438",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ],
+        "Terms of Service": [
+          {
+            "id": "5869fdf2-b906-4418-9c15-4fa3f0cdf214",
+            "type": "nav-bar",
+            "props": {
+              "variant": "boxed-brand",
+              "fullWidthBackground": true,
+              "showLogo": true,
+              "logo": "",
+              "logoWidth": 44,
+              "stickyMode": "sticky-solid",
+              "mobileMenuStyle": "hamburger",
+              "brand": "Northstar Studio",
+              "brandFontSize": 18,
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "linkFontSize": 16,
+              "linkHoverEffect": "fill",
+              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+              "linkHoverTextColor": "#ffffff",
+              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+              "activeLinkTextColor": "#ffffff",
+              "ctaText": "Start Project",
+              "ctaLink": "?page=contact",
+              "ctaFontSize": 16,
+              "backgroundColor": "#081120",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "textColor": "#e2e8f0",
+              "buttonColor": "#ffffff",
+              "buttonTextColor": "#0f172a",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "2656714b-3734-4c37-8bb4-310f4d3dd5ae",
+            "type": "hero",
+            "props": {
+              "heroVariant": "split",
+              "headline": "Terms of Service",
+              "subheadline": "Set the legal rules, commercial terms, disclaimers, and service conditions that apply to this website.",
+              "ctaText": "Contact us",
+              "ctaLink": "?page=contact",
+              "headlineAlignment": "center",
+              "headlineColor": "#ffffff",
+              "headlineFontFamily": "system-ui, -apple-system, sans-serif",
+              "headlineFontWeight": "700",
+              "headlineFontSize": 72,
+              "subheadlineFontSize": 21,
+              "textColor": "#e2e8f0",
+              "fontFamily": "system-ui, -apple-system, sans-serif",
+              "fontWeight": "400",
+              "buttonColor": "#22c55e",
+              "buttonTextColor": "#081120",
+              "fullWidthBackground": true,
+              "enableParallax": true,
+              "backgroundStyle": "image",
+              "backgroundColor": "#081120",
+              "backgroundImage": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80",
+              "backgroundVideoUrl": "",
+              "backgroundPosition": "center center",
+              "minHeight": "540px",
+              "baseLayoutWidth": 1500,
+              "eyebrow": "",
+              "secondaryCtaText": "",
+              "secondaryCtaLink": "",
+              "contentWidth": 760,
+              "sectionAnimation": "blur-in",
+              "sectionAnimationDelay": 0,
+              "sectionAnimationSpeed": 1.05,
+              "textAnimation": "fade-up",
+              "textAnimationDelay": 0.08,
+              "textAnimationSpeed": 0.95,
+              "subheadlineAnimation": "fade-in",
+              "subheadlineAnimationDelay": 0.16,
+              "subheadlineAnimationSpeed": 1.05,
+              "floatingImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+              "floatingX": 77,
+              "floatingY": 52,
+              "floatingWidth": 320,
+              "floatingHeight": 320
+            }
+          },
+          {
+            "id": "bbfc5901-b85e-4bf1-b036-473c426112bf",
+            "type": "divider",
+            "props": {
+              "style": "dashes",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "00ddacc5-fd5f-4d15-9a0e-5a48898595de",
+            "type": "text",
+            "props": {
+              "text": "<strong>Terms of Service</strong><br/><br/>Effective Date: [Effective Date]<br/>Last Updated: [Last Updated Date]<br/><br/>These Terms of Service govern access to and use of the website operated by [Business Legal Name], trading as Northstar Studio, as well as any products, services, digital resources, bookings, proposals, subscriptions, or communications made available through the website. By accessing the website or engaging with Northstar Studio, a user agrees to be bound by these Terms of Service and any additional policies, notices, or agreements that are expressly incorporated into them.<br/><br/><strong>1. Parties and Scope</strong><br/><br/>These Terms apply between [Business Legal Name], trading as Northstar Studio, and any person or entity who visits the website, submits an enquiry, makes a booking, purchases a product or service, creates an account, or otherwise interacts with the business through this website. If a person is acting on behalf of a company, trust, partnership, or other entity, that person confirms they have authority to bind that entity to these Terms.<br/><br/><strong>2. Website Use</strong><br/><br/>Users may access the website only for lawful purposes and in a way that does not infringe the rights of others, disrupt site availability, interfere with security, introduce malicious code, scrape data without permission, attempt unauthorised access, impersonate another person, or misuse content, forms, systems, or communications. Northstar Studio may suspend, restrict, or terminate access to the website at any time if it believes a user has breached these Terms, created risk for the business, or used the website in a way that is unlawful, abusive, misleading, or harmful.<br/><br/><strong>3. Services, Quotes, and Enquiries</strong><br/><br/>Information on this website is provided for general information and marketing purposes unless stated otherwise. A submitted enquiry, contact form, booking request, discovery call, or quote request does not by itself create a binding service agreement unless Northstar Studio expressly confirms the engagement in writing. Quotes, estimates, proposals, packages, timelines, deliverables, and pricing shown on the website or in pre-contract discussions are subject to change, confirmation, scoping, availability, and any separate written agreement issued by the business.<br/><br/><strong>4. Bookings, Orders, and Acceptance</strong><br/><br/>If the website allows a user to request a booking, appointment, consultation, trial, reservation, or order, the request is not confirmed until Northstar Studio accepts it. The business may reject or reschedule requests at its discretion, including where availability changes, information is incomplete, payment is not received, the request falls outside the business scope, or the user is not a suitable fit for the relevant service. Insert any specific acceptance, intake, screening, waitlist, or approval language that applies to the business model.<br/><br/><strong>5. Payments, Deposits, and Billing</strong><br/><br/>Where payment is required, the user agrees to pay all applicable fees, taxes, charges, and approved expenses in the amount and currency specified by Northstar Studio. Insert the actual billing rules that apply to the business here, including whether deposits are required, whether invoices are due on issue or within a set number of days, whether subscriptions renew automatically, whether late fees apply, and whether work may pause if payment is overdue. If the website uses third-party payment processors, payment handling is also subject to the terms of those providers.<br/><br/><strong>6. Cancellations, Rescheduling, and Refunds</strong><br/><br/>Cancellation, rescheduling, refund, and credit entitlements depend on the business model and must be customised before publication. Insert the actual policy that applies to bookings, services, memberships, events, retainers, digital products, or consultations. Unless local law requires otherwise, Northstar Studio may retain deposits, charge for work already completed, deduct administrative costs, or refuse refunds for services already delivered, custom work commenced, perishable dates, or digital resources already accessed.<br/><br/><strong>7. User Responsibilities</strong><br/><br/>A user agrees to provide accurate and complete information, respond in a timely way where input is required, maintain the confidentiality of any account credentials, and cooperate with reasonable requests necessary for delivery of services. Northstar Studio is not responsible for delays, failures, or extra costs caused by missing information, inaccurate submissions, delayed approvals, third-party provider failures, changes requested after work begins, or circumstances outside the business’s reasonable control.<br/><br/><strong>8. Intellectual Property</strong><br/><br/>Unless otherwise stated in a separate written agreement, all content on this website, including text, designs, branding, graphics, layouts, code, documents, videos, downloads, and other materials, is owned by or licensed to Northstar Studio and is protected by intellectual property laws. A user may view the website for personal or internal business evaluation purposes, but may not reproduce, copy, republish, distribute, modify, exploit, reverse engineer, or create derivative works from any content without prior written permission. If the business provides custom deliverables, ownership, licence scope, portfolio rights, and usage rights should be defined in the relevant client agreement.<br/><br/><strong>9. Third-Party Platforms and Integrations</strong><br/><br/>This website may integrate with or link to third-party services such as payment gateways, booking systems, social media platforms, analytics tools, maps, video providers, CRM systems, or external software. Northstar Studio is not responsible for the availability, security, functionality, or terms of any third-party service. Use of those services may be subject to separate terms and policies imposed by the relevant provider.<br/><br/><strong>10. Disclaimers</strong><br/><br/>To the maximum extent permitted by law, the website and its content are provided on an “as is” and “as available” basis. Northstar Studio does not guarantee uninterrupted access, error-free operation, specific outcomes, or suitability for every purpose. Insert any service-specific disclaimers relevant to the business here, such as educational-not-advice wording, results-not-guaranteed language, consultation limitations, or information-only statements. Nothing in these Terms excludes rights that cannot lawfully be excluded under applicable consumer or contract law.<br/><br/><strong>11. Limitation of Liability</strong><br/><br/>To the maximum extent permitted by law, Northstar Studio is not liable for indirect, incidental, consequential, special, punitive, or loss-of-profit damages arising from use of the website, reliance on its content, third-party service failures, unauthorised access, delays, interruptions, or any service relationship except where liability cannot legally be limited. Where liability may be limited by law, Northstar Studio's total liability in connection with a claim relating to the website or services will be limited to the amount paid by the relevant user for the affected service in the [insert relevant time period], or another lawful cap set by the governing agreement or applicable legislation.<br/><br/><strong>12. Indemnity</strong><br/><br/>A user agrees to indemnify and hold harmless Northstar Studio, its directors, officers, employees, contractors, and agents from claims, losses, liabilities, damages, costs, and expenses arising from the user’s unlawful conduct, breach of these Terms, misuse of the website, infringement of third-party rights, or provision of inaccurate or misleading information.<br/><br/><strong>13. Suspension and Termination</strong><br/><br/>Northstar Studio may suspend or terminate access to the website, a user account, a booking pathway, or service-related access where reasonably necessary to protect the business, enforce these Terms, manage risk, address non-payment, investigate misconduct, comply with law, or respond to security issues. Rights and obligations intended to survive termination, including payment obligations, liability limits, indemnities, confidentiality, and intellectual property protections, will continue after termination.<br/><br/><strong>14. Privacy</strong><br/><br/>Use of the website is also subject to the Privacy Policy published by Northstar Studio. By using the website, a user acknowledges that personal information may be collected and handled in accordance with that policy.<br/><br/><strong>15. Governing Law and Disputes</strong><br/><br/>These Terms are governed by the laws of [Jurisdiction, State, or Country], unless another mandatory law applies. The parties agree that courts or tribunals located in [Jurisdiction] will have non-exclusive or exclusive jurisdiction, depending on the business’s preferred position and applicable law. Insert any dispute resolution steps required by the business, such as negotiation periods, mediation, venue rules, or consumer complaint processes, before publication.<br/><br/><strong>16. Changes to These Terms</strong><br/><br/>Northstar Studio may update these Terms from time to time. The updated version will be posted on this page with a revised effective date. Continued use of the website after an update constitutes acceptance of the revised Terms to the extent permitted by law.<br/><br/><strong>17. Contact Details</strong><br/><br/>Questions about these Terms, service conditions, bookings, payments, cancellations, or commercial terms should be directed to:<br/><br/>[Business Legal Name]<br/>Trading as Northstar Studio<br/>[Business Address]<br/>[Contact Email]<br/>[Contact Phone]",
+              "alignment": "left",
+              "textSize": "medium",
+              "textFontSize": 16,
+              "fontFamily": "system-ui",
+              "fontWeight": "400",
+              "minHeight": "auto",
+              "fullWidthBackground": true,
+              "enableParallax": false,
+              "textColor": "#0f172a",
+              "backgroundColor": "#ffffff",
+              "backgroundImage": "",
+              "paddingTop": 40,
+              "paddingBottom": 40,
+              "textAnimation": "fade-in",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "36169bdd-281b-4d53-9007-c0b53929481f",
+            "type": "divider",
+            "props": {
+              "style": "line",
+              "color": "#94a3b8",
+              "baseLayoutWidth": 1500
+            }
+          },
+          {
+            "id": "9fa94998-dd58-478e-9ebf-02b601787ec6",
+            "type": "footer",
+            "props": {
+              "backgroundColor": "#081120",
+              "textColor": "#e2e8f0",
+              "linkColor": "#94a3b8",
+              "borderColor": "rgba(148,163,184,0.2)",
+              "logo": "",
+              "logoWidth": 48,
+              "brand": "Northstar Studio",
+              "tagline": "A sharper digital presence built to position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "contactHeading": "Contact",
+              "contactEmail": "hello@northstarstudio.com",
+              "contactPhone": "(555) 010-2026",
+              "contactAddress": "Serving clients across your market",
+              "navHeading": "Navigate",
+              "navLinks": [
+                {
+                  "label": "Home",
+                  "href": "?page=home"
+                },
+                {
+                  "label": "About",
+                  "href": "?page=about"
+                },
+                {
+                  "label": "Services",
+                  "href": "?page=services"
+                },
+                {
+                  "label": "Contact",
+                  "href": "?page=contact"
+                }
+              ],
+              "extraHeading": "Legal",
+              "extraLinks": [
+                {
+                  "label": "Privacy Policy",
+                  "href": "?page=privacy"
+                },
+                {
+                  "label": "Terms of Service",
+                  "href": "?page=terms"
+                }
+              ],
+              "showNewsletter": true,
+              "newsletterHeading": "Stay in the loop",
+              "newsletterSubtitle": "Use the footer signup for updates, offers, or announcements that keep the site feeling active.",
+              "newsletterButtonText": "Subscribe",
+              "newsletterButtonColor": "#38bdf8",
+              "newsletterButtonTextColor": "#081120",
+              "newsletterActionUrl": "",
+              "newsletterSubmitMethod": "post",
+              "newsletterFallbackEmail": "",
+              "copyrightText": "© 2026 Northstar Studio. All rights reserved.",
+              "baseLayoutWidth": 1500,
+              "fullWidthBackground": true,
+              "footerVariant": "service-grid",
+              "footerEyebrow": "Closing note",
+              "linkGroups": [
+                {
+                  "heading": "Explore",
+                  "links": [
+                    {
+                      "label": "Home",
+                      "href": "?page=home"
+                    },
+                    {
+                      "label": "About",
+                      "href": "?page=about"
+                    }
+                  ]
+                },
+                {
+                  "heading": "More",
+                  "links": [
+                    {
+                      "label": "Services",
+                      "href": "?page=services"
+                    },
+                    {
+                      "label": "Contact",
+                      "href": "?page=contact"
+                    }
+                  ]
+                }
+              ],
+              "spotlightHeading": "What this site should reinforce",
+              "spotlightText": "Position the studio as a premium digital partner and move qualified visitors into a serious project conversation.",
+              "spotlightItems": [
+                "Clarify the offer",
+                "Build trust early",
+                "Move people forward"
+              ]
+            }
+          }
+        ]
+      },
+      "globalNavBlock": null,
+      "globalFooterBlock": null
+    }
+  },
+  "blockDefaults": {}
+}

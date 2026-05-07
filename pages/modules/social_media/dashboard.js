@@ -314,7 +314,7 @@ export default function SocialDashboard() {
           {[
             { icon: '✍️', label: 'Create & Publish',  desc: 'Write posts, use the AI generator, schedule & go live', href: '/modules/social_media/create' },
             { icon: '✏️', label: 'Review Posts',       desc: 'Edit, approve, publish or delete your saved drafts',    href: '/modules/social_media/review' },
-            { icon: '🖼️', label: 'Image Library',     desc: 'Browse and manage your saved social media images',      href: '/modules/social_media/images' },
+            { icon: '🖼️', label: 'Image Library',     desc: 'Browse and manage your saved social media images',      href: '/assets' },
             { icon: '📅', label: 'Schedule Calendar',  desc: 'See all upcoming posts on the calendar view',           href: '/modules/social_media/calendar' },
             { icon: '📁', label: 'Campaigns',          desc: 'Manage saved AI campaigns and post collections',        href: '/modules/social_media/campaigns' },
             { icon: '📬', label: 'Smart Inbox',        desc: 'Review comments and replies from all platforms',        href: '/modules/social_media/inbox' },

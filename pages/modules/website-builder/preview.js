@@ -3,11 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { renderWebsiteBlock } from "../../../components/website-builder/WebsiteBlockRenderer";
-import { getWebsiteTemplatePreview } from "../../../lib/website-builder/projectStore";
+import { deleteWebsiteTemplateOverride, getWebsiteTemplatePreview, updateWebsiteTemplateOverride } from "../../../lib/website-builder/projectStore";
 import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
 import { supabase } from "../../../lib/supabaseClient";
 
-function pickLayoutWidth(blocks, fallback = 1500) {
+function pickLayoutWidth(blocks, fallback = 1120) {
   for (const block of Array.isArray(blocks) ? blocks : []) {
     const value = Number(block?.props?.baseLayoutWidth || 0);
     if (Number.isFinite(value) && value > 0) return value;
@@ -35,6 +35,8 @@ function getThemeAccent(slug = "") {
 export default function ThemePreviewPage() {
   const router = useRouter();
   const [session, setSession] = useState(null);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [defaultsVersion, setDefaultsVersion] = useState(0);
   const routeParams = useMemo(() => {
     const query = router.query || {};
     const search = String(router.asPath || "").split("?")[1] || "";
@@ -49,18 +51,22 @@ export default function ThemePreviewPage() {
 
   const templateSlug = routeParams.templateSlug;
   const pageKey = routeParams.pageKey;
-  const previewRouteReady = router.isReady;
+  const previewRouteReady = router.isReady || (hasMounted && Boolean(templateSlug));
   const previewViewport = ["mobile", "tablet", "desktop"].includes(routeParams.viewport)
     ? routeParams.viewport
     : "desktop";
   const compactPreview = previewViewport === "mobile";
   const accent = getThemeAccent(templateSlug);
-  const preview = useMemo(() => getWebsiteTemplatePreview(templateSlug, pageKey), [templateSlug, pageKey]);
+  const preview = useMemo(() => getWebsiteTemplatePreview(templateSlug, pageKey), [templateSlug, pageKey, defaultsVersion]);
   const assets = useMemo(() => ({ logo: null, images: [] }), []);
-  const layoutWidth = pickLayoutWidth(preview?.blocks || [], 1500);
+  const layoutWidth = pickLayoutWidth(preview?.blocks || [], 1120);
   const previewShellWidth = previewViewport === "mobile" ? 430 : previewViewport === "tablet" ? 920 : layoutWidth;
   const pageBackground = pickPageBackground(preview?.blocks || [], accent.bg);
   const activePageSlug = preview?.activePage?.slug || "";
+  const previewPages = useMemo(
+    () => (preview?.pages || []).filter((page) => !["privacy", "terms"].includes(String(page?.slug || "").toLowerCase())),
+    [preview?.pages]
+  );
   const navigationContext = useMemo(() => {
     if (!preview || !templateSlug) return null;
 
@@ -77,6 +83,10 @@ export default function ThemePreviewPage() {
       basePath: `/modules/website-builder/preview?template=${encodeURIComponent(templateSlug)}&viewport=${encodeURIComponent(previewViewport)}`,
     };
   }, [preview, templateSlug, activePageSlug, previewViewport]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     let subscription;
@@ -97,6 +107,39 @@ export default function ThemePreviewPage() {
       // Template previews should still load even if background library sync fails.
     });
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!templateSlug) return;
+
+    let cancelled = false;
+
+    const syncServerTemplateDefaults = async () => {
+      try {
+        const response = await fetch("/api/website-builder/defaults");
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok || cancelled) return;
+
+        const serverOverride = payload.templateOverrides?.[templateSlug] || null;
+        if (serverOverride) {
+          updateWebsiteTemplateOverride(templateSlug, serverOverride);
+        } else {
+          deleteWebsiteTemplateOverride(templateSlug);
+        }
+
+        if (!cancelled) {
+          setDefaultsVersion((value) => value + 1);
+        }
+      } catch (error) {
+        console.warn("Could not sync server template defaults", error);
+      }
+    };
+
+    syncServerTemplateDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [templateSlug]);
 
   return (
     <>
@@ -135,7 +178,7 @@ export default function ThemePreviewPage() {
                   </div>
                 </div>
                 <section style={styles.pageTabsFloating}>
-                  {preview.pages.map((page) => (
+                  {previewPages.map((page) => (
                     <Link
                       key={page.slug}
                       href={`/modules/website-builder/preview?template=${encodeURIComponent(templateSlug)}&page=${encodeURIComponent(page.slug)}&viewport=${encodeURIComponent(previewViewport)}`}

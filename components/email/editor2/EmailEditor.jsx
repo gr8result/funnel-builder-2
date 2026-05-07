@@ -5,6 +5,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
+import { supabase } from "../../../utils/supabase-client";
+import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 const ImageEditModal = dynamic(() => import("./ImageEditModal"), { ssr: false });
 const ImageLibraryModal = dynamic(() => import("./ImageLibraryModal"), { ssr: false });
 const AiGenerateModal = dynamic(() => import("./AiGenerateModal"), { ssr: false });
@@ -5236,25 +5238,12 @@ export default function EmailEditor({
   // ── Image library modal ───────────────────────────────────────
   const [libraryState, setLibraryState] = useState(null); // { blockId, field, fieldIdx }
 
-  const openLibrary = useCallback((blockId, field, fieldIdx) => {
-    if (!blockId || !field) return;
-    setLibraryState(null);
-    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-      window.requestAnimationFrame(() => {
-        setLibraryState({ blockId, field, fieldIdx: fieldIdx ?? null });
-      });
-      return;
-    }
-    setLibraryState({ blockId, field, fieldIdx: fieldIdx ?? null });
-  }, []);
-
-  const applyLibraryImage = useCallback((url) => {
-    if (!libraryState) return;
-    const { blockId, field, fieldIdx } = libraryState;
+  const applyLibraryImageToTarget = useCallback((target, url) => {
+    if (!target || !url) return;
+    const { blockId, field, fieldIdx } = target;
 
     if (blockId === "__emailSettings") {
       setDocSettings(prev => normalizeEmailSettings({ ...prev, [field]: url }));
-      setLibraryState(null);
       return;
     }
 
@@ -5271,8 +5260,36 @@ export default function EmailEditor({
       }
       return { ...b, props: { ...p, [field]: url } };
     }));
+  }, []);
+
+  const openLibrary = useCallback((blockId, field, fieldIdx) => {
+    if (!blockId || !field) return;
+    const nextState = { blockId, field, fieldIdx: fieldIdx ?? null };
+    const opened = openSharedMediaPicker({
+      onPick: (asset) => applyLibraryImageToTarget(nextState, asset?.url || ""),
+      onBlocked: () => {
+        setLibraryState(null);
+        if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+          window.requestAnimationFrame(() => {
+            setLibraryState(nextState);
+          });
+          return;
+        }
+        setLibraryState(nextState);
+      },
+    });
+    if (opened) {
+      setLibraryState(null);
+      return;
+    }
+    setLibraryState(nextState);
+  }, [applyLibraryImageToTarget]);
+
+  const applyLibraryImage = useCallback((url) => {
+    if (!libraryState) return;
+    applyLibraryImageToTarget(libraryState, url);
     setLibraryState(null);
-  }, [libraryState]);
+  }, [applyLibraryImageToTarget, libraryState]);
 
   // ── Image edit modal ─────────────────────────────────────────
   const [imageEditState, setImageEditState] = useState(null); // { blockId, field, fieldIdx, src }
@@ -5687,14 +5704,21 @@ export default function EmailEditor({
         r.onerror = rej;
         r.readAsDataURL(file);
       });
-      const resp = await fetch(`/api/email/editor-images?userId=${encodeURIComponent(safeUid)}`, {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token || "";
+      if (!token) throw new Error("Sign in required to upload images.");
+
+      const resp = await fetch("/api/social/save-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: safeUid, filename: file.name || "upload.png", base64 }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageUrl: base64, description: file.name || "upload.png" }),
       });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok || !data?.url) throw new Error(data?.error || "Upload failed");
-      const url = data.url;
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok || !payload?.image?.url) throw new Error(payload?.error || "Upload failed");
+      const url = payload.image.url;
 
       if (blockId === "__emailSettings") {
         setDocSettings(prev => normalizeEmailSettings({ ...prev, [field]: url }));

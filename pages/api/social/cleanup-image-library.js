@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { requireUser } from '../../../lib/social/auth';
+import { isBlockedSharedMediaHash, isPlaceholderSvgBuffer } from '../../../lib/sharedMediaModeration';
 
 function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
@@ -44,18 +45,6 @@ async function listAllStorageEntries(admin, bucket, prefix) {
 
 function isLegacyGenericLibraryObject(name = '') {
   return /^library-(funnel-template|website-template)-/i.test(String(name || ''));
-}
-
-const BAD_SHARED_LIBRARY_HASHES = new Set([
-  '4388792057fb681774bb6e1f4e97a50208241b7fe66a58f0117cb36fc20c96df',
-  '860908d39ccee3bcba61f66e9ac45fc353d59a7505f50705f35852bc1ee6d17e',
-]);
-
-function isPlaceholderSvg(buffer, contentType = '') {
-  const type = String(contentType || '').toLowerCase();
-  if (!type.includes('svg')) return false;
-  const text = String(buffer?.toString('utf8') || '');
-  return text.includes('960 x 720') || text.includes('Feature 1') || text.includes('Feature 2') || text.includes('Feature 3');
 }
 
 export default async function handler(req, res) {
@@ -151,7 +140,7 @@ export default async function handler(req, res) {
 
       const buffer = Buffer.from(await response.arrayBuffer());
       const hash = sha256(buffer);
-      if (BAD_SHARED_LIBRARY_HASHES.has(hash) || isPlaceholderSvg(buffer, contentType)) {
+      if (isBlockedSharedMediaHash(hash) || isPlaceholderSvgBuffer(buffer, contentType)) {
         invalidRowIds.push(row.id);
         if (target?.bucket && target?.path) {
           if (!invalidObjectsByBucket.has(target.bucket)) invalidObjectsByBucket.set(target.bucket, []);

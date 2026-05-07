@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import ReactCrop from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import { supabase } from "../../../utils/supabase-client";
 
 function buildCanvasFromImage(image) {
   if (!image) throw new Error("Image not ready");
@@ -143,16 +144,19 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
 
   async function persistBase64Image(base64, filename = "edited.png") {
     if (!userId || !String(base64 || "").startsWith("data:")) return base64;
-    const resp = await fetch(
-      `/api/email/editor-images?userId=${encodeURIComponent(userId || "")}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, filename, base64 }),
-      }
-    );
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token || "";
+    if (!token) return base64;
+    const resp = await fetch("/api/social/save-image", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ imageUrl: base64, description: filename }),
+    });
     const out = await resp.json().catch(() => ({}));
-    return out.url || base64;
+    return out?.image?.url || base64;
   }
 
   function handleImageLoad(e) {
@@ -297,29 +301,58 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
 
   return (
     <div
+      data-image-edit-modal="true"
       style={{
         position: "fixed", inset: 0, zIndex: 9999,
         background: "rgba(0,0,0,0.78)",
         display: "flex", alignItems: "center", justifyContent: "center",
         fontFamily: "Inter,system-ui,Arial,sans-serif",
+        color: "#ffffff",
+        fontSize: 16,
       }}
       onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
     >
+      <style>{`
+        [data-image-edit-modal="true"] * {
+          color: #ffffff;
+        }
+
+        [data-image-edit-modal="true"] div,
+        [data-image-edit-modal="true"] span,
+        [data-image-edit-modal="true"] p,
+        [data-image-edit-modal="true"] label,
+        [data-image-edit-modal="true"] button,
+        [data-image-edit-modal="true"] input,
+        [data-image-edit-modal="true"] strong {
+          font-size: max(16px, 1rem);
+        }
+
+        [data-image-edit-modal="true"] button {
+          font-weight: 800;
+        }
+
+        [data-image-edit-modal="true"] .ReactCrop,
+        [data-image-edit-modal="true"] .ReactCrop * {
+          color: #ffffff;
+          font-size: 16px;
+        }
+      `}</style>
       <div style={{
         background: "#0f172a", borderRadius: 14,
+        border: "2px solid rgba(125,211,252,0.32)",
         boxShadow: "0 24px 70px rgba(0,0,0,0.65)",
         display: "flex", flexDirection: "column",
         maxWidth: "92vw", maxHeight: "92vh",
-        minWidth: 440, overflow: "hidden",
+        minWidth: 560, overflow: "hidden",
       }}>
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 18px", borderBottom: "1px solid #1e293b", flexShrink: 0,
         }}>
-          <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>Edit Image</span>
+          <span style={{ fontWeight: 800, fontSize: 20, color: "#ffffff", letterSpacing: "0.01em" }}>Edit Image</span>
           <button
             onClick={onCancel}
-            style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0 }}
+            style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", fontSize: 26, fontWeight: 700, lineHeight: 1, padding: 0 }}
           >
             ×
           </button>
@@ -348,28 +381,33 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
                 />
               </ReactCrop>
             ) : (
-              <div style={{ color: "#475569", fontSize: 14 }}>No image</div>
+              <div style={{ color: "#ffffff", fontSize: 16, fontWeight: 600 }}>No image</div>
             )}
           </div>
 
           <div style={{
-            width: 186, flexShrink: 0, padding: 18,
+            width: 300, flexShrink: 0, padding: 22,
             display: "flex", flexDirection: "column", gap: 10,
             background: "#0f172a", borderLeft: "1px solid #1e293b",
           }}>
             {status && (
               <div style={{
-                padding: "8px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                padding: "12px 14px", borderRadius: 10, fontSize: 16, fontWeight: 700,
                 background: status.type === "err" ? "#7f1d1d" : "#14532d",
-                color: status.type === "err" ? "#fca5a5" : "#86efac",
+                color: "#ffffff",
                 lineHeight: 1.4,
               }}>
                 {status.msg}
               </div>
             )}
 
-            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
-              A crop area is already selected. Drag the handles if you want, then click <strong style={{ color: "#a5b4fc" }}>Apply Crop</strong>.
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+                Crop
+              </div>
+              <div style={{ fontSize: 16, color: "#ffffff", lineHeight: 1.5 }}>
+                A crop area is already selected. Drag the handles if you want, then click <strong style={{ color: "#ffffff", fontWeight: 800 }}>Apply Crop</strong>.
+              </div>
             </div>
 
             <ABtn
@@ -382,8 +420,13 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
 
             <div style={{ borderTop: "1px solid #1e293b", margin: "4px 0" }} />
 
-            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
-              Automatically remove the image background using the configured API. If the key is missing, the editor will fall back to a very basic local cleanup.
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+                Background Removal
+              </div>
+              <div style={{ fontSize: 16, color: "#ffffff", lineHeight: 1.5 }}>
+                Automatically remove the image background using the configured API. If the key is missing, the editor will fall back to a very basic local cleanup.
+              </div>
             </div>
 
             <ABtn
@@ -417,15 +460,15 @@ function ABtn({ onClick, children, color = "#334155", disabled = false }) {
       disabled={disabled}
       style={{
         width: "100%",
-        minHeight: 38,
+        minHeight: 48,
         border: "none",
         borderRadius: 8,
         background: disabled ? "#1e293b" : color,
-        color: "#fff",
-        fontSize: 13,
-        fontWeight: 700,
+        color: "#ffffff",
+        fontSize: 16,
+        fontWeight: 800,
         cursor: disabled ? "not-allowed" : "pointer",
-        padding: "10px 12px",
+        padding: "12px 14px",
         opacity: disabled ? 0.65 : 1,
       }}
     >

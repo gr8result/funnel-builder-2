@@ -14,6 +14,7 @@ import {
   applyAssetToProps,
   createStoredAsset,
   mergeWebsiteBuilderAssetSources,
+  normalizeSelectedAsset,
   syncWebsiteBuilderSharedAssetCache,
   uploadSharedMediaLibraryAsset,
 } from "../../../../../lib/website-builder/mediaAssets";
@@ -210,7 +211,8 @@ export default function ProjectCanvasPage() {
   }
 
   function handleSelectAsset(blockIndex, fieldKey, asset) {
-    if (!asset?.src || !project || !activePage) return;
+    const normalizedAsset = normalizeSelectedAsset(asset);
+    if (!normalizedAsset?.src || !project || !activePage) return;
 
     const currentBlocks = Array.isArray(project?.pageBlocks?.[activePage])
       ? [...project.pageBlocks[activePage]]
@@ -219,8 +221,8 @@ export default function ProjectCanvasPage() {
     if (!currentBlocks[blockIndex]) return;
 
     const existingProps = currentBlocks[blockIndex]?.props || {};
-    const nextProps = applyAssetToProps(existingProps, fieldKey, asset);
-    nextProps[fieldKey] = String(asset.src || "").startsWith("data:") ? "" : asset.src;
+    const nextProps = applyAssetToProps(existingProps, fieldKey, normalizedAsset);
+    nextProps[fieldKey] = String(normalizedAsset.src || "").startsWith("data:") ? "" : normalizedAsset.src;
 
     currentBlocks[blockIndex] = {
       ...currentBlocks[blockIndex],

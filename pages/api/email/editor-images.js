@@ -5,7 +5,8 @@
 // ============================================
 
 import { createClient } from "@supabase/supabase-js";
-import crypto from "crypto";
+import { listMergedSharedMediaLibrary } from "../../../lib/sharedMediaLibrary";
+import { persistImageForUser } from "../social/save-image";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -65,6 +66,75 @@ function filenameFromUrl(url, fallbackExt) {
   }
 }
 
+function canonicalUrl(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function dedupeUrls(urls = []) {
+  const seen = new Set();
+  return urls.filter((url) => {
+    const key = canonicalUrl(url);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function listLegacyEmailUrls(basePath) {
+  const { data, error } = await admin.storage.from(BUCKET).list(basePath, {
+    limit: 200,
+    offset: 0,
+    sortBy: { column: "name", order: "desc" },
+  });
+
+  if (error) throw error;
+
+  return (data || [])
+    .filter((x) => x?.name && !x.name.endsWith("/"))
+    .map((f) => {
+      const path = `${basePath}/${f.name}`;
+      const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
+      return pub?.publicUrl || null;
+    })
+    .filter(Boolean);
+}
+
+async function deleteSharedImageForUser(userId, url) {
+  const normalized = canonicalUrl(url);
+  if (!normalized) return false;
+
+  const { data: row } = await admin
+    .from("social_image_library")
+    .select("id, storage_path, url")
+    .eq("user_id", userId)
+    .or(`url.eq.${normalized},url.eq.${String(url || "")}`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!row?.storage_path || !String(row.storage_path).startsWith("assets:")) return false;
+
+  const assetPath = String(row.storage_path).slice("assets:".length);
+  const { error: storageError } = await admin.storage.from("assets").remove([assetPath]);
+  if (storageError) throw storageError;
+
+  await admin
+    .from("social_image_library")
+    .delete()
+    .eq("user_id", userId)
+    .or(`storage_path.eq.${row.storage_path},url.eq.${row.url}`);
+
+  return true;
+}
+
 export default async function handler(req, res) {
   try {
     const userId = String(req.query.userId || req.body?.userId || "").trim();
@@ -73,22 +143,15 @@ export default async function handler(req, res) {
     const basePath = `${userId}/${folderOverride || FOLDER}`;
 
     if (req.method === "GET") {
-      const { data, error } = await admin.storage.from(BUCKET).list(basePath, {
-        limit: 200,
-        offset: 0,
-        sortBy: { column: "name", order: "desc" },
-      });
+      const [sharedImages, legacyUrls] = await Promise.all([
+        listMergedSharedMediaLibrary({ admin, userId }),
+        listLegacyEmailUrls(basePath),
+      ]);
 
-      if (error) return bad(res, 500, "List failed", error.message);
-
-      const urls = (data || [])
-        .filter((x) => x?.name && !x.name.endsWith("/"))
-        .map((f) => {
-          const path = `${basePath}/${f.name}`;
-          const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
-          return pub?.publicUrl || null;
-        })
-        .filter(Boolean);
+      const urls = dedupeUrls([
+        ...(sharedImages || []).map((image) => image?.url).filter(Boolean),
+        ...legacyUrls,
+      ]);
 
       return ok(res, { urls, count: urls.length });
     }
@@ -121,19 +184,17 @@ export default async function handler(req, res) {
         return bad(res, 400, "Missing image data", "POST { base64 } or { sourceUrl } required");
       }
 
-      const stamp = Date.now();
-      const hash = crypto.createHash("md5").update(buffer).digest("hex").slice(0, 10);
-      const path = `${basePath}/${stamp}_${hash}_${resolvedFilename}`;
+      const sharedImage = await persistImageForUser(
+        { user: { id: userId }, admin },
+        {
+          imageUrl: `data:${mime || "image/png"};base64,${buffer.toString("base64")}`,
+          description: resolvedFilename,
+          tags: ["email"],
+          source: "email-editor",
+        }
+      );
 
-      const { error: upErr } = await admin.storage.from(BUCKET).upload(path, buffer, {
-        contentType: mime || "image/png",
-        upsert: false,
-      });
-
-      if (upErr) return bad(res, 500, "Upload failed", upErr.message);
-
-      const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
-      return ok(res, { url: pub?.publicUrl || null });
+      return ok(res, { url: sharedImage?.url || null, image: sharedImage || null });
     }
 
     if (req.method === "DELETE") {
@@ -141,19 +202,20 @@ export default async function handler(req, res) {
       const { url } = req.body || {};
       if (!url) return bad(res, 400, "Missing url", "Send { url } of the image to delete");
 
-      // Extract the storage path from the public URL
-      // Public URLs look like: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+      const deletedShared = await deleteSharedImageForUser(userId, url).catch((error) => {
+        throw error;
+      });
+      if (deletedShared) return ok(res, { deleted: url, source: "shared" });
+
       let filePath = null;
       try {
         const parsed = new URL(String(url));
         const marker = `/object/public/${BUCKET}/`;
         const idx = parsed.pathname.indexOf(marker);
         if (idx !== -1) filePath = decodeURIComponent(parsed.pathname.slice(idx + marker.length));
-      } catch { /* ignore */ }
+      } catch {}
 
-      if (!filePath) return bad(res, 400, "Cannot parse path", "URL does not match expected Supabase storage format");
-
-      // Security: ensure the path belongs to this userId
+      if (!filePath) return bad(res, 400, "Cannot parse path", "URL does not match expected storage format");
       if (!filePath.startsWith(`${userId}/`)) {
         return bad(res, 403, "Forbidden", "You can only delete your own images");
       }
@@ -161,7 +223,7 @@ export default async function handler(req, res) {
       const { error: delErr } = await admin.storage.from(BUCKET).remove([filePath]);
       if (delErr) return bad(res, 500, "Delete failed", delErr.message);
 
-      return ok(res, { deleted: filePath });
+      return ok(res, { deleted: filePath, source: "legacy-email" });
     }
 
     res.setHeader("Allow", "GET, POST, DELETE");

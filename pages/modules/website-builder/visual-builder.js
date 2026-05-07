@@ -7,6 +7,7 @@ import {
   applyAssetToProps,
   createStoredAsset,
   mergeWebsiteBuilderAssetSources,
+  normalizeSelectedAsset,
   syncWebsiteBuilderSharedAssetCache,
   uploadSharedMediaLibraryAsset,
 } from "../../../lib/website-builder/mediaAssets";
@@ -15,9 +16,11 @@ import { supabase } from "../../../lib/supabaseClient";
 import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
 import {
   createWebsiteProject,
+  deleteWebsiteTemplateOverride,
   getWebsiteBuilderAssets,
   getWebsiteProject,
   saveWebsiteBuilderAssets,
+  updateWebsiteTemplateOverride,
   updateWebsiteProject,
 } from "../../../lib/website-builder/projectStore";
 
@@ -57,6 +60,7 @@ export default function VisualBuilderPage() {
   const [publishBusy, setPublishBusy] = useState(false);
   const [siteSlug, setSiteSlug] = useState("");
   const [customDomain, setCustomDomain] = useState("");
+  const [blockDefaults, setBlockDefaults] = useState({});
 
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
@@ -372,6 +376,125 @@ export default function VisualBuilderPage() {
     }, successMessage);
   }
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncServerDefaults = async () => {
+      try {
+        const response = await fetch("/api/website-builder/defaults");
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok || cancelled) return;
+
+        setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
+
+        const templateSlug = String(project?.templateSlug || "").trim();
+        if (!templateSlug) return;
+
+        const serverOverride = payload.templateOverrides?.[templateSlug] || null;
+        if (serverOverride) {
+          updateWebsiteTemplateOverride(templateSlug, serverOverride);
+        } else {
+          deleteWebsiteTemplateOverride(templateSlug);
+        }
+
+        if (!project?.id) return;
+        const refreshed = getWebsiteProject(project.id);
+        if (!cancelled && refreshed) setProject(refreshed);
+      } catch (error) {
+        console.warn("Could not load website builder defaults", error);
+      }
+    };
+
+    syncServerDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.id, project?.templateSlug]);
+
+  async function saveTemplatePageToServer({ pageName, blocks, globalNavBlock, globalFooterBlock }) {
+    if (!project?.templateSlug) return false;
+
+    try {
+      const response = await fetch("/api/website-builder/defaults", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-template-page",
+          templateSlug: project.templateSlug,
+          pageName,
+          blocks,
+          globalNavBlock,
+          globalFooterBlock,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) return false;
+
+      updateWebsiteTemplateOverride(project.templateSlug, payload.templateOverride || {});
+      setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
+      flashNotice(`Saved ${pageName} to ${project.templateSlug}`, "success", 3600);
+      return true;
+    } catch (error) {
+      flashNotice(error?.message || "Could not save template page", "error");
+      return false;
+    }
+  }
+
+  async function saveTemplateSiteToServer({ pageBlocks, globalNavBlock, globalFooterBlock }) {
+    if (!project?.templateSlug) return false;
+
+    try {
+      const response = await fetch("/api/website-builder/defaults", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-template-site",
+          templateSlug: project.templateSlug,
+          pageBlocks,
+          globalNavBlock,
+          globalFooterBlock,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) return false;
+
+      updateWebsiteTemplateOverride(project.templateSlug, payload.templateOverride || {});
+      setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
+      flashNotice(`Saved ${project.templateSlug} globally`, "success", 3600);
+      return true;
+    } catch (error) {
+      flashNotice(error?.message || "Could not save template", "error");
+      return false;
+    }
+  }
+
+  async function saveBlockDefaultToServer(block) {
+    const blockType = String(block?.type || "").trim();
+    if (!blockType) return false;
+
+    try {
+      const response = await fetch("/api/website-builder/defaults", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-block-default",
+          blockType,
+          props: block?.props || {},
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok) return false;
+
+      setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
+      flashNotice(`Saved ${blockType} block defaults`, "success", 3200);
+      return true;
+    } catch (error) {
+      flashNotice(error?.message || "Could not save block defaults", "error");
+      return false;
+    }
+  }
+
   function saveGlobalBlock(block, role) {
     if (!project?.id || !block) return;
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
@@ -409,7 +532,8 @@ export default function VisualBuilderPage() {
   }
 
   function handleSelectAsset(blockIndex, fieldKey, asset, blocksOverride) {
-    if (!asset?.src) return;
+    const normalizedAsset = normalizeSelectedAsset(asset);
+    if (!normalizedAsset?.src) return;
 
     const currentBlocks = Array.isArray(blocksOverride)
       ? [...blocksOverride]
@@ -420,8 +544,8 @@ export default function VisualBuilderPage() {
     if (!currentBlocks[blockIndex]) return;
 
     const existingProps = currentBlocks[blockIndex]?.props || {};
-    const nextProps = applyAssetToProps(existingProps, fieldKey, asset);
-    nextProps[fieldKey] = String(asset.src || "").startsWith("data:") ? "" : asset.src;
+    const nextProps = applyAssetToProps(existingProps, fieldKey, normalizedAsset);
+    nextProps[fieldKey] = String(normalizedAsset.src || "").startsWith("data:") ? "" : normalizedAsset.src;
 
     currentBlocks[blockIndex] = {
       ...currentBlocks[blockIndex],
@@ -452,6 +576,35 @@ export default function VisualBuilderPage() {
       return asset;
     } catch (error) {
       flashNotice(error?.message || "Image upload failed.");
+    }
+  }
+
+  function openMediaLibrary() {
+    if (typeof window === "undefined") return;
+    window.open("/assets", "_blank", "noopener,noreferrer");
+  }
+
+  async function refreshSharedLibrary() {
+    if (!session?.user?.id) {
+      const currentAssets = getWebsiteBuilderAssets();
+      setBrandAssets(currentAssets);
+      flashNotice("Media library refreshed", "success");
+      return true;
+    }
+
+    try {
+      const mergedAssets = await syncWebsiteBuilderSharedAssetCache({
+        supabase,
+        userId: session.user.id,
+        currentAssets: getWebsiteBuilderAssets(),
+      });
+
+      persistAssets(mergedAssets);
+      flashNotice("Shared media library refreshed", "success");
+      return true;
+    } catch (error) {
+      flashNotice(error?.message || "Could not refresh shared media library", "error");
+      return false;
     }
   }
 
@@ -636,6 +789,7 @@ export default function VisualBuilderPage() {
                   <button type="button" onClick={() => applyDesignPreset("bold")} style={styles.themeBtn}>Bold</button>
                 </div>
               </div>
+
             </div>
 
             <div style={styles.addRow}>
@@ -662,7 +816,13 @@ export default function VisualBuilderPage() {
                 onUploadImage={handleUploadImage}
                 onSelectAsset={handleSelectAsset}
                 onSaveAsGlobal={saveGlobalBlock}
+                onSaveBlockDefault={saveBlockDefaultToServer}
+                onSaveTemplatePage={saveTemplatePageToServer}
+                onSaveTemplateSite={saveTemplateSiteToServer}
                 onUpdateGlobalBlock={updateGlobalBlock}
+                onOpenMediaLibrary={openMediaLibrary}
+                onRefreshAssetLibrary={refreshSharedLibrary}
+                blockDefaults={blockDefaults}
                 showHeader={true}
               />
             </div>
@@ -712,7 +872,7 @@ const styles = {
   },
   mainColumn: {
     minWidth: 0,
-    minHeight: 680,
+    minHeight: "calc(100dvh - 320px)",
     height: "calc(100dvh - 320px)",
     display: "grid",
   },

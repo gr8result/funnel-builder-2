@@ -1,5 +1,6 @@
 import { requireUser } from '../../../lib/social/auth';
 import { createHash } from 'crypto';
+import { isBlockedSharedMediaHash } from '../../../lib/sharedMediaModeration';
 
 const SHARED_ASSET_BUCKET = 'assets';
 
@@ -130,9 +131,14 @@ export default async function handler(req, res) {
       const { mimeType, buffer, suggestedExt } = await readImageInput(imageUrl);
       const extension = suggestedExt || 'jpg';
       const sourceKey = canonicalSourceUrl(imageUrl) || imageUrl;
-      const contentHash = sha256(buffer).slice(0, 20);
+      const fullContentHash = sha256(buffer);
+      if (isBlockedSharedMediaHash(fullContentHash)) {
+        results.push({ assetKey, name: displayName, ok: false, error: 'Blocked image source is not imported into the shared library' });
+        continue;
+      }
+      const contentHash = fullContentHash.slice(0, 20);
       const sourceHash = hashText(sourceKey);
-      const storagePath = `${auth.user.id}/library-${String(sourceHash)}-${contentHash}.${extension}`;
+      const storagePath = `generic/library-${String(sourceHash)}-${contentHash}.${extension}`;
 
       const uploadResult = await auth.admin.storage
         .from(SHARED_ASSET_BUCKET)

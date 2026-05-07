@@ -23,6 +23,7 @@ function buildPrompt({ trade, title, subtitle, service, keywords, variant, slot 
   return [
     framing,
     "Photorealistic trade or local-service marketing image.",
+    "Australian context only.",
     `Trade: ${trade}.`,
     `Focus: ${title}.`,
     subtitle ? `Context: ${subtitle}.` : "",
@@ -30,6 +31,8 @@ function buildPrompt({ trade, title, subtitle, service, keywords, variant, slot 
     slotText,
     keywordText,
     "Show realistic people, tools, vehicles, workspaces, equipment, or finished results relevant to the trade.",
+    "If buildings, vehicles, streets, packaging, uniforms, or suburbs are visible, they must feel appropriate for Australia.",
+    "No American flags, no US police cars, no US road markings, no European streetscapes, and no recognisable overseas landmarks.",
     "No text overlays, no words in the image, no watermarks, no logos, no UI mockups.",
     "No animals, pets, cartoons, or unrelated subjects unless explicitly required by the trade.",
     "Strong composition, natural lighting, production-quality website photography.",

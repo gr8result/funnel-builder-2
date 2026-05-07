@@ -3,8 +3,11 @@
 // Removes background for a given imageUrl using remove.bg
 // - Downloads the imageUrl server-side
 // - Calls remove.bg API
-// - Uploads result PNG into Supabase assets bucket under <userId>/
+// - Persists result PNG into the shared assets library for the user
 // - Returns { publicUrl }
+
+import { createClient } from "@supabase/supabase-js";
+import { persistImageForUser } from "../social/save-image";
 
 export default async function handler(req, res) {
   try {
@@ -29,7 +32,6 @@ export default async function handler(req, res) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !serviceKey) return res.status(500).json({ error: "Missing Supabase env vars" });
 
-    const { createClient } = await import("@supabase/supabase-js");
     const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     });
@@ -74,17 +76,17 @@ export default async function handler(req, res) {
 
     const outBuf = Buffer.from(await rb.arrayBuffer());
 
-    const filePath = `${userId}/email-images/${Date.now()}-removed-bg.png`;
-    const { error: upErr } = await supabaseAdmin.storage.from("email-user-assets").upload(filePath, outBuf, {
-      contentType: "image/png",
-      upsert: true,
-    });
+    const sharedImage = await persistImageForUser(
+      { user: { id: userId }, admin: supabaseAdmin },
+      {
+        imageUrl: `data:image/png;base64,${outBuf.toString("base64")}`,
+        description: "Background removed image",
+        tags: ["edited", "background-removed"],
+        source: "remove-bg",
+      }
+    );
 
-    if (upErr) return res.status(500).json({ error: "Upload failed: " + upErr.message });
-
-    const { data: pub } = supabaseAdmin.storage.from("email-user-assets").getPublicUrl(filePath);
-
-    return res.status(200).json({ publicUrl: pub.publicUrl });
+    return res.status(200).json({ publicUrl: sharedImage?.url || null, image: sharedImage || null });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: e?.message || "Server error" });

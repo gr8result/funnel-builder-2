@@ -18,7 +18,7 @@ function slugify(v) {
     .replace(/(^-|-$)/g, "");
 }
 
-function pickLayoutWidth(blocks, fallback = 1500) {
+function pickLayoutWidth(blocks, fallback = 1120) {
   for (const block of Array.isArray(blocks) ? blocks : []) {
     const value = Number(block?.props?.baseLayoutWidth || 0);
     if (Number.isFinite(value) && value > 0) return value;
@@ -139,7 +139,7 @@ export default function ProjectPreviewPage() {
     ...blocksWithoutNav,
     globalFooterBlock,
   ].filter(Boolean);
-  const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
+  const layoutWidth = pickLayoutWidth(shellBlocks, 1120);
   const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
   const compactPreview = previewViewport === "mobile";
   const previewShellWidth = previewViewport === "mobile"
@@ -166,7 +166,7 @@ export default function ProjectPreviewPage() {
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        <div style={{ ...styles.previewStack, width: "100%", maxWidth: `${previewShellWidth}px`, margin: "0 auto" }}>
+        <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
           {/* Global nav — injected above all page content */}
           {injectNav ? (
             <Fragment key="__global-nav">
@@ -285,6 +285,14 @@ const styles = {
     display: "grid",
     gap: 0,
   },
+  previewViewport: (viewport, previewShellWidth) => ({
+    ...styles.previewStack,
+    width: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
+    maxWidth: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
+    margin: viewport === "desktop" ? 0 : "0 auto",
+    marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
+    marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
+  }),
   brandRow: {
     borderRadius: 18,
     border: "1px solid rgba(148,163,184,0.35)",

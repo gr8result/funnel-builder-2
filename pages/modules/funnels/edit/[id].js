@@ -13,6 +13,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import AuthGate from "../../../../components/AuthGate";
 import AIWriterAssist from "../../../../components/ui/AIWriterAssist";
+import { openSharedMediaPicker } from "../../../../lib/openSharedMediaPicker";
 import { supabase } from "../../../../lib/supabaseClient";
 import { SECTION_BLOCKS, assemblePage } from "../../../../lib/funnelSections";
 
@@ -2637,6 +2638,20 @@ function Editor() {
     if (!editor) return;
 
     const selected = editor.getSelected?.() || selectedCompRef.current || lastBlockCompRef.current || null;
+    const opened = openSharedMediaPicker({
+      onPick: (asset) => insertImageUrlIntoEditor(asset?.url || "", "insert", asset?.name || "Media library image"),
+      onBlocked: () => {
+        if (typeof editor.AssetManager?.open === "function") {
+          editor.AssetManager.open({ target: selected || undefined });
+          return;
+        }
+        if (typeof editor.runCommand === "function") {
+          editor.runCommand("open-assets", { target: selected || undefined });
+        }
+      },
+    });
+    if (opened) return;
+
     if (typeof editor.AssetManager?.open === "function") {
       editor.AssetManager.open({ target: selected || undefined });
       return;

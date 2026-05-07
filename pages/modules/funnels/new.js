@@ -11,8 +11,6 @@ import { FUNNEL_TYPES, assemblePage, getFunnelTemplateLibraryAssets } from '../.
 import { supabase } from '../../../lib/supabaseClient';
 import { getWebsiteBuilderAssets, saveWebsiteBuilderAssets } from '../../../lib/website-builder/projectStore';
 
-const SHARED_LIBRARY_SYNC_VERSION = 'funnel-template-library-v6';
-
 export default function NewFunnelWizard() {
   return (
     <AuthGate>
@@ -50,58 +48,10 @@ function Wizard() {
       const existingAssets = getWebsiteBuilderAssets();
       const funnelAssets = getFunnelTemplateLibraryAssets();
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      let resolvedAssets = funnelAssets;
-
-      if (session?.access_token && session?.user?.id) {
-        const syncKey = `gr8:shared-media-sync:${session.user.id}:${SHARED_LIBRARY_SYNC_VERSION}`;
-        const alreadySynced = typeof window !== 'undefined' ? window.localStorage.getItem(syncKey) : null;
-
-        if (!alreadySynced) {
-          const imported = [];
-          for (let index = 0; index < funnelAssets.length; index += 20) {
-            const chunk = funnelAssets.slice(index, index + 20).map((asset) => ({
-              assetKey: asset.id,
-              name: asset.name,
-              imageUrl: asset.src,
-            }));
-
-            const response = await fetch('/api/assets/import-library', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ assets: chunk }),
-            });
-
-            const payload = await response.json();
-            if (!response.ok || !payload?.ok) {
-              throw new Error(payload?.error || 'Could not sync shared media library');
-            }
-
-            imported.push(...(payload.results || []));
-          }
-
-          if (!cancelled && typeof window !== 'undefined') {
-            window.localStorage.setItem(syncKey, `${Date.now()}`);
-          }
-
-          const uploadedByKey = new Map(imported.filter((item) => item?.ok && item?.publicUrl).map((item) => [item.assetKey, item.publicUrl]));
-          resolvedAssets = funnelAssets.map((asset) => ({
-            ...asset,
-            src: uploadedByKey.get(asset.id) || asset.src,
-          }));
-        }
-      }
-
       if (cancelled) return;
 
       const existingBySrc = new Set((existingAssets.images || []).map((image) => String(image?.src || '').trim()).filter(Boolean));
-      const missingAssets = resolvedAssets.filter((image) => !existingBySrc.has(String(image?.src || '').trim()));
+      const missingAssets = funnelAssets.filter((image) => !existingBySrc.has(String(image?.src || '').trim()));
       if (!missingAssets.length) return;
 
       saveWebsiteBuilderAssets({

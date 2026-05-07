@@ -5,6 +5,48 @@ const MIN_TEXT_SIZE = 16;
 const MIN_TAP_SIZE = 24;
 const PREMIUM_SHADOW = "0 26px 56px rgba(15,23,42,0.16)";
 const PREMIUM_BORDER = "1px solid rgba(148,163,184,0.28)";
+const DEFAULT_LAYOUT_WIDTH = 1120;
+const WEBSITE_BLOCK_ANIMATION_STYLE_ID = "website-block-animation-keyframes";
+const WEBSITE_BLOCK_ANIMATION_CSS = `
+@keyframes wbFadeUp {
+  from { opacity: 0; transform: translate3d(0, 28px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbSlideUp {
+  from { opacity: 0; transform: translate3d(0, 36px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbBlurIn {
+  from { opacity: 0; filter: blur(14px); transform: scale(0.98); }
+  to { opacity: 1; filter: blur(0); transform: scale(1); }
+}
+
+@keyframes wbZoom {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+`;
+
+export function websiteBlockKeyframes() {
+  return WEBSITE_BLOCK_ANIMATION_CSS;
+}
+
+function ensureWebsiteBlockAnimationStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(WEBSITE_BLOCK_ANIMATION_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = WEBSITE_BLOCK_ANIMATION_STYLE_ID;
+  style.textContent = WEBSITE_BLOCK_ANIMATION_CSS;
+  document.head.appendChild(style);
+}
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -54,249 +96,232 @@ function shouldHighlightNavLink(link, currentPageKey) {
 }
 
 function resolvePublishedNavHref(link, navigationContext) {
-  const rawHref = String(link?.href || "").trim();
+  const href = String(link?.href || "").trim();
+  if (!href) return "#";
+  if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
+
   const pageMap = navigationContext?.pageMap || {};
   const basePath = String(navigationContext?.basePath || "").replace(/\/$/, "");
-  const labelKey = slugifyText(link?.label || "");
-  const hrefPath = rawHref.split("?")[0].split("#")[0];
-  const hrefKey = slugifyText(hrefPath === "/" ? "home" : (hrefPath.split("/").filter(Boolean).pop() || ""));
+  const normalizedHref = href === "/" ? "home" : slugifyText(href.replace(/^\//, ""));
+  const publishedHref = pageMap[normalizedHref];
 
-  if (rawHref.startsWith("?")) {
-    try {
-      const params = new URLSearchParams(rawHref.replace(/^\?/, ""));
-      const pageParam = slugifyText(params.get("page") || "");
-      if (pageParam && pageMap[pageParam]) {
-        return pageMap[pageParam];
-      }
-    } catch {
-      // Ignore malformed query-style hrefs and continue with the fallback path resolution.
-    }
+  if (publishedHref) {
+    return `${basePath}${publishedHref}`;
   }
 
-  if (labelKey && pageMap[labelKey]) {
-    return pageMap[labelKey];
-  }
-
-  if (hrefKey && pageMap[hrefKey]) {
-    return pageMap[hrefKey];
-  }
-
-  if (rawHref && rawHref !== "#") {
-    if (/^(https?:|mailto:|tel:)/i.test(rawHref)) return rawHref;
-    if (rawHref.startsWith("#")) return rawHref;
-    if (rawHref.startsWith("/")) return rawHref;
-  }
-
-  return basePath || "/";
+  return href;
 }
 
-function asRichHtml(value) {
-  const text = String(value || "");
-  if (!text.trim()) return "";
-  if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
-  return text.replace(/\n/g, "<br />");
+function isGradientValue(value) {
+  return /(linear-gradient|radial-gradient|conic-gradient)\(/i.test(String(value || ""));
 }
 
-function textLayerBackgroundStyle(layer) {
-  const backgroundImage = String(layer?.backgroundImage || "").trim();
-  if (backgroundImage) {
-    return {
-      backgroundColor: String(layer?.backgroundColor || "transparent") || "transparent",
-      backgroundImage: `url("${backgroundImage}")`,
-      backgroundSize: layer?.backgroundSize || "cover",
-      backgroundPosition: layer?.backgroundPosition || "center center",
-      backgroundRepeat: layer?.backgroundRepeat || "no-repeat",
-    };
-  }
-
-  if (typeof layer?.background === "string" && layer.background.trim()) {
-    return { background: layer.background };
-  }
-
-  return { background: String(layer?.backgroundColor || "transparent") || "transparent" };
+function extractSolidColor(value, fallback = "#0f172a") {
+  const match = String(value || "").match(/(#[0-9a-fA-F]{3,8}|rgba?\([^\)]+\)|hsla?\([^\)]+\))/);
+  return match?.[1] || fallback;
 }
 
-function textSizePx(textSize, compact, explicitSize) {
-  const numeric = Number(explicitSize);
-  if (Number.isFinite(numeric) && numeric > 0) {
-    if (compact) {
-      const scaled = Math.round(numeric * 0.72);
-      return Math.max(MIN_TEXT_SIZE, Math.min(26, Math.max(14, scaled)));
-    }
-    return Math.max(MIN_TEXT_SIZE, numeric);
-  }
-
-  const map = {
-    small: compact ? 14 : 16,
-    medium: compact ? 16 : 18,
-    large: compact ? 18 : 22,
-  };
-  return Math.max(MIN_TEXT_SIZE, map[String(textSize || "medium")] || map.medium);
+function resolveHeroBaseColor(props) {
+  const backgroundValue = String(props?.backgroundColor || "").trim();
+  if (!backgroundValue) return "#0f172a";
+  return isGradientValue(backgroundValue) ? extractSolidColor(backgroundValue, "#0f172a") : backgroundValue;
 }
 
-function parseSizeValue(value, fallback) {
-  if (typeof value === "number") return value;
-  const raw = String(value || "").trim().toLowerCase();
-  if (!raw) return fallback;
-  if (raw.includes("%") || raw.includes("vw")) return fallback;
-  const parsed = Number(raw.replace(/[^\d.-]/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function createCanvasImageLayer(seed = 0, patch = {}) {
-  return {
-    id: `layer-${Date.now()}-${seed}`,
-    kind: "image",
-    src: "",
-    assetId: "",
-    x: 40 + (seed * 24),
-    y: 40 + (seed * 24),
-    width: 260,
-    height: 180,
-    rotation: seed % 2 === 0 ? -4 : 4,
-    radius: 18,
-    zIndex: seed + 1,
-    ...patch,
-  };
-}
-
-function createCanvasTextLayer(seed = 0, patch = {}) {
-  return {
-    id: `text-layer-${Date.now()}-${seed}`,
-    kind: "text",
-    content: "Type text here",
-    x: 420 + (seed * 18),
-    y: 96 + (seed * 18),
-    width: 360,
-    height: 140,
-    rotation: 0,
-    radius: 16,
-    zIndex: seed + 1,
-    fontSize: 40,
-    fontWeight: "700",
-    textAlign: "center",
-    verticalAlign: "center",
-    textColor: "#0f172a",
-    background: "transparent",
-    ...patch,
-  };
-}
-
-export function getAnimationStyle(name, delay = 0, speed = null) {
-  const resolveDuration = (fallback) => {
-    const numeric = Number(speed);
-    return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
-  };
-
-  const map = {
-    none: {},
-    "fade-in": { animation: `wbFadeIn ${resolveDuration(0.7)}s ease ${delay}s both` },
-    "fade-up": { animation: `wbFadeUp ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "fade-down": { animation: `wbFadeDown ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "slide-left": { animation: `wbSlideLeft ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "slide-right": { animation: `wbSlideRight ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "slide-up": { animation: `wbSlideUp ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "slide-down": { animation: `wbSlideDown ${resolveDuration(0.8)}s ease ${delay}s both` },
-    zoom: { animation: `wbZoomIn ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "zoom-out": { animation: `wbZoomOut ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "blur-in": { animation: `wbBlurIn ${resolveDuration(0.8)}s ease ${delay}s both` },
-    "rotate-in": { animation: `wbRotateIn ${resolveDuration(0.85)}s cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}s both` },
-    "flip-up": { animation: `wbFlipUp ${resolveDuration(0.9)}s cubic-bezier(0.2, 0.8, 0.2, 1) ${delay}s both` },
-    "bounce-in": { animation: `wbBounceIn ${resolveDuration(0.9)}s cubic-bezier(0.22, 1, 0.36, 1) ${delay}s both` },
-  };
-
-  return map[String(name || "none")] || map.none;
-}
-
-export function websiteBlockKeyframes() {
-  return `
-    @keyframes wbFadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes wbFadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes wbFadeDown { from { opacity: 0; transform: translateY(-22px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes wbSlideLeft { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes wbSlideRight { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes wbSlideUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes wbSlideDown { from { opacity: 0; transform: translateY(-26px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes wbZoomIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-    @keyframes wbZoomOut { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
-    @keyframes wbBlurIn { from { opacity: 0; filter: blur(12px); transform: scale(0.98); } to { opacity: 1; filter: blur(0); transform: scale(1); } }
-    @keyframes wbRotateIn { from { opacity: 0; transform: rotate(-8deg) scale(0.96); transform-origin: center; } to { opacity: 1; transform: rotate(0deg) scale(1); transform-origin: center; } }
-    @keyframes wbFlipUp { from { opacity: 0; transform: perspective(1200px) rotateX(24deg) translateY(18px); transform-origin: center bottom; } to { opacity: 1; transform: perspective(1200px) rotateX(0deg) translateY(0); transform-origin: center bottom; } }
-    @keyframes wbBounceIn { 0% { opacity: 0; transform: scale(0.86); } 60% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
-  `;
-}
-
-function fullWidthStyle(props, compact, editor) {
-  if (!props?.fullWidthBackground || compact) return {};
-  if (editor) {
-    return {
-      width: "100vw",
-      maxWidth: "100vw",
-      marginLeft: "calc(50% - 50vw)",
-      marginRight: "calc(50% - 50vw)",
-      borderRadius: 0,
-    };
-  }
-
-  return {
-    width: "100vw",
-    maxWidth: "100vw",
-    marginLeft: "calc(50% - 50vw)",
-    marginRight: "calc(50% - 50vw)",
-    borderRadius: 0,
-  };
-}
-
-function sectionContentStyle(props, compact, fallback = 1500) {
-  if (compact) {
-    return {
-      width: "100%",
-      margin: "0 auto",
-      boxSizing: "border-box",
-    };
-  }
-
-  const baseLayoutWidth = Math.max(320, Number(props?.baseLayoutWidth || fallback));
-  return {
-    width: "100%",
-    maxWidth: `${baseLayoutWidth}px`,
-    margin: "0 auto",
-    boxSizing: "border-box",
-  };
-}
-
-function colorWithAlpha(color, alpha = 0.5) {
-  const text = String(color || "").trim();
-  if (/^#([0-9a-fA-F]{6})$/.test(text)) {
-    const hex = text.slice(1);
-    const r = Number.parseInt(hex.slice(0, 2), 16);
-    const g = Number.parseInt(hex.slice(2, 4), 16);
-    const b = Number.parseInt(hex.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-  if (/^rgb\(/i.test(text)) {
-    const parts = text.replace(/^rgb\((.*)\)$/i, "$1");
-    return `rgba(${parts}, ${alpha})`;
-  }
-  if (/^rgba\(/i.test(text)) return text;
-  return `rgba(15,23,42,${alpha})`;
-}
-
-function asStyleObject(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+function resolveHeroGradient(props) {
+  const backgroundValue = String(props?.backgroundColor || "").trim();
+  if (isGradientValue(backgroundValue)) return backgroundValue;
+  const baseColor = backgroundValue || "#0ea5e9";
+  return `linear-gradient(135deg, ${baseColor}, #22c55e)`;
 }
 
 function heroBackground(props) {
   if (props.backgroundStyle === "image" && props.backgroundImage) {
-    const overlay = colorWithAlpha(props.backgroundColor || "#0f172a", 0.52);
-    return `linear-gradient(${overlay}, ${overlay}), url(${props.backgroundImage}) ${props.backgroundPosition || "center center"} / ${props.backgroundSize || "cover"} ${props.backgroundRepeat || "no-repeat"}`;
+    const baseColor = resolveHeroBaseColor(props);
+    return {
+      backgroundColor: baseColor,
+      backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(baseColor, 0.28)}, ${colorWithAlpha(baseColor, 0.58)}), url(${props.backgroundImage})`,
+      backgroundSize: props.backgroundSize || "cover",
+      backgroundPosition: props.backgroundPosition || "center center",
+      backgroundRepeat: props.backgroundRepeat || "no-repeat",
+    };
   }
 
   if (props.backgroundStyle === "solid") {
-    return props.backgroundColor || "#0f172a";
+    return { background: resolveHeroBaseColor(props) };
   }
 
-  return `linear-gradient(135deg, ${props.backgroundColor || "#0ea5e9"}, #22c55e)`;
+  return { background: resolveHeroGradient(props) };
+}
+
+function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
+  const layerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const layer = layerRef.current;
+    const container = layer?.parentElement;
+    if (!layer || !container) return undefined;
+
+    const scrollTarget = findScrollParent(container);
+    const usesWindowScroll = !scrollTarget || scrollTarget === window;
+
+    let frame = 0;
+
+    const updateOffset = () => {
+      frame = 0;
+      const rect = container.getBoundingClientRect();
+      const scrollViewportRect = usesWindowScroll
+        ? { top: 0, height: window.innerHeight || 900 }
+        : scrollTarget.getBoundingClientRect();
+      const viewportHeight = scrollViewportRect.height || window.innerHeight || 900;
+      const viewportCenter = (scrollViewportRect.top || 0) + (viewportHeight / 2);
+      const distanceFromCenter = (rect.top + (rect.height / 2)) - viewportCenter;
+      const offset = Math.max(-260, Math.min(260, -distanceFromCenter * speed));
+      layer.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
+    };
+
+    const requestUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateOffset);
+    };
+
+    updateOffset();
+    scrollTarget?.addEventListener?.("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      scrollTarget?.removeEventListener?.("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+    };
+  }, [speed, backgroundStyle?.backgroundImage, backgroundStyle?.backgroundPosition, backgroundStyle?.backgroundSize, backgroundStyle?.backgroundRepeat]);
+
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: "absolute",
+        inset: "-18% 0",
+        zIndex: 0,
+        pointerEvents: "none",
+        willChange: "transform",
+        backgroundColor: backgroundStyle?.backgroundColor || "transparent",
+        backgroundImage: backgroundStyle?.backgroundImage || "none",
+        backgroundSize: backgroundStyle?.backgroundSize || "cover",
+        backgroundPosition: backgroundStyle?.backgroundPosition || "center center",
+        backgroundRepeat: backgroundStyle?.backgroundRepeat || "no-repeat",
+        transform: "translate3d(0, 0, 0)",
+      }}
+    />
+  );
+}
+
+export function getAnimationStyle(name, delay = 0, speed = null) {
+  if (name) ensureWebsiteBlockAnimationStyles();
+
+  const safeDelay = Math.max(0, Number(delay || 0));
+  const duration = Math.max(0.25, Number(speed || 0.9));
+
+  switch (String(name || "").trim()) {
+    case "fade-up":
+      return {
+        opacity: 0,
+        transform: "translate3d(0, 28px, 0)",
+        animation: `wbFadeUp ${duration}s ease ${safeDelay}s forwards`,
+      };
+    case "slide-up":
+      return {
+        opacity: 0,
+        transform: "translate3d(0, 36px, 0)",
+        animation: `wbSlideUp ${duration}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "blur-in":
+      return {
+        opacity: 0,
+        filter: "blur(14px)",
+        transform: "scale(0.98)",
+        animation: `wbBlurIn ${Math.max(duration, 1)}s ease ${safeDelay}s forwards`,
+      };
+    case "zoom":
+      return {
+        opacity: 0,
+        transform: "scale(0.94)",
+        animation: `wbZoom ${duration}s ease ${safeDelay}s forwards`,
+      };
+    case "fade-in":
+      return {
+        opacity: 0,
+        animation: `wbFadeIn ${duration}s ease ${safeDelay}s forwards`,
+      };
+    default:
+      return {};
+  }
+}
+
+function colorWithAlpha(color, alpha = 1) {
+  const safeAlpha = Math.max(0, Math.min(1, Number(alpha ?? 1)));
+  const raw = String(color || "").trim();
+  if (!raw) return `rgba(15,23,42,${safeAlpha})`;
+
+  if (raw.startsWith("rgba(")) {
+    return raw.replace(/rgba\(([^)]+),\s*[^,()]+\)$/i, `rgba($1, ${safeAlpha})`);
+  }
+
+  if (raw.startsWith("rgb(")) {
+    const values = raw.slice(4, -1);
+    return `rgba(${values}, ${safeAlpha})`;
+  }
+
+  let hex = raw.replace("#", "");
+  if (hex.length === 3) {
+    hex = hex.split("").map((char) => char + char).join("");
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    const red = parseInt(hex.slice(0, 2), 16);
+    const green = parseInt(hex.slice(2, 4), 16);
+    const blue = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${safeAlpha})`;
+  }
+
+  return raw;
+}
+
+function asStyleObject(style) {
+  return style && typeof style === "object" ? style : {};
+}
+
+function asRichHtml(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  return raw
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n{2,}/g, "<br/><br/>")
+    .replace(/\n/g, "<br/>");
+}
+
+function textLayerBackgroundStyle(layer) {
+  const background = typeof layer?.background === "string" && layer.background.trim()
+    ? layer.background
+    : "transparent";
+
+  return {
+    background,
+    display: "flex",
+    alignItems: String(layer?.verticalAlign || "center") === "top"
+      ? "flex-start"
+      : String(layer?.verticalAlign || "center") === "bottom"
+        ? "flex-end"
+        : "center",
+    justifyContent: String(layer?.textAlign || "center") === "left"
+      ? "flex-start"
+      : String(layer?.textAlign || "center") === "right"
+        ? "flex-end"
+        : "center",
+    padding: 18,
+    boxSizing: "border-box",
+  };
 }
 
 function headingTypography(props) {
@@ -330,7 +355,60 @@ function scaleBoxPadding(value, scale) {
     }
     return part;
   });
+
   return parts.join(" ");
+}
+
+function parseSizeValue(value, fallback) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return fallback;
+
+  if (/^-?\d+(\.\d+)?$/.test(raw)) {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  const match = raw.match(/-?\d+(\.\d+)?/);
+  if (!match) return fallback;
+
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function fullWidthStyle(props, compact, editor) {
+  if (props?.fullWidthBackground === false) {
+    return {
+      width: "100%",
+      maxWidth: `${Math.max(320, Number(props?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH))}px`,
+      marginLeft: "auto",
+      marginRight: "auto",
+    };
+  }
+
+  return {
+    width: "100%",
+    maxWidth: "100%",
+    marginLeft: 0,
+    marginRight: 0,
+    borderRadius: editor ? (compact ? 12 : 18) : undefined,
+  };
+}
+
+function sectionContentStyle(props, compact, explicitMaxWidth = null) {
+  const maxWidth = Math.max(320, Number(explicitMaxWidth || props?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
+  return {
+    width: "100%",
+    maxWidth: `${maxWidth}px`,
+    marginLeft: "auto",
+    marginRight: "auto",
+    boxSizing: "border-box",
+    paddingLeft: compact ? 0 : 0,
+    paddingRight: compact ? 0 : 0,
+  };
 }
 
 function normalizeOverlayLayoutProps(props, layout, hasFloatingImage = false) {
@@ -2279,11 +2357,12 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const node = shellRef.current;
-    if (!node) return undefined;
+
+    const measureTarget = wrapperRef.current || shellRef.current;
+    if (!measureTarget) return undefined;
 
     const updateHeight = () => {
-      setNavHeight(Math.ceil(node.getBoundingClientRect().height || 0));
+      setNavHeight(Math.ceil(measureTarget.getBoundingClientRect().height || 0));
     };
 
     updateHeight();
@@ -2292,7 +2371,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     let resizeObserver;
     if (typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(updateHeight);
-      resizeObserver.observe(node);
+      resizeObserver.observe(measureTarget);
     }
 
     return () => {
@@ -2561,8 +2640,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
           style={{
             position: "relative",
             width: "100%",
-            minHeight: navHeight || undefined,
-            paddingTop: shouldUseFixedNav || shouldUseStickyEditor ? (navHeight || 0) : 0,
+            minHeight: shouldUseFixedNav ? (navHeight || undefined) : undefined,
+            paddingTop: shouldUseFixedNav ? (navHeight || 0) : 0,
           }}
         >
         {renderNavSection()}
@@ -2622,7 +2701,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const [canvasWidth, setCanvasWidth] = React.useState(0);
   const gridSize = compact ? 20 : 24;
   const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
-  const fullWidthBlock = blockProps?.fullWidthBackground !== false;
+  const fullWidthBlock = editor ? true : blockProps?.fullWidthBackground !== false;
   const selectedLayerIndex = Number.isInteger(blockProps?.selectedLayerIndex) ? blockProps.selectedLayerIndex : null;
 
   const layers = asArray(blockProps?.images)
@@ -2662,7 +2741,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   }, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
   const contentWidth = Math.max(320, bounds.maxX - bounds.minX);
   const contentHeight = Math.max(240, bounds.maxY - bounds.minY);
-  const baseLayoutWidth = Number(blockProps?.baseLayoutWidth || 1100);
+  const baseLayoutWidth = Math.max(720, Number(blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
   const responsiveScale = !editor && !compact && canvasWidth > 0
     ? Math.min(1, Math.max(0.6, canvasWidth / baseLayoutWidth))
     : 1;
@@ -2677,7 +2756,15 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const previewCanvasBackground = !editor && (!blockProps?.backgroundColor || blockProps.backgroundColor === "transparent")
     ? "linear-gradient(135deg, #09111f 0%, #0f172a 100%)"
     : (blockProps?.backgroundColor || "transparent");
-  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
+  const stackContentFrame = editor
+    ? {
+        width: "100%",
+        maxWidth: "100%",
+        marginLeft: 0,
+        marginRight: 0,
+        boxSizing: "border-box",
+      }
+    : sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
 
   React.useEffect(() => {
     latestPropsRef.current = blockProps || {};
@@ -2702,21 +2789,10 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     return () => window.removeEventListener("resize", syncWidth);
   }, [compact, editor, blockProps?.fullWidthBackground]);
 
-  React.useEffect(() => {
-    if (!editor || typeof onChangeBlock !== "function") return;
-    const node = canvasRef.current;
-    const measuredWidth = Math.round(node?.clientWidth || 0);
-    const savedWidth = Math.round(Number(latestPropsRef.current?.baseLayoutWidth || 0));
-    if (measuredWidth > 0 && Math.abs(measuredWidth - savedWidth) > 1) {
-      onChangeBlock({ ...latestPropsRef.current, baseLayoutWidth: measuredWidth });
-    }
-  }, [editor, onChangeBlock, canvasWidth]);
-
   function applyLayerUpdate(nextLayers) {
     if (typeof onChangeBlock !== "function") return;
     onChangeBlock({
       ...latestPropsRef.current,
-      baseLayoutWidth: Math.round(canvasRef.current?.clientWidth || latestPropsRef.current?.baseLayoutWidth || baseLayoutWidth),
       images: nextLayers.map((layer, index) => ({ ...layer, zIndex: index + 1 })),
     });
   }
@@ -2886,14 +2962,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     if (!file) return;
 
     if (typeof onUploadLayerImage === "function") {
-      const asset = await onUploadLayerImage(layerIndex, file);
-      if (asset?.src) {
-        patchLayer(layerIndex, {
-          kind: "image",
-          src: String(asset.src || "").startsWith("data:") ? "" : (asset.src || ""),
-          assetId: asset.id || "",
-        });
-      }
+      await onUploadLayerImage(layerIndex, file);
     }
   }
 
@@ -2974,7 +3043,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: `${baseLayoutWidth}px`,
+            maxWidth: editor ? "100%" : `${baseLayoutWidth}px`,
             minHeight: stackHeight,
             marginTop: 0,
             marginLeft: "auto",
@@ -4262,7 +4331,7 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
     startInteraction(event, "move");
   }
 
-  if (!canManipulate && (!overlayEnabled || compact)) {
+  if (!overlayEnabled || compact) {
     return (
       <div style={{ position: "relative", zIndex: 3, width: "100%" }}>
         <div style={{ width: "100%", maxWidth: "100%" }}>{children}</div>
@@ -4534,13 +4603,12 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
       floatingY: props.floatingY ?? yPct,
       floatingWidth: props.floatingWidth ?? effectiveWidth,
       floatingHeight: props.floatingHeight ?? effectiveHeight,
-      enableParallax: true,
     });
   }
 
   if (!imageSrc) return null;
 
-  if (!canManipulate && (!overlayEnabled || compact)) {
+  if (!overlayEnabled || compact) {
     return (
       <div
         style={{
@@ -4635,7 +4703,6 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
                       floatingY: props.floatingY ?? yPct,
                       floatingWidth: props.floatingWidth ?? boxWidth,
                       floatingHeight: props.floatingHeight ?? boxHeight,
-                      enableParallax: true,
                     });
                     onUploadImage?.("floatingImage", file);
                   }}
@@ -4697,23 +4764,22 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "hero":
     case "parallax": {
-      const shouldStretchHero = block?.type === "parallax"
-        || props.backgroundStyle === "image"
-        || props.backgroundStyle === "video"
-        || !!String(heroBackgroundImage || "").trim();
+      const useFullBleedHero = props.fullWidthBackground !== false;
       const heroFullWidth = fullWidthStyle({
         ...props,
-        fullWidthBackground: shouldStretchHero ? true : props.fullWidthBackground,
+        fullWidthBackground: useFullBleedHero,
       }, compact, editor);
       const heroVariant = heroVariantStyles(props, compact);
       const heroLayout = heroLayoutDefaults(props.heroVariant || "spotlight", compact);
       const heroLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, compact ? 2 : 4) : [];
-      const overlayEditingEnabled = props.enableParallax ?? (block?.type === "parallax");
       const showHeroMediaControls = editor && isSelected;
       const isVideoHero = props.backgroundStyle === "video" && !!props.backgroundVideoUrl;
       const heroBg = isVideoHero
         ? (props.backgroundColor || "#0f172a")
         : heroBackground({ ...props, backgroundImage: heroBackgroundImage });
+      const heroStaticStyle = asStyleObject(heroBg);
+      const heroParallaxEnabled = block?.type === "parallax" && !!props.enableParallax && !!heroBackgroundImage && !compact && !isVideoHero;
+      const heroOverlayEnabled = !compact;
       const headingColor = props.headlineColor || "#ffffff";
       const headingFamily = props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
       const headingWeight = props.headlineFontWeight || "700";
@@ -4721,7 +4787,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const bodyFamily = props.fontFamily || headingFamily;
       const headingAlign = props.headlineAlignment || heroLayout.headlineAlignment || "center";
       const heroHorizontalInset = compact ? 24 : 48;
-      const heroContentMaxWidth = Math.max(320, Number(props.baseLayoutWidth || 1500));
+      const heroContentMaxWidth = Math.max(320, Number(props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
       const heroContentBounds = {
         position: "absolute",
         inset: 0,
@@ -4756,13 +4822,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           style={{
             position: "relative",
             overflow: "hidden",
-            borderRadius: compact ? 12 : 20,
+            borderRadius: compact ? 12 : (editor ? 20 : useFullBleedHero ? 0 : 20),
             ...heroFullWidth,
             ...heroVariant.shell,
             ...sectionAnimationStyle,
             minHeight: compact ? 180 : props.minHeight || "400px",
-            background: heroBg,
-            backgroundAttachment: overlayEditingEnabled && heroBackgroundImage && !compact ? "fixed" : "scroll",
+            ...heroStaticStyle,
+            backgroundAttachment: heroParallaxEnabled ? "fixed" : "scroll",
             padding: compact ? "40px 24px" : "80px 48px",
           }}
         >
@@ -4861,7 +4927,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   contentY: props.contentY ?? (floatingImageSrc ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY),
                   contentWidth: props.contentWidth ?? heroLayout.contentWidth,
                   contentHeight: props.contentHeight ?? heroLayout.contentHeight,
-                  enableParallax: true,
                 })}
                 style={{ ...sharedStyles.editorChip, background: "#22c55e" }}
               >
@@ -4877,7 +4942,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     floatingY: props.floatingY ?? heroOverlayProps.floatingY,
                     floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
                     floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                    enableParallax: true,
                   })}
                   style={{ ...sharedStyles.editorChip, background: "#ffffff", color: "#111827" }}
                 >
@@ -4900,7 +4964,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       floatingY: props.floatingY ?? heroOverlayProps.floatingY,
                       floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
                       floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                      enableParallax: true,
                     });
                     onUploadImage?.("floatingImage", file);
                   }}
@@ -4976,7 +5039,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                               floatingY: props.floatingY ?? heroOverlayProps.floatingY,
                               floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
                               floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                              enableParallax: true,
                             })}
                             style={{ width: 46, height: 46, padding: 0, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.24)", background: "#0f172a", cursor: "pointer" }}
                             title={image.name || "Use library image"}
@@ -4989,9 +5051,40 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </div>
               ) : null}
-              <DraggableImageOverlay props={heroOverlayProps} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} onSelectAsset={onSelectAsset} assets={assets} imageSrc={floatingImageSrc} overlayEnabled={overlayEditingEnabled} frameStyle={block?.type === "hero" ? heroVariant.imageFrame : null} />
-              <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={overlayEditingEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
+              <DraggableImageOverlay props={heroOverlayProps} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} onSelectAsset={onSelectAsset} assets={assets} imageSrc={floatingImageSrc} overlayEnabled={heroOverlayEnabled} frameStyle={block?.type === "hero" ? heroVariant.imageFrame : null} />
+              <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
                 <div style={{ display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...heroVariant.content }}>
+                  {(props.eyebrow || editor) ? (
+                    <p
+                      data-website-inline-editor="true"
+                      data-text-prop="eyebrow"
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onBlur={(event) => {
+                        if (shouldSkipToolbarBlur(event)) return;
+                        if (!editor || typeof onChangeBlock !== "function") return;
+                        onChangeBlock({ ...props, eyebrow: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                      }}
+                      style={{
+                        position: "relative",
+                        zIndex: 1,
+                        margin: 0,
+                        fontSize: compact ? 11 : 13,
+                        lineHeight: 1.4,
+                        fontWeight: 800,
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        color: colorWithAlpha(headingColor, 0.72),
+                        ...getAnimationStyle(props.subheadlineAnimation || "fade-up", Math.max(0, Number(props.subheadlineAnimationDelay || 0) - 0.06), props.subheadlineAnimationSpeed),
+                        outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
+                        padding: editor ? "4px 6px" : 0,
+                        borderRadius: 8,
+                      }}
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(props.eyebrow || (editor ? "Section label" : "")) }}
+                    />
+                  ) : null}
                   <h1
                 data-website-inline-editor="true"
                 data-text-prop="headline"
@@ -5062,31 +5155,68 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     />
                   ) : null}
                   {props.ctaText ? (
-                    <a
-                  href={editor ? "#" : (props.ctaLink || "#")}
-                  onClick={(event) => {
-                    if (editor) event.preventDefault();
-                  }}
-                  style={{
-                    position: "relative",
-                    zIndex: 1,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    textDecoration: "none",
-                    background: props.buttonColor || "#2563eb",
-                    color: props.buttonTextColor || "#ffffff",
-                    padding: compact ? "10px 20px" : "14px 28px",
-                    borderRadius: Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999,
-                    fontWeight: 600,
-                    fontSize: compact ? 14 : 17,
-                    fontFamily: bodyFamily,
-                    border: "none",
-                    alignSelf: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
-                  }}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: compact ? 10 : 14,
+                        alignItems: "center",
+                        justifyContent: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
+                      }}
                     >
-                      {props.ctaText}
-                    </a>
+                      <a
+                        href={editor ? "#" : (props.ctaLink || "#")}
+                        onClick={(event) => {
+                          if (editor) event.preventDefault();
+                        }}
+                        style={{
+                          position: "relative",
+                          zIndex: 1,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textDecoration: "none",
+                          background: props.buttonColor || "#2563eb",
+                          color: props.buttonTextColor || "#ffffff",
+                          padding: compact ? "10px 20px" : "14px 28px",
+                          borderRadius: Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999,
+                          fontWeight: 600,
+                          fontSize: compact ? 14 : 17,
+                          fontFamily: bodyFamily,
+                          border: "none",
+                          alignSelf: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
+                        }}
+                      >
+                        {props.ctaText}
+                      </a>
+                      {props.secondaryCtaText ? (
+                        <a
+                          href={editor ? "#" : (props.secondaryCtaLink || "#")}
+                          onClick={(event) => {
+                            if (editor) event.preventDefault();
+                          }}
+                          style={{
+                            position: "relative",
+                            zIndex: 1,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            background: colorWithAlpha("#081120", 0.18),
+                            color: headingColor,
+                            padding: compact ? "10px 18px" : "14px 24px",
+                            borderRadius: Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999,
+                            fontWeight: 600,
+                            fontSize: compact ? 14 : 17,
+                            fontFamily: bodyFamily,
+                            border: `1px solid ${colorWithAlpha(headingColor, 0.3)}`,
+                            backdropFilter: "blur(10px)",
+                          }}
+                        >
+                          {props.secondaryCtaText}
+                        </a>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </DraggableContentOverlay>
@@ -5116,10 +5246,16 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             paddingBottom: `${textPadBottom}px`,
             paddingLeft: sectionPad.replace(/\s.*/, ""),
             paddingRight: sectionPad.replace(/\s.*/, ""),
-            background:
-              heroBackgroundImage
-                ? `linear-gradient(rgba(7,17,29,0.35), rgba(7,17,29,0.35)), url(${heroBackgroundImage}) center / cover no-repeat`
-                : (textBackground !== "transparent" ? textBackground : "transparent"),
+            ...(heroBackgroundImage
+              ? {
+                  backgroundImage: `linear-gradient(rgba(7,17,29,0.35), rgba(7,17,29,0.35)), url(${heroBackgroundImage})`,
+                  backgroundPosition: props.backgroundPosition || "center center",
+                  backgroundSize: props.backgroundSize || "cover",
+                  backgroundRepeat: props.backgroundRepeat || "no-repeat",
+                }
+              : {
+                  background: textBackground !== "transparent" ? textBackground : "transparent",
+                }),
             backgroundAttachment: props.enableParallax && heroBackgroundImage && !compact ? "fixed" : "scroll",
             color: props.textColor || "#e6eef5",
             border: hasBorder ? PREMIUM_BORDER : "none",
@@ -6538,6 +6674,65 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         </section>
       );
 
+    case "marquee-strip": {
+      const items = asArray(props.items).filter(Boolean);
+      const repeated = [...items, ...items];
+      const speed = Math.max(10, Number(props.speed) || 24);
+      const bg = props.backgroundColor || "#081120";
+      const text = props.textColor || "#f8fafc";
+      const accent = props.accentColor || "#7dd3fc";
+
+      return (
+        <section
+          style={{
+            ...fullWidthStyle(props, compact, editor),
+            ...sectionAnimationStyle,
+            background: bg,
+            color: text,
+            overflow: "hidden",
+            borderTop: `1px solid ${colorWithAlpha(accent, 0.25)}`,
+            borderBottom: `1px solid ${colorWithAlpha(accent, 0.18)}`,
+            padding: compact ? "12px 0" : "16px 0",
+          }}
+        >
+          <div style={{ width: "100%", overflow: "hidden" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: compact ? 18 : 26,
+                width: "max-content",
+                minWidth: "100%",
+                animation: `wbMarquee ${speed}s linear infinite`,
+                willChange: "transform",
+              }}
+            >
+              {repeated.map((item, idx) => (
+                <div
+                  key={`${String(item)}-${idx}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: compact ? 10 : 14,
+                    paddingLeft: compact ? 10 : 14,
+                    whiteSpace: "nowrap",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.18em",
+                    fontSize: compact ? 11 : 12,
+                    fontWeight: 800,
+                    opacity: 0.98,
+                  }}
+                >
+                  <span style={{ color: accent, fontSize: compact ? 12 : 14 }}>✦</span>
+                  <span>{String(item)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     case "divider":
       return <div style={sharedStyles.divider(props.color)} />;
 
@@ -6569,11 +6764,35 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const newsletterFallbackHref = resolveFooterEmailHref(props.newsletterFallbackEmail || props.contactEmail || "");
       const newsletterUsesExternalForm = !!newsletterActionHref && !/^mailto:/i.test(newsletterActionHref);
       const newsletterFormMethod = String(props.newsletterSubmitMethod || "post").toLowerCase() === "get" ? "get" : "post";
-      const contactItems = [
-        props.contactEmail,
-        props.contactPhone,
-        props.contactAddress,
-      ].filter(Boolean);
+      const footerVariant = String(props.footerVariant || "service-grid");
+      const contactItems = [props.contactEmail, props.contactPhone, props.contactAddress].filter(Boolean);
+      const derivedLinkGroups = [
+        { heading: props.navHeading || "Navigate", links: navLinks },
+        { heading: props.extraHeading || "Legal", links: extraLinks },
+      ].filter((group) => Array.isArray(group.links) && group.links.length);
+      const linkGroups = (Array.isArray(props.linkGroups) && props.linkGroups.length ? props.linkGroups : derivedLinkGroups)
+        .map((group) => ({ heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
+        .filter((group) => group.links.length);
+      const spotlightItems = Array.isArray(props.spotlightItems) ? props.spotlightItems.filter(Boolean) : [];
+      const footerPanelBackground = footerVariant === "editorial"
+        ? "rgba(255,255,255,0.04)"
+        : footerVariant === "trust-columns"
+          ? "rgba(15,23,42,0.24)"
+          : "rgba(255,255,255,0.03)";
+      const footerPanelBorder = `1px solid ${ftBorder}`;
+      const topGridColumns = compact
+        ? "1fr"
+        : props.showNewsletter !== false
+          ? "1.15fr 0.95fr 1fr 1.05fr"
+          : "1.2fr 1fr 1fr";
+      const panelStyle = {
+        borderRadius: compact ? 18 : 24,
+        padding: compact ? "18px" : "22px",
+        background: footerPanelBackground,
+        border: footerPanelBorder,
+        backdropFilter: "blur(14px)",
+        boxShadow: "0 22px 45px rgba(2,8,23,0.18)",
+      };
 
       const patchFt = (patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
@@ -6606,155 +6825,78 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       return (
         <footer style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), ...sectionAnimationStyle }}>
           <div style={sectionContentStyle(props, compact)}>
-          {/* Top grid */}
-          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : `1fr 1fr${props.showNewsletter !== false ? " 1fr" : ""}`, gap: compact ? 28 : 40, marginBottom: compact ? 24 : 36 }}>
-
-            {/* Col 1: Brand */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <BrandMark
-                brand={props.brand}
-                logoSrc={footerLogoSrc}
-                size={footerMarkSize}
-                background={ftBtnBg}
-                color={ftBtnText}
-                borderColor={ftBorder}
-                borderRadius={10}
-              />
-              <span
-                contentEditable={editor} suppressContentEditableWarning
-                onBlur={(e) => patchFt({ brand: e.currentTarget.textContent })}
-                style={inlineStyle({ fontSize: compact ? 18 : 22, fontWeight: 600, color: ftText })}
-              >{props.brand || (editor ? "Your Brand" : "")}</span>
-              {(props.tagline || editor) ? (
-                <span
-                  contentEditable={editor} suppressContentEditableWarning
-                  onBlur={(e) => patchFt({ tagline: e.currentTarget.textContent })}
-                  style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.5 })}
-                >{props.tagline || (editor ? "Your tagline here." : "")}</span>
-              ) : null}
-              {contactItems.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
-                  {(props.contactHeading || editor) ? (
-                    <span
-                      contentEditable={editor} suppressContentEditableWarning
-                      onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })}
-                      style={inlineStyle({ fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: ftText, marginBottom: 2 })}
-                    >{props.contactHeading || "Contact"}</span>
-                  ) : null}
-                  {(props.contactEmail || editor) ? (
-                    <a
-                      href={editor ? undefined : (footerEmailHref || undefined)}
-                      contentEditable={editor} suppressContentEditableWarning
-                      onBlur={(e) => patchFt({ contactEmail: e.currentTarget.textContent })}
-                      style={{ ...inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.5 }), textDecoration: "none" }}
-                    >{props.contactEmail || (editor ? "hello@yourbrand.com" : "")}</a>
-                  ) : null}
-                  {(props.contactPhone || editor) ? (
-                    <a
-                      href={editor ? undefined : (footerPhoneHref || undefined)}
-                      contentEditable={editor} suppressContentEditableWarning
-                      onBlur={(e) => patchFt({ contactPhone: e.currentTarget.textContent })}
-                      style={{ ...inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.5 }), textDecoration: "none" }}
-                    >{props.contactPhone || (editor ? "(555) 010-2026" : "")}</a>
-                  ) : null}
-                  {(props.contactAddress || editor) ? (
-                    <span
-                      contentEditable={editor} suppressContentEditableWarning
-                      onBlur={(e) => patchFt({ contactAddress: e.currentTarget.textContent })}
-                      style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.5 })}
-                    >{props.contactAddress || (editor ? "Your city, state" : "")}</span>
+            <div style={{ display: "grid", gap: compact ? 18 : 24, marginBottom: compact ? 24 : 34 }}>
+              {(props.brand || props.tagline || props.spotlightHeading || props.spotlightText) ? (
+                <div style={{ display: "flex", flexDirection: compact ? "column" : "row", gap: compact ? 10 : 18, alignItems: compact ? "flex-start" : "end", justifyContent: "space-between" }}>
+                  <div style={{ display: "grid", gap: 8, maxWidth: 720 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.9) }}>{props.footerEyebrow || "Closing note"}</span>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ brand: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 22 : 30, fontWeight: 700, color: ftText, lineHeight: 1.05 })}>{props.brand || (editor ? "Your Brand" : "")}</span>
+                      {(props.tagline || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ tagline: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 15 : 17, color: ftLink, lineHeight: 1.55, maxWidth: 640 })}>{props.tagline || (editor ? "Your tagline here." : "")}</span> : null}
+                    </div>
+                  </div>
+                  {spotlightItems.length ? (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: compact ? "flex-start" : "flex-end" }}>
+                      {spotlightItems.map((item, index) => (
+                        <span key={`footer-pill-${index}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 38, padding: "0 14px", borderRadius: 999, border: footerPanelBorder, background: footerVariant === "editorial" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", color: ftText, fontSize: 14, fontWeight: 600 }}>{String(item)}</span>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
               ) : null}
-            </div>
 
-            {/* Col 2: Nav links */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {(props.navHeading || editor) ? (
-                <span
-                  contentEditable={editor} suppressContentEditableWarning
-                  onBlur={(e) => patchFt({ navHeading: e.currentTarget.textContent })}
-                  style={inlineStyle({ fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: ftText, marginBottom: 4 })}
-                >{props.navHeading || "Navigation"}</span>
-              ) : null}
-              {navLinks.map((link, i) => (
-                <a
-                  key={i}
-                  href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)}
-                  style={{ color: ftLink, fontSize: 16, textDecoration: "none", lineHeight: 1.6 }}
-                >{link.label || "Link"}</a>
-              ))}
-              {extraLinks.length > 0 ? (
-                <>
-                  {(props.extraHeading || editor) ? (
-                    <span
-                      contentEditable={editor} suppressContentEditableWarning
-                      onBlur={(e) => patchFt({ extraHeading: e.currentTarget.textContent })}
-                      style={inlineStyle({ fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: ftText, marginTop: 12, marginBottom: 4 })}
-                    >{props.extraHeading || "Company"}</span>
-                  ) : null}
-                  {extraLinks.map((link, i) => (
-                    <a
-                      key={i}
-                      href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)}
-                      style={{ color: ftLink, fontSize: 16, textDecoration: "none", lineHeight: 1.6 }}
-                    >{link.label || "Link"}</a>
-                  ))}
-                </>
-              ) : null}
-            </div>
-
-            {/* Col 3: Newsletter */}
-            {props.showNewsletter !== false ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span
-                  contentEditable={editor} suppressContentEditableWarning
-                  onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })}
-                  style={inlineStyle({ fontSize: compact ? 15 : 17, fontWeight: 600, color: ftText })}
-                >{props.newsletterHeading || "Stay Updated"}</span>
-                {(props.newsletterSubtitle || editor) ? (
-                  <span
-                    contentEditable={editor} suppressContentEditableWarning
-                    onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })}
-                    style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.5 })}
-                  >{props.newsletterSubtitle || "Get the latest news."}</span>
-                ) : null}
-                <form
-                  style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}
-                  onSubmit={handleFooterNewsletterSubmit}
-                  action={editor || !newsletterUsesExternalForm ? undefined : newsletterActionHref}
-                  method={editor || !newsletterUsesExternalForm ? undefined : newsletterFormMethod}
-                >
-                  {editor ? (
-                    <div style={{ flex: 1, minWidth: 140, borderRadius: 10, minHeight: 40, border: `1px solid ${ftBorder}`, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 16 }}>
-                      Email address
+              <div style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
+                <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <BrandMark brand={props.brand} logoSrc={footerLogoSrc} size={footerMarkSize} background={ftBtnBg} color={ftBtnText} borderColor={ftBorder} borderRadius={10} />
+                  {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}
+                  {contactItems.length > 0 ? (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {(props.contactEmail || editor) ? <a href={editor ? undefined : (footerEmailHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactEmail: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 15, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactEmail || (editor ? "hello@yourbrand.com" : "")}</a> : null}
+                      {(props.contactPhone || editor) ? <a href={editor ? undefined : (footerPhoneHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactPhone: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 15, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactPhone || (editor ? "(555) 010-2026" : "")}</a> : null}
+                      {(props.contactAddress || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactAddress: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.6 })}>{props.contactAddress || (editor ? "Your city, state" : "")}</span> : null}
                     </div>
-                  ) : (
-                    <input
-                      type="email"
-                      name="footer-newsletter-email"
-                      placeholder="Email address"
-                      required
-                      style={{ flex: 1, minWidth: 140, borderRadius: 10, minHeight: 40, border: `1px solid ${ftBorder}`, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 16, font: "inherit", boxSizing: "border-box" }}
-                    />
-                  )}
-                  <button type={editor ? "button" : "submit"} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 10, padding: "0 16px", minHeight: 40, fontWeight: 600, fontSize: 16, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap", opacity: editor || newsletterUsesExternalForm || newsletterFallbackHref ? 1 : 0.65 }}
-                    contentEditable={editor} suppressContentEditableWarning
-                    onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}
-                  >{props.newsletterButtonText || "Subscribe"}</button>
-                </form>
-              </div>
-            ) : null}
-          </div>
+                  ) : null}
+                </div>
 
-          {/* Bottom row: divider + copyright */}
-          <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span
-              contentEditable={editor} suppressContentEditableWarning
-              onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })}
-              style={inlineStyle({ fontSize: 12, color: ftLink })}
-            >{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
-          </div>
+                {linkGroups.map((group, groupIndex) => (
+                  <div key={`footer-group-${groupIndex}`} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {group.links.map((link, i) => (
+                        <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
+                      ))}
+                    </div>
+                    {groupIndex === 0 && (props.spotlightHeading || props.spotlightText || editor) ? (
+                      <div style={{ display: "grid", gap: 6, marginTop: 8, paddingTop: 12, borderTop: footerPanelBorder }}>
+                        {(props.spotlightHeading || editor) ? <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.88) }}>{props.spotlightHeading || "Highlights"}</span> : null}
+                        {(props.spotlightText || editor) ? <span style={{ fontSize: 14, lineHeight: 1.55, color: ftLink }}>{props.spotlightText || "Add a stronger closing note here."}</span> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+
+                {props.showNewsletter !== false ? (
+                  <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
+                    <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 700, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
+                    {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
+                    <form style={{ display: "grid", gap: 10, marginTop: 4 }} onSubmit={handleFooterNewsletterSubmit} action={editor || !newsletterUsesExternalForm ? undefined : newsletterActionHref} method={editor || !newsletterUsesExternalForm ? undefined : newsletterFormMethod}>
+                      {editor ? <div style={{ flex: 1, minWidth: 140, borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 16 }}>Email address</div> : <input type="email" name="footer-newsletter-email" placeholder="Email address" required style={{ width: "100%", borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 16, font: "inherit", boxSizing: "border-box" }} />}
+                      <button type={editor ? "button" : "submit"} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 12, padding: "0 16px", minHeight: 46, fontWeight: 700, fontSize: 16, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap", opacity: editor || newsletterUsesExternalForm || newsletterFallbackHref ? 1 : 0.65 }} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}>{props.newsletterButtonText || "Subscribe"}</button>
+                    </form>
+                  </div>
+                ) : null}
+              </div>
+
+              <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: compact ? "flex-start" : "space-between", gap: 14, flexWrap: "wrap" }}>
+                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 12, color: ftLink })}>{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                  {Array.isArray(extraLinks) && extraLinks.length ? extraLinks.map((link, index) => (
+                    <a key={`footer-legal-${index}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftLink, fontSize: 12, textDecoration: "none", letterSpacing: "0.04em", textTransform: "uppercase" }}>{link.label || "Link"}</a>
+                  )) : null}
+                  {spotlightItems.length ? <span style={{ fontSize: 12, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" • ")}</span> : null}
+                </div>
+              </div>
+            </div>
           </div>
         </footer>
       );
@@ -6771,23 +6913,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 }
 
 const sharedStyles = {
-  cta: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: MIN_TAP_SIZE,
-    minWidth: MIN_TAP_SIZE,
-    width: "fit-content",
-    textDecoration: "none",
-    background: "linear-gradient(135deg,#0ea5e9,#2563eb)",
-    color: "#ffffff",
-    padding: "14px 18px",
-    borderRadius: 999,
-    fontWeight: 600,
-    fontSize: MIN_TEXT_SIZE,
-    border: "1px solid rgba(255,255,255,0.34)",
-    boxShadow: "0 18px 36px rgba(37,99,235,0.34)",
-  },
   editorChip: {
     appearance: "none",
     border: "1px solid rgba(125,211,252,0.36)",

@@ -5,18 +5,19 @@ const pageStyle = {
   margin: "60px auto",
   padding: "0 24px 60px",
   fontFamily: "system-ui, sans-serif",
-  color: "#1e293b",
+  color: "#83b1fc",
   lineHeight: 1.7,
 };
 
 const headingStyle = {
-  fontSize: 32,
-  fontWeight: 700,
+  fontSize: 48,
+  fontWeight: 600,
+  color: "#f5d222",
   marginBottom: 8,
 };
 
 const sectionStyle = {
-  fontSize: 22,
+  fontSize: 32,
   fontWeight: 600,
   marginTop: 32,
   marginBottom: 12,
@@ -34,7 +35,7 @@ export default function TermsOfUse() {
       </Head>
       <div style={pageStyle}>
         <h1 style={headingStyle}>Terms of Use</h1>
-        <p style={{ color: "#64748b", marginBottom: 32 }}>Last updated: May 7, 2026</p>
+        <p style={{ color: "#f6f6f6", marginBottom: 32 }}>Last updated: May 7, 2026</p>
 
         <p>
           These terms and conditions ("Agreement") set forth the general terms and conditions of your use of the

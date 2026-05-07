@@ -1,12 +1,14 @@
 // components/email/editor2/ImageLibraryModal.jsx
-// Image library picker — lists all email-user-assets images for the user
+// Image library picker — combines the shared media library with legacy email-only images.
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "../../../utils/supabase-client";
 
 export default function ImageLibraryModal({ userId, onPick, onClose }) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [permissions, setPermissions] = useState({ canManageTemplateImages: false });
   const fileRef = useRef();
 
   async function loadImages() {
@@ -19,10 +21,49 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`);
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "Failed to load");
-      setImages((j.urls || []).slice().reverse()); // newest first
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token || "";
+      if (!token) throw new Error("Sign in required to view the image library.");
+
+      const [sharedResponse, legacyResponse] = await Promise.all([
+        fetch("/api/assets/list-library", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`),
+      ]);
+
+      const sharedPayload = await sharedResponse.json().catch(() => ({}));
+      const legacyPayload = await legacyResponse.json().catch(() => ({}));
+
+      if (!sharedResponse.ok || !sharedPayload?.ok) {
+        throw new Error(sharedPayload?.error || "Failed to load shared media library");
+      }
+
+      const sharedImages = Array.isArray(sharedPayload?.images)
+        ? sharedPayload.images.map((image) => ({
+            ...image,
+            source: "shared",
+          }))
+        : [];
+      const sharedUrls = new Set(sharedImages.map((image) => String(image?.url || "")).filter(Boolean));
+
+      const legacyImages = Array.isArray(legacyPayload?.urls)
+        ? legacyPayload.urls
+            .filter(Boolean)
+            .filter((url) => !sharedUrls.has(String(url || "").replace(/\?v=\d+$/, "")))
+            .map((url, index) => ({
+              id: `legacy-email:${index}:${url}`,
+              url,
+              name: `Legacy email image ${index + 1}`,
+              description: "Legacy email-only image",
+              owner_scope: "legacy-email",
+              is_template: false,
+              source: "legacy-email",
+            }))
+        : [];
+
+      setImages([...sharedImages, ...legacyImages]);
+      setPermissions(sharedPayload?.permissions || { canManageTemplateImages: false });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -49,16 +90,20 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
         return;
       }
 
-      const resp = await fetch(
-        `/api/email/editor-images?userId=${encodeURIComponent(userId)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, filename: file.name, base64 }),
-        }
-      );
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token || "";
+      if (!token) throw new Error("Sign in required to upload images.");
+
+      const resp = await fetch("/api/social/save-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageUrl: base64, description: file.name || "Uploaded image" }),
+      });
       const out = await resp.json();
-      if (!out.ok) throw new Error(out.error || "Upload failed");
+      if (!resp.ok || !out?.ok) throw new Error(out?.error || "Upload failed");
       await loadImages();
     } catch (e) {
       setError(e.message);
@@ -67,24 +112,37 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
     }
   }
 
-  async function handleDelete(url) {
+  async function handleDelete(image) {
     if (!window.confirm("Delete this image from your library?")) return;
     try {
-      const resp = await fetch(
-        `/api/email/editor-images?userId=${encodeURIComponent(userId)}`,
-        {
+      let resp;
+
+      if (image?.source === "legacy-email") {
+        resp = await fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, url }),
-        }
-      );
+          body: JSON.stringify({ userId, url: image.url }),
+        });
+      } else {
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token || "";
+        if (!token) throw new Error("Sign in required to delete images.");
+        resp = await fetch(`/api/social/delete-image?id=${encodeURIComponent(image.id)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
       const out = await resp.json();
       if (!out.ok) throw new Error(out.error || "Delete failed");
-      setImages(prev => prev.filter(u => u !== url));
+      setImages((prev) => prev.filter((entry) => entry.id !== image.id));
     } catch (e) {
       setError(e.message);
     }
   }
+
+  const userImages = images.filter((image) => image?.owner_scope !== "generic");
+  const genericImages = images.filter((image) => image?.owner_scope === "generic");
 
   return (
     <div
@@ -150,25 +208,63 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
             </div>
           )}
 
-          {!loading && images.length > 0 && (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: 12,
-            }}>
-              {images.map((url, i) => (
-                <ImgTile key={i} url={url} onPick={() => onPick(url)} onDelete={() => handleDelete(url)} />
-              ))}
+          {!loading && images.length > 0 ? (
+            <div style={{ display: "grid", gap: 24 }}>
+              <LibrarySection
+                title="Your Images"
+                subtitle="Your shared uploads, saved edits, and any legacy email-only images."
+                items={userImages}
+                onPick={onPick}
+                onDelete={handleDelete}
+                canDelete={(image) => !image?.is_template || permissions.canManageTemplateImages || image?.source === "legacy-email"}
+              />
+              <LibrarySection
+                title="Generic Site Images"
+                subtitle="Shared starter images available across websites, funnels, social, and email."
+                items={genericImages}
+                onPick={onPick}
+                onDelete={handleDelete}
+                canDelete={() => permissions.canManageTemplateImages}
+              />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
 
-function ImgTile({ url, onPick, onDelete }) {
+function LibrarySection({ title, subtitle, items, onPick, onDelete, canDelete }) {
+  if (!items.length) return null;
+
+  return (
+    <section style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "grid", gap: 4 }}>
+        <strong style={{ fontSize: 18, color: "#f8fafc" }}>{title}</strong>
+        <span style={{ fontSize: 14, lineHeight: 1.5, color: "#94a3b8" }}>{subtitle}</span>
+      </div>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+        gap: 12,
+      }}>
+        {items.map((image) => (
+          <ImgTile
+            key={image.id}
+            image={image}
+            onPick={() => onPick(image.url)}
+            onDelete={() => onDelete(image)}
+            canDelete={!!canDelete?.(image)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ImgTile({ image, onPick, onDelete, canDelete = false }) {
   const [hov, setHov] = useState(false);
+  const url = String(image?.url || "");
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -201,21 +297,23 @@ function ImgTile({ url, onPick, onDelete }) {
           >
             ＋
           </div>
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(); }}
-            title="Delete image"
-            style={{
-              position: "absolute", top: 6, right: 6,
-              background: "rgba(220,38,38,0.9)",
-              border: "none", borderRadius: 6,
-              color: "#fff", fontSize: 14, fontWeight: 700,
-              width: 28, height: 28, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              lineHeight: 1,
-            }}
-          >
-            🗑
-          </button>
+          {canDelete ? (
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(); }}
+              title="Delete image"
+              style={{
+                position: "absolute", top: 6, right: 6,
+                background: "rgba(220,38,38,0.9)",
+                border: "none", borderRadius: 6,
+                color: "#fff", fontSize: 14, fontWeight: 700,
+                width: 28, height: 28, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                lineHeight: 1,
+              }}
+            >
+              🗑
+            </button>
+          ) : null}
         </>
       )}
     </div>

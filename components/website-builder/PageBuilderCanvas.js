@@ -1,13 +1,70 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { flushSync } from "react-dom";
-import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
+import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { BlockTypes, BlockDefinitions } from "../../lib/website-builder/pageBlockComponents";
+import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import RichText from "../RichText";
 
 const ImageEditModal = dynamic(() => import("../email/editor2/ImageEditModal"), { ssr: false });
+const CUSTOM_STATS_PRESET_STORAGE_KEY = "gr8:stats-custom-preset:v1";
+const CUSTOM_STATS_PRESET_FIELDS = [
+  "statsVariant",
+  "backgroundColor",
+  "textColor",
+  "borderColor",
+  "cardBackgroundColor",
+  "accentColor",
+];
+
+function normalizeCustomStatsPreset(value) {
+  if (!value || typeof value !== "object") return null;
+
+  const preset = CUSTOM_STATS_PRESET_FIELDS.reduce((acc, key) => {
+    const nextValue = value?.[key];
+    if (typeof nextValue === "string" && nextValue.trim()) {
+      acc[key] = nextValue.trim();
+    }
+    return acc;
+  }, {});
+
+  return Object.keys(preset).length ? preset : null;
+}
+
+function readCustomStatsPreset() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_STATS_PRESET_STORAGE_KEY);
+    if (!raw) return null;
+    return normalizeCustomStatsPreset(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function writeCustomStatsPreset(value) {
+  if (typeof window === "undefined") return null;
+
+  const preset = normalizeCustomStatsPreset(value);
+  if (!preset) return null;
+
+  try {
+    window.localStorage.setItem(CUSTOM_STATS_PRESET_STORAGE_KEY, JSON.stringify(preset));
+  } catch {
+    return null;
+  }
+
+  return preset;
+}
+
+function matchesCustomStatsPreset(props, preset) {
+  const left = normalizeCustomStatsPreset(props);
+  const right = normalizeCustomStatsPreset(preset);
+  return JSON.stringify(left) === JSON.stringify(right);
+}
 
 function formatLabel(key) {
   const text = String(key || "")
@@ -82,7 +139,7 @@ function supportsSectionHeight(blockType) {
 }
 
 function supportsFullWidthBackground(blockType) {
-  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE].includes(blockType);
+  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK].includes(blockType);
 }
 
 function supportsCopyRegeneration(blockType) {
@@ -187,6 +244,129 @@ function createContactField(seed = 0, overrides = {}) {
 
 function normalizeContactFields(fields = []) {
   return (Array.isArray(fields) ? fields : []).map((field, index) => createContactField(index, field || {}));
+}
+
+function isCssGradient(value) {
+  return /(linear-gradient|radial-gradient|conic-gradient)\(/i.test(String(value || ""));
+}
+
+function extractSolidColor(value, fallback = "#0f172a") {
+  const match = String(value || "").match(/(#[0-9a-fA-F]{3,8}|rgba?\([^\)]+\)|hsla?\([^\)]+\))/);
+  return match?.[1] || fallback;
+}
+
+function normalizeHeroBackgroundModeProps(props, nextMode) {
+  const currentProps = { ...(props || {}) };
+  const currentBackground = String(currentProps.backgroundColor || "").trim();
+
+  if (nextMode === "solid") {
+    return {
+      ...currentProps,
+      backgroundStyle: "solid",
+      backgroundColor: isCssGradient(currentBackground)
+        ? extractSolidColor(currentBackground, "#0f172a")
+        : (currentBackground || "#0f172a"),
+    };
+  }
+
+  if (nextMode === "gradient") {
+    const baseColor = isCssGradient(currentBackground)
+      ? extractSolidColor(currentBackground, "#0ea5e9")
+      : (currentBackground || "#0ea5e9");
+    return {
+      ...currentProps,
+      backgroundStyle: "gradient",
+      backgroundColor: `linear-gradient(135deg, ${baseColor}, #22c55e)`,
+    };
+  }
+
+  return {
+    ...currentProps,
+    backgroundStyle: nextMode,
+  };
+}
+
+function AssetLibraryModal({ visible, title = "Media Library", assets = [], selectedSrc = "", onClose, onSelect, onUpload }) {
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (!visible) {
+      setQuery("");
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const filteredAssets = (Array.isArray(assets) ? assets : []).filter((asset) => {
+    const needle = String(query || "").trim().toLowerCase();
+    if (!needle) return true;
+    const haystack = `${String(asset?.name || "")} ${String(asset?.src || "")}`.toLowerCase();
+    return haystack.includes(needle);
+  });
+
+  return (
+    <div style={styles.modalOverlay} onClick={() => onClose?.()}>
+      <div style={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+        <div style={styles.modalHeader}>
+          <div style={{ display: "grid", gap: 4 }}>
+            <strong style={styles.modalTitle}>{title}</strong>
+            <span style={styles.modalSubtitle}>Search, preview, and apply media from the shared library.</span>
+          </div>
+          <button type="button" style={styles.modalCloseBtn} onClick={() => onClose?.()}>
+            Close
+          </button>
+        </div>
+        <div style={styles.modalToolbar}>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search library"
+            style={styles.modalSearchInput}
+          />
+          <label style={styles.modalUploadBtn}>
+            Upload Here
+            <input
+              type="file"
+              accept="image/*"
+              style={styles.hiddenInput}
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                const asset = await Promise.resolve(onUpload?.(file));
+                if (asset?.src) onClose?.();
+              }}
+            />
+          </label>
+        </div>
+        <div style={styles.modalAssetGrid}>
+          {filteredAssets.map((asset) => {
+            const src = String(asset?.src || "").trim();
+            const selected = !!selectedSrc && src === selectedSrc;
+            return (
+              <button
+                key={asset?.id || src}
+                type="button"
+                style={{
+                  ...styles.modalAssetCard,
+                  ...(selected ? styles.modalAssetCardSelected : {}),
+                }}
+                onClick={() => {
+                  onSelect?.(asset);
+                  onClose?.();
+                }}
+                title={asset?.name || "Library image"}
+              >
+                <img src={src} alt={asset?.name || "Library image"} style={styles.modalAssetPreview} />
+                <span style={styles.modalAssetName}>{asset?.name || "Image"}</span>
+              </button>
+            );
+          })}
+          {!filteredAssets.length ? <div style={styles.modalEmptyState}>No library images match that search.</div> : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const CONTACT_FORM_TEMPLATES = [
@@ -1659,11 +1839,11 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
           <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
             <input
               type="checkbox"
-              checked={props.enableParallax !== false}
+              checked={!!props.enableParallax}
               onChange={(e) => update({ enableParallax: e.target.checked })}
               style={styles.checkboxInput}
             />
-            Parallax / free-move text
+            Enable parallax background
           </label>
         </div>
         <div style={styles.sectionCard}>
@@ -1722,6 +1902,7 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
 function StatsPropertiesPanel({ block, index, onChange }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const [customPreset, setCustomPreset] = useState(() => readCustomStatsPreset());
   const statsStyleLabels = {
     "editorial-band": "Editorial Band",
     "spotlight-orbs": "Spotlight Orbs",
@@ -1729,6 +1910,12 @@ function StatsPropertiesPanel({ block, index, onChange }) {
     "minimal-ticker": "Minimal Ticker",
     "data-ribbon": "Data Ribbon",
   };
+  const hasCustomPreset = !!customPreset;
+  const customPresetActive = hasCustomPreset && matchesCustomStatsPreset(props, customPreset);
+
+  useEffect(() => {
+    setCustomPreset(readCustomStatsPreset());
+  }, []);
 
   return (
     <div style={styles.properties}>
@@ -1757,6 +1944,35 @@ function StatsPropertiesPanel({ block, index, onChange }) {
                 </button>
               );
             })}
+            {hasCustomPreset ? (
+              <button
+                type="button"
+                onClick={() => update(customPreset)}
+                style={{
+                  ...styles.secondaryBtn,
+                  justifyContent: "center",
+                  background: customPresetActive ? "#dbeafe" : "#ffffff",
+                  borderColor: customPresetActive ? "#2563eb" : "rgba(148,163,184,0.24)",
+                  color: customPresetActive ? "#0f172a" : "#334155",
+                  fontWeight: 600,
+                  gridColumn: "1 / -1",
+                }}
+              >
+                Saved Custom Style
+              </button>
+            ) : null}
+          </div>
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => setCustomPreset(writeCustomStatsPreset(props))}
+              style={{ ...styles.secondaryBtn, justifyContent: "center" }}
+            >
+              Save Current Style as Option
+            </button>
+            <span style={{ fontSize: 12, lineHeight: 1.5, color: "#64748b" }}>
+              Saves this stats card's layout variant and colour treatment into a reusable option here.
+            </span>
           </div>
         </div>
         <div style={styles.sectionCard}>
@@ -4023,7 +4239,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.selected === next.selected
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, compactPreview, pageCanvasWidth }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
@@ -4198,6 +4414,19 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                   📌 Footer
                 </button>
               </>
+            ) : null}
+            {onSaveBlockDefault ? (
+              <button
+                type="button"
+                style={{ ...styles.blockActionBtn, background: "#132036", color: "#c4b5fd", border: "1px solid #7c3aed", fontSize: 11, padding: "2px 7px" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveBlockDefault(block);
+                }}
+                title="Save this block's current presentation as the default for this block type"
+              >
+                Save Default
+              </button>
             ) : null}
           </div>
         </div>
@@ -5223,16 +5452,18 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, project, activePage, currentObjective }) => {
+const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, onRefreshAssetLibrary, project, activePage, currentObjective }) => {
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenError, setRegenError] = useState("");
   const [regenTone, setRegenTone] = useState("balanced");
   const [sectionHeightDraft, setSectionHeightDraft] = useState("");
+  const [assetBrowser, setAssetBrowser] = useState({ visible: false, fieldKey: "", title: "" });
 
   useEffect(() => {
     setRegenBusy(false);
     setRegenError("");
     setSectionHeightDraft(String(parsePixelValue(block?.props?.minHeight, block?.type === BlockTypes.HERO ? 420 : 220)));
+    setAssetBrowser({ visible: false, fieldKey: "", title: "" });
   }, [block?.id, block?.props?.minHeight, block?.type]);
 
   if (!block) {
@@ -5251,7 +5482,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const fontFamilyKey = isHero ? "headlineFontFamily" : "fontFamily";
   const colorKey = isHero ? "headlineColor" : "textColor";
   const alignKey = isHero ? "headlineAlignment" : "alignment";
-  const supportsParallaxToggle = [BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT].includes(block.type);
+  const supportsParallaxToggle = [BlockTypes.PARALLAX, BlockTypes.TEXT].includes(block.type);
   const isPositionableText = block.type === BlockTypes.PARALLAX || (!!block?.props?.enableParallax && [BlockTypes.HERO, BlockTypes.TEXT].includes(block.type));
   const supportsOverlayImage = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
 
@@ -5266,6 +5497,21 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
     onChange(index, nextProps);
   }
+
+  function openAssetBrowser(fieldKey, title) {
+    const opened = openSharedMediaPicker({
+      onPick: (asset) => {
+        if (!assetBrowser.fieldKey && !fieldKey) return;
+        onSelectAsset(index, fieldKey, asset);
+      },
+      onBlocked: () => setAssetBrowser({ visible: true, fieldKey, title }),
+    });
+    if (opened) return;
+    setAssetBrowser({ visible: true, fieldKey, title });
+  }
+
+  const selectedBrowserImage = assetBrowser.fieldKey ? String(block?.props?.[assetBrowser.fieldKey] || "") : "";
+  const browserAssets = [savedLogo, ...savedImages].filter(Boolean);
 
   async function regenerateBlockCopy() {
     if (!block || typeof index !== "number") return;
@@ -5520,6 +5766,21 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🎨 Edit: {def?.name}</h3>
+      <AssetLibraryModal
+        visible={assetBrowser.visible}
+        title={assetBrowser.title || "Media Library"}
+        assets={browserAssets}
+        selectedSrc={selectedBrowserImage}
+        onClose={() => setAssetBrowser({ visible: false, fieldKey: "", title: "" })}
+        onSelect={(asset) => {
+          if (!assetBrowser.fieldKey) return;
+          onSelectAsset(index, assetBrowser.fieldKey, asset);
+        }}
+        onUpload={(file) => {
+          if (!assetBrowser.fieldKey) return null;
+          return onUploadImage(index, assetBrowser.fieldKey, file);
+        }}
+      />
       <div style={styles.propertyGrid}>
         {supportsSectionHeight(block.type) ? (
           <div style={styles.sectionCard}>
@@ -5560,7 +5821,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             <label style={styles.inlineToggle}>
               <input
                 type="checkbox"
-                checked={block?.props?.enableParallax !== false}
+                checked={!!block?.props?.enableParallax}
                 onChange={(e) => {
                   const nextEnabled = e.target.checked;
                   onChange(index, {
@@ -5573,7 +5834,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 }}
                 style={styles.checkboxInput}
               />
-              Enable parallax and free-move text
+              Enable parallax background
             </label>
           </div>
         ) : null}
@@ -5597,20 +5858,6 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   }}
                 />
               </label>
-              {savedImages.slice(0, 6).map((image) => (
-                <button
-                  key={`hero-bg-${image.id}`}
-                  type="button"
-                  style={styles.assetThumbBtn}
-                  onClick={() => {
-                    const nextProps = applyAssetToProps(block.props || {}, "backgroundImage", image);
-                    onChange(index, { ...nextProps, backgroundStyle: "image", backgroundImage: image.src || "" });
-                    onSelectAsset(index, "backgroundImage", image);
-                  }}
-                >
-                  <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
-                </button>
-              ))}
               {block?.props?.backgroundImage ? (
                 <button
                   type="button"
@@ -5621,10 +5868,18 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 </button>
               ) : null}
             </div>
+            <div style={styles.assetLibraryActionRow}>
+              <button type="button" style={styles.assetLibraryBtn} onClick={() => openAssetBrowser("backgroundImage", block.type === BlockTypes.PARALLAX ? "Section Background Library" : "Hero Background Library")}>
+                Open Media Library
+              </button>
+              <button type="button" style={styles.assetLibraryBtnSecondary} onClick={() => onRefreshAssetLibrary?.()}>
+                Refresh Library
+              </button>
+            </div>
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Mode</label>
             <select
               value={String(block?.props?.backgroundStyle || "gradient")}
-              onChange={(e) => onChange(index, { ...block.props, backgroundStyle: e.target.value })}
+              onChange={(e) => onChange(index, normalizeHeroBackgroundModeProps(block.props, e.target.value))}
               style={styles.propertyInput}
             >
               <option value="gradient">Gradient</option>
@@ -5632,28 +5887,45 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               <option value="image">Image</option>
               <option value="video">Video</option>
             </select>
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
-            <select
-              value={String(block?.props?.backgroundPosition || "center center")}
-              onChange={(e) => onChange(index, { ...block.props, backgroundPosition: e.target.value, backgroundStyle: block?.props?.backgroundStyle || "image" })}
-              style={styles.propertyInput}
-            >
-              <option value="top center">Top</option>
-              <option value="center center">Middle</option>
-              <option value="bottom center">Bottom</option>
-              <option value="center left">Left</option>
-              <option value="center right">Right</option>
-            </select>
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Size</label>
-            <select
-              value={String(block?.props?.backgroundSize || "cover")}
-              onChange={(e) => onChange(index, { ...block.props, backgroundSize: e.target.value, backgroundStyle: block?.props?.backgroundStyle || "image" })}
-              style={styles.propertyInput}
-            >
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="auto">Auto</option>
-            </select>
+            {(block?.props?.backgroundStyle || "gradient") === "image" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
+                <select
+                  value={String(block?.props?.backgroundPosition || "center center")}
+                  onChange={(e) => onChange(index, { ...block.props, backgroundPosition: e.target.value, backgroundStyle: "image" })}
+                  style={styles.propertyInput}
+                >
+                  <option value="top center">Top</option>
+                  <option value="center center">Middle</option>
+                  <option value="bottom center">Bottom</option>
+                  <option value="center left">Left</option>
+                  <option value="center right">Right</option>
+                </select>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Size</label>
+                <select
+                  value={String(block?.props?.backgroundSize || "cover")}
+                  onChange={(e) => onChange(index, { ...block.props, backgroundSize: e.target.value, backgroundStyle: "image" })}
+                  style={styles.propertyInput}
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="auto">Auto</option>
+                </select>
+                <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={String(block?.props?.backgroundRepeat || "no-repeat") === "no-repeat"}
+                    onChange={(e) => onChange(index, {
+                      ...block.props,
+                      backgroundRepeat: e.target.checked ? "no-repeat" : "repeat",
+                      backgroundStyle: "image",
+                    })}
+                    style={styles.checkboxInput}
+                  />
+                  No repeat background image
+                </label>
+              </>
+            ) : null}
           </div>
         ) : null}
         {supportsCopyRegeneration(block.type) ? (
@@ -5758,24 +6030,13 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   Remove Overlay
                 </button>
               )}
-              {savedImages.slice(0, 6).map((image) => (
-                <button
-                  key={`floating-${image.id}`}
-                  type="button"
-                  style={styles.assetThumbBtn}
-                  onClick={() => {
-                    const nextProps = applyAssetToProps(block.props || {}, "floatingImage", image);
-                    onChange(index, {
-                      ...withHeroOverlayDefaults(nextProps),
-                      floatingImage: image.src || "",
-                    });
-                    onSelectAsset(index, "floatingImage", image);
-                  }}
-                  title={image.name}
-                >
-                  <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
-                </button>
-              ))}
+              <button
+                type="button"
+                style={styles.assetLibraryBtn}
+                onClick={() => openAssetBrowser("floatingImage", "Overlay Media Library")}
+              >
+                Open Media Library
+              </button>
             </div>
             <div style={styles.colorGrid}>
               <NumberField label="Image X %" value={Number(block?.props?.floatingX ?? 76)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingX: value })} />
@@ -5920,17 +6181,13 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                       Use Logo
                     </button>
                   ) : null}
-                  {savedImages.map((image) => (
-                    <button
-                      key={`${key}-${image.id}`}
-                      type="button"
-                      style={styles.assetThumbBtn}
-                      onClick={() => onSelectAsset(index, key, image)}
-                      title={image.name}
-                    >
-                      <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    style={styles.assetLibraryBtn}
+                    onClick={() => openAssetBrowser(key, `${formatLabel(key)} Library`)}
+                  >
+                    Open Media Library
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -5943,7 +6200,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
 const renderBlockPreview = (block, assets, options = {}) => renderWebsiteBlock(block, { compact: false, assets, editor: true, ...options });
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onUpdateGlobalBlock, showHeader = true }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, blockDefaults = {}, showHeader = true }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -5983,6 +6240,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const animationPopoverDraggedRef = useRef(false);
   const showTextToolbarRef = useRef(false);
   const saveNoticeTimerRef = useRef(null);
+  const autosaveTimerRef = useRef(null);
+  const skipNextAutosaveRef = useRef(true);
+  const pendingLocalBlocksRef = useRef(false);
+  const selectedIndexRef = useRef(null);
+  const selectedGlobalRoleRef = useRef(null);
 
   const selectedBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
   const selectedGlobalBlock = selectedGlobalRole === "nav"
@@ -5992,14 +6254,73 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       : null;
   const imageEditorUserId = project?.userId || project?.user_id || project?.ownerId || project?.owner_id || undefined;
   latestBlocksRef.current = blocks;
+  selectedIndexRef.current = selectedIndex;
+  selectedGlobalRoleRef.current = selectedGlobalRole;
 
   useEffect(() => {
-    latestBlocksRef.current = Array.isArray(pageBlocks) ? pageBlocks : [];
-    setBlocks(Array.isArray(pageBlocks) ? pageBlocks : []);
-    setSelectedIndex(null);
-    setSelectedGlobalRole(null);
+    const nextBlocks = Array.isArray(pageBlocks) ? pageBlocks : [];
+    const localBlocks = latestBlocksRef.current;
+    const blocksMatch = JSON.stringify(localBlocks) === JSON.stringify(nextBlocks);
+
+    if (pendingLocalBlocksRef.current && !blocksMatch) {
+      return;
+    }
+
+    if (blocksMatch) {
+      pendingLocalBlocksRef.current = false;
+    }
+
+    const previousSelectedIndex = selectedIndexRef.current;
+    const previousSelectedGlobalRole = selectedGlobalRoleRef.current;
+    const previousSelectedBlockId = Number.isInteger(previousSelectedIndex)
+      ? localBlocks[previousSelectedIndex]?.id
+      : null;
+
+    latestBlocksRef.current = nextBlocks;
+    setBlocks(nextBlocks);
+    skipNextAutosaveRef.current = true;
+
+    if (previousSelectedGlobalRole === "nav" && project?.globalNavBlock) {
+      setSelectedGlobalRole("nav");
+      setSelectedIndex(null);
+    } else if (previousSelectedGlobalRole === "footer" && project?.globalFooterBlock) {
+      setSelectedGlobalRole("footer");
+      setSelectedIndex(null);
+    } else if (previousSelectedBlockId != null) {
+      const nextSelectedIndex = nextBlocks.findIndex((entry) => entry?.id === previousSelectedBlockId);
+      setSelectedIndex(nextSelectedIndex >= 0 ? nextSelectedIndex : null);
+      setSelectedGlobalRole(null);
+    } else {
+      setSelectedIndex(null);
+      setSelectedGlobalRole(null);
+    }
+
     setDropIndex(null);
-  }, [pageBlocks]);
+  }, [pageBlocks, project?.globalFooterBlock, project?.globalNavBlock]);
+
+  useEffect(() => {
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return undefined;
+    }
+    if (typeof onSave !== "function") return undefined;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      onSave(latestBlocksRef.current);
+    }, 180);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [blocks, onSave]);
 
   useEffect(() => {
     if (selectedGlobalRole === "nav" && !project?.globalNavBlock) {
@@ -6178,10 +6499,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const inEditable = findEditable(event.target);
       const inToolbar = event.target?.closest?.('[data-text-toolbar="true"]');
       const inAnimationPopover = event.target?.closest?.('[data-animation-popover="true"]');
+      const inSidePanel = event.target?.closest?.('[data-builder-sidepanel="true"]');
       if (inEditable) {
         if (showTextToolbarRef.current) {
           syncToolbarForEditable(inEditable, window.getSelection?.(), { reveal: false });
         }
+        return;
+      }
+      if (inSidePanel) {
         return;
       }
       if (!inToolbar && !inAnimationPopover) {
@@ -6243,7 +6568,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const createNewBlock = (blockType) => ({
     id: Date.now() + Math.floor(Math.random() * 1000),
     type: blockType,
-    props: { ...BlockDefinitions[blockType].defaultProps },
+    props: { ...BlockDefinitions[blockType].defaultProps, ...(blockDefaults?.[blockType] || {}) },
   });
 
   const handleInsertAt = (insertIndex, dataTransfer) => {
@@ -6254,6 +6579,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const newBlock = createNewBlock(newBlockType);
       const updated = [...blocks];
       updated.splice(safeIndex, 0, newBlock);
+      pendingLocalBlocksRef.current = true;
       latestBlocksRef.current = updated;
       setBlocks(updated);
       selectCanvasBlock(safeIndex);
@@ -6296,6 +6622,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handleDelete = (index) => {
     const updated = blocks.filter((_, i) => i !== index);
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     setSelectedIndex(null);
@@ -6327,6 +6654,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       id: Date.now(),
     };
     const updated = [...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)];
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(index + 1);
@@ -6338,6 +6666,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.splice(nextIndex, 0, moved);
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(nextIndex);
@@ -6348,6 +6677,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.unshift(moved);
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     selectCanvasBlock(0);
@@ -6356,6 +6686,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const handleUpdateBlock = (index, newProps) => {
     const updated = [...blocks];
     updated[index] = { ...blocks[index], props: newProps };
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
   };
@@ -6370,37 +6701,41 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const applyAssetToCanvasBlock = (index, key, asset) => {
-    if (!asset?.src || typeof index !== "number") return null;
+    const normalizedAsset = normalizeSelectedAsset(asset);
+    if (!normalizedAsset?.src || typeof index !== "number") return null;
     const updated = [...blocks];
     const target = updated[index];
     if (!target) return null;
 
-    const nextProps = applyAssetToProps(target.props || {}, key, asset);
-    nextProps[key] = asset.src || "";
+    const nextProps = applyAssetToProps(target.props || {}, key, normalizedAsset);
+    nextProps[key] = normalizedAsset.src || "";
 
     updated[index] = {
       ...target,
       props: nextProps,
     };
 
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     return updated;
   };
 
   const handleCanvasAssetSelect = (index, key, asset) => {
-    const updated = applyAssetToCanvasBlock(index, key, asset);
+    const normalizedAsset = normalizeSelectedAsset(asset);
+    const updated = applyAssetToCanvasBlock(index, key, normalizedAsset);
     if (!updated) return;
-    onSelectAsset?.(index, key, asset, updated);
+    onSelectAsset?.(index, key, normalizedAsset, updated);
   };
 
   const handleGlobalAssetSelect = (role, key, asset) => {
-    if (!asset?.src) return;
+    const normalizedAsset = normalizeSelectedAsset(asset);
+    if (!normalizedAsset?.src) return;
     const block = role === "nav" ? project?.globalNavBlock : project?.globalFooterBlock;
     if (!block) return;
 
-    const nextProps = applyAssetToProps(block.props || {}, key, asset);
-    nextProps[key] = asset.src || "";
+    const nextProps = applyAssetToProps(block.props || {}, key, normalizedAsset);
+    nextProps[key] = normalizedAsset.src || "";
     onUpdateGlobalBlock?.(role, {
       ...block,
       props: nextProps,
@@ -6492,7 +6827,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const asset = await Promise.resolve(onUploadImage?.(blockIndex, "__image_stack_layer__", file));
     if (!asset?.src) return asset;
 
-    const updated = [...blocks];
+    const updated = [...latestBlocksRef.current];
     const target = updated[blockIndex];
     if (!target) return asset;
 
@@ -6502,20 +6837,28 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         ? {
             ...layer,
             kind: "image",
-            src: String(asset.src || "").startsWith("data:") ? "" : (asset.src || layer?.src || ""),
+            src: asset.src || layer?.src || "",
             assetId: asset.id || "",
           }
         : layer
     ));
+
+    if (layerIndex >= 0 && layerIndex < nextLayers.length) {
+      const [promotedLayer] = nextLayers.splice(layerIndex, 1);
+      nextLayers.push(promotedLayer);
+    }
 
     updated[blockIndex] = {
       ...target,
       props: {
         ...(target.props || {}),
         images: nextLayers,
+        selectedLayerIndex: nextLayers.length ? nextLayers.length - 1 : null,
       },
     };
 
+    pendingLocalBlocksRef.current = true;
+    latestBlocksRef.current = updated;
     setBlocks(updated);
     onSave?.(updated);
     return asset;
@@ -6531,7 +6874,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleToolbarParallax = () => {
-    if (selectedBlock && [BlockTypes.HERO, BlockTypes.TEXT, BlockTypes.PARALLAX].includes(selectedBlock.type)) {
+    if (selectedBlock && [BlockTypes.TEXT, BlockTypes.PARALLAX].includes(selectedBlock.type)) {
       const current = !!selectedBlock?.props?.enableParallax;
       const nextEnabled = !current;
       handleUpdateBlock(selectedIndex, {
@@ -7357,6 +7700,50 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
   };
 
+  const handleSaveCurrentPageAsTemplate = async () => {
+    if (!onSaveTemplatePage) return;
+    showSavePopup("Saving template page...", "info");
+    try {
+      const committedBlocks = await commitPendingInlineEdits();
+      const saved = await Promise.resolve(onSaveTemplatePage({
+        pageName: activePage,
+        blocks: committedBlocks,
+        globalNavBlock: project?.globalNavBlock || null,
+        globalFooterBlock: project?.globalFooterBlock || null,
+      }));
+      if (!saved) {
+        showSavePopup("Could not save template page", "error");
+        return;
+      }
+      showSavePopup("Template page saved");
+    } catch {
+      showSavePopup("Could not save template page", "error");
+    }
+  };
+
+  const handleSaveCurrentSiteAsTemplate = async () => {
+    if (!onSaveTemplateSite) return;
+    showSavePopup("Saving full template...", "info");
+    try {
+      const committedBlocks = await commitPendingInlineEdits();
+      const saved = await Promise.resolve(onSaveTemplateSite({
+        pageBlocks: {
+          ...(project?.pageBlocks || {}),
+          [activePage]: committedBlocks,
+        },
+        globalNavBlock: project?.globalNavBlock || null,
+        globalFooterBlock: project?.globalFooterBlock || null,
+      }));
+      if (!saved) {
+        showSavePopup("Could not save full template", "error");
+        return;
+      }
+      showSavePopup("Template saved globally");
+    } catch {
+      showSavePopup("Could not save full template", "error");
+    }
+  };
+
   return (
     <div style={styles.container}>
       <style>{`
@@ -7410,6 +7797,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             <button
               type="button"
               style={styles.panelToggleBtn}
+              onClick={() => onRefreshAssetLibrary?.()}
+            >
+              Refresh Library
+            </button>
+            <button
+              type="button"
+              style={styles.panelToggleBtn}
               onClick={() => insertPresetBlock(BlockTypes.IMAGE_STACK, {
                 title: "Free Layout Image Canvas",
                 minHeight: "72vh",
@@ -7445,6 +7839,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               </button>
             ) : null}
             <div style={styles.primaryActionGroup}>
+              {project?.templateSlug && onSaveTemplatePage ? (
+                <button type="button" style={styles.previewBtn} onClick={handleSaveCurrentPageAsTemplate}>
+                  Save Page to Template
+                </button>
+              ) : null}
+              {project?.templateSlug && onSaveTemplateSite ? (
+                <button type="button" style={styles.previewBtn} onClick={handleSaveCurrentSiteAsTemplate}>
+                  Save Site to Template
+                </button>
+              ) : null}
               {project?.id ? (
                 <button type="button" style={styles.previewBtn} onClick={handlePreviewPage}>
                   👁 Preview Page
@@ -7549,7 +7953,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           gridTemplateColumns: workspaceColumns,
         }}
       >
-        {showLibrary ? <BlockLibraryPanel onDragStart={handleDragStart} /> : null}
+        {showLibrary ? (
+          <div style={styles.leftPanelShell}>
+            <BlockLibraryPanel onDragStart={handleDragStart} />
+          </div>
+        ) : null}
 
         <div
           data-builder-canvas="true"
@@ -7630,6 +8038,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       onBlockDragOver={handleBlockDragOver}
                       onBlockDrop={handleBlockDrop}
                       onSaveAsGlobal={onSaveAsGlobal}
+                      onSaveBlockDefault={onSaveBlockDefault}
                     />
                   </React.Fragment>
                 ))}
@@ -7666,37 +8075,40 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         </div>
 
         {showProperties ? (
-          rightPanelMode === "global" ? (
-            <GlobalStylePanel blocks={blocks} onApplyGlobal={applyGlobalStyles} />
-          ) : rightPanelMode === "sections" ? (
-            <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
-          ) : (
-            <PropertiesPanel
-              block={selectedGlobalBlock || blocks[selectedIndex] || null}
-              index={selectedGlobalBlock ? -1 : selectedIndex}
-              onChange={selectedGlobalBlock
-                ? (_index, nextProps) => {
-                    if (!selectedGlobalRole || !selectedGlobalBlock) return;
-                    onUpdateGlobalBlock?.(selectedGlobalRole, {
-                      ...selectedGlobalBlock,
-                      props: nextProps,
-                    });
-                  }
-                : handleUpdateBlock}
-              brandAssets={brandAssets}
-              onUploadImage={selectedGlobalBlock
-                ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
-                : handleCanvasImageUpload}
-              onSelectAsset={selectedGlobalBlock
-                ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
-                : handleCanvasAssetSelect}
-              onOpenImageEditor={openStructuredImageEditor}
-              onOpenSimpleImageEditor={openSimpleImageEditor}
-              project={project}
-              activePage={activePage}
-              currentObjective={currentObjective}
-            />
-          )
+          <div data-builder-sidepanel="true" style={styles.sidePanelShell}>
+            {rightPanelMode === "global" ? (
+              <GlobalStylePanel blocks={blocks} onApplyGlobal={applyGlobalStyles} />
+            ) : rightPanelMode === "sections" ? (
+              <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
+            ) : (
+              <PropertiesPanel
+                block={selectedGlobalBlock || blocks[selectedIndex] || null}
+                index={selectedGlobalBlock ? -1 : selectedIndex}
+                onChange={selectedGlobalBlock
+                  ? (_index, nextProps) => {
+                      if (!selectedGlobalRole || !selectedGlobalBlock) return;
+                      onUpdateGlobalBlock?.(selectedGlobalRole, {
+                        ...selectedGlobalBlock,
+                        props: nextProps,
+                      });
+                    }
+                  : handleUpdateBlock}
+                brandAssets={brandAssets}
+                onUploadImage={selectedGlobalBlock
+                  ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
+                  : handleCanvasImageUpload}
+                onSelectAsset={selectedGlobalBlock
+                  ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
+                  : handleCanvasAssetSelect}
+                onOpenImageEditor={openStructuredImageEditor}
+                onOpenSimpleImageEditor={openSimpleImageEditor}
+                onRefreshAssetLibrary={onRefreshAssetLibrary}
+                project={project}
+                activePage={activePage}
+                currentObjective={currentObjective}
+              />
+            )}
+          </div>
         ) : null}
       </div>
     </div>
@@ -8077,6 +8489,15 @@ const styles = {
   workspaceNarrow: {
     gridTemplateColumns: "1fr",
   },
+  leftPanelShell: {
+    minWidth: 0,
+    minHeight: 0,
+    height: "100%",
+    display: "grid",
+    position: "sticky",
+    top: 0,
+    alignSelf: "start",
+  },
   library: {
     background: "#111827",
     border: "1px solid #1e2d45",
@@ -8182,6 +8603,15 @@ const styles = {
     minHeight: 0,
     height: "100%",
   },
+  sidePanelShell: {
+    minWidth: 0,
+    minHeight: 0,
+    height: "100%",
+    display: "grid",
+    position: "sticky",
+    top: 0,
+    alignSelf: "start",
+  },
   canvasGridBg: {
     backgroundImage: "linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px)",
     backgroundSize: "24px 24px",
@@ -8264,7 +8694,7 @@ const styles = {
     position: "absolute",
     left: 14,
     top: 14,
-    zIndex: 5,
+    zIndex: 40,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -8974,5 +9404,170 @@ const styles = {
     height: "100%",
     objectFit: "cover",
     display: "block",
+  },
+  assetPickerGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(52px, 1fr))",
+    gap: 8,
+    marginTop: 8,
+    maxHeight: 220,
+    overflowY: "auto",
+    paddingRight: 4,
+  },
+  assetPickerEmpty: {
+    gridColumn: "1 / -1",
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: "#94a3b8",
+    padding: "6px 0",
+  },
+  assetLibraryActionRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  assetLibraryBtn: {
+    padding: "9px 12px",
+    borderRadius: 10,
+    border: "1px solid rgba(56,189,248,0.26)",
+    background: "rgba(14,165,233,0.14)",
+    color: "#e0f2fe",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  assetLibraryBtnSecondary: {
+    padding: "9px 12px",
+    borderRadius: 10,
+    border: "1px solid rgba(148,163,184,0.2)",
+    background: "rgba(15,23,42,0.52)",
+    color: "#e2e8f0",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 220,
+    background: "rgba(2,6,23,0.72)",
+    backdropFilter: "blur(10px)",
+    display: "grid",
+    placeItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "min(1040px, 100%)",
+    maxHeight: "min(82vh, 880px)",
+    display: "grid",
+    gridTemplateRows: "auto auto minmax(0, 1fr)",
+    gap: 14,
+    background: "#0b1220",
+    border: "1px solid rgba(56,189,248,0.18)",
+    borderRadius: 18,
+    boxShadow: "0 28px 70px rgba(2,6,23,0.42)",
+    padding: 18,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: "#e0f2fe",
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    lineHeight: 1.5,
+    color: "#94a3b8",
+  },
+  modalCloseBtn: {
+    padding: "10px 14px",
+    borderRadius: 10,
+    border: "1px solid rgba(148,163,184,0.22)",
+    background: "rgba(15,23,42,0.9)",
+    color: "#e2e8f0",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  modalToolbar: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  modalSearchInput: {
+    flex: "1 1 280px",
+    minWidth: 0,
+    background: "#0d1522",
+    border: "1px solid #2b3650",
+    color: "#e6eef5",
+    borderRadius: 10,
+    padding: "10px 12px",
+    fontSize: 15,
+  },
+  modalUploadBtn: {
+    padding: "10px 14px",
+    borderRadius: 10,
+    background: "linear-gradient(135deg,#7df9a1,#00d4ff)",
+    color: "#04202e",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalAssetGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+    gap: 12,
+    overflowY: "auto",
+    paddingRight: 4,
+    alignContent: "start",
+  },
+  modalAssetCard: {
+    display: "grid",
+    gap: 8,
+    padding: 10,
+    borderRadius: 14,
+    border: "1px solid #24334d",
+    background: "#101827",
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  modalAssetCardSelected: {
+    border: "1px solid #38bdf8",
+    boxShadow: "0 0 0 1px rgba(56,189,248,0.25)",
+  },
+  modalAssetPreview: {
+    width: "100%",
+    aspectRatio: "1 / 1",
+    objectFit: "cover",
+    borderRadius: 10,
+    background: "#0d1522",
+    display: "block",
+  },
+  modalAssetName: {
+    fontSize: 13,
+    lineHeight: 1.4,
+    color: "#dbeafe",
+    overflowWrap: "anywhere",
+  },
+  modalEmptyState: {
+    gridColumn: "1 / -1",
+    padding: 18,
+    borderRadius: 12,
+    border: "1px dashed #24334d",
+    color: "#94a3b8",
+    fontSize: 14,
+    textAlign: "center",
   },
 };

@@ -1,12 +1,11 @@
 // /pages/api/email/ai-image.js
 // Generate an image via DALL-E 3, download it, upload to Supabase, return public URL
 import { createClient } from "@supabase/supabase-js";
+import { persistImageForUser } from "../social/save-image";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-const BUCKET = "email-user-assets";
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -51,17 +50,18 @@ export default async function handler(req, res) {
     const arrayBuffer = await imgRes.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 3. Upload to Supabase
-    const timestamp = Date.now();
-    const path = `${userId}/email-images/ai-${timestamp}.png`;
-    const { error: upErr } = await admin.storage.from(BUCKET).upload(path, buffer, {
-      contentType: "image/png",
-      upsert: false,
-    });
-    if (upErr) return res.status(500).json({ ok: false, error: "Upload failed", detail: upErr.message });
+    // 3. Persist into the shared assets library
+    const sharedImage = await persistImageForUser(
+      { user: { id: userId }, admin },
+      {
+        imageUrl: `data:image/png;base64,${buffer.toString("base64")}`,
+        description: `AI image ${Date.now()}`,
+        tags: ["email", "ai-generated"],
+        source: "email-ai",
+      }
+    );
 
-    const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(path);
-    return res.status(200).json({ ok: true, url: pub?.publicUrl || null });
+    return res.status(200).json({ ok: true, url: sharedImage?.url || null, image: sharedImage || null });
   } catch (e) {
     console.error("ai-image error:", e);
     return res.status(500).json({ ok: false, error: e.message || "AI image failed" });

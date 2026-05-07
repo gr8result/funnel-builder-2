@@ -4,22 +4,22 @@ import dynamic from "next/dynamic";
 
 // ─── Style tokens ────────────────────────────────────────────────────────────
 const T = {
-  card:    { background: "#0c121a", borderRadius: 12, padding: 16, color: "#e2e8f0", fontFamily: "system-ui, sans-serif", minWidth: 0 },
-  topBar:  { display: "flex", gap: 6, marginBottom: 12, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid #1e293b", paddingBottom: 10 },
+  card:    { background: "#0c121a", borderRadius: 12, padding: 16, color: "#79e4f7", fontFamily: "system-ui, sans-serif", minWidth: 0 },
+  topBar:  { display: "flex", gap: 6, marginBottom: 12, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid #d1ab2f", paddingBottom: 10 },
   row:     { display: "flex", gap: 10, alignItems: "flex-start" },
-  btn:     { padding: "5px 11px", background: "#0f172a", border: "1px solid #334155", borderRadius: 4, color: "#e2e8f0", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap", lineHeight: "1.4" },
-  btnPri:  { padding: "5px 11px", background: "#1d4ed8", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontSize: 12, whiteSpace: "nowrap", lineHeight: "1.4" },
-  iconBtn: { padding: "5px 7px", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 4, color: "#94a3b8", cursor: "pointer", fontSize: 11, textAlign: "center" },
-  toolBtn: { display: "block", width: "100%", padding: "7px 10px", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 4, color: "#e2e8f0", cursor: "pointer", fontSize: 12, textAlign: "left", marginBottom: 4 },
+  btn:     { padding: "5px 11px", background: "#0f172a", border: "1px solid #334155", borderRadius: 4, color: "#e2e8f0", cursor: "pointer", fontSize: 16, whiteSpace: "nowrap", lineHeight: "1.4" },
+  btnPri:  { padding: "5px 11px", background: "#1d4ed8", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontSize: 16, whiteSpace: "nowrap", lineHeight: "1.4" },
+  iconBtn: { padding: "5px 7px", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 4, color: "#fffff", cursor: "pointer", fontSize: 16, textAlign: "center" },
+  toolBtn: { display: "block", width: "100%", padding: "7px 10px", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 4, color: "#e2e8f0", cursor: "pointer", fontSize: 16, textAlign: "left", marginBottom: 4 },
   sec:     { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 6, padding: 10, marginBottom: 8 },
-  secTtl:  { fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
-  lbl:     { display: "block", fontSize: 10, color: "#64748b", marginBottom: 2 },
-  inp:     { width: "100%", padding: "4px 6px", background: "#0c121a", border: "1px solid #1e293b", borderRadius: 3, color: "#f1f5f9", fontSize: 12, boxSizing: "border-box" },
+  secTtl:  { fontSize: 16, fontWeight: 600, color: "#d39611", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 },
+  lbl:     { display: "block", fontSize: 16, color: "#", marginBottom: 2 },
+  inp:     { width: "100%", padding: "4px 6px", background: "#0c121a", border: "1px solid #1e293b", borderRadius: 3, color: "#f1f5f9", fontSize: 16, boxSizing: "border-box" },
   left:    { width: 188, flexShrink: 0 },
   cvWrap:  { flex: 1, background: "#111827", border: "1px solid #1e293b", borderRadius: 8, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 640, position: "relative" },
   right:   { width: 208, flexShrink: 0 },
   layRow:  { display: "flex", alignItems: "center", gap: 2, padding: "5px 6px", borderRadius: 4, border: "1px solid #1e293b", background: "#0c121a", marginBottom: 3, cursor: "pointer" },
-  mini:    { padding: "1px 4px", background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 11, lineHeight: 1, flexShrink: 0 },
+  mini:    { padding: "1px 4px", background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 },
 };
 
 const CANVAS_W = 860;
@@ -144,7 +144,7 @@ function Sec({ title, children }) {
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
-function ImageEditorCard({ initialSrc = null, onSave = null }) {
+function ImageEditorCard({ initialSrc = null, onSave = null, saveLabel = "Save Image" }) {
   const canvasEl   = useRef(null);
   const fab        = useRef(null);   // fabric.Canvas
   const lib        = useRef(null);   // fabric namespace
@@ -169,8 +169,10 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined" || !canvasEl.current || fab.current) return;
+    let cancelled = false;
 
     import("fabric").then((mod) => {
+      if (cancelled || !canvasEl.current || fab.current) return;
       const fabric = mod.fabric;
       lib.current = fabric;
 
@@ -199,6 +201,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
           const saved = localStorage.getItem("gr8:image-editor:autosave");
           if (saved) {
             canvas.loadFromJSON(saved, () => {
+              if (cancelled || fab.current !== canvas) return;
               canvas.renderAll();
               syncLayers(canvas);
             });
@@ -211,6 +214,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
       // If a source image URL was passed in (e.g. opened from email builder)
       if (initialSrc) {
         lib.current.Image.fromURL(initialSrc, (img) => {
+          if (cancelled || !img || fab.current !== canvas) return;
           const mW = canvas.width * 0.85;
           const mH = canvas.height * 0.85;
           if (img.width > mW || img.height > mH) {
@@ -225,7 +229,14 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
       }
     });
 
-    return () => { if (fab.current) { fab.current.dispose(); fab.current = null; } };
+    return () => {
+      cancelled = true;
+      setReady(false);
+      if (fab.current) {
+        fab.current.dispose();
+        fab.current = null;
+      }
+    };
   }, []);
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
@@ -559,7 +570,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
   const addText = useCallback(() => {
     if (!lib.current || !fab.current) return;
     const t = new lib.current.IText("Edit me", {
-      left: 80, top: 80, fontSize: 28, fontFamily: "Arial", fill: "#1e293b", fontWeight: "bold",
+      left: 80, top: 80, fontSize: 48, fontFamily: "Arial", fill: "#f1cf0c", fontWeight: 600,
     });
     fab.current.add(t);
     fab.current.setActiveObject(t);
@@ -630,7 +641,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
 
       {/* ── Top toolbar ─────────────────────────────────────────────────── */}
       <div style={T.topBar}>
-        <strong style={{ fontSize: 14, color: "#f1f5f9", marginRight: 6 }}>🖼 Image Editor</strong>
+        <strong style={{ fontSize: 16, color: "#f1f5f9", marginRight: 6 }}>🖼 Image Editor</strong>
         <button style={T.btn} onClick={() => fileInput.current?.click()}>+ Image</button>
         <input
           ref={fileInput} type="file" accept="image/*" style={{ display: "none" }}
@@ -646,7 +657,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
         <button style={T.btn}    onClick={clearAll}>⊘ Clear</button>
         {onSave && (
           <button
-            style={T.btnPri}
+            style={{ ...T.btnPri, background: "#16a34a", fontWeight: 600 }}
             onClick={() => {
               try {
                 const url = safeCanvasDataUrl("png");
@@ -655,8 +666,9 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
                 alert(err?.message || "Could not apply edited image.");
               }
             }}
+            title="Save the edited image back into your library"
           >
-            ✓ Use This
+            {saveLabel}
           </button>
         )}
         <button style={T.btnPri} onClick={() => exportImg("png")}>↓ PNG</button>
@@ -673,7 +685,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
           <Sec title="Position">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 3, marginBottom: 8 }}>
               {alignBtns.map(b => (
-                <button key={b.t} title={b.label} style={{ ...T.iconBtn, fontSize: 10 }} onClick={() => align(b.t)}>
+                <button key={b.t} title={b.label} style={{ ...T.iconBtn, fontSize: 16 }} onClick={() => align(b.t)}>
                   {b.label}
                 </button>
               ))}
@@ -732,7 +744,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
               onChange={e => setObjOpacity(e.target.value)}
               onMouseUp={() => snapshot()}
               style={{ width: "100%", marginBottom: 2, accentColor: "#3b82f6" }} />
-            <div style={{ textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{Math.round(opac * 100)}%</div>
+            <div style={{ textAlign: "right", fontSize: 16, color: "#94a3b8" }}>{Math.round(opac * 100)}%</div>
           </Sec>
 
           {/* Tools */}
@@ -758,7 +770,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
 
         {/* ── Canvas ──────────────────────────────────────────────────── */}
         <div style={T.cvWrap}>
-          {!ready && <div style={{ position: "absolute", color: "#475569", fontSize: 13 }}>Loading canvas…</div>}
+          {!ready && <div style={{ position: "absolute", color: "#475569", fontSize: 16 }}>Loading canvas…</div>}
           <canvas ref={canvasEl} />
         </div>
 
@@ -766,7 +778,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
         <div style={T.right}>
           <Sec title={`Layers  (${layers.length})`}>
             {layers.length === 0 ? (
-              <p style={{ fontSize: 12, color: "#475569", textAlign: "center", padding: "20px 0" }}>
+              <p style={{ fontSize: 16, color: "#475569", textAlign: "center", padding: "20px 0" }}>
                 No layers yet.<br />Upload an image to start.
               </p>
             ) : (
@@ -778,10 +790,10 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
                     style={{ ...T.layRow, opacity: layer.visible ? 1 : 0.35, background: isActive ? "#1e3a5f" : "#0c121a", borderColor: isActive ? "#3b82f6" : "#1e293b" }}
                     onClick={() => selectLayer(layer.obj)}
                   >
-                    <span style={{ fontSize: 10, flexShrink: 0, marginRight: 2 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0, marginRight: 2 }}>
                       {layer.type === "image" ? "🖼" : layer.type === "i-text" ? "T" : layer.type === "rect" ? "▭" : "●"}
                     </span>
-                    <span style={{ flex: 1, fontSize: 11, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ flex: 1, fontSize: 16, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {layer.name}
                     </span>
                     <button style={T.mini} title="Toggle visibility" onClick={e => { e.stopPropagation(); toggleVis(layer.obj);  }}>
@@ -816,7 +828,7 @@ function ImageEditorCard({ initialSrc = null, onSave = null }) {
       </div>
 
       {/* ── Status bar ────────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 8, fontSize: 11, color: "#475569", display: "flex", gap: 16 }}>
+      <div style={{ marginTop: 8, fontSize: 16, color: "#ffffff", display: "flex", gap: 16 }}>
         <span>Canvas: {CANVAS_W} × {CANVAS_H}px</span>
         {activeObj && <span>Selected: {activeObj.__name || activeObj.type} · X:{posX} Y:{posY} · W:{objW} H:{objH} · {angle}° · {Math.round(opac * 100)}% opacity</span>}
         <span style={{ marginLeft: "auto" }}>Ctrl+Z undo · Del delete · Ctrl+Y redo</span>
