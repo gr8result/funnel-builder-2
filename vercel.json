@@ -1,4 +1,7 @@
 {
+  "env": {
+    "PINTEREST_USE_SANDBOX": "true"
+  },
   "crons": [
     {
       "path": "/api/automation/engine/tick",
