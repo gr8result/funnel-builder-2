@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import { supabase } from '../../../utils/supabase-client';
+import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 
 const PLATFORM_OPTIONS = [
   { key: 'facebook',  label: 'Facebook',   icon: '📘' },
@@ -200,8 +201,19 @@ export default function ReviewPosts() {
 
   // ── Image picker helpers ────────────────────────────────────────
   function openPicker(postId) {
+    const opened = openSharedMediaPicker({
+      onPick: (asset) => handleLibrarySelect(asset?.url || '', postId),
+      onBlocked: () => {
+        setPicker({ postId });
+        setPickerTab('library');
+      },
+    });
+    if (opened) {
+      setPicker(null);
+      return;
+    }
     setPicker({ postId });
-    setPickerTab('upload');
+    setPickerTab('library');
   }
   function closePicker() {
     setPicker(null);
@@ -236,8 +248,9 @@ export default function ReviewPosts() {
   }
 
   // Image chosen from library → straight into crop
-  function handleLibrarySelect(url) {
-    startCrop(picker.postId, url);
+  function handleLibrarySelect(url, postId = picker?.postId) {
+    if (!postId || !url) return;
+    startCrop(postId, url);
   }
 
   function startCrop(postId, src) {
@@ -338,19 +351,11 @@ export default function ReviewPosts() {
 
   useEffect(() => { loadPosts(); }, []);
 
-  async function advanceDuePosts() {
-    try {
-      await fetch('/api/social/process-schedule', { method: 'POST' });
-      await fetch('/api/social/process-queue', { method: 'POST' });
-    } catch {}
-  }
-
   async function loadPosts() {
     setLoading(true); setNotice('');
     try {
       const token = await getToken();
       if (!token) { setNotice('Sign in to view posts.'); setLoading(false); return; }
-      await advanceDuePosts();
       const res  = await fetch('/api/social/calendar-board', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Failed to load posts');
@@ -675,7 +680,7 @@ export default function ReviewPosts() {
           <div style={S.bannerRight}>
             <div style={S.bannerNav}>
               <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/create')}>+ Create Posts</button>
-              <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/images')}>🖼️ Image Library</button>
+              <button type="button" style={S.bannerBtn} onClick={() => router.push('/assets')}>🖼️ Image Library</button>
               <button type="button" style={S.bannerBtn} onClick={goToCalendar}>📅 Calendar</button>
               <button type="button" style={S.bannerBtn} onClick={() => router.push('/modules/social_media/dashboard')}>Back to Dashboard</button>
             </div>
