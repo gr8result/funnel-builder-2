@@ -1,6 +1,5 @@
 import { createSupabaseAdmin } from '../../../../../lib/social/auth';
 import { getPlatformCredentials } from '../../../../../lib/social/platformCredentials';
-import { getPinterestApiBase } from '../../../../../lib/social/pinterest';
 
 async function saveSocialAccount(admin, payload) {
   const match = {
@@ -104,7 +103,7 @@ export default async function handler(req, res) {
     if (!creds?.appSecret) throw new Error('Pinterest App Secret not configured. Open Platform Setup to add your credentials.');
 
     const basicAuth = Buffer.from(`${creds.appId}:${creds.appSecret}`).toString('base64');
-    const tokenRes = await fetch(`${getPinterestApiBase()}/v5/oauth/token`, {
+    const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
       method: 'POST',
       headers: {
         Authorization: `Basic ${basicAuth}`,
@@ -122,7 +121,7 @@ export default async function handler(req, res) {
       throw new Error(tokenData.message || tokenData.error || 'Pinterest token exchange failed');
     }
 
-    const profileRes = await fetch(`${getPinterestApiBase()}/v5/user_account`, {
+    const profileRes = await fetch('https://api.pinterest.com/v5/user_account', {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const profile = await profileRes.json();
