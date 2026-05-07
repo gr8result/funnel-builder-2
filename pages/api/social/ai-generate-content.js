@@ -80,7 +80,10 @@ const HASHTAG_CATEGORY_RULES = [
   { match: /small business|business/i, tags: ['#smallbusiness', '#businessgrowth'] },
   { match: /ai|artificial intelligence/i, tags: ['#aimarketing', '#aiforbusiness'] },
   { match: /platform|software|system/i, tags: ['#businesssoftware', '#allinoneplatform'] },
+  { match: /protein|supplement|powder|whey|fitness|health|nutrition/i, tags: ['#proteinpowder', '#sportsnutrition', '#healthandfitness'] },
 ];
+
+const SALES_INTENT_RE = /(sell|sales|launch|new product|product launch|buy|shop|offer|promo|promotion|advert|advertisement|direct response|cta|ecommerce|product|protein|supplement|powder|whey|fitness brand)/i;
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -111,6 +114,10 @@ function cleanSourceText(text) {
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.;!?])/g, '$1')
     .trim();
+}
+
+function hasSalesIntent(topic) {
+  return SALES_INTENT_RE.test(cleanSourceText(topic));
 }
 
 function normaliseKeyword(value) {
@@ -262,6 +269,51 @@ function topicLead(topic) {
   return `This update focuses on ${lowerFirst(cleaned)}.`;
 }
 
+function salesLead(topic, platform) {
+  const cleaned = sentenceCase(cleanSourceText(topic)).replace(/[.!?]+$/g, '');
+  if (/protein|supplement|powder|whey/i.test(cleaned)) {
+    if (sanitizePlatform(platform) === 'pinterest') {
+      return 'New protein powder now available for people who want a simple way to support training, recovery, and better daily nutrition.';
+    }
+    return 'New protein powder now available for people who want better daily nutrition, a more satisfying shake, and a simpler way to stay consistent.';
+  }
+  return cleaned || 'New product now available.';
+}
+
+function salesBenefitSentence(topic, variant = 0) {
+  const lowered = cleanSourceText(topic).toLowerCase();
+  const options = [];
+
+  if (/(protein|supplement|powder|whey)/i.test(lowered)) {
+    options.push('The copy should focus on the product itself, the value it adds to a customer routine, and why it is worth trying now rather than sounding like a generic announcement.');
+    options.push('A stronger ad here makes the result clear straight away: convenient protein, better consistency, and an easy next step for customers ready to buy.');
+  }
+
+  options.push(
+    'The message needs to sound like a real offer, with a clear benefit, a reason to care now, and a direct next step.',
+    'Good ad copy here should feel specific, product-led, and persuasive instead of vague or informational.'
+  );
+
+  return options[variant % options.length];
+}
+
+function salesDetailSentence(topic, variant = 0) {
+  const lowered = cleanSourceText(topic).toLowerCase();
+  if (/(protein|supplement|powder|whey)/i.test(lowered)) {
+    const options = [
+      'Make it obvious who the product is for, what makes it appealing, and why someone should click through to see the full details.',
+      'Use the post to highlight the product appeal, the practical benefit, and the reason a customer should shop now.'
+    ];
+    return options[variant % options.length];
+  }
+  return 'Keep the copy focused on the offer, the benefit, and the action you want the customer to take next.';
+}
+
+function salesCtaSentence(platform) {
+  if (sanitizePlatform(platform) === 'x') return 'Visit our website to shop now.';
+  return 'Visit our website now to shop and see the full product details.';
+}
+
 function benefitSentence(topic, variant = 0) {
   const lowered = cleanSourceText(topic).toLowerCase();
   const options = [];
@@ -311,6 +363,19 @@ function engagementSentence(topic, variant = 0, platform) {
 }
 
 function buildTopicDrivenPost(topic, platform, variant = 0) {
+  if (hasSalesIntent(topic)) {
+    const sentences = [
+      salesLead(topic, platform),
+      salesBenefitSentence(topic, variant),
+      salesDetailSentence(topic, variant),
+      salesCtaSentence(platform),
+    ].filter(Boolean);
+
+    if (sanitizePlatform(platform) === 'x') return sentences.slice(0, 2).join(' ');
+    if (sanitizePlatform(platform) === 'pinterest') return sentences.slice(0, 3).join(' ');
+    return sentences.join(' ');
+  }
+
   const sentences = [
     topicLead(topic),
     benefitSentence(topic, variant),
@@ -428,6 +493,7 @@ function generateFallbackPosts({ topic, platform, count, style, contentLength, h
 
 function platformRules(platform, contentLength) {
   const p = sanitizePlatform(platform);
+  const salesRule = 'If the brief is about selling or launching a product, write it as direct-response ad copy with a clear benefit, buying motivation, and a specific CTA.';
 
   const longRule = 'Write 3-5 clear sentences. Make it practical, specific, and helpful.';
   const shortRule = 'Write 3 concise but complete sentences. Keep it easy to skim, but still specific and useful.';
@@ -438,6 +504,7 @@ function platformRules(platform, contentLength) {
       'Hard limit: 260 characters max.',
       'No more than 2 hashtags.',
       'Punchy, direct, scroll-stopping.',
+      salesRule,
       baseLengthRule
     ].join('\n');
   }
@@ -447,6 +514,7 @@ function platformRules(platform, contentLength) {
       'Professional tone. No hype.',
       'Use short paragraphs or bullets when helpful.',
       'Use 0-5 hashtags max.',
+      salesRule,
       'Write at least 3 well-formed sentences plus a clear CTA to visit our website.',
       baseLengthRule
     ].join('\n');
@@ -457,6 +525,7 @@ function platformRules(platform, contentLength) {
       'Make it visually readable: short lines, strong hook.',
       'Encourage saves/shares.',
       'Hashtags are okay (moderate to high).',
+      salesRule,
       'Write at least 3 clear sentences plus a CTA telling people to visit our website.',
       baseLengthRule
     ].join('\n');
@@ -464,10 +533,12 @@ function platformRules(platform, contentLength) {
 
   if (p === 'pinterest') {
     return [
-      'Write like a Pin description: SEO-friendly keywords, clear benefit.',
-      'End with a CTA inviting people to visit our website or click to learn more.',
+      'Write like a Pinterest product ad: searchable keywords, product-specific wording, and a clear benefit.',
+      'For product launches or ads, make the item being sold obvious in the first sentence.',
+      'End with a CTA inviting people to visit our website or click to shop now.',
       'Use 0-3 hashtags (optional).',
       'Write at least 2 useful sentences that explain the benefit clearly.',
+      salesRule,
       baseLengthRule
     ].join('\n');
   }
@@ -475,6 +546,7 @@ function platformRules(platform, contentLength) {
   return [
     'Conversational tone.',
     'End with a question to drive comments when appropriate.',
+    salesRule,
     'Write at least 3 clear sentences plus a CTA asking people to visit our website.',
     baseLengthRule
   ].join('\n');
@@ -511,6 +583,8 @@ function buildPromptForPlatform({
 IMPORTANT: Use Australian English spelling throughout. Examples: colour (not color), behaviour (not behavior), organise (not organize), realise (not realize), centre (not center), analyse (not analyse), apologise (not apologize), programme (not program), travelling (not traveling), licence (noun), practice (noun) / practise (verb).
 
 Tone/style: ${style}
+
+If the brief is about launching or selling a product, especially a physical product like a supplement, powder, or nutrition product, write it as a real sales ad. Focus on the product, the customer benefit, and the reason to click now.
 
 Platform rules:
 ${platformRules(p, contentLength)}

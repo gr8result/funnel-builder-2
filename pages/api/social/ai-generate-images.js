@@ -52,6 +52,12 @@ const STOCK_IMAGE_POOLS = {
     'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
     'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=1200&q=80',
   ],
+  product: [
+    'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=1200&q=80',
+  ],
   communication: [
     'https://images.unsplash.com/photo-1516321165247-4aa89a48be28?auto=format&fit=crop&w=1200&q=80',
     'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80',
@@ -106,6 +112,7 @@ const STOCK_KEYWORDS = {
   software: ['platform', 'software', 'dashboard', 'crm', 'automation', 'funnel', 'builder', 'analytics', 'saas'],
   marketing: ['marketing', 'social', 'content', 'campaign', 'brand', 'audience', 'lead', 'growth'],
   ecommerce: ['marketplace', 'shop', 'store', 'product', 'affiliate', 'sales', 'checkout'],
+  product: ['protein', 'supplement', 'powder', 'whey', 'fitness', 'health', 'nutrition', 'shake', 'jar', 'bottle'],
   communication: ['email', 'sms', 'message', 'community', 'support', 'engagement'],
   team: ['team', 'business', 'workflow', 'collaboration', 'strategy', 'community'],
 };
@@ -245,11 +252,15 @@ function escapeHtml(value = '') {
 }
 
 function buildPhotoCreativePrompt(description, style) {
+  const normalized = normalizeDescriptionText(description);
+  const isSupplementAd = /(protein|supplement|powder|whey|nutrition|fitness)/i.test(normalized);
   return [
     'Create a premium square social media ad background image.',
-    `Message to visualize: "${normalizeDescriptionText(description)}".`,
+    `Message to visualize: "${normalized}".`,
     `Brand style: ${style}.`,
-    'Use a real photographic scene, real people, real products, or real business environment that directly matches the message.',
+    isSupplementAd
+      ? 'Use real product-ad photography with a premium protein powder tub or pouch, shake bottle, gym or clean kitchen context, believable lighting, and a strong focus on the product itself.'
+      : 'Use a real photographic scene, real people, real products, or real business environment that directly matches the message.',
     'Do not create illustration, vector art, 3D icon art, abstract gradients, mock UI cards, or cartoon graphics.',
     'Compose it like a modern high-converting Instagram or Facebook ad with a clear focal subject and believable lighting.',
     'Leave clean negative space in the lower third or side of the frame for headline text to be added later.',

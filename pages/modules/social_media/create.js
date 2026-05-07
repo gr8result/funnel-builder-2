@@ -245,9 +245,14 @@ function normalizePlatformPosts(data, style, targetCount) {
 function buildImageDescriptions(postsByPlatform, count) {
   const allPosts = Object.values(postsByPlatform).flat();
   const n = clamp(count, 1, Math.min(allPosts.length, 30));
-  if (n >= allPosts.length) return allPosts.map(p => p.content);
+  const toImageBrief = (post) => {
+    const content = String(post?.content || '').replace(/#[a-z0-9_]+/gi, '').trim();
+    if (post?.platform === 'pinterest') return `Create a Pinterest product ad image for: ${content}`;
+    return content;
+  };
+  if (n >= allPosts.length) return allPosts.map(toImageBrief);
   return Array.from({ length: n }, (_, i) =>
-    allPosts[Math.min(allPosts.length - 1, Math.floor((i / n) * allPosts.length))]?.content || ''
+    toImageBrief(allPosts[Math.min(allPosts.length - 1, Math.floor((i / n) * allPosts.length))]) || ''
   ).filter(Boolean);
 }
 
