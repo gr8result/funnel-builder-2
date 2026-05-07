@@ -9,7 +9,7 @@ const PLATFORM_OPTIONS = [
   { key: 'facebook',  label: 'Facebook',       videoOnly: false },
   { key: 'instagram', label: 'Instagram',       videoOnly: false },
   { key: 'linkedin',  label: 'LinkedIn',        videoOnly: false },
-  { key: 'pinterest', label: 'Pinterest',       videoOnly: false, unsupported: true, unsupportedLabel: 'Publishing not wired yet' },
+  { key: 'pinterest', label: 'Pinterest',       videoOnly: false },
   { key: 'tiktok',   label: 'TikTok',          videoOnly: false },
   { key: 'youtube',  label: 'YouTube',          videoOnly: true, unsupported: true, unsupportedLabel: 'Connection only for now' },
 ];

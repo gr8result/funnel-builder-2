@@ -1,6 +1,7 @@
 import { requireUser } from "../../../lib/social/auth";
 import { postToFacebook, postToInstagram } from "../../../lib/social/facebook";
 import { postToLinkedIn } from "../../../lib/social/linkedin";
+import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
 import { postToTikTok } from "../../../lib/social/tiktok";
 
@@ -69,6 +70,12 @@ export default async function handler(req, res) {
         personUrn: `urn:li:person:${account.account_id}`,
         text: post.content,
         mediaUrl: post.media_url || null,
+      });
+    } else if (post.platform === "pinterest") {
+      result = await postToPinterest({
+        accessToken: account.access_token,
+        text: post.content,
+        imageUrl: post.media_url || null,
       });
     } else if (post.platform === "x") {
       result = await postToX({
