@@ -44,22 +44,27 @@ export default function PrivacyPolicy() {
       </Head>
       <div style={container}>
         <h1 style={heading}>Privacy Policy</h1>
+        <p style={paragraph}>Last updated: May 7, 2026</p>
 
         <h2 style={subheading}>Who We Are</h2>
         <p style={paragraph}>
           Our website address is:{" "}
-          <a href="https://gr8result.com" style={{ color: "#00bcd4" }}>
-            https://gr8result.com
+          <a href="https://app.gr8result.digital" style={{ color: "#00bcd4" }}>
+            https://app.gr8result.digital
           </a>
           .
         </p>
 
         <h2 style={subheading}>Comments</h2>
         <p style={paragraph}>
-          When visitors leave comments, we collect the data shown in the form,
-          plus the visitor’s IP address and browser user agent string to help
-          spam detection. An anonymised string from your email may be provided
-          to the Gravatar service to check if you are using it. See{" "}
+          When visitors leave comments on the site we collect the data shown in
+          the comments form, and also the visitor&apos;s IP address and browser
+          user agent string to help spam detection.
+        </p>
+        <p style={paragraph}>
+          An anonymized string created from your email address, also called a
+          hash, may be provided to the Gravatar service to see if you are using
+          it. The Gravatar service privacy policy is available here:{" "}
           <a
             href="https://automattic.com/privacy/"
             target="_blank"
@@ -68,30 +73,57 @@ export default function PrivacyPolicy() {
           >
             https://automattic.com/privacy/
           </a>
-          . After approval, your profile picture is visible publicly with your
-          comment.
+          . After approval of your comment, your profile picture is visible to
+          the public in the context of your comment.
         </p>
 
         <h2 style={subheading}>Media</h2>
         <p style={paragraph}>
-          If you upload images, avoid including embedded location data (EXIF
-          GPS). Visitors can download and extract this data from images.
+          If you upload images to the website, you should avoid uploading
+          images with embedded location data, including EXIF GPS. Visitors to
+          the website can download and extract any location data from images on
+          the website.
         </p>
 
         <h2 style={subheading}>Cookies</h2>
         <p style={paragraph}>
-          If you leave a comment, you may opt to save your name, email and
-          website in cookies for convenience. These last one year. Login and
-          screen option cookies may also be set to save preferences. “Remember
-          Me” keeps you logged in for two weeks; logout removes them. Editing or
-          publishing content sets an additional cookie lasting one day.
+          If you leave a comment on our site you may opt in to saving your
+          name, email address, and website in cookies. These are for your
+          convenience so that you do not have to fill in your details again
+          when you leave another comment. These cookies will last for one year.
+        </p>
+        <p style={paragraph}>
+          If you visit our login page, we will set a temporary cookie to
+          determine if your browser accepts cookies. This cookie contains no
+          personal data and is discarded when you close your browser.
+        </p>
+        <p style={paragraph}>
+          When you log in, we will also set up several cookies to save your
+          login information and your screen display choices. Login cookies last
+          for two days, and screen options cookies last for a year. If you
+          select "Remember Me", your login will persist for two weeks. If you
+          log out of your account, the login cookies will be removed.
+        </p>
+        <p style={paragraph}>
+          If you edit or publish an article, an additional cookie will be
+          saved in your browser. This cookie includes no personal data and
+          simply indicates the post ID of the article you just edited. It
+          expires after one day.
         </p>
 
         <h2 style={subheading}>Embedded Content from Other Websites</h2>
         <p style={paragraph}>
-          Articles may include embedded content (e.g. videos, images, articles).
-          Such content behaves exactly as if the visitor had visited the source
-          site, which may collect data and use cookies or tracking tools.
+          Articles on this site may include embedded content, for example
+          videos, images, or articles. Embedded content from other websites
+          behaves in the exact same way as if the visitor has visited the other
+          website.
+        </p>
+        <p style={paragraph}>
+          These websites may collect data about you, use cookies, embed
+          additional third-party tracking, and monitor your interaction with
+          that embedded content, including tracking your interaction with the
+          embedded content if you have an account and are logged in to that
+          website.
         </p>
 
         <h2 style={subheading}>Who We Share Your Data With</h2>
@@ -102,17 +134,26 @@ export default function PrivacyPolicy() {
 
         <h2 style={subheading}>How Long We Retain Your Data</h2>
         <p style={paragraph}>
-          Comments and metadata are retained indefinitely for recognition of
-          follow-ups. For registered users, personal info in their profile can
-          be seen, edited, or deleted at any time (except usernames). Admins can
-          also view and edit this information.
+          If you leave a comment, the comment and its metadata are retained
+          indefinitely. This is so we can recognize and approve any follow-up
+          comments automatically instead of holding them in a moderation queue.
+        </p>
+        <p style={paragraph}>
+          For users that register on our website, if any, we also store the
+          personal information they provide in their user profile. All users
+          can see, edit, or delete their personal information at any time,
+          except they cannot change their username. Website administrators can
+          also see and edit that information.
         </p>
 
         <h2 style={subheading}>What Rights You Have Over Your Data</h2>
         <p style={paragraph}>
-          If you have an account or have left comments, you can request an
-          exported file of personal data we hold about you, or request erasure
-          of personal data except that required for legal or security reasons.
+          If you have an account on this site, or have left comments, you can
+          request to receive an exported file of the personal data we hold
+          about you, including any data you have provided to us. You can also
+          request that we erase any personal data we hold about you. This does
+          not include any data we are obliged to keep for administrative,
+          legal, or security purposes.
         </p>
 
         <h2 style={subheading}>Where Your Data Is Sent</h2>
