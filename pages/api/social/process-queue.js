@@ -136,6 +136,12 @@ async function processQueue() {
 
     } catch (err) {
       await supabase
+        .from("social_posts")
+        .update({ status: "failed" })
+        .eq("id", row.post_id)
+        .neq("status", "published");
+
+      await supabase
         .from("social_queue")
         .update({
           status: "failed",
