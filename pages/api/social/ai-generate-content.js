@@ -285,13 +285,14 @@ function salesBenefitSentence(topic, variant = 0) {
   const options = [];
 
   if (/(protein|supplement|powder|whey)/i.test(lowered)) {
-    options.push('The copy should focus on the product itself, the value it adds to a customer routine, and why it is worth trying now rather than sounding like a generic announcement.');
-    options.push('A stronger ad here makes the result clear straight away: convenient protein, better consistency, and an easy next step for customers ready to buy.');
+    options.push('Enjoy an easy way to add more protein to your day with a shake that fits training, recovery, and busy mornings without the usual hassle.');
+    options.push('Get a convenient protein option that helps support recovery, keeps you fuller for longer, and makes your daily routine easier to stay on track with.');
+    options.push('Built for people who want a simple, high-protein option that works after training, between meals, or whenever a quick nutrition boost makes sense.');
   }
 
   options.push(
-    'The message needs to sound like a real offer, with a clear benefit, a reason to care now, and a direct next step.',
-    'Good ad copy here should feel specific, product-led, and persuasive instead of vague or informational.'
+    'Designed to make the offer feel clear, valuable, and worth acting on now.',
+    'A strong product ad should make the benefit obvious and the next step easy.'
   );
 
   return options[variant % options.length];
@@ -301,17 +302,17 @@ function salesDetailSentence(topic, variant = 0) {
   const lowered = cleanSourceText(topic).toLowerCase();
   if (/(protein|supplement|powder|whey)/i.test(lowered)) {
     const options = [
-      'Make it obvious who the product is for, what makes it appealing, and why someone should click through to see the full details.',
-      'Use the post to highlight the product appeal, the practical benefit, and the reason a customer should shop now.'
+      'Perfect for people who want a more convenient way to hit their protein target without overthinking meals, prep, or post-workout recovery.',
+      'Ideal for customers who want a practical protein option they can use after training, on busy mornings, or as a quick high-protein snack.'
     ];
     return options[variant % options.length];
   }
-  return 'Keep the copy focused on the offer, the benefit, and the action you want the customer to take next.';
+  return 'A clear offer, a real benefit, and an obvious next step will usually outperform vague promotional copy.';
 }
 
 function salesCtaSentence(platform) {
   if (sanitizePlatform(platform) === 'x') return 'Visit our website to shop now.';
-  return 'Visit our website now to shop and see the full product details.';
+  return 'Shop now on our website to see the full details and order yours today.';
 }
 
 function benefitSentence(topic, variant = 0) {

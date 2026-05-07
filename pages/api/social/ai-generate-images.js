@@ -138,7 +138,15 @@ function scoreKeywordMatch(words, candidates) {
   return candidates.reduce((score, candidate) => score + (set.has(candidate) ? 1 : 0), 0);
 }
 
+function isProductAdDescription(description = '') {
+  return /(protein|supplement|powder|whey|nutrition|fitness|shake|jar|bottle|product ad)/i.test(String(description || ''));
+}
+
 function pickStockPool(description) {
+  if (isProductAdDescription(description)) {
+    return STOCK_IMAGE_POOLS.product || STOCK_IMAGE_POOLS.ecommerce || STOCK_IMAGE_POOLS.general;
+  }
+
   const words = tokenize(description);
   let bestPool = 'general';
   let bestScore = -1;
@@ -359,10 +367,13 @@ async function loadLibraryImages(req) {
 
 async function buildRealFallbackImages(req, descriptions, safeCount) {
   const libraryImages = await loadLibraryImages(req);
-  const libraryFallback = buildLibraryFallbackImages(descriptions, libraryImages, safeCount);
-  const remainingDescriptions = descriptions.slice(libraryFallback.length, safeCount);
-  const stockFallback = buildStockFallbackImages(remainingDescriptions, remainingDescriptions.length);
-  return [...libraryFallback, ...stockFallback];
+  const preferredProductDescriptions = descriptions.slice(0, safeCount).filter((description) => isProductAdDescription(description));
+  const remainingDescriptions = descriptions.slice(0, safeCount).filter((description) => !isProductAdDescription(description));
+  const productStockFallback = buildStockFallbackImages(preferredProductDescriptions, preferredProductDescriptions.length);
+  const libraryFallback = buildLibraryFallbackImages(remainingDescriptions, libraryImages, remainingDescriptions.length);
+  const residualDescriptions = remainingDescriptions.slice(libraryFallback.length);
+  const stockFallback = buildStockFallbackImages(residualDescriptions, residualDescriptions.length);
+  return [...productStockFallback, ...libraryFallback, ...stockFallback];
 }
 
 async function persistReturnedImages(req, images) {

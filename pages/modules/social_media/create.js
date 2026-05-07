@@ -247,6 +247,9 @@ function buildImageDescriptions(postsByPlatform, count) {
   const n = clamp(count, 1, Math.min(allPosts.length, 30));
   const toImageBrief = (post) => {
     const content = String(post?.content || '').replace(/#[a-z0-9_]+/gi, '').trim();
+    if (post?.platform === 'pinterest' && /(protein|supplement|powder|whey|nutrition|fitness)/i.test(content)) {
+      return `Create a Pinterest protein powder product ad image with a premium supplement tub or pouch as the clear hero product for: ${content}`;
+    }
     if (post?.platform === 'pinterest') return `Create a Pinterest product ad image for: ${content}`;
     return content;
   };
