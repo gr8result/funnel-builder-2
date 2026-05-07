@@ -502,7 +502,7 @@ export default function CreateContent() {
 
   function getSelectedPlatforms() {
     const sel = Object.entries(aiSelectedPlatforms).filter(([, v]) => v).map(([k]) => k);
-    return sel.filter((platform) => !['pinterest', 'youtube'].includes(platform));
+    return sel.filter((platform) => platform !== 'youtube');
   }
 
   function getPostsPerDay() {
