@@ -1,8 +1,9 @@
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../utils/supabase-client';
 import ICONS from '../../../components/iconMap';
+import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PLATFORM_OPTIONS = [
@@ -439,6 +440,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
 // ── Main component ─────────────────────────────────────────────────────────
 export default function CreateContent() {
   const router = useRouter();
+  const imageUploadInputRef = useRef(null);
 
   const [notice,          setNotice]          = useState('');
   const [aiGenerating,    setAiGenerating]    = useState(false);
@@ -502,6 +504,8 @@ export default function CreateContent() {
   const [aiScheduleStartDate, setAiScheduleStartDate] = useState('');
   const [aiScheduleTime,      setAiScheduleTime]      = useState('09:00');
   const [aiScheduleSecondTime, setAiScheduleSecondTime] = useState('21:00');
+  const [manualImageTarget, setManualImageTarget] = useState(null);
+  const [manualImageBusy, setManualImageBusy] = useState('');
 
   useEffect(() => { loadSavedCampaigns(); loadSavedForms(); }, []);
   useEffect(() => {
@@ -875,6 +879,65 @@ export default function CreateContent() {
     });
   }
 
+  function getManualImageKey(platform, id) {
+    return `${platform}:${id}`;
+  }
+
+  function assignManualImage(platform, id, imageUrl) {
+    if (!platform || !id) return;
+    updatePost(platform, id, 'image', imageUrl || null);
+    setNotice(imageUrl ? 'Image assigned to post.' : 'Image removed from post.');
+  }
+
+  function chooseImageFromLibrary(platform, id) {
+    const opened = openSharedMediaPicker({
+      onPick: (asset) => assignManualImage(platform, id, asset?.url || ''),
+      onBlocked: () => setNotice('Allow pop-ups to choose an image from the Media Library, or open the Media Library manually in another tab.'),
+    });
+    if (!opened) return;
+  }
+
+  function chooseImageUpload(platform, id) {
+    setManualImageTarget({ platform, id });
+    imageUploadInputRef.current?.click();
+  }
+
+  async function handleManualImageUpload(event) {
+    const file = event.target.files?.[0];
+    const target = manualImageTarget;
+    event.target.value = '';
+    if (!file || !target) return;
+
+    const busyKey = getManualImageKey(target.platform, target.id);
+    setManualImageBusy(busyKey);
+    try {
+      const readerResult = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => resolve(loadEvent.target?.result || '');
+        reader.onerror = () => reject(new Error('Failed to read image file.'));
+        reader.readAsDataURL(file);
+      });
+
+      const { token } = await getSessionData();
+      if (!token) throw new Error('Sign in to upload images.');
+
+      const response = await fetch('/api/social/save-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ imageUrl: readerResult, description: file.name || 'Uploaded post image' }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload?.ok || !payload?.image?.url) throw new Error(payload?.error || 'Image upload failed.');
+
+      assignManualImage(target.platform, target.id, payload.image.url);
+    } catch (error) {
+      setNotice(error.message || 'Image upload failed.');
+    } finally {
+      setManualImageBusy('');
+      setManualImageTarget(null);
+    }
+  }
+
   function approveAllView() {
     if (viewPlatform === 'all') {
       approveAll();
@@ -1112,11 +1175,33 @@ export default function CreateContent() {
   const isDraftSaved    = notice.toLowerCase().includes('saved') && notice.toLowerCase().includes('draft');
   const activeWeeks     = Array.from({ length: campaignWeeks }, (_, i) => i);
 
+  function renderPostWithControls(post, platform, theme, key) {
+    const busyKey = getManualImageKey(platform, post.id);
+    const isBusy = manualImageBusy === busyKey;
+    return (
+      <div key={key}>
+        <PostCard
+          post={post}
+          theme={theme}
+          brandName={aiCampaignName || 'Your Brand'}
+          onToggle={() => toggleApproval(platform, post.id)}
+          onEdit={text => updatePost(platform, post.id, 'content', text)}
+        />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+          <button onClick={() => chooseImageFromLibrary(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }}>Media Library</button>
+          <button onClick={() => chooseImageUpload(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }} disabled={isBusy}>{isBusy ? 'Uploading...' : 'Upload Image'}</button>
+          <button onClick={() => assignManualImage(platform, post.id, null)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14, opacity: post.image ? 1 : 0.5 }} disabled={!post.image}>Remove Image</button>
+        </div>
+      </div>
+    );
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <>
       <Head><title>AI Content Generator | Social Media</title></Head>
       <div style={S.page}>
+        <input ref={imageUploadInputRef} type="file" accept="image/*" onChange={handleManualImageUpload} style={{ display: 'none' }} />
         <div style={S.shell}>
 
           {/* Banner */}
@@ -1621,13 +1706,7 @@ export default function CreateContent() {
                               : <span style={{ fontSize: 16 }}>{postTheme.icon}</span>}
                             <span style={{ fontSize: 16, fontWeight: 600, color: '#e2e8f0' }}>{postTheme.name}</span>
                           </div>
-                          <PostCard
-                            post={post}
-                            theme={postTheme}
-                            brandName={aiCampaignName || 'Your Brand'}
-                            onToggle={() => toggleApproval(post._viewPlatform, post.id)}
-                            onEdit={text => updatePost(post._viewPlatform, post.id, 'content', text)}
-                          />
+                          {renderPostWithControls(post, post._viewPlatform, postTheme, `${post._viewPlatform}-${post.id}`)}
                         </div>
                       );
                     })}
@@ -1660,14 +1739,7 @@ export default function CreateContent() {
                           return [
                             <div key={`day-${wIdx}-${dayIdx}`} style={{ display: 'grid', gap: 5 }}>
                               {dayPosts.map(post => (
-                                <PostCard
-                                  key={post.id}
-                                  post={post}
-                                  theme={viewTheme}
-                                  brandName={aiCampaignName || 'Your Brand'}
-                                  onToggle={() => toggleApproval(viewPlatform, post.id)}
-                                  onEdit={text => updatePost(viewPlatform, post.id, 'content', text)}
-                                />
+                                renderPostWithControls(post, viewPlatform, viewTheme, post.id)
                               ))}
                               {Array.from({ length: postsPerDay - dayPosts.length }).map((_, slotIdx) => (
                                 <div key={`empty-slot-${wIdx}-${dayIdx}-${slotIdx}`} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px dashed rgba(255,255,255,0.05)', minHeight: 140 }} />
