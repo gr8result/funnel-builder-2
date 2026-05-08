@@ -142,6 +142,13 @@ function supportsFullWidthBackground(blockType) {
   return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK].includes(blockType);
 }
 
+function isFullWidthBackgroundEnabled(block) {
+  if (!supportsFullWidthBackground(block?.type)) {
+    return !!block?.props?.fullWidthBackground;
+  }
+  return block?.props?.fullWidthBackground !== false;
+}
+
 function supportsCopyRegeneration(blockType) {
   return [
     BlockTypes.HERO,
@@ -1830,7 +1837,7 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
           <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
             <input
               type="checkbox"
-              checked={!!props.fullWidthBackground}
+              checked={props.fullWidthBackground !== false}
               onChange={(e) => update({ fullWidthBackground: e.target.checked })}
               style={styles.checkboxInput}
             />
@@ -3989,7 +3996,7 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
   const cardBackgroundColor = pickGlobalStyleValue(blocks, ["cardBackgroundColor", "itemBackgroundColor"], "#f8fafc");
   const buttonRadius = Number(pickGlobalStyleValue(blocks, ["buttonRadius"], 999));
   const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500));
-  const layoutMode = blocks.some((block) => !!block?.props?.fullWidthBackground) ? "full" : "contained";
+  const layoutMode = blocks.some((block) => isFullWidthBackgroundEnabled(block)) ? "full" : "contained";
   const textAlign = pickGlobalStyleValue(blocks, ["headlineAlignment", "alignment"], "left");
   const colorSchemes = [
     { id: "coastal", label: "Coastal Blue", patch: { primaryColor: "#0ea5e9", headingColor: "#082f49", bodyColor: "#164e63", pageBackground: "linear-gradient(180deg,#f0f9ff 0%,#dbeafe 48%,#eff6ff 100%)", cardBackgroundColor: "rgba(255,255,255,0.82)", buttonTextColor: "#ffffff" } },
@@ -4221,9 +4228,10 @@ function PageSectionsPanel({ blocks, selectedIndex, onSelect, onMove }) {
   );
 }
 
-const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected }) {
+const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected, layoutWidth }) {
   return renderBlockPreview(block, brandAssets, {
     compact,
+    layoutWidth,
     isSelected: selected,
     onChangeBlock: (nextProps) => onChange(index, nextProps),
     onUploadImage: (key, file) => onUploadImage?.(index, key, file),
@@ -4237,6 +4245,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.replayToken === next.replayToken
   && prev.compact === next.compact
   && prev.selected === next.selected
+  && prev.layoutWidth === next.layoutWidth
 ));
 
 const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth }) => {
@@ -4246,7 +4255,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   const stickyMode = String(block?.props?.stickyMode || "normal");
   const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
-  const isFullWidthBlock = !compactPreview && canStretchFullWidth && !!block?.props?.fullWidthBackground;
+  const isFullWidthBlock = !compactPreview && canStretchFullWidth && isFullWidthBackgroundEnabled(block);
 
   useEffect(() => {
     const handlePointerMove = (event) => {
@@ -4442,6 +4451,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             index={index}
             brandAssets={brandAssets}
             compact={compactPreview}
+            layoutWidth={pageCanvasWidth}
             selected={selected}
             onChange={onChange}
             onUploadImage={onUploadImage}
@@ -5807,7 +5817,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             <label style={styles.inlineToggle}>
               <input
                 type="checkbox"
-                checked={!!block?.props?.fullWidthBackground}
+                checked={isFullWidthBackgroundEnabled(block)}
                 onChange={(e) => onChange(index, { ...block.props, fullWidthBackground: e.target.checked })}
                 style={styles.checkboxInput}
               />
@@ -6866,7 +6876,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const toggleSelectedProp = (key) => {
     if (typeof selectedIndex !== "number" || !blocks[selectedIndex]) return;
-    const current = !!blocks[selectedIndex]?.props?.[key];
+    const current = key === "fullWidthBackground"
+      ? isFullWidthBackgroundEnabled(blocks[selectedIndex])
+      : !!blocks[selectedIndex]?.props?.[key];
     handleUpdateBlock(selectedIndex, {
       ...(blocks[selectedIndex]?.props || {}),
       [key]: !current,
@@ -7832,10 +7844,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             {selectedBlock && [BlockTypes.HERO, BlockTypes.TEXT].includes(selectedBlock.type) ? (
               <button
                 type="button"
-                style={{ ...styles.panelToggleBtn, ...(selectedBlock?.props?.fullWidthBackground ? styles.panelToggleBtnActive : {}) }}
+                style={{ ...styles.panelToggleBtn, ...(isFullWidthBackgroundEnabled(selectedBlock) ? styles.panelToggleBtnActive : {}) }}
                 onClick={() => toggleSelectedProp("fullWidthBackground")}
               >
-                {selectedBlock?.props?.fullWidthBackground ? "Full Width On" : "Full Width Off"}
+                {isFullWidthBackgroundEnabled(selectedBlock) ? "Full Width On" : "Full Width Off"}
               </button>
             ) : null}
             <div style={styles.primaryActionGroup}>

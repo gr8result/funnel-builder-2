@@ -170,7 +170,7 @@ export default function ProjectPreviewPage() {
           {/* Global nav — injected above all page content */}
           {injectNav ? (
             <Fragment key="__global-nav">
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, navigationContext })}
+              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
             </Fragment>
           ) : null}
 
@@ -179,7 +179,7 @@ export default function ProjectPreviewPage() {
             <>
               {blocksWithoutNav.map((block, index) => (
                 <Fragment key={block.id || `${block.type}-${index}`}>
-                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext })}
+                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
                 </Fragment>
               ))}
             </>

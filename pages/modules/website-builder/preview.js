@@ -196,7 +196,7 @@ export default function ThemePreviewPage() {
               <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
                 {preview.blocks.map((block, index) => (
                   <div key={block.id || `${block.type}-${index}`}>
-                    {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext })}
+                    {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
                   </div>
                 ))}
               </div>

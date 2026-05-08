@@ -237,7 +237,7 @@ export default function SetupPage() {
         {/* ── GLOBAL NOTICE (OAuth callback result) ── */}
         {globalNotice && (
           <div style={{
-            padding: '14px 20px', borderRadius: 10, marginBottom: 20, fontSize: 15, fontWeight: 500,
+            padding: '14px 20px', borderRadius: 10, marginBottom: 20, fontSize: 16, fontWeight: 500,
             background: globalNotice.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
             border: `1px solid ${globalNotice.type === 'success' ? '#10B981' : '#ef4444'}`,
             color: globalNotice.type === 'success' ? '#10B981' : '#f87171',
@@ -381,7 +381,7 @@ const S = {
   introTitle: { fontSize: 24, fontWeight: 700, marginBottom: 8 },
   introText: { fontSize: 18, opacity: 0.7, lineHeight: 1.7 },
   introCallout: {
-    marginTop: 14, fontSize: 15, lineHeight: 1.6, color: '#FCD34D',
+    marginTop: 14, fontSize: 16, lineHeight: 1.6, color: '#FCD34D',
     background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
     borderRadius: 10, padding: '12px 14px',
   },
@@ -396,9 +396,9 @@ const S = {
   cardContent: { flex: 1, minWidth: 0 },
   platformName: { fontSize: 22, fontWeight: 700, marginBottom: 6 },
   platformDesc: { fontSize: 17, opacity: 0.65, lineHeight: 1.65, marginBottom: 6 },
-  platformNote: { fontSize: 15, opacity: 0.45, lineHeight: 1.5, marginTop: 4 },
+  platformNote: { fontSize: 16, opacity: 0.45, lineHeight: 1.5, marginTop: 4 },
   platformSafetyNote: {
-    marginTop: 12, fontSize: 15, lineHeight: 1.6, color: '#FCD34D',
+    marginTop: 12, fontSize: 16, lineHeight: 1.6, color: '#FCD34D',
     background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
     borderRadius: 10, padding: '12px 14px',
   },
@@ -409,7 +409,7 @@ const S = {
     background: 'rgba(16,185,129,0.08)', borderRadius: 10,
     border: '1px solid rgba(16,185,129,0.15)',
   },
-  connectedDot: { color: '#10B981', fontSize: 12 },
+  connectedDot: { color: '#10B981', fontSize: 16 },
   accountName: { flex: 1, fontSize: 16, fontWeight: 600 },
 
   cardActions: { flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, minWidth: 200 },
@@ -417,12 +417,12 @@ const S = {
   notConnectedBadge: { fontSize: 16, opacity: 0.4 },
   connectBtn: {
     padding: '14px 26px', background: 'linear-gradient(90deg,#6D28D9,#9333EA)',
-    border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 17,
+    border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: 17,
     cursor: 'pointer', whiteSpace: 'nowrap',
   },
   disconnectBtn: {
     background: 'none', border: '1px solid rgba(248,113,113,0.4)',
-    color: '#f87171', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 15,
+    color: '#f87171', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 16,
   },
   errorMsg: { marginTop: 10, color: '#f87171', fontSize: 16 },
 
@@ -434,7 +434,7 @@ const S = {
   footerText: { fontSize: 18, lineHeight: 1.5 },
   doneBtn: {
     padding: '14px 30px', background: 'linear-gradient(90deg,#059669,#10B981)',
-    border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 17,
+    border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: 17,
     cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
   },
 };

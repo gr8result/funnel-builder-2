@@ -2692,7 +2692,7 @@ function htmlToPlainText(value) {
     .replace(/&#39;/gi, "'");
 }
 
-function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage }) {
+function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage, layoutWidth = null }) {
   const dragRef = React.useRef(null);
   const fileInputRefs = React.useRef({});
   const canvasRef = React.useRef(null);
@@ -2701,7 +2701,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const [canvasWidth, setCanvasWidth] = React.useState(0);
   const gridSize = compact ? 20 : 24;
   const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
-  const fullWidthBlock = editor ? true : blockProps?.fullWidthBackground !== false;
+  const fullWidthBlock = true;
   const selectedLayerIndex = Number.isInteger(blockProps?.selectedLayerIndex) ? blockProps.selectedLayerIndex : null;
 
   const layers = asArray(blockProps?.images)
@@ -2741,13 +2741,9 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   }, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
   const contentWidth = Math.max(320, bounds.maxX - bounds.minX);
   const contentHeight = Math.max(240, bounds.maxY - bounds.minY);
-  const baseLayoutWidth = Math.max(720, Number(blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
-  const responsiveScale = !editor && !compact && canvasWidth > 0
-    ? Math.min(1, Math.max(0.6, canvasWidth / baseLayoutWidth))
-    : 1;
-  const previewOffsetX = !editor && !compact && canvasWidth > 0
-    ? Math.max(0, Math.round((canvasWidth - (baseLayoutWidth * responsiveScale)) / 2))
-    : 0;
+  const baseLayoutWidth = Math.max(720, Number(layoutWidth || blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
+  const responsiveScale = 1;
+  const previewOffsetX = 0;
   const previewOffsetY = 0;
   const stackHeight = editor
     ? (compact ? 320 : (blockProps?.minHeight || "72vh"))
@@ -2756,15 +2752,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const previewCanvasBackground = !editor && (!blockProps?.backgroundColor || blockProps.backgroundColor === "transparent")
     ? "linear-gradient(135deg, #09111f 0%, #0f172a 100%)"
     : (blockProps?.backgroundColor || "transparent");
-  const stackContentFrame = editor
-    ? {
-        width: "100%",
-        maxWidth: "100%",
-        marginLeft: 0,
-        marginRight: 0,
-        boxSizing: "border-box",
-      }
-    : sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
+  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
 
   React.useEffect(() => {
     latestPropsRef.current = blockProps || {};
@@ -3043,16 +3031,16 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: editor ? "100%" : `${baseLayoutWidth}px`,
+            maxWidth: "100%",
             minHeight: stackHeight,
             marginTop: 0,
-            marginLeft: "auto",
-            marginRight: "auto",
+            marginLeft: 0,
+            marginRight: 0,
             overflow: "hidden",
             borderRadius: compact ? 16 : 20,
             border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
-            background: editor ? previewCanvasBackground : "transparent",
-            backgroundImage: editor && blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
+            background: previewCanvasBackground,
+            backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
             backgroundSize: `${gridSize}px ${gridSize}px`,
           }}
         >
@@ -4745,7 +4733,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
   );
 }
 
-export function renderWebsiteBlock(block, { compact = false, assets, editor = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null } = {}) {
+export function renderWebsiteBlock(block, { compact = false, assets, editor = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null } = {}) {
   const props = block?.props || {};
   const sectionAnimationStyle = getAnimationStyle(props.sectionAnimation, props.sectionAnimationDelay || 0, props.sectionAnimationSpeed);
   const spacingScale = spacingMultiplier(props);
@@ -4764,7 +4752,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "hero":
     case "parallax": {
-      const useFullBleedHero = props.fullWidthBackground !== false;
+      const useFullBleedHero = true;
       const heroFullWidth = fullWidthStyle({
         ...props,
         fullWidthBackground: useFullBleedHero,
@@ -6024,7 +6012,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
 
     case "image-stack":
-      return <LayeredImageStackBlock blockProps={props} compact={compact} assets={assets} editor={editor} onChangeBlock={onChangeBlock} onUploadLayerImage={onUploadLayerImage} />;
+      return <LayeredImageStackBlock blockProps={props} compact={compact} assets={assets} editor={editor} onChangeBlock={onChangeBlock} onUploadLayerImage={onUploadLayerImage} layoutWidth={layoutWidth} />;
 
     case "columns-2": {
       const ratioMap = {
