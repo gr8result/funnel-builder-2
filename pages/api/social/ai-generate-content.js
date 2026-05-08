@@ -265,6 +265,93 @@ function topicTerms(topic) {
   return normaliseKeyword(topic).slice(0, 8);
 }
 
+function isShortVideoPlatform(platform) {
+  return ['tiktok', 'youtube', 'snapchat', 'lemon8'].includes(sanitizePlatform(platform));
+}
+
+function isShortVideoBrief(topic, platform) {
+  const cleaned = cleanSourceText(topic).toLowerCase();
+  if (isShortVideoPlatform(platform)) return true;
+  return /(video|clip|shorts|short-form|reel|training|workout|gym|fitness|coach|behind the scenes|behind-the-scenes|by the sea|beach)/i.test(cleaned);
+}
+
+function creatorCta(platform) {
+  const p = sanitizePlatform(platform);
+  if (p === 'youtube') return 'Watch for more training clips and follow for the next one.';
+  if (p === 'tiktok' || p === 'snapchat' || p === 'lemon8') return 'Follow for more training clips and behind-the-scenes moments.';
+  return 'Follow for more and visit our website to see what else is coming.';
+}
+
+function shortVideoHook(topic, variant = 0) {
+  const cleaned = cleanSourceText(topic).toLowerCase();
+
+  if (/(sea|ocean|beach)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
+    const options = [
+      'Training by the sea just hits different.',
+      'Ocean air, hard session, no excuses.',
+      'A quick coastal training clip with the right kind of energy.',
+    ];
+    return options[variant % options.length];
+  }
+
+  if (/(training|workout|fitness|gym)/i.test(cleaned)) {
+    const options = [
+      'A quick training clip from today\'s session.',
+      'Just a short workout moment worth sharing.',
+      'A little training footage and a lot of good energy.',
+    ];
+    return options[variant % options.length];
+  }
+
+  const options = [
+    'A quick behind-the-scenes clip from the latest post.',
+    'A short sample clip to show the vibe properly.',
+    'A simple moment on video that says more than a long caption.',
+  ];
+  return options[variant % options.length];
+}
+
+function shortVideoBody(topic, variant = 0) {
+  const cleaned = cleanSourceText(topic).toLowerCase();
+
+  if (/(wait ?& ?sea|waite and sea|wait and sea)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
+    const options = [
+      'Wait & Sea keeping it clean, active, and consistent with a simple training moment by the water.',
+      'A small Wait & Sea training moment with a clean lifestyle feel and a strong activewear vibe.',
+      'Just a natural Wait & Sea training clip with movement, energy, and that beach-session feel.',
+    ];
+    return options[variant % options.length];
+  }
+
+  if (/(training|workout|fitness|gym)/i.test(cleaned)) {
+    const options = [
+      'Nothing overdone, just real movement, good energy, and a reminder to keep showing up.',
+      'Clean reps, steady effort, and the kind of session that makes you want to keep going.',
+      'A simple training moment that feels strong, natural, and easy to watch.',
+    ];
+    return options[variant % options.length];
+  }
+
+  const options = [
+    'It is just a small sample, but it gives the right feel straight away.',
+    'Simple, natural, and easy to watch without trying too hard.',
+    'The clip is short, but the mood comes through immediately.',
+  ];
+  return options[variant % options.length];
+}
+
+function buildShortVideoCaption(topic, platform, variant = 0) {
+  const p = sanitizePlatform(platform);
+  const lines = [
+    shortVideoHook(topic, variant),
+    shortVideoBody(topic, variant),
+    creatorCta(p),
+  ].filter(Boolean);
+
+  if (p === 'youtube') return lines.join(' ');
+  return lines.join(' ');
+}
+
 function topicLead(topic) {
   const cleaned = sentenceCase(resolveTopicReference(topic, topic)).replace(/[.!?]+$/g, '');
   if (!cleaned) return 'We are sharing an update designed to make day-to-day marketing easier for growing businesses.';
@@ -367,6 +454,10 @@ function engagementSentence(topic, variant = 0, platform) {
 }
 
 function buildTopicDrivenPost(topic, platform, variant = 0) {
+  if (isShortVideoBrief(topic, platform)) {
+    return buildShortVideoCaption(topic, platform, variant);
+  }
+
   if (hasSalesIntent(topic)) {
     const sentences = [
       salesLead(topic, platform),
@@ -425,6 +516,8 @@ function looksGenericPost(text, topic) {
 
 function websiteCta(platform) {
   const p = sanitizePlatform(platform);
+  if (p === 'tiktok' || p === 'snapchat' || p === 'lemon8') return 'Follow for more.';
+  if (p === 'youtube') return 'Watch for more on our channel.';
   if (p === 'pinterest') return 'Visit our website to learn more and see how it can work for your business.';
   if (p === 'x') return 'Visit our website to learn more.';
   return 'Visit our website to learn more about how this can help your business.';
@@ -432,14 +525,23 @@ function websiteCta(platform) {
 
 function minimumSentenceCount(platform) {
   const p = sanitizePlatform(platform);
+  if (p === 'tiktok' || p === 'snapchat' || p === 'lemon8') return 2;
+  if (p === 'youtube') return 2;
   if (p === 'x') return 2;
   if (p === 'pinterest') return 2;
   return 3;
 }
 
+function needsWebsiteCta(platform, topic) {
+  const p = sanitizePlatform(platform);
+  if (isShortVideoBrief(topic, p) && !hasSalesIntent(topic)) return false;
+  return !['tiktok', 'youtube', 'snapchat', 'lemon8'].includes(p) || hasSalesIntent(topic);
+}
+
 function ensureWebsiteCta(text, platform) {
   const cleaned = cleanSourceText(text);
   if (!cleaned) return websiteCta(platform);
+  if (!needsWebsiteCta(platform, cleaned)) return cleaned;
   if (/(visit|check out|see|learn more on|have a look at|look at).{0,30}website/i.test(cleaned)) {
     return cleaned;
   }
@@ -535,6 +637,32 @@ function platformRules(platform, contentLength) {
     ].join('\n');
   }
 
+  if (p === 'tiktok') {
+    return [
+      'Write like a real TikTok caption, not a marketing brief or corporate post.',
+      'Use a short hook first, then 1-2 natural follow-up lines.',
+      'Speak to viewers, not to the business owner or content manager.',
+      'Never describe how the caption should be written and never repeat instructions from the brief.',
+      'Do not write phrases like "this update focuses on", "the focus is", "create captions", or "keep the tone".',
+      'Only include a selling CTA if the brief is clearly a product sale or launch.',
+      'Keep it natural, modern, and watchable.',
+      salesRule,
+      'Write 2-3 short sentences max.'
+    ].join('\n');
+  }
+
+  if (p === 'youtube') {
+    return [
+      'Write like YouTube Shorts caption copy or a short video description.',
+      'Lead with the actual clip or topic, not with meta commentary about the brief.',
+      'Never repeat instructions from the brief or describe how the caption should be written.',
+      'Do not use filler openings like "this update focuses on".',
+      'Keep it clear and viewer-facing.',
+      salesRule,
+      'Write 2-3 concise sentences.'
+    ].join('\n');
+  }
+
   if (p === 'pinterest') {
     return [
       'Write like a Pinterest product ad: searchable keywords, product-specific wording, and a clear benefit.',
@@ -558,6 +686,8 @@ function platformRules(platform, contentLength) {
 
 function hashtagDirective(platform, hashtagLevel) {
   const p = sanitizePlatform(platform);
+  if (p === 'tiktok' || p === 'snapchat' || p === 'lemon8') return 'Use 3-5 relevant hashtags.';
+  if (p === 'youtube') return 'Use 0-3 relevant hashtags.';
   if (p === 'x') return 'Use 0-2 hashtags.';
   if (p === 'linkedin') return 'Use 0-5 relevant hashtags.';
   if (p === 'pinterest') return 'Use 0-3 hashtags (optional).';
@@ -613,6 +743,8 @@ ${exclusionText}
 
 Before writing, fix any spelling, grammar, punctuation, spacing, and wording errors in the source brief. Never copy obvious typos, malformed hashtags, or broken words from the input.
 
+Treat the brief as internal notes only. Convert rough notes into final audience-facing copy. Never mention or repeat instructions such as "create captions", "write posts", "keep the tone", "focus on", "include hooks", or comments about spelling.
+
 Use only relevant, searchable hashtags people would genuinely look for. Never use filler hashtags like #our, #this, #new, #the, or hashtags copied from broken input.
 
 Return ONLY valid JSON in this exact shape:
@@ -635,7 +767,7 @@ async function requestPostsFromOpenAI(openaiKey, prompt) {
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: 'Return only strict JSON with a posts array. Use Australian English spelling. Correct spelling and grammar errors from the user brief before writing. Use only relevant searchable hashtags. Every post must be coherent, longer than one sentence, explain the point clearly, include a CTA to visit our website, and avoid generic filler openings or vague marketing-coach phrasing.' },
+        { role: 'system', content: 'Return only strict JSON with a posts array. Use Australian English spelling. Correct spelling and grammar errors from the user brief before writing. Use only relevant searchable hashtags. Treat the user brief as rough internal notes, not text to echo. Convert it into final audience-facing copy. Never repeat instructions such as create captions, keep the tone, include hooks, or focus on. Avoid generic filler openings or vague marketing-coach phrasing.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
