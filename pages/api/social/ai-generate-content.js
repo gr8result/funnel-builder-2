@@ -356,6 +356,13 @@ function pickVariantOffset() {
   return Math.floor(Math.random() * 97) + Date.now();
 }
 
+function formatGenerationFailureReason(reason) {
+  if (reason === 'missing_openai_key') return 'OPENAI_API_KEY is not configured on the server.';
+  if (reason === 'openai_quota_or_billing') return 'The server OpenAI key is being rejected for quota or billing reasons.';
+  if (reason === 'empty_or_invalid_openai_response') return 'OpenAI returned an unusable response.';
+  return 'OpenAI generation failed.';
+}
+
 function topicLead(topic) {
   const cleaned = sentenceCase(resolveTopicReference(topic, topic)).replace(/[.!?]+$/g, '');
   if (!cleaned) return 'We are sharing an update designed to make day-to-day marketing easier for growing businesses.';
@@ -959,6 +966,18 @@ export default async function handler(req, res) {
         });
         postsByPlatform[platform] = result.posts;
         generationMeta[platform] = { source: result.source, reason: result.reason };
+      }
+
+      const fallbackPlatforms = safePlatforms.filter((platform) => generationMeta[platform]?.source === 'fallback');
+      if (fallbackPlatforms.length === safePlatforms.length) {
+        const reasons = [...new Set(fallbackPlatforms.map((platform) => generationMeta[platform]?.reason).filter(Boolean))]
+          .map((reason) => formatGenerationFailureReason(reason))
+          .join(' ');
+        return res.status(503).json({
+          ok: false,
+          error: reasons || 'OpenAI generation failed for all selected platforms.',
+          generationMeta,
+        });
       }
     }
 
