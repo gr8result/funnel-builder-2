@@ -464,6 +464,8 @@ export default function CreateContent() {
   const [aiScheduleMode, setAiScheduleMode] = useState('daily');
   const [aiImageCount,   setAiImageCount]   = useState(10);
   const [aiContentType,  setAiContentType]  = useState('standard');
+  const [aiImageCreativeType, setAiImageCreativeType] = useState('realistic');
+  const [aiImageTextMode, setAiImageTextMode] = useState('headline-supporting');
   const [aiSelectedPlatforms, setAiSelectedPlatforms] = useState(() => {
     try {
       const saved = localStorage.getItem('sm_selected_platforms');
@@ -553,6 +555,8 @@ export default function CreateContent() {
       length: aiLength,
       hashtagLevel: aiHashtagLevel,
       contentType: aiContentType,
+      imageCreativeType: aiImageCreativeType,
+      imageTextMode: aiImageTextMode,
       platforms: aiSelectedPlatforms,
       ingredients: aiIngredients,
       leadForm: aiLeadForm,
@@ -719,6 +723,8 @@ export default function CreateContent() {
     setAiLength(campaign.length || 'short');
     setAiHashtagLevel(campaign.hashtagLevel || 'high');
     setAiContentType(campaign.contentType || 'standard');
+    setAiImageCreativeType(campaign.imageCreativeType || 'realistic');
+    setAiImageTextMode(campaign.imageTextMode || 'headline-supporting');
     setAiSelectedPlatforms({ ...DEFAULT_SELECTED_PLATFORMS, ...(campaign.platforms || {}) });
     if (campaign.ingredients)              setAiIngredients(campaign.ingredients);
     if (campaign.leadForm)                 setAiLeadForm(campaign.leadForm);
@@ -776,7 +782,13 @@ export default function CreateContent() {
           const imgRes = await fetch('/api/social/ai-generate-images', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ descriptions: buildImageDescriptions(byPlatform, aiImageCount), style: aiStyle, count: aiImageCount }),
+            body: JSON.stringify({
+              descriptions: buildImageDescriptions(byPlatform, aiImageCount),
+              style: aiStyle,
+              creativeType: aiImageCreativeType,
+              textMode: aiImageTextMode,
+              count: aiImageCount,
+            }),
           });
           const imgData = await imgRes.json();
           if (imgRes.ok && imgData.ok && imgData.images?.length) {
@@ -830,7 +842,13 @@ export default function CreateContent() {
       const res = await fetch('/api/social/ai-generate-images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ descriptions: buildImageDescriptions(postsByPlatform, aiImageCount), style: aiStyle, count: aiImageCount }),
+        body: JSON.stringify({
+          descriptions: buildImageDescriptions(postsByPlatform, aiImageCount),
+          style: aiStyle,
+          creativeType: aiImageCreativeType,
+          textMode: aiImageTextMode,
+          count: aiImageCount,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok || !data.images?.length) {
@@ -1438,6 +1456,25 @@ export default function CreateContent() {
                     <label style={S.label}>Image Count (0 to 30)</label>
                     <input type="number" min={0} max={30} value={aiImageCount} onChange={e => setAiImageCount(Math.max(0, Math.min(30, Number(e.target.value) || 0)))} style={S.input} />
                   </div>
+                  <div>
+                    <label style={S.label}>Image Creative Type</label>
+                    <select value={aiImageCreativeType} onChange={e => setAiImageCreativeType(e.target.value)} style={S.input}>
+                      <option value="realistic">Realistic photo ad</option>
+                      <option value="graphic">Graphic design ad</option>
+                      <option value="mixed">Mixed variety</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={S.label}>Text On Image</label>
+                    <select value={aiImageTextMode} onChange={e => setAiImageTextMode(e.target.value)} style={S.input}>
+                      <option value="headline-supporting">Headline + supporting text</option>
+                      <option value="headline-only">Headline only</option>
+                      <option value="minimal">Short minimal text</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginTop: 10, fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
+                  Realistic uses photo-style ads, Graphic uses designed promotional layouts, and Mixed alternates both. Text is added after generation so it stays readable.
                 </div>
                 {/* Campaign duration */}
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>

@@ -232,7 +232,7 @@ function takeWords(text, count) {
   return String(text || '').split(/\s+/).filter(Boolean).slice(0, count).join(' ');
 }
 
-function buildOverlayCopy(description = '') {
+function buildOverlayCopy(description = '', textMode = 'headline-supporting') {
   const clean = normalizeDescriptionText(description);
   const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
   const firstSentence = sentences[0] || clean;
@@ -243,8 +243,8 @@ function buildOverlayCopy(description = '') {
 
   const headline = takeWords(headlineBase, 8).toUpperCase() || 'GROW YOUR BUSINESS';
   const supportingPool = sentences.slice(1).join(' ').trim() || clean;
-  const supporting = takeWords(supportingPool, 18);
-  const eyebrow = takeWords(clean.split(/[:.!?\-]/)[0], 3).toUpperCase() || 'NEW';
+  const supporting = textMode === 'headline-only' ? '' : takeWords(supportingPool, textMode === 'minimal' ? 8 : 18);
+  const eyebrow = textMode === 'minimal' ? '' : (takeWords(clean.split(/[:.!?\-]/)[0], 3).toUpperCase() || 'NEW');
 
   return {
     eyebrow,
@@ -262,23 +262,38 @@ function escapeHtml(value = '') {
     .replace(/'/g, '&#39;');
 }
 
-function buildPhotoCreativePrompt(description, style) {
+function shouldUseGraphicCreative(creativeType, index) {
+  if (creativeType === 'graphic') return true;
+  if (creativeType === 'mixed') return index % 2 === 1;
+  return false;
+}
+
+function buildPhotoCreativePrompt(description, style, creativeType = 'realistic', index = 0) {
   const normalized = normalizeDescriptionText(description);
   const isSupplementAd = /(protein|supplement|powder|whey|nutrition|fitness)/i.test(normalized);
+  const useGraphicCreative = shouldUseGraphicCreative(creativeType, index);
   return [
     'Create a premium square social media ad background image.',
     `Message to visualize: "${normalized}".`,
     `Brand style: ${style}.`,
-    isSupplementAd
-      ? 'Use real product-ad photography with a premium protein powder tub or pouch, shake bottle, gym or clean kitchen context, believable lighting, and a strong focus on the product itself.'
-      : 'Use a real photographic scene, real people, real products, or real business environment that directly matches the message.',
+    useGraphicCreative
+      ? 'Use a polished graphic ad layout with strong composition, clear shape language, product-led composition, bold contrast, and premium campaign design quality.'
+      : isSupplementAd
+        ? 'Use real product-ad photography with a premium protein powder tub or pouch, shake bottle, gym or clean kitchen context, believable lighting, and a strong focus on the product itself.'
+        : 'Use a real photographic scene, real people, real products, or real business environment that directly matches the message.',
     'If the image includes people for a business campaign, use believable small-business owners or professionals rather than generic corporate placeholder models.',
     'Avoid placeholder layouts, fake social-media mockups, nonsense promo art, and meaningless filler scenes.',
-    'Do not create illustration, vector art, 3D icon art, abstract gradients, mock UI cards, or cartoon graphics.',
-    'Compose it like a modern high-converting Instagram or Facebook ad with a clear focal subject and believable lighting.',
+    useGraphicCreative
+      ? 'This should feel like a finished designed ad background, not a random illustration or template screenshot.'
+      : 'Do not create illustration, vector art, 3D icon art, abstract gradients, mock UI cards, or cartoon graphics.',
+    useGraphicCreative
+      ? 'Use clean promotional design elements, layered shapes, and strong visual hierarchy while leaving room for readable marketing copy.'
+      : 'Compose it like a modern high-converting Instagram or Facebook ad with a clear focal subject and believable lighting.',
     'Leave clean negative space in the lower third or side of the frame for headline text to be added later.',
     'No letters, no typography, no logos, no watermarks, no gibberish text inside the generated image.',
-    'Photorealistic, polished, commercial advertising photography, 1:1 composition.'
+    useGraphicCreative
+      ? 'High-end commercial ad design, premium marketing graphic, 1:1 composition.'
+      : 'Photorealistic, polished, commercial advertising photography, 1:1 composition.'
   ].join(' ');
 }
 
@@ -291,10 +306,10 @@ async function getPromoBrowser() {
   return promoBrowserPromise;
 }
 
-async function renderPromotionalOverlay(imageUrl, description) {
+async function renderPromotionalOverlay(imageUrl, description, textMode = 'headline-supporting') {
   const browser = await getPromoBrowser();
   const page = await browser.newPage();
-  const copy = buildOverlayCopy(description);
+  const copy = buildOverlayCopy(description, textMode);
 
   try {
     await page.setViewport({ width: 1024, height: 1024, deviceScaleFactor: 1 });
@@ -305,9 +320,7 @@ async function renderPromotionalOverlay(imageUrl, description) {
             <img class="bg" src="${escapeHtml(imageUrl)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;" />
             <div style="position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.28) 46%, rgba(0,0,0,0.84) 100%);"></div>
             <div style="position:absolute;left:54px;right:54px;bottom:58px;color:#fff;">
-              <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);font-size:24px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:22px;">
-                ${escapeHtml(copy.eyebrow)}
-              </div>
+              ${copy.eyebrow ? `<div style="display:inline-block;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);font-size:24px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:22px;">${escapeHtml(copy.eyebrow)}</div>` : ''}
               <div style="font-size:74px;line-height:0.94;font-weight:900;letter-spacing:-0.04em;text-transform:uppercase;text-wrap:balance;max-width:880px;text-shadow:0 4px 30px rgba(0,0,0,0.5);">
                 ${escapeHtml(copy.headline)}
               </div>
@@ -336,13 +349,13 @@ async function renderPromotionalOverlay(imageUrl, description) {
   }
 }
 
-async function applyPromotionalOverlays(images) {
+async function applyPromotionalOverlays(images, textMode = 'headline-supporting') {
   if (!Array.isArray(images) || !images.length) return images || [];
 
   try {
     return await Promise.all(images.map(async (image) => {
       if (!image?.url || image.overlayApplied) return image;
-      const overlaidUrl = await renderPromotionalOverlay(image.url, image.description || '');
+      const overlaidUrl = await renderPromotionalOverlay(image.url, image.description || '', textMode);
       return { ...image, url: overlaidUrl, overlayApplied: true };
     }));
   } catch (error) {
@@ -428,7 +441,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { descriptions, style = 'modern', count = 1 } = req.body;
+    const { descriptions, style = 'modern', creativeType = 'realistic', textMode = 'headline-supporting', count = 1 } = req.body;
 
     if (!descriptions || descriptions.length === 0) {
       return res.status(400).json({ error: 'Image descriptions are required' });
@@ -442,7 +455,7 @@ export default async function handler(req, res) {
     const batchSize = Math.min(descriptions.length, safeCount);
 
     if (!openaiKey) {
-      const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount)));
+      const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount), textMode));
       return res.status(200).json({
         ok: true,
         images: fallbackImages,
@@ -465,7 +478,7 @@ export default async function handler(req, res) {
       const description = descriptions[i];
       console.log(`📸 [${i + 1}/${batchSize}] Generating for: ${description.substring(0, 60)}...`);
       
-      const prompt = buildPhotoCreativePrompt(description, style);
+      const prompt = buildPhotoCreativePrompt(description, style, creativeType, i);
 
       try {
         const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -518,7 +531,7 @@ export default async function handler(req, res) {
     console.log(`📸 Image generation complete: ${images.length}/${batchSize} successful`);
 
     if (!images.length) {
-      const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount)));
+      const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount), textMode));
       return res.status(200).json({
         ok: true,
         images: fallbackImages,
@@ -531,16 +544,16 @@ export default async function handler(req, res) {
       });
     }
 
-    const overlaidImages = await applyPromotionalOverlays(images);
+    const overlaidImages = await applyPromotionalOverlays(images, textMode);
 
     if (hadGenerationFailure && overlaidImages.length < batchSize) {
       const remainder = descriptions.slice(overlaidImages.length, batchSize);
-      const fallbackImages = await applyPromotionalOverlays(await buildRealFallbackImages(req, remainder, remainder.length));
+      const fallbackImages = await applyPromotionalOverlays(await buildRealFallbackImages(req, remainder, remainder.length), textMode);
       overlaidImages.push(...fallbackImages);
     }
 
     const uniqueImages = await ensureUniqueImageCount(req, overlaidImages, descriptions, batchSize);
-    const persistedImages = await persistReturnedImages(req, await applyPromotionalOverlays(uniqueImages));
+    const persistedImages = await persistReturnedImages(req, await applyPromotionalOverlays(uniqueImages, textMode));
 
     return res.status(200).json({ 
       ok: true, 
