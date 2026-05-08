@@ -1274,7 +1274,7 @@ export default function CreateContent() {
 
   // ── Computed ────────────────────────────────────────────────────────────
   const allPlatforms    = getVisiblePlatforms(postsByPlatform, getSelectedPlatforms());
-  const hasGenerated    = Object.values(postsByPlatform).some((posts) => Array.isArray(posts) && posts.length > 0);
+  const hasGenerated    = allPlatforms.length > 0;
   const isAllView       = viewPlatform === 'all';
   const postsPerDay     = getPostsPerDay();
   const postsPerPlatformCount = getPostsPerPlatformCount();
