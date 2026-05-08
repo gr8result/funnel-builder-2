@@ -44,9 +44,9 @@ const PLATFORMS = {
 function PlatformLogo({ platformKey, meta }) {
   if (platformKey === 'meta' && Array.isArray(meta.logos)) {
     return (
-      <div style={S.platformLogoStack}>
+      <div style={S.platformLogoColumn}>
         {meta.logos.map((logoPath, index) => (
-          <span key={logoPath} style={{ ...S.platformLogoBadge, marginLeft: index === 0 ? 0 : -10 }}>
+          <span key={logoPath} style={{ ...S.platformLogoBadge, marginTop: index === 0 ? 0 : -8 }}>
             <img src={logoPath} alt="" aria-hidden="true" style={S.platformLogoImage} />
           </span>
         ))}
@@ -426,7 +426,7 @@ const S = {
   },
   cardMain: { display: 'flex', alignItems: 'flex-start', gap: 24 },
   platformIcon: { flexShrink: 0, marginTop: 2, minWidth: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  platformLogoStack: { display: 'flex', alignItems: 'center', paddingLeft: 6 },
+  platformLogoColumn: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 2 },
   platformLogoBadge: {
     width: 64, height: 64, borderRadius: 16, background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
