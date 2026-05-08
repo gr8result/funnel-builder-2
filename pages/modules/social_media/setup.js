@@ -1,7 +1,6 @@
 // /pages/modules/social_media/setup.js
 // User-facing account connection page.
 // Users simply click "Connect" per platform — they never enter app credentials.
-// App credentials (App ID / Secret) are configured once by the platform admin at /admin/social-developer-config
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -12,7 +11,7 @@ const PLATFORMS = {
     label: 'Facebook & Instagram',
     icon: '📘',
     description: 'Connect your Facebook Pages and linked Instagram Business account to post and schedule content.',
-    note: 'You will be asked to select which Facebook Pages and Instagram accounts to grant access to.',
+    note: 'You will be asked to choose which Facebook Pages and Instagram accounts to connect.',
   },
   tiktok: {
     label: 'TikTok',
@@ -29,8 +28,8 @@ const PLATFORMS = {
   pinterest: {
     label: 'Pinterest',
     icon: '📌',
-    description: 'Connect your Pinterest business account to publish pins and manage board content.',
-    note: 'Account connection is wired. Publishing and board-specific workflows still need more work in this build.',
+    description: 'Connect your Pinterest business account to publish pins from this app.',
+    note: 'Pinterest controls its own consent-screen wording. In this build, Gr8 Result only requests the access needed to identify the account, choose a board, and publish pins for you.',
   },
   youtube: {
     label: 'YouTube',
@@ -39,6 +38,31 @@ const PLATFORMS = {
     note: 'OAuth connection is wired, but YouTube publishing is not yet implemented in the posting queue.',
   },
 };
+
+function getFriendlyPlatformName(platform) {
+  return PLATFORMS[platform]?.label || 'This platform';
+}
+
+function sanitizeConnectionMessage(platform, message, fallback = 'Connection failed. Please try again.') {
+  const raw = String(message || '').trim();
+  const lower = raw.toLowerCase();
+
+  if (!raw) return fallback;
+  if (lower.includes('please sign in first')) return 'Please sign in and try again.';
+  if (lower.includes('oauth state expired') || lower.includes('expired or invalid')) return 'This connection attempt expired. Please try again.';
+  if (
+    lower.includes('app id not configured') ||
+    lower.includes('app secret not configured') ||
+    lower.includes('client id not configured') ||
+    lower.includes('client secret not configured') ||
+    lower.includes('configuration id not configured') ||
+    lower.includes('credentials not configured')
+  ) {
+    return `${getFriendlyPlatformName(platform)} connection is temporarily unavailable right now. Please try again later.`;
+  }
+
+  return raw;
+}
 
 async function getToken(retries = 0) {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -104,12 +128,13 @@ export default function SetupPage() {
     const params = new URLSearchParams(window.location.search);
     const connect = router.query.connect || params.get('connect');
     const message = router.query.message || params.get('message');
+    const platform = router.query.platform || params.get('platform') || '';
     if (connect === 'success' || connect === 'ok') {
       setGlobalNotice({ type: 'success', message: 'Account connected successfully!' });
       loadConnections();
       router.replace('/modules/social_media/setup', undefined, { shallow: true });
     } else if (connect === 'error') {
-      setGlobalNotice({ type: 'error', message: message || 'Connection failed.' });
+      setGlobalNotice({ type: 'error', message: sanitizeConnectionMessage(platform, message, 'Connection failed. Please try again.') });
     }
   }, [router.isReady, router.query.connect]);
 
@@ -151,7 +176,7 @@ export default function SetupPage() {
         body: JSON.stringify({ redirectPath: '/modules/social_media/setup' }),
       });
       const data = await res.json();
-      if (!res.ok || !data.authUrl) throw new Error(data.error || `Could not start ${platform} login`);
+      if (!res.ok || !data.authUrl) throw new Error(sanitizeConnectionMessage(platform, data.error, `Could not start ${platform} login`));
 
       const authUrl = data.authUrl;
 
@@ -166,7 +191,7 @@ export default function SetupPage() {
         }
       }, 800);
     } catch (err) {
-      setNotice(n => ({ ...n, [platform]: err.message }));
+      setNotice(n => ({ ...n, [platform]: sanitizeConnectionMessage(platform, err.message) }));
       setBusyPlatform('');
     }
   }
@@ -205,7 +230,7 @@ export default function SetupPage() {
             <div style={S.bannerIcon}>⚙️</div>
             <div>
               <div style={S.bannerTitle}>Social Media Settings</div>
-              <div style={S.bannerSub}>Connect your social accounts and configure platform credentials</div>
+              <div style={S.bannerSub}>Connect your social accounts so this app can publish on your behalf</div>
             </div>
           </div>
           <button style={S.bannerBtn} onClick={() => { window.location.href = '/modules/social_media/dashboard'; }}>
@@ -220,10 +245,10 @@ export default function SetupPage() {
             <div style={S.introTitle}>Connect Your Social Accounts</div>
             <div style={S.introText}>
               Click <strong>Connect</strong> on any platform below. You'll be taken to that platform's login page
-              to approve access — then you're done. It only takes a minute.
+              to approve the page or account you want to connect — then you're done. It only takes a minute.
             </div>
             <div style={S.introCallout}>
-              Meta note: Facebook and Instagram now use Meta Business Login so you can reconnect with the app's saved Business configuration.
+              Platform note: if a connection is temporarily unavailable, we'll show a plain-language message here. Users never need to manage platform App IDs or developer credentials.
             </div>
           </div>
           {connectedCount > 0 && (
