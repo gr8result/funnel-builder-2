@@ -4,41 +4,74 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { SiTiktok } from 'react-icons/si';
 import { supabase } from '../../../utils/supabase-client';
 
 const PLATFORMS = {
   meta: {
     label: 'Facebook & Instagram',
-    icon: '📘',
+    logos: ['/email-assets/social/facebook.svg', '/email-assets/social/instagram.svg'],
     description: 'Connect your Facebook Pages and linked Instagram Business account so this app can publish your scheduled content.',
     note: 'You will be asked to choose which Facebook Pages and Instagram accounts to connect for posting from this app.',
   },
   tiktok: {
     label: 'TikTok',
-    icon: '🎵',
+    logoType: 'tiktok',
     description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
     note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. Until that review is complete, TikTok may reject sign-in for non-test accounts.',
   },
   linkedin: {
     label: 'LinkedIn',
-    icon: '💼',
+    logo: '/email-assets/social/linkedin.svg',
     description: 'Connect your LinkedIn profile or Company Page so this app can publish posts for you.',
     note: 'Personal profile posting is wired in this build. Company Page publishing still needs its own page-selection flow.',
   },
   pinterest: {
     label: 'Pinterest',
-    icon: '📌',
+    logo: '/email-assets/social/pinterest.svg',
     description: 'Connect your Pinterest business account so this app can publish pins for you.',
     note: 'Pinterest controls its own consent-screen wording. In this build, Gr8 Result only requests the access needed to identify the account, choose a board, and publish pins from this app.',
     safetyNote: 'We cannot actually access your account to browse through it or make manual changes outside the actions you approve through this app.',
   },
   youtube: {
     label: 'YouTube',
-    icon: '▶️',
+    logo: '/email-assets/social/youtube.svg',
     description: 'Connect your YouTube channel so this app can upload videos for you when YouTube publishing is enabled.',
     note: 'OAuth connection is wired, but YouTube publishing is not yet implemented in the posting queue.',
   },
 };
+
+function PlatformLogo({ platformKey, meta }) {
+  if (platformKey === 'meta' && Array.isArray(meta.logos)) {
+    return (
+      <div style={S.platformLogoStack}>
+        {meta.logos.map((logoPath, index) => (
+          <span key={logoPath} style={{ ...S.platformLogoBadge, marginLeft: index === 0 ? 0 : -10 }}>
+            <img src={logoPath} alt="" aria-hidden="true" style={S.platformLogoImage} />
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (meta.logoType === 'tiktok') {
+    return (
+      <div style={S.platformLogoBadge}>
+        <SiTiktok size={28} color="#ffffff" />
+      </div>
+    );
+  }
+
+  if (meta.logo) {
+    return (
+      <div style={S.platformLogoBadge}>
+        <img src={meta.logo} alt="" aria-hidden="true" style={S.platformLogoImage} />
+      </div>
+    );
+  }
+
+  return null;
+}
 
 function getFriendlyPlatformName(platform) {
   return PLATFORMS[platform]?.label || 'This platform';
@@ -294,7 +327,7 @@ export default function SetupPage() {
             return (
               <div key={key} style={{ ...S.card, borderLeft: `5px solid ${isConnected ? '#10B981' : 'rgba(255,255,255,0.08)'}` }}>
                 <div style={S.cardMain}>
-                  <div style={S.platformIcon}>{meta.icon}</div>
+                  <div style={S.platformIcon}><PlatformLogo platformKey={key} meta={meta} /></div>
                   <div style={S.cardContent}>
                     <div style={S.platformName}>{meta.label}</div>
                     <div style={S.platformDesc}>{meta.description}</div>
@@ -392,7 +425,14 @@ const S = {
     border: '1px solid rgba(255,255,255,0.07)', padding: '28px 32px',
   },
   cardMain: { display: 'flex', alignItems: 'flex-start', gap: 24 },
-  platformIcon: { fontSize: 44, flexShrink: 0, marginTop: 2 },
+  platformIcon: { flexShrink: 0, marginTop: 2, minWidth: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  platformLogoStack: { display: 'flex', alignItems: 'center', paddingLeft: 6 },
+  platformLogoBadge: {
+    width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+  },
+  platformLogoImage: { width: 24, height: 24, display: 'block', objectFit: 'contain' },
   cardContent: { flex: 1, minWidth: 0 },
   platformName: { fontSize: 22, fontWeight: 700, marginBottom: 6 },
   platformDesc: { fontSize: 17, opacity: 0.65, lineHeight: 1.65, marginBottom: 6 },
