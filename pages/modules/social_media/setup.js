@@ -30,6 +30,7 @@ const PLATFORMS = {
     icon: '📌',
     description: 'Connect your Pinterest business account so this app can publish pins for you.',
     note: 'Pinterest controls its own consent-screen wording. In this build, Gr8 Result only requests the access needed to identify the account, choose a board, and publish pins from this app.',
+    safetyNote: 'We cannot actually access your account to browse through it or make manual changes outside the actions you approve through this app.',
   },
   youtube: {
     label: 'YouTube',
@@ -275,6 +276,7 @@ export default function SetupPage() {
                     <div style={S.platformName}>{meta.label}</div>
                     <div style={S.platformDesc}>{meta.description}</div>
                     {meta.note && <div style={S.platformNote}>ℹ️ {meta.note}</div>}
+                    {meta.safetyNote && <div style={S.platformSafetyNote}>⚠️ {meta.safetyNote}</div>}
 
                     {/* Connected accounts list */}
                     {accounts.length > 0 && (
@@ -372,6 +374,11 @@ const S = {
   platformName: { fontSize: 22, fontWeight: 700, marginBottom: 6 },
   platformDesc: { fontSize: 17, opacity: 0.65, lineHeight: 1.65, marginBottom: 6 },
   platformNote: { fontSize: 15, opacity: 0.45, lineHeight: 1.5, marginTop: 4 },
+  platformSafetyNote: {
+    marginTop: 12, fontSize: 15, lineHeight: 1.6, color: '#FCD34D',
+    background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+    borderRadius: 10, padding: '12px 14px',
+  },
 
   accountList: { marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 },
   accountRow: {
