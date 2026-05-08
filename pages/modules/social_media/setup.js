@@ -10,31 +10,31 @@ const PLATFORMS = {
   meta: {
     label: 'Facebook & Instagram',
     icon: '📘',
-    description: 'Connect your Facebook Pages and linked Instagram Business account to post and schedule content.',
-    note: 'You will be asked to choose which Facebook Pages and Instagram accounts to connect.',
+    description: 'Connect your Facebook Pages and linked Instagram Business account so this app can publish your scheduled content.',
+    note: 'You will be asked to choose which Facebook Pages and Instagram accounts to connect for posting from this app.',
   },
   tiktok: {
     label: 'TikTok',
     icon: '🎵',
-    description: 'Connect your TikTok Business or Creator account to publish direct TikTok posts.',
+    description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
     note: 'Requires a TikTok Business or Creator account. Direct posting is wired; the full video-upload workflow still needs more work.',
   },
   linkedin: {
     label: 'LinkedIn',
     icon: '💼',
-    description: 'Connect your LinkedIn profile or Company Page to share posts and articles.',
+    description: 'Connect your LinkedIn profile or Company Page so this app can publish posts for you.',
     note: 'Personal profile posting is wired in this build. Company Page publishing still needs its own page-selection flow.',
   },
   pinterest: {
     label: 'Pinterest',
     icon: '📌',
-    description: 'Connect your Pinterest business account to publish pins from this app.',
-    note: 'Pinterest controls its own consent-screen wording. In this build, Gr8 Result only requests the access needed to identify the account, choose a board, and publish pins for you.',
+    description: 'Connect your Pinterest business account so this app can publish pins for you.',
+    note: 'Pinterest controls its own consent-screen wording. In this build, Gr8 Result only requests the access needed to identify the account, choose a board, and publish pins from this app.',
   },
   youtube: {
     label: 'YouTube',
     icon: '▶️',
-    description: 'Connect your YouTube channel to upload videos and manage content.',
+    description: 'Connect your YouTube channel so this app can upload videos for you when YouTube publishing is enabled.',
     note: 'OAuth connection is wired, but YouTube publishing is not yet implemented in the posting queue.',
   },
 };
