@@ -10,7 +10,7 @@ const supabase = createClient(
 const DEFAULT_POSTS_PER_PLATFORM = 28;
 
 // platforms you want
-const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'pinterest', 'x', 'tiktok', 'youtube'];
+const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'x', 'threads', 'bluesky', 'pinterest', 'tiktok', 'youtube', 'googlebusiness', 'reddit', 'snapchat', 'telegram', 'whatsapp', 'discord', 'lemon8'];
 
 const COMMON_TYPO_REPLACEMENTS = {
   absolutly: 'absolutely',
@@ -64,7 +64,7 @@ const STOP_WORDS = new Set([
 ]);
 
 const HASHTAG_CATEGORY_RULES = [
-  { match: /(social media|social posts?|instagram|facebook|linkedin|x |twitter|pinterest|tiktok)/i, tags: ['#socialmediamarketing', '#socialmediastrategy', '#contentmarketing'] },
+  { match: /(social media|social posts?|instagram|facebook|linkedin|x |twitter|threads|bluesky|pinterest|tiktok|youtube|reddit|snapchat|telegram|whatsapp|discord|lemon8)/i, tags: ['#socialmediamarketing', '#socialmediastrategy', '#contentmarketing'] },
   { match: /marketing/i, tags: ['#digitalmarketing', '#marketingstrategy'] },
   { match: /email/i, tags: ['#emailmarketing', '#emailautomation'] },
   { match: /crm/i, tags: ['#crm', '#customerrelationshipmanagement'] },
@@ -92,6 +92,8 @@ function clamp(n, min, max) {
 function sanitizePlatform(platform) {
   const p = String(platform || '').trim().toLowerCase();
   if (p === 'twitter') return 'x';
+  if (p === 'google business' || p === 'google business profile' || p === 'googlebusinessprofile' || p === 'gbp') return 'googlebusiness';
+  if (p === 'whatsapp channels' || p === 'whatsapp channel') return 'whatsapp';
   return ALLOWED_PLATFORMS.includes(p) ? p : 'facebook';
 }
 
