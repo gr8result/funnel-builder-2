@@ -593,14 +593,7 @@ export default function Assets() {
                   color: "#eaeaea",
                 }}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                <button
-                  onClick={() => navigator.clipboard?.writeText(url)}
-                  style={miniBtn}
-                  title="Copy public URL"
-                >
-                  Copy URL
-                </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
                 {pickerMode ? (
                   <button
                     onClick={() => handlePickerSelect(f)}

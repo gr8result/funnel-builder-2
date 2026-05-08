@@ -232,6 +232,29 @@ function takeWords(text, count) {
   return String(text || '').split(/\s+/).filter(Boolean).slice(0, count).join(' ');
 }
 
+function truncateAtWordBoundary(text = '', maxLength = 140) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!clean || clean.length <= maxLength) return clean;
+  const sliced = clean.slice(0, maxLength + 1);
+  const boundary = Math.max(sliced.lastIndexOf(' '), sliced.lastIndexOf('.'), sliced.lastIndexOf(','));
+  const shortened = (boundary > 40 ? sliced.slice(0, boundary) : clean.slice(0, maxLength)).trim();
+  return /[.!?]$/.test(shortened) ? shortened : `${shortened}...`;
+}
+
+function buildSupportingCopy(clean, textMode) {
+  if (textMode === 'headline-only') return '';
+
+  const sentences = clean.split(/(?<=[.!?])\s+/).map((part) => part.trim()).filter(Boolean);
+  const candidate = sentences.length > 1 ? sentences[1] : sentences[0] || '';
+  if (!candidate) return '';
+
+  if (textMode === 'minimal') {
+    return truncateAtWordBoundary(candidate, 48);
+  }
+
+  return truncateAtWordBoundary(candidate, 110);
+}
+
 function buildOverlayCopy(description = '', textMode = 'headline-supporting') {
   const clean = normalizeDescriptionText(description);
   const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
@@ -242,8 +265,7 @@ function buildOverlayCopy(description = '', textMode = 'headline-supporting') {
     .trim();
 
   const headline = takeWords(headlineBase, 8).toUpperCase() || 'GROW YOUR BUSINESS';
-  const supportingPool = sentences.slice(1).join(' ').trim() || clean;
-  const supporting = textMode === 'headline-only' ? '' : takeWords(supportingPool, textMode === 'minimal' ? 8 : 18);
+  const supporting = buildSupportingCopy(clean, textMode);
   const eyebrow = textMode === 'minimal' ? '' : (takeWords(clean.split(/[:.!?\-]/)[0], 3).toUpperCase() || 'NEW');
 
   return {
