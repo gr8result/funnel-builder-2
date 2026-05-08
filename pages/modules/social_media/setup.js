@@ -123,6 +123,29 @@ export default function SetupPage() {
     };
   }, []);
 
+  useEffect(() => {
+    function handleOAuthMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      const payload = event.data || {};
+      if (payload.type !== 'social-oauth-complete') return;
+
+      const isSuccess = payload.status === 'ok' || payload.status === 'success';
+      setBusyPlatform('');
+      setGlobalNotice({
+        type: isSuccess ? 'success' : 'error',
+        message: sanitizeConnectionMessage(
+          payload.platform || '',
+          payload.message,
+          isSuccess ? 'Account connected successfully!' : 'Connection failed. Please try again.'
+        ),
+      });
+      loadConnections();
+    }
+
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
+  }, []);
+
   // Show success/error from OAuth callback redirect
   useEffect(() => {
     if (!router.isReady) return;
@@ -174,7 +197,7 @@ export default function SetupPage() {
       const res = await fetch(`/api/social/oauth/${platform}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ redirectPath: '/modules/social_media/setup' }),
+        body: JSON.stringify({ redirectPath: `/modules/social_media/connect-complete?platform=${encodeURIComponent(platform)}` }),
       });
       const data = await res.json();
       if (!res.ok || !data.authUrl) throw new Error(sanitizeConnectionMessage(platform, data.error, `Could not start ${platform} login`));
