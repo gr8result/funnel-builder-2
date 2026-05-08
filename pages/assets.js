@@ -33,6 +33,12 @@ function getFileSelectionKey(file) {
   return String(file?.id || file?.storage_path || file?.url || file?.name || "");
 }
 
+function isAutoMaterializedEmailTemplateImage(file) {
+  const storagePath = String(file?.storage_path || "");
+  const tags = Array.isArray(file?.tags) ? file.tags.map((tag) => String(tag || "").toLowerCase()) : [];
+  return storagePath.startsWith("assets:") && /\/shared-[a-f0-9]{32,}\./i.test(storagePath) && tags.includes("email-template");
+}
+
 export default function Assets() {
   const router = useRouter();
   const pickerMode = String(router.query?.picker || "") === "1";
@@ -443,7 +449,7 @@ export default function Assets() {
     }
   }
 
-  const userOwnedFiles = files.filter((file) => file?.owner_scope !== "generic");
+  const userOwnedFiles = files.filter((file) => file?.owner_scope !== "generic" && !isAutoMaterializedEmailTemplateImage(file));
   const genericFiles = files.filter((file) => file?.owner_scope === "generic");
   const selectedUserImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file))).length;
   const selectedPromotableImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file)) && canPromoteToGlobalTemplate(file)).length;
