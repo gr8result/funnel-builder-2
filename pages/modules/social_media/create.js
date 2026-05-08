@@ -39,7 +39,7 @@ const PLATFORM_LOGO = {
   instagram: '/email-assets/social/instagram.svg',
   linkedin:  '/email-assets/social/linkedin.svg',
   pinterest: '/email-assets/social/pinterest.svg',
-  tiktok:    null,
+  tiktok:    '/email-assets/social/tiktok.svg',
   youtube:   '/email-assets/social/youtube.svg',
 };
 
@@ -242,6 +242,37 @@ function normalizePlatformPosts(data, style, targetCount) {
     }
   }
   return result;
+}
+
+function buildFallbackTopicPosts(topic, platform, style, targetCount) {
+  const desiredCount = Math.max(1, Number(targetCount) || 28);
+  const sourceParagraphs = String(topic || '')
+    .split(/\n\s*\n/)
+    .map((chunk) => String(chunk || '').trim())
+    .filter(Boolean);
+  const seeds = sourceParagraphs.length ? sourceParagraphs : [String(topic || '').trim() || `Post about ${PLATFORM_THEME[platform]?.name || platform}`];
+  const stamp = Date.now();
+
+  return Array.from({ length: desiredCount }, (_, index) => ({
+    id: `${platform}-fallback-${stamp}-${index}`,
+    content: seeds[index % seeds.length],
+    platform,
+    tone: String(style || 'engaging'),
+    approved: false,
+    image: null,
+  }));
+}
+
+function ensureRequestedPlatformPosts(postsByPlatform, requestedPlatforms, topic, style, targetCount) {
+  const next = { ...(postsByPlatform || {}) };
+  const safeRequested = Array.isArray(requestedPlatforms) ? requestedPlatforms.filter(Boolean) : [];
+
+  safeRequested.forEach((platform) => {
+    if (Array.isArray(next[platform]) && next[platform].length) return;
+    next[platform] = buildFallbackTopicPosts(topic, platform, style, targetCount);
+  });
+
+  return next;
 }
 
 function buildImageDescriptions(postsByPlatform, count) {
@@ -772,7 +803,13 @@ export default function CreateContent() {
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || 'AI generation failed');
 
-      const byPlatform = normalizePlatformPosts(data, aiStyle, getPostsPerPlatformCount());
+      const byPlatform = ensureRequestedPlatformPosts(
+        normalizePlatformPosts(data, aiStyle, getPostsPerPlatformCount()),
+        platforms,
+        aiTopic,
+        aiStyle,
+        getPostsPerPlatformCount()
+      );
       if (!Object.keys(byPlatform).length) throw new Error('AI returned no usable posts. Try a more specific topic.');
 
       let msg = '';

@@ -10,7 +10,7 @@ const supabase = createClient(
 const DEFAULT_POSTS_PER_PLATFORM = 28;
 
 // platforms you want
-const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'pinterest', 'x', 'tiktok'];
+const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'pinterest', 'x', 'tiktok', 'youtube'];
 
 const COMMON_TYPO_REPLACEMENTS = {
   absolutly: 'absolutely',
@@ -91,6 +91,7 @@ function clamp(n, min, max) {
 
 function sanitizePlatform(platform) {
   const p = String(platform || '').trim().toLowerCase();
+  if (p === 'twitter') return 'x';
   return ALLOWED_PLATFORMS.includes(p) ? p : 'facebook';
 }
 
