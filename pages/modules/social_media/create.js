@@ -276,10 +276,7 @@ function ensureRequestedPlatformPosts(postsByPlatform, requestedPlatforms, topic
 }
 
 function getVisiblePlatforms(postsByPlatform, selectedPlatforms) {
-  const selected = Array.isArray(selectedPlatforms) ? selectedPlatforms : [];
-  const generated = Object.keys(postsByPlatform || {});
-  const merged = new Set([...selected, ...generated]);
-  return PLATFORM_OPTIONS.map((option) => option.key).filter((key) => merged.has(key));
+  return PLATFORM_OPTIONS.map((option) => option.key);
 }
 
 function buildImageDescriptions(postsByPlatform, count) {
