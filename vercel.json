@@ -17,11 +17,11 @@
     },
     {
       "path": "/api/social/cron/process-schedule",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/social/cron/process-queue",
-      "schedule": "*/5 * * * *"
+      "schedule": "5 4 * * *"
     },
     {
       "path": "/api/social/cron/refresh-tokens",
