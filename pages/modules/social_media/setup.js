@@ -17,7 +17,7 @@ const PLATFORMS = {
     label: 'TikTok',
     icon: '🎵',
     description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
-    note: 'Requires a TikTok Business or Creator account. Direct posting is wired; the full video-upload workflow still needs more work.',
+    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. Until that review is complete, TikTok may reject sign-in for non-test accounts.',
   },
   linkedin: {
     label: 'LinkedIn',
