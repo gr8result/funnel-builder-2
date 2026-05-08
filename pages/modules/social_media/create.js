@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../utils/supabase-client';
 import ICONS from '../../../components/iconMap';
+import ImageEditorCard from '../../../components/image-editor/ImageEditorCard';
 import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -246,14 +247,7 @@ function normalizePlatformPosts(data, style, targetCount) {
 function buildImageDescriptions(postsByPlatform, count) {
   const allPosts = Object.values(postsByPlatform).flat();
   const n = clamp(count, 1, Math.min(allPosts.length, 30));
-  const toImageBrief = (post) => {
-    const content = String(post?.content || '').replace(/#[a-z0-9_]+/gi, '').trim();
-    if (post?.platform === 'pinterest' && /(protein|supplement|powder|whey|nutrition|fitness)/i.test(content)) {
-      return `Create a Pinterest protein powder product ad image with a premium supplement tub or pouch as the clear hero product for: ${content}`;
-    }
-    if (post?.platform === 'pinterest') return `Create a Pinterest product ad image for: ${content}`;
-    return content;
-  };
+  const toImageBrief = (post) => String(post?.content || '').replace(/#[a-z0-9_]+/gi, ' ').replace(/\s+/g, ' ').trim();
   if (n >= allPosts.length) return allPosts.map(toImageBrief);
   return Array.from({ length: n }, (_, i) =>
     toImageBrief(allPosts[Math.min(allPosts.length - 1, Math.floor((i / n) * allPosts.length))]) || ''
@@ -261,10 +255,14 @@ function buildImageDescriptions(postsByPlatform, count) {
 }
 
 // ── PostCard sub-component — platform-specific UI mockups ────────────────
-function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
+function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your Brand' }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(post.content);
   useEffect(() => { if (!editing) setText(post.content); }, [post.content, editing]);
+  const handlePreview = () => {
+    if (!post.image || !onPreview) return;
+    onPreview();
+  };
 
   const outerBase = {
     borderRadius: 10, overflow: 'hidden', position: 'relative',
@@ -289,8 +287,8 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
     </div>
   );
   const img = (h = 80, fit = 'cover') => post.image ? (
-    <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }}
-      style={{ width: '100%', height: h, objectFit: fit, display: 'block' }} />
+    <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview}
+      style={{ width: '100%', height: h, objectFit: fit, display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />
   ) : null;
 
   // ── Facebook ────────────────────────────────────────────────────────────
@@ -305,7 +303,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
         </div>
       </div>
       {post.image
-        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />
         : <div style={{ width: '100%', aspectRatio: '1', background: 'linear-gradient(135deg,#0a1628,#1a2a4a)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 26, opacity: 0.2 }}>📘</span></div>}
       <div style={{ padding: '8px 10px 6px', flex: 1, color: '#e7e9ec' }}>{editing ? ta : txt('#e7e9ec')}</div>
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '5px 10px', display: 'flex', justifyContent: 'space-around', background: '#1c2028' }}>
@@ -323,7 +321,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
         <span style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{brandName}</span>
       </div>
       {post.image
-        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />
         : <div style={{ width: '100%', aspectRatio: '1', background: 'linear-gradient(135deg,#1a0010,#0d0020)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 22, opacity: 0.2 }}>📷</span></div>}
       <div style={{ padding: '6px 9px 2px', display: 'flex', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 8 }}>{'❤️ 💬 ✈️'.split(' ').map((a, i) => <span key={i} style={{ fontSize: 16 }}>{a}</span>)}</div>
@@ -367,7 +365,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
         </div>
       </div>
       <div style={{ padding: '0 10px 6px', flex: 1, color: '#e7e9ea' }}>{editing ? ta : txt('#e7e9ea')}</div>
-      {post.image && <div style={{ padding: '0 10px 4px' }}><img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', borderRadius: 12, objectFit: 'cover', maxHeight: 80, display: 'block' }} /></div>}
+      {post.image && <div style={{ padding: '0 10px 4px' }}><img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', borderRadius: 12, objectFit: 'cover', maxHeight: 80, display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} /></div>}
       <div style={{ padding: '4px 10px 7px', display: 'flex', gap: 12 }}>
         {['💬', '🔁', '❤️', '📊'].map((a, i) => <span key={i} style={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }}>{a}</span>)}
       </div>
@@ -379,7 +377,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
     <div style={{ ...outerBase, background: '#111' }}>
       {approveBox}
       {post.image
-        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', minHeight: 90, objectFit: 'cover', display: 'block' }} />
+        ? <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', minHeight: 90, objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />
         : <div style={{ width: '100%', minHeight: 90, background: 'linear-gradient(135deg,#E60023,#8b0016)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📌</div>}
       <div style={{ padding: '7px 9px 4px', flex: 1 }}>{editing ? ta : txt()}</div>
       <div style={{ padding: '4px 9px 8px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -393,7 +391,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
     <div style={{ ...outerBase, background: '#010101' }}>
       {approveBox}
       <div style={{ position: 'relative', width: '100%', aspectRatio: '9/16', maxHeight: 110, overflow: 'hidden', background: '#1a0010' }}>
-        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
         {!post.image && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, opacity: 0.3 }}>🎵</div>}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.75))' }} />
       </div>
@@ -409,7 +407,7 @@ function PostCard({ post, theme, onToggle, onEdit, brandName = 'Your Brand' }) {
     <div style={{ ...outerBase, background: '#0f0f0f' }}>
       {approveBox}
       <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', maxHeight: 70, overflow: 'hidden', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
         {!post.image && <img src={PLATFORM_LOGO.youtube} alt="yt" style={{ width: 28, height: 28, opacity: 0.5 }} />}
         <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: 16, padding: '1px 4px', borderRadius: 3 }}>0:00</div>
       </div>
@@ -506,6 +504,8 @@ export default function CreateContent() {
   const [aiScheduleSecondTime, setAiScheduleSecondTime] = useState('21:00');
   const [manualImageTarget, setManualImageTarget] = useState(null);
   const [manualImageBusy, setManualImageBusy] = useState('');
+  const [previewTarget, setPreviewTarget] = useState(null);
+  const [previewEditingImage, setPreviewEditingImage] = useState(false);
 
   useEffect(() => { loadSavedCampaigns(); loadSavedForms(); }, []);
   useEffect(() => {
@@ -889,6 +889,23 @@ export default function CreateContent() {
     setNotice(imageUrl ? 'Image assigned to post.' : 'Image removed from post.');
   }
 
+  function openPostPreview(platform, id) {
+    if (!platform || !id) return;
+    setPreviewTarget({ platform, id });
+    setPreviewEditingImage(false);
+  }
+
+  function closePostPreview() {
+    setPreviewTarget(null);
+    setPreviewEditingImage(false);
+  }
+
+  function saveEditedPreviewImage(imageUrl) {
+    if (!previewTarget) return;
+    assignManualImage(previewTarget.platform, previewTarget.id, imageUrl || null);
+    setPreviewEditingImage(false);
+  }
+
   function chooseImageFromLibrary(platform, id) {
     const opened = openSharedMediaPicker({
       onPick: (asset) => assignManualImage(platform, id, asset?.url || ''),
@@ -1174,6 +1191,10 @@ export default function CreateContent() {
   const isError         = notice.toLowerCase().includes('fail') || notice.toLowerCase().includes('error') || notice.toLowerCase().includes('openai');
   const isDraftSaved    = notice.toLowerCase().includes('saved') && notice.toLowerCase().includes('draft');
   const activeWeeks     = Array.from({ length: campaignWeeks }, (_, i) => i);
+  const previewPost = previewTarget
+    ? (postsByPlatform[previewTarget.platform] || []).find((post) => post.id === previewTarget.id) || null
+    : null;
+  const previewTheme = previewTarget ? (PLATFORM_THEME[previewTarget.platform] || PLATFORM_THEME.facebook) : PLATFORM_THEME.facebook;
 
   function renderPostWithControls(post, platform, theme, key) {
     const busyKey = getManualImageKey(platform, post.id);
@@ -1186,8 +1207,10 @@ export default function CreateContent() {
           brandName={aiCampaignName || 'Your Brand'}
           onToggle={() => toggleApproval(platform, post.id)}
           onEdit={text => updatePost(platform, post.id, 'content', text)}
+          onPreview={() => openPostPreview(platform, post.id)}
         />
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+          <button onClick={() => openPostPreview(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }}>Preview</button>
           <button onClick={() => chooseImageFromLibrary(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }}>Media Library</button>
           <button onClick={() => chooseImageUpload(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }} disabled={isBusy}>{isBusy ? 'Uploading...' : 'Upload Image'}</button>
           <button onClick={() => assignManualImage(platform, post.id, null)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14, opacity: post.image ? 1 : 0.5 }} disabled={!post.image}>Remove Image</button>
@@ -1769,6 +1792,46 @@ export default function CreateContent() {
                 </div>
               )}
 
+              {previewPost && (
+                <div style={S.previewBackdrop} onClick={closePostPreview}>
+                  <div style={S.previewModal} onClick={(event) => event.stopPropagation()}>
+                    <div style={S.previewHeader}>
+                      <div>
+                        <div style={S.previewEyebrow}>{previewTheme.name} Preview</div>
+                        <div style={S.previewTitle}>Review and edit before scheduling</div>
+                      </div>
+                      <button onClick={closePostPreview} style={S.previewCloseBtn}>Close</button>
+                    </div>
+                    <div style={S.previewImageWrap}>
+                      {previewPost.image
+                        ? <img src={previewPost.image} alt="Preview" style={S.previewImage} />
+                        : <div style={S.previewImageEmpty}>No image assigned yet.</div>}
+                    </div>
+                    <div style={S.previewActionsRow}>
+                      <button onClick={() => chooseImageFromLibrary(previewTarget.platform, previewTarget.id)} style={S.slimBtn}>Media Library</button>
+                      <button onClick={() => chooseImageUpload(previewTarget.platform, previewTarget.id)} style={S.slimBtn} disabled={manualImageBusy === getManualImageKey(previewTarget.platform, previewTarget.id)}>
+                        {manualImageBusy === getManualImageKey(previewTarget.platform, previewTarget.id) ? 'Uploading...' : 'Upload Image'}
+                      </button>
+                      <button onClick={() => setPreviewEditingImage((value) => !value)} style={S.slimBtn} disabled={!previewPost.image}>
+                        {previewEditingImage ? 'Hide Image Editor' : 'Edit Image'}
+                      </button>
+                      <button onClick={() => assignManualImage(previewTarget.platform, previewTarget.id, null)} style={{ ...S.slimBtn, opacity: previewPost.image ? 1 : 0.5 }} disabled={!previewPost.image}>Remove Image</button>
+                    </div>
+                    <label style={S.label}>Post Copy</label>
+                    <textarea
+                      value={previewPost.content}
+                      onChange={(event) => updatePost(previewTarget.platform, previewTarget.id, 'content', event.target.value)}
+                      style={{ ...S.input, minHeight: 150, resize: 'vertical' }}
+                    />
+                    {previewEditingImage && previewPost.image && (
+                      <div style={{ marginTop: 14 }}>
+                        <ImageEditorCard initialSrc={previewPost.image} onSave={saveEditedPreviewImage} saveLabel="Apply Edited Image" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
           </div>
         )}
 
@@ -1795,4 +1858,14 @@ const S = {
   toggleBtn:   { background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, fontSize: 16 },
   dropdown:    { position: 'absolute', top: '110%', right: 0, zIndex: 50, background: '#1F2937', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, minWidth: 240, maxHeight: 280, overflowY: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' },
   dropdownRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 6px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+  previewBackdrop:{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.82)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  previewModal:{ width: 'min(1100px, 96vw)', maxHeight: '92vh', overflowY: 'auto', background: '#0f172a', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 18, padding: 18, boxShadow: '0 30px 80px rgba(0,0,0,0.45)' },
+  previewHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 },
+  previewEyebrow:{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 },
+  previewTitle:{ fontSize: 22, fontWeight: 700, color: '#f8fafc' },
+  previewCloseBtn:{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(15,23,42,0.8)', color: '#e2e8f0', cursor: 'pointer', fontSize: 14, fontWeight: 600 },
+  previewImageWrap:{ marginBottom: 14, background: '#020617', borderRadius: 16, border: '1px solid rgba(148,163,184,0.16)', overflow: 'hidden', minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  previewImage:{ width: '100%', maxHeight: '70vh', objectFit: 'contain', display: 'block', background: '#020617' },
+  previewImageEmpty:{ color: '#94a3b8', fontSize: 16, padding: 32 },
+  previewActionsRow:{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
 };

@@ -219,6 +219,9 @@ function buildStockFallbackImages(descriptions, safeCount) {
 
 function normalizeDescriptionText(description = '') {
   return String(description || '')
+    .replace(/^\s*create\s+(?:a|an)\s+(?:pinterest|facebook|instagram|linkedin|tiktok|youtube)?\s*[^:]*?for\s*:\s*/i, '')
+    .replace(/^\s*create\s+(?:a|an)\s+[^:]*?image\s+for\s*:\s*/i, '')
+    .replace(/^\s*message\s+to\s+visualize\s*:\s*/i, '')
     .replace(/https?:\/\/\S+/gi, ' ')
     .replace(/[#*_`]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -269,6 +272,8 @@ function buildPhotoCreativePrompt(description, style) {
     isSupplementAd
       ? 'Use real product-ad photography with a premium protein powder tub or pouch, shake bottle, gym or clean kitchen context, believable lighting, and a strong focus on the product itself.'
       : 'Use a real photographic scene, real people, real products, or real business environment that directly matches the message.',
+    'If the image includes people for a business campaign, use believable small-business owners or professionals rather than generic corporate placeholder models.',
+    'Avoid placeholder layouts, fake social-media mockups, nonsense promo art, and meaningless filler scenes.',
     'Do not create illustration, vector art, 3D icon art, abstract gradients, mock UI cards, or cartoon graphics.',
     'Compose it like a modern high-converting Instagram or Facebook ad with a clear focal subject and believable lighting.',
     'Leave clean negative space in the lower third or side of the frame for headline text to be added later.',
