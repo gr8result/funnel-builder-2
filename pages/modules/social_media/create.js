@@ -275,6 +275,13 @@ function ensureRequestedPlatformPosts(postsByPlatform, requestedPlatforms, topic
   return next;
 }
 
+function getVisiblePlatforms(postsByPlatform, selectedPlatforms) {
+  const selected = Array.isArray(selectedPlatforms) ? selectedPlatforms : [];
+  const generated = Object.keys(postsByPlatform || {});
+  const merged = new Set([...selected, ...generated]);
+  return PLATFORM_OPTIONS.map((option) => option.key).filter((key) => merged.has(key));
+}
+
 function buildImageDescriptions(postsByPlatform, count) {
   const allPosts = Object.values(postsByPlatform).flat();
   const n = clamp(count, 1, Math.min(allPosts.length, 30));
@@ -1266,8 +1273,8 @@ export default function CreateContent() {
   }
 
   // ── Computed ────────────────────────────────────────────────────────────
-  const allPlatforms    = Object.keys(postsByPlatform);
-  const hasGenerated    = allPlatforms.length > 0;
+  const allPlatforms    = getVisiblePlatforms(postsByPlatform, getSelectedPlatforms());
+  const hasGenerated    = Object.values(postsByPlatform).some((posts) => Array.isArray(posts) && posts.length > 0);
   const isAllView       = viewPlatform === 'all';
   const postsPerDay     = getPostsPerDay();
   const postsPerPlatformCount = getPostsPerPlatformCount();
@@ -1296,6 +1303,12 @@ export default function CreateContent() {
     ? (postsByPlatform[previewTarget.platform] || []).find((post) => post.id === previewTarget.id) || null
     : null;
   const previewTheme = previewTarget ? (PLATFORM_THEME[previewTarget.platform] || PLATFORM_THEME.facebook) : PLATFORM_THEME.facebook;
+
+  useEffect(() => {
+    if (viewPlatform === 'all') return;
+    if (allPlatforms.includes(viewPlatform)) return;
+    setViewPlatform(getDefaultViewPlatform(allPlatforms));
+  }, [allPlatforms, viewPlatform]);
 
   function renderPostWithControls(post, platform, theme, key) {
     const busyKey = getManualImageKey(platform, post.id);
