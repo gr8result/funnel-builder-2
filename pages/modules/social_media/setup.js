@@ -57,7 +57,7 @@ function PlatformLogo({ platformKey, meta }) {
   if (meta.logoType === 'tiktok') {
     return (
       <div style={S.platformLogoBadge}>
-        <SiTiktok size={28} color="#ffffff" />
+        <SiTiktok size={48} color="#ffffff" />
       </div>
     );
   }
@@ -428,11 +428,11 @@ const S = {
   platformIcon: { flexShrink: 0, marginTop: 2, minWidth: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   platformLogoStack: { display: 'flex', alignItems: 'center', paddingLeft: 6 },
   platformLogoBadge: {
-    width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.08)',
+    width: 64, height: 64, borderRadius: 16, background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
   },
-  platformLogoImage: { width: 24, height: 24, display: 'block', objectFit: 'contain' },
+  platformLogoImage: { width: 48, height: 48, display: 'block', objectFit: 'contain' },
   cardContent: { flex: 1, minWidth: 0 },
   platformName: { fontSize: 22, fontWeight: 700, marginBottom: 6 },
   platformDesc: { fontSize: 17, opacity: 0.65, lineHeight: 1.65, marginBottom: 6 },
