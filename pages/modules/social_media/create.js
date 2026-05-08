@@ -330,7 +330,7 @@ function buildImageDescriptions(postsByPlatform, count) {
 }
 
 // ── PostCard sub-component — platform-specific UI mockups ────────────────
-function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your Brand' }) {
+function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your Brand', videoSrc = '' }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(post.content);
   useEffect(() => { if (!editing) setText(post.content); }, [post.content, editing]);
@@ -364,6 +364,16 @@ function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your 
   const img = (h = 80, fit = 'cover') => post.image ? (
     <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview}
       style={{ width: '100%', height: h, objectFit: fit, display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />
+  ) : null;
+  const video = (aspectRatio) => videoSrc ? (
+    <video
+      src={videoSrc}
+      muted
+      loop
+      playsInline
+      controls
+      style={{ width: '100%', height: '100%', aspectRatio, objectFit: 'cover', display: 'block', background: '#000' }}
+    />
   ) : null;
 
   // ── Facebook ────────────────────────────────────────────────────────────
@@ -466,8 +476,9 @@ function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your 
     <div style={{ ...outerBase, background: '#010101' }}>
       {approveBox}
       <div style={{ position: 'relative', width: '100%', aspectRatio: '9/16', maxHeight: 110, overflow: 'hidden', background: '#1a0010' }}>
-        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
-        {!post.image && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, opacity: 0.3 }}>🎵</div>}
+        {video('9/16')}
+        {!videoSrc && post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
+        {!videoSrc && !post.image && <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, opacity: 0.3 }}>🎵</div>}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.75))' }} />
       </div>
       <div style={{ padding: '6px 9px 3px', color: '#fff', flex: 1 }}>{editing ? ta : txt()}</div>
@@ -482,8 +493,9 @@ function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your 
     <div style={{ ...outerBase, background: '#0f0f0f' }}>
       {approveBox}
       <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', maxHeight: 70, overflow: 'hidden', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
-        {!post.image && <img src={PLATFORM_LOGO.youtube} alt="yt" style={{ width: 28, height: 28, opacity: 0.5 }} />}
+        {video('16/9')}
+        {!videoSrc && post.image && <img src={post.image} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} onClick={handlePreview} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: onPreview ? 'zoom-in' : 'default' }} />}
+        {!videoSrc && !post.image && <img src={PLATFORM_LOGO.youtube} alt="yt" style={{ width: 28, height: 28, opacity: 0.5 }} />}
         <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: 16, padding: '1px 4px', borderRadius: 3 }}>0:00</div>
       </div>
       <div style={{ padding: '6px 9px 4px', display: 'flex', gap: 6 }}>
@@ -855,6 +867,7 @@ export default function CreateContent() {
         getPostsPerPlatformCount()
       );
       if (!Object.keys(byPlatform).length) throw new Error('AI returned no usable posts. Try a more specific topic.');
+      const fallbackEntries = Object.entries(data.generationMeta || {}).filter(([, meta]) => meta?.source === 'fallback');
 
       let msg = '';
 
@@ -898,6 +911,11 @@ export default function CreateContent() {
         clearDraftImages();
         const total = Object.values(byPlatform).reduce((s, arr) => s + arr.length, 0);
         msg = `Generated ${total} posts across ${Object.keys(byPlatform).length} platforms.`;
+      }
+
+      if (fallbackEntries.length) {
+        const names = fallbackEntries.map(([platform]) => PLATFORM_THEME[platform]?.name || platform).join(', ');
+        msg += ` ${fallbackEntries.length === platforms.length ? 'OpenAI did not return usable copy, so fallback captions were used.' : `Fallback captions were used for ${names}.`}`;
       }
 
       setPostsByPlatform(byPlatform);
@@ -1340,6 +1358,7 @@ export default function CreateContent() {
     ? (postsByPlatform[previewTarget.platform] || []).find((post) => post.id === previewTarget.id) || null
     : null;
   const previewTheme = previewTarget ? (PLATFORM_THEME[previewTarget.platform] || PLATFORM_THEME.facebook) : PLATFORM_THEME.facebook;
+  const cardVideoPreviewUrl = aiVideoLocalUrl || aiUploadedVideoUrl || '';
 
   useEffect(() => {
     if (viewPlatform === 'all') return;
@@ -1356,6 +1375,7 @@ export default function CreateContent() {
           post={post}
           theme={theme}
           brandName={aiCampaignName || 'Your Brand'}
+          videoSrc={post.platform === 'tiktok' || post.platform === 'youtube' ? cardVideoPreviewUrl : ''}
           onToggle={() => toggleApproval(platform, post.id)}
           onEdit={text => updatePost(platform, post.id, 'content', text)}
           onPreview={() => openPostPreview(platform, post.id)}

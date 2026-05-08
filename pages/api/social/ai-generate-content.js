@@ -352,6 +352,10 @@ function buildShortVideoCaption(topic, platform, variant = 0) {
   return lines.join(' ');
 }
 
+function pickVariantOffset() {
+  return Math.floor(Math.random() * 97) + Date.now();
+}
+
 function topicLead(topic) {
   const cleaned = sentenceCase(resolveTopicReference(topic, topic)).replace(/[.!?]+$/g, '');
   if (!cleaned) return 'We are sharing an update designed to make day-to-day marketing easier for growing businesses.';
@@ -586,9 +590,9 @@ function platformTemplate(platform, variant, idea, style, contentLength) {
   return buildTopicDrivenPost(idea, platform, variant);
 }
 
-function generateFallbackPosts({ topic, platform, count, style, contentLength, hashtagLevel }) {
+function generateFallbackPosts({ topic, platform, count, style, contentLength, hashtagLevel, variantOffset = 0 }) {
   return Array.from({ length: count }, (_, index) => {
-    const variant = index;
+    const variant = index + variantOffset;
     return {
       content: withHashtags(platformTemplate(platform, variant, topic, style, contentLength), topic, hashtagLevel),
       platform: sanitizePlatform(platform),
@@ -766,11 +770,12 @@ async function requestPostsFromOpenAI(openaiKey, prompt) {
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: 'Return only strict JSON with a posts array. Use Australian English spelling. Correct spelling and grammar errors from the user brief before writing. Use only relevant searchable hashtags. Treat the user brief as rough internal notes, not text to echo. Convert it into final audience-facing copy. Never repeat instructions such as create captions, keep the tone, include hooks, or focus on. Avoid generic filler openings or vague marketing-coach phrasing.' },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature: 1,
       max_tokens: 7000
     })
   });
@@ -797,9 +802,14 @@ async function generateForPlatform({
   hashtagLevel
 }) {
   const requestedCount = clamp(Number(count) || DEFAULT_POSTS_PER_PLATFORM, 1, 60);
+  const variantOffset = pickVariantOffset();
 
   if (!openaiKey) {
-    return generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel });
+    return {
+      posts: generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel, variantOffset }),
+      source: 'fallback',
+      reason: 'missing_openai_key',
+    };
   }
 
   const firstPrompt = buildPromptForPlatform({
@@ -817,7 +827,11 @@ async function generateForPlatform({
     posts = await requestPostsFromOpenAI(openaiKey, firstPrompt);
   } catch (error) {
     if (isQuotaError(error)) {
-      return generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel });
+      return {
+        posts: generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel, variantOffset }),
+        source: 'fallback',
+        reason: 'openai_quota_or_billing',
+      };
     }
     throw error;
   }
@@ -839,7 +853,7 @@ async function generateForPlatform({
     } catch (error) {
       if (isQuotaError(error)) {
         const needed = requestedCount - posts.length;
-        topUp = generateFallbackPosts({ topic, platform, count: needed, style, contentLength, hashtagLevel });
+        topUp = generateFallbackPosts({ topic, platform, count: needed, style, contentLength, hashtagLevel, variantOffset });
       } else {
         throw error;
       }
@@ -862,7 +876,19 @@ async function generateForPlatform({
     normalized.push({ ...seed });
   }
 
-  return normalized;
+  if (!normalized.length) {
+    return {
+      posts: generateFallbackPosts({ topic, platform, count: requestedCount, style, contentLength, hashtagLevel, variantOffset }),
+      source: 'fallback',
+      reason: 'empty_or_invalid_openai_response',
+    };
+  }
+
+  return {
+    posts: normalized,
+    source: 'openai',
+    reason: null,
+  };
 }
 
 export default async function handler(req, res) {
@@ -897,6 +923,7 @@ export default async function handler(req, res) {
     const count = clamp(Number(postsPerPlatform) || DEFAULT_POSTS_PER_PLATFORM, 1, 60);
 
     const postsByPlatform = {};
+    const generationMeta = {};
 
     if (doNotRewrite) {
       // Split the topic text into individual posts by blank-line-separated paragraphs.
@@ -915,12 +942,13 @@ export default async function handler(req, res) {
           tone: 'lightly-polished',
         }));
         postsByPlatform[platform] = posts;
+        generationMeta[platform] = { source: 'verbatim', reason: null };
       }
     } else {
       const openaiKey = process.env.OPENAI_API_KEY;
 
       for (const platform of safePlatforms) {
-        postsByPlatform[platform] = await generateForPlatform({
+        const result = await generateForPlatform({
           openaiKey,
           topic,
           platform,
@@ -929,6 +957,8 @@ export default async function handler(req, res) {
           contentLength,
           hashtagLevel
         });
+        postsByPlatform[platform] = result.posts;
+        generationMeta[platform] = { source: result.source, reason: result.reason };
       }
     }
 
@@ -966,6 +996,7 @@ export default async function handler(req, res) {
       postsPerPlatform: count,
       platforms: safePlatforms,
       total: flat.length,
+      generationMeta,
       postsByPlatform,
       posts: flat
     });
