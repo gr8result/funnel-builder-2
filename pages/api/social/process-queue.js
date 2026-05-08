@@ -7,6 +7,7 @@ import { postToLinkedIn } from "../../../lib/social/linkedin";
 import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
 import { postToTikTok } from "../../../lib/social/tiktok";
+import { postToYouTube } from "../../../lib/social/youtube";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -105,6 +106,19 @@ async function processQueue() {
         result = await postToTikTok({
           accessToken: account.access_token,
           text: post.content,
+        });
+      } else if (row.platform === "youtube") {
+        if (!post.media_url) {
+          throw new Error("YouTube requires a video file");
+        }
+        result = await postToYouTube({
+          admin: supabase,
+          userId: row.user_id,
+          socialAccountId: account.id,
+          accessToken: account.access_token,
+          tokenExpiresAt: account.token_expires_at,
+          text: post.content,
+          videoUrl: post.media_url,
         });
       } else {
         throw new Error(`No publisher for platform: ${row.platform}`);

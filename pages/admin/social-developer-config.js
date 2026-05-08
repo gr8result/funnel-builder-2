@@ -105,6 +105,20 @@ async function getToken(retries = 0) {
   return '';
 }
 
+function formatCredentialSourceLabel(source) {
+  if (source === 'env') return 'Environment variables';
+  if (source === 'user') return 'Saved credentials for this admin user';
+  if (source === 'global') return 'Latest saved shared credential row';
+  return 'Not resolved';
+}
+
+function formatCredentialUpdatedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 export default function SocialDeveloperConfig() {
   const [status, setStatus] = useState({});   // { meta: { configured: true }, ... }
   const [runtime, setRuntime] = useState(null);
@@ -266,6 +280,27 @@ export default function SocialDeveloperConfig() {
                 : key === 'tiktok'
                   ? runtime?.tiktok?.clientKey
                 : '';
+            const runtimeCredentialSource = key === 'linkedin'
+              ? runtime?.linkedin?.credentialSource
+              : key === 'meta'
+                ? runtime?.meta?.credentialSource
+                : key === 'tiktok'
+                  ? runtime?.tiktok?.credentialSource
+                  : '';
+            const runtimeCredentialOwner = key === 'linkedin'
+              ? runtime?.linkedin?.credentialOwnerUserId
+              : key === 'meta'
+                ? runtime?.meta?.credentialOwnerUserId
+                : key === 'tiktok'
+                  ? runtime?.tiktok?.credentialOwnerUserId
+                  : '';
+            const runtimeCredentialUpdatedAt = key === 'linkedin'
+              ? runtime?.linkedin?.credentialUpdatedAt
+              : key === 'meta'
+                ? runtime?.meta?.credentialUpdatedAt
+                : key === 'tiktok'
+                  ? runtime?.tiktok?.credentialUpdatedAt
+                  : '';
 
             return (
               <div key={key} style={{ ...S.card, borderLeft: `5px solid ${isCfg ? '#10B981' : 'rgba(255,255,255,0.08)'}` }}>
@@ -311,8 +346,28 @@ export default function SocialDeveloperConfig() {
                       <div style={S.callbackLabel}>Your OAuth Callback URL (copy this into your developer app):</div>
                       <div style={S.callbackUrl}>{callbackUrl}</div>
                       {!!runtimeClientId && (
+                        <>
+                          <div style={{ ...S.callbackLabel, marginTop: 10 }}>
+                            Effective runtime {key === 'meta' ? 'App ID' : 'Client ID'}: <span style={S.callbackUrl}>{runtimeClientId}</span>
+                          </div>
+                          <div style={{ ...S.callbackLabel, marginTop: 10 }}>
+                            Credential source: <span style={S.callbackUrl}>{formatCredentialSourceLabel(runtimeCredentialSource)}</span>
+                          </div>
+                          {!!runtimeCredentialOwner && runtimeCredentialSource !== 'env' && (
+                            <div style={{ ...S.callbackLabel, marginTop: 10 }}>
+                              Source owner user ID: <span style={S.callbackUrl}>{runtimeCredentialOwner}</span>
+                            </div>
+                          )}
+                          {!!runtimeCredentialUpdatedAt && runtimeCredentialSource !== 'env' && (
+                            <div style={{ ...S.callbackLabel, marginTop: 10 }}>
+                              Last updated: <span style={S.callbackUrl}>{formatCredentialUpdatedAt(runtimeCredentialUpdatedAt)}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {key === 'tiktok' && (
                         <div style={{ ...S.callbackLabel, marginTop: 10 }}>
-                          Effective runtime {key === 'meta' ? 'App ID' : 'Client ID'}: <span style={S.callbackUrl}>{runtimeClientId}</span>
+                          TikTok note: if one internal tester account connects but other users see a TikTok page telling you to fix <span style={S.callbackUrl}>client_key</span>, the runtime key is valid enough to reach TikTok and the remaining blocker is usually TikTok app review, tester allowlisting, or Login Kit app settings on TikTok&apos;s side.
                         </div>
                       )}
                     </div>

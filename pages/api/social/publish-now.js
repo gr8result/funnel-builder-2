@@ -4,6 +4,7 @@ import { postToLinkedIn } from "../../../lib/social/linkedin";
 import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
 import { postToTikTok } from "../../../lib/social/tiktok";
+import { postToYouTube } from "../../../lib/social/youtube";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -86,6 +87,19 @@ export default async function handler(req, res) {
       result = await postToTikTok({
         accessToken: account.access_token,
         text: post.content,
+      });
+    } else if (post.platform === "youtube") {
+      if (!post.media_url) {
+        return res.status(400).json({ ok: false, error: "YouTube requires a video file. Add a video before publishing." });
+      }
+      result = await postToYouTube({
+        admin: auth.admin,
+        userId: auth.user.id,
+        socialAccountId: account.id,
+        accessToken: account.access_token,
+        tokenExpiresAt: account.token_expires_at,
+        text: post.content,
+        videoUrl: post.media_url,
       });
     } else {
       return res.status(400).json({ ok: false, error: `Publishing for ${post.platform} is not yet supported` });

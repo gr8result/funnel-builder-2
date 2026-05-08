@@ -13,7 +13,7 @@ const PLATFORM_OPTIONS = [
   { key: 'linkedin',  label: 'LinkedIn',        videoOnly: false },
   { key: 'pinterest', label: 'Pinterest',       videoOnly: false },
   { key: 'tiktok',   label: 'TikTok',          videoOnly: false },
-  { key: 'youtube',  label: 'YouTube',          videoOnly: true, unsupported: true, unsupportedLabel: 'Connection only for now' },
+  { key: 'youtube',  label: 'YouTube',          videoOnly: true },
 ];
 
 const DEFAULT_SELECTED_PLATFORMS = {
@@ -479,6 +479,7 @@ export default function CreateContent() {
   // Video
   const [aiVideoFile,     setAiVideoFile]     = useState(null);
   const [aiVideoLocalUrl, setAiVideoLocalUrl] = useState('');
+  const [aiUploadedVideoUrl, setAiUploadedVideoUrl] = useState('');
 
   // Ingredients (collapsible)
   const [showIngredients, setShowIngredients] = useState(false);
@@ -515,8 +516,7 @@ export default function CreateContent() {
   }, [aiSelectedPlatforms]);
 
   function getSelectedPlatforms() {
-    const sel = Object.entries(aiSelectedPlatforms).filter(([, v]) => v).map(([k]) => k);
-    return sel.filter((platform) => platform !== 'youtube');
+    return Object.entries(aiSelectedPlatforms).filter(([, v]) => v).map(([k]) => k);
   }
 
   function getPostsPerDay() {
@@ -937,6 +937,34 @@ export default function CreateContent() {
     imageUploadInputRef.current?.click();
   }
 
+  async function uploadSelectedVideo() {
+    if (aiUploadedVideoUrl) return aiUploadedVideoUrl;
+    if (!aiVideoFile) return '';
+
+    const { userId } = await getSessionData();
+    if (!userId) {
+      throw new Error('You must be signed in to upload videos.');
+    }
+
+    const formData = new FormData();
+    formData.append('file', aiVideoFile, aiVideoFile.name || 'video.mp4');
+
+    const response = await fetch('/api/assets/upload', {
+      method: 'POST',
+      headers: { 'x-gr8-user-id': userId },
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    const videoUrl = payload?.data?.[0]?.src || '';
+    if (!response.ok || !videoUrl) {
+      throw new Error(payload?.error || 'Video upload failed.');
+    }
+
+    setAiUploadedVideoUrl(videoUrl);
+    return videoUrl;
+  }
+
   async function handleManualImageUpload(event) {
     const file = event.target.files?.[0];
     const target = manualImageTarget;
@@ -1043,12 +1071,21 @@ export default function CreateContent() {
         setAiGenerating(false);
         return;
       }
+      const hasYouTubePosts = allApproved.some(post => post.platform === 'youtube');
+      let uploadedVideoUrl = aiUploadedVideoUrl;
+      if (hasYouTubePosts) {
+        if (!uploadedVideoUrl && !aiVideoFile) {
+          setNotice('Upload a video before saving YouTube posts.');
+          setAiGenerating(false);
+          return;
+        }
+        uploadedVideoUrl = await uploadSelectedVideo();
+      }
       let ok = 0;
       let lastError = '';
       for (const post of allApproved) {
-        // Upload base64 image to storage first, get back a permanent URL
-        let mediaUrl = null;
-        if (post.image) {
+        let mediaUrl = post.platform === 'youtube' ? (uploadedVideoUrl || null) : null;
+        if (post.platform !== 'youtube' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
               const imgRes = await fetch('/api/social/save-image', {
@@ -1114,6 +1151,16 @@ export default function CreateContent() {
         setAiGenerating(false);
         return;
       }
+      const hasYouTubePosts = allApproved.some(post => post.platform === 'youtube');
+      let uploadedVideoUrl = aiUploadedVideoUrl;
+      if (hasYouTubePosts) {
+        if (!uploadedVideoUrl && !aiVideoFile) {
+          setNotice('Upload a video before scheduling YouTube posts.');
+          setAiGenerating(false);
+          return;
+        }
+        uploadedVideoUrl = await uploadSelectedVideo();
+      }
       const start = new Date(aiScheduleStartDate);
       const startYear = start.getFullYear();
       if (isNaN(start.getTime()) || startYear < 2024 || startYear > 2035) {
@@ -1128,9 +1175,8 @@ export default function CreateContent() {
       let lastError = '';
       for (let i = 0; i < scheduledQueue.length; i++) {
         const { post, scheduledFor } = scheduledQueue[i];
-        // Upload base64 image to storage first
-        let mediaUrl = null;
-        if (post.image) {
+        let mediaUrl = post.platform === 'youtube' ? (uploadedVideoUrl || null) : null;
+        if (post.platform !== 'youtube' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
               const imgRes = await fetch('/api/social/save-image', {
@@ -1344,8 +1390,6 @@ export default function CreateContent() {
                     <select value={aiContentType} onChange={e => {
                       const t = e.target.value;
                       setAiContentType(t);
-                      if (t !== 'video') setAiSelectedPlatforms(prev => ({ ...prev, tiktok: false, youtube: false }));
-                      else setAiSelectedPlatforms(prev => ({ ...prev, tiktok: true, youtube: true }));
                     }} style={S.input}>
                       <option value="standard">Standard (text + image)</option>
                       <option value="video">Video (TikTok / YouTube)</option>
@@ -1356,6 +1400,7 @@ export default function CreateContent() {
                         <input type="file" accept="video/*" onChange={e => {
                           const file = e.target.files?.[0] || null;
                           setAiVideoFile(file);
+                          setAiUploadedVideoUrl('');
                           if (aiVideoLocalUrl) URL.revokeObjectURL(aiVideoLocalUrl);
                           setAiVideoLocalUrl(file ? URL.createObjectURL(file) : '');
                         }} style={{ ...S.input, padding: 5 }} />
@@ -1368,24 +1413,23 @@ export default function CreateContent() {
                   <div>
                     <label style={S.label}>Platforms to generate for</label>
                     <div style={{ background: '#0F172A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 10 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        {PLATFORM_OPTIONS.map(opt => {
-                          const disabled = !!opt.unsupported || (opt.videoOnly && aiContentType !== 'video');
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 18, rowGap: 14 }}>
+                        {PLATFORM_OPTIONS.map((opt, index) => {
                           const theme = PLATFORM_THEME[opt.key];
                           const selected = !!aiSelectedPlatforms[opt.key];
+                          const isRightColumn = index % 2 === 1;
                           return (
-                            <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, opacity: disabled ? 0.35 : 1, cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative' }}>
+                            <label key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, cursor: 'pointer', position: 'relative', minHeight: 32, padding: '4px 0', paddingLeft: isRightColumn ? 18 : 0, opacity: 1 }}>
                               <input
                                 type="checkbox"
                                 checked={selected}
-                                disabled={disabled}
                                 onChange={e => setAiSelectedPlatforms(prev => ({ ...prev, [opt.key]: e.target.checked }))}
                                 style={{
                                   position: 'absolute',
                                   opacity: 0,
                                   inset: 0,
                                   margin: 0,
-                                  cursor: disabled ? 'not-allowed' : 'pointer',
+                                  cursor: 'pointer',
                                 }}
                               />
                               <span
@@ -1409,19 +1453,15 @@ export default function CreateContent() {
                               >
                                 {selected ? '✓' : ''}
                               </span>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 7, opacity: 1, color: '#fff' }}>
                                 {PLATFORM_LOGO[opt.key]
-                                  ? <img src={PLATFORM_LOGO[opt.key]} alt={opt.label} style={{ width: 20, height: 20, borderRadius: 4, opacity: disabled ? 0.35 : 1 }} />
-                                  : <span>{theme?.icon}</span>}
+                                  ? <img src={PLATFORM_LOGO[opt.key]} alt={opt.label} style={{ width: 20, height: 20, borderRadius: 4, opacity: 1, filter: 'none' }} />
+                                  : <span style={{ opacity: 1 }}>{theme?.icon}</span>}
                                 {opt.label}
-                                {opt.unsupported && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>({opt.unsupportedLabel || 'Unavailable'})</span>}
                               </span>
                             </label>
                           );
                         })}
-                      </div>
-                      <div style={{ marginTop: 10, fontSize: 16, color: 'rgba(255,255,255,0.45)' }}>
-                        Each platform gets its own post batch, formatted for that platform.
                       </div>
                     </div>
                   </div>

@@ -55,14 +55,23 @@ export default async function handler(req, res) {
       linkedin: {
         clientId: linkedin?.appId || "",
         redirectUri: getLinkedInRedirectUri(req),
+        credentialSource: linkedin?.source || null,
+        credentialOwnerUserId: linkedin?.ownerUserId || "",
+        credentialUpdatedAt: linkedin?.updatedAt || "",
       },
       meta: {
         appId: meta?.appId || "",
         redirectUri: getMetaRedirectUri(req),
+        credentialSource: meta?.source || null,
+        credentialOwnerUserId: meta?.ownerUserId || "",
+        credentialUpdatedAt: meta?.updatedAt || "",
       },
       tiktok: {
         clientKey: tiktok?.appId || "",
         redirectUri: getTikTokRedirectUri(req),
+        credentialSource: tiktok?.source || null,
+        credentialOwnerUserId: tiktok?.ownerUserId || "",
+        credentialUpdatedAt: tiktok?.updatedAt || "",
       },
     },
   });

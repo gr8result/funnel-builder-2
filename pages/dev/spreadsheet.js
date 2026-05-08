@@ -5,6 +5,40 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ICONS from "../../components/iconMap";
 
+const DEV_LINKS = [
+  {
+    label: "Social Developer Config",
+    href: "/admin/social-developer-config",
+    description: "Internal control page for callback URLs, credential source, and platform setup.",
+    internal: true,
+  },
+  {
+    label: "Meta Developers",
+    href: "https://developers.facebook.com/apps",
+    description: "Facebook and Instagram app settings, Login for Business, and app domains.",
+  },
+  {
+    label: "TikTok Developers",
+    href: "https://developers.tiktok.com",
+    description: "Login Kit, app review, tester allowlisting, and callback setup.",
+  },
+  {
+    label: "LinkedIn Developers",
+    href: "https://www.linkedin.com/developers/apps",
+    description: "OAuth redirect URLs, products, and app credentials.",
+  },
+  {
+    label: "Pinterest Developers",
+    href: "https://developers.pinterest.com/apps/",
+    description: "App creation, redirect URIs, and Pinterest publish permissions.",
+  },
+  {
+    label: "Google Cloud Credentials",
+    href: "https://console.cloud.google.com/apis/credentials",
+    description: "YouTube OAuth client IDs, redirect URIs, and API credentials.",
+  },
+];
+
 
 export default function DevSpreadsheet() {
   const [data, setData] = useState({
@@ -102,6 +136,51 @@ export default function DevSpreadsheet() {
             ❌ {error}
           </div>
         )}
+
+        <section style={quickAccessSection}>
+          <div style={quickAccessHeader}>
+            <div>
+              <h2 style={{ ...secH2, margin: 0 }}>Developer Quick Access</h2>
+              <div style={quickAccessSubtext}>
+                Direct links to the control page and the social platform developer portals.
+              </div>
+            </div>
+          </div>
+          <div style={quickAccessGrid}>
+            {DEV_LINKS.map((link) => {
+              const content = (
+                <>
+                  <div style={quickAccessTitleRow}>
+                    <span style={quickAccessTitle}>{link.label}</span>
+                    <span style={quickAccessArrow}>{link.internal ? "Open" : "Open ↗"}</span>
+                  </div>
+                  <div style={quickAccessDescription}>{link.description}</div>
+                  <div style={quickAccessUrl}>{link.href}</div>
+                </>
+              );
+
+              if (link.internal) {
+                return (
+                  <Link key={link.href} href={link.href} style={quickAccessCard}>
+                    {content}
+                  </Link>
+                );
+              }
+
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={quickAccessCard}
+                >
+                  {content}
+                </a>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Top Stats */}
         <div
@@ -400,6 +479,81 @@ const btn = {
   color: "#e5e7eb",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const quickAccessSection = {
+  background: "linear-gradient(180deg, rgba(15,23,42,0.96), rgba(10,14,23,0.98))",
+  border: "1px solid #1d4ed8",
+  borderRadius: 16,
+  padding: "18px 18px 20px",
+  marginBottom: 18,
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.28)",
+};
+
+const quickAccessHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 14,
+};
+
+const quickAccessSubtext = {
+  fontSize: 14,
+  color: "#93c5fd",
+  marginTop: 4,
+};
+
+const quickAccessGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 12,
+};
+
+const quickAccessCard = {
+  display: "block",
+  textDecoration: "none",
+  color: "#e6edf3",
+  background: "linear-gradient(180deg, rgba(37,99,235,0.18), rgba(15,23,42,0.88))",
+  border: "1px solid rgba(96,165,250,0.35)",
+  borderRadius: 14,
+  padding: "16px 16px 14px",
+  minHeight: 134,
+};
+
+const quickAccessTitleRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+};
+
+const quickAccessTitle = {
+  fontSize: 17,
+  fontWeight: 800,
+  color: "#ffffff",
+};
+
+const quickAccessArrow = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: "#93c5fd",
+  textTransform: "uppercase",
+  letterSpacing: 0.6,
+};
+
+const quickAccessDescription = {
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: "#cbd5e1",
+  marginTop: 10,
+  minHeight: 58,
+};
+
+const quickAccessUrl = {
+  fontSize: 12,
+  color: "#60a5fa",
+  wordBreak: "break-word",
+  marginTop: 10,
 };
 const search = {
   padding: "8px 10px",

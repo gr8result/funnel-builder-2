@@ -18,7 +18,7 @@ const PLATFORMS = {
     label: 'TikTok',
     logoType: 'tiktok',
     description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
-    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. Until that review is complete, TikTok may reject sign-in for non-test accounts.',
+    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. If one tester account works but another user sees a TikTok error page mentioning client_key, the usual cause is TikTok app review, tester allowlisting, or Login Kit settings on TikTok rather than this site URL.',
   },
   linkedin: {
     label: 'LinkedIn',
