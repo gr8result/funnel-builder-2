@@ -690,6 +690,13 @@ export default function CreateContent() {
       .filter((item) => item.count > 0);
   }
 
+  function formatGenerationReason(reason) {
+    if (reason === 'missing_openai_key') return 'Live AI is missing an OpenAI API key.';
+    if (reason === 'openai_quota_or_billing') return 'The OpenAI key is hitting quota or billing limits.';
+    if (reason === 'empty_or_invalid_openai_response') return 'OpenAI returned an unusable response.';
+    return 'OpenAI generation fell back to template captions.';
+  }
+
   function formatSelectionSummary(items) {
     if (!items.length) return 'No posts selected.';
     return items
@@ -915,7 +922,10 @@ export default function CreateContent() {
 
       if (fallbackEntries.length) {
         const names = fallbackEntries.map(([platform]) => PLATFORM_THEME[platform]?.name || platform).join(', ');
-        msg += ` ${fallbackEntries.length === platforms.length ? 'OpenAI did not return usable copy, so fallback captions were used.' : `Fallback captions were used for ${names}.`}`;
+        const fallbackReasons = [...new Set(fallbackEntries.map(([, meta]) => meta?.reason).filter(Boolean))]
+          .map((reason) => formatGenerationReason(reason))
+          .join(' ');
+        msg += ` ${fallbackEntries.length === platforms.length ? 'Fallback captions were used for all selected platforms.' : `Fallback captions were used for ${names}.`} ${fallbackReasons}`;
       }
 
       setPostsByPlatform(byPlatform);
