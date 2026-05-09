@@ -59,6 +59,15 @@ async function getToken() {
   return data?.session?.access_token || '';
 }
 
+async function triggerSocialProcessing() {
+  try {
+    await fetch('/api/social/cron/process-schedule', { method: 'GET' });
+    await fetch('/api/social/cron/process-queue', { method: 'GET' });
+  } catch {
+    // Background kick only; board load should still proceed.
+  }
+}
+
 function StatusBadge({ status }) {
   const map = {
     draft:     { bg: 'rgba(75,85,99,0.4)',    color: '#9CA3AF', label: 'Draft' },
@@ -129,7 +138,21 @@ export default function SocialCalendar() {
     return byDay;
   }, [cards]);
 
-  useEffect(() => { loadBoard(); }, []);
+  useEffect(() => {
+    let alive = true;
+
+    const tick = async () => {
+      await triggerSocialProcessing();
+      if (alive) await loadBoard();
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 60000);
+    return () => {
+      alive = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   async function loadBoard() {
     setLoading(true); setNotice('');
@@ -195,6 +218,8 @@ export default function SocialCalendar() {
                 {loading ? 'Loading...' : `Plan and schedule your content across every channel — ${totalScheduled} post${totalScheduled !== 1 ? 's' : ''} lined up for publishing`}
               </div>
             </div>
+            <button onClick={() => router.back()}
+              style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid rgba(167,169,250,0.3)', background: 'rgba(255,255,255,0.12)', color: '#F3F0FF', fontWeight: 600, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>Back</button>
             <button onClick={() => router.push('/modules/social_media/dashboard')}
               style={{ padding: '10px 22px', borderRadius: 10, border: '1px solid rgba(167,169,250,0.3)', background: 'rgb(200, 182, 253)', color: '#4f39a8', fontWeight: 600, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>Dashboard</button>
           </div>

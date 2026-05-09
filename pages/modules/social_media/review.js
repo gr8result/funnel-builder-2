@@ -107,6 +107,15 @@ async function getToken() {
   return data?.session?.access_token || '';
 }
 
+async function triggerSocialProcessing() {
+  try {
+    await fetch('/api/social/cron/process-schedule', { method: 'GET' });
+    await fetch('/api/social/cron/process-queue', { method: 'GET' });
+  } catch {
+    // Background kick only; the review page can still load current board data.
+  }
+}
+
 const S = {
   page:       { minHeight: '100vh', background: '#1f0420', padding: '0', fontFamily: 'system-ui,sans-serif', color: '#F3F0FF' },
   inner:      { padding: '24px 20px 24px', maxWidth: '100%' },
@@ -349,7 +358,21 @@ export default function ReviewPosts() {
   const [newPlatform, setNewPlatform] = useState('facebook');
   const [creating, setCreating]     = useState(false);
 
-  useEffect(() => { loadPosts(); }, []);
+  useEffect(() => {
+    let alive = true;
+
+    const tick = async () => {
+      await triggerSocialProcessing();
+      if (alive) await loadPosts();
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 60000);
+    return () => {
+      alive = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   async function loadPosts() {
     setLoading(true); setNotice('');
