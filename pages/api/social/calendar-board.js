@@ -37,6 +37,7 @@ export default async function handler(req, res) {
       // Step 2: get schedules by post_id (not user_id — avoids schema mismatch issues)
       // Fetch ALL status values so a missed status update doesn't hide the post
       let schedules = [];
+      let queueRows = [];
       if (posts.length > 0) {
         const postIds = posts.map(p => p.id);
         const schedulesRes = await auth.admin
@@ -46,6 +47,14 @@ export default async function handler(req, res) {
           .order('scheduled_for', { ascending: true });
         if (schedulesRes.error) throw schedulesRes.error;
         schedules = schedulesRes.data || [];
+
+        const queueRes = await auth.admin
+          .from('social_queue')
+          .select('post_id, status, last_error, created_at, processed_at')
+          .in('post_id', postIds)
+          .order('created_at', { ascending: false });
+        if (queueRes.error) throw queueRes.error;
+        queueRows = queueRes.data || [];
       }
 
       // Keep the most-recently-set schedule per post (last updated wins)
@@ -58,8 +67,17 @@ export default async function handler(req, res) {
         }
       }
 
+      const queueByPost = new Map();
+      for (const row of queueRows) {
+        const existing = queueByPost.get(row.post_id);
+        if (!existing || new Date(row.created_at) > new Date(existing.created_at)) {
+          queueByPost.set(row.post_id, row);
+        }
+      }
+
       const cards = posts.map((post) => {
         const schedule = scheduleByPost.get(post.id) || null;
+        const queue = queueByPost.get(post.id) || null;
         return {
           postId:      post.id,
           scheduleId:  schedule?.id || null,
@@ -69,6 +87,7 @@ export default async function handler(req, res) {
           mediaUrl:    post.media_url || null,
           createdAt:   post.created_at,
           scheduledFor: normTs(schedule?.scheduled_for) || null,
+          lastError:   queue?.last_error || null,
         };
       });
 

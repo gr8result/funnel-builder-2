@@ -61,6 +61,9 @@ async function processQueue() {
         .select("*")
         .eq("user_id", row.user_id)
         .eq("platform", row.platform)
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (!account) throw new Error("No connected account");

@@ -915,6 +915,11 @@ export default function ReviewPosts() {
                   {scheduledLabel && <span style={{ fontSize: 16, color: '#6B7280' }}>📅 {scheduledLabel}</span>}
                   <span style={{ fontSize: 16, color: '#4B5563', marginLeft: 'auto' }}>{new Date(post.createdAt).toLocaleDateString('en-AU')}</span>
                 </div>
+                {post.status === 'failed' && post.lastError && (
+                  <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#FCA5A5', fontSize: 14, lineHeight: 1.4 }}>
+                    Failed: {post.lastError}
+                  </div>
+                )}
                 {/* Inline date + time scheduler */}
                 {(() => {
                   const sched = post.scheduledFor ? new Date(post.scheduledFor) : null;

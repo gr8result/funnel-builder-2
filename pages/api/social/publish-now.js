@@ -40,6 +40,7 @@ export default async function handler(req, res) {
       .eq("platform", post.platform)
       .eq("is_active", true)
       .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (accErr || !account) {
