@@ -106,6 +106,7 @@ async function processQueue() {
         result = await postToTikTok({
           accessToken: account.access_token,
           text: post.content,
+          videoUrl: post.media_url || null,
         });
       } else if (row.platform === "youtube") {
         if (!post.media_url) {

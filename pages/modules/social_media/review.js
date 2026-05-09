@@ -865,11 +865,15 @@ export default function ReviewPosts() {
                 {/* Image — click to change */}
                 {post.mediaUrl ? (
                   <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => openPicker(post.postId)}>
-                    <img src={post.mediaUrl} alt="Post image" style={{ width: '100%', height: 240, objectFit: 'cover', display: 'block' }} />
+                    {(post.platform === 'tiktok' || post.platform === 'youtube') ? (
+                      <video src={post.mediaUrl} controls playsInline style={{ width: '100%', height: 240, objectFit: 'cover', display: 'block', background: '#000' }} />
+                    ) : (
+                      <img src={post.mediaUrl} alt="Post image" style={{ width: '100%', height: 240, objectFit: 'cover', display: 'block' }} />
+                    )}
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'all 0.2s' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.opacity = 1; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0)'; e.currentTarget.style.opacity = 0; }}>
-                      <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, background: 'rgba(0,0,0,0.55)', padding: '4px 16px', borderRadius: 8 }}>🖼 Change Image</span>
+                      <span style={{ color: '#fff', fontWeight: 600, fontSize: 16, background: 'rgba(0,0,0,0.55)', padding: '4px 16px', borderRadius: 8 }}>{(post.platform === 'tiktok' || post.platform === 'youtube') ? '🎬 Change Media' : '🖼 Change Image'}</span>
                     </div>
                     <button onClick={e => { e.stopPropagation(); removeImage(post.postId); }}
                       style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 16, padding: '2px 7px', cursor: 'pointer' }}>✕</button>

@@ -1180,11 +1180,11 @@ export default function CreateContent() {
         setAiGenerating(false);
         return;
       }
-      const hasYouTubePosts = allApproved.some(post => post.platform === 'youtube');
+      const hasVideoPosts = allApproved.some(post => post.platform === 'youtube' || post.platform === 'tiktok');
       let uploadedVideoUrl = aiUploadedVideoUrl;
-      if (hasYouTubePosts) {
+      if (hasVideoPosts) {
         if (!uploadedVideoUrl && !aiVideoFile) {
-          setNotice('Upload a video before saving YouTube posts.');
+          setNotice('Upload a video before saving TikTok or YouTube posts.');
           setAiGenerating(false);
           return;
         }
@@ -1193,8 +1193,8 @@ export default function CreateContent() {
       let ok = 0;
       let lastError = '';
       for (const post of allApproved) {
-        let mediaUrl = post.platform === 'youtube' ? (uploadedVideoUrl || null) : null;
-        if (post.platform !== 'youtube' && post.image) {
+        let mediaUrl = (post.platform === 'youtube' || post.platform === 'tiktok') ? (uploadedVideoUrl || null) : null;
+        if (post.platform !== 'youtube' && post.platform !== 'tiktok' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
               const imgRes = await fetch('/api/social/save-image', {
@@ -1260,11 +1260,11 @@ export default function CreateContent() {
         setAiGenerating(false);
         return;
       }
-      const hasYouTubePosts = allApproved.some(post => post.platform === 'youtube');
+      const hasVideoPosts = allApproved.some(post => post.platform === 'youtube' || post.platform === 'tiktok');
       let uploadedVideoUrl = aiUploadedVideoUrl;
-      if (hasYouTubePosts) {
+      if (hasVideoPosts) {
         if (!uploadedVideoUrl && !aiVideoFile) {
-          setNotice('Upload a video before scheduling YouTube posts.');
+          setNotice('Upload a video before scheduling TikTok or YouTube posts.');
           setAiGenerating(false);
           return;
         }
@@ -1284,8 +1284,8 @@ export default function CreateContent() {
       let lastError = '';
       for (let i = 0; i < scheduledQueue.length; i++) {
         const { post, scheduledFor } = scheduledQueue[i];
-        let mediaUrl = post.platform === 'youtube' ? (uploadedVideoUrl || null) : null;
-        if (post.platform !== 'youtube' && post.image) {
+        let mediaUrl = (post.platform === 'youtube' || post.platform === 'tiktok') ? (uploadedVideoUrl || null) : null;
+        if (post.platform !== 'youtube' && post.platform !== 'tiktok' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
               const imgRes = await fetch('/api/social/save-image', {

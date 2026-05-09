@@ -87,6 +87,7 @@ export default async function handler(req, res) {
       result = await postToTikTok({
         accessToken: account.access_token,
         text: post.content,
+        videoUrl: post.media_url || null,
       });
     } else if (post.platform === "youtube") {
       if (!post.media_url) {
