@@ -18,7 +18,7 @@ const PLATFORMS = {
     label: 'TikTok',
     logoType: 'tiktok',
     description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
-    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. If one tester account works but another user sees a TikTok error page mentioning client_key, the usual cause is TikTok app review, tester allowlisting, or Login Kit settings on TikTok rather than this site URL.',
+    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. If one tester account works but another user sees a TikTok error page mentioning client_key, the usual cause is TikTok app review, tester allowlisting, or Login Kit settings on TikTok rather than this site URL. If TikTok publishing says the connection is missing publish permission, reconnect TikTok and approve posting access again.',
   },
   linkedin: {
     label: 'LinkedIn',
@@ -93,6 +93,10 @@ function sanitizeConnectionMessage(platform, message, fallback = 'Connection fai
     lower.includes('credentials not configured')
   ) {
     return `${getFriendlyPlatformName(platform)} connection is temporarily unavailable right now. Please try again later.`;
+  }
+
+  if (lower.includes('missing publish permission') || lower.includes('approve posting access')) {
+    return 'Reconnect TikTok and approve posting access so video publishing is authorized.';
   }
 
   return raw;

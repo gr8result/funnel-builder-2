@@ -26,6 +26,8 @@ function getTikTokRedirectUri(req) {
   return process.env.TIKTOK_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/tiktok/callback`;
 }
 
+const TIKTOK_OAUTH_SCOPES = "user.info.basic,video.publish";
+
 function getPostAuthRedirectUrl(req, redirectPath) {
   const fallbackPath = redirectPath || "/modules/social_media/setup";
   try {
@@ -70,7 +72,7 @@ export default async function handler(req, res) {
 
   const params = new URLSearchParams({
     client_key: creds.appId,
-    scope: "user.info.basic",
+    scope: TIKTOK_OAUTH_SCOPES,
     response_type: "code",
     redirect_uri: getTikTokRedirectUri(req),
     state,
