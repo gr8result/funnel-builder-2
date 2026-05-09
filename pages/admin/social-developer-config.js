@@ -39,8 +39,9 @@ const PLATFORMS = {
     steps: [
       'Go to developers.tiktok.com → Manage Apps → Create an app.',
       'Under "Login Kit", add the Callback URL below.',
-      'Request scopes: user.info.basic.',
-      'Submit for review (TikTok requires app review before real users can connect).',
+      'Enable the Content Posting API product for the app.',
+      'Request scopes: user.info.basic, video.publish.',
+      'Submit the app and Content Posting API access for review, because TikTok rejects video.publish until that scope is approved for the app.',
     ],
   },
   linkedin: {
@@ -368,6 +369,8 @@ export default function SocialDeveloperConfig() {
                       {key === 'tiktok' && (
                         <div style={{ ...S.callbackLabel, marginTop: 10 }}>
                           TikTok note: if one internal tester account connects but other users see a TikTok page telling you to fix <span style={S.callbackUrl}>client_key</span>, the runtime key is valid enough to reach TikTok and the remaining blocker is usually TikTok app review, tester allowlisting, or Login Kit app settings on TikTok&apos;s side.
+                          <br /><br />
+                          If TikTok shows a page telling you to correct <span style={S.callbackUrl}>scope</span>, this app is requesting <span style={S.callbackUrl}>user.info.basic,video.publish</span> and the TikTok developer app has not been granted <span style={S.callbackUrl}>video.publish</span> yet. Enable Content Posting API and complete TikTok&apos;s review for that scope.
                         </div>
                       )}
                     </div>

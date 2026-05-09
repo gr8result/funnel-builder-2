@@ -18,7 +18,7 @@ const PLATFORMS = {
     label: 'TikTok',
     logoType: 'tiktok',
     description: 'Connect your TikTok Business or Creator account so this app can publish TikTok posts for you.',
-    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. If one tester account works but another user sees a TikTok error page mentioning client_key, the usual cause is TikTok app review, tester allowlisting, or Login Kit settings on TikTok rather than this site URL. If TikTok publishing says the connection is missing publish permission, reconnect TikTok and approve posting access again.',
+    note: 'Requires a TikTok Business or Creator account. TikTok also requires the developer app to be approved before real users can connect. If one tester account works but another user sees a TikTok error page mentioning client_key, the usual cause is TikTok app review, tester allowlisting, or Login Kit settings on TikTok rather than this site URL. If TikTok shows a scope error during connect, the TikTok developer app has not been approved for video.publish yet. If TikTok publishing says the connection is missing publish permission, reconnect TikTok and approve posting access again.',
   },
   linkedin: {
     label: 'LinkedIn',
@@ -84,6 +84,9 @@ function sanitizeConnectionMessage(platform, message, fallback = 'Connection fai
   if (!raw) return fallback;
   if (lower.includes('please sign in first')) return 'Please sign in and try again.';
   if (lower.includes('oauth state expired') || lower.includes('expired or invalid')) return 'This connection attempt expired. Please try again.';
+  if (lower === 'scope' || lower.includes('video.publish') || lower.includes('correct the following')) {
+    return 'TikTok is rejecting the requested publish scope for this app. Enable Content Posting API and get video.publish approved in the TikTok developer app.';
+  }
   if (
     lower.includes('app id not configured') ||
     lower.includes('app secret not configured') ||

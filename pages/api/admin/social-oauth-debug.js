@@ -33,6 +33,8 @@ function getTikTokRedirectUri(req) {
   return process.env.TIKTOK_OAUTH_REDIRECT_URI || `${getCanonicalAppOrigin(req)}/api/social/oauth/tiktok/callback`;
 }
 
+const TIKTOK_REQUESTED_SCOPES = "user.info.basic,video.publish";
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -69,6 +71,7 @@ export default async function handler(req, res) {
       tiktok: {
         clientKey: tiktok?.appId || "",
         redirectUri: getTikTokRedirectUri(req),
+        requestedScopes: TIKTOK_REQUESTED_SCOPES,
         credentialSource: tiktok?.source || null,
         credentialOwnerUserId: tiktok?.ownerUserId || "",
         credentialUpdatedAt: tiktok?.updatedAt || "",
