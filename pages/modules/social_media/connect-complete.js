@@ -40,6 +40,7 @@ export default function ConnectCompletePage() {
   const platform = String(router.query.platform || '');
   const connect = String(router.query.connect || '');
   const rawMessage = String(router.query.message || '');
+  const returnPath = '/modules/social_media/setup';
   const isSuccess = connect === 'ok' || connect === 'success';
   const title = isSuccess ? `${getFriendlyPlatformName(platform)} connected` : `${getFriendlyPlatformName(platform)} not connected`;
   const message = sanitizeConnectionMessage(
@@ -58,6 +59,14 @@ export default function ConnectCompletePage() {
     }, window.location.origin);
   }, [router.isReady, platform, connect, message]);
 
+  useEffect(() => {
+    if (!router.isReady || window.opener) return;
+    const timer = window.setTimeout(() => {
+      window.location.replace(returnPath);
+    }, isSuccess ? 1200 : 2200);
+    return () => window.clearTimeout(timer);
+  }, [router.isReady, isSuccess, returnPath]);
+
   return (
     <div style={S.page}>
       <div style={S.card}>
@@ -66,12 +75,18 @@ export default function ConnectCompletePage() {
         <p style={S.message}>{message}</p>
         <div style={isSuccess ? S.successNote : S.warningNote}>
           {isSuccess
-            ? 'You may now close this page and continue in the main window.'
-            : 'You may close this page and continue in the main window after reviewing the message above.'}
+            ? (window.opener ? 'You may now close this page and continue in the main window.' : 'Returning you to Social Setup now.')
+            : (window.opener ? 'You may close this page and continue in the main window after reviewing the message above.' : 'Returning you to Social Setup so you can try again.')}
         </div>
         <div style={S.actions}>
-          <button onClick={() => window.close()} style={S.primaryBtn}>Close This Page</button>
-          <button onClick={() => { window.location.href = '/modules/social_media/setup'; }} style={S.secondaryBtn}>Open Settings Page</button>
+          <button onClick={() => {
+            if (window.opener) {
+              window.close();
+              return;
+            }
+            window.location.href = returnPath;
+          }} style={S.primaryBtn}>{window.opener ? 'Close This Page' : 'Return To Social Setup'}</button>
+          <button onClick={() => { window.location.href = returnPath; }} style={S.secondaryBtn}>Open Settings Page</button>
         </div>
       </div>
     </div>
