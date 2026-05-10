@@ -90,6 +90,7 @@ function StatusBadge({ status }) {
     draft:     { bg: 'rgba(75,85,99,0.4)',    color: '#9CA3AF', label: 'Draft' },
     scheduled: { bg: 'rgba(37,99,235,0.25)',  color: '#93C5FD', label: 'Scheduled' },
     published: { bg: 'rgba(5,160,105,0.25)',  color: '#6EE7B7', label: 'Published' },
+    exported:  { bg: 'rgba(217,119,6,0.25)',  color: '#FCD34D', label: 'Exported' },
     failed:    { bg: 'rgba(239,68,68,0.25)',  color: '#FCA5A5', label: 'Failed' },
     queued:    { bg: 'rgba(217,119,6,0.25)',  color: '#FCD34D', label: 'Queued' },
   };
@@ -657,8 +658,11 @@ export default function ReviewPosts() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Publish failed');
-      setPosts(prev => prev.map(p => p.postId === postId ? { ...p, status: 'published' } : p));
-      setNotice('Post published.');
+      const nextStatus = json.postStatus || 'published';
+      setPosts(prev => prev.map(p => p.postId === postId ? { ...p, status: nextStatus } : p));
+      setNotice(nextStatus === 'exported'
+        ? 'Exported to TikTok inbox. Open TikTok to finish posting.'
+        : 'Post published.');
     } catch (err) { setNotice(err.message); }
     finally { setPublishing(''); }
   }
@@ -918,6 +922,11 @@ export default function ReviewPosts() {
                 {post.status === 'failed' && post.lastError && (
                   <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#FCA5A5', fontSize: 14, lineHeight: 1.4 }}>
                     Failed: {post.lastError}
+                  </div>
+                )}
+                {post.status === 'exported' && post.platform === 'tiktok' && (
+                  <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.28)', color: '#FCD34D', fontSize: 14, lineHeight: 1.4 }}>
+                    Exported to TikTok inbox. Open TikTok and complete the post there.
                   </div>
                 )}
                 {/* Inline date + time scheduler */}

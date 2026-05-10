@@ -168,11 +168,14 @@ export default function CalendarDay() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Publish failed');
+      const nextStatus = json.postStatus || 'published';
       setPosts(prev => prev.map(p =>
-        p.postId === modal.post.postId ? { ...p, status: 'published' } : p
+        p.postId === modal.post.postId ? { ...p, status: nextStatus } : p
       ));
-      setModal(prev => ({ ...prev, post: { ...prev.post, status: 'published' } }));
-      setNotice('Published!');
+      setModal(prev => ({ ...prev, post: { ...prev.post, status: nextStatus } }));
+      setNotice(nextStatus === 'exported'
+        ? 'Exported to TikTok inbox. Open TikTok to finish posting.'
+        : 'Published!');
     } catch (e) {
       setNotice(e.message);
     } finally {

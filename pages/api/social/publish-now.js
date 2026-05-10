@@ -107,12 +107,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: `Publishing for ${post.platform} is not yet supported` });
     }
 
+    const postStatus = result?.mode === 'inbox_pending' ? 'exported' : 'published';
+
     await auth.admin
       .from("social_posts")
       .update({
-        status: "published",
+        status: postStatus,
         platform_post_id: result?.post_id || result?.id || null,
-        published_at: new Date().toISOString(),
+        published_at: postStatus === 'published' ? new Date().toISOString() : null,
       })
       .eq("id", post.id);
 
@@ -136,7 +138,7 @@ export default async function handler(req, res) {
       .eq('user_id', auth.user.id)
       .in('status', ['queued', 'processing', 'failed']);
 
-    return res.status(200).json({ ok: true, result });
+    return res.status(200).json({ ok: true, result, postStatus });
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message });
   }
