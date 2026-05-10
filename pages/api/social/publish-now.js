@@ -3,7 +3,7 @@ import { postToFacebook, postToInstagram } from "../../../lib/social/facebook";
 import { postToLinkedIn } from "../../../lib/social/linkedin";
 import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
-import { postToTikTok } from "../../../lib/social/tiktok";
+import { postToTikTok, refreshTikTokAccountAccess } from "../../../lib/social/tiktok";
 import { postToYouTube } from "../../../lib/social/youtube";
 
 export default async function handler(req, res) {
@@ -85,11 +85,29 @@ export default async function handler(req, res) {
         text: post.content,
       });
     } else if (post.platform === "tiktok") {
-      result = await postToTikTok({
-        accessToken: account.access_token,
-        text: post.content,
-        videoUrl: post.media_url || null,
-      });
+      try {
+        result = await postToTikTok({
+          accessToken: account.access_token,
+          text: post.content,
+          videoUrl: post.media_url || null,
+        });
+      } catch (error) {
+        if (error?.code !== 'scope_not_authorized') {
+          throw error;
+        }
+
+        const refreshed = await refreshTikTokAccountAccess({
+          admin: auth.admin,
+          userId: auth.user.id,
+          socialAccountId: account.id,
+        });
+
+        result = await postToTikTok({
+          accessToken: refreshed.accessToken,
+          text: post.content,
+          videoUrl: post.media_url || null,
+        });
+      }
     } else if (post.platform === "youtube") {
       if (!post.media_url) {
         return res.status(400).json({ ok: false, error: "YouTube requires a video file. Add a video before publishing." });

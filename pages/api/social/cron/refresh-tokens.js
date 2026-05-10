@@ -4,8 +4,7 @@
 // but don't support refresh — those accounts are flagged as expiring for user action.
 
 import { createClient } from "@supabase/supabase-js";
-import { decryptToken, encryptToken } from "../../../../lib/social/tokenCrypto";
-import { refreshTikTokToken } from "../../../../lib/social/tiktok";
+import { refreshTikTokAccountAccess } from "../../../../lib/social/tiktok";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
@@ -31,62 +30,11 @@ async function refreshTikTokAccounts() {
 
   for (const account of accounts) {
     try {
-      const { data: tokenRow } = await supabase
-        .from("social_oauth_tokens")
-        .select("*")
-        .eq("user_id", account.user_id)
-        .eq("platform", "tiktok")
-        .eq("social_account_id", account.id)
-        .maybeSingle();
-
-      if (!tokenRow?.encrypted_refresh_token) {
-        // No refresh token stored — flag account as needing re-auth
-        await supabase
-          .from("social_accounts")
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq("id", account.id);
-        failed++;
-        continue;
-      }
-
-      const refreshToken = decryptToken({
-        cipherText: tokenRow.encrypted_refresh_token,
-        iv: tokenRow.refresh_token_iv,
-        tag: tokenRow.refresh_token_tag,
+      await refreshTikTokAccountAccess({
+        admin: supabase,
+        userId: account.user_id,
+        socialAccountId: account.id,
       });
-
-      const refreshed_data = await refreshTikTokToken(refreshToken);
-
-      const accessExp = refreshed_data.expires_in
-        ? new Date(Date.now() + Number(refreshed_data.expires_in) * 1000).toISOString()
-        : null;
-
-      await supabase
-        .from("social_accounts")
-        .update({
-          access_token: refreshed_data.access_token,
-          token_expires_at: accessExp,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", account.id);
-
-      if (refreshed_data.refresh_token) {
-        const encrypted = encryptToken(refreshed_data.refresh_token);
-        const refreshExp = refreshed_data.refresh_expires_in
-          ? new Date(Date.now() + Number(refreshed_data.refresh_expires_in) * 1000).toISOString()
-          : tokenRow.refresh_expires_at;
-
-        await supabase
-          .from("social_oauth_tokens")
-          .update({
-            encrypted_refresh_token: encrypted.cipherText,
-            refresh_token_iv: encrypted.iv,
-            refresh_token_tag: encrypted.tag,
-            refresh_expires_at: refreshExp,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", tokenRow.id);
-      }
 
       refreshed++;
     } catch {
