@@ -113,7 +113,7 @@ async function processQueue() {
             videoUrl: post.media_url || null,
           });
         } catch (error) {
-          if (error?.code !== 'scope_not_authorized') {
+          if (error?.code !== 'access_token_invalid') {
             throw error;
           }
 
