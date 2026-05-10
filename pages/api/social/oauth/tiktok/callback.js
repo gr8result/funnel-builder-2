@@ -1,6 +1,7 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { encryptToken } from "../../../../../lib/social/tokenCrypto";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
+import { queryTikTokCreatorInfo } from "../../../../../lib/social/tiktok";
 
 async function saveSocialAccount(admin, payload) {
   const match = {
@@ -79,6 +80,23 @@ function doneRedirectUrl(req, path, status, message) {
   return u.toString();
 }
 
+function resolveTikTokAccountId(tokenData, creatorInfo) {
+  return String(
+    tokenData?.open_id
+    || creatorInfo?.creator_username
+    || Date.now()
+  );
+}
+
+function resolveTikTokAccountName(tokenData, creatorInfo) {
+  return (
+    String(creatorInfo?.creator_nickname || '').trim()
+    || String(creatorInfo?.creator_username || '').trim()
+    || String(tokenData?.open_id || '').trim()
+    || 'TikTok Account'
+  );
+}
+
 export default async function handler(req, res) {
   const { code, state, error, error_description } = req.query;
   const admin = createSupabaseAdmin();
@@ -127,6 +145,8 @@ export default async function handler(req, res) {
       throw new Error(tokenData?.error_description || tokenData?.error?.message || "TikTok token exchange failed");
     }
 
+    const creatorInfo = await queryTikTokCreatorInfo(tokenData.access_token);
+
     const accessExp = tokenData.expires_in
       ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
       : null;
@@ -134,8 +154,8 @@ export default async function handler(req, res) {
     const account = await saveSocialAccount(admin, {
       user_id: oauthState.user_id,
       platform: "tiktok",
-      account_id: String(tokenData.open_id || Date.now()),
-      account_name: "TikTok Account",
+      account_id: resolveTikTokAccountId(tokenData, creatorInfo),
+      account_name: resolveTikTokAccountName(tokenData, creatorInfo),
       access_token: tokenData.access_token,
       token_expires_at: accessExp,
       is_active: true,
