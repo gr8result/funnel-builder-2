@@ -39,7 +39,12 @@ function isTikTokPostingPermissionError(message) {
     || lower.includes('video.publish')
     || lower.includes('video.upload')
     || lower.includes('scope_not_authorized')
-    || lower.includes('did not grant posting access');
+    || lower.includes('did not grant posting access')
+    || lower.includes('unaudited')
+    || lower.includes('content posting api audit')
+    || lower.includes('private-only posting')
+    || lower.includes('added as a tester')
+    || lower.includes('developer center');
 }
 
 function clamp(value, min, max) {
