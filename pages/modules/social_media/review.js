@@ -28,6 +28,20 @@ function pm(platform) {
   return PLATFORM_META[String(platform || '').toLowerCase()] || DEFAULT_META;
 }
 
+function isTikTokPostingPermissionError(message) {
+  const lower = String(message || '').toLowerCase();
+  return lower.includes('missing publish permission')
+    || lower.includes('missing posting permission')
+    || lower.includes('posting access')
+    || lower.includes('posting permission')
+    || lower.includes('video publishing')
+    || lower.includes('video upload')
+    || lower.includes('video.publish')
+    || lower.includes('video.upload')
+    || lower.includes('scope_not_authorized')
+    || lower.includes('did not grant posting access');
+}
+
 function clamp(value, min, max) {
   const n = Number(value);
   return Number.isNaN(n) ? min : Math.min(max, Math.max(min, n));
@@ -193,6 +207,7 @@ export default function ReviewPosts() {
   const [bulkRescheduleSecondTime, setBulkRescheduleSecondTime] = useState('21:00');
   const [bulkRescheduleMode, setBulkRescheduleMode] = useState('daily');
   const [postSchedule, setPostSchedule] = useState({}); // { [postId]: { date, time } }
+  const [reconnectingTikTok, setReconnectingTikTok] = useState(false);
 
   // Image picker state
   const [picker, setPicker]         = useState(null); // { postId } or null
@@ -373,6 +388,24 @@ export default function ReviewPosts() {
       alive = false;
       clearInterval(intervalId);
     };
+  }, []);
+
+  useEffect(() => {
+    function handleOAuthMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      const payload = event.data || {};
+      if (payload.type !== 'social-oauth-complete' || payload.platform !== 'tiktok') return;
+
+      const isSuccess = payload.status === 'ok' || payload.status === 'success';
+      setReconnectingTikTok(false);
+      setNotice(isSuccess
+        ? 'TikTok reconnected. Try publishing or rescheduling the failed post again.'
+        : (payload.message || 'TikTok reconnect did not complete.'));
+      loadPosts();
+    }
+
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
   }, []);
 
   async function loadPosts() {
@@ -667,6 +700,40 @@ export default function ReviewPosts() {
     finally { setPublishing(''); }
   }
 
+  async function reconnectTikTok() {
+    setReconnectingTikTok(true);
+    setNotice('');
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sign in to reconnect TikTok.');
+
+      const res = await fetch('/api/social/oauth/tiktok/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ redirectPath: '/modules/social_media/connect-complete?platform=tiktok' }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.authUrl) throw new Error(json.error || 'Could not start TikTok reconnect.');
+
+      const popup = window.open(json.authUrl, 'oauth-popup', 'width=640,height=720,top=80,left=200,resizable=yes,scrollbars=yes');
+      if (!popup) {
+        window.location.href = json.authUrl;
+        return;
+      }
+
+      const timer = window.setInterval(async () => {
+        if (popup.closed) {
+          window.clearInterval(timer);
+          setReconnectingTikTok(false);
+          await loadPosts();
+        }
+      }, 800);
+    } catch (err) {
+      setNotice(err.message);
+      setReconnectingTikTok(false);
+    }
+  }
+
   const PUBLISHED_STATUSES = new Set(['published', 'posted']);
   const SCHEDULED_STATUSES = new Set(['scheduled', 'queued']);
   const activePosts    = posts.filter(p => !PUBLISHED_STATUSES.has(p.status));
@@ -922,6 +989,18 @@ export default function ReviewPosts() {
                 {post.status === 'failed' && post.lastError && (
                   <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#FCA5A5', fontSize: 14, lineHeight: 1.4 }}>
                     Failed: {post.lastError}
+                    {post.platform === 'tiktok' && isTikTokPostingPermissionError(post.lastError) && (
+                      <div style={{ marginTop: 8 }}>
+                        <button
+                          type="button"
+                          onClick={reconnectTikTok}
+                          disabled={reconnectingTikTok}
+                          style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid rgba(252,165,165,0.45)', background: reconnectingTikTok ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.24)', color: '#FECACA', fontWeight: 700, fontSize: 13, cursor: reconnectingTikTok ? 'default' : 'pointer' }}
+                        >
+                          {reconnectingTikTok ? 'Opening TikTok...' : 'Reconnect TikTok'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {post.status === 'exported' && post.platform === 'tiktok' && (

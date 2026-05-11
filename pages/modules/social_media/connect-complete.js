@@ -31,6 +31,16 @@ function sanitizeConnectionMessage(platform, message, fallback) {
   ) {
     return `${getFriendlyPlatformName(platform)} connection is temporarily unavailable right now. Please try again later.`;
   }
+  if (
+    lower.includes('missing publish permission') ||
+    lower.includes('missing posting permission') ||
+    lower.includes('approve posting access') ||
+    lower.includes('did not grant posting access') ||
+    lower.includes('video publishing') ||
+    lower.includes('video.upload')
+  ) {
+    return 'Reconnect TikTok and approve video publishing/upload access so posting is authorized.';
+  }
 
   return raw;
 }

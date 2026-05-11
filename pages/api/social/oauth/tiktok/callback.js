@@ -1,7 +1,7 @@
 import { createSupabaseAdmin } from "../../../../../lib/social/auth";
 import { encryptToken } from "../../../../../lib/social/tokenCrypto";
 import { getPlatformCredentials } from "../../../../../lib/social/platformCredentials";
-import { queryTikTokCreatorInfo } from "../../../../../lib/social/tiktok";
+import { assertTikTokPostingScope, queryTikTokCreatorInfo } from "../../../../../lib/social/tiktok";
 
 async function saveSocialAccount(admin, payload) {
   const match = {
@@ -145,6 +145,7 @@ export default async function handler(req, res) {
       throw new Error(tokenData?.error_description || tokenData?.error?.message || "TikTok token exchange failed");
     }
 
+    assertTikTokPostingScope(tokenData.scope);
     const creatorInfo = await queryTikTokCreatorInfo(tokenData.access_token);
 
     const accessExp = tokenData.expires_in
