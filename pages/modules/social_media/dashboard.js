@@ -245,16 +245,17 @@ export default function SocialDashboard() {
         {stats.failed > 0 && (
           <div style={S.alertBanner}>
             🚨 <strong>{stats.failed} post{stats.failed > 1 ? 's' : ''} failed to publish.</strong>
-            <button style={S.alertLink} onClick={() => { window.location.href = '/modules/social_media'; }}>Review now →</button>
+            <button style={S.alertLink} onClick={() => { window.location.href = '/modules/social_media/review?filter=failed'; }}>Review now →</button>
           </div>
         )}
 
         {/* ── STATS ── */}
         <div style={S.statsRow}>
-          <StatCard icon="📝" label="Total Posts" value={stats.total} color="#7C3AED" loading={loading} />
-          <StatCard icon="⏰" label="Scheduled" value={stats.scheduled} color="#2563EB" loading={loading} />
-          <StatCard icon="✅" label="Published" value={stats.published} color="#059669" loading={loading} />
-          <StatCard icon="🔗" label="Connected Platforms" value={accounts.length} color="#D97706" loading={loading} />
+          <StatCard icon="📝" label="Total Posts" value={stats.total} color="#7C3AED" loading={loading} onClick={() => { window.location.href = '/modules/social_media/review'; }} />
+          <StatCard icon="⏰" label="Scheduled" value={stats.scheduled} color="#2563EB" loading={loading} onClick={() => { window.location.href = '/modules/social_media/review?filter=scheduled'; }} />
+          <StatCard icon="✅" label="Published" value={stats.published} color="#059669" loading={loading} onClick={() => { window.location.href = '/modules/social_media/review?filter=published'; }} />
+          {stats.failed > 0 && <StatCard icon="🚨" label="Failed" value={stats.failed} color="#EF4444" loading={loading} onClick={() => { window.location.href = '/modules/social_media/review?filter=failed'; }} />}
+          <StatCard icon="🔗" label="Connected Platforms" value={accounts.length} color="#D97706" loading={loading} onClick={() => { window.location.href = '/modules/social_media/setup'; }} />
         </div>
 
         {/* ── SCHEDULE + ACCOUNTS ── */}
@@ -335,9 +336,9 @@ export default function SocialDashboard() {
   );
 }
 
-function StatCard({ icon, label, value, color, loading }) {
+function StatCard({ icon, label, value, color, loading, onClick }) {
   return (
-    <div style={{ background: '#111827', borderRadius: 16, padding: '22px 20px', border: `1px solid rgba(255,255,255,0.06)`, borderTop: `3px solid ${color}`, textAlign: 'center' }}>
+    <div style={{ background: '#111827', borderRadius: 16, padding: '22px 20px', border: `1px solid rgba(255,255,255,0.06)`, borderTop: `3px solid ${color}`, textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }} onClick={onClick}>
       <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
       <div style={{ fontSize: 36, fontWeight: 600, color }}>{loading ? '—' : value}</div>
       <div style={{ fontSize: 16, opacity: 0.55, marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
@@ -351,8 +352,11 @@ function ScheduleRow({ item }) {
   const content = item.social_posts?.content || '';
   const preview = content.length > 70 ? content.slice(0, 70) + '…' : content;
   const statusColor = item.status === 'published' ? '#6EE7B7' : item.status === 'failed' ? '#FCA5A5' : '#93C5FD';
+  const reviewUrl = item.status === 'failed'
+    ? '/modules/social_media/review?filter=failed'
+    : '/modules/social_media/review';
   return (
-    <div style={S.scheduleRow}>
+    <div style={{ ...S.scheduleRow, cursor: 'pointer' }} onClick={() => { window.location.href = reviewUrl; }}>
       <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.color + '22', border: `1.5px solid ${meta.color}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {meta.svg(meta.color)}
       </div>

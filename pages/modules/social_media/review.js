@@ -379,6 +379,15 @@ export default function ReviewPosts() {
   const [newPlatform, setNewPlatform] = useState('facebook');
   const [creating, setCreating]     = useState(false);
 
+  // Apply filter from URL query param (e.g. ?filter=failed)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const qf = router.query.filter;
+    if (qf && ['all', 'scheduled', 'published', 'failed', 'draft'].includes(qf)) {
+      setFilter(qf);
+    }
+  }, [router.isReady, router.query.filter]);
+
   useEffect(() => {
     let alive = true;
 
