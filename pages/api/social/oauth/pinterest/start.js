@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     client_id: creds.appId,
     redirect_uri: getPinterestRedirectUri(req),
     response_type: 'code',
-    scope: 'user_accounts:read,boards:read,pins:write',
+    scope: 'user_accounts:read,boards:read,boards:write,pins:read,pins:write',
     state,
   });
 
