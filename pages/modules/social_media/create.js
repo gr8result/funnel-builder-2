@@ -8,22 +8,13 @@ import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PLATFORM_OPTIONS = [
-  { key: 'facebook',  label: 'Facebook',       videoOnly: false },
-  { key: 'instagram', label: 'Instagram',       videoOnly: false },
-  { key: 'linkedin',  label: 'LinkedIn',        videoOnly: false },
-  { key: 'x',         label: 'X',               videoOnly: false },
-  { key: 'threads',   label: 'Threads',         videoOnly: false },
-  { key: 'bluesky',   label: 'Bluesky',         videoOnly: false },
-  { key: 'pinterest', label: 'Pinterest',       videoOnly: false },
-  { key: 'tiktok',   label: 'TikTok',          videoOnly: false },
-  { key: 'youtube',  label: 'YouTube',          videoOnly: true },
-  { key: 'googlebusiness', label: 'Google Business', videoOnly: false },
-  { key: 'reddit',    label: 'Reddit',          videoOnly: false },
-  { key: 'snapchat',  label: 'Snapchat',        videoOnly: false },
-  { key: 'telegram',  label: 'Telegram',        videoOnly: false },
-  { key: 'whatsapp',  label: 'WhatsApp',        videoOnly: false },
-  { key: 'discord',   label: 'Discord',         videoOnly: false },
-  { key: 'lemon8',    label: 'Lemon8',          videoOnly: false },
+  { key: 'facebook',  label: 'Facebook',   videoOnly: false },
+  { key: 'instagram', label: 'Instagram',  videoOnly: false },
+  { key: 'linkedin',  label: 'LinkedIn',   videoOnly: false },
+  { key: 'x',         label: 'X',          videoOnly: false },
+  { key: 'pinterest', label: 'Pinterest',  videoOnly: false },
+  { key: 'tiktok',   label: 'TikTok',     videoOnly: false },
+  { key: 'youtube',  label: 'YouTube',    videoOnly: true  },
 ];
 
 const DEFAULT_SELECTED_PLATFORMS = {
@@ -31,18 +22,9 @@ const DEFAULT_SELECTED_PLATFORMS = {
   instagram: true,
   linkedin: true,
   x: false,
-  threads: false,
-  bluesky: false,
   pinterest: false,
   tiktok: false,
   youtube: false,
-  googlebusiness: false,
-  reddit: false,
-  snapchat: false,
-  telegram: false,
-  whatsapp: false,
-  discord: false,
-  lemon8: false,
 };
 
 const PLATFORM_THEME = {

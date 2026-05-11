@@ -10,7 +10,7 @@ const supabase = createClient(
 const DEFAULT_POSTS_PER_PLATFORM = 28;
 
 // platforms you want
-const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'x', 'threads', 'bluesky', 'pinterest', 'tiktok', 'youtube', 'googlebusiness', 'reddit', 'snapchat', 'telegram', 'whatsapp', 'discord', 'lemon8'];
+const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'x', 'pinterest', 'tiktok', 'youtube'];
 
 const COMMON_TYPO_REPLACEMENTS = {
   absolutly: 'absolutely',
@@ -285,7 +285,7 @@ function creatorCta(platform) {
 function shortVideoHook(topic, variant = 0) {
   const cleaned = cleanSourceText(topic).toLowerCase();
 
-  if (/(sea|ocean|beach)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
+  if (/(by the sea|ocean|beach|coast|coastal)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
     const options = [
       'Training by the sea just hits different.',
       'Ocean air, hard session, no excuses.',
@@ -314,11 +314,11 @@ function shortVideoHook(topic, variant = 0) {
 function shortVideoBody(topic, variant = 0) {
   const cleaned = cleanSourceText(topic).toLowerCase();
 
-  if (/(wait ?& ?sea|waite and sea|wait and sea)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
+  if (/(activewear|apparel|brand|lifestyle|training video|sample clip|gym equipment|workout clip)/i.test(cleaned) && /(training|workout|fitness|gym)/i.test(cleaned)) {
     const options = [
-      'Wait & Sea keeping it clean, active, and consistent with a simple training moment by the water.',
-      'A small Wait & Sea training moment with a clean lifestyle feel and a strong activewear vibe.',
-      'Just a natural Wait & Sea training clip with movement, energy, and that beach-session feel.',
+      'A clean training clip with a strong activewear feel and a simple, natural kind of energy.',
+      'Just a straightforward workout moment with movement, focus, and a clean lifestyle vibe.',
+      'A short training clip that feels active, modern, and easy to watch without trying too hard.',
     ];
     return options[variant % options.length];
   }
@@ -973,11 +973,7 @@ export default async function handler(req, res) {
         const reasons = [...new Set(fallbackPlatforms.map((platform) => generationMeta[platform]?.reason).filter(Boolean))]
           .map((reason) => formatGenerationFailureReason(reason))
           .join(' ');
-        return res.status(503).json({
-          ok: false,
-          error: reasons || 'OpenAI generation failed for all selected platforms.',
-          generationMeta,
-        });
+        console.warn('Social AI generation used fallback for all selected platforms.', reasons || 'No reason provided.');
       }
     }
 
