@@ -74,6 +74,7 @@ export default async function handler(req, res) {
     state,
     response_type: "code",
     config_id: creds.configId,
+    scope: "public_profile,pages_show_list,pages_manage_posts,pages_read_engagement,pages_manage_metadata,pages_read_user_content,instagram_basic,instagram_content_publish",
   });
 
   return res.status(200).json({
