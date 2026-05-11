@@ -1,7 +1,4 @@
 {
-  "env": {
-    "PINTEREST_USE_SANDBOX": "true"
-  },
   "functions": {
     "pages/api/social/ai-generate-images.js": {
       "maxDuration": 60
