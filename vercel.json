@@ -2,6 +2,14 @@
   "env": {
     "PINTEREST_USE_SANDBOX": "true"
   },
+  "functions": {
+    "pages/api/social/ai-generate-images.js": {
+      "maxDuration": 60
+    },
+    "pages/api/social/ai-generate-content.js": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/automation/engine/tick",

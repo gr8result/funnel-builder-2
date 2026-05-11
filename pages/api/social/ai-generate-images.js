@@ -457,6 +457,8 @@ async function ensureUniqueImageCount(req, images, descriptions, targetCount) {
   return combined.slice(0, targetCount);
 }
 
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -490,66 +492,50 @@ export default async function handler(req, res) {
       });
     }
 
+    console.log(`📸 Generating ${batchSize} images in parallel`);
+
+    const rawResults = await Promise.all(
+      Array.from({ length: batchSize }, async (_, i) => {
+        const description = descriptions[i];
+        const prompt = buildPhotoCreativePrompt(description, style, creativeType, i);
+        try {
+          const response = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+            body: JSON.stringify({ model: 'gpt-image-1', prompt, n: 1, size: '1024x1024', quality: 'standard' }),
+          });
+          if (!response.ok) {
+            const errorBody = await response.json();
+            console.error(`❌ OpenAI error [${i}]:`, errorBody);
+            return { error: normalizeApiError(errorBody, 'Image generation failed.'), description };
+          }
+          const data = await response.json();
+          const item = data.data?.[0];
+          const url = item?.url || (item?.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+          if (!url) {
+            return { error: normalizeApiError(null, 'Image generation returned no usable image data.'), description };
+          }
+          return { url, description, generatedAt: new Date().toISOString() };
+        } catch (err) {
+          console.error(`❌ Error generating image [${i}]:`, err.message);
+          return { error: normalizeApiError(null, err.message || 'Image generation failed.'), description };
+        }
+      })
+    );
+
     const images = [];
     let hadGenerationFailure = false;
     let lastError = null;
-    
-    console.log(`📸 Starting image generation: requested=${requestedCount}, safe=${safeCount}, batch=${batchSize}`);
-    
-    for (let i = 0; i < batchSize; i++) {
-      const description = descriptions[i];
-      console.log(`📸 [${i + 1}/${batchSize}] Generating for: ${description.substring(0, 60)}...`);
-      
-      const prompt = buildPhotoCreativePrompt(description, style, creativeType, i);
 
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-image-1',
-            prompt: prompt,
-            n: 1,
-            size: '1024x1024',
-            quality: 'high'
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          console.error(`❌ DALL-E error [${i}]:`, error);
-          hadGenerationFailure = true;
-          lastError = normalizeApiError(error, 'Image generation failed.');
-          continue;
-        }
-
-        const data = await response.json();
-        if (data.data && data.data[0]) {
-          const item = data.data[0];
-          const url = item.url || (item.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
-          if (!url) {
-            console.error(`❌ Image payload missing url/b64_json [${i}]`);
-            lastError = normalizeApiError(null, 'Image generation returned no usable image data.');
-            continue;
-          }
-          console.log(`✅ Image generated [${i}]`);
-          images.push({
-            url,
-            description: description,
-            generatedAt: new Date().toISOString()
-          });
-        }
-      } catch (err) {
-        console.error(`❌ Error generating image [${i}]:`, err.message);
+    for (const result of rawResults) {
+      if (result.error) {
         hadGenerationFailure = true;
-        lastError = normalizeApiError(null, err.message || 'Image generation failed.');
-        continue;
+        lastError = result.error;
+      } else {
+        images.push(result);
       }
     }
-    
+
     console.log(`📸 Image generation complete: ${images.length}/${batchSize} successful`);
 
     if (!images.length) {
