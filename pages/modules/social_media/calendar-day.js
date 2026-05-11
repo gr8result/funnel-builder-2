@@ -173,9 +173,7 @@ export default function CalendarDay() {
         p.postId === modal.post.postId ? { ...p, status: nextStatus } : p
       ));
       setModal(prev => ({ ...prev, post: { ...prev.post, status: nextStatus } }));
-      setNotice(nextStatus === 'exported'
-        ? 'Exported to TikTok inbox. Open TikTok to finish posting.'
-        : 'Published!');
+      setNotice('Published!');
     } catch (e) {
       setNotice(e.message);
     } finally {

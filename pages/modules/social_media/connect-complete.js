@@ -39,7 +39,7 @@ function sanitizeConnectionMessage(platform, message, fallback) {
     lower.includes('video publishing') ||
     lower.includes('video.upload')
   ) {
-    return 'Reconnect TikTok and approve video publishing/upload access so posting is authorized.';
+    return 'Reconnect TikTok and approve video publishing access so direct posting is authorized.';
   }
 
   return raw;

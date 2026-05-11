@@ -693,9 +693,7 @@ export default function ReviewPosts() {
       if (!json.ok) throw new Error(json.error || 'Publish failed');
       const nextStatus = json.postStatus || 'published';
       setPosts(prev => prev.map(p => p.postId === postId ? { ...p, status: nextStatus } : p));
-      setNotice(nextStatus === 'exported'
-        ? 'Exported to TikTok inbox. Open TikTok to finish posting.'
-        : 'Post published.');
+      setNotice('Post published.');
     } catch (err) { setNotice(err.message); }
     finally { setPublishing(''); }
   }
@@ -1001,11 +999,6 @@ export default function ReviewPosts() {
                         </button>
                       </div>
                     )}
-                  </div>
-                )}
-                {post.status === 'exported' && post.platform === 'tiktok' && (
-                  <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.28)', color: '#FCD34D', fontSize: 14, lineHeight: 1.4 }}>
-                    Exported to TikTok inbox. Open TikTok and complete the post there.
                   </div>
                 )}
                 {/* Inline date + time scheduler */}

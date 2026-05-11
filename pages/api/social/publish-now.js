@@ -125,7 +125,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: `Publishing for ${post.platform} is not yet supported` });
     }
 
-    const postStatus = result?.mode === 'inbox_pending' ? 'exported' : 'published';
+    const postStatus = 'published';
 
     await auth.admin
       .from("social_posts")

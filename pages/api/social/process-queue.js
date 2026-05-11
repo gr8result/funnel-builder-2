@@ -146,7 +146,7 @@ async function processQueue() {
         throw new Error(`No publisher for platform: ${row.platform}`);
       }
 
-      const postStatus = result?.mode === 'inbox_pending' ? 'exported' : 'published';
+      const postStatus = 'published';
 
       await supabase
         .from("social_posts")
