@@ -1165,17 +1165,17 @@ export default function CreateContent() {
       const hasVideoPosts = allApproved.some(post => post.platform === 'youtube' || post.platform === 'tiktok');
       let uploadedVideoUrl = aiUploadedVideoUrl;
       if (hasVideoPosts) {
-        if (!uploadedVideoUrl && !aiVideoFile) {
-          setNotice('Upload a video before saving TikTok or YouTube posts.');
-          setAiGenerating(false);
-          return;
+        if (uploadedVideoUrl || aiVideoFile) {
+          uploadedVideoUrl = await uploadSelectedVideo();
         }
-        uploadedVideoUrl = await uploadSelectedVideo();
+        // If no video provided, skip TikTok/YouTube posts and proceed with the rest
       }
       let ok = 0;
       let lastError = '';
       for (const post of allApproved) {
-        let mediaUrl = (post.platform === 'youtube' || post.platform === 'tiktok') ? (uploadedVideoUrl || null) : null;
+        const isVideoPost = post.platform === 'youtube' || post.platform === 'tiktok';
+        if (isVideoPost && !uploadedVideoUrl) continue; // skip video posts with no video
+        let mediaUrl = isVideoPost ? (uploadedVideoUrl || null) : null;
         if (post.platform !== 'youtube' && post.platform !== 'tiktok' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
@@ -1245,12 +1245,10 @@ export default function CreateContent() {
       const hasVideoPosts = allApproved.some(post => post.platform === 'youtube' || post.platform === 'tiktok');
       let uploadedVideoUrl = aiUploadedVideoUrl;
       if (hasVideoPosts) {
-        if (!uploadedVideoUrl && !aiVideoFile) {
-          setNotice('Upload a video before scheduling TikTok or YouTube posts.');
-          setAiGenerating(false);
-          return;
+        if (uploadedVideoUrl || aiVideoFile) {
+          uploadedVideoUrl = await uploadSelectedVideo();
         }
-        uploadedVideoUrl = await uploadSelectedVideo();
+        // If no video provided, skip TikTok/YouTube posts and schedule the rest
       }
       const start = new Date(aiScheduleStartDate);
       const startYear = start.getFullYear();
@@ -1266,7 +1264,9 @@ export default function CreateContent() {
       let lastError = '';
       for (let i = 0; i < scheduledQueue.length; i++) {
         const { post, scheduledFor } = scheduledQueue[i];
-        let mediaUrl = (post.platform === 'youtube' || post.platform === 'tiktok') ? (uploadedVideoUrl || null) : null;
+        const isVideoPost = post.platform === 'youtube' || post.platform === 'tiktok';
+        if (isVideoPost && !uploadedVideoUrl) continue; // skip video posts with no video
+        let mediaUrl = isVideoPost ? (uploadedVideoUrl || null) : null;
         if (post.platform !== 'youtube' && post.platform !== 'tiktok' && post.image) {
           if (post.image.startsWith('data:')) {
             try {
