@@ -197,6 +197,7 @@ export default function ReviewPosts() {
   const [posts, setPosts]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [editing, setEditing]       = useState({});
+  const [editingPlatform, setEditingPlatform] = useState({});
   const [saving, setSaving]         = useState('');
   const [deleting, setDeleting]     = useState('');
   const [publishing, setPublishing] = useState('');
@@ -457,19 +458,27 @@ export default function ReviewPosts() {
 
   async function saveEdit(postId) {
     const content = editing[postId];
-    if (content === undefined) return;
+    const platform = editingPlatform[postId];
+    if (content === undefined && platform === undefined) return;
     setSaving(postId);
     try {
       const token = await getToken();
+      const body = { postId };
+      if (content !== undefined) body.content = content;
+      if (platform !== undefined) { body.platform = platform; body.status = 'scheduled'; }
       const res  = await fetch('/api/social/update-post', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ postId, content }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || 'Save failed');
-      setPosts(prev => prev.map(p => p.postId === postId ? { ...p, content } : p));
+      setPosts(prev => prev.map(p => p.postId === postId
+        ? { ...p, ...(content !== undefined ? { content } : {}), ...(platform !== undefined ? { platform, status: 'scheduled' } : {}) }
+        : p
+      ));
       setEditing(prev => { const n = { ...prev }; delete n[postId]; return n; });
+      setEditingPlatform(prev => { const n = { ...prev }; delete n[postId]; return n; });
       setNotice('Post updated.');
     } catch (err) { setNotice(err.message); }
     finally { setSaving(''); }
@@ -993,7 +1002,15 @@ export default function ReviewPosts() {
                 {/* Header */}
                 <div style={{ padding: '10px 16px 6px', display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 18 }}>{meta.icon}</span>
-                  <span style={{ fontWeight: 600, fontSize: 16, color: meta.color }}>{meta.label}</span>
+                  <select
+                    value={editingPlatform[post.postId] !== undefined ? editingPlatform[post.postId] : (post.platform || '')}
+                    onChange={e => setEditingPlatform(prev => ({ ...prev, [post.postId]: e.target.value }))}
+                    style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${meta.color}55`, borderRadius: 6, color: meta.color, fontWeight: 600, fontSize: 14, padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                    <option value="">— platform —</option>
+                    {['facebook','instagram','linkedin','x','pinterest','tiktok','youtube'].map(pl => (
+                      <option key={pl} value={pl}>{pl.charAt(0).toUpperCase()+pl.slice(1)}</option>
+                    ))}
+                  </select>
                   <StatusBadge status={post.status} />
                   {scheduledLabel && <span style={{ fontSize: 16, color: '#6B7280' }}>📅 {scheduledLabel}</span>}
                   <span style={{ fontSize: 16, color: '#4B5563', marginLeft: 'auto' }}>{new Date(post.createdAt).toLocaleDateString('en-AU')}</span>
@@ -1053,13 +1070,16 @@ export default function ReviewPosts() {
                     onChange={e => setEditing(prev => ({ ...prev, [post.postId]: e.target.value }))}
                   />
                 </div>
-                {/* Save/Revert only when editing text */}
-                {editing[post.postId] !== undefined && editing[post.postId] !== post.content && (
+                {/* Save/Revert when editing text or platform */}
+                {(editing[post.postId] !== undefined && editing[post.postId] !== post.content) || editingPlatform[post.postId] !== undefined ? (
                   <div style={{ padding: '0 16px 12px', display: 'flex', gap: 6 }}>
                     <button style={btn.save} disabled={isSaving} onClick={() => saveEdit(post.postId)}>{isSaving ? 'Saving…' : '✓ Save'}</button>
-                    <button style={btn.cancel} onClick={() => setEditing(prev => { const n = { ...prev }; delete n[post.postId]; return n; })}>Revert</button>
+                    <button style={btn.cancel} onClick={() => {
+                      setEditing(prev => { const n = { ...prev }; delete n[post.postId]; return n; });
+                      setEditingPlatform(prev => { const n = { ...prev }; delete n[post.postId]; return n; });
+                    }}>Revert</button>
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
