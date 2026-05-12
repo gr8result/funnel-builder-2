@@ -97,7 +97,7 @@ export default function CalendarDay() {
     const t = sched
       ? `${String(sched.getHours()).padStart(2,'0')}:${String(sched.getMinutes()).padStart(2,'0')}`
       : '';
-    setModal({ post, content: post.content || '', time: t });
+    setModal({ post, content: post.content || '', time: t, platform: post.platform || '' });
   }
 
   async function saveModal() {
@@ -108,7 +108,13 @@ export default function CalendarDay() {
       const res = await fetch('/api/social/update-post', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ postId: modal.post.postId, content: modal.content }),
+        body: JSON.stringify({
+          postId: modal.post.postId,
+          content: modal.content,
+          platform: modal.platform || undefined,
+          // If post was failed and user is editing, reset to scheduled so it gets retried
+          status: modal.post.status === 'failed' ? 'scheduled' : undefined,
+        }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
@@ -125,7 +131,9 @@ export default function CalendarDay() {
         });
       }
       setPosts(prev => prev.map(p =>
-        p.postId === modal.post.postId ? { ...p, content: modal.content, scheduledFor: newIso } : p
+        p.postId === modal.post.postId
+          ? { ...p, content: modal.content, scheduledFor: newIso, platform: modal.platform || p.platform, status: p.status === 'failed' ? 'scheduled' : p.status }
+          : p
       ));
       setModal(null);
       setNotice('Saved.');
@@ -384,6 +392,22 @@ export default function CalendarDay() {
                     />
                   </div>
                 )}
+                <div>
+                  <label style={{ display: 'block', fontSize: 16, fontWeight: 600, color: '#a78bfa', marginBottom: 6 }}>Platform</label>
+                  <select value={modal.platform}
+                    onChange={e => setModal(prev => ({ ...prev, platform: e.target.value }))}
+                    style={{ width: '100%', background: '#0f0628', border: '1px solid #4c1d95', borderRadius: 8, color: '#f3f0ff', padding: '10px 14px', fontSize: 16, outline: 'none', boxSizing: 'border-box' }}>
+                    <option value="">— select platform —</option>
+                    {Object.entries(PLATFORMS).map(([key, p]) => (
+                      <option key={key} value={key}>{p.label}</option>
+                    ))}
+                  </select>
+                  {modal.post.status === 'failed' && (
+                    <div style={{ marginTop: 6, fontSize: 13, color: '#fca5a5' }}>
+                      ⚠ Saving will reset this post to <strong>scheduled</strong> so it retries.
+                    </div>
+                  )}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 16, fontWeight: 600, color: '#a78bfa', marginBottom: 6 }}>Post Content</label>
                   <textarea value={modal.content}

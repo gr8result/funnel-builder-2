@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const auth = await requireUser(req);
   if (auth.error) return res.status(401).json({ ok: false, error: auth.error });
 
-  const { postId, content, mediaUrl } = req.body || {};
+  const { postId, content, mediaUrl, platform, status } = req.body || {};
   if (!postId) {
     return res.status(400).json({ ok: false, error: 'Missing postId' });
   }
@@ -18,6 +18,11 @@ export default async function handler(req, res) {
   }
   if (content !== undefined && !content.trim()) {
     return res.status(400).json({ ok: false, error: 'Content cannot be empty' });
+  }
+
+  const ALLOWED_PLATFORMS = ['facebook','instagram','linkedin','x','pinterest','tiktok','youtube'];
+  if (platform !== undefined && !ALLOWED_PLATFORMS.includes(platform)) {
+    return res.status(400).json({ ok: false, error: 'Invalid platform' });
   }
 
   try {
@@ -36,6 +41,8 @@ export default async function handler(req, res) {
     const updates = { updated_at: new Date().toISOString() };
     if (content !== undefined) updates.content = content.trim();
     if (mediaUrl !== undefined) updates.media_url = mediaUrl;
+    if (platform !== undefined) updates.platform = platform;
+    if (status !== undefined) updates.status = status;
 
     const { error } = await auth.admin
       .from('social_posts')
