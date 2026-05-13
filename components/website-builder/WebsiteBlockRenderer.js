@@ -1,5 +1,7 @@
 import React from "react";
+import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
+import { renderGridLibraryIcon } from "./gridIconLibrary";
 
 const MIN_TEXT_SIZE = 16;
 const MIN_TAP_SIZE = 24;
@@ -13,8 +15,63 @@ const WEBSITE_BLOCK_ANIMATION_CSS = `
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
+@keyframes wbFadeDown {
+  from { opacity: 0; transform: translate3d(0, -28px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbFadeLeft {
+  from { opacity: 0; transform: translate3d(-48px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbFadeRight {
+  from { opacity: 0; transform: translate3d(48px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
 @keyframes wbSlideUp {
   from { opacity: 0; transform: translate3d(0, 36px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbSlideLeft {
+  from { opacity: 0; transform: translate3d(-48px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbSlideRight {
+  from { opacity: 0; transform: translate3d(48px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbSweepLeft {
+  from { opacity: 0; transform: translate3d(-18vw, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbSweepRight {
+  from { opacity: 0; transform: translate3d(18vw, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbEdgeLeft {
+  from { opacity: 0; transform: translate3d(-32vw, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbEdgeRight {
+  from { opacity: 0; transform: translate3d(32vw, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbEdgeUp {
+  from { opacity: 0; transform: translate3d(0, 24vh, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbEdgeDown {
+  from { opacity: 0; transform: translate3d(0, -24vh, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
@@ -28,9 +85,86 @@ const WEBSITE_BLOCK_ANIMATION_CSS = `
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes wbPopIn {
+  0% { opacity: 0; transform: scale(0.82); }
+  72% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wbFlipUp {
+  from { opacity: 0; transform: perspective(1200px) rotateX(18deg) translate3d(0, 28px, 0); transform-origin: center bottom; }
+  to { opacity: 1; transform: perspective(1200px) rotateX(0deg) translate3d(0, 0, 0); transform-origin: center bottom; }
+}
+
+@keyframes wbDriftLeft {
+  from { opacity: 0; transform: translate3d(-82px, 14px, 0) scale(0.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes wbDriftRight {
+  from { opacity: 0; transform: translate3d(82px, 14px, 0) scale(0.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes wbDriftEdgeLeft {
+  from { opacity: 0; transform: translate3d(-34vw, 3vh, 0) scale(0.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes wbDriftEdgeRight {
+  from { opacity: 0; transform: translate3d(34vw, 3vh, 0) scale(0.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
 @keyframes wbFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes wbLightSpeedIn {
+  from { opacity: 0; transform: translate3d(72px, 0, 0) skewX(-18deg); }
+  60% { opacity: 1; transform: translate3d(-8px, 0, 0) skewX(8deg); }
+  80% { transform: translate3d(0, 0, 0) skewX(-4deg); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) skewX(0deg); }
+}
+
+@keyframes wbRotateInDownRight {
+  from { opacity: 0; transform: rotate3d(0, 0, 1, 16deg) translate3d(24px, -20px, 0); transform-origin: right bottom; }
+  to { opacity: 1; transform: rotate3d(0, 0, 1, 0deg) translate3d(0, 0, 0); transform-origin: right bottom; }
+}
+
+@keyframes wbRubberBand {
+  from { opacity: 0; transform: scale3d(0.9, 0.9, 1); }
+  30% { opacity: 1; transform: scale3d(1.16, 0.84, 1); }
+  40% { transform: scale3d(0.88, 1.12, 1); }
+  55% { transform: scale3d(1.08, 0.92, 1); }
+  70% { transform: scale3d(0.96, 1.04, 1); }
+  to { opacity: 1; transform: scale3d(1, 1, 1); }
+}
+
+@keyframes wbFloatSoft {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -12px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes wbPulseSoft {
+  0% { transform: scale(1); opacity: 0.82; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.82; }
+}
+
+@keyframes wbIconDoubleSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  28% { transform: rotate(220deg) scale(1.08); }
+  58% { transform: rotate(470deg) scale(1.14); }
+  82% { transform: rotate(720deg) scale(1.02); }
+  100% { transform: rotate(720deg) scale(1); }
+}
+
+@keyframes wbMarquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
 }
 `;
 
@@ -46,6 +180,187 @@ function ensureWebsiteBlockAnimationStyles() {
   style.id = WEBSITE_BLOCK_ANIMATION_STYLE_ID;
   style.textContent = WEBSITE_BLOCK_ANIMATION_CSS;
   document.head.appendChild(style);
+}
+
+function animationState(name) {
+  switch (String(name || "").trim()) {
+    case "fade-up":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(0, 28px, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "fade-down":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(0, -28px, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "slide-up":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(0, 36px, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "slide-left":
+    case "fade-left":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(48px, 0, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "slide-right":
+    case "fade-right":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(-48px, 0, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "edge-left":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(32vw, 0, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "edge-right":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(-32vw, 0, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "edge-up":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(0, 24vh, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "edge-down":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(0, -24vh, 0)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0)" },
+      };
+    case "blur-in":
+      return {
+        hidden: { opacity: 0, filter: "blur(14px)", transform: "scale(0.98)" },
+        visible: { opacity: 1, filter: "blur(0)", transform: "scale(1)" },
+      };
+    case "pop-in":
+      return {
+        hidden: { opacity: 0, transform: "scale(0.82)" },
+        visible: { opacity: 1, transform: "scale(1)" },
+      };
+    case "flip-up":
+      return {
+        hidden: { opacity: 0, transform: "perspective(1200px) rotateX(18deg) translate3d(0, 28px, 0)", transformOrigin: "center bottom" },
+        visible: { opacity: 1, transform: "perspective(1200px) rotateX(0deg) translate3d(0, 0, 0)", transformOrigin: "center bottom" },
+      };
+    case "drift-left":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(82px, 14px, 0) scale(0.98)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+      };
+    case "drift-right":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(-82px, 14px, 0) scale(0.98)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+      };
+    case "drift-edge-left":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(34vw, 3vh, 0) scale(0.96)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+      };
+    case "drift-edge-right":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(-34vw, 3vh, 0) scale(0.96)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+      };
+    case "zoom":
+      return {
+        hidden: { opacity: 0, transform: "scale(0.94)" },
+        visible: { opacity: 1, transform: "scale(1)" },
+      };
+    case "light-speed-in":
+      return {
+        hidden: { opacity: 0, transform: "translate3d(72px, 0, 0) skewX(-18deg)" },
+        visible: { opacity: 1, transform: "translate3d(0, 0, 0) skewX(0deg)" },
+      };
+    case "rotate-in-down-right":
+      return {
+        hidden: { opacity: 0, transform: "rotate3d(0, 0, 1, 16deg) translate3d(24px, -20px, 0)", transformOrigin: "right bottom" },
+        visible: { opacity: 1, transform: "rotate3d(0, 0, 1, 0deg) translate3d(0, 0, 0)", transformOrigin: "right bottom" },
+      };
+    case "rubber-band":
+      return {
+        hidden: { opacity: 0, transform: "scale3d(0.9, 0.9, 1)" },
+        visible: { opacity: 1, transform: "scale3d(1, 1, 1)" },
+      };
+    case "fade-in":
+      return {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1 },
+      };
+    default:
+      return { hidden: {}, visible: {} };
+  }
+}
+
+function ScrollReveal({ as: Tag = "div", animationName, delay = 0, speed = null, disabled = false, style, children }) {
+  const nodeRef = React.useRef(null);
+  const [visible, setVisible] = React.useState(!animationName);
+
+  React.useEffect(() => {
+    if (!animationName) {
+      setVisible(true);
+      return undefined;
+    }
+
+    if (typeof window === "undefined" || typeof window.IntersectionObserver !== "function") {
+      setVisible(true);
+      return undefined;
+    }
+
+    const node = nodeRef.current;
+    if (!node) return undefined;
+
+    const rect = node.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+    const isAlreadyVisible = rect.bottom > 0 && rect.right > 0 && rect.top < viewportHeight * 0.9 && rect.left < viewportWidth;
+    if (isAlreadyVisible) {
+      setVisible(true);
+      return undefined;
+    }
+
+    const observer = new window.IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((entry) => entry.isIntersecting || entry.intersectionRatio >= 0.18);
+        if (!hit) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      {
+        threshold: [0.18, 0.34],
+        rootMargin: "0px 0px -10% 0px",
+      },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [animationName]);
+
+  const hiddenStyle = !visible ? animationState(animationName).hidden : null;
+  const revealStyle = visible ? getAnimationStyle(animationName, delay, speed) : null;
+
+  return (
+    <Tag ref={nodeRef} style={{ ...style, ...(hiddenStyle || {}), ...(revealStyle || {}) }}>
+      {children}
+    </Tag>
+  );
+}
+
+function ambientMotionStyle(name, delay = 0) {
+  switch (String(name || "").trim()) {
+    case "float":
+      ensureWebsiteBlockAnimationStyles();
+      return { animation: `wbFloatSoft 7.2s ease-in-out ${Math.max(0, Number(delay || 0))}s infinite` };
+    case "pulse":
+      ensureWebsiteBlockAnimationStyles();
+      return { animation: `wbPulseSoft 4.8s ease-in-out ${Math.max(0, Number(delay || 0))}s infinite` };
+    default:
+      return {};
+  }
 }
 
 function asArray(value) {
@@ -93,6 +408,19 @@ function isCurrentNavLink(link, currentPageKey) {
 function shouldHighlightNavLink(link, currentPageKey) {
   if (isCurrentNavLink(link, currentPageKey)) return true;
   return !slugifyText(currentPageKey) && !!link?.highlighted;
+}
+
+function isSystemAsset(asset) {
+  const assetId = String(asset?.id || "").toLowerCase();
+  return assetId.startsWith("builtin-deco-") || assetId.startsWith("template-");
+}
+
+function pickDefaultAvatarSrc(assets) {
+  const imagePool = asArray(assets?.images).filter((asset) => asset?.src && !isSystemAsset(asset));
+  if (!imagePool.length) return "";
+
+  const namedAvatar = imagePool.find((asset) => /avatar|headshot|profile|portrait|founder|owner|ceo|team/i.test(`${asset?.name || ""} ${asset?.id || ""}`));
+  return namedAvatar?.src || imagePool[0]?.src || "";
 }
 
 function resolvePublishedNavHref(link, navigationContext) {
@@ -153,6 +481,66 @@ function heroBackground(props) {
   return { background: resolveHeroGradient(props) };
 }
 
+// Applies the same JS-driven parallax offset to both the background layer and the
+// [data-parallax-content] sibling element so they always move in perfect sync.
+function ParallaxSyncShell({ speed, bgStyle }) {
+  const shellRef = React.useRef(null);
+  const bgLayerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const shell = shellRef.current;
+    if (!shell) return undefined;
+    const section = shell.parentElement;
+    if (!section) return undefined;
+
+    let frame;
+    let mounted = true;
+
+    const update = () => {
+      if (!mounted) return;
+      const rect = section.getBoundingClientRect();
+      const vh = window.innerHeight || 900;
+      const s = Math.max(0, Math.min(1.4, Number(speed) || 0.34));
+      const maxTravel = Math.max(100, Math.min(360, Math.round(vh * 0.4)));
+      const offset = Math.max(-maxTravel, Math.min(maxTravel, (vh * 0.5 - rect.top - vh * 0.35) * s * 0.28));
+      const px = `${offset.toFixed(1)}px`;
+      if (bgLayerRef.current) bgLayerRef.current.style.transform = `translateY(${px})`;
+      // Apply same offset to content so text/images stay locked to the background
+      const contentEl = section.querySelector('[data-parallax-content="true"]');
+      if (contentEl) contentEl.style.transform = `translateY(${px})`;
+      frame = requestAnimationFrame(update);
+    };
+
+    frame = requestAnimationFrame(update);
+    return () => {
+      mounted = false;
+      if (frame) cancelAnimationFrame(frame);
+      if (bgLayerRef.current) bgLayerRef.current.style.transform = "";
+      const contentEl = section ? section.querySelector('[data-parallax-content="true"]') : null;
+      if (contentEl) contentEl.style.transform = "";
+    };
+  }, [speed]);
+
+  return (
+    <div ref={shellRef} aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+      <div
+        ref={bgLayerRef}
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: -240,
+          bottom: -240,
+          willChange: "transform",
+          pointerEvents: "none",
+          ...bgStyle,
+        }}
+      />
+    </div>
+  );
+}
+
 function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
   const layerRef = React.useRef(null);
 
@@ -163,37 +551,34 @@ function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
     const container = layer?.parentElement;
     if (!layer || !container) return undefined;
 
-    const scrollTarget = findScrollParent(container);
-    const usesWindowScroll = !scrollTarget || scrollTarget === window;
+    const usesContainFit = /contain/i.test(String(backgroundStyle?.backgroundSize || ""));
 
     let frame = 0;
+    let mounted = true;
 
     const updateOffset = () => {
-      frame = 0;
+      if (!mounted) return;
       const rect = container.getBoundingClientRect();
-      const scrollViewportRect = usesWindowScroll
-        ? { top: 0, height: window.innerHeight || 900 }
-        : scrollTarget.getBoundingClientRect();
-      const viewportHeight = scrollViewportRect.height || window.innerHeight || 900;
-      const viewportCenter = (scrollViewportRect.top || 0) + (viewportHeight / 2);
-      const distanceFromCenter = (rect.top + (rect.height / 2)) - viewportCenter;
-      const offset = Math.max(-260, Math.min(260, -distanceFromCenter * speed));
-      layer.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
-    };
-
-    const requestUpdate = () => {
-      if (frame) return;
+      const viewportHeight = window.innerHeight || 900;
+      const viewportCenter = viewportHeight / 2;
+      const numericSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 0.34;
+      const effectiveSpeed = Math.max(0, Math.min(1.4, numericSpeed));
+      const maxTravel = usesContainFit
+        ? Math.max(28, Math.min(80, Math.round(viewportHeight * 0.09)))
+        : Math.max(160, Math.min(420, Math.round(viewportHeight * 0.54)));
+      const offset = Math.max(
+        -maxTravel,
+        Math.min(maxTravel, (viewportCenter - rect.top - viewportHeight * 0.35) * effectiveSpeed * 0.28),
+      );
+      layer.style.transform = `translateY(${offset.toFixed(1)}px)`;
       frame = window.requestAnimationFrame(updateOffset);
     };
 
-    updateOffset();
-    scrollTarget?.addEventListener?.("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
+    frame = window.requestAnimationFrame(updateOffset);
 
     return () => {
+      mounted = false;
       if (frame) window.cancelAnimationFrame(frame);
-      scrollTarget?.removeEventListener?.("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
     };
   }, [speed, backgroundStyle?.backgroundImage, backgroundStyle?.backgroundPosition, backgroundStyle?.backgroundSize, backgroundStyle?.backgroundRepeat]);
 
@@ -202,7 +587,10 @@ function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
       ref={layerRef}
       style={{
         position: "absolute",
-        inset: "-18% 0",
+        left: 0,
+        right: 0,
+        top: -240,
+        bottom: -240,
         zIndex: 0,
         pointerEvents: "none",
         willChange: "transform",
@@ -211,7 +599,6 @@ function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
         backgroundSize: backgroundStyle?.backgroundSize || "cover",
         backgroundPosition: backgroundStyle?.backgroundPosition || "center center",
         backgroundRepeat: backgroundStyle?.backgroundRepeat || "no-repeat",
-        transform: "translate3d(0, 0, 0)",
       }}
     />
   );
@@ -230,11 +617,67 @@ export function getAnimationStyle(name, delay = 0, speed = null) {
         transform: "translate3d(0, 28px, 0)",
         animation: `wbFadeUp ${duration}s ease ${safeDelay}s forwards`,
       };
+    case "fade-down":
+      return {
+        opacity: 0,
+        transform: "translate3d(0, -28px, 0)",
+        animation: `wbFadeDown ${duration}s ease ${safeDelay}s forwards`,
+      };
     case "slide-up":
       return {
         opacity: 0,
         transform: "translate3d(0, 36px, 0)",
         animation: `wbSlideUp ${duration}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "slide-left":
+    case "fade-left":
+      return {
+        opacity: 0,
+        transform: "translate3d(-48px, 0, 0)",
+        animation: `${String(name || "").trim() === "fade-left" ? "wbFadeLeft" : "wbSlideLeft"} ${duration}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "slide-right":
+    case "fade-right":
+      return {
+        opacity: 0,
+        transform: "translate3d(48px, 0, 0)",
+        animation: `${String(name || "").trim() === "fade-right" ? "wbFadeRight" : "wbSlideRight"} ${duration}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "sweep-left":
+      return {
+        opacity: 0,
+        transform: "translate3d(-18vw, 0, 0)",
+        animation: `wbSweepLeft ${Math.max(duration, 1.15)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "sweep-right":
+      return {
+        opacity: 0,
+        transform: "translate3d(18vw, 0, 0)",
+        animation: `wbSweepRight ${Math.max(duration, 1.15)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "edge-left":
+      return {
+        opacity: 0,
+        transform: "translate3d(-32vw, 0, 0)",
+        animation: `wbEdgeLeft ${Math.max(duration, 1.2)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "edge-right":
+      return {
+        opacity: 0,
+        transform: "translate3d(32vw, 0, 0)",
+        animation: `wbEdgeRight ${Math.max(duration, 1.2)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "edge-up":
+      return {
+        opacity: 0,
+        transform: "translate3d(0, 24vh, 0)",
+        animation: `wbEdgeUp ${Math.max(duration, 1.1)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "edge-down":
+      return {
+        opacity: 0,
+        transform: "translate3d(0, -24vh, 0)",
+        animation: `wbEdgeDown ${Math.max(duration, 1.1)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
       };
     case "blur-in":
       return {
@@ -249,10 +692,66 @@ export function getAnimationStyle(name, delay = 0, speed = null) {
         transform: "scale(0.94)",
         animation: `wbZoom ${duration}s ease ${safeDelay}s forwards`,
       };
+    case "pop-in":
+      return {
+        opacity: 0,
+        transform: "scale(0.82)",
+        animation: `wbPopIn ${Math.max(duration, 0.65)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
     case "fade-in":
       return {
         opacity: 0,
         animation: `wbFadeIn ${duration}s ease ${safeDelay}s forwards`,
+      };
+    case "flip-up":
+      return {
+        opacity: 0,
+        transform: "perspective(1200px) rotateX(18deg) translate3d(0, 28px, 0)",
+        transformOrigin: "center bottom",
+        animation: `wbFlipUp ${Math.max(duration, 0.8)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "drift-left":
+      return {
+        opacity: 0,
+        transform: "translate3d(-82px, 14px, 0) scale(0.98)",
+        animation: `wbDriftLeft ${Math.max(duration, 0.9)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "drift-right":
+      return {
+        opacity: 0,
+        transform: "translate3d(82px, 14px, 0) scale(0.98)",
+        animation: `wbDriftRight ${Math.max(duration, 0.9)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "drift-edge-left":
+      return {
+        opacity: 0,
+        transform: "translate3d(-34vw, 3vh, 0) scale(0.96)",
+        animation: `wbDriftEdgeLeft ${Math.max(duration, 1.15)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "drift-edge-right":
+      return {
+        opacity: 0,
+        transform: "translate3d(34vw, 3vh, 0) scale(0.96)",
+        animation: `wbDriftEdgeRight ${Math.max(duration, 1.15)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "light-speed-in":
+      return {
+        opacity: 0,
+        transform: "translate3d(72px, 0, 0) skewX(-18deg)",
+        animation: `wbLightSpeedIn ${Math.max(duration, 0.7)}s cubic-bezier(0.22, 1, 0.36, 1) ${safeDelay}s forwards`,
+      };
+    case "rotate-in-down-right":
+      return {
+        opacity: 0,
+        transform: "rotate3d(0, 0, 1, 16deg) translate3d(24px, -20px, 0)",
+        transformOrigin: "right bottom",
+        animation: `wbRotateInDownRight ${Math.max(duration, 0.7)}s ease ${safeDelay}s forwards`,
+      };
+    case "rubber-band":
+      return {
+        opacity: 0,
+        transform: "scale3d(0.9, 0.9, 1)",
+        animation: `wbRubberBand ${Math.max(duration, 0.9)}s ease ${safeDelay}s forwards`,
       };
     default:
       return {};
@@ -330,6 +829,7 @@ function headingTypography(props) {
     fontWeight: props?.headlineFontWeight || "600",
     textAlign: props?.headlineAlignment || "center",
     color: props?.headlineColor || "inherit",
+    ...(props?.headlineLineHeight ? { lineHeight: props.headlineLineHeight } : {}),
   };
 }
 
@@ -337,6 +837,7 @@ function bodyTypography(props) {
   return {
     fontFamily: props?.fontFamily || props?.bodyFontFamily || "inherit",
     fontWeight: props?.fontWeight || "400",
+    ...(props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight ? { lineHeight: props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight } : {}),
   };
 }
 
@@ -416,7 +917,8 @@ function normalizeOverlayLayoutProps(props, layout, hasFloatingImage = false) {
   const contentYDefault = hasFloatingImage ? (layout.contentY ?? 50) : layout.contentY;
   const contentY = clampValue(Number.isFinite(Number(props?.contentY)) ? Number(props.contentY) : contentYDefault, 0, 100);
   const contentWidth = Math.max(240, Number.isFinite(Number(props?.contentWidth)) ? Number(props.contentWidth) : layout.contentWidth);
-  const contentHeight = Math.max(100, Number.isFinite(Number(props?.contentHeight)) ? Number(props.contentHeight) : layout.contentHeight);
+  const contentHeightFloor = (props?.headline || props?.subheadline || props?.ctaText) ? 420 : 100;
+  const contentHeight = Math.max(contentHeightFloor, Number.isFinite(Number(props?.contentHeight)) ? Number(props.contentHeight) : layout.contentHeight);
   const floatingX = clampValue(Number.isFinite(Number(props?.floatingX)) ? Number(props.floatingX) : layout.floatingX, 0, 100);
   const floatingY = clampValue(Number.isFinite(Number(props?.floatingY)) ? Number(props.floatingY) : layout.floatingY, 0, 100);
   const floatingWidth = Math.max(120, Number.isFinite(Number(props?.floatingWidth)) ? Number(props.floatingWidth) : layout.floatingWidth);
@@ -502,7 +1004,7 @@ function heroVariantStyles(props, compact) {
   if (variant === "split") {
     return {
       shell: {
-        border: "1px solid rgba(148,163,184,0.22)",
+        border: "none",
         boxShadow: "0 24px 60px rgba(2,6,23,0.22)",
         backgroundBlendMode: "screen, normal",
       },
@@ -541,7 +1043,7 @@ function heroVariantStyles(props, compact) {
   if (variant === "editorial") {
     return {
       shell: {
-        border: "1px solid rgba(255,255,255,0.42)",
+        border: "none",
         boxShadow: "0 28px 72px rgba(120,98,67,0.18)",
         backgroundBlendMode: "multiply, normal",
       },
@@ -581,7 +1083,7 @@ function heroVariantStyles(props, compact) {
   if (variant === "framed") {
     return {
       shell: {
-        border: "1px solid rgba(203,213,225,0.9)",
+        border: "none",
         boxShadow: "0 22px 48px rgba(15,23,42,0.08)",
       },
       content: {
@@ -617,7 +1119,7 @@ function heroVariantStyles(props, compact) {
 
   return {
     shell: {
-      border: "1px solid rgba(125,211,252,0.24)",
+      border: "none",
       boxShadow: "0 30px 80px rgba(14,165,233,0.16)",
     },
     content: {
@@ -1451,15 +1953,22 @@ function statsVariantStyles(props, compact) {
   const border = props?.borderColor || "rgba(226,232,240,0.92)";
   const cardBackground = props?.cardBackgroundColor || "rgba(255,255,255,0.92)";
   const accent = props?.accentColor || "#0ea5e9";
+  const statsGap = compact ? Math.max(10, Number(props?.statsCardGap ?? 14)) : Math.max(12, Number(props?.statsCardGap ?? 18));
+  const statsCardMinWidth = Math.max(140, Number(props?.statsCardMinWidth ?? 220));
+  const sectionTitleColor = props?.sectionTitleColor || text;
+  const sectionSubtitleColor = props?.sectionSubtitleColor || (variant === "spotlight-orbs" || variant === "split-scoreboard" ? "rgba(226,232,240,0.8)" : "#64748b");
+  const numberColor = props?.numberColor || (variant === "spotlight-orbs" || variant === "split-scoreboard" ? "#ffffff" : text);
+  const labelColor = props?.labelColor || accent;
   const subtle = variant === "spotlight-orbs" || variant === "split-scoreboard"
     ? "rgba(226,232,240,0.8)"
     : "#64748b";
+  const detailColor = props?.detailColor || subtle;
 
   if (variant === "spotlight-orbs") {
     return {
-      section: { background: props?.backgroundColor || "radial-gradient(circle at top,#1d4ed8 0%,#0f172a 58%,#020617 100%)", borderColor: border },
+      section: { background: props?.backgroundColor || "radial-gradient(circle at top,#1d4ed8 0%,#0f172a 58%,#020617 100%)", borderColor: border, sectionTitleColor, sectionSubtitleColor },
       header: { maxWidth: 760, margin: "0 auto", textAlign: "center" },
-      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit, minmax(220px, 1fr))", gap: compact ? 14 : 18, marginTop: 20 },
+      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(auto-fit, minmax(${statsCardMinWidth}px, 1fr))`, gap: statsGap, marginTop: 20 },
       cardWrap: () => ({}),
       card: (index) => ({
         position: "relative",
@@ -1473,20 +1982,18 @@ function statsVariantStyles(props, compact) {
         placeItems: "center",
         textAlign: "center",
       }),
-      number: { margin: 0, fontSize: compact ? 34 : 46, lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: "#ffffff" },
-      label: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: accent },
-      detail: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.7, color: subtle },
+      number: { margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || 34)) : Math.max(20, Number(props?.numberSize || 46)), lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
+      label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     };
   }
 
   if (variant === "split-scoreboard") {
     return {
-      section: { background: props?.backgroundColor || "linear-gradient(135deg,#081120,#17304d)", borderColor: border },
-      header: { maxWidth: compact ? "100%" : 420, textAlign: compact ? "center" : "left" },
-      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(280px, 1.15fr) minmax(0, 0.85fr)", gap: compact ? 14 : 18, marginTop: compact ? 20 : 0, alignItems: "start" },
-      shell: { display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0, 0.95fr) minmax(0, 1.05fr)", gap: compact ? 20 : 28, alignItems: "start" },
-      cardsShell: { display: "grid", gap: compact ? 12 : 14 },
-      cardWrap: (index) => index === 0 ? { gridRow: compact ? "auto" : "span 2" } : {},
+      section: { background: props?.backgroundColor || "linear-gradient(135deg,#081120,#17304d)", borderColor: border, sectionTitleColor, sectionSubtitleColor },
+      header: { maxWidth: compact ? "100%" : 760, margin: "0 auto", textAlign: compact ? "center" : "center" },
+      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(auto-fit, minmax(${statsCardMinWidth}px, 1fr))`, gap: statsGap, marginTop: 20, alignItems: "stretch" },
+      cardWrap: (index) => index === 0 && !compact ? { gridColumn: "span 2" } : {},
       card: (index) => ({
         padding: compact ? "18px 18px" : (index === 0 ? "26px 24px" : "20px 20px"),
         minHeight: compact ? "auto" : (index === 0 ? 260 : 0),
@@ -1495,17 +2002,17 @@ function statsVariantStyles(props, compact) {
         background: index === 0 ? `linear-gradient(180deg, ${colorWithAlpha(accent, 0.34)}, ${cardBackground})` : cardBackground,
         boxShadow: index === 0 ? "0 26px 58px rgba(2,6,23,0.34)" : "0 18px 36px rgba(2,6,23,0.22)",
       }),
-      number: (index) => ({ margin: 0, fontSize: compact ? (index === 0 ? 40 : 28) : (index === 0 ? 68 : 34), lineHeight: 0.96, fontWeight: 600, letterSpacing: "-0.05em", color: "#ffffff" }),
-      label: { margin: "10px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: accent },
-      detail: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.7, color: subtle },
+      number: (index) => ({ margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || (index === 0 ? 40 : 28))) : Math.max(20, Number(props?.numberSize || (index === 0 ? 68 : 34))), lineHeight: 0.96, fontWeight: 600, letterSpacing: "-0.05em", color: numberColor }),
+      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     };
   }
 
   if (variant === "minimal-ticker") {
     return {
-      section: { background: props?.backgroundColor || "linear-gradient(180deg,#ffffff,#f8fafc)", borderColor: border },
+      section: { background: props?.backgroundColor || "linear-gradient(180deg,#ffffff,#f8fafc)", borderColor: border, sectionTitleColor, sectionSubtitleColor },
       header: { maxWidth: 680, margin: "0 auto", textAlign: "center" },
-      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit, minmax(200px, 1fr))", gap: compact ? 10 : 12, marginTop: 18 },
+      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(auto-fit, minmax(${Math.max(160, Number(props?.statsCardMinWidth ?? 200))}px, 1fr))`, gap: statsGap, marginTop: 18 },
       cardWrap: () => ({}),
       card: () => ({
         padding: compact ? "14px 16px" : "16px 18px",
@@ -1517,18 +2024,18 @@ function statsVariantStyles(props, compact) {
         alignItems: "center",
         boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
       }),
-      number: { margin: 0, fontSize: compact ? 26 : 30, lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: text },
-      label: { margin: 0, fontSize: compact ? 13 : 14, lineHeight: 1.5, fontWeight: 600, color: text },
-      detail: { margin: 0, fontSize: compact ? 12 : 13, lineHeight: 1.6, color: subtle },
+      number: { margin: 0, fontSize: compact ? Math.max(16, Number(props?.numberSize || 26)) : Math.max(18, Number(props?.numberSize || 30)), lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
+      label: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, color: labelColor },
+      detail: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.detailSize || 12)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.6, color: detailColor },
     };
   }
 
   if (variant === "data-ribbon") {
     return {
-      section: { background: props?.backgroundColor || "linear-gradient(135deg,#f8fbff,#eef7ff)", borderColor: border },
+      section: { background: props?.backgroundColor || "linear-gradient(135deg,#f8fbff,#eef7ff)", borderColor: border, sectionTitleColor, sectionSubtitleColor },
       header: { maxWidth: compact ? "100%" : 360, textAlign: compact ? "center" : "left" },
       shell: { display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(260px, 0.8fr) minmax(0, 1.2fr)", gap: compact ? 18 : 28, alignItems: "start" },
-      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit, minmax(180px, 1fr))", gap: compact ? 10 : 12 },
+      grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(auto-fit, minmax(${Math.max(160, Number(props?.statsCardMinWidth ?? 180))}px, 1fr))`, gap: statsGap },
       cardWrap: () => ({}),
       card: (index) => ({
         padding: compact ? "18px 16px" : "22px 18px",
@@ -1540,16 +2047,16 @@ function statsVariantStyles(props, compact) {
         overflow: "hidden",
       }),
       accentBar: { position: "absolute", left: 14, right: 14, top: 0, height: 4, borderRadius: 999, background: `linear-gradient(90deg, ${accent}, ${colorWithAlpha(accent, 0.32)})` },
-      number: { margin: "10px 0 0", fontSize: compact ? 28 : 34, lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.04em", color: text },
-      label: { margin: "10px 0 0", fontSize: compact ? 12 : 13, lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: accent },
-      detail: { margin: "10px 0 0", fontSize: compact ? 12 : 13, lineHeight: 1.65, color: subtle },
+      number: { margin: "10px 0 0", fontSize: compact ? Math.max(16, Number(props?.numberSize || 28)) : Math.max(18, Number(props?.numberSize || 34)), lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
+      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 12)) : Math.max(10, Number(props?.labelSize || 13)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: labelColor },
+      detail: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 12)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.65, color: detailColor },
     };
   }
 
   return {
-    section: { background: props?.backgroundColor || "linear-gradient(180deg,#fffaf2,#f6ead8)", borderColor: border },
+    section: { background: props?.backgroundColor || "linear-gradient(180deg,#fffaf2,#f6ead8)", borderColor: border, sectionTitleColor, sectionSubtitleColor },
     header: { maxWidth: 720, margin: "0 auto", textAlign: "center" },
-    grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit, minmax(220px, 1fr))", gap: compact ? 14 : 18, marginTop: 18 },
+    grid: { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(auto-fit, minmax(${statsCardMinWidth}px, 1fr))`, gap: statsGap, marginTop: 18 },
     cardWrap: () => ({}),
     card: (index) => ({
       padding: compact ? "18px 18px" : "22px 22px",
@@ -1560,9 +2067,9 @@ function statsVariantStyles(props, compact) {
       position: "relative",
       overflow: "hidden",
     }),
-    number: { margin: 0, fontSize: compact ? 36 : 48, lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.05em", color: text },
-    label: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: accent },
-    detail: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.7, color: subtle },
+    number: { margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || 36)) : Math.max(20, Number(props?.numberSize || 48)), lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.05em", color: numberColor },
+    label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+    detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     accentBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${accent}, ${colorWithAlpha(accent, 0.3)})` },
   };
 }
@@ -2273,7 +2780,10 @@ function findScrollParent(node) {
   while (current) {
     const style = window.getComputedStyle(current);
     const overflowY = `${style.overflowY || ""} ${style.overflow || ""}`;
-    if (/(auto|scroll|overlay)/i.test(overflowY)) {
+    const verticalRange = Math.max(0, current.scrollHeight - current.clientHeight);
+    const horizontalRange = Math.max(0, current.scrollWidth - current.clientWidth);
+    const canScroll = verticalRange > 40 || horizontalRange > 40;
+    if (/(auto|scroll|overlay)/i.test(overflowY) && canScroll) {
       return current;
     }
     current = current.parentElement;
@@ -2454,6 +2964,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
   const fixedLeft = editor ? fixedFrame.left : (isFullWidthNav ? 0 : fixedFrame.left);
   const fixedWidth = editor ? (fixedFrame.width || undefined) : (isFullWidthNav ? "100vw" : (fixedFrame.width || "100%"));
   const brandMarkSize = compact ? 36 : Number(blockProps.logoWidth) || 44;
+  const shouldShowBrandMark = blockProps.showLogo || !!logoSrc;
 
   const shellStyle = {
     ...navTheme.shell,
@@ -2496,7 +3007,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
   const renderNavSection = () => (
     <section ref={shellRef} style={asStyleObject(shellStyle)}>
       <div style={asStyleObject(navTheme.brandRow)}>
-        {blockProps.showLogo ? (
+        {shouldShowBrandMark ? (
           <BrandMark
             brand={blockProps.brand}
             logoSrc={logoSrc}
@@ -2698,6 +3209,9 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const canvasRef = React.useRef(null);
   const latestPropsRef = React.useRef(blockProps || {});
   const latestLayersRef = React.useRef([]);
+  const draftLayersRef = React.useRef(null);
+  const [draftLayers, setDraftLayers] = React.useState(null);
+  const [canvasGuides, setCanvasGuides] = React.useState({ showX: false, showY: false, active: false });
   const [canvasWidth, setCanvasWidth] = React.useState(0);
   const gridSize = compact ? 20 : 24;
   const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
@@ -2727,7 +3241,9 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     }))
     .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
-  const bounds = layers.reduce((acc, layer) => {
+  const visibleLayers = draftLayers || layers;
+
+  const bounds = visibleLayers.reduce((acc, layer) => {
     const x = Number(layer?.x || 0);
     const y = Number(layer?.y || 0);
     const width = Number(layer?.width || 0);
@@ -2756,7 +3272,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
   React.useEffect(() => {
     latestPropsRef.current = blockProps || {};
-    latestLayersRef.current = layers;
+    if (!dragRef.current) latestLayersRef.current = layers;
   }, [blockProps, layers]);
 
   React.useEffect(() => {
@@ -2842,7 +3358,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
       const dx = event.clientX - current.startX;
       const dy = event.clientY - current.startY;
-      const currentLayers = latestLayersRef.current;
+      const currentLayers = current.baseLayers || latestLayersRef.current;
 
       const nextImages = currentLayers.map((layer, layerIndex) => {
         if (layerIndex !== current.layerIndex) return layer;
@@ -2875,30 +3391,54 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
           rawHeight = clampValue(rawHeight, 96, current.rect.height);
           rawX = clampValue(rawX, 0, Math.max(0, current.rect.width - rawWidth));
           rawY = clampValue(rawY, 0, Math.max(0, current.rect.height - rawHeight));
+          rawWidth = snapEnabled ? snapToGrid(rawWidth, gridSize) : rawWidth;
+          rawHeight = snapEnabled ? snapToGrid(rawHeight, gridSize) : rawHeight;
+          rawX = snapEnabled ? snapToGrid(rawX, gridSize) : rawX;
+          rawY = snapEnabled ? snapToGrid(rawY, gridSize) : rawY;
+          const guideState = getPixelGuideState(rawX, rawY, rawWidth, rawHeight, current.rect);
+          rawX = guideState.snappedX;
+          rawY = guideState.snappedY;
 
           return {
             ...layer,
-            x: snapEnabled ? snapToGrid(rawX, gridSize) : rawX,
-            y: snapEnabled ? snapToGrid(rawY, gridSize) : rawY,
-            width: snapEnabled ? snapToGrid(rawWidth, gridSize) : rawWidth,
-            height: snapEnabled ? snapToGrid(rawHeight, gridSize) : rawHeight,
+            x: rawX,
+            y: rawY,
+            width: rawWidth,
+            height: rawHeight,
           };
         }
 
-        const rawX = clampValue(current.baseX + dx, 0, Math.max(0, current.rect.width - current.baseWidth));
-        const rawY = clampValue(current.baseY + dy, 0, Math.max(0, current.rect.height - current.baseHeight));
+        let rawX = clampValue(current.baseX + dx, 0, Math.max(0, current.rect.width - current.baseWidth));
+        let rawY = clampValue(current.baseY + dy, 0, Math.max(0, current.rect.height - current.baseHeight));
+        rawX = snapEnabled ? snapToGrid(rawX, gridSize) : rawX;
+        rawY = snapEnabled ? snapToGrid(rawY, gridSize) : rawY;
+        const guideState = getPixelGuideState(rawX, rawY, current.baseWidth, current.baseHeight, current.rect);
+        rawX = guideState.snappedX;
+        rawY = guideState.snappedY;
         return {
           ...layer,
-          x: snapEnabled ? snapToGrid(rawX, gridSize) : rawX,
-          y: snapEnabled ? snapToGrid(rawY, gridSize) : rawY,
+          x: rawX,
+          y: rawY,
         };
       });
 
-      applyLayerUpdate(nextImages);
+      const activeLayer = nextImages[current.layerIndex];
+      const guideState = activeLayer
+        ? getPixelGuideState(Number(activeLayer.x || 0), Number(activeLayer.y || 0), Number(activeLayer.width || 0), Number(activeLayer.height || 0), current.rect)
+        : { showX: false, showY: false };
+      latestLayersRef.current = nextImages;
+      draftLayersRef.current = nextImages;
+      setDraftLayers(nextImages);
+      setCanvasGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
     };
 
     const handleUp = () => {
+      const nextLayers = draftLayersRef.current;
       dragRef.current = null;
+      draftLayersRef.current = null;
+      setDraftLayers(null);
+      setCanvasGuides({ showX: false, showY: false, active: false });
+      if (nextLayers) applyLayerUpdate(nextLayers);
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -2937,6 +3477,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
       startX: event.clientX,
       startY: event.clientY,
       rect,
+      baseLayers: latestLayersRef.current,
       baseX: Number(layer.x || 0),
       baseY: Number(layer.y || 0),
       baseWidth: Number(layer.width || 200),
@@ -3044,7 +3585,8 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
             backgroundSize: `${gridSize}px ${gridSize}px`,
           }}
         >
-          {layers.map((layer, idx) => (
+          {editor ? renderCanvasCenterGuides(canvasGuides) : null}
+          {visibleLayers.map((layer, idx) => (
             <div
               key={layer.id || `${idx}`}
               data-image-layer={idx}
@@ -3173,7 +3715,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   );
 }
 
-function EditableImageBlock({ props, imageSrc, compact, editor = false, onChangeBlock }) {
+function EditableImageBlock({ props, imageSrc, compact, editor = false, animationPreview = false, onChangeBlock }) {
   const resizeRef = React.useRef(null);
   const figureRef = React.useRef(null);
   const latestPropsRef = React.useRef(props || {});
@@ -3387,7 +3929,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, onChange
     <section
       style={{
         ...fullWidthStyle(fullWidthProps, compact, editor),
-        ...getAnimationStyle(props?.sectionAnimation, props?.sectionAnimationDelay || 0, props?.sectionAnimationSpeed),
+        ...((!editor || animationPreview) ? getAnimationStyle(props?.sectionAnimation, props?.sectionAnimationDelay || 0, props?.sectionAnimationSpeed) : {}),
         padding: 0,
         marginTop: 0,
         marginBottom: 0,
@@ -3487,7 +4029,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, onChange
                   lineHeight: 1.08,
                   fontWeight: Math.min(800, Number(props?.headlineFontWeight || 700) || 700),
                   fontFamily: props?.headlineFontFamily || "inherit",
-                  ...getAnimationStyle(props?.textAnimation, props?.textAnimationDelay || 0, props?.textAnimationSpeed),
+                  ...((!editor || animationPreview) ? getAnimationStyle(props?.textAnimation, props?.textAnimationDelay || 0, props?.textAnimationSpeed) : {}),
                   outline: editor ? "1px dashed rgba(255,255,255,0.45)" : "none",
                   borderRadius: 10,
                   padding: editor ? "6px 8px" : 0,
@@ -3511,7 +4053,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, onChange
                     lineHeight: 1.5,
                     fontWeight: Math.min(700, Number(props?.fontWeight || 400) || 400),
                     fontFamily: props?.fontFamily || props?.headlineFontFamily || "inherit",
-                    ...getAnimationStyle(props?.subheadlineAnimation, props?.subheadlineAnimationDelay || 0, props?.subheadlineAnimationSpeed),
+                    ...((!editor || animationPreview) ? getAnimationStyle(props?.subheadlineAnimation, props?.subheadlineAnimationDelay || 0, props?.subheadlineAnimationSpeed) : {}),
                     outline: editor ? "1px dashed rgba(255,255,255,0.35)" : "none",
                     borderRadius: 10,
                     padding: editor ? "6px 8px" : 0,
@@ -3907,6 +4449,129 @@ function ColumnEditorCard({
   );
 }
 
+function FAQAccordionItems({ items, compact, editor = false, props, openItems, onToggleItem, onPatchItem, propPrefix = "items" }) {
+  const sourceSplitVariant = props.faqVariant === "source-split";
+  const sourceHeaderBackground = "linear-gradient(34deg, rgba(13, 141, 222, 0.2), rgba(8, 140, 202, 0.09))";
+  const sourceArrowBackground = props.arrowBackgroundColor || "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)";
+  return (
+    <div style={sharedStyles.stack}>
+      {items.map((item, idx) => {
+        const isOpen = openItems.includes(idx);
+        return (
+          <ScrollReveal
+            key={item.id || `${item.question}-${idx}`}
+            animationName={sourceSplitVariant ? (props.faqAnimation || "fade-up") : "fade-up"}
+            delay={(sourceSplitVariant ? Number(props.faqAnimationDelay || 0) : 0) + (idx * 0.06)}
+            speed={sourceSplitVariant ? props.faqAnimationSpeed : undefined}
+            disabled={editor}
+            style={{
+              ...sharedStyles.faqItem,
+              ...(sourceSplitVariant ? {
+                background: "rgba(3, 18, 28, 0.16)",
+                border: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+                borderRadius: 15,
+                overflow: "hidden",
+                padding: 0,
+                boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+                gap: 0,
+                marginBottom: 15,
+              } : {
+                background: props.itemBackgroundColor || sharedStyles.faqItem.background,
+                border: `1px solid ${props.itemBorderColor || props.borderColor || "#cbd5e1"}`,
+              }),
+            }}
+          >
+            <div style={{
+              ...sharedStyles.faqTrigger,
+              ...(sourceSplitVariant ? {
+                display: "grid",
+                gridTemplateColumns: `${compact ? 36 : 40}px minmax(0, 1fr)`,
+                alignItems: "center",
+                gap: compact ? 14 : 20,
+                padding: compact ? "20px" : "30px",
+                background: sourceHeaderBackground,
+              } : {}),
+            }}>
+              <button
+                type="button"
+                onClick={() => onToggleItem(idx)}
+                style={{
+                  ...sharedStyles.faqChevronButton,
+                  color: props.chevronColor || "#2563eb",
+                  ...(sourceSplitVariant ? {
+                    width: compact ? 44 : 52,
+                    height: compact ? 44 : 52,
+                    alignSelf: "center",
+                    justifySelf: "start",
+                    flex: "0 0 auto",
+                    borderRadius: 6,
+                    background: sourceArrowBackground,
+                    boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+                  } : {}),
+                }}
+                aria-expanded={isOpen}
+                aria-label={isOpen ? "Collapse FAQ item" : "Expand FAQ item"}
+              >
+                <span style={{ ...sharedStyles.faqChevron, color: sourceSplitVariant ? "#ffffff" : (props.chevronColor || "#2563eb"), ...(sourceSplitVariant ? { fontSize: compact ? 18 : 22, fontWeight: 800, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" } : {}) }}>
+                  {isOpen ? <FaArrowDown /> : <FaArrowRight />}
+                </span>
+              </button>
+              <div
+                data-website-inline-editor="true"
+                data-text-prop={`${propPrefix}.${idx}.question`}
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => onPatchItem(idx, { question: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={{
+                  ...sharedStyles.faqQ,
+                  color: props.questionColor || (sourceSplitVariant ? "#ffffff" : "#0f172a"),
+                  fontSize: compact ? Math.max(17, Number(props.questionFontSize || 18) - 1) : Number(props.questionFontSize || 18),
+                  fontWeight: props.questionFontWeight || (sourceSplitVariant ? "700" : "inherit"),
+                  fontFamily: sourceSplitVariant ? "Poppins, sans-serif" : undefined,
+                  lineHeight: props.questionLineHeight || (sourceSplitVariant ? "23.4px" : undefined),
+                  letterSpacing: sourceSplitVariant ? "0.3px" : undefined,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: sourceSplitVariant ? 10 : 8,
+                  padding: editor ? "4px 6px" : 0,
+                  flex: 1,
+                  minWidth: 0,
+                  cursor: editor ? "text" : "default",
+                  boxSizing: "border-box",
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(item.question) }}
+              />
+            </div>
+            {isOpen ? (
+              <div
+                data-website-inline-editor="true"
+                data-text-prop={`${propPrefix}.${idx}.answer`}
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => onPatchItem(idx, { answer: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={{
+                  ...sharedStyles.faqA,
+                  color: props.answerColor || props.textColor || "#475569",
+                  fontSize: compact ? Math.max(12, Number(props.answerFontSize || MIN_TEXT_SIZE) - 1) : Number(props.answerFontSize || MIN_TEXT_SIZE),
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: sourceSplitVariant ? 15 : 8,
+                  padding: editor ? "6px 8px" : (sourceSplitVariant ? "30px" : 0),
+                  ...(sourceSplitVariant ? {
+                    borderTop: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+                    fontFamily: "Inter, sans-serif",
+                    lineHeight: props.answerLineHeight || "28.8px",
+                    background: "rgba(2, 12, 18, 0.34)",
+                  } : {}),
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(item.answer) }}
+              />
+            ) : null}
+          </ScrollReveal>
+        );
+      })}
+    </div>
+  );
+}
+
 function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sectionAnimationStyle, assets }) {
   const sourceItems = asArray(props.items).map((item, idx) => {
     const question = item?.question || item?.heading || item?.q || `Question ${idx + 1}`;
@@ -3969,7 +4634,6 @@ function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sect
   }
 
   const faqOuterStyle = {
-    ...sectionAnimationStyle,
     width: "100%",
     borderRadius: compact ? 16 : 22,
     padding: compact ? "20px" : scaleBoxPadding("30px", spacingMultiplier(props)),
@@ -3991,7 +4655,7 @@ function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sect
   };
 
   return (
-    <section style={asStyleObject(faqOuterStyle)}>
+    <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqOuterStyle)}>
       <div style={asStyleObject(faqPanelStyle)}>
       <h2
         data-website-inline-editor="true"
@@ -4013,77 +4677,418 @@ function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sect
         }}
         dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Questions") }}
       />
-      <div style={sharedStyles.stack}>
-        {items.map((item, idx) => {
-          const isOpen = editor || openItems.includes(idx);
-          return (
-            <div
-              key={item.id || `${item.question}-${idx}`}
-              style={{
-                ...sharedStyles.faqItem,
-                ...getAnimationStyle("fade-up", idx * 0.06),
-                background: props.itemBackgroundColor || sharedStyles.faqItem.background,
-                border: `1px solid ${props.itemBorderColor || props.borderColor || "#cbd5e1"}`,
-              }}
+      <FAQAccordionItems items={items} compact={compact} editor={editor} props={props} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="items" />
+      </div>
+    </ScrollReveal>
+  );
+}
+
+function resolveSplitFaqBlockProps(props = {}) {
+  return {
+    ...(props.faqBlock || {}),
+    items: asArray(props.faqBlock?.items || props.items).map((item, idx) => {
+      const question = item?.question || item?.heading || item?.q || `Question ${idx + 1}`;
+      const answer = item?.answer || item?.content || item?.a || "Answer";
+      return {
+        ...item,
+        id: item?.id || `split-faq-item-${idx}`,
+        question,
+        answer,
+        heading: question,
+        content: answer,
+      };
+    }),
+    faqStartCollapsed: props.faqBlock?.faqStartCollapsed ?? props.faqStartCollapsed,
+    faqAllowMultipleOpen: props.faqBlock?.faqAllowMultipleOpen ?? props.faqAllowMultipleOpen,
+    itemBackgroundColor: props.faqBlock?.itemBackgroundColor ?? props.itemBackgroundColor,
+    itemBorderColor: props.faqBlock?.itemBorderColor ?? props.itemBorderColor,
+    arrowBackgroundColor: props.faqBlock?.arrowBackgroundColor ?? props.arrowBackgroundColor,
+    chevronColor: props.faqBlock?.chevronColor ?? props.chevronColor,
+    questionColor: props.faqBlock?.questionColor ?? props.questionColor,
+    answerColor: props.faqBlock?.answerColor ?? props.answerColor,
+    questionFontWeight: props.faqBlock?.questionFontWeight ?? props.questionFontWeight,
+    questionFontSize: props.faqBlock?.questionFontSize ?? props.questionFontSize,
+    answerFontSize: props.faqBlock?.answerFontSize ?? props.answerFontSize,
+    questionLineHeight: props.faqBlock?.questionLineHeight ?? props.questionLineHeight,
+    answerLineHeight: props.faqBlock?.answerLineHeight ?? props.answerLineHeight,
+    faqVariant: props.faqBlock?.faqVariant ?? props.faqVariant ?? "source-split",
+    faqAnimation: props.faqBlock?.faqAnimation ?? props.faqAnimation ?? "fade-up",
+    faqAnimationDelay: props.faqBlock?.faqAnimationDelay ?? props.faqAnimationDelay ?? 0.18,
+    faqAnimationSpeed: props.faqBlock?.faqAnimationSpeed ?? props.faqAnimationSpeed ?? 0.9,
+    sectionAnimation: props.faqBlock?.sectionAnimation ?? "fade-up",
+    sectionAnimationDelay: props.faqBlock?.sectionAnimationDelay ?? 0.12,
+    sectionAnimationSpeed: props.faqBlock?.sectionAnimationSpeed ?? 0.9,
+    faqPanelBackgroundColor: props.faqBlock?.faqPanelBackgroundColor ?? props.faqPanelBackgroundColor,
+    faqPanelBorderColor: props.faqBlock?.faqPanelBorderColor ?? props.faqPanelBorderColor,
+    faqMaxWidth: props.faqBlock?.faqMaxWidth ?? props.faqMaxWidth,
+  };
+}
+
+function resolveSplitHeadlineBlockProps(props = {}) {
+  return {
+    ...(props.headlineBlock || {}),
+    content: props.headlineBlock?.content ?? props.headline ?? "",
+    animation: props.headlineBlock?.animation ?? props.textAnimation ?? "fade-up",
+    animationDelay: props.headlineBlock?.animationDelay ?? props.textAnimationDelay ?? 0,
+    animationSpeed: props.headlineBlock?.animationSpeed ?? props.textAnimationSpeed ?? 0.8,
+    fontSize: props.headlineBlock?.fontSize ?? props.headlineFontSize ?? 48,
+    lineHeight: props.headlineBlock?.lineHeight ?? props.headlineLineHeight ?? 1.2,
+    fontFamily: props.headlineBlock?.fontFamily ?? props.headlineFontFamily ?? "Poppins, sans-serif",
+    fontWeight: props.headlineBlock?.fontWeight ?? props.headlineFontWeight ?? "400",
+    color: props.headlineBlock?.color ?? props.headlineColor ?? "#61ce70",
+    alignment: props.headlineBlock?.alignment ?? props.headlineAlignment ?? "left",
+  };
+}
+
+function resolveSplitBodyBlockProps(props = {}) {
+  return {
+    ...(props.bodyBlock || {}),
+    content: props.bodyBlock?.content ?? props.subheadline ?? "",
+    animation: props.bodyBlock?.animation ?? props.subheadlineAnimation ?? "fade-in",
+    animationDelay: props.bodyBlock?.animationDelay ?? props.subheadlineAnimationDelay ?? 0.12,
+    animationSpeed: props.bodyBlock?.animationSpeed ?? props.subheadlineAnimationSpeed ?? 0.9,
+    fontSize: props.bodyBlock?.fontSize ?? props.subheadlineFontSize ?? props.textFontSize ?? 18,
+    lineHeight: props.bodyBlock?.lineHeight ?? props.subheadlineLineHeight ?? props.textLineHeight ?? 1.6,
+    fontFamily: props.bodyBlock?.fontFamily ?? props.fontFamily ?? "Arial",
+    fontWeight: props.bodyBlock?.fontWeight ?? props.fontWeight ?? "400",
+    color: props.bodyBlock?.color ?? props.textColor ?? "#bdbcbf",
+    alignment: props.bodyBlock?.alignment ?? props.alignment ?? "left",
+  };
+}
+
+function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionAnimationStyle, assets, layoutWidth = null }) {
+  const faqBlockProps = resolveSplitFaqBlockProps(props);
+  const headlineBlockProps = resolveSplitHeadlineBlockProps(props);
+  const bodyBlockProps = resolveSplitBodyBlockProps(props);
+  const items = faqBlockProps.items;
+  const splitBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
+  const [viewportWidth, setViewportWidth] = React.useState(() => (typeof window !== "undefined" ? window.innerWidth : 1440));
+  const [openItems, setOpenItems] = React.useState(() => {
+    if (faqBlockProps.faqStartCollapsed) return [];
+    return items.length ? [0] : [];
+  });
+  const allowMultipleOpen = !!faqBlockProps.faqAllowMultipleOpen;
+  const isTabletLike = !compact && viewportWidth <= 1100;
+  const shouldRunAnimations = !editor;
+  const splitParallaxEnabled = !!splitBackgroundImage && !!props.enableParallax;
+  const splitContentWidth = Math.max(320, Number(props.blockMaxWidth || layoutWidth || props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    if (!items.length) {
+      setOpenItems([]);
+      return;
+    }
+    setOpenItems((current) => {
+      const next = current.filter((idx) => idx >= 0 && idx < items.length);
+      if (next.length) return next;
+      return faqBlockProps.faqStartCollapsed ? [] : [0];
+    });
+  }, [items.length, faqBlockProps.faqStartCollapsed]);
+
+  function toggleItem(itemIndex) {
+    setOpenItems((current) => {
+      const isOpen = current.includes(itemIndex);
+      if (allowMultipleOpen) {
+        return isOpen ? current.filter((idx) => idx !== itemIndex) : [...current, itemIndex];
+      }
+      if (isOpen) return [];
+      return [itemIndex];
+    });
+  }
+
+  function patchItem(itemIndex, patch) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    const nextItems = items.map((item, currentIndex) => {
+      if (currentIndex !== itemIndex) return item;
+      const nextQuestion = patch.question ?? item.question;
+      const nextAnswer = patch.answer ?? item.answer;
+      return {
+        ...item,
+        question: nextQuestion,
+        heading: nextQuestion,
+        answer: nextAnswer,
+        content: nextAnswer,
+      };
+    });
+    onChangeBlock({
+      ...props,
+      faqBlock: {
+        ...(props.faqBlock || {}),
+        items: nextItems,
+      },
+    });
+  }
+
+  const splitRatioMap = {
+    "43-57": "434fr 563fr",
+    "50-50": "1fr 1fr",
+    "45-55": "0.9fr 1.1fr",
+    "55-45": "1.1fr 0.9fr",
+  };
+  const splitIsFullWidth = props.fullWidthBackground !== false;
+  const sectionSurface = {
+    width: "100%",
+    ...(splitIsFullWidth
+      ? { maxWidth: "100%", marginLeft: 0, marginRight: 0 }
+      : { maxWidth: `${splitContentWidth}px`, marginLeft: "auto", marginRight: "auto" }),
+    boxSizing: "border-box",
+    borderRadius: editor ? (compact ? 12 : 18) : undefined,
+    background: props.sectionBackgroundColor || "#000000",
+    boxShadow: "none",
+    border: "none",
+    padding: 0,
+    // CSS transforms break position:sticky on children — skip animation when parallax is active
+    ...(splitParallaxEnabled && !compact ? {} : sectionAnimationStyle),
+  };
+  const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
+  const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
+  const panelShell = {
+    display: "grid",
+    gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
+    minHeight: compact ? undefined : props.minHeight || "760px",
+    borderRadius: 0,
+    overflow: ((splitParallaxEnabled && !compact) || hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
+    alignItems: (splitParallaxEnabled && !compact) ? "stretch" : "start",
+    background: props.sectionBackgroundColor || "#000000",
+    border: "none",
+    boxShadow: "none",
+  };
+  // When parallax is enabled, the outer wrapper is the grid item (stretches full row height)
+  // and the inner sticky div sticks within it. This ensures the sticky-containing block
+  // is the full grid row height, giving the sticky element room to travel.
+  const mediaPanelWrapperStyle = (splitParallaxEnabled && !compact && splitBackgroundImage)
+    ? { position: "relative", overflow: "visible" }
+    : null;
+  const mediaPanelStyle = splitBackgroundImage
+    ? {
+        position: (splitParallaxEnabled && !compact) ? "sticky" : "relative",
+        top: (splitParallaxEnabled && !compact) ? 0 : undefined,
+        height: (splitParallaxEnabled && !compact) ? "100vh" : undefined,
+        overflow: "hidden",
+        minHeight: compact ? 122 : (splitParallaxEnabled ? undefined : "100%"),
+        backgroundColor: props.backgroundColor || "#0f172a",
+        backgroundImage: `url(${splitBackgroundImage})`,
+        backgroundPosition: props.backgroundPosition || "center center",
+        backgroundSize: props.backgroundSize || "cover",
+        backgroundRepeat: props.backgroundRepeat || "no-repeat",
+      }
+    : {
+        position: "relative",
+        overflow: "hidden",
+        minHeight: compact ? 122 : "100%",
+        background: props.backgroundColor || "#0f172a",
+      };
+  const contentPanelStyle = {
+    background: props.contentPanelBackgroundColor || "transparent",
+    padding: compact ? "44px 20px 56px" : (isTabletLike ? "115px 20px 115px 40px" : "115px 120px 115px 120px"),
+    display: "grid",
+    alignContent: "start",
+    gap: compact ? 16 : 20,
+  };
+  const faqWrapStyle = {
+    width: "100%",
+    maxWidth: `${compact ? 312 : Math.max(280, Number(faqBlockProps.faqMaxWidth || 323))}px`,
+  };
+  const faqSurfaceStyle = {
+    width: "100%",
+    borderRadius: compact ? 18 : 24,
+    padding: compact ? "14px" : "18px",
+    background: faqBlockProps.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)",
+    border: `1px solid ${faqBlockProps.faqPanelBorderColor || faqBlockProps.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+    boxShadow: "0 18px 38px rgba(0,0,0,0.18)",
+  };
+
+  return (
+    <ScrollReveal as="section" animationName={(splitParallaxEnabled && !compact) ? "" : (props.sectionAnimation || "fade-up")} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor || (splitParallaxEnabled && !compact)} style={asStyleObject(sectionSurface)}>
+      <div style={asStyleObject(panelShell)}>
+          {mediaPanelWrapperStyle ? (
+            <div style={mediaPanelWrapperStyle}>
+              <div style={mediaPanelStyle}>
+                {!splitBackgroundImage && editor ? (
+                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
+                    Upload a background image for the parallax half
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+          <ScrollReveal
+            as="div"
+            animationName={(splitParallaxEnabled && !compact) ? "" : (props.leftPanelAnimation || "none")}
+            delay={Number(props.leftPanelAnimationDelay ?? 0)}
+            speed={props.leftPanelAnimationSpeed}
+            disabled={editor || (splitParallaxEnabled && !compact)}
+            style={mediaPanelStyle}
+          >
+            {!splitBackgroundImage && editor ? (
+              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
+                Upload a background image for the parallax half
+              </div>
+            ) : null}
+          </ScrollReveal>
+          )}
+          <ScrollReveal
+            as="div"
+            animationName={props.rightPanelAnimation || "none"}
+            delay={Number(props.rightPanelAnimationDelay ?? 0)}
+            speed={props.rightPanelAnimationSpeed}
+            disabled={editor}
+            style={asStyleObject(contentPanelStyle)}
+          >
+            {(props.eyebrow || editor) ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0,
+                  marginBottom: compact ? 8 : 10,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: "inline-block",
+                    width: compact ? 44 : 70,
+                    height: 2,
+                    background: props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)",
+                    marginRight: 12,
+                    borderRadius: 999,
+                    flex: "0 0 auto",
+                  }}
+                />
+                <p
+                data-website-inline-editor="true"
+                data-text-prop="eyebrow"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, eyebrow: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  margin: 0,
+                  fontSize: compact ? 16 : 16,
+                  lineHeight: Number(props.eyebrowLineHeight || 1.2),
+                  fontWeight: 600,
+                  letterSpacing: "0.45px",
+                  textTransform: "capitalize",
+                  backgroundImage: props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  color: "transparent",
+                  textAlign: headlineBlockProps.alignment || "left",
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                  ...(shouldRunAnimations ? getAnimationStyle(headlineBlockProps.animation, Math.max(0, Number(headlineBlockProps.animationDelay || 0) - 0.08), headlineBlockProps.animationSpeed) : {}),
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.eyebrow || (editor ? "Section label" : "")) }}
+                />
+              </div>
+            ) : null}
+            <ScrollReveal
+              as="div"
+              animationName={headlineBlockProps.animation || "fade-up"}
+              delay={headlineBlockProps.animationDelay || 0}
+              speed={headlineBlockProps.animationSpeed}
+              disabled={editor}
+              style={{ width: "100%" }}
             >
-              <div style={sharedStyles.faqTrigger}>
-                <div
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="headlineBlock.content"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  const content = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                  onChangeBlock({
+                    ...props,
+                    headline: content,
+                    headlineBlock: {
+                      ...(props.headlineBlock || {}),
+                      content,
+                    },
+                  });
+                }}
+                style={{
+                  margin: 0,
+                  fontSize: compact ? Math.max(30, Math.min(40, Number(headlineBlockProps.fontSize || 48))) : Math.max(32, Number(headlineBlockProps.fontSize || 48)),
+                  lineHeight: Number(headlineBlockProps.lineHeight || 1.2),
+                  fontWeight: headlineBlockProps.fontWeight || "400",
+                  fontFamily: headlineBlockProps.fontFamily || "Poppins, sans-serif",
+                  color: headlineBlockProps.color || "#61ce70",
+                  textAlign: headlineBlockProps.alignment || "left",
+                  letterSpacing: compact ? "-0.3px" : "-0.6px",
+                  marginBottom: 10,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(headlineBlockProps.content || (editor ? "Headline" : "")) }}
+              />
+            </ScrollReveal>
+            {(bodyBlockProps.content || editor) ? (
+              <ScrollReveal
+                as="div"
+                animationName={bodyBlockProps.animation || "fade-in"}
+                delay={bodyBlockProps.animationDelay || 0}
+                speed={bodyBlockProps.animationSpeed}
+                disabled={editor}
+                style={{ width: "100%" }}
+              >
+                <p
                   data-website-inline-editor="true"
-                  data-text-prop={`items.${idx}.question`}
+                  data-text-prop="bodyBlock.content"
                   contentEditable={editor}
                   suppressContentEditableWarning
-                  onBlur={(event) => patchItem(idx, { question: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                  onBlur={(event) => {
+                    if (!editor || typeof onChangeBlock !== "function") return;
+                    const content = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                    onChangeBlock({
+                      ...props,
+                      subheadline: content,
+                      bodyBlock: {
+                        ...(props.bodyBlock || {}),
+                        content,
+                      },
+                    });
+                  }}
                   style={{
-                    ...sharedStyles.faqQ,
-                    color: props.questionColor || "#0f172a",
-                    fontSize: compact ? Math.max(14, Number(props.questionFontSize || 16) - 1) : Number(props.questionFontSize || 16),
-                    fontWeight: props.questionFontWeight || "inherit",
+                    margin: 0,
+                    fontSize: compact ? Math.max(16, Math.min(20, Number(bodyBlockProps.fontSize || 18))) : Math.max(14, Number(bodyBlockProps.fontSize || 18)),
+                    lineHeight: Number(bodyBlockProps.lineHeight || 1.6),
+                    color: bodyBlockProps.color || "#bdbcbf",
+                    fontFamily: bodyBlockProps.fontFamily || undefined,
+                    fontWeight: bodyBlockProps.fontWeight || undefined,
+                    textAlign: bodyBlockProps.alignment || "left",
+                    maxWidth: `${Math.max(280, Number(props.faqMaxWidth || 323)) - 8}px`,
+                    marginBottom: compact ? 20 : 35,
                     outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
                     borderRadius: 8,
                     padding: editor ? "4px 6px" : 0,
-                    flex: 1,
-                    minWidth: 0,
-                    cursor: editor ? "text" : "default",
                   }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(item.question) }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(bodyBlockProps.content || (editor ? "Supporting copy" : "")) }}
                 />
-                <button
-                  type="button"
-                  onClick={() => toggleItem(idx)}
-                  style={{
-                    ...sharedStyles.faqChevronButton,
-                    color: props.chevronColor || "#2563eb",
-                  }}
-                  aria-expanded={isOpen}
-                  aria-label={isOpen ? "Collapse FAQ item" : "Expand FAQ item"}
-                >
-                  <span style={{ ...sharedStyles.faqChevron, color: props.chevronColor || "#2563eb", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                </button>
-              </div>
-              {isOpen ? (
-                <div
-                  data-website-inline-editor="true"
-                  data-text-prop={`items.${idx}.answer`}
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onBlur={(event) => patchItem(idx, { answer: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                  style={{
-                    ...sharedStyles.faqA,
-                    color: props.answerColor || props.textColor || "#475569",
-                    fontSize: compact ? Math.max(12, Number(props.answerFontSize || MIN_TEXT_SIZE) - 1) : Number(props.answerFontSize || MIN_TEXT_SIZE),
-                    outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-                    borderRadius: 8,
-                    padding: editor ? "6px 8px" : 0,
-                  }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(item.answer) }}
-                />
-              ) : null}
+              </ScrollReveal>
+            ) : null}
+            <div style={asStyleObject(faqWrapStyle)}>
+              <ScrollReveal as="div" animationName={faqBlockProps.sectionAnimation || "fade-up"} delay={faqBlockProps.sectionAnimationDelay || 0.12} speed={faqBlockProps.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqSurfaceStyle)}>
+                <FAQAccordionItems items={items} compact={compact} editor={editor} props={faqBlockProps} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="faqBlock.items" />
+              </ScrollReveal>
             </div>
-          );
-        })}
-      </div>
-      </div>
-    </section>
+          </ScrollReveal>
+        </div>
+    </ScrollReveal>
   );
 }
 
@@ -4148,16 +5153,70 @@ function getOverlayGuideState(x, y, rect) {
   };
 }
 
+function getPixelGuideState(x, y, width, height, rect, threshold = 10) {
+  const safeWidth = Math.max(rect?.width || 1, 1);
+  const safeHeight = Math.max(rect?.height || 1, 1);
+  const centerX = x + (width / 2);
+  const centerY = y + (height / 2);
+  const targetX = safeWidth / 2;
+  const targetY = safeHeight / 2;
+  const showX = Math.abs(centerX - targetX) <= threshold;
+  const showY = Math.abs(centerY - targetY) <= threshold;
+
+  return {
+    snappedX: showX ? targetX - (width / 2) : x,
+    snappedY: showY ? targetY - (height / 2) : y,
+    showX,
+    showY,
+  };
+}
+
+function renderCanvasCenterGuides(guides) {
+  if (!guides?.active && !guides?.showX && !guides?.showY) return null;
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 999 }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: guides.showX ? 2 : 1,
+          background: guides.showX ? "rgba(56,189,248,0.98)" : "rgba(56,189,248,0.28)",
+          boxShadow: guides.showX ? "0 0 0 1px rgba(255,255,255,0.28), 0 0 20px rgba(56,189,248,0.32)" : "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          height: guides.showY ? 2 : 1,
+          background: guides.showY ? "rgba(56,189,248,0.98)" : "rgba(56,189,248,0.28)",
+          boxShadow: guides.showY ? "0 0 0 1px rgba(255,255,255,0.28), 0 0 20px rgba(56,189,248,0.32)" : "none",
+        }}
+      />
+    </div>
+  );
+}
+
+function getOverlayBoundsElement(shell) {
+  if (!shell) return null;
+  return shell.closest?.('[data-overlay-bounds="true"]') || shell.parentElement || null;
+}
+
 function useOverlayBounds(shellRef) {
   const [bounds, setBounds] = React.useState({ width: 0, height: 0 });
 
   React.useEffect(() => {
     const shell = shellRef.current;
-    const parent = shell?.parentElement;
-    if (!parent) return undefined;
+    const boundsNode = getOverlayBoundsElement(shell);
+    if (!boundsNode) return undefined;
 
     const updateBounds = () => {
-      const rect = parent.getBoundingClientRect();
+      const rect = boundsNode.getBoundingClientRect();
       setBounds({ width: rect.width || 0, height: rect.height || 0 });
     };
 
@@ -4166,7 +5225,7 @@ function useOverlayBounds(shellRef) {
     let observer;
     if (typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(updateBounds);
-      observer.observe(parent);
+      observer.observe(boundsNode);
     }
 
     window.addEventListener("resize", updateBounds);
@@ -4179,10 +5238,15 @@ function useOverlayBounds(shellRef) {
   return bounds;
 }
 
-function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align = "center", vertical = "center", children, overlayEnabled = false, contentShellStyle = null }) {
+function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align = "center", vertical = "center", children, overlayEnabled = false, contentShellStyle = null, onDelete = null }) {
   const dragRef = React.useRef(null);
   const shellRef = React.useRef(null);
+  const latestPropsRef = React.useRef(props || {});
+  const draftPatchRef = React.useRef(null);
+  const onChangeBlockRef = React.useRef(onChangeBlock);
+  onChangeBlockRef.current = onChangeBlock;
   const [guides, setGuides] = React.useState({ showX: false, showY: false, active: false });
+  const [draftPatch, setDraftPatch] = React.useState(null);
   const [isActive, setIsActive] = React.useState(false);
   const bounds = useOverlayBounds(shellRef);
   const canManipulate = !!editor && !compact;
@@ -4190,13 +5254,21 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
   const yPct = Number(props?.contentY ?? 50);
   const boxWidth = Math.max(240, Number(props?.contentWidth ?? 760));
   const boxHeight = Math.max(100, Number(props?.contentHeight ?? 220));
+  const displayX = Number(draftPatch?.contentX ?? xPct);
+  const displayY = Number(draftPatch?.contentY ?? yPct);
+  const displayBoxWidth = Math.max(240, Number(draftPatch?.contentWidth ?? boxWidth));
+  const displayBoxHeight = Math.max(100, Number(draftPatch?.contentHeight ?? boxHeight));
   const maxUsableWidth = bounds.width ? Math.max(180, bounds.width - 24) : boxWidth;
   const maxUsableHeight = bounds.height ? Math.max(80, bounds.height - 24) : boxHeight;
-  const effectiveWidth = Math.min(boxWidth, maxUsableWidth);
-  const effectiveHeight = Math.min(boxHeight, maxUsableHeight);
+  const effectiveWidth = Math.min(displayBoxWidth, maxUsableWidth);
+  const effectiveHeight = Math.min(displayBoxHeight, maxUsableHeight);
   const constrainedWidth = `min(${effectiveWidth}px, calc(100% - 24px))`;
-  const constrainedLeft = `clamp(calc(${effectiveWidth}px / 2), ${xPct}%, calc(100% - (${effectiveWidth}px / 2)))`;
-  const constrainedTop = `clamp(calc(${effectiveHeight}px / 2), ${yPct}%, calc(100% - (${effectiveHeight}px / 2)))`;
+  const constrainedLeft = `clamp(calc(${effectiveWidth}px / 2), ${displayX}%, calc(100% - (${effectiveWidth}px / 2)))`;
+  const constrainedTop = `clamp(calc(${effectiveHeight}px / 2), ${displayY}%, calc(100% - (${effectiveHeight}px / 2)))`;
+
+  React.useEffect(() => {
+    latestPropsRef.current = props || {};
+  }, [props]);
 
   React.useEffect(() => {
     if (!editor) return undefined;
@@ -4205,6 +5277,8 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
       const shell = shellRef.current;
       if (!shell || shell.contains(event.target)) return;
       dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
       setGuides({ showX: false, showY: false, active: false });
       setIsActive(false);
       if (shell.contains(document.activeElement) && typeof document.activeElement?.blur === "function") {
@@ -4221,7 +5295,7 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
   }, [editor]);
 
   React.useEffect(() => {
-    if (!editor || !canManipulate || typeof onChangeBlock !== "function") return undefined;
+    if (!editor || !canManipulate) return undefined;
 
     const handleMove = (event) => {
       const current = dragRef.current;
@@ -4249,14 +5323,15 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
           current.rect,
         );
 
-        setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
-        onChangeBlock({
-          ...props,
+        const patch = {
           contentWidth: Math.round(nextWidth),
           contentHeight: Math.round(nextHeight),
           contentX: Math.round(guideState.snappedX),
           contentY: Math.round(guideState.snappedY),
-        });
+        };
+        draftPatchRef.current = patch;
+        setDraftPatch(patch);
+        setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
         return;
       }
 
@@ -4268,13 +5343,19 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
         current.rect,
       );
 
+      const patch = { contentX: Math.round(guideState.snappedX), contentY: Math.round(guideState.snappedY) };
+      draftPatchRef.current = patch;
+      setDraftPatch(patch);
       setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
-      onChangeBlock({ ...props, contentX: Math.round(guideState.snappedX), contentY: Math.round(guideState.snappedY) });
     };
 
     const handleUp = () => {
+      const patch = draftPatchRef.current;
       dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
       setGuides({ showX: false, showY: false, active: false });
+      if (patch) onChangeBlockRef.current?.({ ...latestPropsRef.current, ...patch });
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -4288,15 +5369,15 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [editor, canManipulate, onChangeBlock, props]);
+  }, [editor, canManipulate]);
 
   function startInteraction(event, mode = "move", handle = "se") {
-    if (!editor || !canManipulate || typeof onChangeBlock !== "function") return;
+    if (!editor || !canManipulate) return;
     setIsActive(true);
     setGuides((prev) => ({ ...prev, active: true }));
     event.preventDefault();
     event.stopPropagation();
-    const rect = shellRef.current?.parentElement?.getBoundingClientRect();
+    const rect = getOverlayBoundsElement(shellRef.current)?.getBoundingClientRect();
     if (!rect) return;
     dragRef.current = {
       mode,
@@ -4353,6 +5434,7 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
           boxSizing: "border-box",
           touchAction: "none",
           cursor: editor ? "move" : "default",
+          pointerEvents: "auto",
         }}
       >
         {editor ? (
@@ -4360,9 +5442,19 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
             data-overlay-drag-handle="true"
             onPointerDown={(event) => startInteraction(event, "move")}
             onMouseDown={(event) => startInteraction(event, "move")}
-            style={{ position: "absolute", top: 4, left: 8, right: 8, zIndex: 5, cursor: "move", display: "flex", justifyContent: align === "right" ? "flex-end" : align === "left" ? "flex-start" : "center" }}
+            style={{ position: "absolute", top: 4, left: 8, right: 8, zIndex: 5, cursor: "move", display: "flex", gap: 6, alignItems: "center", justifyContent: align === "right" ? "flex-end" : align === "left" ? "flex-start" : "center" }}
           >
             <span style={sharedStyles.editorChip}>Drag Text Box</span>
+            {onDelete ? (
+              <button
+                type="button"
+                data-overlay-resize="true"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                style={{ width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1, flexShrink: 0 }}
+                title="Hide text block"
+              >✕</button>
+            ) : null}
           </div>
         ) : null}
         <div
@@ -4374,7 +5466,7 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
             justifyContent: vertical === "top" ? "flex-start" : vertical === "bottom" ? "flex-end" : "center",
             alignItems: "stretch",
             textAlign: align,
-            overflow: "hidden",
+            overflow: editor ? "hidden" : "visible",
             boxSizing: "border-box",
             background: props?.contentBackground || (editor ? "rgba(15,23,42,0.08)" : "transparent"),
             borderRadius: 16,
@@ -4386,22 +5478,29 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
           {children}
         </div>
         {editor && isActive ? [
-          { key: "left", left: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
-          { key: "right", right: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
-          { key: "top", top: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
-          { key: "bottom", bottom: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
-          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", width: 14, height: 14 },
-          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", width: 14, height: 14 },
-          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", width: 14, height: 14 },
-          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", width: 14, height: 14 },
+          // Corners
+          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", w: 14, h: 14, corner: true },
+          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", w: 14, h: 14, corner: true },
+          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", w: 14, h: 14, corner: true },
+          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", w: 14, h: 14, corner: true },
+          // Center edges — transparent hit zone with inner dot
+          { key: "top",    top: -14,    left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  w: 36, h: 28, dotW: 28, dotH: 14, dotTop: 14, dotLeft: 4, corner: false },
+          { key: "bottom", bottom: -14, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  w: 36, h: 28, dotW: 28, dotH: 14, dotTop: 0,  dotLeft: 4, corner: false },
+          { key: "left",   left: -14,   top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  w: 28, h: 36, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 14, corner: false },
+          { key: "right",  right: -14,  top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  w: 28, h: 36, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 0,  corner: false },
         ].map((handle) => (
           <div
             key={handle.key}
             data-overlay-resize="true"
             onPointerDown={(event) => startInteraction(event, "resize", handle.key)}
             onMouseDown={(event) => startInteraction(event, "resize", handle.key)}
-            style={{ position: "absolute", borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", ...handle }}
-          />
+            style={{ position: "absolute", background: "transparent", pointerEvents: "auto", zIndex: 10, boxSizing: "border-box", width: handle.w, height: handle.h, left: handle.left, right: handle.right, top: handle.top, bottom: handle.bottom, transform: handle.transform, cursor: handle.cursor }}
+          >
+            {handle.corner
+              ? <div style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", pointerEvents: "none" }} />
+              : <div style={{ position: "absolute", top: handle.dotTop, left: handle.dotLeft, width: handle.dotW, height: handle.dotH, borderRadius: 4, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", pointerEvents: "none" }} />
+            }
+          </div>
         )) : null}
       </div>
     </>
@@ -4447,27 +5546,679 @@ function resolveColumnCardStyle(props, prefix, compact) {
   };
 }
 
-function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUploadImage, onSelectAsset, assets, imageSrc, overlayEnabled = false, frameStyle = null, isSelected = false }) {
+function normalizeGridSectionItems(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return [{ icon: "", iconName: "", iconGlyph: "", iconFontFamily: "", iconImage: "", iconAssetId: "", title: "", content: "", image: "" }];
+  }
+
+  return items.map((item) => ({
+    icon: String(item?.icon || ""),
+    iconName: String(item?.iconName || ""),
+    iconGlyph: String(item?.iconGlyph || ""),
+    iconFontFamily: String(item?.iconFontFamily || ""),
+    iconImage: String(item?.iconImage || ""),
+    iconAssetId: String(item?.iconAssetId || ""),
+    title: String(item?.title || ""),
+    eyebrow: String(item?.eyebrow || ""),
+    content: String(item?.content || ""),
+    link: String(item?.link || ""),
+    image: String(item?.image || ""),
+    imageAlt: String(item?.imageAlt || ""),
+    imageHeight: item?.imageHeight,
+  }));
+}
+
+function renderGridSectionIcon(item, color, size) {
+  if (item?.iconImage) {
+    return <img src={item.iconImage} alt={item?.title || "Grid icon"} style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
+  }
+  if (item?.iconGlyph && item?.iconFontFamily) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: item.iconFontFamily,
+          fontSize: size,
+          lineHeight: 1,
+          color,
+          display: "block",
+          fontStyle: "normal",
+          fontWeight: 400,
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+        }}
+      >
+        {item.iconGlyph}
+      </span>
+    );
+  }
+  const namedIcon = renderGridLibraryIcon(item?.iconName, { size, color });
+  if (namedIcon) {
+    return namedIcon;
+  }
+  if (item?.icon) {
+    return <span style={{ fontSize: size, lineHeight: 1, color }}>{item.icon}</span>;
+  }
+  return null;
+}
+
+function resolveServicesStylePreset(props = {}) {
+  switch (String(props?.servicesStylePreset || "style-01").trim()) {
+    case "style-02":
+      return {
+        cardRadius: 24,
+        badgeRadius: 18,
+        panelRadius: 20,
+        panelInset: { left: 20, right: 20, bottom: 20 },
+        panelPadding: "22px 26px",
+        panelBackground: "rgba(12,18,34,0.76)",
+        panelHoverBackground: "rgba(12,18,34,0.88)",
+        cardSurface: "linear-gradient(180deg, rgba(9,16,30,0.98), rgba(18,30,52,0.98))",
+        badgePosition: { top: 18, left: 18, right: "auto" },
+        contentAlign: "center",
+        titleWeight: 700,
+        panelShadow: "0 18px 34px rgba(0,0,0,0.2)",
+      };
+    case "style-03":
+      return {
+        cardRadius: 18,
+        badgeRadius: 16,
+        panelRadius: 0,
+        panelInset: { left: 24, right: 24, bottom: 28 },
+        panelPadding: "0px",
+        panelBackground: "transparent",
+        panelHoverBackground: "transparent",
+        cardSurface: "linear-gradient(180deg, rgba(8,12,24,0.98), rgba(18,27,46,0.98))",
+        badgePosition: { top: 18, right: 18 },
+        contentAlign: "left",
+        titleWeight: 600,
+        panelShadow: "none",
+      };
+    default:
+      return {
+        cardRadius: 15,
+        badgeRadius: 15,
+        panelRadius: 15,
+        panelInset: { left: 12.5, right: 12.5, bottom: 20 },
+        panelPadding: "25px 40px",
+        panelBackground: "linear-gradient(290deg, rgba(15,23,42,0.9), rgba(3,34,47,0.92))",
+        panelHoverBackground: "linear-gradient(290deg, rgba(17,24,39,0.92), rgba(8,47,73,0.94))",
+        cardSurface: "linear-gradient(180deg, rgba(15,23,42,0.92), rgba(30,41,59,0.96))",
+        badgePosition: { top: 0, right: 20 },
+        contentAlign: "left",
+        titleWeight: 400,
+        panelShadow: "0 2px 28px rgba(0,0,0,0.09)",
+        useImageBackground: false,
+      };
+  }
+}
+
+function resolveServicesColorPreset(props = {}) {
+  switch (String(props?.servicesColorPreset || "blue").trim()) {
+    case "green":
+      return {
+        badgeBackground: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+        badgeShadow: "rgba(34,197,94,0.24)",
+        badgeGlow: "rgba(190,242,100,0.2)",
+        eyebrowGradient: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+        titleColor: "#86efac",
+        bodyColor: "rgba(248,250,252,0.92)",
+        sectionTitleColor: "#dcfce7",
+      };
+    default:
+      return {
+        badgeBackground: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+        badgeShadow: "rgba(12,140,233,0.28)",
+        badgeGlow: "rgba(56,189,248,0.22)",
+        eyebrowGradient: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        titleColor: "#7dd3fc",
+        bodyColor: "rgba(248,250,252,0.92)",
+        sectionTitleColor: "#dbeafe",
+      };
+  }
+}
+
+function ServicesGridCard({
+  item,
+  itemIndex,
+  compact,
+  editor,
+  props,
+  baseDelay,
+  serviceTileRadius,
+  tileHeight,
+  topIconNode,
+  ghostIconNode,
+  imageStyle,
+  iconStyle,
+  titleStyle,
+  bodyStyle,
+  eyebrowFontSize,
+  serviceIconBadgeWidth,
+  serviceIconBadgeHeight,
+  serviceIconBadgePadding,
+  cardTitleFontSize,
+  cardBodyFontSize,
+  onUpdate,
+}) {
+  const [hovered, setHovered] = React.useState(false);
+  const stylePreset = resolveServicesStylePreset(props);
+  const colorPreset = resolveServicesColorPreset(props);
+  const navigateHref = String(item?.link || "").trim();
+  const cardLinkEnabled = !!navigateHref && !editor;
+  const badgeMotionStyle = editor
+    ? {}
+    : {
+        ...ambientMotionStyle("float", baseDelay * 0.3),
+        animationDuration: hovered ? "3.1s" : "7.2s",
+      };
+  const ghostMotionStyle = editor
+    ? {}
+    : {
+        ...ambientMotionStyle("pulse", baseDelay * 0.25),
+        animationDuration: hovered ? "2.2s" : "4.8s",
+      };
+  const cardSurface = stylePreset.cardSurface;
+  const cardBorder = props?.columnBorderColor || "rgba(148,163,184,0.28)";
+  const cardInset = hovered
+    ? "inset 0 0 0 1px rgba(255,255,255,0.16)"
+    : "inset 0 0 0 1px rgba(255,255,255,0.08)";
+  const contentPanelBackground = hovered ? stylePreset.panelHoverBackground : stylePreset.panelBackground;
+  const showCardImage = stylePreset.useImageBackground !== false && !!item.image;
+  const activateCardLink = React.useCallback((event) => {
+    if (!navigateHref || typeof window === "undefined") return;
+    const interactiveTarget = event?.target?.closest?.("a,button,input,textarea,select,label");
+    if (interactiveTarget) return;
+    window.location.assign(navigateHref);
+  }, [navigateHref]);
+
+  return (
+    <article
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      onClick={cardLinkEnabled ? activateCardLink : undefined}
+      onKeyDown={cardLinkEnabled ? (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        activateCardLink(event);
+      } : undefined}
+      role={cardLinkEnabled ? "link" : undefined}
+      tabIndex={cardLinkEnabled ? 0 : undefined}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: stylePreset.cardRadius,
+        minHeight: tileHeight || undefined,
+        aspectRatio: compact ? undefined : "1 / 1",
+        height: compact ? (tileHeight || 260) : "auto",
+        background: cardSurface,
+        border: `1px solid ${cardBorder}`,
+        boxShadow: hovered ? `0 24px 54px rgba(2,6,23,0.34), ${cardInset}` : `0 10px 26px rgba(2,6,23,0.18), ${cardInset}`,
+        transform: hovered ? "scale(1.03)" : "scale(1)",
+        cursor: cardLinkEnabled ? "pointer" : "default",
+        transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
+      {showCardImage ? (
+        <img
+          src={item.image}
+          alt={item.imageAlt || item.title || "Grid item image"}
+          style={{
+            position: "absolute",
+            inset: -1,
+            width: "calc(100% + 2px)",
+            height: "calc(100% + 2px)",
+            objectFit: "cover",
+            borderRadius: stylePreset.cardRadius,
+            display: "block",
+            transform: hovered ? "scale(1.12)" : "scale(1)",
+            filter: hovered ? "grayscale(1)" : "grayscale(0)",
+            transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), filter 360ms ease",
+            ...imageStyle,
+          }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: stylePreset.cardRadius,
+          background: hovered
+            ? "linear-gradient(180deg, rgba(2,6,23,0.01) 0%, rgba(2,6,23,0.06) 34%, rgba(2,6,23,0.36) 58%, rgba(3,12,24,0.74) 100%)"
+            : "linear-gradient(180deg, rgba(2,6,23,0.02) 0%, rgba(2,6,23,0.08) 38%, rgba(2,6,23,0.42) 62%, rgba(3,12,24,0.66) 100%)",
+          zIndex: 1,
+          pointerEvents: "none",
+          transition: "background 320ms ease",
+        }}
+      />
+      {topIconNode ? (
+        <div
+          style={{
+            position: "absolute",
+            top: stylePreset.badgePosition?.top ?? 0,
+            right: stylePreset.badgePosition?.right ?? (compact ? 14 : 20),
+            left: stylePreset.badgePosition?.left,
+            zIndex: 4,
+            ...iconStyle,
+          }}
+        >
+          <div
+            style={{
+              width: serviceIconBadgeWidth,
+              height: serviceIconBadgeHeight,
+              borderRadius: stylePreset.badgeRadius,
+              background: colorPreset.badgeBackground,
+              backgroundSize: hovered ? "150% 150%" : "120% 120%",
+              backgroundPosition: hovered ? "34% 50%" : "80% 50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              padding: serviceIconBadgePadding,
+              boxSizing: "border-box",
+              boxShadow: hovered ? `0 16px 26px ${colorPreset.badgeShadow}` : `0 8px 16px ${colorWithAlpha(colorPreset.badgeShadow, 0.55)}`,
+              filter: hovered ? `drop-shadow(0 12px 20px ${colorPreset.badgeGlow})` : `drop-shadow(0 6px 12px ${colorWithAlpha(colorPreset.badgeShadow, 0.5)})`,
+              transform: hovered ? "translate3d(0, 6px, 0) scale(1.04)" : "translate3d(0, 0, 0) scale(1)",
+              transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), background-size 320ms ease, background-position 320ms ease, box-shadow 320ms ease, filter 320ms ease",
+              ...badgeMotionStyle,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: hovered ? "wbIconDoubleSpin 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1" : "none",
+              }}
+            >
+              {topIconNode}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          left: compact ? 10 : 12.5,
+          right: compact ? 10 : 12.5,
+          bottom: compact ? 14 : 20,
+          ...(stylePreset.panelInset || {}),
+          zIndex: 4,
+          padding: compact ? "18px 24px" : stylePreset.panelPadding,
+          borderRadius: stylePreset.panelRadius,
+          background: contentPanelBackground,
+          boxShadow: hovered ? "0 18px 34px rgba(0,0,0,0.18)" : stylePreset.panelShadow,
+          overflow: "hidden",
+          transform: hovered ? "translateY(-10px)" : "translateY(0)",
+          transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), background 320ms ease, box-shadow 320ms ease",
+          textAlign: stylePreset.contentAlign,
+        }}
+      >
+        {ghostIconNode ? (
+          <div
+            style={{
+              position: "absolute",
+              right: -10,
+              bottom: -15,
+              zIndex: 0,
+              opacity: hovered ? 0.24 : 0.1,
+              transform: hovered ? "translate3d(-8px, -4px, 0) rotate(-10deg) scale(0.98)" : "translate3d(0, 0, 0) rotate(0deg) scale(0.8)",
+              transformOrigin: "right bottom",
+              transition: "opacity 320ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+              pointerEvents: "none",
+              color: "#8ee5ff",
+              ...ghostMotionStyle,
+            }}
+          >
+            {ghostIconNode}
+          </div>
+        ) : null}
+        {item.title ? (
+          <div
+            key={`service-title-${itemIndex}-${cardTitleFontSize}`}
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { title: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...bodyStyle,
+              position: "relative",
+              zIndex: 1,
+              margin: 0,
+              color: props.cardTitleColor || colorPreset.titleColor,
+              fontSize: cardTitleFontSize,
+              lineHeight: 1.3,
+              fontWeight: stylePreset.titleWeight,
+              letterSpacing: "-0.1px",
+              outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.title || "Card title") }}
+          />
+        ) : null}
+        {item.eyebrow ? (
+          <div
+            key={`service-subtitle-${itemIndex}-${eyebrowFontSize}`}
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { eyebrow: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...titleStyle,
+              display: "inline-block",
+              width: "fit-content",
+              maxWidth: "100%",
+              position: "relative",
+              zIndex: 1,
+              margin: item.title ? "6px 0 0" : 0,
+              fontSize: eyebrowFontSize,
+              fontWeight: 500,
+              lineHeight: 1.3,
+              letterSpacing: "-0.3px",
+              color: "rgba(248,250,252,0.92)",
+              outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.eyebrow || "") }}
+          />
+        ) : null}
+        {item.content ? (
+          <div
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { content: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...bodyStyle,
+              position: "relative",
+              zIndex: 1,
+              marginTop: 8,
+              color: colorPreset.bodyColor,
+              fontSize: cardBodyFontSize,
+              lineHeight: 1.6,
+              outline: editor ? "1px dashed rgba(14,165,233,0.28)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.content || "") }}
+          />
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function isServicesGridVariant(props, items) {
+  if (String(props?.gridVariant || "").trim() === "services") return true;
+  return Array.isArray(items) && items.length >= 4 && items.every((item) => item?.image && item?.link && item?.eyebrow);
+}
+
+function resolveGridSectionCardStyle(props, compact) {
+  const borderColor = props?.columnBorderColor || "rgba(148,163,184,0.28)";
+  const radius = Number(props?.columnRadius ?? 18);
+  const padding = Number(props?.columnPadding ?? (compact ? 14 : 18));
+  const shadowPreset = String(props?.columnShadow || "soft");
+  const overlayColor = String(props?.columnOverlayColor || "transparent");
+  const gradient = String(props?.columnGradient || "").trim();
+  const shadowMap = {
+    none: "none",
+    soft: "0 10px 24px rgba(15,23,42,0.08)",
+    medium: "0 18px 36px rgba(15,23,42,0.14)",
+    strong: "0 26px 48px rgba(15,23,42,0.18)",
+  };
+
+  return {
+    align: String(props?.columnContentAlign || "left"),
+    titleTextColor: props?.columnTitleColor || props?.textColor || "#0f172a",
+    bodyTextColor: props?.columnBodyColor || "#334155",
+    iconColor: props?.iconColor || props?.textColor || "#0f172a",
+    style: {
+      background: gradient || props?.columnBackgroundColor || props?.cardBackgroundColor || "#f8fafc",
+      border: `1px solid ${borderColor}`,
+      borderRadius: Math.max(0, radius),
+      padding: Math.max(0, padding),
+      boxShadow: shadowMap[shadowPreset] || shadowMap.soft,
+      minHeight: Number(props?.gridItemMinHeight ?? 0) > 0 ? Number(props?.gridItemMinHeight) : undefined,
+      position: "relative",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      gap: compact ? 12 : 14,
+      height: "100%",
+    },
+    overlay: overlayColor && overlayColor !== "transparent" ? (
+      <div style={{ position: "absolute", inset: 0, background: overlayColor, pointerEvents: "none" }} />
+    ) : null,
+  };
+}
+
+function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
   const dragRef = React.useRef(null);
   const shellRef = React.useRef(null);
+  const onUpdateRef = React.useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const draftRef = React.useRef(null); // never in effect deps — avoids listener churn on every pixel
+  const [draft, setDraft] = React.useState(null);
+  const [isActive, setIsActive] = React.useState(false);
+
+  const x = Number(draft?.x ?? item.x ?? 50);
+  const y = Number(draft?.y ?? item.y ?? 30);
+  const w = Math.max(80, Number(draft?.width ?? item.width ?? 320));
+  const h = Math.max(30, Number(draft?.height ?? item.height ?? 80));
+
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    const handleMove = (event) => {
+      const cur = dragRef.current;
+      if (!cur) return;
+      const { containerBounds } = cur;
+      if (!containerBounds || containerBounds.width === 0) return;
+      const dx = event.clientX - cur.startX;
+      const dy = event.clientY - cur.startY;
+      let next;
+      if (cur.mode === "resize") {
+        next = { x: cur.baseX, y: cur.baseY, width: Math.round(Math.max(80, cur.baseW + dx)), height: Math.round(Math.max(30, cur.baseH + dy)) };
+      } else {
+        next = {
+          x: Math.round(Math.max(0, Math.min(100, cur.baseX + (dx / containerBounds.width) * 100))),
+          y: Math.round(Math.max(0, Math.min(100, cur.baseY + (dy / containerBounds.height) * 100))),
+          width: cur.baseW,
+          height: cur.baseH,
+        };
+      }
+      draftRef.current = next;
+      setDraft({ ...next });
+    };
+    const handleUp = () => {
+      const d = draftRef.current;
+      dragRef.current = null;
+      draftRef.current = null;
+      setDraft(null);
+      if (d) onUpdateRef.current(d);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [editor]); // intentionally no draft/state in deps — draftRef keeps it current
+
+  function startDrag(event, mode = "move") {
+    if (!editor) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsActive(true);
+    // Capture bounds once at drag start — not during move
+    const container = shellRef.current?.closest?.('[data-overlay-bounds="true"]') || shellRef.current?.parentElement;
+    const containerBounds = container?.getBoundingClientRect() || null;
+    dragRef.current = { mode, startX: event.clientX, startY: event.clientY, baseX: x, baseY: y, baseW: w, baseH: h, containerBounds };
+  }
+
+  const isDragging = !!dragRef.current;
+
+  return (
+    <div
+      ref={shellRef}
+      onPointerDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"],[data-overlay-toolbar="true"]')) startDrag(event, "move"); }}
+      onMouseDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"],[data-overlay-toolbar="true"]')) startDrag(event, "move"); }}
+      style={{
+        position: "absolute",
+        left: `${x}%`,
+        top: `${y}%`,
+        transform: "translate(-50%, -50%)",
+        width: `${w}px`,
+        minHeight: `${h}px`,
+        zIndex: isActive ? 12 : 10,
+        border: editor ? `2px dashed ${isActive ? "rgba(34,197,94,1)" : "rgba(34,197,94,0.55)"}` : "none",
+        borderRadius: 10,
+        background: item.background && item.background !== "transparent" ? item.background : "transparent",
+        boxSizing: "border-box",
+        touchAction: "none",
+        cursor: editor ? "grab" : "default",
+        pointerEvents: "auto",
+        padding: editor ? "20px 8px 6px" : "4px 8px",
+        userSelect: "none",
+      }}
+    >
+      {editor ? (
+        <span style={{ position: "absolute", top: 2, left: 6, fontSize: 10, fontWeight: 700, color: "#22c55e", letterSpacing: "0.1em", pointerEvents: "none", userSelect: "none" }}>
+          TEXT {isActive ? `· ${x}% ${y}%` : ""}
+        </span>
+      ) : null}
+      {editor ? (
+        <div style={{ position: "absolute", top: -28, left: 0, right: 0, display: "flex", gap: 4, alignItems: "center", pointerEvents: "auto", flexWrap: "wrap" }}
+          data-overlay-toolbar="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <select
+            value={String(item.fontSize || 18)}
+            onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
+            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
+            title="Font size"
+          >
+            {[12,14,16,18,20,24,28,32,36,40,48,56,64,72,84,96].map(s => (
+              <option key={s} value={s}>{s}px</option>
+            ))}
+          </select>
+          <input
+            type="color"
+            value={item.color || "#ffffff"}
+            onChange={(e) => onUpdate({ color: e.target.value })}
+            style={{ width: 22, height: 22, padding: 1, borderRadius: 4, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", cursor: "pointer" }}
+            title="Text color"
+          />
+          <select
+            value={item.fontWeight || "600"}
+            onChange={(e) => onUpdate({ fontWeight: e.target.value })}
+            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
+            title="Font weight"
+          >
+            <option value="400">Regular</option>
+            <option value="600">Semi Bold</option>
+            <option value="700">Bold</option>
+            <option value="800">Extra Bold</option>
+          </select>
+          <select
+            value={item.textAlign || "center"}
+            onChange={(e) => onUpdate({ textAlign: e.target.value })}
+            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
+            title="Alignment"
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+      ) : null}
+      {editor ? (
+        <button
+          type="button"
+          data-overlay-resize="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onDelete(); }}
+          style={{ position: "absolute", top: -9, right: -9, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
+        >✕</button>
+      ) : null}
+      {editor ? (
+        <div
+          data-overlay-resize="true"
+          onPointerDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          onMouseDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          style={{ position: "absolute", right: -7, bottom: -7, width: 15, height: 15, borderRadius: 3, background: "#22c55e", border: "2px solid #fff", cursor: "se-resize", zIndex: 14 }}
+        />
+      ) : null}
+      <div
+        data-txt-edit="true"
+        data-website-inline-editor="true"
+        contentEditable={editor}
+        suppressContentEditableWarning
+        onMouseDown={(event) => editor && event.stopPropagation()}
+        onPointerDown={(event) => editor && event.stopPropagation()}
+        onBlur={(event) => {
+          if (!editor) return;
+          onUpdateRef.current({ text: event.currentTarget.innerHTML });
+        }}
+        style={{
+          outline: "none",
+          fontSize: Number(item.fontSize || 18),
+          fontWeight: item.fontWeight || "600",
+          color: item.color || "#ffffff",
+          textAlign: item.textAlign || "center",
+          lineHeight: 1.35,
+          cursor: "text",
+          minHeight: 20,
+          wordBreak: "break-word",
+          userSelect: editor ? "text" : "none",
+        }}
+        dangerouslySetInnerHTML={{ __html: item.text || (editor ? "Click to edit" : "") }}
+      />
+    </div>
+  );
+}
+
+function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUploadImage, onSelectAsset, assets, imageSrc, overlayEnabled = false, frameStyle = null, isSelected = false, imageFit = "contain", onDelete = null, imageLabel = null, onMoveLayer = null }) {
+  const dragRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const latestPropsRef = React.useRef(props || {});
+  const draftPatchRef = React.useRef(null);
+  const onChangeBlockRef = React.useRef(onChangeBlock);
+  onChangeBlockRef.current = onChangeBlock;
   const [guides, setGuides] = React.useState({ showX: false, showY: false, active: false });
+  const [draftPatch, setDraftPatch] = React.useState(null);
   const [isActive, setIsActive] = React.useState(false);
   const bounds = useOverlayBounds(shellRef);
   const canManipulate = !!editor && !compact && !!imageSrc;
-  const showEditorControls = !!editor && (isSelected || isActive);
+  const showEditorControls = !!editor;
   const overlayLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, compact ? 2 : 4) : [];
   const xPct = Number(props?.floatingX ?? 76);
   const yPct = Number(props?.floatingY ?? 58);
   const boxWidth = Math.max(120, Number(props?.floatingWidth ?? 260));
   const boxHeight = Math.max(120, Number(props?.floatingHeight ?? 260));
-  const maxUsableWidth = bounds.width ? Math.max(100, bounds.width - 24) : boxWidth;
-  const maxUsableHeight = bounds.height ? Math.max(100, bounds.height - 24) : boxHeight;
-  const effectiveWidth = Math.min(boxWidth, maxUsableWidth);
-  const effectiveHeight = Math.min(boxHeight, maxUsableHeight);
-  const constrainedWidth = `min(${effectiveWidth}px, calc(100% - 24px))`;
-  const constrainedHeight = `min(${effectiveHeight}px, calc(100% - 24px))`;
-  const constrainedLeft = `clamp(calc(${effectiveWidth}px / 2), ${xPct}%, calc(100% - (${effectiveWidth}px / 2)))`;
-  const constrainedTop = `clamp(calc(${effectiveHeight}px / 2), ${yPct}%, calc(100% - (${effectiveHeight}px / 2)))`;
+  const displayX = Number(draftPatch?.floatingX ?? xPct);
+  const displayY = Number(draftPatch?.floatingY ?? yPct);
+  const displayBoxWidth = Math.max(120, Number(draftPatch?.floatingWidth ?? boxWidth));
+  const displayBoxHeight = Math.max(120, Number(draftPatch?.floatingHeight ?? boxHeight));
+  // No clamping — images can extend beyond the block edges intentionally
+  const effectiveWidth = displayBoxWidth;
+  const effectiveHeight = displayBoxHeight;
+  const constrainedWidth = `${effectiveWidth}px`;
+  const constrainedHeight = `${effectiveHeight}px`;
+  const constrainedLeft = `${displayX}%`;
+  const constrainedTop = `${displayY}%`;
+
+  React.useEffect(() => {
+    latestPropsRef.current = props || {};
+  }, [props]);
 
   React.useEffect(() => {
     if (!editor) return undefined;
@@ -4476,6 +6227,8 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
       const shell = shellRef.current;
       if (!shell || shell.contains(event.target)) return;
       dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
       setGuides({ showX: false, showY: false, active: false });
       setIsActive(false);
     };
@@ -4485,7 +6238,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
   }, [editor]);
 
   React.useEffect(() => {
-    if (!editor || !canManipulate || typeof onChangeBlock !== "function") return undefined;
+    if (!editor || !canManipulate) return undefined;
 
     const handleMove = (event) => {
       const current = dragRef.current;
@@ -4502,43 +6255,45 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
         if (["top", "nw", "ne"].includes(current.handle)) nextHeight = current.baseHeight - dy;
         if (["bottom", "sw", "se"].includes(current.handle)) nextHeight = current.baseHeight + dy;
 
-        nextWidth = clampValue(nextWidth, 100, current.rect.width);
-        nextHeight = clampValue(nextHeight, 100, current.rect.height);
+        nextWidth = Math.max(60, nextWidth);
+        nextHeight = Math.max(60, nextHeight);
 
-        const halfWidthPct = (nextWidth / current.rect.width) * 50;
-        const halfHeightPct = (nextHeight / current.rect.height) * 50;
-        const guideState = getOverlayGuideState(
-          clampValue(current.baseX, halfWidthPct, 100 - halfWidthPct),
-          clampValue(current.baseY, halfHeightPct, 100 - halfHeightPct),
-          current.rect,
-        );
+        // When resizing, the center shifts by half the delta so the OPPOSITE edge stays fixed.
+        // This applies to all handles: corners shift both axes, edge handles shift one axis.
+        const changesW = ["left", "right", "nw", "ne", "sw", "se"].includes(current.handle);
+        const changesH = ["top", "bottom", "nw", "ne", "sw", "se"].includes(current.handle);
+        const newX = changesW ? current.baseX + (dx / current.rect.width * 50) : current.baseX;
+        const newY = changesH ? current.baseY + (dy / current.rect.height * 50) : current.baseY;
 
-        setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
-        onChangeBlock({
-          ...props,
+        const patch = {
           floatingWidth: Math.round(nextWidth),
           floatingHeight: Math.round(nextHeight),
-          floatingX: Math.round(guideState.snappedX),
-          floatingY: Math.round(guideState.snappedY),
-        });
+          floatingX: Math.round(newX),
+          floatingY: Math.round(newY),
+        };
+        draftPatchRef.current = patch;
+        setDraftPatch(patch);
+        setGuides({ showX: false, showY: false, active: false });
         return;
       }
 
-      const halfWidthPct = (current.baseWidth / current.rect.width) * 50;
-      const halfHeightPct = (current.baseHeight / current.rect.height) * 50;
-      const guideState = getOverlayGuideState(
-        clampValue(current.baseX + ((dx / current.rect.width) * 100), halfWidthPct, 100 - halfWidthPct),
-        clampValue(current.baseY + ((dy / current.rect.height) * 100), halfHeightPct, 100 - halfHeightPct),
-        current.rect,
-      );
-
+      // Move — no clamping, free to go off-edge
+      const newX = current.baseX + ((dx / current.rect.width) * 100);
+      const newY = current.baseY + ((dy / current.rect.height) * 100);
+      const guideState = getOverlayGuideState(newX, newY, current.rect);
+      const patch = { floatingX: Math.round(guideState.snappedX), floatingY: Math.round(guideState.snappedY) };
+      draftPatchRef.current = patch;
+      setDraftPatch(patch);
       setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
-      onChangeBlock({ ...props, floatingX: Math.round(guideState.snappedX), floatingY: Math.round(guideState.snappedY) });
     };
 
     const handleUp = () => {
+      const patch = draftPatchRef.current;
       dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
       setGuides({ showX: false, showY: false, active: false });
+      if (patch) onChangeBlockRef.current?.({ ...latestPropsRef.current, ...patch });
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -4552,15 +6307,15 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
-  }, [editor, canManipulate, onChangeBlock, props]);
+  }, [editor, canManipulate]);
 
   function startInteraction(event, mode = "move", handle = "se") {
-    if (!editor || !canManipulate || typeof onChangeBlock !== "function") return;
+    if (!editor || !canManipulate) return;
     setIsActive(true);
     setGuides((prev) => ({ ...prev, active: true }));
     event.preventDefault();
     event.stopPropagation();
-    const rect = shellRef.current?.parentElement?.getBoundingClientRect();
+    const rect = getOverlayBoundsElement(shellRef.current)?.getBoundingClientRect();
     if (!rect) return;
     dragRef.current = {
       mode,
@@ -4621,7 +6376,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
             ...(frameStyle || {}),
           }}
         >
-          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: imageFit, display: "block" }} />
         </div>
       </div>
     );
@@ -4644,8 +6399,6 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
           transform: "translate(-50%, -50%)",
           width: constrainedWidth,
           height: constrainedHeight,
-          maxWidth: "100%",
-          maxHeight: "100%",
           zIndex: isActive ? 5 : 2,
           border: editor ? "1px dashed rgba(245,158,11,0.95)" : "none",
           borderRadius: 18,
@@ -4653,89 +6406,89 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
           boxSizing: "border-box",
           touchAction: "none",
           cursor: editor ? "move" : "default",
+          pointerEvents: "auto",
+          overflow: "visible",
         }}
       >
         {editor ? (
           <div
             onPointerDown={(event) => startInteraction(event, "move")}
             onMouseDown={(event) => startInteraction(event, "move")}
-            style={{ position: "absolute", top: -12, left: 10, zIndex: 5, cursor: "move" }}
+            style={{ position: "absolute", top: -12, left: 10, zIndex: 10, cursor: "move", display: "flex", gap: 4, alignItems: "center" }}
           >
-            <span style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827" }}>Drag Image</span>
-          </div>
-        ) : null}
-        <div style={{ width: "100%", height: "100%", overflow: "hidden", borderRadius: 18, boxShadow: "0 24px 48px rgba(15,23,42,0.28)", background: "rgba(255,255,255,0.06)", ...(frameStyle || {}) }}>
-          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none", userSelect: "none" }} />
-        </div>
-        {showEditorControls ? (
-          <div
-            onPointerDown={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-            style={{ position: "absolute", left: 12, right: 12, bottom: 12, zIndex: 6, display: "grid", gap: 8, padding: "10px 12px", borderRadius: 14, background: "rgba(15,23,42,0.62)", border: "1px solid rgba(245,158,11,0.34)", boxShadow: "0 14px 28px rgba(15,23,42,0.18)" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ color: "#f8fafc", fontSize: 12, fontWeight: 700 }}>Overlay image: drag anywhere to move</span>
-              <label style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer" }}>
-                Replace
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    onChangeBlock?.({
-                      ...props,
-                      floatingX: props.floatingX ?? xPct,
-                      floatingY: props.floatingY ?? yPct,
-                      floatingWidth: props.floatingWidth ?? boxWidth,
-                      floatingHeight: props.floatingHeight ?? boxHeight,
-                    });
-                    onUploadImage?.("floatingImage", file);
-                  }}
-                />
-              </label>
-            </div>
-            {overlayLibraryImages.length ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {overlayLibraryImages.map((image) => (
-                  <button
-                    key={`overlay-library-${image.id || image.src}`}
-                    type="button"
-                    onClick={() => onSelectAsset ? onSelectAsset("floatingImage", image) : applyOverlayAsset(image)}
-                    style={{ width: 40, height: 40, padding: 0, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)", background: "#0f172a", cursor: "pointer" }}
-                    title={image.name || "Use library image"}
-                  >
-                    <img src={image.src} alt={image.name || "Library image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </button>
-                ))}
-              </div>
+            <span style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827" }}>{imageLabel || "Drag Image"}</span>
+            {onMoveLayer ? (
+              <>
+                <button
+                  type="button"
+                  data-overlay-resize="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onMoveLayer(-1); }}
+                  style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 11, cursor: "pointer" }}
+                  title="Move layer backward"
+                >↓ Back</button>
+                <button
+                  type="button"
+                  data-overlay-resize="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onMoveLayer(1); }}
+                  style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 11, cursor: "pointer" }}
+                  title="Move layer forward"
+                >↑ Front</button>
+              </>
             ) : null}
           </div>
         ) : null}
+        <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "transparent", ...(frameStyle ? { borderRadius: frameStyle.borderRadius, boxShadow: frameStyle.boxShadow, border: frameStyle.border } : { borderRadius: 0 }) }}>
+          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: imageFit, display: "block", pointerEvents: "none", userSelect: "none" }} />
+        </div>
         {editor && isActive ? [
-          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", width: 14, height: 14 },
-          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", width: 14, height: 14 },
-          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", width: 14, height: 14 },
-          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", width: 14, height: 14 },
+          // Corners — resize both dimensions
+          { key: "nw",     left: -7, top: -7,       cursor: "nwse-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "ne",     right: -7, top: -7,      cursor: "nesw-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "sw",     left: -7, bottom: -7,    cursor: "nesw-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "se",     right: -7, bottom: -7,   cursor: "nwse-resize", width: 14, height: 14, dotRadius: 999 },
+          // Center edges — larger transparent hit zone wraps a visible inner dot
+          { key: "top",    top: -14,    left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  width: 36, height: 28, dotRadius: 4, dotW: 28, dotH: 14, dotTop: 14, dotLeft: 4 },
+          { key: "bottom", bottom: -14, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  width: 36, height: 28, dotRadius: 4, dotW: 28, dotH: 14, dotTop: 0,  dotLeft: 4 },
+          { key: "left",   left: -14,   top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  width: 28, height: 36, dotRadius: 4, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 14 },
+          { key: "right",  right: -14,  top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  width: 28, height: 36, dotRadius: 4, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 0 },
         ].map((handle) => (
           <div
             key={handle.key}
             data-overlay-resize="true"
             onPointerDown={(event) => startInteraction(event, "resize", handle.key)}
             onMouseDown={(event) => startInteraction(event, "resize", handle.key)}
-            style={{ position: "absolute", borderRadius: 999, background: "#f59e0b", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(245,158,11,0.35)", ...handle }}
-          />
-        )) : null}
+            style={{ position: "absolute", background: "transparent", pointerEvents: "auto", zIndex: 10, boxSizing: "border-box", width: handle.width, height: handle.height, left: handle.left, right: handle.right, top: handle.top, bottom: handle.bottom, transform: handle.transform, cursor: handle.cursor }}
+          >
+            {handle.dotRadius === 999
+              ? <div style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#f59e0b", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(245,158,11,0.35)", pointerEvents: "none" }} />
+              : <div style={{ position: "absolute", top: handle.dotTop, left: handle.dotLeft, width: handle.dotW, height: handle.dotH, borderRadius: handle.dotRadius, background: "#f59e0b", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(245,158,11,0.35)", pointerEvents: "none" }} />
+            }
+          </div>
+        )).concat(onDelete ? [
+          <button
+            key="delete-overlay"
+            type="button"
+            data-overlay-resize="true"
+            onPointerDown={(event) => { event.stopPropagation(); }}
+            onMouseDown={(event) => { event.stopPropagation(); }}
+            onClick={(event) => { event.stopPropagation(); onDelete(); }}
+            style={{ position: "absolute", top: -8, right: -8, zIndex: 7, width: 22, height: 22, borderRadius: 999, background: "rgba(239,68,68,0.92)", border: "2px solid #fff", color: "#fff", fontSize: 12, lineHeight: 1, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 12px rgba(239,68,68,0.4)", padding: 0 }}
+            title="Remove image"
+          >✕</button>
+        ] : []) : null}
       </div>
     </>
   );
 }
 
-export function renderWebsiteBlock(block, { compact = false, assets, editor = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null } = {}) {
+export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null } = {}) {
   const props = block?.props || {};
-  const sectionAnimationStyle = getAnimationStyle(props.sectionAnimation, props.sectionAnimationDelay || 0, props.sectionAnimationSpeed);
+  const shouldRunAnimations = !editor || animationPreview;
+  const sectionAnimationStyle = !shouldRunAnimations
+    ? {}
+    : getAnimationStyle(props.sectionAnimation, props.sectionAnimationDelay || 0, props.sectionAnimationSpeed);
   const spacingScale = spacingMultiplier(props);
   const sectionPad = scaleBoxPadding(compact ? "24px 20px" : "72px 32px", spacingScale);
   const cardPad = scaleBoxPadding(compact ? "18px" : "32px 28px", spacingScale);
@@ -4743,7 +6496,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
   const heroBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
   const avatarSrc = resolveAssetField(props, "avatar", assets);
   const logoSrc = resolveAssetField(props, "logo", assets);
-  const brandLogoSrc = assets?.logo?.src || logoSrc;
+  const defaultAvatarSrc = pickDefaultAvatarSrc(assets);
+  const brandLogoSrc = logoSrc || assets?.logo?.src || "";
   const floatingImageSrc = resolveAssetField(props, "floatingImage", assets);
 
   switch (block?.type) {
@@ -4760,7 +6514,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroVariant = heroVariantStyles(props, compact);
       const heroLayout = heroLayoutDefaults(props.heroVariant || "spotlight", compact);
       const heroLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, compact ? 2 : 4) : [];
-      const showHeroMediaControls = editor && isSelected;
+      const showHeroMediaControls = !!editor;
       const isVideoHero = props.backgroundStyle === "video" && !!props.backgroundVideoUrl;
       const heroBg = isVideoHero
         ? (props.backgroundColor || "#0f172a")
@@ -4768,6 +6522,32 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroStaticStyle = asStyleObject(heroBg);
       const heroParallaxEnabled = block?.type === "parallax" && !!props.enableParallax && !!heroBackgroundImage && !compact && !isVideoHero;
       const heroOverlayEnabled = !compact;
+      const hasFloatingHeroImage = !!floatingImageSrc;
+      // Build floatingImages array (supports multiple overlay images)
+      const rawFloatingImages = Array.isArray(props.floatingImages) && props.floatingImages.length > 0
+        ? props.floatingImages
+        : (floatingImageSrc ? [{
+            src: floatingImageSrc,
+            assetId: props.floatingImageAssetId || "",
+            x: props.floatingX,
+            y: props.floatingY,
+            width: props.floatingWidth,
+            height: props.floatingHeight,
+            animation: props.imageOverlayAnimation,
+            animationDelay: props.imageOverlayAnimationDelay,
+            animationSpeed: props.imageOverlayAnimationSpeed,
+          }] : []);
+      const heroOverlayVisualSrc = rawFloatingImages[0]?.src || brandLogoSrc;
+      const heroOverlayImageFit = "contain";
+      const heroImageOverlayAnimation = String(props.imageOverlayAnimation || "sweep-left");
+      const heroImageOverlayDelay = Number(props.imageOverlayAnimationDelay ?? 0.08) || 0.08;
+      const heroImageOverlaySpeed = Number(props.imageOverlayAnimationSpeed ?? 1.45) || 1.45;
+      const heroContentOverlayAnimation = String(props.contentOverlayAnimation || "sweep-right");
+      const heroContentOverlayDelay = Number(props.contentOverlayAnimationDelay ?? 0.22) || 0.22;
+      const heroContentOverlaySpeed = Number(props.contentOverlayAnimationSpeed ?? 1.05) || 1.05;
+      const heroCtaAnimation = String(props.ctaAnimation || "fade-up");
+      const heroCtaDelay = Number(props.ctaAnimationDelay ?? 0.18) || 0.18;
+      const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
       const headingColor = props.headlineColor || "#ffffff";
       const headingFamily = props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
       const headingWeight = props.headlineFontWeight || "700";
@@ -4780,47 +6560,64 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         position: "absolute",
         inset: 0,
         width: "100%",
+        height: "100%",
         zIndex: 2,
       };
       const heroContentBoundsInner = {
-        position: "relative",
         width: `calc(100% - ${heroHorizontalInset * 2}px)`,
         maxWidth: `${heroContentMaxWidth}px`,
         height: "100%",
         margin: "0 auto",
         minWidth: 0,
       };
+      const overlayAnimationLayer = (zIndex, animationStyle = {}) => ({
+        position: "absolute",
+        inset: 0,
+        zIndex,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        ...animationStyle,
+      });
       const normalizedOverlayLayout = normalizeOverlayLayoutProps(
         props,
         {
           ...heroLayout,
-          contentY: floatingImageSrc ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY,
+          contentY: hasFloatingHeroImage ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY,
           floatingX: heroVariant.imageDefaults?.x ?? heroLayout.floatingX,
           floatingY: heroVariant.imageDefaults?.y ?? heroLayout.floatingY,
           floatingWidth: heroVariant.imageDefaults?.width ?? heroLayout.floatingWidth,
           floatingHeight: heroVariant.imageDefaults?.height ?? heroLayout.floatingHeight,
         },
-        !!floatingImageSrc,
+        hasFloatingHeroImage,
       );
       const heroOverlayProps = normalizedOverlayLayout;
       const heroContentProps = normalizedOverlayLayout;
 
       return (
-        <section
+        <ScrollReveal
+          as="section"
+          animationName={props.sectionAnimation}
+          delay={props.sectionAnimationDelay || 0}
+          speed={props.sectionAnimationSpeed}
+          disabled={editor}
           style={{
             position: "relative",
             overflow: "hidden",
             borderRadius: compact ? 12 : (editor ? 20 : useFullBleedHero ? 0 : 20),
             ...heroFullWidth,
             ...heroVariant.shell,
-            ...sectionAnimationStyle,
             minHeight: compact ? 180 : props.minHeight || "400px",
             ...heroStaticStyle,
-            backgroundAttachment: heroParallaxEnabled ? "fixed" : "scroll",
+            backgroundAttachment: "scroll",
             padding: compact ? "40px 24px" : "80px 48px",
           }}
         >
-          {block?.type === "hero" ? heroVariant.decor : null}
+          {block?.type === "hero" ? (
+            <div style={editor ? undefined : { ...ambientMotionStyle("pulse") }}>
+              {heroVariant.decor}
+            </div>
+          ) : null}
           {isVideoHero ? (
             <video
               src={props.backgroundVideoUrl}
@@ -4912,65 +6709,72 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   headline: props.headline || "Click to type headline",
                   subheadline: props.subheadline || "Add supporting text here",
                   contentX: props.contentX ?? heroLayout.contentX,
-                  contentY: props.contentY ?? (floatingImageSrc ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY),
+                  contentY: props.contentY ?? (hasFloatingHeroImage ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY),
                   contentWidth: props.contentWidth ?? heroLayout.contentWidth,
                   contentHeight: props.contentHeight ?? heroLayout.contentHeight,
                 })}
-                style={{ ...sharedStyles.editorChip, background: "#22c55e" }}
+                style={sharedStyles.editorChip}
+                title="Restore main headline/CTA text block"
               >
-                Add Text
+                Main Text
               </button>
               {brandLogoSrc ? (
                 <button
                   type="button"
-                  onClick={() => onChangeBlock?.({
-                    ...props,
-                    floatingImage: brandLogoSrc,
-                    floatingX: props.floatingX ?? heroOverlayProps.floatingX,
-                    floatingY: props.floatingY ?? heroOverlayProps.floatingY,
-                    floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
-                    floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                  })}
+                  onClick={() => {
+                    const logoItem = { src: brandLogoSrc, assetId: "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "fade-in", animationDelay: 0.1, animationSpeed: 1.0 };
+                    const nextImages = rawFloatingImages.length > 0 ? [...rawFloatingImages, logoItem] : [logoItem];
+                    onChangeBlock?.({ ...props, floatingImages: nextImages });
+                  }}
                   style={{ ...sharedStyles.editorChip, background: "#ffffff", color: "#111827" }}
                 >
-                  Use Logo
+                  + Logo
                 </button>
               ) : null}
-              <label style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer" }}>
-                {floatingImageSrc ? "Replace Image" : "Upload Image"}
+              <label style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer" }} title="Add image or GIF overlay — freely draggable">
+                + Image / GIF
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,image/gif,image/webp,image/apng"
                   style={{ display: "none" }}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
                     if (!file) return;
-                    onChangeBlock?.({
-                      ...props,
-                      floatingX: props.floatingX ?? heroOverlayProps.floatingX,
-                      floatingY: props.floatingY ?? heroOverlayProps.floatingY,
-                      floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
-                      floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
+                    Promise.resolve(onUploadImage?.("__addFloatingImage", file)).then((asset) => {
+                      if (!asset?.src) return;
+                      const nextImages = [...rawFloatingImages, {
+                        src: asset.src,
+                        assetId: asset.id || "",
+                        x: 76, y: 52, width: 280, height: 320,
+                        animation: "sweep-left",
+                        animationDelay: 0.08,
+                        animationSpeed: 1.45,
+                      }];
+                      onChangeBlock?.({ ...props, floatingImages: nextImages });
                     });
-                    onUploadImage?.("floatingImage", file);
                   }}
                 />
               </label>
-              {floatingImageSrc ? (
-                <button
-                  type="button"
-                  onClick={() => onChangeBlock?.({ ...props, floatingImage: "" })}
-                  style={{ ...sharedStyles.editorChip, background: "rgba(239,68,68,0.92)" }}
-                >
-                  Remove Image
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  const extraTextOverlays = Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : [];
+                  // Spread new blocks so they don't all stack at the same spot
+                  const baseX = 20 + (extraTextOverlays.length * 8) % 60;
+                  const baseY = 15 + (extraTextOverlays.length * 12) % 55;
+                  onChangeBlock?.({ ...props, extraTextOverlays: [...extraTextOverlays, { id: `txt-${Date.now()}`, text: "New text block", x: baseX, y: baseY, width: 280, height: 60, fontSize: 18, color: "#ffffff", fontWeight: "600", textAlign: "left", background: "transparent", animation: "fade-in", animationDelay: 0 }] });
+                }}
+                style={{ ...sharedStyles.editorChip, background: "#22c55e", color: "#fff" }}
+                title="Add a free-floating text block — drag anywhere"
+              >
+                + Text Block
+              </button>
             </div>
           ) : null}
-          <div style={heroContentBounds}>
+          <div data-overlay-bounds="true" style={heroContentBounds}>
             <div style={heroContentBoundsInner}>
-              {!floatingImageSrc && showHeroMediaControls && !compact ? (
+              {!heroOverlayVisualSrc && showHeroMediaControls && !compact ? (
                 <div
                   style={{
                     position: "absolute",
@@ -5001,15 +6805,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           const file = event.target.files?.[0];
                           event.target.value = "";
                           if (!file) return;
-                          onChangeBlock?.({
-                            ...props,
-                            floatingX: props.floatingX ?? heroOverlayProps.floatingX,
-                            floatingY: props.floatingY ?? heroOverlayProps.floatingY,
-                            floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
-                            floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                            enableParallax: true,
+                          Promise.resolve(onUploadImage?.("__addFloatingImage", file)).then((asset) => {
+                            if (!asset?.src) return;
+                            const nextImages = [{ src: asset.src, assetId: asset.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 }];
+                            onChangeBlock?.({ ...props, floatingImages: nextImages });
                           });
-                          onUploadImage?.("floatingImage", file);
                         }}
                       />
                     </label>
@@ -5019,15 +6819,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           <button
                             key={`overlay-empty-library-${image.id || image.src}`}
                             type="button"
-                            onClick={() => onSelectAsset ? onSelectAsset("floatingImage", image) : onChangeBlock?.({
-                              ...props,
-                              floatingImage: image.src || "",
-                              floatingImageAssetId: image.id || "",
-                              floatingX: props.floatingX ?? heroOverlayProps.floatingX,
-                              floatingY: props.floatingY ?? heroOverlayProps.floatingY,
-                              floatingWidth: props.floatingWidth ?? heroOverlayProps.floatingWidth,
-                              floatingHeight: props.floatingHeight ?? heroOverlayProps.floatingHeight,
-                            })}
+                            onClick={() => {
+                              const item = { src: image.src || "", assetId: image.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 };
+                              onChangeBlock?.({ ...props, floatingImages: [item] });
+                            }}
                             style={{ width: 46, height: 46, padding: 0, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.24)", background: "#0f172a", cursor: "pointer" }}
                             title={image.name || "Use library image"}
                           >
@@ -5039,9 +6834,79 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </div>
               ) : null}
-              <DraggableImageOverlay props={heroOverlayProps} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} onSelectAsset={onSelectAsset} assets={assets} imageSrc={floatingImageSrc} overlayEnabled={heroOverlayEnabled} frameStyle={block?.type === "hero" ? heroVariant.imageFrame : null} />
-              <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
-                <div style={{ display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...heroVariant.content }}>
+              {rawFloatingImages.length === 0 ? null : rawFloatingImages.map((imgItem, imgIdx) => {
+                const imgSrc = imgItem.src || "";
+                if (!imgSrc) return null;
+                const imgAnimation = String(imgItem.animation || heroImageOverlayAnimation);
+                const imgDelay = Number(imgItem.animationDelay ?? heroImageOverlayDelay);
+                const imgSpeed = Number(imgItem.animationSpeed ?? heroImageOverlaySpeed);
+                const imgOverlayProps = {
+                  ...heroOverlayProps,
+                  floatingX: Number.isFinite(Number(imgItem.x)) ? Number(imgItem.x) : heroOverlayProps.floatingX,
+                  floatingY: Number.isFinite(Number(imgItem.y)) ? Number(imgItem.y) : heroOverlayProps.floatingY,
+                  floatingWidth: Number.isFinite(Number(imgItem.width)) ? Number(imgItem.width) : heroOverlayProps.floatingWidth,
+                  floatingHeight: Number.isFinite(Number(imgItem.height)) ? Number(imgItem.height) : heroOverlayProps.floatingHeight,
+                };
+                const handleImgChange = (nextProps) => {
+                  const nextImages = rawFloatingImages.map((img, i) => i !== imgIdx ? img : {
+                    ...img,
+                    x: nextProps.floatingX,
+                    y: nextProps.floatingY,
+                    width: nextProps.floatingWidth,
+                    height: nextProps.floatingHeight,
+                  });
+                  onChangeBlock?.({ ...props, floatingImages: nextImages });
+                };
+                const handleImgDelete = () => {
+                  const nextImages = rawFloatingImages.filter((_, i) => i !== imgIdx);
+                  onChangeBlock?.({ ...props, floatingImages: nextImages });
+                };
+                const handleImgMoveLayer = (direction) => {
+                  const arr = [...rawFloatingImages];
+                  const swapIdx = imgIdx + direction;
+                  if (swapIdx < 0 || swapIdx >= arr.length) return;
+                  [arr[imgIdx], arr[swapIdx]] = [arr[swapIdx], arr[imgIdx]];
+                  onChangeBlock?.({ ...props, floatingImages: arr });
+                };
+                return (
+                  <div key={`fi-${imgIdx}-${imgSrc.slice(-12)}`} style={overlayAnimationLayer(2 + imgIdx, shouldRunAnimations ? getAnimationStyle(imgAnimation, imgDelay, imgSpeed) : {})}>
+                    <div style={overlayAnimationLayer(1, shouldRunAnimations ? ambientMotionStyle("float", 0.12 + imgIdx * 0.06) : {})}>
+                      <DraggableImageOverlay
+                        props={imgOverlayProps}
+                        compact={compact}
+                        editor={editor}
+                        isSelected={isSelected}
+                        onChangeBlock={handleImgChange}
+                        onUploadImage={onUploadImage}
+                        onSelectAsset={onSelectAsset}
+                        assets={assets}
+                        imageSrc={imgSrc}
+                        overlayEnabled={heroOverlayEnabled}
+                        frameStyle={null}
+                        imageFit="contain"
+                        imageLabel={rawFloatingImages.length > 1 ? `Image ${imgIdx + 1}` : null}
+                        onDelete={editor ? handleImgDelete : null}
+                        onMoveLayer={editor && rawFloatingImages.length > 1 ? handleImgMoveLayer : null}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {editor && props.hideTextOverlay ? (
+                <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "auto" }}>
+                  <button
+                    type="button"
+                    onClick={() => onChangeBlock?.({ ...props, hideTextOverlay: false })}
+                    style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", cursor: "pointer" }}
+                  >+ Show Text Block</button>
+                </div>
+              ) : null}
+              {!props.hideTextOverlay ? (
+              <div style={overlayAnimationLayer(3, shouldRunAnimations ? getAnimationStyle(heroContentOverlayAnimation, heroContentOverlayDelay, heroContentOverlaySpeed) : {})}>
+                <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null} onDelete={editor ? () => onChangeBlock?.({ ...props, hideTextOverlay: true }) : null}>
+                  {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
+                  {/* eslint-disable-next-line no-unused-vars */}
+                  <div style={(() => { const { maxWidth: _mw, ...variantContent } = heroVariant.content || {}; return { display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...variantContent }; })()}>
                   {(props.eyebrow || editor) ? (
                     <p
                       data-website-inline-editor="true"
@@ -5065,7 +6930,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         letterSpacing: "0.22em",
                         textTransform: "uppercase",
                         color: colorWithAlpha(headingColor, 0.72),
-                        ...getAnimationStyle(props.subheadlineAnimation || "fade-up", Math.max(0, Number(props.subheadlineAnimationDelay || 0) - 0.06), props.subheadlineAnimationSpeed),
+                        ...(shouldRunAnimations ? getAnimationStyle(props.subheadlineAnimation || "fade-up", Math.max(0, Number(props.subheadlineAnimationDelay || 0) - 0.06), props.subheadlineAnimationSpeed) : {}),
                         outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
                         padding: editor ? "4px 6px" : 0,
                         borderRadius: 8,
@@ -5094,14 +6959,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   fontWeight: headingWeight,
                   fontFamily: headingFamily,
                   color: headingColor,
-                  ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed),
+                  ...(shouldRunAnimations ? getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) : {}),
                   width: "100%",
                   maxWidth: "100%",
                   boxSizing: "border-box",
                   outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
                   padding: editor ? "4px 6px" : 0,
-                  wordBreak: "break-word",
-                  overflowWrap: "anywhere",
+                  wordBreak: "normal",
+                  overflowWrap: "break-word",
                   borderRadius: 8,
                 }}
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.headline || (editor ? "Click to type headline" : "")) }}
@@ -5128,13 +6993,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     fontFamily: bodyFamily,
                     fontWeight: props.fontWeight || "400",
                     color: bodyColor,
-                    ...getAnimationStyle(props.subheadlineAnimation, props.subheadlineAnimationDelay || 0, props.subheadlineAnimationSpeed),
+                    ...(shouldRunAnimations ? getAnimationStyle(props.subheadlineAnimation, props.subheadlineAnimationDelay || 0, props.subheadlineAnimationSpeed) : {}),
                     width: "100%",
                     maxWidth: "100%",
                     boxSizing: "border-box",
                     opacity: 0.92,
-                    wordBreak: "break-word",
-                    overflowWrap: "anywhere",
+                    wordBreak: "normal",
+                    overflowWrap: "break-word",
                     outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
                     padding: editor ? "4px 6px" : 0,
                     borderRadius: 8,
@@ -5150,6 +7015,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         gap: compact ? 10 : 14,
                         alignItems: "center",
                         justifyContent: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
+                        ...(shouldRunAnimations ? getAnimationStyle(heroCtaAnimation, heroCtaDelay, heroCtaSpeed) : {}),
                       }}
                     >
                       <a
@@ -5206,13 +7072,45 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       ) : null}
                     </div>
                   ) : null}
-                </div>
-              </DraggableContentOverlay>
+                  </div>
+                </DraggableContentOverlay>
+              </div>
+              ) : null}
+              {/* Extra free text overlays */}
+              {(Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
+                const txtX = Number(txtItem.x ?? 50);
+                const txtY = Number(txtItem.y ?? 30);
+                const txtW = Math.max(80, Number(txtItem.width ?? 320));
+                const txtH = Math.max(30, Number(txtItem.height ?? 80));
+                const txtLeft = `clamp(calc(${txtW}px / 2), ${txtX}%, calc(100% - ${txtW}px / 2))`;
+                const txtTop = `clamp(calc(${txtH}px / 2), ${txtY}%, calc(100% - ${txtH}px / 2))`;
+                const updateTxt = (patch) => {
+                  const next = (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((t, i) => i !== txtIdx ? t : { ...t, ...patch });
+                  onChangeBlock?.({ ...props, extraTextOverlays: next });
+                };
+                const deleteTxt = () => {
+                  const next = (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).filter((_, i) => i !== txtIdx);
+                  onChangeBlock?.({ ...props, extraTextOverlays: next });
+                };
+                return (
+                  <div key={txtItem.id || txtIdx} style={overlayAnimationLayer(10 + txtIdx, shouldRunAnimations ? getAnimationStyle(txtItem.animation || "fade-in", Number(txtItem.animationDelay ?? 0), 0.8) : {})}>
+                    <ExtraTextOverlay
+                      item={txtItem}
+                      editor={editor}
+                      onUpdate={updateTxt}
+                      onDelete={deleteTxt}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
     }
+
+    case "split-block":
+      return <SplitFaqBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} sectionAnimationStyle={sectionAnimationStyle} assets={assets} layoutWidth={layoutWidth} />;
 
     case "text":
       const textFullWidth = fullWidthStyle(props, compact, editor);
@@ -5224,7 +7122,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const textOverlayEnabled = !!props.enableParallax && !compact;
       
       return (
-        <section
+        <ScrollReveal
+          as="section"
+          animationName={props.sectionAnimation || "fade-up"}
+          delay={props.sectionAnimationDelay || 0.06}
+          speed={props.sectionAnimationSpeed}
+          disabled={editor}
           style={{
             position: "relative",
             borderRadius: compact ? 16 : 22,
@@ -5244,12 +7147,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               : {
                   background: textBackground !== "transparent" ? textBackground : "transparent",
                 }),
-            backgroundAttachment: props.enableParallax && heroBackgroundImage && !compact ? "fixed" : "scroll",
+            backgroundAttachment: "scroll", // JS parallax or none — CSS fixed causes bg/text to diverge
             color: props.textColor || "#e6eef5",
             border: hasBorder ? PREMIUM_BORDER : "none",
             boxShadow: hasBoxShadow ? PREMIUM_SHADOW : "none",
             overflow: textOverlayEnabled ? "hidden" : undefined,
-            ...sectionAnimationStyle,
           }}
         >
           <div style={sectionContentStyle(props, compact)}>
@@ -5272,21 +7174,21 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   if (!editor || typeof onChangeBlock !== "function") return;
                   onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                 }}
-                style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", fontSize: textSizePx(props.textSize, compact, props.textFontSize), lineHeight: 1.8, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
+                style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: 1.8, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.text) }}
               />
             </DraggableContentOverlay>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "image":
-      return <EditableImageBlock props={props} imageSrc={imageSrc} compact={compact} editor={editor} onChangeBlock={onChangeBlock} />;
+      return <EditableImageBlock props={props} imageSrc={imageSrc} compact={compact} editor={editor} animationPreview={animationPreview} onChangeBlock={onChangeBlock} />;
 
     case "cta-button": {
       const ctaVariant = ctaButtonVariantStyles(props, compact);
       return (
-        <section style={{ ...ctaVariant.section, ...fullWidthStyle(props, compact, editor), ...getAnimationStyle("fade-up", 0.06) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={ctaVariant.content}>
             {(props.eyebrow || editor) ? (
@@ -5389,14 +7291,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ) : null}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
     }
 
     case "feature-list":
       const featureVariant = featureVariantStyles(props);
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <h2
             data-website-inline-editor="true"
@@ -5429,7 +7331,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               };
 
               return (
-                <div key={item.id || `${item.title}-${idx}`} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, ...getAnimationStyle("fade-up", idx * 0.08), background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
+                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName="fade-up" delay={idx * 0.08} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
                   <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
                     <img src={itemImage} alt={item.title || `Feature ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
                   </div>
@@ -5479,12 +7381,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       {item.body || (editor ? "Add a short supporting sentence" : "")}
                     </p>
                   </div>
-                </div>
+                </ScrollReveal>
               );
             })}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "testimonial": {
@@ -5521,13 +7423,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
       const renderTestimonialCard = (item, idx) => {
         const cardSty = typeof variantSty.card === "function" ? variantSty.card(idx) : variantSty.card;
-        const avatarSrcItem = getAssetFromLibrary(assets, item.avatarAssetId)?.src || item.avatarUrl || "";
+        const avatarSrcItem = getAssetFromLibrary(assets, item.avatarAssetId)?.src || item.avatarUrl || avatarSrc || defaultAvatarSrc || "";
         // For wall variant the card's own color determines text, override quote/author/meta per card
         const wallCardColor = isWall && (idx % 3 === 2) ? (props.textColor || "#0f172a") : variantSty.quote.color;
         const wallMetaColor = isWall && (idx % 3 === 2) ? "#64748b" : variantSty.meta.color;
         const wallAuthorColor = isWall && (idx % 3 === 2) ? (props.textColor || "#0f172a") : variantSty.author.color;
         return (
-          <div key={item.id || `testimonial-${idx}`} style={{ ...cardSty, ...(variantSty.cardWrap ? { width: "100%", boxSizing: "border-box" } : {}), ...getAnimationStyle("fade-up", idx * 0.07) }}>
+          <ScrollReveal key={item.id || `testimonial-${idx}`} animationName="fade-up" delay={idx * 0.07} disabled={editor} style={{ ...cardSty, ...(variantSty.cardWrap ? { width: "100%", boxSizing: "border-box" } : {}) }}>
             {renderStarRow(item.rating, idx)}
             <p
               contentEditable={editor}
@@ -5592,12 +7494,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 />
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         );
       };
 
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...variantSty.shell, ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...variantSty.shell }}>
           <div style={sectionContentStyle(props, compact)}>
           {(props.title || editor) ? (
             <h2
@@ -5627,7 +7529,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ))}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
     }
 
@@ -5681,7 +7583,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       };
 
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor), ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <h2
             data-website-inline-editor="true"
@@ -5709,7 +7611,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             }}
           >
             {plans.map((plan, idx) => (
-              <article key={plan.id || `${plan.name}-${idx}`} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted), ...getAnimationStyle("fade-up", idx * 0.08) }}>
+              <ScrollReveal as="article" key={plan.id || `${plan.name}-${idx}`} animationName="fade-up" delay={idx * 0.08} disabled={editor} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted) }}>
                 {(() => {
                   const defaultTone = pricingVariant.textTone?.(idx, !!plan.highlighted) || {};
                   const accentTone = props.accentColor || defaultTone.accent || "#0ea5e9";
@@ -5813,11 +7715,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     </>
                   );
                 })()}
-              </article>
+              </ScrollReveal>
             ))}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "contact-form":
@@ -5968,7 +7870,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         </div>
       );
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...sectionAnimationStyle, background: props.sectionGradient || props.backgroundColor || "#ffffff" }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.sectionGradient || props.backgroundColor || "#ffffff" }}>
           <div style={sectionContentStyle(props, compact)}>
             <div style={{ display: "grid", gridTemplateColumns: wrapperGrid, gap: compact ? 16 : 22, alignItems: "stretch", maxWidth: formMaxWidth, margin: "0 auto" }}>
               {mediaPosition === "top" && mediaImageSrc ? <img src={mediaImageSrc} alt={props.mediaAlt || props.title || "Contact form"} style={{ width: "100%", ...contactVariant.media }} /> : null}
@@ -5977,13 +7879,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               {mediaPosition === "right" && mediaImageSrc ? <img src={mediaImageSrc} alt={props.mediaAlt || props.title || "Contact form"} style={{ width: "100%", height: "100%", ...contactVariant.media }} /> : null}
             </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "image-gallery":
       const galleryVariant = imageGalleryVariantStyles(props, compact);
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <h2
             data-website-inline-editor="true"
@@ -6001,14 +7903,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             {asArray(props.images).map((rawImage, idx) => {
               const image = normalizeGalleryItem(rawImage, idx);
               return (
-              <div key={`${image.alt || "image"}-${idx}`} style={galleryVariant.card(idx)}>
+              <ScrollReveal key={`${image.alt || "image"}-${idx}`} animationName="fade-up" delay={idx * 0.06} disabled={editor} style={galleryVariant.card(idx)}>
                 {image?.src ? <img src={image.src} alt={image.alt || "Gallery image"} style={{ ...galleryVariant.image, objectPosition: `${image.imageX}% ${image.imageY}%` }} /> : <div style={sharedStyles.galleryPlaceholder}>No image</div>}
                 {image.caption ? <div style={galleryVariant.captionWrap}><p style={galleryVariant.caption}>{image.caption}</p></div> : null}
-              </div>
+              </ScrollReveal>
             );})}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "image-stack":
@@ -6227,6 +8129,225 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
     }
 
+    case "grid-section": {
+      const items = normalizeGridSectionItems(props.items);
+      const cardStyle = resolveGridSectionCardStyle(props, compact);
+      const servicesVariant = isServicesGridVariant(props, items);
+      const fullBleedServicesLayout = servicesVariant && props.stretchToCanvas !== false;
+      const servicesLayoutMode = String(props.servicesLayoutMode || "grid");
+      const sliderLayout = servicesVariant && servicesLayoutMode === "slider";
+      const rawColumns = Math.max(1, Math.min(6, Number(props.columns) || 3));
+      const gridColumns = compact ? 1 : rawColumns;
+      const verticalAlign = String(props.columnsVerticalAlign || "stretch");
+      const alignItems = verticalAlign === "center" ? "center" : verticalAlign === "bottom" ? "end" : "stretch";
+      const cardStagger = Math.max(0, Number(props.cardStagger ?? 0.08));
+      const surfaceSpeed = Number(props.surfaceAnimationSpeed) || null;
+      const sectionBgImage = String(props.sectionBackgroundImage || "").trim();
+      const resolvedSectionBackground = servicesVariant
+        ? (sectionBgImage
+            ? `linear-gradient(180deg, rgba(5,9,20,0.84) 0%, rgba(8,19,31,0.80) 100%), url("${sectionBgImage}")`
+            : "linear-gradient(180deg, #050914 0%, #08131f 100%)")
+        : (props.backgroundColor || "transparent");
+      const contentWrapStyle = fullBleedServicesLayout
+        ? {
+            ...sectionContentStyle(
+              { ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth || layoutWidth },
+              compact,
+              props.blockMaxWidth || props.baseLayoutWidth || layoutWidth,
+            ),
+            padding: 0,
+          }
+        : {
+            ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact),
+            padding: compact ? "20px" : "30px 32px",
+          };
+      const updateGridItem = (itemIndex, patch) => {
+        if (typeof onChangeBlock !== "function") return;
+        const nextItems = items.map((item, currentIndex) => (
+          currentIndex === itemIndex ? { ...item, ...patch } : item
+        ));
+        onChangeBlock({ ...props, items: nextItems });
+      };
+
+      const servicesColorPreset = resolveServicesColorPreset(props);
+      const sliderCardWidth = compact
+        ? "84vw"
+        : rawColumns >= 5
+          ? "220px"
+          : rawColumns === 4
+            ? "260px"
+            : rawColumns === 2
+              ? "420px"
+              : "320px";
+
+      return (
+        <ScrollReveal
+          as="section"
+          animationName={props.sectionAnimation || "fade-up"}
+          delay={props.sectionAnimationDelay || 0.04}
+          speed={props.sectionAnimationSpeed || surfaceSpeed}
+          disabled={false}
+          style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: resolvedSectionBackground, ...(sectionBgImage ? { backgroundSize: "cover", backgroundPosition: "center center" } : {}), boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined, height: props.sectionHeight || undefined, overflow: servicesVariant ? "hidden" : undefined }}
+        >
+          <div style={contentWrapStyle}>
+            {props.title ? (
+              <div style={fullBleedServicesLayout ? { padding: compact ? "20px 20px 0" : "30px 32px 0" } : undefined}>
+                <h2
+                  data-website-inline-editor="true"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(e) => { if (typeof onChangeBlock === "function") onChangeBlock({ ...props, title: cleanInlineEditorHtml(e.currentTarget.innerHTML) }); }}
+                  style={{ ...sharedStyles.sectionTitle(compact), color: props.sectionTitleColor || servicesColorPreset.sectionTitleColor || props.textColor || "#0f172a", fontSize: compact ? Math.max(16, Number(props.sectionTitleSize || 28)) : Math.max(18, Number(props.sectionTitleSize || 28)) }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "") }}
+                />
+              </div>
+            ) : null}
+            <div
+              style={{
+                ...(sliderLayout ? {
+                  display: "flex",
+                  gap: compact ? 16 : Number(props.columnGap ?? 20),
+                  overflowX: "auto",
+                  overflowY: "hidden",
+                  scrollSnapType: "x mandatory",
+                  paddingBottom: 8,
+                } : sharedStyles.columns(gridColumns)),
+                ...(!sliderLayout ? { gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` } : {}),
+                marginTop: props.title ? Number(props.columnsTopMargin ?? 18) : 0,
+                columnGap: compact ? 16 : Number(props.columnGap ?? (servicesVariant ? 15 : 20)),
+                rowGap: compact ? 16 : Number(props.rowGap ?? (servicesVariant ? 25 : (props.columnGap ?? 20))),
+                alignItems,
+                padding: fullBleedServicesLayout ? 0 : undefined,
+              }}
+            >
+              {items.map((item, itemIndex) => {
+                const baseDelay = itemIndex * cardStagger;
+                const resolvedSurfaceSpeed = surfaceSpeed || (servicesVariant ? 0.95 : null);
+                const resolvedIconAnimation = props.iconAnimation || (servicesVariant ? "rubber-band" : "none");
+                const resolvedImageAnimation = props.imageAnimation || (servicesVariant ? "zoom" : "none");
+                const resolvedTitleAnimation = props.titleAnimation || (servicesVariant ? "slide-up" : "none");
+                const resolvedBodyAnimation = props.bodyAnimation || (servicesVariant ? "fade-in" : "none");
+                const resolvedCardAnimation = props.cardAnimation || "fade-up";
+                const serviceIconSize = Math.max(14, Number(props.iconSize ?? (compact ? 28 : 36)));
+                const serviceIconBadgeWidth = Math.max(serviceIconSize + 14, Number(props.iconBadgeWidth ?? (compact ? 58 : 65)));
+                const serviceIconBadgeHeight = Math.max(serviceIconSize + 20, Number(props.iconBadgeHeight ?? (compact ? 72 : 82)));
+                const serviceIconBadgePadding = Math.max(0, Number(props.iconBadgePadding ?? (compact ? 12 : 14)));
+                const serviceEyebrowFontSize = Math.max(12, Number(props.eyebrowFontSize ?? 18));
+                const serviceCardTitleFontSize = Math.max(16, Number(props.cardTitleSize ?? 28));
+                const serviceCardBodyFontSize = Math.max(10, Number(props.cardBodySize ?? 16));
+                const iconStyle = editor ? {} : getAnimationStyle(resolvedIconAnimation, baseDelay, resolvedSurfaceSpeed);
+                const imageStyle = editor ? {} : getAnimationStyle(resolvedImageAnimation, baseDelay + 0.04, resolvedSurfaceSpeed);
+                const titleStyle = editor ? {} : getAnimationStyle(resolvedTitleAnimation, baseDelay + 0.08, resolvedSurfaceSpeed);
+                const bodyStyle = editor ? {} : getAnimationStyle(resolvedBodyAnimation, baseDelay + 0.12, resolvedSurfaceSpeed);
+                const iconNode = renderGridSectionIcon(item, cardStyle.iconColor, Number(props.iconSize ?? (compact ? 18 : 20)));
+                const topIconNode = renderGridSectionIcon(item, "#ffffff", serviceIconSize);
+                const ghostIconNode = renderGridSectionIcon(item, colorWithAlpha("#9ae6b4", 0.16), Math.round(serviceIconSize * 2.45));
+                const titleNode = (
+                  <>
+                    {item.eyebrow ? (
+                      <div style={{ margin: 0, color: props.eyebrowColor || cardStyle.bodyTextColor, fontSize: serviceEyebrowFontSize, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+                        {item.eyebrow}
+                      </div>
+                    ) : null}
+                    <h3
+                      data-website-inline-editor="true"
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onBlur={(event) => updateGridItem(itemIndex, { title: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                      style={{ margin: 0, color: cardStyle.titleTextColor, fontSize: serviceCardTitleFontSize, lineHeight: 1.16, fontWeight: 700, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, ...titleStyle }}
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(item.title || "Card title") }}
+                    />
+                  </>
+                );
+
+                if (servicesVariant) {
+                  const serviceTileRadius = compact ? 14 : 15;
+                  const tileHeight = item.imageHeight ? Number(item.imageHeight) : undefined;
+                  const serviceCard = (
+                    <ServicesGridCard
+                      item={item}
+                      itemIndex={itemIndex}
+                      compact={compact}
+                      editor={editor}
+                      props={props}
+                      baseDelay={baseDelay}
+                      serviceTileRadius={serviceTileRadius}
+                      tileHeight={tileHeight}
+                      topIconNode={topIconNode}
+                      ghostIconNode={ghostIconNode}
+                      imageStyle={imageStyle}
+                      iconStyle={iconStyle}
+                      titleStyle={titleStyle}
+                      bodyStyle={bodyStyle}
+                      eyebrowFontSize={serviceEyebrowFontSize}
+                      serviceIconBadgeWidth={serviceIconBadgeWidth}
+                      serviceIconBadgeHeight={serviceIconBadgeHeight}
+                      serviceIconBadgePadding={serviceIconBadgePadding}
+                      cardTitleFontSize={serviceCardTitleFontSize}
+                      cardBodyFontSize={serviceCardBodyFontSize}
+                      onUpdate={updateGridItem}
+                    />
+                  );
+
+                  return (
+                    <ScrollReveal
+                      as="div"
+                      key={`grid-item-${itemIndex}`}
+                      animationName={resolvedCardAnimation}
+                      delay={baseDelay}
+                      speed={resolvedSurfaceSpeed}
+                      disabled={false}
+                      style={sliderLayout ? { flex: `0 0 ${sliderCardWidth}`, minWidth: sliderCardWidth, scrollSnapAlign: "start" } : undefined}
+                    >
+                      {serviceCard}
+                    </ScrollReveal>
+                  );
+                }
+
+                return (
+                  <article key={`grid-item-${itemIndex}`} style={{ ...cardStyle.style, textAlign: cardStyle.align }}>
+                    {cardStyle.overlay}
+                    {iconNode ? (
+                      <div style={{ position: "relative", zIndex: 1, display: "inline-flex", alignSelf: cardStyle.align === "center" ? "center" : cardStyle.align === "right" ? "flex-end" : "flex-start", alignItems: "center", justifyContent: "center", minWidth: 44, minHeight: 44, borderRadius: 999, padding: "10px 14px", background: props.iconBackgroundColor || "rgba(14,165,233,0.12)", color: cardStyle.iconColor, fontSize: Number(props.iconSize ?? (compact ? 22 : 26)), lineHeight: 1, ...iconStyle }}>
+                        <span
+                          data-website-inline-editor="true"
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => updateGridItem(itemIndex, { icon: cleanInlineEditorHtml(event.currentTarget.innerHTML).replace(/<[^>]+>/g, "").trim() })}
+                        >
+                          {iconNode}
+                        </span>
+                      </div>
+                    ) : null}
+                    {item.image ? (
+                      <img src={item.image} alt={item.imageAlt || item.title || "Grid item image"} style={{ position: "relative", zIndex: 1, width: "100%", height: item.imageHeight ? `${Number(item.imageHeight)}px` : (compact ? 180 : 220), objectFit: "cover", borderRadius: Math.max(12, Number(props.imageRadius ?? 16)), ...imageStyle }} />
+                    ) : null}
+                    <div style={{ position: "relative", zIndex: 1, display: "grid", gap: 10 }}>
+                      {!editor && item.link ? (
+                        <a href={item.link} style={{ color: "inherit", textDecoration: "none", display: "grid", gap: 8 }}>
+                          {titleNode}
+                        </a>
+                      ) : titleNode}
+                      {item.content ? (
+                        <div
+                          data-website-inline-editor="true"
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => updateGridItem(itemIndex, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                          style={{ color: cardStyle.bodyTextColor, fontSize: compact ? 15 : 16, lineHeight: 1.7, outline: editor ? "1px dashed rgba(14,165,233,0.28)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, ...bodyStyle }}
+                          dangerouslySetInnerHTML={{ __html: asRichHtml(item.content || "") }}
+                        />
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </ScrollReveal>
+      );
+    }
+
     case "accordion":
     case "faq":
       return <FAQAccordionBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} sectionAnimationStyle={sectionAnimationStyle} assets={assets} />;
@@ -6234,6 +8355,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "stats":
       const statsItems = asArray(props.stats).map((item, index) => normalizeStatItem(item, index));
       const statsVariant = statsVariantStyles(props, compact);
+      const statsContentWidth = props.blockMaxWidth || props.baseLayoutWidth || layoutWidth;
+      const statsCardAnimation = props.cardAnimation || "fade-up";
+      const statsNumberAnimation = props.numberAnimation || "slide-up";
+      const statsLabelAnimation = props.labelAnimation || "fade-up";
+      const statsDetailAnimation = props.detailAnimation || "fade-in";
+      const statsSurfaceSpeed = Number(props.surfaceAnimationSpeed) || null;
+      const statsCardStagger = Math.max(0, Number(props.cardStagger ?? 0.08));
       const patchStat = (index, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         onChangeBlock({
@@ -6243,8 +8371,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       };
 
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...statsVariant.section, ...sectionAnimationStyle }}>
-          <div style={sectionContentStyle(props, compact)}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...statsVariant.section }}>
+          <div style={sectionContentStyle(props, compact, statsContentWidth)}>
           <div style={asStyleObject(statsVariant.shell)}>
             <div style={asStyleObject(statsVariant.header)}>
               <h2
@@ -6256,7 +8384,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   if (!editor || typeof onChangeBlock !== "function") return;
                   onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                 }}
-                style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: props.textColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: statsVariant.sectionTitleColor || props.textColor || undefined, fontSize: compact ? Math.max(16, Number(props.sectionTitleSize || 28)) : Math.max(18, Number(props.sectionTitleSize || 28)), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Stats") }}
               />
               {props.subtitle || editor ? (
@@ -6269,15 +8397,21 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     if (!editor || typeof onChangeBlock !== "function") return;
                     onChangeBlock({ ...props, subtitle: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                   }}
-                  style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: props.textColor || undefined, opacity: props.subtitle ? 0.88 : 0.72, marginTop: 12, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                  style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: statsVariant.sectionSubtitleColor || props.textColor || undefined, fontSize: compact ? Math.max(12, Number(props.sectionSubtitleSize || 16)) : Math.max(12, Number(props.sectionSubtitleSize || 16)), opacity: props.subtitle ? 0.88 : 0.72, marginTop: 12, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
                   dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "Add a short supporting line for the stats section.") }}
                 />
               ) : null}
             </div>
-            <div style={asStyleObject(statsVariant.cardsShell || statsVariant.grid)}>
-              <div style={statsVariant.cardsShell ? asStyleObject(statsVariant.grid) : {}}>
-                {statsItems.map((stat, idx) => (
-                  <div key={`${stat.id}-${idx}`} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}), ...getAnimationStyle("fade-up", idx * 0.06) }}>
+            {statsVariant.cardsShell ? (
+              <div style={asStyleObject(statsVariant.cardsShell)}>
+                <div style={asStyleObject(statsVariant.grid)}>
+                  {statsItems.map((stat, idx) => {
+                    const baseDelay = idx * statsCardStagger;
+                    const numberAnimationStyle = editor ? {} : getAnimationStyle(statsNumberAnimation, baseDelay + 0.04, statsSurfaceSpeed);
+                    const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
+                    const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
+                    return (
+                  <ScrollReveal key={`${stat.id}-${idx}`} animationName={statsCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
                     <div style={statsVariant.card(idx)}>
                       {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
                       <p
@@ -6286,7 +8420,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         contentEditable={editor}
                         suppressContentEditableWarning
                         onBlur={(event) => patchStat(idx, { number: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number)}
+                        style={asStyleObject({ ...(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number), ...numberAnimationStyle })}
                         dangerouslySetInnerHTML={{ __html: asRichHtml(stat.number || "0") }}
                       />
                       <p
@@ -6295,7 +8429,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         contentEditable={editor}
                         suppressContentEditableWarning
                         onBlur={(event) => patchStat(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject(statsVariant.label)}
+                        style={asStyleObject({ ...statsVariant.label, ...labelAnimationStyle })}
                         dangerouslySetInnerHTML={{ __html: asRichHtml(stat.label || "Metric") }}
                       />
                       {(stat.detail || editor) ? (
@@ -6305,18 +8439,65 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           contentEditable={editor}
                           suppressContentEditableWarning
                           onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                          style={asStyleObject(statsVariant.detail)}
+                          style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
                           dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
                         />
                       ) : null}
                     </div>
-                  </div>
-                ))}
+                  </ScrollReveal>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={asStyleObject(statsVariant.grid)}>
+                {statsItems.map((stat, idx) => {
+                  const baseDelay = idx * statsCardStagger;
+                  const numberAnimationStyle = editor ? {} : getAnimationStyle(statsNumberAnimation, baseDelay + 0.04, statsSurfaceSpeed);
+                  const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
+                  const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
+                  return (
+                  <ScrollReveal key={`${stat.id}-${idx}`} animationName={statsCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
+                    <div style={statsVariant.card(idx)}>
+                      {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
+                      <p
+                        data-website-inline-editor="true"
+                        data-text-prop={`stats.${idx}.number`}
+                        contentEditable={editor}
+                        suppressContentEditableWarning
+                        onBlur={(event) => patchStat(idx, { number: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                        style={asStyleObject({ ...(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number), ...numberAnimationStyle })}
+                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.number || "0") }}
+                      />
+                      <p
+                        data-website-inline-editor="true"
+                        data-text-prop={`stats.${idx}.label`}
+                        contentEditable={editor}
+                        suppressContentEditableWarning
+                        onBlur={(event) => patchStat(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                        style={asStyleObject({ ...statsVariant.label, ...labelAnimationStyle })}
+                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.label || "Metric") }}
+                      />
+                      {(stat.detail || editor) ? (
+                        <p
+                          data-website-inline-editor="true"
+                          data-text-prop={`stats.${idx}.detail`}
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                          style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
+                          dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
+                        />
+                      ) : null}
+                    </div>
+                  </ScrollReveal>
+                  );
+                })}
+              </div>
+            )}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "team":
@@ -6334,7 +8515,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         const memberImageSrc = getAssetFromLibrary(assets, member.imageAssetId)?.src || member.image;
         const editorOutline = editor ? "1px dashed rgba(14,165,233,0.35)" : "none";
         return (
-          <article style={{ ...teamVariant.card(animIdx), ...getAnimationStyle("fade-up", animIdx * 0.08) }}>
+          <ScrollReveal as="article" animationName="fade-up" delay={animIdx * 0.08} disabled={editor} style={{ ...teamVariant.card(animIdx) }}>
             {memberImageSrc ? (
               <img src={memberImageSrc} alt={member.name || "Team member"} style={{ ...teamVariant.image(animIdx), objectPosition: `${member.imageX}% ${member.imageY}%` }} />
             ) : (
@@ -6368,12 +8549,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 />
               ) : null}
             </div>
-          </article>
+          </ScrollReveal>
         );
       };
 
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...teamVariant.section, ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...teamVariant.section }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={asStyleObject(teamVariant.header)}>
             <h2
@@ -6431,7 +8612,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             </div>
           )}
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "newsletter": {
@@ -6536,7 +8717,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       // VARIANT: centered
       if (nlVariant === "centered") {
         return (
-          <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(165deg,#f8fafc,#ffffff)", textAlign: "center", ...sectionAnimationStyle }}>
+          <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(165deg,#f8fafc,#ffffff)", textAlign: "center" }}>
             <div style={sectionContentStyle(props, compact)}>
             <h2
               contentEditable={editor} suppressContentEditableWarning
@@ -6552,14 +8733,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             />
             {renderEmailRow()}
             </div>
-          </section>
+          </ScrollReveal>
         );
       }
 
       // VARIANT: dark-banner
       if (nlVariant === "dark-banner") {
         return (
-          <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#0f172a,#1e3a5f)", ...sectionAnimationStyle }}>
+          <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#0f172a,#1e3a5f)" }}>
             <div style={sectionContentStyle(props, compact)}>
             <h2
               contentEditable={editor} suppressContentEditableWarning
@@ -6575,14 +8756,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             />
             {renderEmailRow()}
             </div>
-          </section>
+          </ScrollReveal>
         );
       }
 
       // VARIANT: split
       if (nlVariant === "split") {
         return (
-          <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "#ffffff", ...sectionAnimationStyle }}>
+          <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "#ffffff" }}>
             <div style={sectionContentStyle(props, compact)}>
             <div style={{ display: compact ? "grid" : "flex", gap: 24, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 240px", minWidth: 0 }}>
@@ -6607,13 +8788,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               </div>
             </div>
             </div>
-          </section>
+          </ScrollReveal>
         );
       }
 
       // VARIANT: card-highlight
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#eff6ff,#dbeafe)", ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#eff6ff,#dbeafe)" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={{ maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontSize: compact ? 28 : 40, marginBottom: 8 }}>{props.icon || "✉️"}</div>
@@ -6640,7 +8821,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ) : null}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
     }
 
@@ -6648,43 +8829,76 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const trustBadgeBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
       const trustBadgeSty = trustBadgeVariantStyles(props, compact, trustBadgeBackgroundImage);
       return (
-        <section style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor), ...sectionAnimationStyle }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={asStyleObject(trustBadgeSty.row)}>
             {asArray(props.badges).map((badge, idx) => (
-              <div key={`${badge.label}-${idx}`} style={asStyleObject(trustBadgeSty.badge)}>
+              <ScrollReveal key={`${badge.label}-${idx}`} animationName="fade-up" delay={idx * 0.05} disabled={editor} style={asStyleObject(trustBadgeSty.badge)}>
                 <span style={asStyleObject(trustBadgeSty.icon)}>{badge.icon || "✓"}</span>
                 <span>{badge.label || "Badge"}</span>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
           </div>
-        </section>
+        </ScrollReveal>
       );
 
     case "marquee-strip": {
       const items = asArray(props.items).filter(Boolean);
       const repeated = [...items, ...items];
       const speed = Math.max(10, Number(props.speed) || 24);
+      const marqueeFontSize = Math.max(10, Number(props.fontSize || 12));
+      const marqueeStrokeWidth = Math.max(0, Number(props.textStrokeWidth || 0));
+      const dividerSize = Math.max(8, Number(props.dividerSize || (compact ? 12 : 14)));
+      const stripPaddingTop = Math.max(0, Number(props.paddingTop ?? (compact ? 12 : 16)));
+      const stripPaddingBottom = Math.max(0, Number(props.paddingBottom ?? (compact ? 12 : 16)));
+      const itemPaddingX = Math.max(0, Number(props.itemPaddingX ?? (compact ? 10 : 14)));
+      const marqueeLineHeight = Math.max(1, Number(props.lineHeight) || 1.08);
+      const marqueeMarginTop = Math.max(0, Number(props.marginTop ?? 0));
+      const marqueeMarginBottom = Math.max(0, Number(props.marginBottom ?? 0));
       const bg = props.backgroundColor || "#081120";
       const text = props.textColor || "#f8fafc";
+      const fill = props.textFillColor || text;
+      const stroke = props.textStrokeColor || "transparent";
+      const textTransform = String(props.textTransform || "uppercase");
+      const marqueeDirection = String(props.direction || "left");
+      const marqueeFontWeight = String(props.fontWeight || "800");
+      const marqueeFontStyle = String(props.fontStyle || "normal");
+      const marqueeTextDecoration = String(props.textDecoration || "none");
+      const dividerText = String(props.dividerText || "✦").trim() || "✦";
       const accent = props.accentColor || "#7dd3fc";
 
       return (
         <section
+          data-marquee-shell="true"
           style={{
             ...fullWidthStyle(props, compact, editor),
             ...sectionAnimationStyle,
+            position: "relative",
+            display: "block",
             background: bg,
             color: text,
             overflow: "hidden",
-            borderTop: `1px solid ${colorWithAlpha(accent, 0.25)}`,
-            borderBottom: `1px solid ${colorWithAlpha(accent, 0.18)}`,
-            padding: compact ? "12px 0" : "16px 0",
+            fontSize: `${marqueeFontSize}px`,
+            borderTop: "none",
+            borderBottom: "none",
+            borderRadius: 0,
+            padding: `${stripPaddingTop}px 0 ${stripPaddingBottom}px`,
+            marginTop: marqueeMarginTop,
+            marginBottom: marqueeMarginBottom,
+            boxShadow: "none",
+            isolation: "isolate",
           }}
         >
+          {editor ? (
+            <div style={{ position: "absolute", top: 8, right: compact ? 10 : 14, zIndex: 2, display: "flex", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
+              <button type="button" onClick={() => onChangeBlock?.({ ...props, fontSize: Math.max(10, Number(props.fontSize || 12) - 1) })} style={sharedStyles.editorChip}>A-</button>
+              <button type="button" onClick={() => onChangeBlock?.({ ...props, fontSize: Math.min(40, Number(props.fontSize || 12) + 1) })} style={sharedStyles.editorChip}>A+</button>
+            </div>
+          ) : null}
           <div style={{ width: "100%", overflow: "hidden" }}>
             <div
+              data-marquee-track="true"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -6692,7 +8906,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 width: "max-content",
                 minWidth: "100%",
                 animation: `wbMarquee ${speed}s linear infinite`,
+                animationDirection: marqueeDirection === "right" ? "reverse" : "normal",
                 willChange: "transform",
+                backfaceVisibility: "hidden",
               }}
             >
               {repeated.map((item, idx) => (
@@ -6702,17 +8918,68 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     display: "inline-flex",
                     alignItems: "center",
                     gap: compact ? 10 : 14,
-                    paddingLeft: compact ? 10 : 14,
+                    paddingLeft: itemPaddingX,
                     whiteSpace: "nowrap",
-                    textTransform: "uppercase",
+                    textTransform,
                     letterSpacing: "0.18em",
-                    fontSize: compact ? 11 : 12,
-                    fontWeight: 800,
+                    fontSize: `${compact ? Math.max(10, marqueeFontSize - 1) : marqueeFontSize}px`,
+                    lineHeight: marqueeLineHeight,
+                    fontWeight: marqueeFontWeight,
+                    fontStyle: marqueeFontStyle,
+                    textDecoration: marqueeTextDecoration,
+                    minHeight: `${Math.ceil((compact ? Math.max(10, marqueeFontSize - 1) : marqueeFontSize) * marqueeLineHeight)}px`,
                     opacity: 0.98,
                   }}
                 >
-                  <span style={{ color: accent, fontSize: compact ? 12 : 14 }}>✦</span>
-                  <span>{String(item)}</span>
+                  <span style={{ color: accent, fontSize: dividerSize, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>{dividerText}</span>
+                  <span
+                    data-website-inline-editor={editor ? "true" : undefined}
+                    data-text-prop={editor && idx < items.length ? `items.${idx}` : undefined}
+                    contentEditable={editor && idx < items.length}
+                    suppressContentEditableWarning
+                    onFocus={(event) => {
+                      const shell = event.currentTarget.closest?.('[data-marquee-shell="true"]');
+                      const track = shell?.querySelector?.('[data-marquee-track="true"]');
+                      if (track?.style) track.style.animationPlayState = "paused";
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      const shell = event.currentTarget.closest?.('[data-marquee-shell="true"]');
+                      const track = shell?.querySelector?.('[data-marquee-track="true"]');
+                      if (track?.style) track.style.animationPlayState = "paused";
+                    }}
+                    onBlur={(event) => {
+                      const shell = event.currentTarget.closest?.('[data-marquee-shell="true"]');
+                      const track = shell?.querySelector?.('[data-marquee-track="true"]');
+                      if (track?.style) track.style.animationPlayState = "running";
+                      if (shouldSkipToolbarBlur(event)) return;
+                      if (!editor || typeof onChangeBlock !== "function" || idx >= items.length) return;
+                      const nextItems = items.map((entry, entryIdx) => (
+                        entryIdx === idx ? cleanInlineEditorHtml(event.currentTarget.innerHTML) : entry
+                      ));
+                      onChangeBlock({ ...props, items: nextItems });
+                    }}
+                    style={{
+                      outline: editor && idx < items.length ? "1px dashed rgba(125,211,252,0.35)" : "none",
+                      borderRadius: 6,
+                      padding: editor && idx < items.length ? "2px 4px" : 0,
+                      color: fill,
+                      WebkitTextFillColor: fill,
+                      WebkitTextStroke: marqueeStrokeWidth > 0 ? `${marqueeStrokeWidth}px ${stroke}` : undefined,
+                      textShadow: marqueeStrokeWidth > 0 && stroke !== "transparent"
+                        ? `0 0 1px ${stroke}, 0 0 1px ${stroke}`
+                        : undefined,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      fontSize: `${compact ? Math.max(10, marqueeFontSize - 1) : marqueeFontSize}px`,
+                      lineHeight: marqueeLineHeight,
+                      fontWeight: marqueeFontWeight,
+                      fontStyle: marqueeFontStyle,
+                      textDecoration: marqueeTextDecoration,
+                    }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(String(item)) }}
+                  />
                 </div>
               ))}
             </div>
@@ -6811,7 +9078,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       };
 
       return (
-        <footer style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), ...sectionAnimationStyle }}>
+        <ScrollReveal as="footer" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
             <div style={{ display: "grid", gap: compact ? 18 : 24, marginBottom: compact ? 24 : 34 }}>
               {(props.brand || props.tagline || props.spotlightHeading || props.spotlightText) ? (
@@ -6886,7 +9153,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               </div>
             </div>
           </div>
-        </footer>
+        </ScrollReveal>
       );
     }
 
@@ -6932,7 +9199,9 @@ const sharedStyles = {
   cardSection: (compact, props = {}) => {
     const scale = spacingMultiplier(props);
     return {
-    border: `1px solid ${props.borderColor || "rgba(148,163,184,0.28)"}`,
+    borderWidth: 0,
+    borderStyle: "solid",
+    borderColor: "transparent",
     background: props.backgroundColor || "linear-gradient(165deg,#ffffff 0%,#f8fafc 100%)",
     color: props.textColor || "#0f172a",
     borderRadius: compact ? 16 : 22,
