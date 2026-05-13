@@ -4845,7 +4845,10 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     boxShadow: "none",
     border: "none",
     padding: 0,
-    ...sectionAnimationStyle,
+    // CSS transforms on the section break position:sticky on children — omit them when parallax is active
+    ...(splitParallaxEnabled && !compact ? {} : sectionAnimationStyle),
+    // overflow must be visible for sticky to work
+    ...(splitParallaxEnabled && !compact ? { overflow: "visible" } : {}),
   };
   const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
   const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
@@ -4854,17 +4857,21 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
     minHeight: compact ? undefined : props.minHeight || "760px",
     borderRadius: 0,
-    overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
-    alignItems: "start",
+    // overflow:hidden breaks position:sticky — must be visible when parallax is on
+    overflow: (splitParallaxEnabled && !compact) ? "visible" : ((hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden"),
+    // stretch makes the grid row height equal to the taller (content) column, giving sticky room to travel
+    alignItems: (splitParallaxEnabled && !compact) ? "stretch" : "start",
     background: props.sectionBackgroundColor || "#000000",
     border: "none",
     boxShadow: "none",
   };
   const mediaPanelStyle = splitBackgroundImage
     ? {
-        position: "relative",
+        position: (splitParallaxEnabled && !compact) ? "sticky" : "relative",
+        top: (splitParallaxEnabled && !compact) ? 0 : undefined,
+        height: (splitParallaxEnabled && !compact) ? "100vh" : undefined,
         overflow: "hidden",
-        minHeight: compact ? 122 : "100%",
+        minHeight: compact ? 122 : (splitParallaxEnabled ? undefined : "100%"),
         backgroundColor: props.backgroundColor || "#0f172a",
         backgroundImage: `url(${splitBackgroundImage})`,
         backgroundPosition: props.backgroundPosition || "center center",
@@ -4898,14 +4905,23 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   };
 
   return (
-    <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={asStyleObject(sectionSurface)}>
+    // When parallax is enabled, use a plain <section> so no CSS transform is ever applied
+    // (transforms on a containing block prevent position:sticky from working in descendants)
+    <ScrollReveal
+      as="section"
+      animationName={(splitParallaxEnabled && !compact) ? "" : (props.sectionAnimation || "fade-up")}
+      delay={props.sectionAnimationDelay || 0.06}
+      speed={props.sectionAnimationSpeed}
+      disabled={editor || (splitParallaxEnabled && !compact)}
+      style={asStyleObject(sectionSurface)}
+    >
       <div style={asStyleObject(panelShell)}>
           <ScrollReveal
             as="div"
-            animationName={props.leftPanelAnimation || "none"}
+            animationName={(splitParallaxEnabled && !compact) ? "" : (props.leftPanelAnimation || "none")}
             delay={Number(props.leftPanelAnimationDelay ?? 0)}
             speed={props.leftPanelAnimationSpeed}
-            disabled={editor}
+            disabled={editor || (splitParallaxEnabled && !compact)}
             style={mediaPanelStyle}
           >
             {!splitBackgroundImage && editor ? (
