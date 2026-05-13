@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { BlockTypes, BlockDefinitions } from "../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
+import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "./gridIconLibrary";
 import RichText from "../RichText";
 
 const ImageEditModal = dynamic(() => import("../email/editor2/ImageEditModal"), { ssr: false });
@@ -111,6 +112,9 @@ function getSelectOptions(key) {
     sectionAnimation: ANIMATION_PRESETS.map((item) => item.value),
     textAnimation: ANIMATION_PRESETS.map((item) => item.value),
     subheadlineAnimation: ANIMATION_PRESETS.map((item) => item.value),
+    ctaAnimation: ANIMATION_PRESETS.map((item) => item.value),
+    contentOverlayAnimation: ANIMATION_PRESETS.map((item) => item.value),
+    imageOverlayAnimation: ANIMATION_PRESETS.map((item) => item.value),
     alignment: ["left", "center", "right"],
     headlineAlignment: ["left", "center", "right"],
     textSize: ["small", "medium", "large"],
@@ -135,7 +139,7 @@ function getSelectOptions(key) {
 }
 
 function supportsSectionHeight(blockType) {
-  return [BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.COLUMNS_2, BlockTypes.COLUMNS_3].includes(blockType);
+  return [BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.COLUMNS_2, BlockTypes.COLUMNS_3, BlockTypes.GRID_SECTION].includes(blockType);
 }
 
 function supportsFullWidthBackground(blockType) {
@@ -374,6 +378,16 @@ function AssetLibraryModal({ visible, title = "Media Library", assets = [], sele
       </div>
     </div>
   );
+}
+
+function openSharedLibraryAssetPicker(onPick) {
+  return openSharedMediaPicker({
+    onPick: (asset) => {
+      const normalizedAsset = normalizeSelectedAsset(asset);
+      if (!normalizedAsset?.src) return;
+      onPick?.(normalizedAsset);
+    },
+  });
 }
 
 const CONTACT_FORM_TEMPLATES = [
@@ -1144,6 +1158,21 @@ function normalizeStatItem(item, index) {
 function StatsItemsEditor({ stats, onChange }) {
   const safeStats = Array.isArray(stats) ? stats : [];
 
+  function updateStat(index, patch) {
+    onChange(safeStats.map((item, itemIndex) => (
+      itemIndex === index ? { ...normalizeStatItem(item, itemIndex), ...patch } : item
+    )));
+  }
+
+  function moveStat(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= safeStats.length) return;
+    const nextStats = [...safeStats];
+    const [moved] = nextStats.splice(index, 1);
+    nextStats.splice(targetIndex, 0, moved);
+    onChange(nextStats);
+  }
+
   function addStat() {
     onChange([
       ...safeStats,
@@ -1168,9 +1197,41 @@ function StatsItemsEditor({ stats, onChange }) {
           <div key={`${index}-${stat.id}`} style={styles.linkRowCard}>
             <div style={styles.linkRowHeader}>
               <span style={styles.linkRowTitle}>Card {index + 1}</span>
-              <button type="button" style={styles.linkRowDelete} onClick={() => removeStat(index)}>Remove</button>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" style={styles.secondaryBtn} onClick={() => moveStat(index, -1)} disabled={index === 0}>Up</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => moveStat(index, 1)} disabled={index === safeStats.length - 1}>Down</button>
+                <button type="button" style={styles.linkRowDelete} onClick={() => removeStat(index)}>Remove</button>
+              </div>
             </div>
-            <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>Card {index + 1}</p>
+            <div style={styles.colorGrid}>
+              <div>
+                <label style={styles.propertyLabel}>Number</label>
+                <input
+                  type="text"
+                  value={stat.number || ""}
+                  onChange={(event) => updateStat(index, { number: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="5+"
+                />
+              </div>
+              <div>
+                <label style={styles.propertyLabel}>Label</label>
+                <input
+                  type="text"
+                  value={stat.label || ""}
+                  onChange={(event) => updateStat(index, { label: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Tools replaced"
+                />
+              </div>
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Detail</label>
+            <textarea
+              value={stat.detail || ""}
+              onChange={(event) => updateStat(index, { detail: event.target.value })}
+              style={{ ...styles.propertyInput, minHeight: 88 }}
+              placeholder="Add a short line of context."
+            />
           </div>
         );
       })}
@@ -1444,6 +1505,13 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
                 }}
               />
             </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatarAssetId: asset.id || "" }))}
+            >
+              Choose From Library
+            </button>
             {savedImages.map((image) => (
               <button
                 key={`tav-${index}-${image.id || image.src}`}
@@ -1677,6 +1745,13 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
                 }}
               />
             </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => update({ logo: asset.src || "", logoAssetId: asset.id || "", logoWidth: props.logoWidth || 48 }))}
+            >
+              Choose From Library
+            </button>
             {brandAssets?.logo ? (
               <button
                 type="button"
@@ -1870,6 +1945,13 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
                 }}
               />
             </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+            >
+              Choose From Library
+            </button>
             {savedImages.map((image) => (
               <button
                 key={`text-bg-${image.id || image.src}`}
@@ -1981,10 +2063,25 @@ function StatsPropertiesPanel({ block, index, onChange }) {
               Saves this stats card's layout variant and colour treatment into a reusable option here.
             </span>
           </div>
+          <div style={{ ...styles.colorGrid, marginTop: 12 }}>
+            <NumberField label="Block Max Width" value={Number(props.blockMaxWidth) || 1200} min={320} max={1800} onChange={(value) => update({ blockMaxWidth: value })} />
+            <NumberField label="Card Gap" value={Number(props.statsCardGap ?? 18)} min={0} max={80} onChange={(value) => update({ statsCardGap: value })} />
+            <NumberField label="Card Min Width" value={Number(props.statsCardMinWidth ?? 220)} min={140} max={520} onChange={(value) => update({ statsCardMinWidth: value })} />
+          </div>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Stat Cards</label>
           <StatsItemsEditor stats={props.stats} onChange={(stats) => update({ stats })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Typography</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Section Title" value={Number(props.sectionTitleSize || 28)} min={14} max={96} onChange={(value) => update({ sectionTitleSize: value })} />
+            <NumberField label="Section Subtitle" value={Number(props.sectionSubtitleSize || 16)} min={12} max={72} onChange={(value) => update({ sectionSubtitleSize: value })} />
+            <NumberField label="Number" value={Number(props.numberSize || 48)} min={14} max={120} onChange={(value) => update({ numberSize: value })} />
+            <NumberField label="Card Title" value={Number(props.labelSize || 14)} min={10} max={56} onChange={(value) => update({ labelSize: value })} />
+            <NumberField label="Card Subtitle" value={Number(props.detailSize || 14)} min={10} max={56} onChange={(value) => update({ detailSize: value })} />
+          </div>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Colours</label>
@@ -1994,6 +2091,34 @@ function StatsPropertiesPanel({ block, index, onChange }) {
             <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
             <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
             <CompactColorField label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ accentColor: value })} />
+            <CompactColorField label="Section Title" value={props.sectionTitleColor || props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ sectionTitleColor: value })} />
+            <CompactColorField label="Section Subtitle" value={props.sectionSubtitleColor || props.textColor || "#475569"} fallback="#475569" onChange={(value) => update({ sectionSubtitleColor: value })} />
+            <CompactColorField label="Number" value={props.numberColor || props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ numberColor: value })} />
+            <CompactColorField label="Card Title" value={props.labelColor || props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ labelColor: value })} />
+            <CompactColorField label="Card Subtitle" value={props.detailColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ detailColor: value })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            {[
+              { key: "sectionAnimation", label: "Section" },
+              { key: "cardAnimation", label: "Cards" },
+              { key: "numberAnimation", label: "Number" },
+              { key: "labelAnimation", label: "Card Title" },
+              { key: "detailAnimation", label: "Card Subtitle" },
+            ].map((field) => (
+              <div key={field.key} style={styles.propertyField}>
+                <label style={styles.propertyLabel}>{field.label}</label>
+                <select value={String(props[field.key] || (field.key === "cardAnimation" ? "fade-up" : field.key === "sectionAnimation" ? "fade-up" : "fade-in"))} onChange={(event) => update({ [field.key]: event.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`${field.key}-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Surface Speed" value={Math.round((Number(props.surfaceAnimationSpeed ?? 0.9) || 0.9) * 100)} min={25} max={300} onChange={(value) => update({ surfaceAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Card Stagger" value={Math.round((Number(props.cardStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ cardStagger: Number((value / 100).toFixed(2)) })} />
           </div>
         </div>
       </div>
@@ -2129,6 +2254,16 @@ function TeamMembersEditor({ members, onChange, brandAssets, onOpenImageEditor, 
                   }}
                 />
               </label>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => openSharedLibraryAssetPicker((asset) => updateMember(index, {
+                  image: String(asset.src || "").startsWith("data:") ? "" : (asset.src || ""),
+                  imageAssetId: asset.id || "",
+                }))}
+              >
+                Choose From Library
+              </button>
               {savedImages.map((image) => (
                 <button
                   key={`team-member-${index}-${image.id || image.src}`}
@@ -2249,18 +2384,18 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
             <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
           </div>
           <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
-            Edit the item title and copy directly on the page.
+            Edit the item title and copy directly on the page. Use SVG icons or normal images here.
           </p>
           <input
             type="text"
             value={item.image}
             onChange={(e) => updateItem(index, { image: e.target.value })}
             style={{ ...styles.propertyInput, marginTop: 10 }}
-            placeholder="Image URL"
+            placeholder="Icon or image URL"
           />
           <div style={{ ...styles.assetPicker, marginTop: 8 }}>
             <label style={styles.assetUploadCta}>
-              Upload Image
+              Upload Icon / Image
               <input
                 type="file"
                 accept="image/*"
@@ -2274,6 +2409,13 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
                 }}
               />
             </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { image: asset.src || "" }))}
+            >
+              Choose From Library
+            </button>
             {savedImages.map((image) => (
               <button
                 key={`feature-item-${index}-${image.id || image.src}`}
@@ -2329,7 +2471,7 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
       <h3 style={styles.propertiesTitle}>☰ Edit: List Block</h3>
       <div style={styles.propertyGrid}>
         <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>List Items</label>
+          <label style={styles.propertyLabel}>List Items / Icons</label>
           <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
         </div>
         <div style={styles.sectionCard}>
@@ -2460,6 +2602,13 @@ function GalleryImagesEditor({ images, onChange, brandAssets, onOpenImageEditor 
                   }}
                 />
               </label>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => openSharedLibraryAssetPicker((asset) => updateImage(index, { src: asset.src || "", alt: asset.name || item.alt }))}
+              >
+                Choose From Library
+              </button>
               {savedImages.map((image) => (
                 <button
                   key={`gallery-item-${index}-${image.id || image.src}`}
@@ -2857,6 +3006,27 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
     update({ items: nextItems });
   }
 
+  function applySplitColorPreset(value) {
+    if (String(value) === "blue") {
+      update({
+        splitColorPreset: "blue",
+        headlineColor: "#7dd3fc",
+        eyebrowColor: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        chevronColor: "#ffffff",
+        arrowBackgroundColor: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+      });
+      return;
+    }
+
+    update({
+      splitColorPreset: "green",
+      headlineColor: "#61ce70",
+      eyebrowColor: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+      chevronColor: "#ffffff",
+      arrowBackgroundColor: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+    });
+  }
+
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>❓ Edit: FAQ Section</h3>
@@ -2975,6 +3145,538 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
   );
 }
 
+function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const [activeTab, setActiveTab] = useState("content");
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const headlineBlock = {
+    ...(props.headlineBlock || {}),
+    content: props.headlineBlock?.content ?? props.headline,
+    animation: props.headlineBlock?.animation ?? props.textAnimation ?? "fade-up",
+    animationDelay: props.headlineBlock?.animationDelay ?? props.textAnimationDelay ?? 0,
+    animationSpeed: props.headlineBlock?.animationSpeed ?? props.textAnimationSpeed ?? 0.8,
+    fontSize: props.headlineBlock?.fontSize ?? props.headlineFontSize ?? 48,
+    lineHeight: props.headlineBlock?.lineHeight ?? props.headlineLineHeight ?? 1.2,
+    fontFamily: props.headlineBlock?.fontFamily ?? props.headlineFontFamily ?? "Poppins, sans-serif",
+    fontWeight: props.headlineBlock?.fontWeight ?? props.headlineFontWeight ?? "400",
+    color: props.headlineBlock?.color ?? props.headlineColor ?? "#61ce70",
+    alignment: props.headlineBlock?.alignment ?? props.headlineAlignment ?? "left",
+  };
+  const bodyBlock = {
+    ...(props.bodyBlock || {}),
+    content: props.bodyBlock?.content ?? props.subheadline,
+    animation: props.bodyBlock?.animation ?? props.subheadlineAnimation ?? "fade-in",
+    animationDelay: props.bodyBlock?.animationDelay ?? props.subheadlineAnimationDelay ?? 0.12,
+    animationSpeed: props.bodyBlock?.animationSpeed ?? props.subheadlineAnimationSpeed ?? 0.9,
+    fontSize: props.bodyBlock?.fontSize ?? props.subheadlineFontSize ?? props.textFontSize ?? 18,
+    lineHeight: props.bodyBlock?.lineHeight ?? props.subheadlineLineHeight ?? props.textLineHeight ?? 1.6,
+    fontFamily: props.bodyBlock?.fontFamily ?? props.fontFamily ?? "Arial",
+    fontWeight: props.bodyBlock?.fontWeight ?? props.fontWeight ?? "400",
+    color: props.bodyBlock?.color ?? props.textColor ?? "#bdbcbf",
+    alignment: props.bodyBlock?.alignment ?? props.alignment ?? "left",
+  };
+  const faqBlock = {
+    ...(props.faqBlock || {}),
+    items: normalizeFaqItems(props.faqBlock?.items || props.items),
+    faqStartCollapsed: props.faqBlock?.faqStartCollapsed ?? props.faqStartCollapsed,
+    faqAllowMultipleOpen: props.faqBlock?.faqAllowMultipleOpen ?? props.faqAllowMultipleOpen,
+    itemBackgroundColor: props.faqBlock?.itemBackgroundColor ?? props.itemBackgroundColor,
+    itemBorderColor: props.faqBlock?.itemBorderColor ?? props.itemBorderColor,
+    arrowBackgroundColor: props.faqBlock?.arrowBackgroundColor ?? props.arrowBackgroundColor,
+    chevronColor: props.faqBlock?.chevronColor ?? props.chevronColor,
+    questionFontSize: props.faqBlock?.questionFontSize ?? props.questionFontSize,
+    answerFontSize: props.faqBlock?.answerFontSize ?? props.answerFontSize,
+    questionLineHeight: props.faqBlock?.questionLineHeight ?? props.questionLineHeight,
+    answerLineHeight: props.faqBlock?.answerLineHeight ?? props.answerLineHeight,
+    faqPanelBackgroundColor: props.faqBlock?.faqPanelBackgroundColor ?? props.faqPanelBackgroundColor,
+    faqMaxWidth: props.faqBlock?.faqMaxWidth ?? props.faqMaxWidth,
+    sectionAnimation: props.faqBlock?.sectionAnimation ?? "fade-up",
+    sectionAnimationDelay: props.faqBlock?.sectionAnimationDelay ?? 0.12,
+    sectionAnimationSpeed: props.faqBlock?.sectionAnimationSpeed ?? 0.9,
+    faqAnimation: props.faqBlock?.faqAnimation ?? props.faqAnimation ?? "fade-up",
+    faqAnimationDelay: props.faqBlock?.faqAnimationDelay ?? props.faqAnimationDelay ?? 0.18,
+    faqAnimationSpeed: props.faqBlock?.faqAnimationSpeed ?? props.faqAnimationSpeed ?? 0.9,
+  };
+  const items = faqBlock.items;
+  const currentBackgroundPreview = resolveAssetField(props, "backgroundImage", brandAssets);
+
+  function update(patch) {
+    onChange(index, { ...props, ...patch });
+  }
+
+  function updateFaqBlock(patch) {
+    onChange(index, {
+      ...props,
+      faqBlock: {
+        ...(props.faqBlock || {}),
+        ...patch,
+      },
+    });
+  }
+
+  function updateHeadlineBlock(patch) {
+    const nextHeadlineBlock = {
+      ...(props.headlineBlock || {}),
+      ...patch,
+    };
+    const next = {
+      ...props,
+      headlineBlock: nextHeadlineBlock,
+    };
+    if (Object.prototype.hasOwnProperty.call(patch, "content")) next.headline = nextHeadlineBlock.content;
+    if (Object.prototype.hasOwnProperty.call(patch, "animation")) next.textAnimation = nextHeadlineBlock.animation;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationDelay")) next.textAnimationDelay = nextHeadlineBlock.animationDelay;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationSpeed")) next.textAnimationSpeed = nextHeadlineBlock.animationSpeed;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontSize")) next.headlineFontSize = nextHeadlineBlock.fontSize;
+    if (Object.prototype.hasOwnProperty.call(patch, "lineHeight")) next.headlineLineHeight = nextHeadlineBlock.lineHeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontFamily")) next.headlineFontFamily = nextHeadlineBlock.fontFamily;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontWeight")) next.headlineFontWeight = nextHeadlineBlock.fontWeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "color")) next.headlineColor = nextHeadlineBlock.color;
+    if (Object.prototype.hasOwnProperty.call(patch, "alignment")) next.headlineAlignment = nextHeadlineBlock.alignment;
+    onChange(index, next);
+  }
+
+  function updateBodyBlock(patch) {
+    const nextBodyBlock = {
+      ...(props.bodyBlock || {}),
+      ...patch,
+    };
+    const next = {
+      ...props,
+      bodyBlock: nextBodyBlock,
+    };
+    if (Object.prototype.hasOwnProperty.call(patch, "content")) next.subheadline = nextBodyBlock.content;
+    if (Object.prototype.hasOwnProperty.call(patch, "animation")) next.subheadlineAnimation = nextBodyBlock.animation;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationDelay")) next.subheadlineAnimationDelay = nextBodyBlock.animationDelay;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationSpeed")) next.subheadlineAnimationSpeed = nextBodyBlock.animationSpeed;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontSize")) {
+      next.subheadlineFontSize = nextBodyBlock.fontSize;
+      next.textFontSize = nextBodyBlock.fontSize;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "lineHeight")) {
+      next.subheadlineLineHeight = nextBodyBlock.lineHeight;
+      next.textLineHeight = nextBodyBlock.lineHeight;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "fontFamily")) next.fontFamily = nextBodyBlock.fontFamily;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontWeight")) next.fontWeight = nextBodyBlock.fontWeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "color")) next.textColor = nextBodyBlock.color;
+    if (Object.prototype.hasOwnProperty.call(patch, "alignment")) next.alignment = nextBodyBlock.alignment;
+    onChange(index, next);
+  }
+
+  function addItem() {
+    updateFaqBlock({
+      items: [
+        ...items,
+        createFaqItem(items.length),
+      ],
+    });
+  }
+
+  function updateItem(itemIndex, patch) {
+    updateFaqBlock({
+      items: items.map((item, currentIndex) => {
+        if (currentIndex !== itemIndex) return item;
+        const nextQuestion = Object.prototype.hasOwnProperty.call(patch, "question")
+          ? String(patch.question || "")
+          : item.question;
+        const nextAnswer = Object.prototype.hasOwnProperty.call(patch, "answer")
+          ? String(patch.answer || "")
+          : item.answer;
+        return {
+          ...item,
+          ...patch,
+          question: nextQuestion,
+          heading: nextQuestion,
+          answer: nextAnswer,
+          content: nextAnswer,
+        };
+      }),
+    });
+  }
+
+  function removeItem(itemIndex) {
+    updateFaqBlock({ items: items.filter((_, currentIndex) => currentIndex !== itemIndex) });
+  }
+
+  function moveItem(itemIndex, direction) {
+    const nextIndex = itemIndex + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) return;
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(itemIndex, 1);
+    nextItems.splice(nextIndex, 0, movedItem);
+    updateFaqBlock({ items: nextItems });
+  }
+
+  function applySplitColorPreset(value) {
+    if (String(value) === "blue") {
+      update({
+        splitColorPreset: "blue",
+        headlineColor: "#7dd3fc",
+        eyebrowColor: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        chevronColor: "#ffffff",
+        arrowBackgroundColor: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+      });
+      return;
+    }
+
+    update({
+      splitColorPreset: "green",
+      headlineColor: "#61ce70",
+      eyebrowColor: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+      chevronColor: "#ffffff",
+      arrowBackgroundColor: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+    });
+  }
+
+  function renderAnimationControlCard(label, animationKey, delayKey, speedKey, defaults = {}) {
+    return (
+      <div style={styles.sectionCard}>
+        <label style={styles.propertyLabel}>{label}</label>
+        <select
+          value={String(props?.[animationKey] || defaults.animation || "none")}
+          onChange={(event) => update({ [animationKey]: event.target.value })}
+          style={styles.propertyInput}
+        >
+          {ANIMATION_PRESETS.map((preset) => (
+            <option key={`${animationKey}-${preset.value}`} value={preset.value}>{preset.label}</option>
+          ))}
+        </select>
+        <div style={styles.colorGrid}>
+          <NumberField
+            label="Delay (s)"
+            value={Number(props?.[delayKey] ?? defaults.delay ?? 0)}
+            min={0}
+            max={4}
+            onChange={(value) => update({ [delayKey]: Number(value) })}
+          />
+          <NumberField
+            label="Speed (s)"
+            value={Number(props?.[speedKey] ?? defaults.speed ?? 0.9)}
+            min={0.2}
+            max={4}
+            onChange={(value) => update({ [speedKey]: Number(value) })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>↔️ Edit: Split Block</h3>
+      <div style={styles.tabRow}>
+        {[
+          { id: "content", label: "Content" },
+          { id: "layout", label: "Layout" },
+          { id: "style", label: "Style" },
+          { id: "faq", label: `FAQ (${items.length})` },
+          { id: "animations", label: "Animations" },
+        ].map((tab) => (
+          <button
+            key={`split-tab-${tab.id}`}
+            type="button"
+            style={{ ...styles.tabChip, ...(activeTab === tab.id ? styles.tabChipActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.propertyGrid}>
+        {activeTab === "layout" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Parallax Side</label>
+          {currentBackgroundPreview ? (
+            <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: "100%", minHeight: 148, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "#0f172a" }}>
+                <img src={currentBackgroundPreview} alt="Split block background" style={{ width: "100%", height: 148, objectFit: props.backgroundSize === "contain" ? "contain" : "cover", display: "block" }} />
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>Current image used for the parallax half.</div>
+            </div>
+          ) : null}
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  update({ backgroundStyle: "image" });
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            {savedImages.map((image) => (
+              <button
+                key={`split-bg-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" style={styles.secondaryBtn} onClick={() => update({ backgroundImage: "", backgroundImageAssetId: undefined })}>Remove Background</button>
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Section Height" value={parsePixelValue(props.minHeight, 760)} min={320} max={1600} onChange={(value) => update({ minHeight: `${value}px` })} />
+            <select value={String(props.splitLayout || "43-57")} onChange={(event) => update({ splitLayout: event.target.value })} style={styles.propertyInput}>
+              <option value="43-57">43 / 57</option>
+              <option value="50-50">50 / 50</option>
+              <option value="45-55">45 / 55</option>
+              <option value="55-45">55 / 45</option>
+            </select>
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.fullWidthBackground !== false}
+              onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Full width section
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.enableParallax}
+              onChange={(e) => update({ enableParallax: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Enable parallax image half
+          </label>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
+          <select value={String(props.backgroundPosition || "center center")} onChange={(event) => update({ backgroundPosition: event.target.value, backgroundStyle: "image" })} style={styles.propertyInput}>
+            <option value="top center">Top</option>
+            <option value="center center">Middle</option>
+            <option value="bottom center">Bottom</option>
+            <option value="center left">Left</option>
+            <option value="center right">Right</option>
+          </select>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Image Fit</label>
+          <select value={String(props.backgroundSize || "cover")} onChange={(event) => update({ backgroundSize: event.target.value, backgroundStyle: "image" })} style={styles.propertyInput}>
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+          </select>
+          <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5, marginTop: 8 }}>
+            Use Cover to fill the whole half and crop the edges. Use Contain to keep the full image visible.
+          </div>
+        </div>
+        ) : null}
+
+        {activeTab === "content" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content Side</label>
+          <input
+            type="text"
+            value={String(props.eyebrow || "")}
+            onChange={(event) => update({ eyebrow: event.target.value })}
+            style={styles.propertyInput}
+            placeholder="Small label"
+          />
+          <textarea
+            value={htmlToPlainText(headlineBlock.content || "")}
+            onChange={(event) => updateHeadlineBlock({ content: event.target.value })}
+            style={{ ...styles.propertyInput, minHeight: 88, resize: "vertical", marginTop: 8 }}
+            placeholder="Headline"
+          />
+          <textarea
+            value={htmlToPlainText(bodyBlock.content || "")}
+            onChange={(event) => updateBodyBlock({ content: event.target.value })}
+            style={{ ...styles.propertyInput, minHeight: 110, resize: "vertical", marginTop: 8 }}
+            placeholder="Supporting copy"
+          />
+        </div>
+        ) : null}
+
+        {activeTab === "style" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content Styling</label>
+          <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+            <label style={styles.propertyLabel}>Color Styles</label>
+            <select
+              value={String(props.splitColorPreset || "green")}
+              onChange={(event) => applySplitColorPreset(event.target.value)}
+              style={styles.propertyInput}
+            >
+              <option value="green">Green</option>
+              <option value="blue">Blue</option>
+            </select>
+          </div>
+          <ColorSelector label="Section Background" value={props.sectionBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ sectionBackgroundColor: value })} />
+          <ColorSelector label="Content Panel" value={props.contentPanelBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ contentPanelBackgroundColor: value })} />
+          <ColorSelector label="FAQ Block Background" value={props.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)"} fallback="#0f172a" onChange={(value) => update({ faqPanelBackgroundColor: value })} />
+          <ColorSelector label="Eyebrow Gradient / Rule" value={props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)"} fallback="#0ea5e9" onChange={(value) => update({ eyebrowColor: value })} />
+          <ColorSelector label="Headline Color" value={headlineBlock.color || "#0f172a"} fallback="#0f172a" onChange={(value) => updateHeadlineBlock({ color: value })} />
+          <ColorSelector label="Body Color" value={bodyBlock.color || "#475569"} fallback="#475569" onChange={(value) => updateBodyBlock({ color: value })} />
+          <div style={styles.colorGrid}>
+            <NumberField label="Headline Size" value={Number(headlineBlock.fontSize || 48)} min={20} max={120} onChange={(value) => updateHeadlineBlock({ fontSize: value })} />
+            <NumberField label="Headline Line Height" value={Number(headlineBlock.lineHeight || 1.2)} min={0.8} max={3} onChange={(value) => updateHeadlineBlock({ lineHeight: Number(value) })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Body Size" value={Number(bodyBlock.fontSize || 18)} min={12} max={42} onChange={(value) => updateBodyBlock({ fontSize: Number(value) })} />
+            <NumberField label="Body Line Height" value={Number(bodyBlock.lineHeight || 1.6)} min={1} max={3} onChange={(value) => updateBodyBlock({ lineHeight: Number(value) })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="FAQ Width" value={Number(faqBlock.faqMaxWidth || props.faqMaxWidth || 720)} min={280} max={1200} onChange={(value) => updateFaqBlock({ faqMaxWidth: value })} />
+            <div />
+          </div>
+        </div>
+        ) : null}
+
+        {activeTab === "faq" ? (
+        <>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Nested FAQ Block</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Question Size" value={Number(faqBlock.questionFontSize || 24)} min={16} max={44} onChange={(value) => updateFaqBlock({ questionFontSize: value })} />
+            <NumberField label="Answer Size" value={Number(faqBlock.answerFontSize || 18)} min={12} max={32} onChange={(value) => updateFaqBlock({ answerFontSize: value })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Question Line Height" value={Number(faqBlock.questionLineHeight || 1.4)} min={1} max={3} onChange={(value) => updateFaqBlock({ questionLineHeight: Number(value) })} />
+            <NumberField label="Answer Line Height" value={Number(faqBlock.answerLineHeight || 1.6)} min={1} max={3} onChange={(value) => updateFaqBlock({ answerLineHeight: Number(value) })} />
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!faqBlock.faqStartCollapsed}
+              onChange={(e) => updateFaqBlock({ faqStartCollapsed: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Collapse all items by default
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!faqBlock.faqAllowMultipleOpen}
+              onChange={(e) => updateFaqBlock({ faqAllowMultipleOpen: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Allow multiple items open
+          </label>
+          <ColorSelector label="FAQ Block Background" value={faqBlock.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)"} fallback="#0f172a" onChange={(value) => updateFaqBlock({ faqPanelBackgroundColor: value })} />
+          <ColorSelector label="Item Background" value={faqBlock.itemBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => updateFaqBlock({ itemBackgroundColor: value })} />
+          <ColorSelector label="Item Border" value={faqBlock.itemBorderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => updateFaqBlock({ itemBorderColor: value })} />
+          <ColorSelector label="Arrow Background" value={faqBlock.arrowBackgroundColor || "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)"} fallback="#22c55e" onChange={(value) => updateFaqBlock({ arrowBackgroundColor: value })} />
+          <ColorSelector label="Chevron Color" value={faqBlock.chevronColor || "#2563eb"} fallback="#2563eb" onChange={(value) => updateFaqBlock({ chevronColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>FAQ Items</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add New Question</button>
+          </div>
+          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+            {items.length ? items.map((item, itemIndex) => (
+              <div key={item.id || `split-item-${itemIndex}`} style={styles.sectionCard}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <span style={styles.colorLabel}>Question {itemIndex + 1}</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, -1)} disabled={itemIndex === 0}>↑ Move Up</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, 1)} disabled={itemIndex === items.length - 1}>↓ Move Down</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => removeItem(itemIndex)}>Remove</button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={String(item.question || "")}
+                  onChange={(event) => updateItem(itemIndex, { question: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Question"
+                />
+                <textarea
+                  value={String(item.answer || "")}
+                  onChange={(event) => updateItem(itemIndex, { answer: event.target.value })}
+                  style={{ ...styles.propertyInput, minHeight: 96 }}
+                  placeholder="Answer"
+                />
+              </div>
+            )) : (
+              <p style={styles.noSelection}>No FAQ items yet. Add your first question above.</p>
+            )}
+          </div>
+        </div>
+        </>
+        ) : null}
+
+        {activeTab === "animations" ? (
+        <>
+          {renderAnimationControlCard("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", { animation: "fade-up", delay: 0.06, speed: 0.9 })}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Left Panel (Image Column)</label>
+            <select value={String(props.leftPanelAnimation || "none")} onChange={(event) => update({ leftPanelAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-left-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(props.leftPanelAnimationDelay ?? 0)} min={0} max={4} onChange={(value) => update({ leftPanelAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(props.leftPanelAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => update({ leftPanelAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Right Panel (Content Column)</label>
+            <select value={String(props.rightPanelAnimation || "none")} onChange={(event) => update({ rightPanelAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-right-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(props.rightPanelAnimationDelay ?? 0)} min={0} max={4} onChange={(value) => update({ rightPanelAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(props.rightPanelAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => update({ rightPanelAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Headline Block</label>
+            <select value={String(headlineBlock.animation || "fade-up")} onChange={(event) => updateHeadlineBlock({ animation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-headline-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(headlineBlock.animationDelay ?? 0)} min={0} max={4} onChange={(value) => updateHeadlineBlock({ animationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(headlineBlock.animationSpeed ?? 0.8)} min={0.2} max={4} onChange={(value) => updateHeadlineBlock({ animationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Body Block</label>
+            <select value={String(bodyBlock.animation || "fade-in")} onChange={(event) => updateBodyBlock({ animation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-body-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(bodyBlock.animationDelay ?? 0.12)} min={0} max={4} onChange={(value) => updateBodyBlock({ animationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(bodyBlock.animationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateBodyBlock({ animationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Nested FAQ Block</label>
+            <select value={String(faqBlock.sectionAnimation || "fade-up")} onChange={(event) => updateFaqBlock({ sectionAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-faq-block-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(faqBlock.sectionAnimationDelay ?? 0.12)} min={0} max={4} onChange={(value) => updateFaqBlock({ sectionAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(faqBlock.sectionAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateFaqBlock({ sectionAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Nested Accordion Items</label>
+            <select value={String(faqBlock.faqAnimation || "fade-up")} onChange={(event) => updateFaqBlock({ faqAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-faq-items-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(faqBlock.faqAnimationDelay ?? 0.18)} min={0} max={4} onChange={(value) => updateFaqBlock({ faqAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(faqBlock.faqAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateFaqBlock({ faqAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+        </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function NumberField({ label, value, min = 0, max = 200, onChange }) {
   return (
     <div style={styles.numberField}>
@@ -3017,6 +3719,13 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
                 }}
               />
             </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "src", asset))}
+            >
+              Choose From Library
+            </button>
             {savedImages.map((image) => (
               <button
                 key={`image-block-${image.id || image.src}`}
@@ -3151,6 +3860,16 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
             }}
           />
         </label>
+        <button
+          type="button"
+          style={styles.secondaryBtn}
+          onClick={() => openSharedLibraryAssetPicker((asset) => {
+            onSelectAsset(index, "logo", asset);
+            update({ showLogo: true });
+          })}
+        >
+          Choose From Library
+        </button>
         {savedLogo ? (
           <button
             type="button"
@@ -3191,6 +3910,19 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
 
 function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
   const props = block.props || {};
+  const [section, setSection] = useState("setup");
+  const navbarSectionShells = [
+    { background: "linear-gradient(180deg, #1f3048 0%, #18283d 100%)", borderColor: "rgba(125,211,252,0.28)" },
+    { background: "linear-gradient(180deg, #243148 0%, #1a2436 100%)", borderColor: "rgba(167,139,250,0.24)" },
+    { background: "linear-gradient(180deg, #223741 0%, #17262f 100%)", borderColor: "rgba(74,222,128,0.22)" },
+    { background: "linear-gradient(180deg, #3a2b45 0%, #241b30 100%)", borderColor: "rgba(244,114,182,0.18)" },
+  ];
+  const sections = [
+    { id: "setup", label: "Setup" },
+    { id: "brand", label: "Brand" },
+    { id: "menu", label: "Menu" },
+    { id: "style", label: "Style" },
+  ];
 
   function update(patch) {
     onChange(index, { ...props, ...patch });
@@ -3199,145 +3931,179 @@ function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🎨 Edit: Navigation Bar</h3>
+      <div style={styles.tabRow}>
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            style={{ ...styles.tabChip, ...(section === item.id ? styles.tabChipActive : {}) }}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
       <div style={styles.propertyGrid}>
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Navbar Style</label>
-          <NavbarPresetPicker value={props.variant || "split-dark"} onApply={update} />
-        </div>
+        {section === "setup" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navbar Style</label>
+              <NavbarPresetPicker value={props.variant || "split-dark"} onApply={update} />
+            </div>
 
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Layout Variant</label>
-          <select
-            value={String(props.variant || "split-dark")}
-            onChange={(e) => update({ variant: e.target.value })}
-            style={styles.propertyInput}
-          >
-            {getSelectOptions("variant").map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[1] }}>
+              <label style={styles.propertyLabel}>Layout Variant</label>
+              <select
+                value={String(props.variant || "split-dark")}
+                onChange={(e) => update({ variant: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("variant").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
 
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Behaviour</label>
-          <label style={styles.propertyLabel}>Sticky Mode</label>
-          <select
-            value={String(props.stickyMode || "normal")}
-            onChange={(e) => update({ stickyMode: e.target.value })}
-            style={styles.propertyInput}
-          >
-            {getSelectOptions("stickyMode").map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Mobile Menu</label>
-          <select
-            value={String(props.mobileMenuStyle || "hamburger")}
-            onChange={(e) => update({ mobileMenuStyle: e.target.value })}
-            style={styles.propertyInput}
-          >
-            {getSelectOptions("mobileMenuStyle").map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
+              <label style={styles.propertyLabel}>Behaviour</label>
+              <label style={styles.propertyLabel}>Sticky Mode</label>
+              <select
+                value={String(props.stickyMode || "normal")}
+                onChange={(e) => update({ stickyMode: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("stickyMode").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Mobile Menu</label>
+              <select
+                value={String(props.mobileMenuStyle || "hamburger")}
+                onChange={(e) => update({ mobileMenuStyle: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("mobileMenuStyle").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : null}
 
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Brand Text</label>
-          <input
-            type="text"
-            value={props.brand || ""}
-            onChange={(e) => update({ brand: e.target.value })}
-            style={styles.propertyInput}
-          />
-        </div>
+        {section === "brand" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Brand Text</label>
+              <input
+                type="text"
+                value={props.brand || ""}
+                onChange={(e) => update({ brand: e.target.value })}
+                style={styles.propertyInput}
+              />
+            </div>
 
-        <NavbarLogoPicker
-          index={index}
-          props={props}
-          brandAssets={brandAssets}
-          onUploadImage={onUploadImage}
-          onSelectAsset={onSelectAsset}
-          update={update}
-        />
-
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Navigation Links</label>
-          <NavbarLinksEditor
-            links={props.links}
-            onChange={(links) => update({ links })}
-          />
-        </div>
-
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>CTA Text</label>
-          <input
-            type="text"
-            value={props.ctaText || ""}
-            onChange={(e) => update({ ctaText: e.target.value })}
-            style={styles.propertyInput}
-            placeholder="Get Started"
-          />
-          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA Link</label>
-          <input
-            type="text"
-            value={props.ctaLink || ""}
-            onChange={(e) => update({ ctaLink: e.target.value })}
-            style={styles.propertyInput}
-            placeholder="#contact"
-          />
-        </div>
-
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Typography</label>
-          <div style={styles.colorGrid}>
-            <NumberField
-              label="Brand size"
-              value={props.brandFontSize || 16}
-              min={16}
-              max={48}
-              onChange={(next) => update({ brandFontSize: next })}
+            <NavbarLogoPicker
+              index={index}
+              props={props}
+              brandAssets={brandAssets}
+              onUploadImage={onUploadImage}
+              onSelectAsset={onSelectAsset}
+              update={update}
             />
-            <NumberField
-              label="Link size"
-              value={props.linkFontSize || 16}
-              min={16}
-              max={32}
-              onChange={(next) => update({ linkFontSize: next })}
-            />
-            <NumberField
-              label="Button size"
-              value={props.ctaFontSize || 16}
-              min={16}
-              max={28}
-              onChange={(next) => update({ ctaFontSize: next })}
-            />
-          </div>
-        </div>
 
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Hover & Highlight</label>
-          <select
-            value={String(props.linkHoverEffect || "fill")}
-            onChange={(e) => update({ linkHoverEffect: e.target.value })}
-            style={styles.propertyInput}
-          >
-            {getSelectOptions("linkHoverEffect").map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
+              <label style={styles.propertyLabel}>Typography</label>
+              <div style={styles.colorGrid}>
+                <NumberField
+                  label="Brand size"
+                  value={props.brandFontSize || 16}
+                  min={16}
+                  max={48}
+                  onChange={(next) => update({ brandFontSize: next })}
+                />
+                <NumberField
+                  label="Link size"
+                  value={props.linkFontSize || 16}
+                  min={16}
+                  max={32}
+                  onChange={(next) => update({ linkFontSize: next })}
+                />
+                <NumberField
+                  label="Button size"
+                  value={props.ctaFontSize || 16}
+                  min={16}
+                  max={28}
+                  onChange={(next) => update({ ctaFontSize: next })}
+                />
+              </div>
+            </div>
+          </>
+        ) : null}
 
-        <ColorSelector label="Hover Background" value={props.linkHoverBackgroundColor || "#334155"} fallback="#334155" onChange={(value) => update({ linkHoverBackgroundColor: value })} />
-        <ColorSelector label="Hover Text" value={props.linkHoverTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ linkHoverTextColor: value })} />
-        <ColorSelector label="Highlighted Background" value={props.activeLinkBackgroundColor || "#475569"} fallback="#475569" onChange={(value) => update({ activeLinkBackgroundColor: value })} />
-        <ColorSelector label="Highlighted Text" value={props.activeLinkTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ activeLinkTextColor: value })} />
+        {section === "menu" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navigation Links</label>
+              <NavbarLinksEditor
+                links={props.links}
+                onChange={(links) => update({ links })}
+              />
+            </div>
 
-        <ColorSelector label="Navbar Background" value={props.backgroundColor || "#0b1220"} fallback="#0b1220" allowTransparent onChange={(value) => update({ backgroundColor: value })} />
-        <ColorSelector label="Navbar Border" value={props.borderColor || "rgba(148,163,184,0.24)"} fallback="#94a3b8" onChange={(value) => update({ borderColor: value })} />
-        <ColorSelector label="Navbar Text" value={props.textColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ textColor: value })} />
-        <ColorSelector label="Button Background" value={props.buttonColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ buttonColor: value })} />
-        <ColorSelector label="Button Text" value={props.buttonTextColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ buttonTextColor: value })} />
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[1] }}>
+              <label style={styles.propertyLabel}>CTA Text</label>
+              <input
+                type="text"
+                value={props.ctaText || ""}
+                onChange={(e) => update({ ctaText: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Get Started"
+              />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA Link</label>
+              <input
+                type="text"
+                value={props.ctaLink || ""}
+                onChange={(e) => update({ ctaLink: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="#contact"
+              />
+            </div>
+          </>
+        ) : null}
+
+        {section === "style" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Hover & Highlight</label>
+              <select
+                value={String(props.linkHoverEffect || "fill")}
+                onChange={(e) => update({ linkHoverEffect: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("linkHoverEffect").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <div style={{ ...styles.colorGrid, marginTop: 10 }}>
+                <CompactColorField label="Hover Background" value={props.linkHoverBackgroundColor || "#334155"} fallback="#334155" onChange={(value) => update({ linkHoverBackgroundColor: value })} />
+                <CompactColorField label="Hover Text" value={props.linkHoverTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ linkHoverTextColor: value })} />
+                <CompactColorField label="Highlighted Background" value={props.activeLinkBackgroundColor || "#475569"} fallback="#475569" onChange={(value) => update({ activeLinkBackgroundColor: value })} />
+                <CompactColorField label="Highlighted Text" value={props.activeLinkTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ activeLinkTextColor: value })} />
+              </div>
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navbar Colours</label>
+              <div style={styles.colorGrid}>
+                <CompactColorField label="Navbar Background" value={props.backgroundColor || "#0b1220"} fallback="#0b1220" onChange={(value) => update({ backgroundColor: value })} />
+                <CompactColorField label="Navbar Text" value={props.textColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ textColor: value })} />
+                <CompactColorField label="Navbar Border" value={rgbToHex(props.borderColor || "rgba(148,163,184,0.24)", "#94a3b8")} fallback="#94a3b8" onChange={(value) => update({ borderColor: value })} />
+                <CompactColorField label="Button Background" value={props.buttonColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ buttonColor: value })} />
+                <CompactColorField label="Button Text" value={props.buttonTextColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ buttonTextColor: value })} />
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -3350,6 +4116,7 @@ function normalizeColorInput(value, fallback) {
 
 const STANDARD_COLOR_SWATCHES = [
   "#000000",
+  "#081120",
   "#444444",
   "#666666",
   "#999999",
@@ -3534,24 +4301,37 @@ const TEXT_TOOLBAR_FONTS = [
 ];
 
 const TEXT_TOOLBAR_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 84, 96];
+const TEXT_TOOLBAR_LINE_HEIGHTS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2];
 const ANIMATION_PRESETS = [
   { value: "none", label: "None" },
   { value: "fade-in", label: "Fade In" },
   { value: "fade-up", label: "Fade Up" },
   { value: "fade-down", label: "Fade Down" },
+  { value: "fade-left", label: "Fade Left" },
+  { value: "fade-right", label: "Fade Right" },
   { value: "slide-left", label: "Slide Left" },
   { value: "slide-right", label: "Slide Right" },
   { value: "slide-up", label: "Slide Up" },
-  { value: "slide-down", label: "Slide Down" },
+  { value: "sweep-left", label: "Sweep Left" },
+  { value: "sweep-right", label: "Sweep Right" },
+  { value: "edge-left", label: "From Left Edge" },
+  { value: "edge-right", label: "From Right Edge" },
+  { value: "edge-up", label: "From Bottom Edge" },
+  { value: "edge-down", label: "From Top Edge" },
   { value: "zoom", label: "Zoom In" },
-  { value: "zoom-out", label: "Zoom Out" },
+  { value: "pop-in", label: "Pop In" },
   { value: "blur-in", label: "Blur In" },
-  { value: "rotate-in", label: "Rotate In" },
   { value: "flip-up", label: "Flip Up" },
-  { value: "bounce-in", label: "Bounce In" },
+  { value: "drift-left", label: "Drift Left" },
+  { value: "drift-right", label: "Drift Right" },
+  { value: "drift-edge-left", label: "Drift From Left Edge" },
+  { value: "drift-edge-right", label: "Drift From Right Edge" },
+  { value: "light-speed-in", label: "Light Speed In" },
+  { value: "rotate-in-down-right", label: "Rotate In Down Right" },
+  { value: "rubber-band", label: "Rubber Band" },
 ];
 const ANIMATION_DELAY_OPTIONS = [0, 0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.2];
-const ANIMATION_SPEED_OPTIONS = [0.5, 0.7, 0.8, 1, 1.2, 1.5];
+const ANIMATION_SPEED_OPTIONS = [0.5, 0.7, 0.8, 1, 1.2, 1.5, 1.8, 2.2];
 const BLOCK_TYPE_STYLE_PRESETS = {
   P: { fontSize: "18px", fontWeight: "400", lineHeight: "1.7" },
   H1: { fontSize: "48px", fontWeight: "600", lineHeight: "1.08" },
@@ -3563,7 +4343,7 @@ function getTextAnimationBinding(block, editable) {
   const propName = String(editable?.getAttribute?.("data-text-prop") || "").trim();
   if (!block || !propName) return null;
 
-  if (propName === "headline") {
+  if (propName === "headline" || propName === "headlineBlock.content") {
     return {
       label: "Headline Motion",
       animationKey: "textAnimation",
@@ -3572,7 +4352,7 @@ function getTextAnimationBinding(block, editable) {
     };
   }
 
-  if (propName === "subheadline") {
+  if (propName === "subheadline" || propName === "bodyBlock.content") {
     return {
       label: "Body Motion",
       animationKey: "subheadlineAnimation",
@@ -3627,7 +4407,19 @@ function normalizeToolbarBackgroundColor(value) {
   return text;
 }
 
-function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
+function normalizeComputedLineHeight(lineHeightValue, fontSizeValue, fallback = 1.5) {
+  const parsedFontSize = Number.parseFloat(fontSizeValue || 0);
+  const raw = String(lineHeightValue || "").trim().toLowerCase();
+  if (!raw || raw === "normal") return fallback;
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (raw.endsWith("px") && parsedFontSize > 0) {
+    return Math.max(0.8, Math.min(3, Number((parsed / parsedFontSize).toFixed(2))));
+  }
+  return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   if (!visible) return null;
 
   const backgroundFileInputRef = useRef(null);
@@ -3722,6 +4514,16 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
           >
             {TEXT_TOOLBAR_SIZES.map((size) => (
               <option key={size} value={size}>{size}px</option>
+            ))}
+          </select>
+          <select
+            value={String(lineHeight || 1.5)}
+            style={{ ...styles.textToolbarSelect, minWidth: 94 }}
+            onMouseDownCapture={() => onPreserveSelection?.()}
+            onChange={(event) => onLineHeight?.(Number(event.target.value))}
+          >
+            {TEXT_TOOLBAR_LINE_HEIGHTS.map((value) => (
+              <option key={value} value={value}>{value} lh</option>
             ))}
           </select>
         </div>
@@ -4232,6 +5034,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   return renderBlockPreview(block, brandAssets, {
     compact,
     layoutWidth,
+    animationPreview: Number(replayToken || 0) > 0,
     isSelected: selected,
     onChangeBlock: (nextProps) => onChange(index, nextProps),
     onUploadImage: (key, file) => onUploadImage?.(index, key, file),
@@ -4297,10 +5100,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         width: "100%",
         maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
-        ...((block?.type === "columns-2" || block?.type === "columns-3") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
+        ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? { padding: 0, background: "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px", border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(block?.props?.height || "40").replace("px", "")) || 40, boxShadow: "none" } : {}),
-        ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
-        ...(selected && (block?.type === "columns-2" || block?.type === "columns-3") ? { outline: "2px solid #0ea5e9" } : {}),
+        ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "grid-section" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
+        ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
       }}
       data-canvas-block-index={index}
       onClick={() => onSelect(index)}
@@ -4441,10 +5244,12 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         </div>
       ) : null}
       <div style={styles.blockPreviewShell}>
+        {showOverlay ? (
         <div style={styles.blockInfoPill}>
           <span style={styles.blockIcon}>{def?.icon || "📦"}</span>
         </div>
-        <div style={{ ...styles.blockPreview, ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
+        ) : null}
+        <div style={{ ...styles.blockPreview, ...(showOverlay ? styles.blockPreviewWithOverlay : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
           <CanvasBlockPreview
             key={`${block.id || index}-${animationReplayToken || 0}`}
             block={block}
@@ -4796,6 +5601,17 @@ function ImageStackPropertiesPanel({ block, index, onChange, brandAssets, onUplo
                       }}
                     />
                   </label>
+                  <button
+                    type="button"
+                    style={styles.secondaryBtn}
+                    onClick={() => openSharedLibraryAssetPicker((asset) => updateLayer(selectedLayerIndex, {
+                      kind: "image",
+                      src: String(asset.src || "").startsWith("data:") ? "" : (asset.src || ""),
+                      assetId: asset.id || "",
+                    }))}
+                  >
+                    Choose From Library
+                  </button>
                   {libraryImages.map((image, imageIndex) => (
                     <button
                       key={`${image.id || image.name || "asset"}-${imageIndex}`}
@@ -5054,6 +5870,16 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                         }}
                       />
                     </label>
+                    <button
+                      type="button"
+                      style={styles.secondaryBtn}
+                      onClick={() => openSharedLibraryAssetPicker((asset) => {
+                        const nextProps = applyAssetToProps(props, `${column.prefix}NewsletterImage`, asset);
+                        onChange(index, { ...nextProps, [`${column.prefix}NewsletterImage`]: asset.src || "" });
+                      })}
+                    >
+                      Choose From Library
+                    </button>
                     {savedImages.map((asset) => (
                       <button
                         key={`nl-img-${column.id}-${asset.id || asset.src}`}
@@ -5154,6 +5980,13 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                         }}
                       />
                     </label>
+                    <button
+                      type="button"
+                      style={styles.secondaryBtn}
+                      onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset?.(index, column.imageKey, asset))}
+                    >
+                      Choose From Library
+                    </button>
                     {savedImages.map((asset) => (
                       <button
                         key={`${column.id}-${asset.id || asset.src}`}
@@ -5252,6 +6085,587 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function normalizeGridSectionItems(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return [{ icon: "", iconName: "", iconGlyph: "", iconFontFamily: "", iconImage: "", iconAssetId: "", title: "", content: "", image: "", imageAlt: "" }];
+  }
+
+  return items.map((item) => ({
+    icon: String(item?.icon || ""),
+    iconName: String(item?.iconName || ""),
+    iconGlyph: String(item?.iconGlyph || ""),
+    iconFontFamily: String(item?.iconFontFamily || ""),
+    iconImage: String(item?.iconImage || ""),
+    iconAssetId: String(item?.iconAssetId || ""),
+    title: htmlToPlainText(item?.title || ""),
+    eyebrow: htmlToPlainText(item?.eyebrow || ""),
+    content: htmlToPlainText(item?.content || ""),
+    link: String(item?.link || ""),
+    image: String(item?.image || ""),
+    imageAlt: htmlToPlainText(item?.imageAlt || ""),
+    imageHeight: item?.imageHeight,
+    imageAssetId: item?.imageAssetId,
+  }));
+}
+
+function renderGridFontIcon(item, color, size) {
+  if (!item?.iconGlyph || !item?.iconFontFamily) return null;
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        fontFamily: item.iconFontFamily,
+        fontSize: size,
+        lineHeight: 1,
+        color,
+        display: "block",
+        fontStyle: "normal",
+        fontWeight: 400,
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+      }}
+    >
+      {item.iconGlyph}
+    </span>
+  );
+}
+
+function resolveGridIconLibraryName(entry) {
+  if (entry?.library) return String(entry.library);
+  const key = String(entry?.key || "");
+  const src = String(entry?.src || "");
+  if (src) return "Social Files";
+  if (key.startsWith("fi-")) return "Feather";
+  if (key.startsWith("bs-")) return "Bootstrap";
+  return "Font Awesome";
+}
+
+function renderGridEditorIcon(item, color, size) {
+  const fontIcon = renderGridFontIcon(item, color, size);
+  if (fontIcon) {
+    return fontIcon;
+  }
+  const namedIcon = renderGridLibraryIcon(item?.iconName, { size, color });
+  if (namedIcon) {
+    return namedIcon;
+  }
+  if (item?.icon) {
+    return <span style={{ fontSize: size, lineHeight: 1, color }}>{item.icon}</span>;
+  }
+  return <span style={{ fontSize: Math.max(16, Math.round(size * 0.72)), fontWeight: 700, color }}>Icon</span>;
+}
+
+function GridIconLibraryModal({ open, searchValue, onSearchChange, onClose, onSelect, entries = [] }) {
+  const [activeLibrary, setActiveLibrary] = useState("all");
+  const libraryOptions = useMemo(() => {
+    const labels = [];
+    const seen = new Set();
+    entries.forEach((entry) => {
+      const library = resolveGridIconLibraryName(entry);
+      if (!seen.has(library)) {
+        seen.add(library);
+        labels.push(library);
+      }
+    });
+    return [{ value: "all", label: "All" }, ...labels.map((label) => ({ value: label, label }))];
+  }, [entries]);
+
+  useEffect(() => {
+    if (open) setActiveLibrary("all");
+  }, [open]);
+
+  const filteredIcons = useMemo(() => {
+    const query = String(searchValue || "").trim().toLowerCase();
+    return entries.filter((entry) => {
+      const library = resolveGridIconLibraryName(entry);
+      const matchesLibrary = activeLibrary === "all" || library === activeLibrary;
+      const matchesQuery = !query || `${entry.label} ${entry.group} ${entry.key} ${library}`.toLowerCase().includes(query);
+      return matchesLibrary && matchesQuery;
+    });
+  }, [activeLibrary, entries, searchValue]);
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center", zIndex: 10000, padding: 16 }} onClick={onClose}>
+      <div style={{ width: "min(1160px, calc(100vw - 24px))", maxHeight: "min(860px, calc(100vh - 24px))", overflow: "hidden", borderRadius: 24, border: "1px solid rgba(148,163,184,0.24)", background: "#ffffff", boxShadow: "0 32px 80px rgba(2,6,23,0.28)", display: "grid", gridTemplateRows: "auto auto auto minmax(0, 1fr)" }} onClick={(event) => event.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "22px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.22)" }}>
+          <div style={{ display: "grid", gap: 4 }}>
+            <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 700 }}>Icon Library</div>
+            <div style={{ color: "#475569", fontSize: 16, fontWeight: 500 }}>Choose an icon. This is separate from the image library.</div>
+          </div>
+          <button type="button" style={{ ...styles.secondaryBtn, minWidth: 0 }} onClick={onClose}>Close</button>
+        </div>
+
+        <div style={{ padding: "18px 24px 0" }}>
+          <input type="text" value={searchValue} onChange={(event) => onSearchChange(event.target.value)} style={{ ...styles.propertyInput, minHeight: 52, fontSize: 16, background: "#ffffff", color: "#0f172a", border: "1px solid rgba(148,163,184,0.35)" }} placeholder="Filter icons by name" autoFocus />
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "14px 24px 0" }}>
+          {libraryOptions.map((option) => {
+            const isActive = activeLibrary === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setActiveLibrary(option.value)}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  border: isActive ? "1px solid #1d4ed8" : "1px solid rgba(148,163,184,0.35)",
+                  background: isActive ? "#dbeafe" : "#ffffff",
+                  color: isActive ? "#1e3a8a" : "#334155",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: 24, overflow: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(164px, 1fr))", gap: 16 }}>
+            {filteredIcons.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                onClick={() => onSelect(entry)}
+                style={{ display: "grid", gap: 12, justifyItems: "center", alignContent: "start", minHeight: 148, padding: 18, borderRadius: 18, border: "1px solid rgba(148,163,184,0.22)", background: "#162235", color: "#e2e8f0", cursor: "pointer", textAlign: "center" }}
+              >
+                <div style={{ width: 72, height: 72, borderRadius: 16, background: "#0b1220", border: "1px solid rgba(148,163,184,0.2)", display: "grid", placeItems: "center" }}>
+                  {entry.src ? <img src={entry.src} alt={entry.label || "Icon"} style={{ width: 32, height: 32, objectFit: "contain", display: "block" }} /> : entry.fontFamily && entry.glyph ? renderGridFontIcon({ iconGlyph: entry.glyph, iconFontFamily: entry.fontFamily }, "#e2e8f0", 32) : renderGridLibraryIcon(entry.key, { size: 32, color: "#e2e8f0" })}
+                </div>
+                <div style={{ display: "grid", gap: 2 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{entry.label}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.25 }}>{resolveGridIconLibraryName(entry)}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          {!filteredIcons.length ? (
+            <div style={{ padding: "32px 0", textAlign: "center", color: "#64748b", fontSize: 17 }}>No icons match that search.</div>
+          ) : null}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function isBuiltinGridDecorationAsset(asset) {
+  return String(asset?.id || "").startsWith("builtin-deco-");
+}
+
+const LIVE_SERVICES_GRID_PRESET = {
+  title: "Our Services",
+  columns: 4,
+  gridVariant: "services",
+  columnBackgroundColor: "#ffffff",
+  columnBorderColor: "rgba(148,163,184,0.18)",
+  columnTitleColor: "#0f172a",
+  columnBodyColor: "#475569",
+  columnPadding: 18,
+  columnRadius: 22,
+  columnShadow: "soft",
+  columnGap: 24,
+  iconBackgroundColor: "#ffffff",
+  iconColor: "#0f172a",
+  iconSize: 20,
+  imageRadius: 18,
+  items: [
+    { title: "Social Media", eyebrow: "Content Creation", iconName: "social", content: "", link: "https://gr8result.com/social-media/", image: "/imported/gr8-services/social-media.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Software", eyebrow: "Business Software", iconName: "software", content: "", link: "https://gr8result.com/software/", image: "/imported/gr8-services/software.png", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Graphic Arts", eyebrow: "Graphic Design", iconName: "design", content: "", link: "https://gr8result.com/graphic-design/", image: "/imported/gr8-services/graphic-arts.png", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Websites", eyebrow: "Design and SEO", iconName: "web", content: "", link: "https://gr8result.com/website-development/", image: "/imported/gr8-services/websites.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Videos", eyebrow: "AI Avatars", iconName: "video", content: "", link: "https://gr8result.com/videos/", image: "/imported/gr8-services/videos.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "SEO", eyebrow: "Organic Growth", iconName: "seo", content: "", link: "https://gr8result.com/seo/", image: "/imported/gr8-services/seo.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Email", eyebrow: "Email marketing", iconName: "email", content: "", link: "https://gr8result.com/email-marketing/", image: "/imported/gr8-services/email.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+    { title: "Digital Marketing", eyebrow: "Google & Meta Ads", iconName: "marketing", content: "", link: "https://gr8result.com/branding-design/", image: "/imported/gr8-services/digital-marketing.jpg", imageAlt: "Gr8 Result Digital Solutions.", imageHeight: 150 },
+  ],
+};
+
+const SERVICES_STYLE_OPTIONS = [
+  { value: "style-01", label: "Style 01" },
+  { value: "style-02", label: "Style 02" },
+  { value: "style-03", label: "Style 03" },
+];
+
+const SERVICES_COLOR_OPTIONS = [
+  { value: "blue", label: "Blue" },
+  { value: "green", label: "Green" },
+];
+
+const SERVICES_LAYOUT_OPTIONS = [
+  { value: "grid", label: "Grid" },
+  { value: "slider", label: "Slider" },
+];
+
+function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRefreshAssetLibrary }) {
+  const props = block?.props || {};
+  const [activeTab, setActiveTab] = useState("content");
+  const [expandedCardIndex, setExpandedCardIndex] = useState(0);
+  const [iconLibraryState, setIconLibraryState] = useState({ itemIndex: null, search: "" });
+  const [discoveredIconEntries, setDiscoveredIconEntries] = useState([]);
+  const safeItems = normalizeGridSectionItems(props.items);
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateItem = (itemIndex, patch) => {
+    const nextItems = safeItems.map((item, currentIndex) => (
+      currentIndex === itemIndex ? { ...item, ...patch } : item
+    ));
+    update({ items: nextItems });
+  };
+  const addItem = () => {
+    update({
+      items: [...safeItems, { icon: "", iconName: "", iconGlyph: "", iconFontFamily: "", iconImage: "", iconAssetId: "", title: `Grid card ${safeItems.length + 1}`, eyebrow: "", content: "Add your supporting detail here.", link: "", image: "", imageAlt: "", imageAssetId: "" }],
+    });
+    setExpandedCardIndex(safeItems.length);
+  };
+  const removeItem = (itemIndex) => {
+    const nextItems = safeItems.filter((_, currentIndex) => currentIndex !== itemIndex);
+    update({ items: nextItems.length ? nextItems : [{ icon: "", iconName: "", iconGlyph: "", iconFontFamily: "", iconImage: "", iconAssetId: "", title: "", eyebrow: "", content: "", link: "", image: "", imageAlt: "", imageAssetId: "" }] });
+    setExpandedCardIndex((prev) => (prev === itemIndex ? Math.max(0, itemIndex - 1) : prev));
+  };
+  const moveItem = (itemIndex, direction) => {
+    const targetIndex = itemIndex + direction;
+    if (targetIndex < 0 || targetIndex >= safeItems.length) return;
+    const nextItems = [...safeItems];
+    const [moved] = nextItems.splice(itemIndex, 1);
+    nextItems.splice(targetIndex, 0, moved);
+    update({ items: nextItems });
+    setExpandedCardIndex(targetIndex);
+  };
+  const updateItemText = (itemIndex, key, value) => {
+    updateItem(itemIndex, { [key]: htmlToPlainText(value) });
+  };
+  const openLibraryFallback = () => {
+    if (typeof window === "undefined") return;
+    window.open("/assets?view=generic", "_blank", "noopener,noreferrer");
+  };
+  const openGridImagePicker = (itemIndex) => {
+    openSharedMediaPicker({
+      view: "generic",
+      onPick: (asset) => {
+        if (!asset?.src) return;
+        updateItem(itemIndex, {
+          image: asset.src || "",
+          imageAssetId: asset.id || "",
+          imageAlt: htmlToPlainText(asset.name || safeItems[itemIndex]?.imageAlt || ""),
+        });
+      },
+      onBlocked: openLibraryFallback,
+    });
+  };
+  const openGridIconLibrary = (itemIndex) => {
+    setIconLibraryState({ itemIndex, search: "" });
+  };
+  const closeGridIconLibrary = () => {
+    setIconLibraryState({ itemIndex: null, search: "" });
+  };
+  const applyGridIcon = (entry) => {
+    if (!Number.isInteger(iconLibraryState.itemIndex)) return;
+    if (entry?.src) {
+      updateItem(iconLibraryState.itemIndex, {
+        iconName: "",
+        icon: "",
+        iconGlyph: "",
+        iconFontFamily: "",
+        iconImage: String(entry.src || ""),
+        iconAssetId: String(entry.assetId || ""),
+      });
+    } else if (entry?.fontFamily && entry?.glyph) {
+      updateItem(iconLibraryState.itemIndex, {
+        iconName: "",
+        icon: "",
+        iconGlyph: String(entry.glyph || ""),
+        iconFontFamily: String(entry.fontFamily || ""),
+        iconImage: "",
+        iconAssetId: "",
+      });
+    } else {
+      updateItem(iconLibraryState.itemIndex, {
+        iconName: String(entry?.key || ""),
+        icon: "",
+        iconGlyph: "",
+        iconFontFamily: "",
+        iconImage: "",
+        iconAssetId: "",
+      });
+    }
+    closeGridIconLibrary();
+  };
+  const serviceStyleValue = String(props.servicesStylePreset || "style-01");
+  const serviceColorValue = String(props.servicesColorPreset || "blue");
+  const serviceLayoutValue = String(props.servicesLayoutMode || "grid");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/website-builder/icon-library")
+      .then((response) => response.ok ? response.json() : { entries: [] })
+      .then((payload) => {
+        if (cancelled) return;
+        setDiscoveredIconEntries(Array.isArray(payload?.entries) ? payload.entries : []);
+      })
+      .catch(() => {
+        if (!cancelled) setDiscoveredIconEntries([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const iconLibraryEntries = useMemo(() => {
+    const seen = new Set();
+    return [...GRID_ICON_LIBRARY, ...discoveredIconEntries].filter((entry) => {
+      const dedupeKey = String(entry?.src || entry?.key || `${entry?.fontFamily || ""}-${entry?.glyph || ""}`);
+      if (!dedupeKey || seen.has(dedupeKey)) return false;
+      seen.add(dedupeKey);
+      return true;
+    });
+  }, [discoveredIconEntries]);
+
+  return (
+    <div style={styles.properties}>
+      <GridIconLibraryModal
+        open={Number.isInteger(iconLibraryState.itemIndex)}
+        searchValue={iconLibraryState.search}
+        onSearchChange={(value) => setIconLibraryState((current) => ({ ...current, search: value }))}
+        onClose={closeGridIconLibrary}
+        onSelect={applyGridIcon}
+        entries={iconLibraryEntries}
+      />
+      <h3 style={styles.propertiesTitle}>▦ Edit: Grid Section</h3>
+      <div style={styles.tabRow}>
+        {[
+          { id: "content", label: `Content (${safeItems.length})` },
+          { id: "layout", label: "Layout" },
+        ].map((tab) => (
+          <button
+            key={`grid-tab-${tab.id}`}
+            type="button"
+            style={{ ...styles.tabChip, ...(activeTab === tab.id ? styles.tabChipActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.propertyGrid}>
+        {activeTab === "layout" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Layout</label>
+          <input type="text" value={props.title || ""} onChange={(event) => update({ title: event.target.value })} style={styles.propertyInput} placeholder="Section heading" />
+          <button type="button" style={{ ...styles.secondaryBtn, width: "100%", marginTop: 8 }} onClick={() => update({ ...LIVE_SERVICES_GRID_PRESET, backgroundColor: props.backgroundColor || "transparent", textColor: props.textColor || "#0f172a", stretchToCanvas: true })}>Apply Live Services Preset</button>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Columns" value={Math.max(1, Math.min(6, Number(props.columns) || 3))} min={1} max={6} onChange={(value) => update({ columns: value })} />
+            <NumberField label="Grid Gap" value={Number(props.columnGap ?? 20)} min={0} max={120} onChange={(value) => update({ columnGap: value })} />
+            <NumberField label="Top Margin" value={Number(props.columnsTopMargin ?? 18)} min={0} max={240} onChange={(value) => update({ columnsTopMargin: value })} />
+            <NumberField label="Block Max Width" value={Number(props.blockMaxWidth) || 1200} min={320} max={1800} onChange={(value) => update({ blockMaxWidth: value })} />
+            <NumberField label="Section Height" value={parsePixelValue(props.sectionHeight || props.minHeight, 280)} min={160} max={1400} onChange={(value) => update({ sectionHeight: `${value}px`, minHeight: `${value}px` })} />
+            <NumberField label="Item Min Height" value={Number(props.gridItemMinHeight ?? 0)} min={0} max={1200} onChange={(value) => update({ gridItemMinHeight: value })} />
+            <NumberField label="Main Title Size" value={Number(props.cardTitleSize ?? 28)} min={16} max={72} onChange={(value) => update({ cardTitleSize: value })} />
+            <NumberField label="Subtitle Size" value={Number(props.eyebrowFontSize ?? 18)} min={12} max={48} onChange={(value) => update({ eyebrowFontSize: value })} />
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input type="checkbox" checked={props.stretchToCanvas !== false} onChange={(event) => update({ stretchToCanvas: event.target.checked })} style={styles.checkboxInput} />
+            Stretch services grid edge-to-edge on the canvas
+          </label>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Vertical Alignment</label>
+          <div style={styles.inlineChipRow}>
+            {[
+              { value: "top", label: "Top" },
+              { value: "center", label: "Center" },
+              { value: "bottom", label: "Bottom" },
+            ].map((option) => (
+              <button key={`grid-align-${option.value}`} type="button" style={{ ...styles.presetChip, ...(String(props.columnsVerticalAlign || "top") === option.value ? styles.presetChipActive : {}) }} onClick={() => update({ columnsVerticalAlign: option.value })}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        ) : null}
+
+        {activeTab === "content" ? (
+          <>
+        <div style={styles.sectionCard}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 8 }}>
+              <label style={styles.propertyLabel}>Services Styles</label>
+              <select
+                value={serviceStyleValue}
+                onChange={(event) => update({ gridVariant: "services", servicesStylePreset: event.target.value })}
+                style={styles.propertyInput}
+              >
+                {SERVICES_STYLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <label style={styles.propertyLabel}>Color Styles</label>
+              <select
+                value={serviceColorValue}
+                onChange={(event) => update({
+                  gridVariant: "services",
+                  servicesColorPreset: event.target.value,
+                  backgroundColor: "",
+                  cardBackgroundColor: "",
+                  columnBackgroundColor: "",
+                  columnTitleColor: "",
+                  columnBodyColor: "",
+                  eyebrowColor: "",
+                  textColor: "",
+                  sectionTitleColor: "",
+                  iconBackgroundColor: "",
+                  iconColor: "",
+                })}
+                style={styles.propertyInput}
+              >
+                {SERVICES_COLOR_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.colorGrid}>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Layout</label>
+                <select
+                  value={serviceLayoutValue}
+                  onChange={(event) => update({ gridVariant: "services", servicesLayoutMode: event.target.value })}
+                  style={styles.propertyInput}
+                >
+                  {SERVICES_LAYOUT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Grid Column</label>
+                <select
+                  value={String(Math.max(2, Math.min(5, Number(props.columns) || 4)))}
+                  onChange={(event) => update({ columns: Number(event.target.value) || 4 })}
+                  style={styles.propertyInput}
+                  disabled={serviceLayoutValue === "slider"}
+                >
+                  {[2, 3, 4, 5].map((count) => <option key={`services-columns-${count}`} value={String(count)}>{`${count} column`}{count > 1 ? "s" : ""}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+            <label style={styles.propertyLabel}>Cards</label>
+            <button type="button" style={styles.secondaryBtn} onClick={addItem}>Add New</button>
+          </div>
+        </div>
+
+        {safeItems.map((item, itemIndex) => {
+          const resolvedImage = String(item.image || getAssetFromLibrary(brandAssets, item.imageAssetId)?.src || "");
+          const resolvedIconImage = String(item.iconImage || getAssetFromLibrary(brandAssets, item.iconAssetId)?.src || "");
+          const isOpen = expandedCardIndex === itemIndex;
+          return (
+            <div key={`grid-item-panel-${itemIndex}`} style={styles.sectionCard}>
+              <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedCardIndex((prev) => (prev === itemIndex ? -1 : itemIndex))}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "56px 56px minmax(0, 1fr)",
+                    gap: 10,
+                    alignItems: "center",
+                    width: "100%",
+                    background: isOpen ? "#223653" : "#1a2940",
+                    border: isOpen ? "1px solid #5f84b0" : "1px solid #41577a",
+                    borderRadius: 14,
+                    padding: 12,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    minWidth: 0,
+                    boxShadow: isOpen ? "0 0 0 1px rgba(125,211,252,0.18)" : "none",
+                  }}
+                >
+                  <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    {resolvedImage ? <img src={resolvedImage} alt={item.imageAlt || item.title || `Card ${itemIndex + 1} image`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 16, fontWeight: 600, color: "#cbd5e1" }}>Image</span>}
+                  </div>
+                  <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 36, height: 36, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 22)}
+                  </div>
+                  <div style={{ minWidth: 0, display: "grid", gap: 6 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#f8fafc", lineHeight: 1.3, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.title || item.eyebrow || `Card ${itemIndex + 1}`)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 500, color: "#cbd5e1", lineHeight: 1.35, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.eyebrow || item.link || "Click to edit this card")}</div>
+                  </div>
+                </button>
+              </div>
+
+              {isOpen ? (
+                <div style={{ display: "grid", gap: 14 }}>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => openGridImagePicker(itemIndex)}
+                      style={{ display: "grid", gap: 10, padding: 12, borderRadius: 14, background: "#1a2940", border: "1px solid #41577a", textAlign: "left", cursor: "pointer" }}
+                    >
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Image</div>
+                      <div style={{ width: "100%", minHeight: 132, borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                        {resolvedImage ? <img src={resolvedImage} alt={item.imageAlt || item.title || `Card ${itemIndex + 1} image`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 16, fontWeight: 600, color: "#cbd5e1" }}>Choose image</span>}
+                      </div>
+                    </button>
+                    {resolvedImage ? (
+                      <button type="button" style={{ ...styles.secondaryBtn, justifySelf: "start" }} onClick={() => updateItem(itemIndex, { image: "", imageAlt: "", imageAssetId: "" })}>Remove Image</button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => openGridIconLibrary(itemIndex)}
+                      style={{ display: "grid", gap: 10, padding: 12, borderRadius: 14, background: "#1a2940", border: "1px solid #41577a", textAlign: "left", cursor: "pointer" }}
+                    >
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Icon</div>
+                      <div style={{ width: "100%", minHeight: 132, borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                        {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 64, height: 64, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 28)}
+                      </div>
+                    </button>
+                    {resolvedIconImage ? (
+                      <button type="button" style={{ ...styles.secondaryBtn, justifySelf: "start" }} onClick={() => updateItem(itemIndex, { iconImage: "", iconAssetId: "", iconName: "", icon: "" })}>Remove Icon</button>
+                    ) : null}
+                  </div>
+
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <label style={styles.propertyLabel}>Main Title</label>
+                    <input type="text" value={htmlToPlainText(item.title || "")} onChange={(event) => updateItemText(itemIndex, "title", event.target.value)} style={styles.propertyInput} placeholder="Main card title" />
+                    <label style={styles.propertyLabel}>Subtitle</label>
+                    <input type="text" value={htmlToPlainText(item.eyebrow || "")} onChange={(event) => updateItemText(itemIndex, "eyebrow", event.target.value)} style={styles.propertyInput} placeholder="Subtitle under the title" />
+                    <input type="text" value={item.link || ""} onChange={(event) => updateItem(itemIndex, { link: event.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                    <input type="text" value={htmlToPlainText(item.imageAlt || "")} onChange={(event) => updateItemText(itemIndex, "imageAlt", event.target.value)} style={styles.propertyInput} placeholder="Image alt text" />
+                    <NumberField label="Image Height" value={Number(item.imageHeight ?? 0)} min={0} max={1200} onChange={(value) => updateItem(itemIndex, { imageHeight: value || undefined })} />
+                    <textarea value={htmlToPlainText(item.content || "")} onChange={(event) => updateItemText(itemIndex, "content", event.target.value)} style={{ ...styles.propertyInput, minHeight: 112 }} placeholder="Card content" />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start" }}>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, -1)} disabled={itemIndex === 0}>Up</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, 1)} disabled={itemIndex === safeItems.length - 1}>Down</button>
+                    <button type="button" style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "rgba(239,68,68,0.35)" }} onClick={() => removeItem(itemIndex)}>Remove</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -5468,12 +6882,14 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const [regenTone, setRegenTone] = useState("balanced");
   const [sectionHeightDraft, setSectionHeightDraft] = useState("");
   const [assetBrowser, setAssetBrowser] = useState({ visible: false, fieldKey: "", title: "" });
+  const [heroEditorSection, setHeroEditorSection] = useState("layout");
 
   useEffect(() => {
     setRegenBusy(false);
     setRegenError("");
     setSectionHeightDraft(String(parsePixelValue(block?.props?.minHeight, block?.type === BlockTypes.HERO ? 420 : 220)));
     setAssetBrowser({ visible: false, fieldKey: "", title: "" });
+    setHeroEditorSection("layout");
   }, [block?.id, block?.props?.minHeight, block?.type]);
 
   if (!block) {
@@ -5487,6 +6903,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const def = BlockDefinitions[block.type];
   const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
   const savedLogo = brandAssets?.logo || null;
+  const currentBackgroundPreview = resolveAssetField(block?.props || {}, "backgroundImage", brandAssets);
+  const currentOverlayPreview = resolveAssetField(block?.props || {}, "floatingImage", brandAssets);
+  const effectiveOverlayPreview = currentOverlayPreview || savedLogo?.src || "";
   const isHero = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
   const fontWeightKey = isHero ? "headlineFontWeight" : "fontWeight";
   const fontFamilyKey = isHero ? "headlineFontFamily" : "fontFamily";
@@ -5495,6 +6914,99 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const supportsParallaxToggle = [BlockTypes.PARALLAX, BlockTypes.TEXT].includes(block.type);
   const isPositionableText = block.type === BlockTypes.PARALLAX || (!!block?.props?.enableParallax && [BlockTypes.HERO, BlockTypes.TEXT].includes(block.type));
   const supportsOverlayImage = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
+  const heroSections = [
+    { id: "layout", label: "Layout" },
+    { id: "media", label: "Media" },
+    { id: "style", label: "Style" },
+    { id: "animations", label: "Animations" },
+  ];
+  const heroTabRowStyle = isHero ? { ...styles.tabRow, gap: 6, marginBottom: 10 } : styles.tabRow;
+  const heroTabChipStyle = { ...styles.tabChip, fontSize: 14, padding: "6px 10px" };
+  const heroLayoutKeys = new Set(["heroVariant", "spacingScale", "headlineAlignment"]);
+  const heroContentKeys = new Set(["headline", "subheadline", "ctaText", "ctaLink", "ctaSubtext", "eyebrow", "tagline", "brand"]);
+  const heroAnimationKeys = new Set([
+    "sectionAnimation",
+    "sectionAnimationDelay",
+    "sectionAnimationSpeed",
+    "textAnimation",
+    "textAnimationDelay",
+    "textAnimationSpeed",
+    "subheadlineAnimation",
+    "subheadlineAnimationDelay",
+    "subheadlineAnimationSpeed",
+    "ctaAnimation",
+    "ctaAnimationDelay",
+    "ctaAnimationSpeed",
+    "contentOverlayAnimation",
+    "contentOverlayAnimationDelay",
+    "contentOverlayAnimationSpeed",
+    "imageOverlayAnimation",
+    "imageOverlayAnimationDelay",
+    "imageOverlayAnimationSpeed",
+  ]);
+
+  function shouldShowHeroPanelSection(sectionId) {
+    return !isHero || heroEditorSection === sectionId;
+  }
+
+  function shouldRenderHeroGenericField(key, value) {
+    if (!isHero) return true;
+
+    if (heroAnimationKeys.has(key) || /animation/i.test(key)) {
+      return heroEditorSection === "animations";
+    }
+
+    if (heroContentKeys.has(key) || isLongTextField(key) || /^cta/i.test(key)) {
+      return heroEditorSection === "layout";
+    }
+
+    if (heroLayoutKeys.has(key) || /align/i.test(key) || /layout/i.test(key) || /variant/i.test(key)) {
+      return heroEditorSection === "layout";
+    }
+
+    if (isColorField(key) || /(font|weight|animation|shadow|border|radius|opacity|background)/i.test(key)) {
+      return heroEditorSection === "style";
+    }
+
+    if (typeof value === "boolean" || typeof value === "number") {
+      return heroEditorSection === "layout";
+    }
+
+    return heroEditorSection === "layout";
+  }
+
+  function renderAnimationControlCard(label, animationKey, delayKey, speedKey, defaults = {}) {
+    return (
+      <div style={styles.sectionCard}>
+        <label style={styles.propertyLabel}>{label}</label>
+        <select
+          value={String(block?.props?.[animationKey] || defaults.animation || "none")}
+          onChange={(event) => onChange(index, { ...block.props, [animationKey]: event.target.value })}
+          style={styles.propertyInput}
+        >
+          {ANIMATION_PRESETS.map((preset) => (
+            <option key={`${animationKey}-${preset.value}`} value={preset.value}>{preset.label}</option>
+          ))}
+        </select>
+        <div style={styles.colorGrid}>
+          <NumberField
+            label="Delay (s)"
+            value={Number(block?.props?.[delayKey] ?? defaults.delay ?? 0)}
+            min={0}
+            max={4}
+            onChange={(value) => onChange(index, { ...block.props, [delayKey]: Number(value) })}
+          />
+          <NumberField
+            label="Speed (s)"
+            value={Number(block?.props?.[speedKey] ?? defaults.speed ?? 0.9)}
+            min={0.2}
+            max={4}
+            onChange={(value) => onChange(index, { ...block.props, [speedKey]: Number(value) })}
+          />
+        </div>
+      </div>
+    );
+  }
 
   function applyCanvasAlignment(axis, value) {
     const nextProps = { ...(block.props || {}) };
@@ -5743,6 +7255,19 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.SPLIT_BLOCK) {
+    return (
+      <SplitBlockPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+        brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
+        onSelectAsset={onSelectAsset}
+      />
+    );
+  }
+
   if (block.type === BlockTypes.SPACE) {
     const spacerPx = parsePixelValue(block.props?.height, 40);
     return (
@@ -5771,11 +7296,211 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.GRID_SECTION) {
+    return (
+      <GridSectionPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+        brandAssets={brandAssets}
+        onRefreshAssetLibrary={onRefreshAssetLibrary}
+      />
+    );
+  }
+
+  if (block.type === BlockTypes.MARQUEE_STRIP) {
+    const safeItems = Array.isArray(block.props?.items) ? block.props.items : [];
+    const marqueeProps = block.props || {};
+    const updateMarquee = (patch) => onChange(index, { ...marqueeProps, ...patch });
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>🎞 Edit: {def?.name}</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Marquee Content</label>
+            <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 12 }}>Click the marquee text directly on the canvas to edit it.</p>
+            <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
+              {safeItems.map((item, itemIndex) => (
+                <div key={`marquee-item-${itemIndex}`} style={styles.propertyField}>
+                  <label style={styles.propertyLabel}>Line {itemIndex + 1}</label>
+                  <input
+                    type="text"
+                    value={String(item || "")}
+                    onChange={(event) => {
+                      const nextItems = safeItems.map((entry, index) => (
+                        index === itemIndex ? event.target.value : entry
+                      ));
+                      updateMarquee({ items: nextItems });
+                    }}
+                    style={styles.propertyInput}
+                    placeholder={`Message ${itemIndex + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => updateMarquee({ items: [...safeItems, `New message ${safeItems.length + 1}`] })}
+              >
+                Add Line
+              </button>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => updateMarquee({ items: safeItems.length > 1 ? safeItems.slice(0, -1) : safeItems })}
+                disabled={safeItems.length <= 1}
+              >
+                Remove Last
+              </button>
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Marquee Style</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Speed (s)" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
+              <NumberField label="Text Size" value={Number(marqueeProps.fontSize || 12)} min={10} max={48} onChange={(value) => updateMarquee({ fontSize: value })} />
+              <NumberField label="Outline Width" value={Number(marqueeProps.textStrokeWidth || 0)} min={0} max={8} onChange={(value) => updateMarquee({ textStrokeWidth: value })} />
+              <NumberField label="Divider Size" value={Number(marqueeProps.dividerSize || 14)} min={8} max={48} onChange={(value) => updateMarquee({ dividerSize: value })} />
+              <NumberField label="Animation Duration" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
+              <NumberField label="Top Padding" value={Number(marqueeProps.paddingTop ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingTop: value })} />
+              <NumberField label="Bottom Padding" value={Number(marqueeProps.paddingBottom ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingBottom: value })} />
+              <NumberField label="Side Padding" value={Number(marqueeProps.itemPaddingX ?? 14)} min={0} max={64} onChange={(value) => updateMarquee({ itemPaddingX: value })} />
+              <NumberField label="Line Height" value={Number(marqueeProps.lineHeight || 1.08)} min={1} max={3} onChange={(value) => updateMarquee({ lineHeight: value })} />
+              <NumberField label="Top Margin" value={Number(marqueeProps.marginTop ?? 0)} min={0} max={96} onChange={(value) => updateMarquee({ marginTop: value })} />
+              <NumberField label="Bottom Margin" value={Number(marqueeProps.marginBottom ?? 0)} min={0} max={96} onChange={(value) => updateMarquee({ marginBottom: value })} />
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Direction</label>
+            <select
+              value={String(marqueeProps.direction || "left")}
+              onChange={(event) => updateMarquee({ direction: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="left">Move Left</option>
+              <option value="right">Move Right</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Letter Case</label>
+            <select
+              value={String(marqueeProps.textTransform || "uppercase")}
+              onChange={(event) => updateMarquee({ textTransform: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="uppercase">UPPERCASE</option>
+              <option value="none">Normal Case</option>
+              <option value="lowercase">lowercase</option>
+              <option value="capitalize">Capitalize</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Font Weight</label>
+            <select
+              value={String(marqueeProps.fontWeight || "800")}
+              onChange={(event) => updateMarquee({ fontWeight: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="400">Regular 400</option>
+              <option value="500">Medium 500</option>
+              <option value="600">Semi Bold 600</option>
+              <option value="700">Bold 700</option>
+              <option value="800">Extra Bold 800</option>
+              <option value="900">Black 900</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Text Decoration</label>
+            <select
+              value={String(marqueeProps.textDecoration || "none")}
+              onChange={(event) => updateMarquee({ textDecoration: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="none">None</option>
+              <option value="underline">Underline</option>
+              <option value="overline">Overline</option>
+              <option value="line-through">Strike Through</option>
+            </select>
+            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={String(marqueeProps.fontStyle || "normal") === "italic"}
+                  onChange={(event) => updateMarquee({ fontStyle: event.target.checked ? "italic" : "normal" })}
+                />
+                Italic
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#cbd5e1", fontSize: 13, fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={String(marqueeProps.textDecoration || "none").includes("underline")}
+                  onChange={(event) => updateMarquee({ textDecoration: event.target.checked ? "underline" : "none" })}
+                />
+                Underline quick toggle
+              </label>
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Divider Text</label>
+            <input
+              type="text"
+              value={String(marqueeProps.dividerText || "✦")}
+              onChange={(event) => updateMarquee({ dividerText: event.target.value })}
+              style={styles.propertyInput}
+              placeholder="Divider symbol or word"
+            />
+            <p style={{ margin: "8px 0 0", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
+              WordPress parity: direction, fill, stroke, stroke width, duration, padding, and margin are all editable here now.
+            </p>
+          </div>
+          <ColorSelector
+            label="Background Color"
+            value={String(marqueeProps.backgroundColor || "#081120")}
+            fallback="#081120"
+            allowTransparent
+            onChange={(nextValue) => updateMarquee({ backgroundColor: nextValue })}
+          />
+          <ColorSelector
+            label="Text Color"
+            value={String(marqueeProps.textColor || "#f8fafc")}
+            fallback="#f8fafc"
+            onChange={(nextValue) => updateMarquee({ textColor: nextValue })}
+          />
+          <ColorSelector
+            label="Fill Color"
+            value={String(marqueeProps.textFillColor || marqueeProps.textColor || "#f8fafc")}
+            fallback="#f8fafc"
+            onChange={(nextValue) => updateMarquee({ textFillColor: nextValue })}
+          />
+          <ColorSelector
+            label="Outline Color"
+            value={String(marqueeProps.textStrokeColor || "#0f172a")}
+            fallback="#0f172a"
+            allowTransparent
+            onChange={(nextValue) => updateMarquee({ textStrokeColor: nextValue })}
+          />
+          <ColorSelector
+            label="Accent Color"
+            value={String(marqueeProps.accentColor || "#7dd3fc")}
+            fallback="#7dd3fc"
+            onChange={(nextValue) => updateMarquee({ accentColor: nextValue })}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const textContentKeys = Object.keys(block.props || {}).filter((k) => isLongTextField(k));
 
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🎨 Edit: {def?.name}</h3>
+      {isHero ? (
+        <div style={heroTabRowStyle}>
+          {heroSections.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              style={{ ...heroTabChipStyle, ...(heroEditorSection === item.id ? styles.tabChipActive : {}) }}
+              onClick={() => setHeroEditorSection(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <AssetLibraryModal
         visible={assetBrowser.visible}
         title={assetBrowser.title || "Media Library"}
@@ -5792,7 +7517,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         }}
       />
       <div style={styles.propertyGrid}>
-        {supportsSectionHeight(block.type) ? (
+        {supportsSectionHeight(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Section Height</label>
             <input
@@ -5811,7 +7536,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             />
           </div>
         ) : null}
-        {supportsFullWidthBackground(block.type) ? (
+        {supportsFullWidthBackground(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Background Width</label>
             <label style={styles.inlineToggle}>
@@ -5825,7 +7550,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </label>
           </div>
         ) : null}
-        {supportsParallaxToggle ? (
+        {supportsParallaxToggle && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Parallax Mode</label>
             <label style={styles.inlineToggle}>
@@ -5848,10 +7573,131 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </label>
           </div>
         ) : null}
-        {isHero ? (
+        {isHero && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Hero Copy</label>
+            <p style={styles.aiHint}>This sits with layout so the copy and positioning stay in one place.</p>
+            <label style={styles.propertyLabel}>Eyebrow</label>
+            <input
+              type="text"
+              value={String(block?.props?.eyebrow || "")}
+              onChange={(event) => onChange(index, { ...block.props, eyebrow: event.target.value })}
+              style={styles.propertyInput}
+              placeholder="Section label"
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Headline</label>
+            <textarea
+              value={htmlToPlainText(block?.props?.headline || "")}
+              onChange={(event) => onChange(index, { ...block.props, headline: event.target.value })}
+              placeholder="Write headline..."
+              style={{ ...styles.propertyInput, minHeight: 88, resize: "vertical", lineHeight: 1.45 }}
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Body Copy</label>
+            <textarea
+              value={htmlToPlainText(block?.props?.subheadline || "")}
+              onChange={(event) => onChange(index, { ...block.props, subheadline: event.target.value })}
+              placeholder="Write supporting text..."
+              style={{ ...styles.propertyInput, minHeight: 108, resize: "vertical", lineHeight: 1.5 }}
+            />
+            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Primary CTA</label>
+                <input
+                  type="text"
+                  value={String(block?.props?.ctaText || "")}
+                  onChange={(event) => onChange(index, { ...block.props, ctaText: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Get Started"
+                />
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Primary Link</label>
+                <input
+                  type="text"
+                  value={String(block?.props?.ctaLink || "")}
+                  onChange={(event) => onChange(index, { ...block.props, ctaLink: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="#contact"
+                />
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Secondary CTA</label>
+                <input
+                  type="text"
+                  value={String(block?.props?.secondaryCtaText || "")}
+                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaText: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Learn More"
+                />
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Secondary Link</label>
+                <input
+                  type="text"
+                  value={String(block?.props?.secondaryCtaLink || "")}
+                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaLink: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="#services"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {isHero && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text Block Position</label>
+            <div style={styles.inlineChipRow}>
+              {[
+                { value: "left", label: "Left" },
+                { value: "center", label: "Center" },
+                { value: "right", label: "Right" },
+              ].map((option) => (
+                <button
+                  key={`hero-align-${option.value}`}
+                  type="button"
+                  style={{ ...styles.presetChip, ...(String(block?.props?.headlineAlignment || "center") === option.value ? styles.presetChipActive : {}) }}
+                  onClick={() => applyCanvasAlignment("x", option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div style={styles.inlineChipRow}>
+              {[
+                { value: "top", label: "Top" },
+                { value: "center", label: "Middle" },
+                { value: "bottom", label: "Bottom" },
+              ].map((option) => (
+                <button
+                  key={`hero-vertical-${option.value}`}
+                  type="button"
+                  style={{ ...styles.presetChip, ...(String(block?.props?.verticalAlign || "center") === option.value ? styles.presetChipActive : {}) }}
+                  onClick={() => applyCanvasAlignment("y", option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div style={styles.colorGrid}>
+              <NumberField label="Text X %" value={Number(block?.props?.contentX ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentX)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentX: value })} />
+              <NumberField label="Text Y %" value={Number(block?.props?.contentY ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentY)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentY: value })} />
+              <NumberField label="Text Width" value={Number(block?.props?.contentWidth ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentWidth)} min={180} max={1400} onChange={(value) => onChange(index, { ...block.props, contentWidth: value })} />
+              <NumberField label="Text Height" value={Number(block?.props?.contentHeight ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentHeight)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, contentHeight: value })} />
+            </div>
+          </div>
+        ) : null}
+        {isHero && shouldShowHeroPanelSection("media") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>{block.type === BlockTypes.PARALLAX ? "Section Background Image" : "Hero Background Image"}</label>
             <p style={styles.aiHint}>Use an actual hero image, not just the draggable overlay.</p>
+            {currentBackgroundPreview ? (
+              <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+                <div style={{ width: "100%", minHeight: 132, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "#0f172a" }}>
+                  <img src={currentBackgroundPreview} alt="Current hero background" style={{ width: "100%", height: 132, objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>Current background used on the hero.</div>
+              </div>
+            ) : null}
             <div style={styles.assetPicker}>
               <label style={styles.assetUploadCta}>
                 Upload Background
@@ -5868,6 +7714,13 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   }}
                 />
               </label>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+              >
+                Choose From Library
+              </button>
               {block?.props?.backgroundImage ? (
                 <button
                   type="button"
@@ -5936,9 +7789,43 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 </label>
               </>
             ) : null}
+            {(block?.props?.backgroundStyle || "gradient") === "video" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Video Background (MP4)</label>
+                <label style={{ ...styles.secondaryBtn, display: "block", textAlign: "center", cursor: "pointer", marginBottom: 6 }}>
+                  Upload MP4 Video
+                  <input
+                    type="file"
+                    accept="video/mp4,video/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const localUrl = URL.createObjectURL(file);
+                      onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
+                      onUploadImage?.(index, "backgroundVideoUrl", file);
+                    }}
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={String(block?.props?.backgroundVideoUrl || "")}
+                  onChange={(e) => onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: e.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Or paste MP4 URL here"
+                />
+                {block?.props?.backgroundVideoUrl ? (
+                  <button
+                    type="button"
+                    style={{ ...styles.secondaryBtn, marginTop: 4, color: "#ef4444" }}
+                    onClick={() => onChange(index, { ...block.props, backgroundVideoUrl: "" })}
+                  >Remove Video</button>
+                ) : null}
+              </>
+            ) : null}
           </div>
         ) : null}
-        {supportsCopyRegeneration(block.type) ? (
+        {supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>AI Copy</label>
             <label style={styles.propertyLabel}>Tone</label>
@@ -5963,31 +7850,42 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             {regenError ? <p style={styles.aiErrorText}>{regenError}</p> : null}
           </div>
         ) : null}
-        <BlockPresetPicker
-          blockType={block.type}
-          onApply={(patch) => onChange(index, { ...block.props, ...patch })}
-        />
+        {shouldShowHeroPanelSection("layout") ? (
+          <BlockPresetPicker
+            blockType={block.type}
+            onApply={(patch) => onChange(index, { ...block.props, ...patch })}
+          />
+        ) : null}
+        {isHero && shouldShowHeroPanelSection("animations") ? (
+          <>
+            {renderAnimationControlCard("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", { animation: "fade-up", delay: 0.06, speed: 0.9 })}
+            {renderAnimationControlCard("Content Shell", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", { animation: "sweep-right", delay: 0.22, speed: 1.05 })}
+            {renderAnimationControlCard("Overlay Image", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", { animation: "sweep-left", delay: 0.08, speed: 1.45 })}
+            {renderAnimationControlCard("Headline", "textAnimation", "textAnimationDelay", "textAnimationSpeed", { animation: "fade-up", delay: 0, speed: 0.8 })}
+            {renderAnimationControlCard("Body Copy", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", { animation: "fade-in", delay: 0.12, speed: 0.9 })}
+            {renderAnimationControlCard("CTA Buttons", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", { animation: "fade-up", delay: 0.18, speed: 0.9 })}
+          </>
+        ) : null}
         {![BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.STATS, BlockTypes.CTA_BUTTON].includes(block.type) && textContentKeys.length ? (
           <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Text Content</label>
-            <div style={{ display: "grid", gap: 12, marginTop: 8 }}>
-              {textContentKeys.map((key) => (
-                <div key={key} style={styles.propertyField}>
-                  <label style={styles.propertyLabel}>{formatLabel(key)}</label>
-                  <RichText
-                    value={String(block.props?.[key] || "")}
-                    onChange={(nextHtml) => onChange(index, { ...block.props, [key]: nextHtml })}
-                    placeholder={`Write ${formatLabel(key).toLowerCase()}...`}
-                  />
-                </div>
-              ))}
-            </div>
+            <label style={styles.propertyLabel}>Text Editing</label>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>Edit text directly on the canvas. Use the floating text toolbar or the on-block size controls when available.</p>
           </div>
         ) : null}
-        {supportsOverlayImage ? (
+        {supportsOverlayImage && shouldShowHeroPanelSection("media") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Overlay Image / Logo</label>
             <p style={styles.aiHint}>Add a logo, badge, or product shot over the background image.</p>
+            {effectiveOverlayPreview ? (
+              <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+                <div style={{ width: "100%", minHeight: 132, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "linear-gradient(180deg,#0f172a,#111827)", display: "grid", placeItems: "center", padding: 16, boxSizing: "border-box" }}>
+                  <img src={effectiveOverlayPreview} alt="Current overlay media" style={{ maxWidth: "100%", maxHeight: 132, objectFit: currentOverlayPreview ? "cover" : "contain", display: "block" }} />
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>
+                  {currentOverlayPreview ? "Current overlay image used on the hero." : "No custom overlay set, so the hero falls back to the saved brand logo."}
+                </div>
+              </div>
+            ) : null}
             <div style={styles.assetPicker}>
               <label style={styles.assetUploadCta}>
                 Upload Overlay
@@ -6058,8 +7956,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         ) : null}
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed"].includes(key)) return null;
           if (isLongTextField(key)) return null;
+          if (!shouldRenderHeroGenericField(key, value)) return null;
           if (block.type === BlockTypes.CTA_BUTTON && key === "link") {
             return (
               <div key={key} style={styles.propertyField}>
@@ -6210,7 +8109,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
 const renderBlockPreview = (block, assets, options = {}) => renderWebsiteBlock(block, { compact: false, assets, editor: true, ...options });
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, blockDefaults = {}, showHeader = true }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -6228,6 +8127,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     highlight: "#ffffff",
     fontFamily: "Arial",
     fontSize: 18,
+    lineHeight: 1.5,
     blockType: "P",
     canStyleBox: false,
     boxBackgroundColor: "transparent",
@@ -6266,6 +8166,26 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   latestBlocksRef.current = blocks;
   selectedIndexRef.current = selectedIndex;
   selectedGlobalRoleRef.current = selectedGlobalRole;
+
+  // Dev helper: allows external code (e.g. Playwright) to inject a block into the canvas
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__injectBlock = (index, blockData) => {
+      const updated = [...latestBlocksRef.current];
+      const safeIndex = Math.max(0, Math.min(index, updated.length));
+      updated.splice(safeIndex, 0, blockData);
+      pendingLocalBlocksRef.current = true;
+      latestBlocksRef.current = updated;
+      setBlocks(updated);
+    };
+    window.__deleteBlock = (index) => {
+      const updated = latestBlocksRef.current.filter((_, i) => i !== index);
+      pendingLocalBlocksRef.current = true;
+      latestBlocksRef.current = updated;
+      setBlocks(updated);
+    };
+    return () => { delete window.__injectBlock; delete window.__deleteBlock; };
+  }, []);
 
   useEffect(() => {
     const nextBlocks = Array.isArray(pageBlocks) ? pageBlocks : [];
@@ -6395,6 +8315,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .replace(/["']/g, "")
       .trim() || "Arial";
     const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
+    const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
     const currentBlock = Number.isInteger(blockIndex) ? blocks[blockIndex] || null : null;
     const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
     const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
@@ -6404,6 +8325,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       highlight: rgbToHex(computed.backgroundColor, "#ffffff"),
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
+      lineHeight: lineHeightValue,
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -6468,12 +8390,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const onResize = () => setIsNarrowLayout(window.innerWidth < 1260);
+    const computeIsNarrowLayout = () => {
+      const viewportWidth = window.innerWidth || 1440;
+      if (showLibrary && showProperties) return viewportWidth < 1120;
+      if (showLibrary || showProperties) return viewportWidth < 960;
+      return viewportWidth < 840;
+    };
+
+    const onResize = () => setIsNarrowLayout(computeIsNarrowLayout());
     onResize();
     window.addEventListener("resize", onResize);
 
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, [showLibrary, showProperties]);
 
   useEffect(() => {
     if (typeof document === "undefined" || typeof window === "undefined") return undefined;
@@ -6498,7 +8427,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       syncToolbarForEditable(editable, selection, { reveal: false });
     };
 
-    const handleEditableDoubleClick = (event) => {
+    const handleEditableClick = (event) => {
       const editable = findEditable(event.target);
       if (!editable) return;
       textToolbarDraggedRef.current = false;
@@ -6549,16 +8478,39 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     document.addEventListener("selectionchange", syncTextToolbar);
     document.addEventListener("mouseup", syncTextToolbar, true);
     document.addEventListener("keyup", syncTextToolbar, true);
-    document.addEventListener("dblclick", handleEditableDoubleClick, true);
+    document.addEventListener("click", handleEditableClick, true);
+    document.addEventListener("dblclick", handleEditableClick, true);
     document.addEventListener("pointerdown", handleOutside, true);
 
     return () => {
       document.removeEventListener("selectionchange", syncTextToolbar);
       document.removeEventListener("mouseup", syncTextToolbar, true);
       document.removeEventListener("keyup", syncTextToolbar, true);
-      document.removeEventListener("dblclick", handleEditableDoubleClick, true);
+      document.removeEventListener("click", handleEditableClick, true);
+      document.removeEventListener("dblclick", handleEditableClick, true);
       document.removeEventListener("pointerdown", handleOutside, true);
     };
+  }, []);
+
+  // Delete selected block with Delete/Backspace key (only when not editing text)
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const handleKeyDelete = (event) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const activeEl = document.activeElement;
+      // Skip if focus is inside an input, textarea, or contentEditable
+      if (!activeEl) return;
+      const tag = activeEl.tagName?.toLowerCase?.();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (activeEl.isContentEditable || activeEl.closest?.('[contenteditable="true"]')) return;
+      if (activeEl.closest?.('[data-text-toolbar="true"]')) return;
+      const idx = selectedIndexRef.current;
+      if (idx == null || !Number.isInteger(idx)) return;
+      event.preventDefault();
+      handleDelete(idx);
+    };
+    document.addEventListener("keydown", handleKeyDelete);
+    return () => document.removeEventListener("keydown", handleKeyDelete);
   }, []);
 
   const workspaceColumns = useMemo(() => {
@@ -7079,6 +9031,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return assignPath(patched, [path[0], path[1], "content"], nextValue);
     }
 
+    if (path[0] === "faqBlock" && path[1] === "items" && path[3] === "question") {
+      return assignPath(patched, [path[0], path[1], path[2], "heading"], nextValue);
+    }
+
+    if (path[0] === "faqBlock" && path[1] === "items" && path[3] === "answer") {
+      return assignPath(patched, [path[0], path[1], path[2], "content"], nextValue);
+    }
+
     return patched;
   };
 
@@ -7119,6 +9079,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const currentBlock = updated[selectedIndex];
     const computed = typeof window !== "undefined" ? window.getComputedStyle(editable) : null;
     const fontSize = Math.max(12, Math.round(parseFloat(computed?.fontSize || "18") || 18));
+    const lineHeight = normalizeComputedLineHeight(computed?.lineHeight, computed?.fontSize, 1.6);
     const fontFamily = String(computed?.fontFamily || "Arial").split(",")[0].replace(/["']/g, "").trim() || "Arial";
     const fontWeight = String(computed?.fontWeight || "400");
     const textColor = rgbToHex(computed?.color, "#111827");
@@ -7147,6 +9108,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                   ...layer,
                   content: nextHtml,
                   fontSize,
+                  lineHeight,
                   fontWeight,
                   textColor,
                   textAlign,
@@ -7171,32 +9133,81 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     const nextProps = applyInlinePropPatch(currentBlock?.props || {}, propName, nextHtml);
 
-    if (propName === "headline") {
+    if (propName === "headline" || propName === "headlineBlock.content") {
+      nextProps.headlineBlock = {
+        ...(nextProps.headlineBlock || {}),
+        content: nextHtml,
+        fontSize,
+        lineHeight,
+        fontFamily,
+        fontWeight,
+        color: textColor,
+        alignment: textAlign,
+      };
+      nextProps.headline = nextHtml;
       nextProps.headlineFontSize = fontSize;
+      nextProps.headlineLineHeight = lineHeight;
       nextProps.headlineFontFamily = fontFamily;
       nextProps.headlineFontWeight = fontWeight;
       nextProps.headlineColor = textColor;
       nextProps.headlineAlignment = textAlign;
-    } else if (propName === "subheadline") {
+    } else if (propName === "subheadline" || propName === "bodyBlock.content") {
+      nextProps.bodyBlock = {
+        ...(nextProps.bodyBlock || {}),
+        content: nextHtml,
+        fontSize,
+        lineHeight,
+        fontFamily,
+        fontWeight,
+        color: textColor,
+        alignment: textAlign,
+      };
+      nextProps.subheadline = nextHtml;
       nextProps.subheadlineFontSize = fontSize;
+      nextProps.subheadlineLineHeight = lineHeight;
       nextProps.fontFamily = fontFamily;
       nextProps.fontWeight = fontWeight;
       nextProps.textColor = textColor;
       nextProps.alignment = textAlign;
+      nextProps.textFontSize = fontSize;
     } else if (/^items\.\d+\.question$/.test(propName)) {
       nextProps.questionFontSize = fontSize;
+      nextProps.questionLineHeight = lineHeight;
       nextProps.fontFamily = fontFamily;
       nextProps.fontWeight = fontWeight;
       nextProps.questionColor = textColor;
       nextProps.alignment = textAlign;
     } else if (/^items\.\d+\.answer$/.test(propName)) {
       nextProps.answerFontSize = fontSize;
+      nextProps.answerLineHeight = lineHeight;
       nextProps.fontFamily = fontFamily;
       nextProps.fontWeight = fontWeight;
       nextProps.answerColor = textColor;
       nextProps.alignment = textAlign;
+    } else if (/^faqBlock\.items\.\d+\.question$/.test(propName)) {
+      nextProps.faqBlock = {
+        ...(nextProps.faqBlock || {}),
+        questionFontSize: fontSize,
+        questionLineHeight: lineHeight,
+        fontFamily,
+        fontWeight,
+        questionColor: textColor,
+        alignment: textAlign,
+      };
+    } else if (/^faqBlock\.items\.\d+\.answer$/.test(propName)) {
+      nextProps.faqBlock = {
+        ...(nextProps.faqBlock || {}),
+        answerFontSize: fontSize,
+        answerLineHeight: lineHeight,
+        fontFamily,
+        fontWeight,
+        answerColor: textColor,
+        alignment: textAlign,
+      };
     } else {
       nextProps.textFontSize = fontSize;
+      nextProps.textLineHeight = lineHeight;
+      nextProps.lineHeight = lineHeight;
       nextProps.fontFamily = fontFamily;
       nextProps.fontWeight = fontWeight;
       nextProps.textColor = textColor;
@@ -7254,6 +9265,34 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     ).toString();
     previewWindow.location.replace(previewUrl);
   };
+
+  const handlePreviewSite = async () => {
+    if (!project?.id) return;
+    const previewWindow = window.open("about:blank", "_blank");
+    if (!previewWindow) {
+      showSavePopup("Enable popups to open the preview in a new tab", "error");
+      return;
+    }
+    previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
+    const committedBlocks = await commitPendingInlineEdits();
+    const saved = await Promise.resolve(onSave?.(committedBlocks));
+    if (!saved) {
+      previewWindow.close();
+      showSavePopup("Could not save before preview", "error");
+      return;
+    }
+    const previewUrl = new URL(
+      `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewMode)}`,
+      window.location.origin,
+    ).toString();
+    previewWindow.location.replace(previewUrl);
+  };
+
+  useEffect(() => {
+    if (typeof onRegisterPreviewActions !== "function") return undefined;
+    onRegisterPreviewActions({ previewPage: handlePreviewPage, previewSite: handlePreviewSite });
+    return () => onRegisterPreviewActions(null);
+  }, [onRegisterPreviewActions, handlePreviewPage, handlePreviewSite]);
 
   const restoreSavedSelection = () => {
     if (typeof window === "undefined") return;
@@ -7412,6 +9451,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .replace(/["']/g, "")
       .trim() || "Arial";
     const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
+    const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
     const currentBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
     const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
     const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
@@ -7422,6 +9462,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       highlight: rgbToHex(computed.backgroundColor, "#ffffff"),
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
+      lineHeight: lineHeightValue,
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : prev.blockType || "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -7507,6 +9548,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (command === "fontSize") {
       applyInlineStyleToSelection({ fontSize: `${Number(nextValue || 18)}px` }, { fallbackToEditable: true });
       setTextToolbarState((prev) => ({ ...prev, fontSize: Number(nextValue || 18) }));
+      finishTextCommand();
+      return;
+    }
+
+    if (command === "lineHeight") {
+      applyInlineStyleToSelection({ lineHeight: String(Number(nextValue || 1.5)) }, { fallbackToEditable: true });
+      setTextToolbarState((prev) => ({ ...prev, lineHeight: Number(nextValue || 1.5) }));
       finishTextCommand();
       return;
     }
@@ -7707,7 +9755,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         return;
       }
       showSavePopup("Page saved successfully");
-    } catch {
+    } catch (err) {
+      console.error("[handleSave]", err);
       showSavePopup("Could not save page", "error");
     }
   };
@@ -7728,7 +9777,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         return;
       }
       showSavePopup("Template page saved");
-    } catch {
+    } catch (err) {
+      console.error("[handleSaveTemplate]", err);
       showSavePopup("Could not save template page", "error");
     }
   };
@@ -7751,7 +9801,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         return;
       }
       showSavePopup("Template saved globally");
-    } catch {
+    } catch (err) {
+      console.error("[handleSaveSite]", err);
       showSavePopup("Could not save full template", "error");
     }
   };
@@ -7904,6 +9955,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         highlightColor={textToolbarState.highlight}
         fontFamily={textToolbarState.fontFamily}
         fontSize={textToolbarState.fontSize}
+        lineHeight={textToolbarState.lineHeight}
         blockType={textToolbarState.blockType}
         canStyleBox={textToolbarState.canStyleBox}
         boxBackgroundColor={textToolbarState.boxBackgroundColor}
@@ -7918,6 +9970,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         onTextColor={(value) => runTextCommand("foreColor", value)}
         onHighlightColor={(value) => runTextCommand("hiliteColor", value)}
         onFontSize={(value) => runTextCommand("fontSize", value)}
+        onLineHeight={(value) => runTextCommand("lineHeight", value)}
         onBlockType={(value) => runTextCommand("formatBlock", value)}
         onFontFamily={(value) => runTextCommand("fontName", value)}
         onOpenAnimations={(triggerNode) => {
@@ -7990,99 +10043,101 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           }}
         >
           <div style={styles.canvasLabel}>Drag widgets here • {previewMode}</div>
-          <div style={{ ...styles.blocksList, width: previewMode === "desktop" ? "100%" : previewWidth, maxWidth: "100%", margin: "0 auto" }}>
-            {project?.globalNavBlock ? (
-              <GlobalBlockPreview
-                label="🌐 Global Navigation"
-                role="nav"
-                block={project.globalNavBlock}
-                brandAssets={brandAssets}
-                compact={previewMode === "mobile"}
-                selected={selectedGlobalRole === "nav"}
-                onSelect={() => selectGlobalBlock("nav")}
-                onChange={(nextBlock) => onUpdateGlobalBlock?.("nav", nextBlock)}
-                onSaveAsGlobal={onSaveAsGlobal}
-              />
-            ) : null}
-            {canvasBlockEntries.length === 0 ? (
-              <div style={styles.emptyState}>
-                📭 No widgets yet. Drag one in from the widgets panel to start building!
-              </div>
-            ) : (
-              <>
-                {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => (
-                  <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
-                    <DropInsertZone
-                      active={dropIndex === blockIndex}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "copy";
-                        if (dropIndex !== blockIndex) setDropIndex(blockIndex);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        handleInsertAt(blockIndex, e.dataTransfer);
-                        setDropIndex(null);
-                      }}
-                    />
-                    <CanvasBlock
-                      block={block}
-                      index={blockIndex}
-                      pageCanvasWidth={pageCanvasWidth}
-                      brandAssets={brandAssets}
-                      compactPreview={previewMode === "mobile"}
-                      animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
-                      selected={selectedIndex === blockIndex}
-                      hovered={hoveredIndex === blockIndex}
-                      onSelect={selectCanvasBlock}
-                      onHover={(value) => setHoveredIndex(value)}
-                      onDelete={handleDelete}
-                      onDuplicate={handleDuplicate}
-                      onMoveStep={moveBlockByStep}
-                      onMoveToTop={moveBlockToTop}
-                      onEdit={openTextEditorForBlock}
-                      onAnimate={openAnimationPanelForBlock}
-                      onChange={handleUpdateBlock}
-                      onResizeHeight={handleResizeBlockHeight}
-                      onUploadImage={handleCanvasImageUpload}
-                      onUploadLayerImage={handleLayerImageUpload}
-                      onSelectAsset={handleCanvasAssetSelect}
-                      onBlockDragOver={handleBlockDragOver}
-                      onBlockDrop={handleBlockDrop}
-                      onSaveAsGlobal={onSaveAsGlobal}
-                      onSaveBlockDefault={onSaveBlockDefault}
-                    />
-                  </React.Fragment>
-                ))}
-                <DropInsertZone
-                  active={dropIndex === blocks.length}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "copy";
-                    if (dropIndex !== blocks.length) setDropIndex(blocks.length);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleInsertAt(blocks.length, e.dataTransfer);
-                    setDropIndex(null);
-                  }}
+          <div style={styles.canvasViewport}>
+            <div style={{ ...styles.blocksList, width: previewMode === "desktop" ? `min(100%, ${pageCanvasWidth}px)` : previewWidth, minWidth: 0, maxWidth: previewMode === "desktop" ? `${pageCanvasWidth}px` : previewWidth, margin: "0 auto" }}>
+              {project?.globalNavBlock ? (
+                <GlobalBlockPreview
+                  label="🌐 Global Navigation"
+                  role="nav"
+                  block={project.globalNavBlock}
+                  brandAssets={brandAssets}
+                  compact={previewMode === "mobile"}
+                  selected={selectedGlobalRole === "nav"}
+                  onSelect={() => selectGlobalBlock("nav")}
+                  onChange={(nextBlock) => onUpdateGlobalBlock?.("nav", nextBlock)}
+                  onSaveAsGlobal={onSaveAsGlobal}
                 />
-                {project?.globalFooterBlock ? (
-                  <GlobalBlockPreview
-                    label="🌐 Global Footer"
-                    role="footer"
-                    block={project.globalFooterBlock}
-                    brandAssets={brandAssets}
-                    compact={previewMode === "mobile"}
-                    selected={selectedGlobalRole === "footer"}
-                    onSelect={() => selectGlobalBlock("footer")}
-                    onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
-                    onSaveAsGlobal={onSaveAsGlobal}
+              ) : null}
+              {canvasBlockEntries.length === 0 ? (
+                <div style={styles.emptyState}>
+                  📭 No widgets yet. Drag one in from the widgets panel to start building!
+                </div>
+              ) : (
+                <>
+                  {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => (
+                    <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
+                      <DropInsertZone
+                        active={dropIndex === blockIndex}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "copy";
+                          if (dropIndex !== blockIndex) setDropIndex(blockIndex);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleInsertAt(blockIndex, e.dataTransfer);
+                          setDropIndex(null);
+                        }}
+                      />
+                      <CanvasBlock
+                        block={block}
+                        index={blockIndex}
+                        pageCanvasWidth={pageCanvasWidth}
+                        brandAssets={brandAssets}
+                        compactPreview={previewMode === "mobile"}
+                        animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
+                        selected={selectedIndex === blockIndex}
+                        hovered={hoveredIndex === blockIndex}
+                        onSelect={selectCanvasBlock}
+                        onHover={(value) => setHoveredIndex(value)}
+                        onDelete={handleDelete}
+                        onDuplicate={handleDuplicate}
+                        onMoveStep={moveBlockByStep}
+                        onMoveToTop={moveBlockToTop}
+                        onEdit={openTextEditorForBlock}
+                        onAnimate={openAnimationPanelForBlock}
+                        onChange={handleUpdateBlock}
+                        onResizeHeight={handleResizeBlockHeight}
+                        onUploadImage={handleCanvasImageUpload}
+                        onUploadLayerImage={handleLayerImageUpload}
+                        onSelectAsset={handleCanvasAssetSelect}
+                        onBlockDragOver={handleBlockDragOver}
+                        onBlockDrop={handleBlockDrop}
+                        onSaveAsGlobal={onSaveAsGlobal}
+                        onSaveBlockDefault={onSaveBlockDefault}
+                      />
+                    </React.Fragment>
+                  ))}
+                  <DropInsertZone
+                    active={dropIndex === blocks.length}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "copy";
+                      if (dropIndex !== blocks.length) setDropIndex(blocks.length);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleInsertAt(blocks.length, e.dataTransfer);
+                      setDropIndex(null);
+                    }}
                   />
-                ) : null}
-                <div style={styles.canvasEndSpacer} aria-hidden="true" />
-              </>
-            )}
+                  {project?.globalFooterBlock ? (
+                    <GlobalBlockPreview
+                      label="🌐 Global Footer"
+                      role="footer"
+                      block={project.globalFooterBlock}
+                      brandAssets={brandAssets}
+                      compact={previewMode === "mobile"}
+                      selected={selectedGlobalRole === "footer"}
+                      onSelect={() => selectGlobalBlock("footer")}
+                      onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
+                      onSaveAsGlobal={onSaveAsGlobal}
+                    />
+                  ) : null}
+                  <div style={styles.canvasEndSpacer} aria-hidden="true" />
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -8134,7 +10189,8 @@ const styles = {
     gap: 12,
     minHeight: 0,
     minWidth: 0,
-    height: "100%",
+    height: "100dvh",
+    maxHeight: "100dvh",
     background: "#0c121a",
     color: "#e6eef5",
     fontFamily: "system-ui, -apple-system, sans-serif",
@@ -8452,8 +10508,12 @@ const styles = {
   tabRow: {
     display: "flex",
     gap: 8,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
     marginBottom: 12,
+    overflowX: "auto",
+    overflowY: "hidden",
+    paddingBottom: 4,
+    scrollbarWidth: "thin",
   },
   tabChip: {
     background: "#102036",
@@ -8464,6 +10524,8 @@ const styles = {
     fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
+    whiteSpace: "nowrap",
+    flex: "0 0 auto",
   },
   tabChipActive: {
     background: "#7df9a1",
@@ -8607,13 +10669,20 @@ const styles = {
     border: "2px dashed #2c3f62",
     borderRadius: 12,
     padding: "18px 18px 84px",
-    overflowX: "hidden",
-    overflowY: "auto",
+    overflow: "hidden",
     position: "relative",
     minWidth: 0,
     width: "100%",
     minHeight: 0,
     height: "100%",
+  },
+  canvasViewport: {
+    width: "100%",
+    height: "100%",
+    overflow: "auto",
+    minWidth: 0,
+    minHeight: 0,
+    paddingTop: 20,
   },
   sidePanelShell: {
     minWidth: 0,
@@ -8648,8 +10717,8 @@ const styles = {
     fontSize: 16,
   },
   canvasEndSpacer: {
-    height: "42vh",
-    minHeight: 280,
+    height: 120,
+    minHeight: 120,
     pointerEvents: "none",
   },
   globalBlockBanner: {
@@ -8692,15 +10761,15 @@ const styles = {
     fontStyle: "normal",
   },
   canvasBlock: {
-    background: "linear-gradient(180deg,#f8fbff,#eef4fb)",
-    border: "1px solid #c9d7ea",
+    background: "transparent",
+    border: "1px solid transparent",
     borderRadius: 16,
-    padding: 12,
+    padding: 0,
     cursor: "default",
     transition: "all 0.2s",
     minWidth: 0,
     position: "relative",
-    boxShadow: "0 14px 28px rgba(15,23,42,0.08)",
+    boxShadow: "none",
   },
   blockActionBar: {
     position: "absolute",
@@ -8828,8 +10897,8 @@ const styles = {
   },
   canvasBlockSelected: {
     border: "2px solid #0ea5e9",
-    background: "linear-gradient(180deg,#ffffff,#f0f9ff)",
-    boxShadow: "0 0 0 4px rgba(14,165,233,0.12), 0 18px 34px rgba(15,23,42,0.12)",
+    background: "transparent",
+    boxShadow: "0 0 0 4px rgba(14,165,233,0.12)",
   },
   blockHeader: {
     display: "flex",
@@ -8870,6 +10939,9 @@ const styles = {
     minWidth: 0,
     maxWidth: "100%",
     overflowX: "auto",
+    paddingTop: 0,
+  },
+  blockPreviewWithOverlay: {
     paddingTop: 42,
   },
   blockPreviewFullWidth: {
@@ -9030,8 +11102,8 @@ const styles = {
     boxShadow: "0 0 0 2px rgba(34,197,94,0.2)",
   },
   properties: {
-    background: "#111827",
-    border: "1px solid #1e2d45",
+    background: "#0b1220",
+    border: "1px solid #20314b",
     borderRadius: 12,
     padding: 16,
     overflowY: "auto",
@@ -9067,8 +11139,9 @@ const styles = {
     gap: 8,
     padding: 12,
     borderRadius: 10,
-    background: "#0d1522",
-    border: "1px solid #1e2d45",
+    background: "#1d2c43",
+    border: "1px solid #4a6488",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 16px rgba(2,6,23,0.22)",
   },
   propertyField: {
     display: "grid",

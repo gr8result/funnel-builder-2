@@ -4845,10 +4845,8 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     boxShadow: "none",
     border: "none",
     padding: 0,
-    // CSS transforms on the section break position:sticky on children — omit them when parallax is active
+    // CSS transforms break position:sticky and also interfere with ParallaxImageLayer — skip when parallax is active
     ...(splitParallaxEnabled && !compact ? {} : sectionAnimationStyle),
-    // overflow must be visible for sticky to work
-    ...(splitParallaxEnabled && !compact ? { overflow: "visible" } : {}),
   };
   const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
   const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
@@ -4857,26 +4855,26 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
     minHeight: compact ? undefined : props.minHeight || "760px",
     borderRadius: 0,
-    // overflow:hidden breaks position:sticky — must be visible when parallax is on
-    overflow: (splitParallaxEnabled && !compact) ? "visible" : ((hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden"),
-    // stretch makes the grid row height equal to the taller (content) column, giving sticky room to travel
-    alignItems: (splitParallaxEnabled && !compact) ? "stretch" : "start",
+    overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
+    alignItems: "start",
     background: props.sectionBackgroundColor || "#000000",
     border: "none",
     boxShadow: "none",
   };
   const mediaPanelStyle = splitBackgroundImage
     ? {
-        position: (splitParallaxEnabled && !compact) ? "sticky" : "relative",
-        top: (splitParallaxEnabled && !compact) ? 0 : undefined,
-        height: (splitParallaxEnabled && !compact) ? "100vh" : undefined,
+        position: "relative",
         overflow: "hidden",
-        minHeight: compact ? 122 : (splitParallaxEnabled ? undefined : "100%"),
+        minHeight: compact ? 122 : "100%",
+        // When parallax is active the ParallaxImageLayer owns the background rendering;
+        // setting it here would show a static bg on top of the animated layer.
         backgroundColor: props.backgroundColor || "#0f172a",
-        backgroundImage: `url(${splitBackgroundImage})`,
-        backgroundPosition: props.backgroundPosition || "center center",
-        backgroundSize: props.backgroundSize || "cover",
-        backgroundRepeat: props.backgroundRepeat || "no-repeat",
+        ...(!splitParallaxEnabled || compact ? {
+          backgroundImage: `url(${splitBackgroundImage})`,
+          backgroundPosition: props.backgroundPosition || "center center",
+          backgroundSize: props.backgroundSize || "cover",
+          backgroundRepeat: props.backgroundRepeat || "no-repeat",
+        } : {}),
       }
     : {
         position: "relative",
@@ -4905,8 +4903,6 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   };
 
   return (
-    // When parallax is enabled, use a plain <section> so no CSS transform is ever applied
-    // (transforms on a containing block prevent position:sticky from working in descendants)
     <ScrollReveal
       as="section"
       animationName={(splitParallaxEnabled && !compact) ? "" : (props.sectionAnimation || "fade-up")}
@@ -4924,6 +4920,18 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
             disabled={editor || (splitParallaxEnabled && !compact)}
             style={mediaPanelStyle}
           >
+            {splitParallaxEnabled && !compact && splitBackgroundImage ? (
+              <ParallaxImageLayer
+                speed={Number(props.parallaxStrength ?? 0.78)}
+                backgroundStyle={{
+                  backgroundImage: `url(${splitBackgroundImage})`,
+                  backgroundSize: props.backgroundSize || "cover",
+                  backgroundPosition: props.backgroundPosition || "center center",
+                  backgroundRepeat: props.backgroundRepeat || "no-repeat",
+                  backgroundColor: props.backgroundColor || "#0f172a",
+                }}
+              />
+            ) : null}
             {!splitBackgroundImage && editor ? (
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
                 Upload a background image
