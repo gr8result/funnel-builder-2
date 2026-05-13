@@ -4845,8 +4845,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     boxShadow: "none",
     border: "none",
     padding: 0,
-    // CSS transforms break position:sticky on children — skip animation when parallax is active
-    ...(splitParallaxEnabled && !compact ? {} : sectionAnimationStyle),
+    ...sectionAnimationStyle,
   };
   const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
   const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
@@ -4855,25 +4854,17 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
     minHeight: compact ? undefined : props.minHeight || "760px",
     borderRadius: 0,
-    overflow: ((splitParallaxEnabled && !compact) || hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
-    alignItems: (splitParallaxEnabled && !compact) ? "stretch" : "start",
+    overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
+    alignItems: "start",
     background: props.sectionBackgroundColor || "#000000",
     border: "none",
     boxShadow: "none",
   };
-  // When parallax is enabled, the outer wrapper is the grid item (stretches full row height)
-  // and the inner sticky div sticks within it. This ensures the sticky-containing block
-  // is the full grid row height, giving the sticky element room to travel.
-  const mediaPanelWrapperStyle = (splitParallaxEnabled && !compact && splitBackgroundImage)
-    ? { position: "relative", overflow: "visible" }
-    : null;
   const mediaPanelStyle = splitBackgroundImage
     ? {
-        position: (splitParallaxEnabled && !compact) ? "sticky" : "relative",
-        top: (splitParallaxEnabled && !compact) ? 0 : undefined,
-        height: (splitParallaxEnabled && !compact) ? "100vh" : undefined,
+        position: "relative",
         overflow: "hidden",
-        minHeight: compact ? 122 : (splitParallaxEnabled ? undefined : "100%"),
+        minHeight: compact ? 122 : "100%",
         backgroundColor: props.backgroundColor || "#0f172a",
         backgroundImage: `url(${splitBackgroundImage})`,
         backgroundPosition: props.backgroundPosition || "center center",
@@ -4907,34 +4898,22 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   };
 
   return (
-    <ScrollReveal as="section" animationName={(splitParallaxEnabled && !compact) ? "" : (props.sectionAnimation || "fade-up")} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor || (splitParallaxEnabled && !compact)} style={asStyleObject(sectionSurface)}>
+    <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={asStyleObject(sectionSurface)}>
       <div style={asStyleObject(panelShell)}>
-          {mediaPanelWrapperStyle ? (
-            <div style={mediaPanelWrapperStyle}>
-              <div style={mediaPanelStyle}>
-                {!splitBackgroundImage && editor ? (
-                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
-                    Upload a background image for the parallax half
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : (
           <ScrollReveal
             as="div"
-            animationName={(splitParallaxEnabled && !compact) ? "" : (props.leftPanelAnimation || "none")}
+            animationName={props.leftPanelAnimation || "none"}
             delay={Number(props.leftPanelAnimationDelay ?? 0)}
             speed={props.leftPanelAnimationSpeed}
-            disabled={editor || (splitParallaxEnabled && !compact)}
+            disabled={editor}
             style={mediaPanelStyle}
           >
             {!splitBackgroundImage && editor ? (
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
-                Upload a background image for the parallax half
+                Upload a background image
               </div>
             ) : null}
           </ScrollReveal>
-          )}
           <ScrollReveal
             as="div"
             animationName={props.rightPanelAnimation || "none"}
@@ -5238,7 +5217,7 @@ function useOverlayBounds(shellRef) {
   return bounds;
 }
 
-function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align = "center", vertical = "center", children, overlayEnabled = false, contentShellStyle = null, onDelete = null }) {
+function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align = "center", vertical = "center", children, overlayEnabled = false, contentShellStyle = null }) {
   const dragRef = React.useRef(null);
   const shellRef = React.useRef(null);
   const latestPropsRef = React.useRef(props || {});
@@ -5442,19 +5421,9 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
             data-overlay-drag-handle="true"
             onPointerDown={(event) => startInteraction(event, "move")}
             onMouseDown={(event) => startInteraction(event, "move")}
-            style={{ position: "absolute", top: 4, left: 8, right: 8, zIndex: 5, cursor: "move", display: "flex", gap: 6, alignItems: "center", justifyContent: align === "right" ? "flex-end" : align === "left" ? "flex-start" : "center" }}
+            style={{ position: "absolute", top: 4, left: 8, right: 8, zIndex: 5, cursor: "move", display: "flex", justifyContent: align === "right" ? "flex-end" : align === "left" ? "flex-start" : "center" }}
           >
             <span style={sharedStyles.editorChip}>Drag Text Box</span>
-            {onDelete ? (
-              <button
-                type="button"
-                data-overlay-resize="true"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                style={{ width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1, flexShrink: 0 }}
-                title="Hide text block"
-              >✕</button>
-            ) : null}
           </div>
         ) : null}
         <div
@@ -5478,29 +5447,22 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
           {children}
         </div>
         {editor && isActive ? [
-          // Corners
-          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", w: 14, h: 14, corner: true },
-          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", w: 14, h: 14, corner: true },
-          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", w: 14, h: 14, corner: true },
-          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", w: 14, h: 14, corner: true },
-          // Center edges — transparent hit zone with inner dot
-          { key: "top",    top: -14,    left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  w: 36, h: 28, dotW: 28, dotH: 14, dotTop: 14, dotLeft: 4, corner: false },
-          { key: "bottom", bottom: -14, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  w: 36, h: 28, dotW: 28, dotH: 14, dotTop: 0,  dotLeft: 4, corner: false },
-          { key: "left",   left: -14,   top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  w: 28, h: 36, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 14, corner: false },
-          { key: "right",  right: -14,  top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  w: 28, h: 36, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 0,  corner: false },
+          { key: "left", left: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
+          { key: "right", right: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
+          { key: "top", top: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
+          { key: "bottom", bottom: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
+          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", width: 14, height: 14 },
+          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", width: 14, height: 14 },
+          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", width: 14, height: 14 },
+          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", width: 14, height: 14 },
         ].map((handle) => (
           <div
             key={handle.key}
             data-overlay-resize="true"
             onPointerDown={(event) => startInteraction(event, "resize", handle.key)}
             onMouseDown={(event) => startInteraction(event, "resize", handle.key)}
-            style={{ position: "absolute", background: "transparent", pointerEvents: "auto", zIndex: 10, boxSizing: "border-box", width: handle.w, height: handle.h, left: handle.left, right: handle.right, top: handle.top, bottom: handle.bottom, transform: handle.transform, cursor: handle.cursor }}
-          >
-            {handle.corner
-              ? <div style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", pointerEvents: "none" }} />
-              : <div style={{ position: "absolute", top: handle.dotTop, left: handle.dotLeft, width: handle.dotW, height: handle.dotH, borderRadius: 4, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", pointerEvents: "none" }} />
-            }
-          </div>
+            style={{ position: "absolute", borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", ...handle }}
+          />
         )) : null}
       </div>
     </>
@@ -6068,8 +6030,8 @@ function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
   return (
     <div
       ref={shellRef}
-      onPointerDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"],[data-overlay-toolbar="true"]')) startDrag(event, "move"); }}
-      onMouseDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"],[data-overlay-toolbar="true"]')) startDrag(event, "move"); }}
+      onPointerDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"]')) startDrag(event, "move"); }}
+      onMouseDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"]')) startDrag(event, "move"); }}
       style={{
         position: "absolute",
         left: `${x}%`,
@@ -6095,52 +6057,6 @@ function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
         </span>
       ) : null}
       {editor ? (
-        <div style={{ position: "absolute", top: -28, left: 0, right: 0, display: "flex", gap: 4, alignItems: "center", pointerEvents: "auto", flexWrap: "wrap" }}
-          data-overlay-toolbar="true"
-          onPointerDown={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <select
-            value={String(item.fontSize || 18)}
-            onChange={(e) => onUpdate({ fontSize: Number(e.target.value) })}
-            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
-            title="Font size"
-          >
-            {[12,14,16,18,20,24,28,32,36,40,48,56,64,72,84,96].map(s => (
-              <option key={s} value={s}>{s}px</option>
-            ))}
-          </select>
-          <input
-            type="color"
-            value={item.color || "#ffffff"}
-            onChange={(e) => onUpdate({ color: e.target.value })}
-            style={{ width: 22, height: 22, padding: 1, borderRadius: 4, border: "1px solid rgba(255,255,255,0.2)", background: "transparent", cursor: "pointer" }}
-            title="Text color"
-          />
-          <select
-            value={item.fontWeight || "600"}
-            onChange={(e) => onUpdate({ fontWeight: e.target.value })}
-            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
-            title="Font weight"
-          >
-            <option value="400">Regular</option>
-            <option value="600">Semi Bold</option>
-            <option value="700">Bold</option>
-            <option value="800">Extra Bold</option>
-          </select>
-          <select
-            value={item.textAlign || "center"}
-            onChange={(e) => onUpdate({ textAlign: e.target.value })}
-            style={{ fontSize: 11, background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 4, padding: "1px 3px", cursor: "pointer", height: 22 }}
-            title="Alignment"
-          >
-            <option value="left">Left</option>
-            <option value="center">Center</option>
-            <option value="right">Right</option>
-          </select>
-        </div>
-      ) : null}
-      {editor ? (
         <button
           type="button"
           data-overlay-resize="true"
@@ -6159,7 +6075,6 @@ function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
       ) : null}
       <div
         data-txt-edit="true"
-        data-website-inline-editor="true"
         contentEditable={editor}
         suppressContentEditableWarning
         onMouseDown={(event) => editor && event.stopPropagation()}
@@ -6892,18 +6807,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 );
               })}
-              {editor && props.hideTextOverlay ? (
-                <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 10, pointerEvents: "auto" }}>
-                  <button
-                    type="button"
-                    onClick={() => onChangeBlock?.({ ...props, hideTextOverlay: false })}
-                    style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", cursor: "pointer" }}
-                  >+ Show Text Block</button>
-                </div>
-              ) : null}
-              {!props.hideTextOverlay ? (
               <div style={overlayAnimationLayer(3, shouldRunAnimations ? getAnimationStyle(heroContentOverlayAnimation, heroContentOverlayDelay, heroContentOverlaySpeed) : {})}>
-                <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null} onDelete={editor ? () => onChangeBlock?.({ ...props, hideTextOverlay: true }) : null}>
+                <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
                   {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
                   {/* eslint-disable-next-line no-unused-vars */}
                   <div style={(() => { const { maxWidth: _mw, ...variantContent } = heroVariant.content || {}; return { display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...variantContent }; })()}>
@@ -7075,7 +6980,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </DraggableContentOverlay>
               </div>
-              ) : null}
               {/* Extra free text overlays */}
               {(Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
                 const txtX = Number(txtItem.x ?? 50);
