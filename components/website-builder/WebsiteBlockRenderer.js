@@ -4856,7 +4856,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     minHeight: compact ? undefined : props.minHeight || "760px",
     borderRadius: 0,
     overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
-    alignItems: "start",
+    alignItems: "stretch",
     background: props.sectionBackgroundColor || "#000000",
     border: "none",
     boxShadow: "none",
@@ -4865,9 +4865,8 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     ? {
         position: "relative",
         overflow: "hidden",
-        minHeight: compact ? 122 : "100%",
         // When parallax is active the ParallaxImageLayer owns the background rendering;
-        // setting it here would show a static bg on top of the animated layer.
+        // setting backgroundImage here would show a static bg on top of the animated layer.
         backgroundColor: props.backgroundColor || "#0f172a",
         ...(!splitParallaxEnabled || compact ? {
           backgroundImage: `url(${splitBackgroundImage})`,
@@ -4879,7 +4878,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     : {
         position: "relative",
         overflow: "hidden",
-        minHeight: compact ? 122 : "100%",
+        minHeight: compact ? 122 : undefined,
         background: props.backgroundColor || "#0f172a",
       };
   const contentPanelStyle = {
