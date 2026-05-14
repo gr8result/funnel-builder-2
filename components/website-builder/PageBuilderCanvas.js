@@ -3434,7 +3434,6 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               <option value="45-55">45 / 55</option>
               <option value="55-45">55 / 45</option>
             </select>
-          </div>
           <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
             <input
               type="checkbox"
@@ -7825,6 +7824,16 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             ) : null}
           </div>
         ) : null}
+        {(block?.type === "hero" || block?.type === "hero-split" || block?.type === "hero-centered") ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text Block</label>
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, background: block?.props?.hideTextOverlay ? "#ef4444" : undefined, color: block?.props?.hideTextOverlay ? "#fff" : undefined }}
+              onClick={() => onChange(index, { ...block.props, hideTextOverlay: !block?.props?.hideTextOverlay })}
+            >{block?.props?.hideTextOverlay ? "Show Text Block" : "Hide Text Block"}</button>
+          </div>
+        ) : null}
         {supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>AI Copy</label>
@@ -8498,12 +8507,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const handleKeyDelete = (event) => {
       if (event.key !== "Delete" && event.key !== "Backspace") return;
       const activeEl = document.activeElement;
-      // Skip if focus is inside an input, textarea, or contentEditable
       if (!activeEl) return;
+      // Skip standard form controls
       const tag = activeEl.tagName?.toLowerCase?.();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
-      if (activeEl.isContentEditable || activeEl.closest?.('[contenteditable="true"]')) return;
-      if (activeEl.closest?.('[data-text-toolbar="true"]')) return;
+      // Skip if the focused element is or is inside a contentEditable
+      if (activeEl.isContentEditable) return;
+      if (activeEl.closest?.('[contenteditable="true"]')) return;
+      // Skip if there is any non-collapsed text selection — user is editing/deleting text
+      const sel = typeof window !== "undefined" ? window.getSelection?.() : null;
+      if (sel && !sel.isCollapsed) return;
+      // Also walk up the selection anchor to catch focus inside contentEditable that didn't update activeElement
+      if (sel?.anchorNode) {
+        let node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+        while (node) {
+          if (node.isContentEditable || node.getAttribute?.("contenteditable") === "true") return;
+          node = node.parentElement;
+        }
+      }
       const idx = selectedIndexRef.current;
       if (idx == null || !Number.isInteger(idx)) return;
       event.preventDefault();
