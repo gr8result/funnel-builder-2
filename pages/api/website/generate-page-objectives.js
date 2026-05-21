@@ -4,6 +4,10 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function safeTrim(value) {
+  return String(value || "").trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: "OPENAI_API_KEY not configured" });
@@ -14,6 +18,12 @@ export default async function handler(req, res) {
     targetAudience = "",
     goal = "",
     notes = "",
+    primaryKeywords = "",
+    serviceAreas = "",
+    differentiators = "",
+    proofPoints = "",
+    tone = "",
+    mustIncludeSections = "",
     pages = [],
   } = req.body || {};
 
@@ -38,11 +48,17 @@ export default async function handler(req, res) {
           role: "user",
           content: `Create one objective sentence for each page name below.
 
-Business Name: ${businessName || "(not provided)"}
-Offer: ${offer || "(not provided)"}
-Target Audience: ${targetAudience || "(not provided)"}
-Main Goal: ${goal || "(not provided)"}
-Notes: ${notes || "(none)"}
+Business Name: ${safeTrim(businessName) || "(not provided)"}
+Offer: ${safeTrim(offer) || "(not provided)"}
+Target Audience: ${safeTrim(targetAudience) || "(not provided)"}
+Main Goal: ${safeTrim(goal) || "(not provided)"}
+SEO Keywords: ${safeTrim(primaryKeywords) || "(not provided)"}
+Service Areas: ${safeTrim(serviceAreas) || "(not provided)"}
+Differentiators: ${safeTrim(differentiators) || "(not provided)"}
+Proof Points: ${safeTrim(proofPoints) || "(not provided)"}
+Brand Tone: ${safeTrim(tone) || "(not provided)"}
+Must-Have Sections: ${safeTrim(mustIncludeSections) || "(not provided)"}
+Notes: ${safeTrim(notes) || "(none)"}
 
 Pages: ${pageNames.join(", ")}
 
@@ -56,6 +72,7 @@ Return JSON with this exact shape:
 Rules:
 - Keep each objective under 14 words when possible.
 - Keep language specific and benefit-oriented.
+- Weave in likely buyer or SEO intent when relevant.
 - Preserve the page names exactly as provided.`,
         },
       ],

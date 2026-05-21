@@ -324,6 +324,9 @@ export async function getServerSideProps(ctx) {
 }
 
 function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
+  // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
+  // No page-level POST needed here.
+
   const project = publication?.site_data || {};
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
@@ -360,7 +363,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
       <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif" }}>
         {injectNav ? (
           <Fragment key="global-nav">
-            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
+            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </Fragment>
         ) : null}
 
@@ -368,7 +371,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
           <>
             {blocksWithoutNav.map((block, index) => (
               <Fragment key={block.id || `${block.type}-${index}`}>
-                {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
+                {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
               </Fragment>
             ))}
           </>
@@ -385,7 +388,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
 
         {injectFooter ? (
           <Fragment key="global-footer">
-            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext })}
+            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </Fragment>
         ) : null}
 

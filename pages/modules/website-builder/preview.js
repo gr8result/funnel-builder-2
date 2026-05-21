@@ -2,12 +2,12 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { renderWebsiteBlock } from "../../../components/website-builder/WebsiteBlockRenderer";
+import { renderWebsiteBlock, websiteBlockKeyframes } from "../../../components/website-builder/WebsiteBlockRenderer";
 import { deleteWebsiteTemplateOverride, getWebsiteTemplatePreview, updateWebsiteTemplateOverride } from "../../../lib/website-builder/projectStore";
 import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
 import { supabase } from "../../../lib/supabaseClient";
 
-function pickLayoutWidth(blocks, fallback = 1120) {
+function pickLayoutWidth(blocks, fallback = 1500) {
   for (const block of Array.isArray(blocks) ? blocks : []) {
     const value = Number(block?.props?.baseLayoutWidth || 0);
     if (Number.isFinite(value) && value > 0) return value;
@@ -59,7 +59,7 @@ export default function ThemePreviewPage() {
   const accent = getThemeAccent(templateSlug);
   const preview = useMemo(() => getWebsiteTemplatePreview(templateSlug, pageKey), [templateSlug, pageKey, defaultsVersion]);
   const assets = useMemo(() => ({ logo: null, images: [] }), []);
-  const layoutWidth = pickLayoutWidth(preview?.blocks || [], 1120);
+  const layoutWidth = pickLayoutWidth(preview?.blocks || [], 1500);
   const previewShellWidth = previewViewport === "mobile" ? 430 : previewViewport === "tablet" ? 920 : layoutWidth;
   const pageBackground = pickPageBackground(preview?.blocks || [], accent.bg);
   const activePageSlug = preview?.activePage?.slug || "";
@@ -145,7 +145,11 @@ export default function ThemePreviewPage() {
     <>
       <Head>
         <title>{preview?.template?.name || "Template Preview"} Preview | GR8</title>
-        <style>{`html, body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
+        <style>{`
+          html { background: ${pageBackground} !important; margin: 0; padding: 0; }
+          body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }
+          ${websiteBlockKeyframes()}
+        `}</style>
       </Head>
 
       <main style={styles.page(pageBackground)}>
@@ -195,8 +199,8 @@ export default function ThemePreviewPage() {
 
               <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
                 {preview.blocks.map((block, index) => (
-                  <div key={block.id || `${block.type}-${index}`}>
-                    {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
+                  <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "hidden" }}>
+                    {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
                   </div>
                 ))}
               </div>
@@ -326,7 +330,7 @@ const styles = {
     marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     borderRadius: viewport === "desktop" ? 0 : 24,
-    overflow: viewport === "desktop" ? "visible" : "hidden",
+    overflow: "hidden",
     boxShadow: viewport === "desktop" ? "none" : "0 24px 60px rgba(15,23,42,0.22)",
     background: viewport === "desktop" ? "transparent" : "#ffffff",
     paddingTop: viewport === "desktop" ? 112 : 126,

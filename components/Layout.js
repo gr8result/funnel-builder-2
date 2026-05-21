@@ -163,9 +163,16 @@ export default function Layout({ children }) {
       try {
         let localMarketplaceAllowed = false;
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        let { data: { session } } = await supabase.auth.getSession();
+        // If no session, try an explicit refresh once (handles expired access tokens
+        // that weren't auto-refreshed, e.g. after the computer woke from sleep or
+        // the dev server restarted during the refresh window).
+        if (!session?.user) {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session) session = refreshed.session;
+          } catch { /* refresh failed – user is genuinely logged out */ }
+        }
         const user = session?.user;
         if (!user) {
           setDeveloperAccess(false);
@@ -204,7 +211,8 @@ export default function Layout({ children }) {
           }
 
           if (isProtectedPlatformRoute && !isAdminRoute) {
-            router.replace("/login");
+            const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
+            router.replace(`/login${currentPath && currentPath !== "/" ? `?redirect=${encodeURIComponent(currentPath)}` : ""}`);
           }
 
           setHeader({

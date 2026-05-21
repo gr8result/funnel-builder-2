@@ -1,0 +1,270 @@
+@font-face {
+  font-family: 'webexthemeicon';
+  src:  url('fonts/webexthemeicon.eot?i5l1nl');
+  src:  url('fonts/webexthemeicon.eot?i5l1nl#iefix') format('embedded-opentype'),
+    url('fonts/webexthemeicon.ttf?i5l1nl') format('truetype'),
+    url('fonts/webexthemeicon.woff?i5l1nl') format('woff'),
+    url('fonts/webexthemeicon.svg?i5l1nl#webexthemeicon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+[class^="webextheme-icon-"], [class*=" webextheme-icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'webexthemeicon' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.webextheme-icon-helmet:before {
+  content: "\f145";
+}
+.webextheme-icon-set-square:before {
+  content: "\f187";
+}
+.webextheme-icon-surgery-room:before {
+  content: "\f197";
+}
+.webextheme-icon-worker:before {
+  content: "\f1a5";
+}
+.webextheme-icon-wrench:before {
+  content: "\f1a8";
+}
+.webextheme-icon-art-and-design-1:before {
+  content: "\e900";
+}
+.webextheme-icon-tools-1:before {
+  content: "\e901";
+}
+.webextheme-icon-002-furnitures1:before {
+  content: "\f167";
+}
+.webextheme-icon-003-renovation1:before {
+  content: "\f168";
+}
+.webextheme-icon-008-concept1:before {
+  content: "\f16d";
+}
+.webextheme-icon-013-sketch1:before {
+  content: "\f172";
+}
+.webextheme-icon-016-sketch-11:before {
+  content: "\f175";
+}
+.webextheme-icon-019-architect-11:before {
+  content: "\f177";
+}
+.webextheme-icon-architect-1:before {
+  content: "\f103";
+}
+.webextheme-icon-architect-2:before {
+  content: "\f104";
+}
+.webextheme-icon-architect-3:before {
+  content: "\f105";
+}
+.webextheme-icon-architect-4:before {
+  content: "\f106";
+}
+.webextheme-icon-architect:before {
+  content: "\f107";
+}
+.webextheme-icon-armchair:before {
+  content: "\f108";
+}
+.webextheme-icon-blueprint:before {
+  content: "\f109";
+}
+.webextheme-icon-building:before {
+  content: "\f10a";
+}
+.webextheme-icon-buildings:before {
+  content: "\f10b";
+}
+.webextheme-icon-decorating:before {
+  content: "\f113";
+}
+.webextheme-icon-design:before {
+  content: "\f114";
+}
+.webextheme-icon-furniture:before {
+  content: "\f11e";
+}
+.webextheme-icon-furnitures:before {
+  content: "\f11f";
+}
+.webextheme-icon-home:before {
+  content: "\f120";
+}
+.webextheme-icon-house-design:before {
+  content: "\f121";
+}
+.webextheme-icon-import:before {
+  content: "\f122";
+}
+.webextheme-icon-interior-design-1:before {
+  content: "\f123";
+}
+.webextheme-icon-interior-design-2:before {
+  content: "\f124";
+}
+.webextheme-icon-interior-design:before {
+  content: "\f125";
+}
+.webextheme-icon-interior:before {
+  content: "\f126";
+}
+.webextheme-icon-kitchen:before {
+  content: "\f127";
+}
+.webextheme-icon-living-room:before {
+  content: "\f129";
+}
+.webextheme-icon-measure:before {
+  content: "\f12a";
+}
+.webextheme-icon-sofa:before {
+  content: "\f135";
+}
+.webextheme-icon-stairs:before {
+  content: "\f136";
+}
+.webextheme-icon-under-construction-1:before {
+  content: "\f138";
+}
+.webextheme-icon-sofa-1:before {
+  content: "\e90a";
+}
+.webextheme-icon-stairs-1:before {
+  content: "\e90b";
+}
+.webextheme-icon-team-1:before {
+  content: "\e90c";
+}
+.webextheme-icon-apartment-1:before {
+  content: "\f10c";
+}
+.webextheme-icon-apartment:before {
+  content: "\f10d";
+}
+.webextheme-icon-armchair1:before {
+  content: "\f10e";
+}
+.webextheme-icon-bathtub:before {
+  content: "\f10f";
+}
+.webextheme-icon-bed-1:before {
+  content: "\f110";
+}
+.webextheme-icon-bed:before {
+  content: "\f111";
+}
+.webextheme-icon-clean:before {
+  content: "\f115";
+}
+.webextheme-icon-double-bed:before {
+  content: "\f119";
+}
+.webextheme-icon-excavator:before {
+  content: "\f15a";
+}
+.webextheme-icon-office:before {
+  content: "\f15b";
+}
+.webextheme-icon-pencil:before {
+  content: "\f15c";
+}
+.webextheme-icon-square-shape-design-interface-tool-symbol:before {
+  content: "\f155";
+}
+.webextheme-icon-toilet:before {
+  content: "\f159";
+}
+.webextheme-icon-bed-1-1:before {
+  content: "\e902";
+}
+.webextheme-icon-home-1-1:before {
+  content: "\e903";
+}
+.webextheme-icon-home-2-1:before {
+  content: "\e904";
+}
+.webextheme-icon-office-1:before {
+  content: "\e905";
+}
+.webextheme-icon-wallpaper:before {
+  content: "\e906";
+}
+.webextheme-icon-wallpaper-6:before {
+  content: "\e913";
+}
+.webextheme-icon-house:before {
+  content: "\e917";
+}
+.webextheme-icon-furnitures1:before {
+  content: "\e91f";
+}
+.webextheme-icon-001-workspace:before {
+  content: "\f15f";
+}
+.webextheme-icon-002-living-room:before {
+  content: "\f102";
+}
+.webextheme-icon-003-staircase:before {
+  content: "\f160";
+}
+.webextheme-icon-004-blueprint:before {
+  content: "\f112";
+}
+.webextheme-icon-005-home-decoration:before {
+  content: "\f116";
+}
+.webextheme-icon-006-decorating:before {
+  content: "\f117";
+}
+.webextheme-icon-007-door:before {
+  content: "\f118";
+}
+.webextheme-icon-008-stairs:before {
+  content: "\f161";
+}
+.webextheme-icon-009-interior-design:before {
+  content: "\f11a";
+}
+.webextheme-icon-010-wardrobe:before {
+  content: "\f11b";
+}
+.webextheme-icon-011-windows:before {
+  content: "\f11c";
+}
+.webextheme-icon-012-door-1:before {
+  content: "\f11d";
+}
+.webextheme-icon-013-bed:before {
+  content: "\f128";
+}
+.webextheme-icon-014-bed-1:before {
+  content: "\f12b";
+}
+.webextheme-icon-015-interior-design-1:before {
+  content: "\f12c";
+}
+.webextheme-icon-016-apartment:before {
+  content: "\f12d";
+}
+.webextheme-icon-017-interior-design-2:before {
+  content: "\f12e";
+}
+.webextheme-icon-018-french-doors:before {
+  content: "\f12f";
+}

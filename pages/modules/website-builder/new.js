@@ -46,6 +46,34 @@ function normalizePageName(name) {
   return String(name || "").trim().replace(/\s+/g, " ");
 }
 
+function createInitialForm() {
+  return {
+    businessName: "",
+    offer: "",
+    targetAudience: "",
+    goal: "",
+    notes: "",
+    primaryKeywords: "",
+    serviceAreas: "",
+    differentiators: "",
+    proofPoints: "",
+    tone: "",
+    mustIncludeSections: "",
+    imageRequests: "",
+    imageUrls: "",
+    contactEmail: "",
+    contactPhone: "",
+  };
+}
+
+function buildBrief(form, extras = {}) {
+  return {
+    ...createInitialForm(),
+    ...(form && typeof form === "object" ? form : {}),
+    ...extras,
+  };
+}
+
 function inferBusinessNameFromUser(user) {
   const meta = user?.user_metadata || {};
   const raw =
@@ -67,6 +95,7 @@ function inferBusinessNameFromUser(user) {
 function makePlan(form, buildType = "website") {
   const pages = buildType === "landing" ? ["Landing"] : ["Home", "About", "Contact"];
   const goalText = String(form.goal || "").toLowerCase();
+  const sectionsText = String(form.mustIncludeSections || "").toLowerCase();
 
   if (buildType !== "landing") {
     if (goalText.includes("lead") || goalText.includes("book") || goalText.includes("call")) {
@@ -76,6 +105,11 @@ function makePlan(form, buildType = "website") {
     } else {
       pages.splice(1, 0, "Services", "Case Studies");
     }
+
+    if (/(faq|question)/.test(sectionsText)) pages.splice(pages.length - 1, 0, "FAQ");
+    if (/(portfolio|gallery|work)/.test(sectionsText)) pages.splice(pages.length - 1, 0, "Portfolio");
+    if (/(pricing|package|plan)/.test(sectionsText)) pages.splice(pages.length - 1, 0, "Pricing");
+    if (/(team|story|about us|founder)/.test(sectionsText)) pages.splice(pages.length - 1, 0, "Our Story");
   }
 
   const uniquePages = [...new Set(pages)];
@@ -99,7 +133,9 @@ function makePlan(form, buildType = "website") {
     })),
     copyAngles: [
       `Primary offer: ${form.offer || "Your core service"}`,
-      `Voice direction: ${form.notes ? "Use founder story + proof" : "Clear, confidence-first"}`,
+      `Voice direction: ${form.tone || (form.notes ? "Use founder story + proof" : "Clear, confidence-first")}`,
+      `SEO targets: ${form.primaryKeywords || "Core commercial keywords"}`,
+      `Differentiators: ${form.differentiators || "Specific reasons to choose this business"}`,
       "CTA language: action-first with specific outcomes",
     ],
   };
@@ -127,13 +163,7 @@ export default function WebsiteBuilderNewPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   
-  const [form, setForm] = useState({
-    businessName: "",
-    offer: "",
-    targetAudience: "",
-    goal: "",
-    notes: "",
-  });
+  const [form, setForm] = useState(createInitialForm);
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [newPageName, setNewPageName] = useState("");
   const [aiDescBusy, setAiDescBusy] = useState(false);
@@ -142,6 +172,7 @@ export default function WebsiteBuilderNewPage() {
   const [aiObjError, setAiObjError] = useState("");
   const [aiPlanBusy, setAiPlanBusy] = useState(false);
   const [aiPlanError, setAiPlanError] = useState("");
+  const [aiBuildError, setAiBuildError] = useState("");
   const [blankRedirecting, setBlankRedirecting] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const [importBusy, setImportBusy] = useState(false);
@@ -210,18 +241,59 @@ export default function WebsiteBuilderNewPage() {
 
   async function openProject(projectInput) {
     setLaunchBusy(true);
+    setAiBuildError("");
 
     try {
+      let nextProjectInput = { ...projectInput };
+      const nextMode = String(projectInput?.mode || mode || "blank").toLowerCase();
+      const nextPages = projectInput?.pages || normalizePagePlan(generatedPlan?.pagePlan);
+      const nextTemplateSlug = String(projectInput?.templateSlug || generatedPlan?.templateSlug || router.query.template || "").trim();
+
+      if (nextMode === "ai" && !projectInput?.pageBlocks && Array.isArray(nextPages) && nextPages.length) {
+        try {
+          const response = await fetch("/api/website/generate-site-content", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              brief: projectInput?.brief || buildBrief(form, { stylePack: projectStylePack, importStylePack: projectStylePack }),
+              pages: nextPages,
+              buildType: projectInput?.buildType || buildType,
+              templateSlug: nextTemplateSlug,
+            }),
+          });
+
+          const payload = await response.json();
+          if (!response.ok || !payload?.ok) {
+            throw new Error(payload?.error || "Could not generate production-ready website content");
+          }
+
+          nextProjectInput = {
+            ...nextProjectInput,
+            name: payload.name || nextProjectInput.name,
+            pageBlocks: payload.pageBlocks || {},
+            pagesContent: payload.pagesContent || {},
+            globalNavBlock: payload.globalNavBlock || null,
+            globalFooterBlock: payload.globalFooterBlock || null,
+          };
+        } catch (error) {
+          setAiBuildError(error?.message || "Could not generate business-specific website content. Falling back to starter build.");
+        }
+      }
+
       await openSelfHostedBuilder({
-        name: projectInput?.name || `${form.businessName || "GR8"} Website`,
-        mode: projectInput?.mode || mode,
-        buildType: projectInput?.buildType || buildType,
-        stylePack: projectInput?.stylePack || projectStylePack,
-        templateSlug: String(projectInput?.templateSlug || generatedPlan?.templateSlug || router.query.template || "").trim(),
-        brief: projectInput?.brief || { ...form, stylePack: projectStylePack, importStylePack: projectStylePack },
-        pages: projectInput?.pages || normalizePagePlan(generatedPlan?.pagePlan),
-        copyAngles: projectInput?.copyAngles || generatedPlan?.copyAngles || [],
-        tab: projectInput?.tab || "builder",
+        name: nextProjectInput?.name || `${form.businessName || "GR8"} Website`,
+        mode: nextProjectInput?.mode || mode,
+        buildType: nextProjectInput?.buildType || buildType,
+        stylePack: nextProjectInput?.stylePack || projectStylePack,
+        templateSlug: nextTemplateSlug,
+        brief: nextProjectInput?.brief || buildBrief(form, { stylePack: projectStylePack, importStylePack: projectStylePack }),
+        pages: nextPages,
+        pagesContent: nextProjectInput?.pagesContent || {},
+        pageBlocks: nextProjectInput?.pageBlocks || {},
+        globalNavBlock: nextProjectInput?.globalNavBlock || null,
+        globalFooterBlock: nextProjectInput?.globalFooterBlock || null,
+        copyAngles: nextProjectInput?.copyAngles || generatedPlan?.copyAngles || [],
+        tab: nextProjectInput?.tab || "builder",
       });
     } finally {
       setLaunchBusy(false);
@@ -242,7 +314,7 @@ export default function WebsiteBuilderNewPage() {
       name: `${form.businessName || "Starter"} Website`,
       mode: "blank",
       stylePack: projectStylePack,
-      brief: { ...form, stylePack: projectStylePack },
+      brief: buildBrief(form, { stylePack: projectStylePack }),
       pages: [
         { name: "Home", objective: "Start with a completely blank page and build from scratch." },
       ],
@@ -257,7 +329,7 @@ export default function WebsiteBuilderNewPage() {
       const res = await fetch("/api/website/generate-description", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(buildBrief(form)),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
@@ -281,7 +353,7 @@ export default function WebsiteBuilderNewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          ...buildBrief(form),
           pages: generatedPlan.pagePlan.map((p) => p.name),
         }),
       });
@@ -319,7 +391,7 @@ export default function WebsiteBuilderNewPage() {
       const res = await fetch("/api/website/generate-site-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, buildType }),
+        body: JSON.stringify(buildBrief(form, { buildType })),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok || !json?.plan) {
@@ -370,7 +442,7 @@ export default function WebsiteBuilderNewPage() {
         mode: "import",
         templateSlug: "external-import",
         brief: {
-          ...form,
+          ...buildBrief(form),
           importUrl: url,
           stylePack: projectStylePack,
           importCrawl,
@@ -380,6 +452,7 @@ export default function WebsiteBuilderNewPage() {
           ? json.pages
           : [{ name: "Home", objective: "Imported page" }],
         pageBlocks: json.pageBlocks || {},
+        brandAssets: json.brandAssets || { logo: null, images: [] },
         stylePack: projectStylePack,
         copyAngles: ["Imported from external page URL"],
       });
@@ -441,13 +514,77 @@ export default function WebsiteBuilderNewPage() {
                   value={form.goal}
                   onChange={(v) => setForm((prev) => ({ ...prev, goal: v }))}
                 />
+                <VoiceInput
+                  label="SEO Keywords"
+                  placeholder="Primary search terms to rank for"
+                  value={form.primaryKeywords}
+                  onChange={(v) => setForm((prev) => ({ ...prev, primaryKeywords: v }))}
+                />
+                <VoiceInput
+                  label="Service Areas"
+                  placeholder="Cities, regions, industries, or niches served"
+                  value={form.serviceAreas}
+                  onChange={(v) => setForm((prev) => ({ ...prev, serviceAreas: v }))}
+                />
+                <VoiceInput
+                  label="Why Choose You"
+                  placeholder="Key differentiators, unique methods, guarantees"
+                  value={form.differentiators}
+                  onChange={(v) => setForm((prev) => ({ ...prev, differentiators: v }))}
+                />
+                <VoiceInput
+                  label="Proof Points"
+                  placeholder="Results, certifications, awards, years, volumes, testimonials"
+                  value={form.proofPoints}
+                  onChange={(v) => setForm((prev) => ({ ...prev, proofPoints: v }))}
+                />
+                <VoiceInput
+                  label="Brand Tone"
+                  placeholder="Bold, premium, playful, corporate, calm, direct"
+                  value={form.tone}
+                  onChange={(v) => setForm((prev) => ({ ...prev, tone: v }))}
+                />
+                <VoiceInput
+                  label="Must-Have Sections"
+                  placeholder="Pricing, FAQ, case studies, team, gallery, before/after"
+                  value={form.mustIncludeSections}
+                  onChange={(v) => setForm((prev) => ({ ...prev, mustIncludeSections: v }))}
+                />
+                <VoiceInput
+                  label="Contact Email"
+                  placeholder="hello@yourbusiness.com"
+                  value={form.contactEmail}
+                  onChange={(v) => setForm((prev) => ({ ...prev, contactEmail: v }))}
+                />
+                <VoiceInput
+                  label="Contact Phone"
+                  placeholder="Best public phone number"
+                  value={form.contactPhone}
+                  onChange={(v) => setForm((prev) => ({ ...prev, contactPhone: v }))}
+                />
               </div>
               <VoiceInput
                 textarea
-                label="Brand Voice & Details"
-                placeholder="Describe your brand voice, objections to handle, and what makes you different..."
+                label="Brand Voice, Offer Details & Objections"
+                placeholder="Describe your company, ideal client, offer details, objections to handle, and what the finished site needs to communicate..."
                 value={form.notes}
                 onChange={(v) => setForm((prev) => ({ ...prev, notes: v }))}
+                style={styles.textarea}
+              />
+              <VoiceInput
+                textarea
+                label="Images To Include"
+                placeholder="List the exact images the website should include, page by page if needed. Example: founder portrait, team photo, clinic exterior, product close-up, before/after gallery..."
+                value={form.imageRequests}
+                onChange={(v) => setForm((prev) => ({ ...prev, imageRequests: v }))}
+                style={styles.textarea}
+              />
+              <VoiceInput
+                textarea
+                label="Image URLs Or Asset Links"
+                placeholder="Paste one image URL per line. If blank, the builder will fall back to business-relevant generic imagery."
+                value={form.imageUrls}
+                onChange={(v) => setForm((prev) => ({ ...prev, imageUrls: v }))}
                 style={styles.textarea}
               />
               <div style={styles.subActions(isMobile)}>
@@ -557,16 +694,17 @@ export default function WebsiteBuilderNewPage() {
                           buildType,
                           stylePack: projectStylePack,
                           templateSlug: generatedPlan.templateSlug,
-                          brief: { ...form, stylePack: projectStylePack },
+                          brief: buildBrief(form, { stylePack: projectStylePack }),
                           pages: generatedPlan.pagePlan,
                           copyAngles: generatedPlan.copyAngles,
                         })
                       }
                     >
-                      {launchBusy ? "Opening Visual Builder..." : "Open in Visual Builder"}
+                      {launchBusy ? "Generating Production Website..." : "Open in Visual Builder"}
                     </button>
                     <Link href="/modules/website-builder/new?mode=import" style={styles.secondary(isMobile)}>Open Template Import</Link>
                   </div>
+                  {aiBuildError ? <p style={styles.aiError}>{aiBuildError}</p> : null}
                 </div>
               ) : null}
             </section>
@@ -591,7 +729,7 @@ export default function WebsiteBuilderNewPage() {
                         mode: "import",
                         templateSlug: "website-generic-premium",
                         stylePack: projectStylePack,
-                        brief: { ...form, stylePack: projectStylePack },
+                        brief: buildBrief(form, { stylePack: projectStylePack }),
                         pages: [
                           { name: "Home", objective: "Establish trust and present core offer" },
                           { name: "About", objective: "Build authority and personal connection" },

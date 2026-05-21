@@ -27,6 +27,10 @@ function normalizePlan(raw) {
   };
 }
 
+function safeTrim(value) {
+  return String(value || "").trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: "OPENAI_API_KEY not configured" });
@@ -37,6 +41,13 @@ export default async function handler(req, res) {
     targetAudience = "",
     goal = "",
     notes = "",
+    primaryKeywords = "",
+    serviceAreas = "",
+    differentiators = "",
+    proofPoints = "",
+    tone = "",
+    mustIncludeSections = "",
+    imageRequests = "",
     buildType = "website",
   } = req.body || {};
 
@@ -54,7 +65,7 @@ export default async function handler(req, res) {
         },
         {
           role: "user",
-          content: `Create an AI ${safeBuildType === "landing" ? "landing page" : "website"} plan for this business.\n\nBuild Type: ${safeBuildType}\nBusiness Name: ${businessName || "(not provided)"}\nOffer: ${offer || "(not provided)"}\nTarget Audience: ${targetAudience || "(not provided)"}\nMain Goal: ${goal || "(not provided)"}\nNotes: ${notes || "(none)"}\n\nReturn JSON with this exact shape:\n{\n  "headline": "short heading",\n  "strap": "one-sentence strategy",\n  "templateSlug": "template slug recommendation",\n  "pagePlan": [\n    { "name": "Home", "objective": "specific conversion objective" }\n  ],\n  "copyAngles": ["angle 1", "angle 2", "angle 3"]\n}\n\nRules:\n- If Build Type is landing: return exactly 1 page in pagePlan.\n- If Build Type is website: return 4 to 8 pages in pagePlan.\n- Keep objective lines crisp and specific.\n- Make plan aligned to the stated audience and goal.`,
+          content: `Create an AI ${safeBuildType === "landing" ? "landing page" : "website"} plan for this business.\n\nBuild Type: ${safeBuildType}\nBusiness Name: ${safeTrim(businessName) || "(not provided)"}\nOffer: ${safeTrim(offer) || "(not provided)"}\nTarget Audience: ${safeTrim(targetAudience) || "(not provided)"}\nMain Goal: ${safeTrim(goal) || "(not provided)"}\nSEO Keywords: ${safeTrim(primaryKeywords) || "(not provided)"}\nService Areas: ${safeTrim(serviceAreas) || "(not provided)"}\nDifferentiators: ${safeTrim(differentiators) || "(not provided)"}\nProof Points: ${safeTrim(proofPoints) || "(not provided)"}\nBrand Tone: ${safeTrim(tone) || "(not provided)"}\nMust-Have Sections: ${safeTrim(mustIncludeSections) || "(not provided)"}\nRequested Images: ${safeTrim(imageRequests) || "(not provided)"}\nNotes: ${safeTrim(notes) || "(none)"}\n\nReturn JSON with this exact shape:\n{\n  "headline": "short heading",\n  "strap": "one-sentence strategy",\n  "templateSlug": "template slug recommendation",\n  "pagePlan": [\n    { "name": "Home", "objective": "specific conversion objective" }\n  ],\n  "copyAngles": ["angle 1", "angle 2", "angle 3"]\n}\n\nRules:\n- If Build Type is landing: return exactly 1 page in pagePlan.\n- If Build Type is website: return 5 to 9 pages in pagePlan when justified by the brief.\n- Include must-have sections as dedicated pages when appropriate.\n- Keep objective lines crisp and specific.\n- Make plan aligned to the stated audience, SEO intent, and goal.\n- Make the copy angles strong enough to guide a near publish-ready site.`,
         },
       ],
     });

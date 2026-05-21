@@ -128,6 +128,12 @@ export default function Login() {
         
 
       // --- SIGNIN ---
+      // DEV BYPASS: on localhost only, allow login with the dev credentials without hitting Supabase
+      const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      if (isLocalhost && process.env.NODE_ENV !== "production" && email === process.env.NEXT_PUBLIC_DEV_BYPASS_EMAIL && password === process.env.NEXT_PUBLIC_DEV_BYPASS_PASSWORD) {
+        return router.push("/dashboard");
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,

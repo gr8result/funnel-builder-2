@@ -1,0 +1,343 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#030712"/>
+      <stop offset="55%" stop-color="#060d1f"/>
+      <stop offset="100%" stop-color="#090e20"/>
+    </linearGradient>
+    <linearGradient id="cardA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1c38"/>
+      <stop offset="100%" stop-color="#080f22"/>
+    </linearGradient>
+    <linearGradient id="cardB" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1b2e"/>
+      <stop offset="100%" stop-color="#07101e"/>
+    </linearGradient>
+    <linearGradient id="accentGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4a1"/>
+      <stop offset="100%" stop-color="#00a67e"/>
+    </linearGradient>
+    <linearGradient id="accentPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="lineGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4a1" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#00d4a1" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#00d4a1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="linePurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#7c3aed" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lineDiag" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#2563eb" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#1e3a5f" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00d4a1" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#00d4a1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nodeGlowGreen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00d4a1" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#00d4a1" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#00d4a1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nodeGlowPurple" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#7c3aed" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nodeGlowBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#3b82f6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow4" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow10" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow20" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="20" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="cardShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="16" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    <clipPath id="cardClip1"><rect x="120" y="200" width="240" height="160" rx="14"/></clipPath>
+    <clipPath id="cardClip2"><rect x="480" y="120" width="240" height="160" rx="14"/></clipPath>
+    <clipPath id="cardClip3"><rect x="840" y="200" width="240" height="160" rx="14"/></clipPath>
+    <clipPath id="cardClip4"><rect x="120" y="440" width="240" height="160" rx="14"/></clipPath>
+    <clipPath id="cardClip5"><rect x="480" y="520" width="240" height="160" rx="14"/></clipPath>
+    <clipPath id="cardClip6"><rect x="840" y="440" width="240" height="160" rx="14"/></clipPath>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="1200" height="800" fill="url(#bg)"/>
+
+  <!-- Subtle dot grid -->
+  <g opacity="0.06">
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.2" fill="#4a90d9"/>
+    </pattern>
+    <rect width="1200" height="800" fill="url(#dots)"/>
+  </g>
+
+  <!-- Center ambient glow -->
+  <ellipse cx="600" cy="400" rx="380" ry="280" fill="url(#centerGlow)"/>
+
+  <!-- ── Connection lines (behind cards) ── -->
+  <!-- Horizontal top row -->
+  <line x1="360" y1="280" x2="480" y2="200" stroke="url(#lineGreen)" stroke-width="1.5" opacity="0.8"/>
+  <line x1="720" y1="200" x2="840" y2="280" stroke="url(#lineGreen)" stroke-width="1.5" opacity="0.8"/>
+  <!-- Top to center -->
+  <line x1="600" y1="280" x2="600" y2="520" stroke="url(#linePurple)" stroke-width="1.5" opacity="0.7"/>
+  <!-- Cross diagonals -->
+  <line x1="240" y1="360" x2="480" y2="520" stroke="url(#lineDiag)" stroke-width="1.2" opacity="0.5"/>
+  <line x1="960" y1="360" x2="720" y2="520" stroke="url(#lineDiag)" stroke-width="1.2" opacity="0.5"/>
+  <line x1="360" y1="440" x2="480" y2="360" stroke="#00d4a1" stroke-width="0.8" opacity="0.25"/>
+  <line x1="840" y1="360" x2="720" y2="440" stroke="#00d4a1" stroke-width="0.8" opacity="0.25"/>
+  <!-- Bottom horizontals -->
+  <line x1="360" y1="520" x2="480" y2="520" stroke="url(#lineGreen)" stroke-width="1.5" opacity="0.6"/>
+  <line x1="720" y1="520" x2="840" y2="520" stroke="url(#lineGreen)" stroke-width="1.5" opacity="0.6"/>
+  <!-- Outer arcs (SVG path approximation) -->
+  <path d="M 240 200 Q 100 400 240 600" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2"/>
+  <path d="M 960 200 Q 1100 400 960 600" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2"/>
+
+  <!-- ── Arrow heads on connection lines ── -->
+  <polygon points="476,194 488,204 476,210" fill="#00d4a1" opacity="0.7"/>
+  <polygon points="844,274 832,284 844,290" fill="#00d4a1" opacity="0.7"/>
+  <polygon points="596,516 600,530 604,516" fill="#7c3aed" opacity="0.7"/>
+
+  <!-- ── CARD 1 (top-left) ── -->
+  <rect x="120" y="200" width="240" height="160" rx="14" fill="url(#cardA)" filter="url(#cardShadow)"/>
+  <rect x="120" y="200" width="240" height="160" rx="14" fill="none" stroke="#1e3a6e" stroke-width="1.5"/>
+  <rect x="120" y="200" width="240" height="3" rx="1.5" fill="url(#accentGreen)" opacity="0.9"/>
+  <!-- Card 1 content — shopping bag icon (geometric) -->
+  <rect x="157" y="228" width="48" height="48" rx="8" fill="#0a1830" stroke="#1e4080" stroke-width="1"/>
+  <path d="M168 248 L174 238 L180 248 Z" fill="none" stroke="#00d4a1" stroke-width="1.8" stroke-linecap="round"/>
+  <rect x="162" y="248" width="28" height="18" rx="3" fill="none" stroke="#00d4a1" stroke-width="1.6"/>
+  <!-- Bar chart bars -->
+  <rect x="220" y="252" width="10" height="24" rx="2" fill="#3b82f6" opacity="0.7"/>
+  <rect x="234" y="242" width="10" height="34" rx="2" fill="#3b82f6" opacity="0.85"/>
+  <rect x="248" y="258" width="10" height="18" rx="2" fill="#3b82f6" opacity="0.6"/>
+  <rect x="262" y="246" width="10" height="30" rx="2" fill="#00d4a1" opacity="0.9"/>
+  <!-- Dots row -->
+  <circle cx="157" cy="310" r="5" fill="#00d4a1" opacity="0.9" filter="url(#glow4)"/>
+  <circle cx="175" cy="310" r="5" fill="#00d4a1" opacity="0.9" filter="url(#glow4)"/>
+  <circle cx="193" cy="310" r="5" fill="#00d4a1" opacity="0.9" filter="url(#glow4)"/>
+  <circle cx="211" cy="310" r="5" fill="#1e3a6e" opacity="0.5"/>
+  <circle cx="229" cy="310" r="5" fill="#1e3a6e" opacity="0.5"/>
+  <!-- Price line -->
+  <rect x="248" y="305" width="60" height="8" rx="4" fill="#00d4a1" opacity="0.25"/>
+  <rect x="248" y="305" width="40" height="8" rx="4" fill="#00d4a1" opacity="0.65"/>
+  <!-- Shimmer -->
+  <rect x="120" y="200" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── CARD 2 (top-center) ── -->
+  <rect x="480" y="120" width="240" height="160" rx="14" fill="url(#cardA)" filter="url(#cardShadow)"/>
+  <rect x="480" y="120" width="240" height="160" rx="14" fill="none" stroke="#2d1b69" stroke-width="1.5"/>
+  <rect x="480" y="120" width="240" height="3" rx="1.5" fill="url(#accentPurple)" opacity="0.9"/>
+  <!-- Hexagon icon -->
+  <polygon points="537,148 549,142 561,148 561,160 549,166 537,160" fill="none" stroke="#a78bfa" stroke-width="2"/>
+  <polygon points="537,148 549,142 561,148 561,160 549,166 537,160" fill="#1a0f3a" opacity="0.5"/>
+  <circle cx="549" cy="154" r="5" fill="#7c3aed" opacity="0.9" filter="url(#glow4)"/>
+  <!-- Network nodes inside card -->
+  <circle cx="600" cy="172" r="4" fill="#a78bfa" opacity="0.8" filter="url(#glow4)"/>
+  <circle cx="620" cy="158" r="3" fill="#7c3aed" opacity="0.7"/>
+  <circle cx="638" cy="168" r="3" fill="#a78bfa" opacity="0.7"/>
+  <line x1="600" y1="172" x2="620" y2="158" stroke="#7c3aed" stroke-width="1" opacity="0.5"/>
+  <line x1="620" y1="158" x2="638" y2="168" stroke="#7c3aed" stroke-width="1" opacity="0.5"/>
+  <line x1="600" y1="172" x2="638" y2="168" stroke="#7c3aed" stroke-width="1" opacity="0.3"/>
+  <!-- Commission arc bar -->
+  <path d="M 500 248 A 60 60 0 0 1 620 248" fill="none" stroke="#1e1145" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 500 248 A 60 60 0 0 1 585 210" fill="none" stroke="#7c3aed" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="585" cy="210" r="5" fill="#a78bfa" filter="url(#glow4)"/>
+  <!-- Shimmer -->
+  <rect x="480" y="120" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── CARD 3 (top-right) ── -->
+  <rect x="840" y="200" width="240" height="160" rx="14" fill="url(#cardA)" filter="url(#cardShadow)"/>
+  <rect x="840" y="200" width="240" height="160" rx="14" fill="none" stroke="#1e3a6e" stroke-width="1.5"/>
+  <rect x="840" y="200" width="240" height="3" rx="1.5" fill="url(#accentBlue)" opacity="0.9"/>
+  <!-- Trend line -->
+  <polyline points="865,295 890,270 920,280 950,252 980,258 1010,230 1040,240 1060,215" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <circle cx="1010" cy="230" r="4" fill="#60a5fa" filter="url(#glow4)"/>
+  <circle cx="1060" cy="215" r="5" fill="#3b82f6" filter="url(#glow4)"/>
+  <!-- Area under trend -->
+  <path d="M865,295 L890,270 L920,280 L950,252 L980,258 L1010,230 L1040,240 L1060,215 L1060,340 L865,340 Z" fill="#3b82f6" opacity="0.07"/>
+  <!-- Horizontal divider -->
+  <line x1="860" y1="310" x2="1060" y2="310" stroke="#1e3a6e" stroke-width="1" opacity="0.5"/>
+  <!-- Pill badges -->
+  <rect x="860" y="318" width="56" height="18" rx="9" fill="#0e2044" stroke="#3b82f6" stroke-width="1" opacity="0.8"/>
+  <rect x="925" y="318" width="56" height="18" rx="9" fill="#0e2044" stroke="#1e3a6e" stroke-width="1" opacity="0.5"/>
+  <rect x="990" y="318" width="56" height="18" rx="9" fill="#0e2044" stroke="#1e3a6e" stroke-width="1" opacity="0.5"/>
+  <!-- Shimmer -->
+  <rect x="840" y="200" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── CARD 4 (bottom-left) ── -->
+  <rect x="120" y="440" width="240" height="160" rx="14" fill="url(#cardB)" filter="url(#cardShadow)"/>
+  <rect x="120" y="440" width="240" height="160" rx="14" fill="none" stroke="#1a2e52" stroke-width="1.5"/>
+  <rect x="120" y="440" width="240" height="3" rx="1.5" fill="url(#accentBlue)" opacity="0.8"/>
+  <!-- Avatar circles (people/affiliates) -->
+  <circle cx="165" cy="490" r="22" fill="#0d1e3a" stroke="#1e3a6e" stroke-width="1.5"/>
+  <circle cx="165" cy="482" r="9" fill="#1e3a6e" opacity="0.9"/>
+  <path d="M147,504 Q147,494 165,494 Q183,494 183,504" fill="#1e3a6e" opacity="0.7"/>
+  <circle cx="210" cy="490" r="22" fill="#0d1e3a" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="210" cy="482" r="9" fill="#3b82f6" opacity="0.6"/>
+  <path d="M192,504 Q192,494 210,494 Q228,494 228,504" fill="#3b82f6" opacity="0.35"/>
+  <!-- Arrow between avatars -->
+  <line x1="188" y1="490" x2="203" y2="490" stroke="#00d4a1" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="201,487 205,490 201,493" fill="#00d4a1" opacity="0.8"/>
+  <!-- Micro bars at bottom of card -->
+  <rect x="140" y="548" width="20" height="32" rx="3" fill="#3b82f6" opacity="0.4"/>
+  <rect x="166" y="540" width="20" height="40" rx="3" fill="#3b82f6" opacity="0.6"/>
+  <rect x="192" y="544" width="20" height="36" rx="3" fill="#3b82f6" opacity="0.5"/>
+  <rect x="218" y="532" width="20" height="48" rx="3" fill="#00d4a1" opacity="0.7"/>
+  <rect x="244" y="550" width="20" height="30" rx="3" fill="#3b82f6" opacity="0.35"/>
+  <!-- Shimmer -->
+  <rect x="120" y="440" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── CARD 5 (bottom-center) ── -->
+  <rect x="480" y="520" width="240" height="160" rx="14" fill="url(#cardB)" filter="url(#cardShadow)"/>
+  <rect x="480" y="520" width="240" height="160" rx="14" fill="none" stroke="#1e2e1a" stroke-width="1.5"/>
+  <rect x="480" y="520" width="240" height="3" rx="1.5" fill="url(#accentGreen)" opacity="0.9"/>
+  <!-- Circular progress / donut -->
+  <circle cx="540" cy="588" r="38" fill="#091a10" stroke="#0a2010" stroke-width="2"/>
+  <!-- Donut segments -->
+  <circle cx="540" cy="588" r="28" fill="none" stroke="#0d2a18" stroke-width="14"/>
+  <circle cx="540" cy="588" r="28" fill="none" stroke="#00d4a1" stroke-width="14" stroke-dasharray="113 63" stroke-dashoffset="28" stroke-linecap="butt" opacity="0.85"/>
+  <circle cx="540" cy="588" r="28" fill="none" stroke="#3b82f6" stroke-width="14" stroke-dasharray="44 132" stroke-dashoffset="-85" stroke-linecap="butt" opacity="0.6"/>
+  <circle cx="540" cy="550" r="4" fill="#00d4a1" opacity="0.9" filter="url(#glow4)"/>
+  <!-- Side stats — horizontal pill bars -->
+  <rect x="598" y="550" width="100" height="9" rx="4.5" fill="#0a2010"/>
+  <rect x="598" y="550" width="72" height="9" rx="4.5" fill="#00d4a1" opacity="0.75"/>
+  <rect x="598" y="566" width="100" height="9" rx="4.5" fill="#0a2010"/>
+  <rect x="598" y="566" width="48" height="9" rx="4.5" fill="#3b82f6" opacity="0.7"/>
+  <rect x="598" y="582" width="100" height="9" rx="4.5" fill="#0a2010"/>
+  <rect x="598" y="582" width="85" height="9" rx="4.5" fill="#00d4a1" opacity="0.55"/>
+  <rect x="598" y="598" width="100" height="9" rx="4.5" fill="#0a2010"/>
+  <rect x="598" y="598" width="35" height="9" rx="4.5" fill="#a78bfa" opacity="0.65"/>
+  <!-- Shimmer -->
+  <rect x="480" y="520" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── CARD 6 (bottom-right) ── -->
+  <rect x="840" y="440" width="240" height="160" rx="14" fill="url(#cardB)" filter="url(#cardShadow)"/>
+  <rect x="840" y="440" width="240" height="160" rx="14" fill="none" stroke="#2d1b69" stroke-width="1.5"/>
+  <rect x="840" y="440" width="240" height="3" rx="1.5" fill="url(#accentPurple)" opacity="0.9"/>
+  <!-- Commission coins stacked -->
+  <ellipse cx="900" cy="520" rx="28" ry="9" fill="#3b0d6e" stroke="#7c3aed" stroke-width="1.5"/>
+  <rect x="872" y="508" width="56" height="14" rx="0" fill="#280a52"/>
+  <ellipse cx="900" cy="510" rx="28" ry="9" fill="#3b0d6e" stroke="#7c3aed" stroke-width="1.5"/>
+  <rect x="872" y="498" width="56" height="14" rx="0" fill="#280a52"/>
+  <ellipse cx="900" cy="500" rx="28" ry="9" fill="#4a1580" stroke="#a78bfa" stroke-width="1.5"/>
+  <!-- Glow on top coin -->
+  <ellipse cx="900" cy="500" rx="28" ry="9" fill="#7c3aed" opacity="0.3" filter="url(#glow10)"/>
+  <!-- Sparkle star -->
+  <path d="M900,482 L902,490 L910,490 L904,495 L906,503 L900,498 L894,503 L896,495 L890,490 L898,490 Z" fill="#a78bfa" opacity="0.7" filter="url(#glow4)"/>
+  <!-- Right side lines -->
+  <rect x="948" y="470" width="110" height="8" rx="4" fill="#1a0a35" opacity="0.8"/>
+  <rect x="948" y="470" width="80" height="8" rx="4" fill="#7c3aed" opacity="0.6"/>
+  <rect x="948" y="485" width="110" height="8" rx="4" fill="#1a0a35" opacity="0.8"/>
+  <rect x="948" y="485" width="55" height="8" rx="4" fill="#7c3aed" opacity="0.45"/>
+  <rect x="948" y="500" width="110" height="8" rx="4" fill="#1a0a35" opacity="0.8"/>
+  <rect x="948" y="500" width="95" height="8" rx="4" fill="#a78bfa" opacity="0.5"/>
+  <!-- Small number circles -->
+  <circle cx="960" cy="540" r="14" fill="#1a0a35" stroke="#7c3aed" stroke-width="1.2"/>
+  <circle cx="990" cy="540" r="14" fill="#1a0a35" stroke="#5b21b6" stroke-width="1.2"/>
+  <circle cx="1020" cy="540" r="14" fill="#1a0a35" stroke="#5b21b6" stroke-width="1.2"/>
+  <circle cx="960" cy="540" r="4" fill="#7c3aed" opacity="0.9" filter="url(#glow4)"/>
+  <circle cx="990" cy="540" r="3" fill="#5b21b6" opacity="0.7"/>
+  <circle cx="1020" cy="540" r="3" fill="#5b21b6" opacity="0.7"/>
+  <!-- Shimmer -->
+  <rect x="840" y="440" width="240" height="160" rx="14" fill="url(#shimmer)"/>
+
+  <!-- ── Network node glows (connection junction points) ── -->
+  <!-- Top-left junction -->
+  <circle cx="360" cy="280" r="28" fill="url(#nodeGlowGreen)" opacity="0.5"/>
+  <circle cx="360" cy="280" r="8" fill="#0d2a18" stroke="#00d4a1" stroke-width="1.5"/>
+  <circle cx="360" cy="280" r="4" fill="#00d4a1" filter="url(#glow10)"/>
+  <!-- Top-right junction -->
+  <circle cx="840" cy="280" r="28" fill="url(#nodeGlowBlue)" opacity="0.5"/>
+  <circle cx="840" cy="280" r="8" fill="#0e1e38" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="840" cy="280" r="4" fill="#60a5fa" filter="url(#glow10)"/>
+  <!-- Center top junction -->
+  <circle cx="600" cy="280" r="32" fill="url(#nodeGlowPurple)" opacity="0.4"/>
+  <circle cx="600" cy="280" r="9" fill="#1a0a35" stroke="#a78bfa" stroke-width="1.5"/>
+  <circle cx="600" cy="280" r="5" fill="#a78bfa" filter="url(#glow10)"/>
+  <!-- Bottom-left junction -->
+  <circle cx="360" cy="520" r="24" fill="url(#nodeGlowBlue)" opacity="0.4"/>
+  <circle cx="360" cy="520" r="7" fill="#0e1e38" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="360" cy="520" r="3.5" fill="#60a5fa" filter="url(#glow10)"/>
+  <!-- Bottom-right junction -->
+  <circle cx="840" cy="520" r="24" fill="url(#nodeGlowPurple)" opacity="0.4"/>
+  <circle cx="840" cy="520" r="7" fill="#1a0a35" stroke="#7c3aed" stroke-width="1.5"/>
+  <circle cx="840" cy="520" r="3.5" fill="#a78bfa" filter="url(#glow10)"/>
+  <!-- Center bottom junction -->
+  <circle cx="600" cy="520" r="28" fill="url(#nodeGlowGreen)" opacity="0.45"/>
+  <circle cx="600" cy="520" r="8" fill="#091a10" stroke="#00d4a1" stroke-width="1.5"/>
+  <circle cx="600" cy="520" r="4.5" fill="#00d4a1" filter="url(#glow10)"/>
+
+  <!-- ── Outer floating micro-nodes (affiliates) ── -->
+  <circle cx="60" cy="300" r="18" fill="url(#nodeGlowGreen)" opacity="0.4"/>
+  <circle cx="60" cy="300" r="6" fill="#09180e" stroke="#00d4a1" stroke-width="1.2"/>
+  <circle cx="60" cy="300" r="3" fill="#00d4a1" opacity="0.9"/>
+  <line x1="78" y1="300" x2="120" y2="280" stroke="#00d4a1" stroke-width="1" opacity="0.3"/>
+
+  <circle cx="60" cy="500" r="18" fill="url(#nodeGlowBlue)" opacity="0.35"/>
+  <circle cx="60" cy="500" r="6" fill="#0a1220" stroke="#3b82f6" stroke-width="1.2"/>
+  <circle cx="60" cy="500" r="3" fill="#60a5fa" opacity="0.9"/>
+  <line x1="78" y1="500" x2="120" y2="520" stroke="#3b82f6" stroke-width="1" opacity="0.3"/>
+
+  <circle cx="1140" cy="300" r="18" fill="url(#nodeGlowPurple)" opacity="0.35"/>
+  <circle cx="1140" cy="300" r="6" fill="#130825" stroke="#7c3aed" stroke-width="1.2"/>
+  <circle cx="1140" cy="300" r="3" fill="#a78bfa" opacity="0.9"/>
+  <line x1="1122" y1="300" x2="1080" y2="280" stroke="#7c3aed" stroke-width="1" opacity="0.3"/>
+
+  <circle cx="1140" cy="500" r="18" fill="url(#nodeGlowGreen)" opacity="0.35"/>
+  <circle cx="1140" cy="500" r="6" fill="#09180e" stroke="#00d4a1" stroke-width="1.2"/>
+  <circle cx="1140" cy="500" r="3" fill="#00d4a1" opacity="0.9"/>
+  <line x1="1122" y1="500" x2="1080" y2="520" stroke="#00d4a1" stroke-width="1" opacity="0.3"/>
+
+  <circle cx="300" cy="88" r="14" fill="url(#nodeGlowBlue)" opacity="0.3"/>
+  <circle cx="300" cy="88" r="5" fill="#0a1220" stroke="#3b82f6" stroke-width="1.2"/>
+  <circle cx="300" cy="88" r="2.5" fill="#60a5fa" opacity="0.8"/>
+  <line x1="310" y1="95" x2="370" y2="160" stroke="#3b82f6" stroke-width="0.8" opacity="0.2"/>
+
+  <circle cx="900" cy="88" r="14" fill="url(#nodeGlowPurple)" opacity="0.3"/>
+  <circle cx="900" cy="88" r="5" fill="#130825" stroke="#7c3aed" stroke-width="1.2"/>
+  <circle cx="900" cy="88" r="2.5" fill="#a78bfa" opacity="0.8"/>
+  <line x1="890" y1="95" x2="830" y2="160" stroke="#7c3aed" stroke-width="0.8" opacity="0.2"/>
+
+  <circle cx="300" cy="712" r="14" fill="url(#nodeGlowGreen)" opacity="0.3"/>
+  <circle cx="300" cy="712" r="5" fill="#091a10" stroke="#00d4a1" stroke-width="1.2"/>
+  <circle cx="300" cy="712" r="2.5" fill="#00d4a1" opacity="0.8"/>
+  <line x1="310" y1="705" x2="370" y2="640" stroke="#00d4a1" stroke-width="0.8" opacity="0.2"/>
+
+  <circle cx="900" cy="712" r="14" fill="url(#nodeGlowBlue)" opacity="0.3"/>
+  <circle cx="900" cy="712" r="5" fill="#0a1220" stroke="#3b82f6" stroke-width="1.2"/>
+  <circle cx="900" cy="712" r="2.5" fill="#60a5fa" opacity="0.8"/>
+  <line x1="890" y1="705" x2="830" y2="640" stroke="#3b82f6" stroke-width="0.8" opacity="0.2"/>
+
+  <!-- ── Vignette overlay ── -->
+  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
+  </radialGradient>
+  <rect width="1200" height="800" fill="url(#vignette)"/>
+</svg>

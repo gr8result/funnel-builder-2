@@ -311,6 +311,134 @@ function buildImageDescriptions(postsByPlatform, count) {
   ).filter(Boolean);
 }
 
+// ── GeneratingOverlay — floating animated progress ring ───────────────────
+const GEN_STAGES = [
+  { key: 'writing',   label: 'Writing captions',  sub: 'Crafting posts for each platform…', pct: 28, color: '#818cf8' },
+  { key: 'imaging',   label: 'Creating images',   sub: 'Generating AI visuals…',            pct: 65, color: '#a78bfa' },
+  { key: 'finishing', label: 'Almost there',      sub: 'Putting it all together…',          pct: 90, color: '#c084fc' },
+  { key: 'done',      label: 'Done!',             sub: 'Your campaign is ready.',            pct: 100, color: '#22c55e' },
+];
+
+function GeneratingOverlay({ stage, onDismiss }) {
+  useEffect(() => {
+    if (stage !== 'done') return;
+    const t = setTimeout(onDismiss, 2200);
+    return () => clearTimeout(t);
+  }, [stage, onDismiss]);
+
+  const idx     = GEN_STAGES.findIndex(s => s.key === stage);
+  const current = GEN_STAGES[idx] || GEN_STAGES[0];
+  const isDone  = stage === 'done';
+
+  const R    = 74;
+  const circ = 2 * Math.PI * R;
+  const dash = circ - (current.pct / 100) * circ;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.75)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: 'linear-gradient(145deg, #0f172a 0%, #1a1040 100%)',
+        border: '1px solid rgba(139,92,246,0.45)',
+        borderRadius: 28,
+        padding: '52px 56px 44px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28,
+        boxShadow: '0 0 100px rgba(99,102,241,0.28), 0 30px 60px rgba(0,0,0,0.6)',
+        minWidth: 340,
+      }}>
+
+        {/* Ring */}
+        <div style={{ position: 'relative', width: 180, height: 180 }}>
+          <svg width={180} height={180} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+            <circle cx={90} cy={90} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={14} />
+            <circle
+              cx={90} cy={90} r={R} fill="none"
+              stroke={current.color}
+              strokeWidth={14}
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              strokeDashoffset={dash}
+              style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.6s ease' }}
+            />
+            {/* Glow filter effect via a second slightly wider translucent stroke */}
+            <circle
+              cx={90} cy={90} r={R} fill="none"
+              stroke={current.color}
+              strokeWidth={22}
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              strokeDashoffset={dash}
+              opacity={0.12}
+              style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.6s ease' }}
+            />
+          </svg>
+
+          {/* Centre content */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em' }}>
+              {current.pct}%
+            </div>
+            {isDone ? (
+              <div style={{ fontSize: 26, marginTop: 6, color: '#22c55e' }}>✓</div>
+            ) : (
+              <div style={{
+                width: 9, height: 9, borderRadius: '50%', background: current.color, marginTop: 8,
+                animation: 'gen_pulse 1.3s ease-in-out infinite',
+              }} />
+            )}
+          </div>
+        </div>
+
+        {/* Label */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 6, letterSpacing: '-0.01em' }}>
+            {current.label}
+          </div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.42)', lineHeight: 1.5 }}>
+            {current.sub}
+          </div>
+        </div>
+
+        {/* Stage pills */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {GEN_STAGES.slice(0, -1).map((s, i) => {
+            const isActive   = s.key === stage;
+            const isComplete = i < idx;
+            return (
+              <div key={s.key} style={{
+                padding: '5px 15px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                background: isActive || isComplete ? `rgba(129,140,248,0.15)` : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isActive ? 'rgba(129,140,248,0.7)' : isComplete ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                color: isComplete ? '#86efac' : isActive ? '#c7d2fe' : 'rgba(255,255,255,0.28)',
+                transition: 'all 0.45s ease',
+                whiteSpace: 'nowrap',
+              }}>
+                {isComplete ? `✓ ${s.label}` : s.label}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes gen_pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.35; transform: scale(0.6); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ── PostCard sub-component — platform-specific UI mockups ────────────────
 function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your Brand', videoSrc = '' }) {
   const [editing, setEditing] = useState(false);
@@ -511,6 +639,8 @@ export default function CreateContent() {
 
   const [notice,          setNotice]          = useState('');
   const [aiGenerating,    setAiGenerating]    = useState(false);
+  const [genStage,        setGenStage]        = useState(null); // null | 'writing' | 'imaging' | 'finishing' | 'done'
+  const [aiPurging,       setAiPurging]       = useState(false);
   const [postsByPlatform, setPostsByPlatform] = useState(() => {
     try { const s = localStorage.getItem('sm_draft_posts'); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });
@@ -526,6 +656,8 @@ export default function CreateContent() {
 
   // Generation settings
   const [aiTopic,        setAiTopic]        = useState('');
+  const [aiAudience,     setAiAudience]     = useState('');
+  const [aiBrand,        setAiBrand]        = useState('');
   const [doNotRewrite,   setDoNotRewrite]   = useState(false);
   const [aiStyle,        setAiStyle]        = useState('engaging');
   const [aiLength,       setAiLength]       = useState('short');
@@ -535,6 +667,7 @@ export default function CreateContent() {
   const [aiContentType,  setAiContentType]  = useState('standard');
   const [aiImageCreativeType, setAiImageCreativeType] = useState('realistic');
   const [aiImageTextMode, setAiImageTextMode] = useState('headline-supporting');
+  const [aiImageDirection, setAiImageDirection] = useState('');
   const [aiSelectedPlatforms, setAiSelectedPlatforms] = useState(() => {
     try {
       const saved = localStorage.getItem('sm_selected_platforms');
@@ -620,12 +753,15 @@ export default function CreateContent() {
   function buildCampaignSettings(postsOverride = postsByPlatform) {
     return {
       topic: aiTopic,
+      audience: aiAudience,
+      brand: aiBrand,
       style: aiStyle,
       length: aiLength,
       hashtagLevel: aiHashtagLevel,
       contentType: aiContentType,
       imageCreativeType: aiImageCreativeType,
       imageTextMode: aiImageTextMode,
+      imageDirection: aiImageDirection,
       platforms: aiSelectedPlatforms,
       ingredients: aiIngredients,
       leadForm: aiLeadForm,
@@ -795,12 +931,15 @@ export default function CreateContent() {
   function loadCampaign(campaign) {
     setAiCampaignName(campaign.name);
     setAiTopic(campaign.topic || '');
+    setAiAudience(campaign.audience || '');
+    setAiBrand(campaign.brand || '');
     setAiStyle(campaign.style || 'engaging');
     setAiLength(campaign.length || 'short');
     setAiHashtagLevel(campaign.hashtagLevel || 'high');
     setAiContentType(campaign.contentType || 'standard');
     setAiImageCreativeType(campaign.imageCreativeType || 'realistic');
     setAiImageTextMode(campaign.imageTextMode || 'headline-supporting');
+    setAiImageDirection(campaign.imageDirection || '');
     setAiSelectedPlatforms({ ...DEFAULT_SELECTED_PLATFORMS, ...(campaign.platforms || {}) });
     if (campaign.ingredients)              setAiIngredients(campaign.ingredients);
     if (campaign.leadForm)                 setAiLeadForm(campaign.leadForm);
@@ -831,6 +970,7 @@ export default function CreateContent() {
     const platforms = getSelectedPlatforms();
     if (!platforms.length) { setNotice('Select at least one platform.'); return; }
     setAiGenerating(true);
+    setGenStage('writing');
     setNotice('');
     try {
       const { token, userId } = await getSessionData();
@@ -841,6 +981,7 @@ export default function CreateContent() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           topic: aiTopic, postsPerPlatform: getPostsPerPlatformCount(), platforms,
+          audience: aiAudience.trim() || undefined,
           style: aiStyle, contentLength: aiLength, hashtagLevel: aiHashtagLevel,
           userId, saveDrafts: false, doNotRewrite,
         }),
@@ -861,6 +1002,7 @@ export default function CreateContent() {
       let msg = '';
 
       if (aiImageCount > 0) {
+        setGenStage('imaging');
         try {
           const imgRes = await fetch('/api/social/ai-generate-images', {
             method: 'POST',
@@ -871,9 +1013,14 @@ export default function CreateContent() {
               creativeType: aiImageCreativeType,
               textMode: aiImageTextMode,
               count: aiImageCount,
+              imageDirection: aiImageDirection.trim() || undefined,
+              topic: aiTopic.trim() || undefined,
+              audience: aiAudience.trim() || undefined,
+              brand: aiBrand.trim() || undefined,
             }),
           });
           const imgData = await imgRes.json();
+          setGenStage('finishing');
           if (imgRes.ok && imgData.ok && imgData.images?.length) {
             setAiImages(imgData.images);
             try { localStorage.setItem('sm_draft_images', JSON.stringify(imgData.images)); } catch {}
@@ -915,7 +1062,9 @@ export default function CreateContent() {
       await syncCampaignPosts(byPlatform);
       setViewPlatform(getDefaultViewPlatform(Object.keys(byPlatform)));
       setNotice(msg);
+      setGenStage('done');
     } catch (err) {
+      setGenStage(null);
       setNotice(err.message || 'Failed to generate content');
     } finally {
       setAiGenerating(false);
@@ -927,6 +1076,7 @@ export default function CreateContent() {
     if (!aiImageCount) { setNotice('Image count is 0.'); return; }
     if (!Object.keys(postsByPlatform).length) { setNotice('Generate posts first, then add images.'); return; }
     setAiGenerating(true);
+    setGenStage('imaging');
     setNotice('');
     try {
       const { token } = await getSessionData();
@@ -939,6 +1089,10 @@ export default function CreateContent() {
           creativeType: aiImageCreativeType,
           textMode: aiImageTextMode,
           count: aiImageCount,
+          imageDirection: aiImageDirection.trim() || undefined,
+          topic: aiTopic.trim() || undefined,
+          audience: aiAudience.trim() || undefined,
+          brand: aiBrand.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -948,6 +1102,7 @@ export default function CreateContent() {
         setNotice(`No images were created. ${formatImageError(data)}`);
         return;
       }
+      setGenStage('finishing');
       setAiImages(data.images);
       try { localStorage.setItem('sm_draft_images', JSON.stringify(data.images)); } catch {}
       setPostsByPlatform(prev => assignImagesAcrossPlatforms(prev, data.images));
@@ -956,7 +1111,9 @@ export default function CreateContent() {
         : data.partial
           ? `Generated ${data.images.length} real images. Saved to your shared Media Library. Some image requests failed: ${formatImageError(data)}`
           : `Generated ${data.images.length} images, distributed across all platforms, and saved to your shared Media Library.`);
+      setGenStage('done');
     } catch (err) {
+      setGenStage(null);
       setNotice(err.message || 'Failed');
     } finally {
       setAiGenerating(false);
@@ -1386,6 +1543,12 @@ export default function CreateContent() {
   return (
     <>
       <Head><title>AI Content Generator | Social Media</title></Head>
+      {genStage && (
+        <GeneratingOverlay
+          stage={genStage}
+          onDismiss={() => setGenStage(null)}
+        />
+      )}
       <div style={S.page}>
         <input ref={imageUploadInputRef} type="file" accept="image/*" onChange={handleManualImageUpload} style={{ display: 'none' }} />
         <div style={S.shell}>
@@ -1478,6 +1641,24 @@ export default function CreateContent() {
                   placeholder={doNotRewrite ? 'Paste your content here. Each paragraph (separated by a blank line) will become one post.' : 'Describe exactly what you want. e.g. Posts about SEO for small businesses — educational tips, statistics, success stories and calls-to-action. Include questions that drive engagement.'}
                   style={{ ...S.input, minHeight: doNotRewrite ? 180 : 100, resize: 'vertical' }}
                 />
+                <div style={{ marginTop: 12 }}>
+                  <label style={S.label}>Brand / Company Name <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>(shown on image overlays)</span></label>
+                  <input
+                    value={aiBrand}
+                    onChange={e => setAiBrand(e.target.value)}
+                    placeholder="e.g. Easyway Building Brokers"
+                    style={S.input}
+                  />
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label style={S.label}>Target Audience <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>(who are you talking to?)</span></label>
+                  <input
+                    value={aiAudience}
+                    onChange={e => setAiAudience(e.target.value)}
+                    placeholder="e.g. Homeowners in Melbourne looking to build on a sloping block, ages 35-55"
+                    style={S.input}
+                  />
+                </div>
               </div>
 
               {/* Content type + Platforms */}
@@ -1610,6 +1791,19 @@ export default function CreateContent() {
                       <option value="headline-only">Headline only</option>
                       <option value="minimal">Short minimal text</option>
                     </select>
+                  </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label style={S.label}>Image Direction (what should the images actually show?)</label>
+                  <textarea
+                    value={aiImageDirection}
+                    onChange={e => setAiImageDirection(e.target.value)}
+                    placeholder="e.g. Houses on sloping blocks, modern home exteriors, new builds under construction — leave blank to auto-generate from post content"
+                    rows={3}
+                    style={{ ...S.input, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', minHeight: 72 }}
+                  />
+                  <div style={{ marginTop: 4, fontSize: 13, color: 'rgba(255,255,255,0.42)' }}>
+                    Tell the AI exactly what to put in the image. When blank, it guesses from your post copy — which often gets it wrong.
                   </div>
                 </div>
                 <div style={{ marginTop: 10, fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
@@ -1763,7 +1957,7 @@ export default function CreateContent() {
           </div>
 
           {/* Generate buttons — full width */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 36 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 36, flexWrap: 'wrap' }}>
             <button
               onClick={generateAIContent}
               disabled={aiGenerating}
@@ -1777,6 +1971,27 @@ export default function CreateContent() {
               style={{ ...S.slimBtn, flex: 1, fontSize: 16, padding: '16px 12px', opacity: (aiGenerating || !aiTopic.trim()) ? 0.4 : 1 }}
             >
               {aiGenerating ? '...' : `Generate Images (${aiImageCount})`}
+            </button>
+            <button
+              onClick={async () => {
+                if (!window.confirm('This will permanently delete all AI-generated images from your library. Continue?')) return;
+                setAiPurging(true);
+                try {
+                  const r = await fetch('/api/social/purge-ai-images', { method: 'POST' });
+                  const json = await r.json();
+                  if (json.ok) alert(`Cleared ${json.deleted} AI image${json.deleted !== 1 ? 's' : ''} from your library.`);
+                  else alert(json.error || 'Failed to clear images.');
+                } catch (e) {
+                  alert('Failed to clear images.');
+                } finally {
+                  setAiPurging(false);
+                }
+              }}
+              disabled={aiPurging}
+              title="Delete all auto-generated AI images from your library to start fresh"
+              style={{ ...S.slimBtn, fontSize: 14, padding: '16px 12px', opacity: aiPurging ? 0.5 : 0.7, flexShrink: 0 }}
+            >
+              {aiPurging ? 'Clearing...' : '🗑 Clear AI Image Cache'}
             </button>
           </div>
 

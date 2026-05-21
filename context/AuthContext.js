@@ -13,14 +13,19 @@ export function AuthProvider({ children }) {
     // Get initial session
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-        const { data: { user: initialUser }, error: userError } = await supabase.auth.getUser();
+        let { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+
+        // If no session (access token expired), try refresh before treating as logged out
+        if (!sessionError && !initialSession) {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session) initialSession = refreshed.session;
+          } catch { /* refresh failed – genuinely logged out */ }
+        }
         
         if (!sessionError && initialSession) {
           setSession(initialSession);
-        }
-        if (!userError && initialUser) {
-          setUser(initialUser);
+          setUser(initialSession.user || null);
         }
       } catch (err) {
         console.error('Auth initialization error:', err);

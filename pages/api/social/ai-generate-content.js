@@ -954,16 +954,14 @@ export default async function handler(req, res) {
     } else {
       const openaiKey = process.env.OPENAI_API_KEY;
 
-      for (const platform of safePlatforms) {
-        const result = await generateForPlatform({
-          openaiKey,
-          topic,
-          platform,
-          count,
-          style,
-          contentLength,
-          hashtagLevel
-        });
+      // Run all platform generations in parallel to avoid sequential timeout
+      const platformResults = await Promise.all(
+        safePlatforms.map((platform) =>
+          generateForPlatform({ openaiKey, topic, platform, count, style, contentLength, hashtagLevel })
+            .then((result) => ({ platform, result }))
+        )
+      );
+      for (const { platform, result } of platformResults) {
         postsByPlatform[platform] = result.posts;
         generationMeta[platform] = { source: result.source, reason: result.reason };
       }

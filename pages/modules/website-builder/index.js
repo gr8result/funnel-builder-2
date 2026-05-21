@@ -1,8 +1,9 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { deleteWebsiteProject, listWebsiteProjects } from "../../../lib/website-builder/projectStore";
+import { cacheWebsiteProjects, deleteWebsiteProject, listWebsiteProjects, updateWebsiteProject } from "../../../lib/website-builder/projectStore";
 import { getWebsiteTemplatePreview } from "../../../lib/website-builder/projectStore";
+import { deleteWebsiteProjectFromServer, fetchWebsiteProjectsFromServer, renameWebsiteProjectOnServer } from "../../../lib/website-builder/remoteProjects";
 import { TEMPLATES } from "../../../lib/website-builder/templates";
 import { openSelfHostedBuilder } from "../../../lib/website-builder/launchSelfHostedBuilder";
 import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
@@ -42,6 +43,20 @@ function isPreviewImageUrl(value = "") {
   return /^(https?:)?\/\//i.test(raw) || /^data:image\//i.test(raw) || /^\//.test(raw);
 }
 
+function isSafeDashboardPreviewImage(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (/^data:image\//i.test(raw) || /^\//.test(raw)) return true;
+
+  try {
+    const url = new URL(raw);
+    if (/images\.unsplash\.com$/i.test(url.hostname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function collectPreviewImages(value, bucket) {
   if (!value) return;
 
@@ -72,8 +87,8 @@ function resolveThemePreviewImages(preview) {
 
   const unique = Array.from(new Set(collected.filter(Boolean)));
   return {
-    primary: unique[0] || "",
-    secondary: unique.find((url) => url !== unique[0]) || "",
+    primary: unique.find((url) => isSafeDashboardPreviewImage(url)) || "",
+    secondary: unique.find((url) => url !== unique[0] && isSafeDashboardPreviewImage(url)) || "",
   };
 }
 
@@ -83,6 +98,10 @@ function ThemePreview({ theme }) {
   const pageBackground = pickPageBackground(blocks, "#ffffff");
   const previewImages = useMemo(() => resolveThemePreviewImages(preview), [preview]);
   const pageCount = Array.isArray(preview?.pages) ? preview.pages.length : 1;
+  // Use the template's explicit thumb first (covers Unsplash which isSafeDashboardPreviewImage blocks),
+  // then fall back to block-extracted images
+  const primaryImage = theme?.thumb || previewImages.primary;
+  const secondaryImage = previewImages.secondary;
 
   return (
     <div
@@ -100,7 +119,7 @@ function ThemePreview({ theme }) {
         textAlign: "left",
       }}
     >
-      {previewImages.primary ? (
+      {primaryImage ? (
         <div
           aria-label={`${theme.title} preview`}
           style={{
@@ -114,7 +133,7 @@ function ThemePreview({ theme }) {
             style={{
               position: "absolute",
               inset: 0,
-              backgroundImage: `linear-gradient(180deg, rgba(8,15,29,0.08) 0%, rgba(8,15,29,0.14) 28%, rgba(8,15,29,0.74) 100%), url(${previewImages.primary})`,
+              backgroundImage: `linear-gradient(180deg, rgba(8,15,29,0.08) 0%, rgba(8,15,29,0.14) 28%, rgba(8,15,29,0.74) 100%), url(${primaryImage})`,
               backgroundSize: "cover",
               backgroundPosition: "center top",
               transform: "scale(1.02)",
@@ -147,7 +166,7 @@ function ThemePreview({ theme }) {
               >
                 {pageCount} pages
               </span>
-              {previewImages.secondary ? (
+              {secondaryImage ? (
                 <span
                   style={{
                     display: "inline-flex",
@@ -193,6 +212,9 @@ export default function WebsiteBuilderDashboard() {
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState("");
   const [deletingId, setDeletingId] = useState("");
+  const [renamingId, setRenamingId] = useState("");
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
   const [error, setError] = useState("");
 
   const selectedWebsite = useMemo(() => {
@@ -224,8 +246,22 @@ export default function WebsiteBuilderDashboard() {
     setError("");
 
     try {
-      const nextWebsites = listWebsiteProjects().map((site) => ({
+      let nextProjects = listWebsiteProjects({ includeUnsaved: true });
+
+      if (session?.access_token) {
+        try {
+          const remoteProjects = await fetchWebsiteProjectsFromServer(session);
+          // replaceAll: true makes the server list authoritative so locally-cached
+          // drafts that were deleted on the server are not re-surfaced.
+          nextProjects = cacheWebsiteProjects(remoteProjects, { replaceAll: true });
+        } catch (syncError) {
+          console.warn("Could not sync website drafts from the server", syncError);
+        }
+      }
+
+      const nextWebsites = nextProjects.map((site) => ({
         ...site,
+        projectStatus: String(site?.status || "saved"),
         pageCount: Array.isArray(site?.pages) && site.pages.length ? site.pages.length : Object.keys(site?.pagesContent || {}).length || 1,
       }));
 
@@ -254,20 +290,21 @@ export default function WebsiteBuilderDashboard() {
 
   useEffect(() => {
     refreshDashboard();
-  }, []);
+  }, [session?.access_token]);
 
   function pageCountForWebsite(site) {
     return Number(site?.pageCount || site?.pages?.length || 1);
   }
 
   async function openBuilder(tab = "builder", websiteId = selectedWebsite?.id) {
+    const targetWebsite = websites.find((site) => String(site?.id) === String(websiteId)) || selectedWebsite;
     if (websiteId) {
-      const pageName = selectedWebsite?.pages?.[0]?.name || "Home";
-      return router.push(`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(websiteId)}&page=${encodeURIComponent(pageName)}&name=${encodeURIComponent(selectedWebsite?.name || "GR8 Website")}`);
+      const pageName = targetWebsite?.pages?.[0]?.name || "Home";
+      return router.push(`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(websiteId)}&page=${encodeURIComponent(pageName)}&name=${encodeURIComponent(targetWebsite?.name || "GR8 Website")}`);
     }
 
     await openSelfHostedBuilder({
-      name: selectedWebsite?.name || "GR8 Website",
+      name: targetWebsite?.name || "GR8 Website",
       tab,
       mode: "blank",
       buildType: "website",
@@ -310,6 +347,32 @@ export default function WebsiteBuilderDashboard() {
     }
   }
 
+  function startRename(site) {
+    setRenamingId(String(site.id));
+    setRenameValue(site.name || "");
+  }
+
+  function cancelRename() {
+    setRenamingId("");
+    setRenameValue("");
+  }
+
+  async function commitRename(site) {
+    const newName = renameValue.trim();
+    if (!newName || newName === site.name) { cancelRename(); return; }
+    setRenameSaving(true);
+    try {
+      updateWebsiteProject(site.id, { name: newName });
+      if (session?.access_token) {
+        await renameWebsiteProjectOnServer(session, site.id, newName).catch(() => {});
+      }
+      await refreshDashboard();
+    } finally {
+      setRenameSaving(false);
+      cancelRename();
+    }
+  }
+
   async function deleteWebsite(site) {
     const websiteId = String(site?.id || "").trim();
     if (!websiteId) return;
@@ -325,6 +388,9 @@ export default function WebsiteBuilderDashboard() {
 
     try {
       deleteWebsiteProject(websiteId);
+      if (session?.access_token) {
+        await deleteWebsiteProjectFromServer(session, websiteId);
+      }
       await refreshDashboard();
     } catch (err) {
       setError(err?.message || "Could not delete that saved website.");
@@ -394,15 +460,35 @@ export default function WebsiteBuilderDashboard() {
 
           <section className={s.wizardCard}>
             <h3 className={s.wizardTitle}>Saved Websites</h3>
-            <p className={s.wizardText}>Select from your saved website projects and reopen them in the visual block builder.</p>
+            <p className={s.wizardText}>Select from your saved website projects and reopen them in the visual block builder. Draft and unsaved projects are shown too so AI builds do not disappear from the dashboard.</p>
             {loading ? <p className={s.wizardText}>Loading sites...</p> : null}
             {!loading && websites.length === 0 ? <p className={s.wizardText}>No sites found yet. Open the visual block builder to create one.</p> : null}
             <div className={s.grid}>
               {websites.map((site) => (
                 <article key={site.id} className={s.modeCard}>
                   <div className={s.modeIcon}>{String(site.id) === String(selectedWebsiteId) ? "✅" : "🌍"}</div>
-                  <h3 className={s.modeTitle}>{site.name}</h3>
+                  {renamingId === String(site.id) ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") commitRename(site); if (e.key === "Escape") cancelRename(); }}
+                        style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid #3b82f6", background: "#0f172a", color: "#f1f5f9", fontSize: 15, fontWeight: 600 }}
+                        disabled={renameSaving}
+                      />
+                      <button type="button" onClick={() => commitRename(site)} disabled={renameSaving} style={{ padding: "6px 12px", borderRadius: 8, background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+                        {renameSaving ? "…" : "Save"}
+                      </button>
+                      <button type="button" onClick={cancelRename} disabled={renameSaving} style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.08)", color: "#cbd5e1", border: "none", cursor: "pointer", fontSize: 13 }}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <h3 className={s.modeTitle}>{site.name}</h3>
+                  )}
                   <p className={s.modeDesc}>{pageCountForWebsite(site)} pages ready on this site.</p>
+                  <p className={s.modeDesc}>Status: {site.projectStatus}</p>
                   <div className={s.heroActions}>
                     <button
                       type="button"
@@ -411,6 +497,14 @@ export default function WebsiteBuilderDashboard() {
                       disabled={deletingId === String(site.id)}
                     >
                       {String(site.id) === String(selectedWebsiteId) ? "Selected" : "Select Site"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startRename(site)}
+                      className={s.secondaryAction}
+                      disabled={deletingId === String(site.id) || renamingId === String(site.id)}
+                    >
+                      Rename
                     </button>
                     <button
                       type="button"

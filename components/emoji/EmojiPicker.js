@@ -1,25 +1,72 @@
 // /components/emoji/EmojiPicker.js
-// FULL REPLACEMENT — prevents "Cannot read properties of undefined (reading 'map')"
+// Unified emoji picker — uses the full EMOJI_GROUPS library, supports both
+// inline mode (no open/onClose props) and overlay mode (open + onClose props).
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { EMOJI_GROUPS } from "./emojiLibrary";
 
-// If you previously imported a big emoji list, keep it.
-// If it fails or is missing, we fallback to a small built-in set.
-const FALLBACK = ["😀","😁","😂","🤣","😊","😍","😎","👍","🔥","💬","✅","🎉","📞","💡","🚀","💰","❤️","🙏","😅","🤝","📩","📲","⭐"];
+const ALL_EMOJIS = EMOJI_GROUPS.flatMap((g) => g.emojis);
 
-export default function EmojiPicker({ onPick }) {
+export default function EmojiPicker({ onPick, open, onClose }) {
   const [q, setQ] = useState("");
+  const [activeGroup, setActiveGroup] = useState("all");
+  const containerRef = useRef(null);
+
+  // Overlay mode: close on outside click / Escape
+  const isOverlay = open !== undefined;
+  useEffect(() => {
+    if (!isOverlay || !open) return;
+    function onKey(e) { if (e.key === "Escape") onClose?.(); }
+    function onDown(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) onClose?.();
+    }
+    window.addEventListener("keydown", onKey, true);
+    document.addEventListener("mousedown", onDown, true);
+    document.addEventListener("touchstart", onDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onDown, true);
+      document.removeEventListener("touchstart", onDown, true);
+    };
+  }, [isOverlay, open, onClose]);
+
+  if (isOverlay && !open) return null;
+
+  const sourceEmojis = activeGroup === "all"
+    ? ALL_EMOJIS
+    : (EMOJI_GROUPS.find((g) => g.id === activeGroup)?.emojis || []);
 
   const list = useMemo(() => {
-    const base = Array.isArray(FALLBACK) ? FALLBACK : [];
     const query = String(q || "").trim().toLowerCase();
-    if (!query) return base;
-    // simple filter (works with unicode)
-    return base.filter((e) => String(e).includes(query));
-  }, [q]);
+    if (!query) return sourceEmojis;
+    return ALL_EMOJIS.filter((e) => String(e).includes(query));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, activeGroup]);
 
   return (
-    <div style={{ marginTop: 10 }}>
+    <div ref={containerRef} style={{ marginTop: isOverlay ? 0 : 10 }}>
+      {/* Group tabs */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+        {[{ id: "all", name: "All" }, ...EMOJI_GROUPS.filter((g) => g.id !== "recent")].map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => { setActiveGroup(g.id); setQ(""); }}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 8,
+              border: activeGroup === g.id ? "1px solid rgba(148,163,184,.6)" : "1px solid rgba(148,163,184,.2)",
+              background: activeGroup === g.id ? "rgba(148,163,184,.2)" : "transparent",
+              color: "#e5e7eb",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            {g.name}
+          </button>
+        ))}
+      </div>
+
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -34,6 +81,7 @@ export default function EmojiPicker({ onPick }) {
           fontWeight: 600,
           fontSize: 16,
           marginBottom: 10,
+          boxSizing: "border-box",
         }}
       />
 
@@ -46,6 +94,8 @@ export default function EmojiPicker({ onPick }) {
           borderRadius: 12,
           border: "1px solid rgba(148,163,184,.18)",
           background: "rgba(2,6,23,.35)",
+          maxHeight: 280,
+          overflowY: "auto",
         }}
       >
         {(Array.isArray(list) ? list : []).map((emo, i) => (

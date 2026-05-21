@@ -79,7 +79,7 @@ async function findExistingImage(auth, userId, storagePath) {
   return data || null;
 }
 
-export async function persistImageForUser(auth, { imageUrl, description = '', tags = [], source = 'social' }) {
+export async function persistImageForUser(auth, { imageUrl, description = '', tags = [], source = 'social', skipLibrary = false }) {
   const userId = auth.user.id;
   const { mimeType, buffer, suggestedExt } = await readImageInput(imageUrl);
   const descriptionText = String(description || '').slice(0, 500);
@@ -87,8 +87,10 @@ export async function persistImageForUser(auth, { imageUrl, description = '', ta
   const filename = `${userId}/shared-${imageHash}.${suggestedExt || 'png'}`;
   const storagePath = `assets:${filename}`;
 
-  const existing = await findExistingImage(auth, userId, storagePath);
-  if (existing) return existing;
+  if (!skipLibrary) {
+    const existing = await findExistingImage(auth, userId, storagePath);
+    if (existing) return existing;
+  }
 
   const { error: uploadError } = await admin.storage
     .from(SHARED_ASSET_BUCKET)
@@ -98,6 +100,12 @@ export async function persistImageForUser(auth, { imageUrl, description = '', ta
 
   const { data: urlData } = admin.storage.from(SHARED_ASSET_BUCKET).getPublicUrl(filename);
   const publicUrl = urlData.publicUrl;
+
+  // When skipLibrary is true (e.g. auto-generated campaign images), we upload to storage
+  // for a stable URL but do not insert a library row — keeps the media library clean.
+  if (skipLibrary) {
+    return { url: publicUrl, storage_path: storagePath, id: null };
+  }
 
   const { data, error: dbError } = await admin
     .from('social_image_library')

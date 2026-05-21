@@ -12,6 +12,7 @@ import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../../../../utils/supabase-client";
+import EmojiPicker from "../../../../../components/emoji/EmojiPicker";
 
 const CLEAN_FONT =
   "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'";
@@ -57,11 +58,7 @@ const DEFAULT_TEMPLATES = [
   },
 ];
 
-const EMOJIS = [
-  "😀","😃","😄","😁","😆","😅","😂","🤣","😊","🙂","😉","😍","😘","😎","🤩","🤔","😴",
-  "👍","👎","👏","🙏","💪","🔥","✨","⭐","✅","❌","⚠️","📞","💬","📩","📅","⏰",
-  "🎉","🎯","💡","📌","🧠","🫶","❤️","💛","💚","💙","💜","🖤","🤍",
-];
+
 
 function BannerIcon({ size = 48 }) {
   return (
@@ -97,115 +94,6 @@ function BannerIcon({ size = 48 }) {
           strokeLinecap="round"
         />
       </svg>
-    </div>
-  );
-}
-
-// ✅ BIGGER GLYPHS (but not bigger tiles) + DOES NOT AUTO CLOSE UNLESS ESC / OUTSIDE CLICK / Close BUTTON
-function EmojiPicker({ open, onPick, onClose }) {
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function onKey(e) {
-      if (e.key === "Escape") onClose?.();
-    }
-    function onDown(e) {
-      // if click/tap is outside the picker container, close it
-      if (!containerRef.current) return;
-      const el = containerRef.current;
-      if (!el.contains(e.target)) onClose?.();
-    }
-
-    window.addEventListener("keydown", onKey, true);
-    // use capture so clicks are detected even if other handlers stop propagation
-    document.addEventListener("mousedown", onDown, true);
-    document.addEventListener("touchstart", onDown, true);
-
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("mousedown", onDown, true);
-      document.removeEventListener("touchstart", onDown, true);
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "absolute",
-        right: 0,
-        top: "calc(100% + 10px)",
-        zIndex: 50,
-        width: 720, // keep panel width as original
-        borderRadius: 16,
-        border: "1px solid rgba(255, 255, 255, 0.14)",
-        background: "rgba(5,10,20,0.98)",
-        boxShadow: "0 18px 60px rgba(0,0,0,0.65)",
-        padding: 14,
-      }}
-    >
-      <div
-        style={{
-          color: "rgba(255,255,255,0.88)",
-          fontSize: 18,
-          marginBottom: 10,
-          fontWeight: 700,
-        }}
-      >
-        Pick emojis (stays open — press Close when done)
-      </div>
-
-      {/* keep original grid (many columns) but scale the emoji glyph only */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 12 }}>
-        {EMOJIS.map((e) => (
-          <button
-            key={e}
-            type="button"
-            onClick={() => onPick?.(e)}
-            style={{
-              height: 64, // original tile height
-              borderRadius: 16,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: "rgba(255,255,255,0.07)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-            }}
-            aria-label={`emoji ${e}`}
-            title={e}
-          >
-            {/* scale only the emoji glyph so the tile stays the same size; slightly reduced from previous */}
-            <span style={{ display: "inline-block", fontSize: 36, transform: "scale(1.5)", lineHeight: 1, transformOrigin: "center" }}>
-              {e}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        style={{
-          width: "100%",
-          marginTop: 12,
-          padding: "12px 12px",
-          borderRadius: 14,
-          background: "rgba(255,255,255,0.10)",
-          border: "1px solid rgba(255,255,255,0.16)",
-          color: "#fff",
-          fontWeight: 900,
-          cursor: "pointer",
-          fontSize: 16,
-        }}
-      >
-        Close
-      </button>
     </div>
   );
 }

@@ -1,0 +1,33 @@
+@font-face {
+  font-family: "webexbaseicon";
+  src: url("/vendor/elementor-icons/webexbaseicon/fonts/webexbaseicon.eot");
+  src:
+    url("/vendor/elementor-icons/webexbaseicon/fonts/webexbaseicon.eot?#iefix") format("embedded-opentype"),
+    url("/vendor/elementor-icons/webexbaseicon/fonts/webexbaseicon.woff") format("woff"),
+    url("/vendor/elementor-icons/webexbaseicon/fonts/webexbaseicon.ttf") format("truetype"),
+    url("/vendor/elementor-icons/webexbaseicon/fonts/webexbaseicon.svg#webexbaseicon") format("svg");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "webexthemeicon";
+  src: url("/vendor/elementor-icons/webexthemeicon/fonts/webexthemeicon.eot");
+  src:
+    url("/vendor/elementor-icons/webexthemeicon/fonts/webexthemeicon.eot?#iefix") format("embedded-opentype"),
+    url("/vendor/elementor-icons/webexthemeicon/fonts/webexthemeicon.woff") format("woff"),
+    url("/vendor/elementor-icons/webexthemeicon/fonts/webexthemeicon.ttf") format("truetype"),
+    url("/vendor/elementor-icons/webexthemeicon/fonts/webexthemeicon.svg#webexthemeicon") format("svg");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "dticon";
+  src: url("/vendor/elementor-icons/dticon/fonts/dticon.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,0 +1,4736 @@
+import React from "react";
+import { FaArrowDown, FaArrowRight } from "react-icons/fa";
+import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { renderGridLibraryIcon } from "../gridIconLibrary";
+import {
+  MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
+  PARALLAX_OVERRUN, asArray, slugifyText, resolveCurrentPageKey,
+  compensateParallaxBgPosition, resolveParallaxSpeed, STABLE_PARALLAX_OVERRUN,
+  ParallaxImageLayer, StableParallaxLayer,
+  ScrollReveal, getAnimationStyle, ambientMotionStyle, ensureWebsiteBlockAnimationStyles,
+  isCurrentNavLink, shouldHighlightNavLink, isSystemAsset, resolvePublishedNavHref,
+  IconCounterNumber,
+} from "./wbAnimations";
+import {
+  colorWithAlpha, asStyleObject, asRichHtml, CANVAS_PLACEHOLDER_STRINGS, stripPlaceholder,
+  computeHeadlineTextStyleCss, textLayerBackgroundStyle, headingTypography, bodyTypography,
+  spacingMultiplier, scaleBoxPadding, parseSizeValue, fullWidthStyle, sectionContentStyle,
+  normalizeOverlayLayoutProps, heroLayoutDefaults, heroVariantStyles, normalizeFeatureItem,
+  featureVariantStyles, testimonialVariantStyles, ctaButtonVariantStyles,
+  normalizeGalleryItem, normalizeTeamMember, normalizeTestimonialItem, normalizeTestimonialItems,
+  normalizeTeamRowSizes, defaultTeamHierarchyRows, buildTeamHierarchyRows, renderHierarchyConnector,
+  teamVariantStyles, normalizeStatItem, statsVariantStyles, imageGalleryVariantStyles,
+  pricingVariantStyles, iconGlyph, normalizePricingPlan,
+  navVariantTheme, contactFormVariantStyles, DEFAULT_ENQUIRY_BOOKING_URL, resolveContactBookingUrl, sharedStyles,
+  trustBadgeVariantStyles, resolveNewsletterButtonUrl, resolveFooterEmailHref,
+  resolveFooterPhoneHref, buildNewsletterMailtoHref,
+  buildNavLinkStyle, applyNavHoverEffect, resetNavHoverEffect,
+  findScrollParent, BrandMark,
+} from "./wbVariantStyles";
+
+function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
+  const wrapperRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const navTheme = navVariantTheme(blockProps, compact);
+  const navProps = { ...blockProps, fullWidthBackground: blockProps?.fullWidthBackground !== false };
+  const stickyMode = blockProps.stickyMode || "normal";
+  const isAlwaysMode = stickyMode === "always";
+  const isStickyMode = stickyMode === "sticky" || stickyMode === "sticky-transparent" || stickyMode === "sticky-solid";
+  const navFullWidth = fullWidthStyle(navProps, compact, editor);
+  const isFullWidthNav = navProps.fullWidthBackground && !compact;
+  const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [openDropdown, setOpenDropdown] = React.useState(null);
+  const [isMobile, setIsMobile] = React.useState(!!compact);
+  const [scrolled, setScrolled] = React.useState(false);
+  const [browserPageKey, setBrowserPageKey] = React.useState("");
+  const [navHeight, setNavHeight] = React.useState(0);
+  const [stickyPinned, setStickyPinned] = React.useState(false);
+  const [fixedFrame, setFixedFrame] = React.useState({ top: 0, left: 0, width: 0 });
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const onResize = () => setIsMobile(!!compact || window.innerWidth < 900);
+
+    onResize();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, [compact]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const measureTarget = wrapperRef.current || shellRef.current;
+    if (!measureTarget) return undefined;
+
+    const updateHeight = () => {
+      setNavHeight(Math.ceil(measureTarget.getBoundingClientRect().height || 0));
+    };
+
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(updateHeight);
+      resizeObserver.observe(measureTarget);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      resizeObserver?.disconnect?.();
+    };
+  }, [compact, blockProps, mobileOpen]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const wrapperNode = wrapperRef.current;
+    const scrollTarget = findScrollParent(wrapperNode || shellRef.current);
+    const readScrollTop = () => {
+      const usesWindowScroll = !scrollTarget || scrollTarget === window;
+      const scrollAmount = usesWindowScroll ? (window.scrollY || 0) : (scrollTarget?.scrollTop || 0);
+      const wrapperRect = wrapperNode?.getBoundingClientRect?.();
+      const containerTop = usesWindowScroll ? 0 : (scrollTarget?.getBoundingClientRect?.().top || 0);
+
+      setScrolled(scrollAmount > 18);
+
+      if (isStickyMode) {
+        setStickyPinned((wrapperRect?.top || 0) <= containerTop && scrollAmount > 0);
+      }
+
+      if ((isAlwaysMode || isStickyMode) && wrapperRect) {
+        setFixedFrame((current) => {
+          const next = {
+            top: usesWindowScroll ? 0 : containerTop,
+            left: wrapperRect.left,
+            width: wrapperRect.width,
+          };
+
+          if (current.top === next.top && current.left === next.left && current.width === next.width) {
+            return current;
+          }
+
+          return next;
+        });
+      }
+    };
+
+    readScrollTop();
+    scrollTarget?.addEventListener?.("scroll", readScrollTop, { passive: true });
+    window.addEventListener("resize", readScrollTop);
+
+    return () => {
+      scrollTarget?.removeEventListener?.("scroll", readScrollTop);
+      window.removeEventListener("resize", readScrollTop);
+    };
+  }, [compact, isAlwaysMode, isStickyMode]);
+
+  React.useEffect(() => {
+    if (!isMobile) setMobileOpen(false);
+  }, [isMobile]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncCurrentPage = () => setBrowserPageKey(resolveCurrentPageKey());
+    syncCurrentPage();
+
+    window.addEventListener("popstate", syncCurrentPage);
+    window.addEventListener("hashchange", syncCurrentPage);
+
+    return () => {
+      window.removeEventListener("popstate", syncCurrentPage);
+      window.removeEventListener("hashchange", syncCurrentPage);
+    };
+  }, []);
+
+  const currentPageKey = slugifyText(navigationContext?.currentPageKey || browserPageKey || "");
+
+  const shouldUseMobileMenu = (compact || isMobile) && mobileMenuStyle === "hamburger";
+  const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : asArray(blockProps.links);
+  const shouldUseStickyEditor = editor && (isAlwaysMode || isStickyMode);
+  const useFixedSticky = !editor && isStickyMode;
+  const shouldUseFixedNav = !editor && (isAlwaysMode || isStickyMode);
+  const fixedTop = fixedFrame.top || 0;
+  const fixedLeft = editor ? fixedFrame.left : (isFullWidthNav ? 0 : fixedFrame.left);
+  const fixedWidth = editor ? (fixedFrame.width || undefined) : (isFullWidthNav ? "100vw" : (fixedFrame.width || "100%"));
+  const brandMarkSize = compact ? 36 : Number(blockProps.logoWidth) || 44;
+  const shouldShowBrandMark = blockProps.showLogo || !!logoSrc;
+
+  const shellStyle = {
+    ...navTheme.shell,
+    ...navFullWidth,
+    width: shouldUseFixedNav ? fixedWidth : (navFullWidth.width || "100%"),
+    maxWidth: shouldUseFixedNav ? fixedWidth : navFullWidth.maxWidth,
+    boxSizing: "border-box",
+    position: shouldUseFixedNav ? "fixed" : shouldUseStickyEditor ? "sticky" : navTheme.shell.position,
+    top: shouldUseFixedNav ? fixedTop : shouldUseStickyEditor ? 0 : navTheme.shell.top,
+    left: shouldUseFixedNav ? fixedLeft : navTheme.shell.left,
+    right: shouldUseFixedNav ? (editor || !isFullWidthNav ? "auto" : 0) : navTheme.shell.right,
+    zIndex: isAlwaysMode ? (editor ? 28 : 120) : isStickyMode ? (editor ? 24 : 80) : navTheme.shell.zIndex,
+    backdropFilter: stickyMode === "sticky-transparent" ? "blur(14px)" : navTheme.shell.backdropFilter,
+    background:
+      stickyMode === "sticky-transparent" && !scrolled
+        ? "rgba(15,23,42,0.08)"
+        : navTheme.shell.background,
+    border:
+      stickyMode === "sticky-transparent" && !scrolled
+        ? "1px solid rgba(255,255,255,0.08)"
+        : navTheme.shell.border,
+    boxShadow:
+      stickyMode !== "normal" && scrolled
+        ? "0 18px 38px rgba(15,23,42,0.14)"
+        : "none",
+    isolation: stickyMode === "normal" ? navTheme.shell.isolation : "isolate",
+    borderRadius: isFullWidthNav ? 0 : navTheme.shell.borderRadius,
+    margin: shouldUseFixedNav ? 0 : (navFullWidth.margin ?? navTheme.shell.margin),
+  };
+
+  const menuWrapStyle = shouldUseMobileMenu
+    ? {
+        width: "100%",
+        display: mobileOpen ? "grid" : "none",
+        gap: 10,
+        paddingTop: 10,
+      }
+    : navTheme.links;
+
+  const renderNavSection = () => (
+    <section ref={shellRef} style={asStyleObject(shellStyle)}>
+      <div style={asStyleObject(navTheme.brandRow)}>
+        {shouldShowBrandMark ? (
+          <BrandMark
+            brand={blockProps.brand}
+            logoSrc={logoSrc}
+            size={brandMarkSize}
+            background={blockProps.buttonColor || blockProps.backgroundColor || "#0f172a"}
+            color={blockProps.buttonTextColor || "#ffffff"}
+            borderColor={blockProps.borderColor || "rgba(148,163,184,0.24)"}
+            borderRadius={Math.max(8, Math.round(brandMarkSize * 0.24))}
+          />
+        ) : null}
+        <p style={asStyleObject(navTheme.brand)}>{blockProps.brand || "Your Brand"}</p>
+      </div>
+
+      {shouldUseMobileMenu ? (
+        <button
+          type="button"
+          style={{
+            background: "transparent",
+            border: `1px solid ${blockProps.borderColor || "rgba(148,163,184,0.24)"}`,
+            color: blockProps.textColor || "#e2e8f0",
+            borderRadius: 12,
+            padding: "8px 10px",
+            fontSize: 18,
+            fontWeight: 600,
+            minHeight: MIN_TAP_SIZE,
+            minWidth: MIN_TAP_SIZE,
+            cursor: "pointer",
+          }}
+          onClick={() => setMobileOpen((value) => !value)}
+        >
+          {mobileOpen ? "×" : "☰"}
+        </button>
+      ) : null}
+
+      <div style={asStyleObject(menuWrapStyle)}>
+        {visibleLinks.map((item, idx) => {
+          const hasChildren = asArray(item?.children).length > 0;
+          const isOpen = openDropdown === idx;
+          const isCurrentPage = isCurrentNavLink(item, currentPageKey);
+          const isHighlighted = shouldHighlightNavLink(item, currentPageKey);
+          const linkState = { ...item, __isCurrentPage: isHighlighted };
+
+          return (
+            <div
+              key={`${item?.label || "link"}-${idx}`}
+              style={{ position: "relative", display: shouldUseMobileMenu ? "grid" : "block" }}
+              onMouseEnter={() => {
+                if (!isMobile && hasChildren) setOpenDropdown(idx);
+              }}
+              onMouseLeave={() => {
+                if (!isMobile && hasChildren) setOpenDropdown(null);
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <a
+                  href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
+                  style={asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted))}
+                  onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                  onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
+                >
+                  {item?.label || "Link"}
+                </a>
+                {hasChildren ? (
+                  <button
+                    type="button"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: blockProps.textColor || "#e2e8f0",
+                      cursor: "pointer",
+                      padding: "6px 4px",
+                      fontSize: MIN_TEXT_SIZE,
+                      fontWeight: 600,
+                      minHeight: MIN_TAP_SIZE,
+                      minWidth: MIN_TAP_SIZE,
+                    }}
+                    onClick={() => setOpenDropdown((value) => (value === idx ? null : idx))}
+                  >
+                    ▾
+                  </button>
+                ) : null}
+              </div>
+
+              {hasChildren && isOpen ? (
+                <div
+                  style={{
+                    position: isMobile ? "relative" : "absolute",
+                    top: isMobile ? "auto" : "calc(100% + 8px)",
+                    left: 0,
+                    minWidth: isMobile ? "100%" : 220,
+                    display: "grid",
+                    gap: 6,
+                    padding: 10,
+                    borderRadius: 14,
+                    background: blockProps.backgroundColor || "#0b1220",
+                    border: `1px solid ${blockProps.borderColor || "rgba(148,163,184,0.24)"}`,
+                    boxShadow: "0 20px 38px rgba(15,23,42,0.18)",
+                    zIndex: 20,
+                  }}
+                >
+                  {asArray(item.children).map((child, childIdx) => (
+                    <a
+                      key={`${child?.label || "child"}-${childIdx}`}
+                      href={editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext)}
+                      style={{
+                        color: blockProps.textColor || "#e2e8f0",
+                        textDecoration: "none",
+                        fontSize: MIN_TEXT_SIZE,
+                        fontWeight: 600,
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        minHeight: MIN_TAP_SIZE,
+                        minWidth: MIN_TAP_SIZE,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: "rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      {child?.label || "Sub link"}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      {blockProps.ctaText ? (
+        <a href={blockProps.ctaLink || "#contact"} style={asStyleObject(navTheme.cta)}>
+          {blockProps.ctaText}
+        </a>
+      ) : null}
+    </section>
+  );
+
+  if (isAlwaysMode || isStickyMode) {
+    return (
+        <div
+          ref={wrapperRef}
+          style={{
+            position: "relative",
+            width: "100%",
+            minHeight: shouldUseFixedNav ? (navHeight || undefined) : undefined,
+            paddingTop: shouldUseFixedNav ? (navHeight || 0) : 0,
+          }}
+        >
+        {renderNavSection()}
+      </div>
+    );
+  }
+
+  return renderNavSection();
+}
+
+function clampValue(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function snapToGrid(value, size = 24) {
+  return Math.round(value / size) * size;
+}
+
+function shouldSkipToolbarBlur(event) {
+  return !!event?.relatedTarget?.closest?.('[data-text-toolbar="true"]');
+}
+
+function cleanInlineEditorHtml(value) {
+  return String(value || "")
+    .replace(/\u200b/g, "")
+    .replace(/<span\b([^>]*)>\s*<\/span>/gi, "");
+}
+
+function htmlToPlainText(value) {
+  const raw = String(value || "").replace(/\u200b/g, "");
+  if (!/[<&]/.test(raw)) return raw;
+
+  if (typeof document !== "undefined") {
+    const container = document.createElement("div");
+    container.innerHTML = raw;
+    return (container.textContent || container.innerText || "").replace(/\u00a0/g, " ");
+  }
+
+  return raw
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
+function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage, layoutWidth = null }) {
+  const dragRef = React.useRef(null);
+  const fileInputRefs = React.useRef({});
+  const canvasRef = React.useRef(null);
+  const latestPropsRef = React.useRef(blockProps || {});
+  const latestLayersRef = React.useRef([]);
+  const draftLayersRef = React.useRef(null);
+  const [draftLayers, setDraftLayers] = React.useState(null);
+  const [canvasGuides, setCanvasGuides] = React.useState({ showX: false, showY: false, active: false });
+  const [canvasWidth, setCanvasWidth] = React.useState(0);
+  const gridSize = compact ? 20 : 24;
+  const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
+  const fullWidthBlock = true;
+  const selectedLayerIndex = Number.isInteger(blockProps?.selectedLayerIndex) ? blockProps.selectedLayerIndex : null;
+
+  const layers = asArray(blockProps?.images)
+    .map((layer, index) => ({
+      id: layer?.id || `layer-${index}`,
+      kind: layer?.kind || (layer?.content ? "text" : "image"),
+      src: getAssetFromLibrary(assets, layer?.assetId)?.src || layer?.src || "",
+      assetId: layer?.assetId || "",
+      content: layer?.content || "Headline Text",
+      x: Number(layer?.x ?? 40 + (index * 30)),
+      y: Number(layer?.y ?? 40 + (index * 30)),
+      width: Number(layer?.width ?? (layer?.kind === "text" ? 320 : 260)),
+      height: Number(layer?.height ?? (layer?.kind === "text" ? 140 : 180)),
+      rotation: Number(layer?.rotation ?? 0),
+      radius: Number(layer?.radius ?? 18),
+      zIndex: Number(layer?.zIndex ?? (index + 1)),
+      fontSize: Number(layer?.fontSize ?? 40),
+      fontWeight: String(layer?.fontWeight || "700"),
+      textAlign: String(layer?.textAlign || "center"),
+      verticalAlign: String(layer?.verticalAlign || "center"),
+      textColor: (!layer?.background || layer?.background === "transparent") && (!layer?.textColor || layer?.textColor === "#ffffff") ? "#0f172a" : (layer?.textColor || "#0f172a"),
+      background: typeof layer?.background === "string" && layer.background.trim() ? layer.background : "transparent",
+    }))
+    .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+  const visibleLayers = draftLayers || layers;
+
+  const bounds = visibleLayers.reduce((acc, layer) => {
+    const x = Number(layer?.x || 0);
+    const y = Number(layer?.y || 0);
+    const width = Number(layer?.width || 0);
+    const height = Number(layer?.height || 0);
+    return {
+      minX: Math.min(acc.minX, x),
+      minY: Math.min(acc.minY, y),
+      maxX: Math.max(acc.maxX, x + width),
+      maxY: Math.max(acc.maxY, y + height),
+    };
+  }, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
+  const contentWidth = Math.max(320, bounds.maxX - bounds.minX);
+  const contentHeight = Math.max(240, bounds.maxY - bounds.minY);
+  const baseLayoutWidth = Math.max(720, Number(layoutWidth || blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
+  const responsiveScale = 1;
+  const previewOffsetX = 0;
+  const previewOffsetY = 0;
+  const stackHeight = editor
+    ? (compact ? 320 : (blockProps?.minHeight || "72vh"))
+    : Math.max(compact ? 320 : 420, Math.round((Math.max(bounds.maxY + 32, contentHeight + 32)) * responsiveScale));
+  const stackFullWidth = fullWidthStyle({ ...blockProps, fullWidthBackground: fullWidthBlock }, compact, editor);
+  const previewCanvasBackground = !editor && (!blockProps?.backgroundColor || blockProps.backgroundColor === "transparent")
+    ? "linear-gradient(135deg, #09111f 0%, #0f172a 100%)"
+    : (blockProps?.backgroundColor || "transparent");
+  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
+
+  React.useEffect(() => {
+    latestPropsRef.current = blockProps || {};
+    if (!dragRef.current) latestLayersRef.current = layers;
+  }, [blockProps, layers]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const node = canvasRef.current;
+    if (!node) return undefined;
+
+    const syncWidth = () => setCanvasWidth(node.clientWidth || 0);
+    syncWidth();
+
+    if (typeof window.ResizeObserver === "function") {
+      const observer = new window.ResizeObserver(() => syncWidth());
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", syncWidth);
+    return () => window.removeEventListener("resize", syncWidth);
+  }, [compact, editor, blockProps?.fullWidthBackground]);
+
+  function applyLayerUpdate(nextLayers) {
+    if (typeof onChangeBlock !== "function") return;
+    onChangeBlock({
+      ...latestPropsRef.current,
+      images: nextLayers.map((layer, index) => ({ ...layer, zIndex: index + 1 })),
+    });
+  }
+
+  function patchLayer(layerIndex, patch) {
+    const next = latestLayersRef.current.map((layer, currentIndex) => (
+      currentIndex === layerIndex ? { ...layer, ...patch } : layer
+    ));
+    applyLayerUpdate(next);
+  }
+
+  function moveLayer(layerIndex, direction) {
+    const nextIndex = layerIndex + direction;
+    if (nextIndex < 0 || nextIndex >= latestLayersRef.current.length) return;
+    const next = [...latestLayersRef.current];
+    const [moved] = next.splice(layerIndex, 1);
+    next.splice(nextIndex, 0, moved);
+    applyLayerUpdate(next);
+  }
+
+  function addImageLayer() {
+    const next = [...latestLayersRef.current, createCanvasImageLayer(latestLayersRef.current.length)];
+    applyLayerUpdate(next);
+  }
+
+  function addTextLayer(x = null, y = null) {
+    const seed = latestLayersRef.current.length;
+    const patch = {};
+    if (Number.isFinite(x)) patch.x = x;
+    if (Number.isFinite(y)) patch.y = y;
+    const next = [...latestLayersRef.current, createCanvasTextLayer(seed, patch)];
+    applyLayerUpdate(next);
+  }
+
+  function addLogoLayer() {
+    const logo = assets?.logo;
+    if (!logo?.src) return;
+    const next = [
+      ...latestLayersRef.current,
+      createCanvasImageLayer(latestLayersRef.current.length, {
+        src: logo.src,
+        assetId: logo.id || "",
+        width: 180,
+        height: 90,
+        rotation: 0,
+        x: 460,
+        y: 24,
+      }),
+    ];
+    applyLayerUpdate(next);
+  }
+
+  React.useEffect(() => {
+    if (!editor || typeof onChangeBlock !== "function") return undefined;
+
+    const handleMove = (event) => {
+      const current = dragRef.current;
+      if (!current) return;
+
+      const cs = current.canvasScale || 1;
+      const dx = (event.clientX - current.startX) / cs;
+      const dy = (event.clientY - current.startY) / cs;
+      const currentLayers = current.baseLayers || latestLayersRef.current;
+
+      const nextImages = currentLayers.map((layer, layerIndex) => {
+        if (layerIndex !== current.layerIndex) return layer;
+
+        if (current.mode === "resize") {
+          let rawX = current.baseX;
+          let rawY = current.baseY;
+          let rawWidth = current.baseWidth;
+          let rawHeight = current.baseHeight;
+
+          if (current.handle === "nw") {
+            rawX = current.baseX + dx;
+            rawY = current.baseY + dy;
+            rawWidth = current.baseWidth - dx;
+            rawHeight = current.baseHeight - dy;
+          } else if (current.handle === "ne") {
+            rawY = current.baseY + dy;
+            rawWidth = current.baseWidth + dx;
+            rawHeight = current.baseHeight - dy;
+          } else if (current.handle === "sw") {
+            rawX = current.baseX + dx;
+            rawWidth = current.baseWidth - dx;
+            rawHeight = current.baseHeight + dy;
+          } else {
+            rawWidth = current.baseWidth + dx;
+            rawHeight = current.baseHeight + dy;
+          }
+
+          rawWidth = clampValue(rawWidth, 96, current.rect.width);
+          rawHeight = clampValue(rawHeight, 96, current.rect.height);
+          rawX = clampValue(rawX, 0, Math.max(0, current.rect.width - rawWidth));
+          rawY = clampValue(rawY, 0, Math.max(0, current.rect.height - rawHeight));
+          rawWidth = snapEnabled ? snapToGrid(rawWidth, gridSize) : rawWidth;
+          rawHeight = snapEnabled ? snapToGrid(rawHeight, gridSize) : rawHeight;
+          rawX = snapEnabled ? snapToGrid(rawX, gridSize) : rawX;
+          rawY = snapEnabled ? snapToGrid(rawY, gridSize) : rawY;
+          const guideState = getPixelGuideState(rawX, rawY, rawWidth, rawHeight, current.rect);
+          rawX = guideState.snappedX;
+          rawY = guideState.snappedY;
+
+          return {
+            ...layer,
+            x: rawX,
+            y: rawY,
+            width: rawWidth,
+            height: rawHeight,
+          };
+        }
+
+        let rawX = clampValue(current.baseX + dx, 0, Math.max(0, current.rect.width - current.baseWidth));
+        let rawY = clampValue(current.baseY + dy, 0, Math.max(0, current.rect.height - current.baseHeight));
+        rawX = snapEnabled ? snapToGrid(rawX, gridSize) : rawX;
+        rawY = snapEnabled ? snapToGrid(rawY, gridSize) : rawY;
+        const guideState = getPixelGuideState(rawX, rawY, current.baseWidth, current.baseHeight, current.rect);
+        rawX = guideState.snappedX;
+        rawY = guideState.snappedY;
+        return {
+          ...layer,
+          x: rawX,
+          y: rawY,
+        };
+      });
+
+      const activeLayer = nextImages[current.layerIndex];
+      const guideState = activeLayer
+        ? getPixelGuideState(Number(activeLayer.x || 0), Number(activeLayer.y || 0), Number(activeLayer.width || 0), Number(activeLayer.height || 0), current.rect)
+        : { showX: false, showY: false };
+      latestLayersRef.current = nextImages;
+      draftLayersRef.current = nextImages;
+      setDraftLayers(nextImages);
+      setCanvasGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
+    };
+
+    const handleUp = () => {
+      const nextLayers = draftLayersRef.current;
+      dragRef.current = null;
+      draftLayersRef.current = null;
+      setDraftLayers(null);
+      setCanvasGuides({ showX: false, showY: false, active: false });
+      if (nextLayers) applyLayerUpdate(nextLayers);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [editor, onChangeBlock, gridSize, snapEnabled]);
+
+  function startInteraction(event, layerIndex, mode = "move", handle = "se") {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    if (latestPropsRef.current?.selectedLayerIndex !== layerIndex) {
+      onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: layerIndex });
+    }
+    if (event.target?.closest?.('[data-layer-editor="true"]')) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const canvas = event.currentTarget.closest("[data-image-stack-canvas]");
+    if (!canvas) return;
+
+    const rectRaw = canvas.getBoundingClientRect();
+    const canvasScaleVal = Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1);
+    const rect = { ...rectRaw, width: rectRaw.width / canvasScaleVal, height: rectRaw.height / canvasScaleVal };
+    const layer = latestLayersRef.current[layerIndex];
+    if (!layer) return;
+
+    dragRef.current = {
+      layerIndex,
+      mode,
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      rect,
+      baseLayers: latestLayersRef.current,
+      baseX: Number(layer.x || 0),
+      baseY: Number(layer.y || 0),
+      baseWidth: Number(layer.width || 200),
+      baseHeight: Number(layer.height || 140),
+      canvasScale: canvasScaleVal,
+    };
+  }
+
+  async function handleFileChange(event, layerIndex) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (typeof onUploadLayerImage === "function") {
+      await onUploadLayerImage(layerIndex, file);
+    }
+  }
+
+  function justifyForVertical(align) {
+    if (align === "top") return "flex-start";
+    if (align === "bottom") return "flex-end";
+    return "center";
+  }
+
+  function alignLayer(layerIndex, axis, alignment) {
+    if (typeof window === "undefined") return;
+    const canvas = document.querySelector("[data-image-stack-canvas]");
+    const layer = latestLayersRef.current[layerIndex];
+    if (!canvas || !layer) return;
+
+    if (axis === "x") {
+      const canvasWidth = canvas.clientWidth || 1200;
+      let rawX = Number(layer.x || 0);
+      if (alignment === "left") rawX = gridSize;
+      if (alignment === "center") rawX = Math.max(0, (canvasWidth - Number(layer.width || 0)) / 2);
+      if (alignment === "right") rawX = Math.max(0, canvasWidth - Number(layer.width || 0) - gridSize);
+      patchLayer(layerIndex, {
+        x: snapEnabled ? snapToGrid(rawX, gridSize) : rawX,
+        textAlign: alignment,
+      });
+      return;
+    }
+
+    const canvasHeight = canvas.clientHeight || 560;
+    let rawY = Number(layer.y || 0);
+    if (alignment === "top") rawY = gridSize;
+    if (alignment === "center") rawY = Math.max(0, (canvasHeight - Number(layer.height || 0)) / 2);
+    if (alignment === "bottom") rawY = Math.max(0, canvasHeight - Number(layer.height || 0) - gridSize);
+    patchLayer(layerIndex, {
+      y: snapEnabled ? snapToGrid(rawY, gridSize) : rawY,
+      verticalAlign: alignment,
+    });
+  }
+
+  return (
+    <section
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        padding: compact ? "18px 0" : "28px 0",
+        margin: 0,
+        background: previewCanvasBackground,
+        border: "none",
+        boxShadow: "none",
+        ...stackFullWidth,
+      }}
+    >
+      {editor && blockProps?.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), marginBottom: 12 }}>{blockProps.title}</h2> : null}
+      <div
+        style={{
+          width: "100%",
+          ...stackContentFrame,
+          padding: compact ? "0 14px" : "0 24px",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          ref={canvasRef}
+          data-image-stack-canvas
+          onPointerDown={(event) => {
+            if (!editor || typeof onChangeBlock !== "function") return;
+            if (event.target === event.currentTarget && latestPropsRef.current?.selectedLayerIndex != null) {
+              onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: null });
+            }
+          }}
+          onDoubleClick={(event) => {
+            if (!editor || event.target?.closest?.("[data-image-layer]")) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const nextX = clampValue(event.clientX - rect.left - 180, 0, Math.max(0, rect.width - 360));
+            const nextY = clampValue(event.clientY - rect.top - 70, 0, Math.max(0, rect.height - 140));
+            addTextLayer(nextX, nextY);
+          }}
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "100%",
+            minHeight: stackHeight,
+            marginTop: 0,
+            marginLeft: 0,
+            marginRight: 0,
+            overflow: "hidden",
+            borderRadius: compact ? 16 : 20,
+            border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
+            background: previewCanvasBackground,
+            backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
+            backgroundSize: `${gridSize}px ${gridSize}px`,
+          }}
+        >
+          {editor ? renderCanvasCenterGuides(canvasGuides) : null}
+          {visibleLayers.map((layer, idx) => (
+            <div
+              key={layer.id || `${idx}`}
+              data-image-layer={idx}
+              data-layer-kind={layer.kind || "image"}
+              onPointerDown={(event) => startInteraction(event, idx, "move")}
+              onMouseDown={(event) => startInteraction(event, idx, "move")}
+              onDoubleClick={() => {
+                if (editor && layer.kind === "image") fileInputRefs.current[idx]?.click();
+              }}
+              style={{
+                position: "absolute",
+                left: Math.round((layer.x * responsiveScale) + previewOffsetX),
+                top: Math.round((layer.y * responsiveScale) + previewOffsetY),
+                width: Math.max(48, Math.round(layer.width * responsiveScale)),
+                height: Math.max(48, Math.round(layer.height * responsiveScale)),
+                zIndex: layer.zIndex,
+                borderRadius: Math.max(8, Math.round(layer.radius * responsiveScale)),
+                overflow: "hidden",
+                cursor: editor ? "move" : "default",
+                border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
+                boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
+                transform: `rotate(${layer.rotation}deg)`,
+                ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
+                touchAction: "none",
+                userSelect: "none",
+              }}
+            >
+            {layer.kind === "text" ? (
+              <>
+                {editor && selectedLayerIndex === idx ? (
+                  <div
+                    data-layer-drag-handle="true"
+                    onPointerDown={(event) => startInteraction(event, idx, "move")}
+                    onMouseDown={(event) => startInteraction(event, idx, "move")}
+                    style={{ position: "absolute", top: 6, left: 6, zIndex: 4, cursor: "move" }}
+                  >
+                    <span style={sharedStyles.editorChip}>Drag Text</span>
+                  </div>
+                ) : null}
+                <div
+                  data-layer-editor="true"
+                  data-website-inline-editor="true"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onPointerDown={(event) => {
+                    if (editor && typeof onChangeBlock === "function" && latestPropsRef.current?.selectedLayerIndex !== idx) {
+                      onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: idx });
+                    }
+                    event.stopPropagation();
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onBlur={(event) => {
+                    if (shouldSkipToolbarBlur(event)) return;
+                    patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: justifyForVertical(layer.verticalAlign),
+                    alignItems: "stretch",
+                    textAlign: layer.textAlign,
+                    padding: editor ? "34px 12px 12px" : 12,
+                    color: layer.textColor,
+                    fontSize: compact ? Math.max(16, layer.fontSize - 6) : Math.max(16, Math.round(layer.fontSize * responsiveScale)),
+                    fontWeight: layer.fontWeight,
+                    lineHeight: 1.2,
+                    outline: "none",
+                    cursor: "text",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "Type text here") }}
+                />
+              </>
+            ) : layer.src ? (
+              <img src={layer.src} alt={`Layer ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+            ) : (
+              <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#475569", fontWeight: 600, background: "linear-gradient(135deg,#e2e8f0,#f8fafc)", pointerEvents: "none" }}>
+                Double-click to upload
+              </div>
+            )}
+
+
+            {layer.kind === "image" ? (
+              <input
+                ref={(el) => {
+                  fileInputRefs.current[idx] = el;
+                }}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(event) => handleFileChange(event, idx)}
+              />
+            ) : null}
+
+            {editor && selectedLayerIndex === idx ? [
+              { key: "nw", left: 6, top: 6, cursor: "nwse-resize" },
+              { key: "ne", right: 6, top: 6, cursor: "nesw-resize" },
+              { key: "sw", left: 6, bottom: 6, cursor: "nesw-resize" },
+              { key: "se", right: 6, bottom: 6, cursor: "nwse-resize" },
+            ].map((handle) => (
+              <div
+                key={handle.key}
+                data-resize-handle={handle.key}
+                onPointerDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                onMouseDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                style={{
+                  position: "absolute",
+                  width: 14,
+                  height: 14,
+                  borderRadius: 999,
+                  background: layer.kind === "image" ? "#f59e0b" : "#0ea5e9",
+                  border: "2px solid #fff",
+                  boxShadow: "0 6px 16px rgba(15,23,42,0.24)",
+                  touchAction: "none",
+                  ...handle,
+                }}
+              />
+            )) : null}
+
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EditableImageBlock({ props, imageSrc, compact, editor = false, animationPreview = false, onChangeBlock }) {
+  const resizeRef = React.useRef(null);
+  const figureRef = React.useRef(null);
+  const latestPropsRef = React.useRef(props || {});
+  const [figureSize, setFigureSize] = React.useState({ width: 0, height: 0 });
+  const [guides, setGuides] = React.useState({ showX: false, showY: false, active: false });
+  const fullWidthProps = { ...props, fullWidthBackground: props?.fullWidthBackground !== false };
+  const rawWidth = String(props?.width || "100%").trim().toLowerCase();
+  const useFullWidth = fullWidthProps.fullWidthBackground || rawWidth === "100%" || rawWidth === "full" || rawWidth.includes("vw");
+  const widthPx = parseSizeValue(props?.width, compact ? 280 : 720);
+  const heightPx = parseSizeValue(props?.height, compact ? 220 : 400);
+  const effectiveWidth = Math.max(1, Math.round(figureSize.width || widthPx));
+  const effectiveHeight = Math.max(1, Math.round(figureSize.height || heightPx));
+  const showOverlayText = !!props?.showOverlayText || !!props?.headline || !!props?.subheadline;
+  const overlayAlign = String(props?.overlayTextAlign || "center");
+  const overlayJustify = overlayAlign === "left" ? "flex-start" : overlayAlign === "right" ? "flex-end" : "center";
+  const overlayVertical = String(props?.overlayTextVerticalAlign || "center");
+  const overlayTextColor = props?.overlayTextColor || props?.headlineColor || "#ffffff";
+  const overlayBodyColor = props?.overlaySubheadlineColor || props?.textColor || "rgba(255,255,255,0.92)";
+  const overlayBackground = props?.overlayTextBackground || "linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.42))";
+  const overlayPad = compact ? 18 : 28;
+  const overlayDefaultWidth = Math.min(Math.max(Math.round(effectiveWidth * (compact ? 0.52 : 0.36)), 240), compact ? 360 : 420);
+  const overlayBoxWidth = Math.max(180, Math.min(effectiveWidth, Number(props?.overlayTextWidth || Math.min(effectiveWidth - (overlayPad * 2), overlayDefaultWidth)) || Math.min(effectiveWidth - (overlayPad * 2), overlayDefaultWidth)));
+  const overlayEstimateHeight = props?.subheadline || editor ? (compact ? 120 : 170) : (compact ? 84 : 118);
+  const overlayAvailableWidth = Math.max(0, effectiveWidth - overlayBoxWidth);
+  const overlayAvailableHeight = Math.max(0, effectiveHeight - overlayEstimateHeight);
+  const overlayStoredXRatio = Number(props?.overlayTextXRatio);
+  const overlayStoredYRatio = Number(props?.overlayTextYRatio);
+  const overlayDefaultX = overlayAlign === "left"
+    ? overlayPad
+    : overlayAlign === "right"
+      ? Math.max(overlayPad, effectiveWidth - overlayPad - overlayBoxWidth)
+      : Math.max(overlayPad, Math.round((effectiveWidth - overlayBoxWidth) / 2));
+  const overlayDefaultY = overlayVertical === "top"
+    ? overlayPad
+    : overlayVertical === "bottom"
+      ? Math.max(overlayPad, effectiveHeight - overlayPad - overlayEstimateHeight)
+      : Math.max(overlayPad, Math.round((effectiveHeight - overlayEstimateHeight) / 2));
+  const overlayX = Math.max(
+    0,
+    Math.min(
+      Number.isFinite(overlayStoredXRatio)
+        ? overlayStoredXRatio * overlayAvailableWidth
+        : Number.isFinite(Number(props?.overlayTextX))
+          ? Number(props.overlayTextX)
+          : overlayDefaultX,
+      overlayAvailableWidth,
+    ),
+  );
+  const overlayY = Math.max(
+    0,
+    Math.min(
+      Number.isFinite(overlayStoredYRatio)
+        ? overlayStoredYRatio * overlayAvailableHeight
+        : Number.isFinite(Number(props?.overlayTextY))
+          ? Number(props.overlayTextY)
+          : overlayDefaultY,
+      overlayAvailableHeight,
+    ),
+  );
+
+  React.useEffect(() => {
+    latestPropsRef.current = props || {};
+  }, [props]);
+
+  React.useEffect(() => {
+    const node = figureRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+
+    const updateSize = () => {
+      const rect = node.getBoundingClientRect?.();
+      if (!rect) return;
+      setFigureSize({ width: rect.width || 0, height: rect.height || 0 });
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(() => updateSize());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [useFullWidth, widthPx, heightPx, imageSrc]);
+
+  React.useEffect(() => {
+    if (!editor || typeof onChangeBlock !== "function") return undefined;
+
+    const handleMove = (event) => {
+      const current = resizeRef.current;
+      if (!current) return;
+      const cs = current.canvasScale || 1;
+      const dx = (event.clientX - current.startX) / cs;
+      const dy = (event.clientY - current.startY) / cs;
+
+      if (current.mode === "overlay-move") {
+        const nextWidth = current.baseWidth > Math.round(effectiveWidth * 0.56)
+          ? Math.max(220, Math.min(Math.round(effectiveWidth * 0.36), effectiveWidth - (overlayPad * 2)))
+          : current.baseWidth;
+        const nextAvailableWidth = Math.max(0, effectiveWidth - nextWidth);
+        const nextAvailableHeight = Math.max(0, effectiveHeight - current.boxHeight);
+        let nextX = Math.max(0, Math.min(current.baseX + dx, nextAvailableWidth));
+        let nextY = Math.max(0, Math.min(current.baseY + dy, nextAvailableHeight));
+        const centerThreshold = 12;
+        const centerX = nextX + (nextWidth / 2);
+        const centerY = nextY + (current.boxHeight / 2);
+        const shouldSnapX = Math.abs(centerX - (effectiveWidth / 2)) <= centerThreshold;
+        const shouldSnapY = Math.abs(centerY - (effectiveHeight / 2)) <= centerThreshold;
+
+        if (shouldSnapX) {
+          nextX = Math.max(0, Math.min((effectiveWidth - nextWidth) / 2, nextAvailableWidth));
+        }
+
+        if (shouldSnapY) {
+          nextY = Math.max(0, Math.min((effectiveHeight - current.boxHeight) / 2, nextAvailableHeight));
+        }
+
+        setGuides({ showX: shouldSnapX, showY: shouldSnapY, active: true });
+        onChangeBlock({
+          ...latestPropsRef.current,
+          showOverlayText: true,
+          overlayTextWidth: nextWidth,
+          overlayTextX: Math.round(nextX),
+          overlayTextY: Math.round(nextY),
+          overlayTextXRatio: nextAvailableWidth > 0 ? Number((nextX / nextAvailableWidth).toFixed(6)) : 0,
+          overlayTextYRatio: nextAvailableHeight > 0 ? Number((nextY / nextAvailableHeight).toFixed(6)) : 0,
+        });
+        return;
+      }
+
+      if (current.mode === "overlay-resize") {
+        const nextWidth = Math.max(180, Math.min(effectiveWidth - current.baseX, current.baseWidth + dx));
+        const nextAvailableWidth = Math.max(0, effectiveWidth - nextWidth);
+        const nextX = Math.max(0, Math.min(current.baseX, nextAvailableWidth));
+        setGuides((prev) => ({ ...prev, active: true }));
+        onChangeBlock({
+          ...latestPropsRef.current,
+          showOverlayText: true,
+          overlayTextWidth: nextWidth,
+          overlayTextX: Math.round(nextX),
+          overlayTextXRatio: nextAvailableWidth > 0 ? Number((nextX / nextAvailableWidth).toFixed(6)) : 0,
+        });
+        return;
+      }
+
+      onChangeBlock({
+        ...latestPropsRef.current,
+        width: `${Math.max(160, current.baseWidth + dx)}px`,
+        height: `${Math.max(120, current.baseHeight + dy)}px`,
+      });
+    };
+
+    const handleUp = () => {
+      resizeRef.current = null;
+      setGuides({ showX: false, showY: false, active: false });
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [editor, onChangeBlock]);
+
+  function startResize(event) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeRef.current = {
+      mode: "image-resize",
+      startX: event.clientX,
+      startY: event.clientY,
+      baseWidth: widthPx,
+      baseHeight: heightPx,
+      canvasScale: Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1),
+    };
+  }
+
+  function startOverlayMove(event) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    event.preventDefault();
+    event.stopPropagation();
+    setGuides((prev) => ({ ...prev, active: true }));
+    resizeRef.current = {
+      mode: "overlay-move",
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: overlayX,
+      baseY: overlayY,
+      baseWidth: overlayBoxWidth,
+      boxHeight: overlayEstimateHeight,
+      canvasScale: Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1),
+    };
+  }
+
+  function startOverlayResize(event) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    event.preventDefault();
+    event.stopPropagation();
+    setGuides((prev) => ({ ...prev, active: true }));
+    resizeRef.current = {
+      mode: "overlay-resize",
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: overlayX,
+      baseY: overlayY,
+      baseWidth: overlayBoxWidth,
+      boxHeight: overlayEstimateHeight,
+      canvasScale: Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1),
+    };
+  }
+
+  return (
+    <section
+      style={{
+        ...fullWidthStyle(fullWidthProps, compact, editor),
+        ...((!editor || animationPreview) ? getAnimationStyle(props?.sectionAnimation, props?.sectionAnimationDelay || 0, props?.sectionAnimationSpeed) : {}),
+        padding: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+      }}
+    >
+      <figure ref={figureRef} style={{ ...sharedStyles.figure, position: "relative", width: useFullWidth ? "100%" : `${widthPx}px`, maxWidth: "100%" }}>
+        {imageSrc ? (
+          <img src={imageSrc} alt={props.alt || "Image"} style={{ ...sharedStyles.figureImage, width: "100%", height: `${heightPx}px`, maxHeight: "none" }} />
+        ) : (
+          <div style={{ ...sharedStyles.galleryPlaceholder, width: "100%", height: `${heightPx}px`, borderRadius: 22 }}>
+            Upload or choose an image
+          </div>
+        )}
+        {showOverlayText ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 22,
+              pointerEvents: "none",
+            }}
+          >
+            {editor ? renderOverlayGuides(guides) : null}
+            <div
+              style={{
+                position: "absolute",
+                left: overlayX,
+                top: overlayY,
+                width: overlayBoxWidth,
+                maxWidth: `calc(100% - ${overlayPad * 2}px)`,
+                textAlign: overlayAlign,
+                padding: compact ? 14 : 18,
+                borderRadius: 20,
+                background: overlayBackground,
+                boxShadow: editor ? "0 12px 28px rgba(15,23,42,0.22)" : "none",
+                outline: editor ? "1px dashed rgba(255,255,255,0.38)" : "none",
+                pointerEvents: "auto",
+              }}
+              onPointerDown={(event) => {
+                if (!editor) return;
+                if (event.target !== event.currentTarget) return;
+                startOverlayMove(event);
+              }}
+              onMouseDown={(event) => {
+                if (!editor) return;
+                if (event.target !== event.currentTarget) return;
+                startOverlayMove(event);
+              }}
+            >
+              {editor ? (
+                <div
+                  onPointerDown={startOverlayMove}
+                  onMouseDown={startOverlayMove}
+                  style={{
+                    position: "absolute",
+                    left: 10,
+                    right: 22,
+                    top: -18,
+                    height: 26,
+                    borderRadius: 999,
+                    border: "1px solid rgba(14,165,233,0.36)",
+                    background: "rgba(255,255,255,0.97)",
+                    color: "#0f3f73",
+                    boxShadow: "0 10px 20px rgba(15,23,42,0.18)",
+                    padding: "0 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    cursor: "grab",
+                    touchAction: "none",
+                  }}
+                >
+                  <span>Move Text</span>
+                  <span style={{ opacity: 0.72 }}>Drag Anywhere</span>
+                </div>
+              ) : null}
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="headline"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...latestPropsRef.current, headline: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                }}
+                style={{
+                  margin: 0,
+                  color: overlayTextColor,
+                  fontSize: compact ? 28 : (props?.headlineFontSize || 46),
+                  lineHeight: 1.08,
+                  fontWeight: Math.min(800, Number(props?.headlineFontWeight || 700) || 700),
+                  fontFamily: props?.headlineFontFamily || "inherit",
+                  ...((!editor || animationPreview) ? getAnimationStyle(props?.textAnimation, props?.textAnimationDelay || 0, props?.textAnimationSpeed) : {}),
+                  outline: editor ? "1px dashed rgba(255,255,255,0.45)" : "none",
+                  borderRadius: 10,
+                  padding: editor ? "6px 8px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props?.headline || "Add image headline") }}
+              />
+              {props?.subheadline || editor ? (
+                <div
+                  data-website-inline-editor="true"
+                  data-text-prop="subheadline"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => {
+                    if (!editor || typeof onChangeBlock !== "function") return;
+                    onChangeBlock({ ...latestPropsRef.current, subheadline: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                  }}
+                  style={{
+                    marginTop: 10,
+                    color: overlayBodyColor,
+                    fontSize: compact ? 15 : (props?.subheadlineFontSize || 20),
+                    lineHeight: 1.5,
+                    fontWeight: Math.min(700, Number(props?.fontWeight || 400) || 400),
+                    fontFamily: props?.fontFamily || props?.headlineFontFamily || "inherit",
+                    ...((!editor || animationPreview) ? getAnimationStyle(props?.subheadlineAnimation, props?.subheadlineAnimationDelay || 0, props?.subheadlineAnimationSpeed) : {}),
+                    outline: editor ? "1px dashed rgba(255,255,255,0.35)" : "none",
+                    borderRadius: 10,
+                    padding: editor ? "6px 8px" : 0,
+                  }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(props?.subheadline || "Add supporting text") }}
+                />
+              ) : null}
+              {editor ? (
+                <>
+                  <div
+                    title="Resize text width"
+                    aria-label="Resize text width"
+                    onPointerDown={startOverlayResize}
+                    onMouseDown={startOverlayResize}
+                    style={{
+                      position: "absolute",
+                      top: 12,
+                      right: -10,
+                      bottom: 12,
+                      width: 16,
+                      borderRadius: 999,
+                      background: "linear-gradient(180deg, #7dd3fc, #0ea5e9)",
+                      border: "2px solid #ffffff",
+                      boxShadow: "0 8px 18px rgba(14,165,233,0.3)",
+                      cursor: "ew-resize",
+                      touchAction: "none",
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 14,
+                      bottom: -22,
+                      borderRadius: 999,
+                      border: "1px solid rgba(14,165,233,0.36)",
+                      background: "rgba(255,255,255,0.97)",
+                      color: "#0f3f73",
+                      boxShadow: "0 10px 20px rgba(15,23,42,0.18)",
+                      padding: "4px 10px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    Drag Right Edge
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {editor ? (
+          <div style={{ position: "absolute", top: 10, left: 10, borderRadius: 999, background: "rgba(15,23,42,0.72)", color: "#fff", padding: "5px 9px", fontSize: 12, fontWeight: 600 }}>
+            Resize handle enabled
+          </div>
+        ) : null}
+        {editor ? (
+          <div
+            title="Drag to resize image"
+            aria-label="Drag to resize image"
+            data-resize-handle="image"
+            onPointerDown={startResize}
+            onMouseDown={startResize}
+            style={{ position: "absolute", right: 10, bottom: props.caption ? 34 : 10, width: 18, height: 18, borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", cursor: "nwse-resize", boxShadow: "0 6px 16px rgba(14,165,233,0.35)" }}
+          />
+        ) : null}
+        {props.caption ? (
+          <figcaption
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(event) => {
+              if (!editor || typeof onChangeBlock !== "function") return;
+              onChangeBlock({ ...latestPropsRef.current, caption: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+            }}
+            style={{ ...sharedStyles.figureCaption, outline: editor ? "1px dashed rgba(14,165,233,0.45)" : "none", padding: editor ? "4px 6px" : 0, borderRadius: 8 }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(props.caption) }}
+          />
+        ) : null}
+      </figure>
+    </section>
+  );
+}
+
+function getListMarker(style, index) {
+  if (style === "number") return `${index + 1}.`;
+  if (style === "disc") return "•";
+  return "✓";
+}
+
+function ColumnEditorCard({
+  title,
+  content,
+  titleProp,
+  contentProp,
+  image,
+  compact,
+  editor,
+  textColor,
+  bodyTextColor,
+  cardBackgroundColor,
+  cardStyle,
+  contentAlign,
+  overlay,
+  onTitleChange,
+  onContentChange,
+  contentType,
+  newsletterHeading,
+  newsletterSubtitle,
+  newsletterButtonText,
+  newsletterButtonColor,
+  newsletterButtonTextColor,
+  onPatchNewsletter,
+  imageHeight,
+  onImageHeightChange,
+  imageWidth,
+  onImageWidthChange,
+  newsletterImage,
+  newsletterImageHeight,
+  onNewsletterImageHeightChange,
+  newsletterImageWidth,
+  onNewsletterImageWidthChange,
+  newsletterFields,
+}) {
+  const resolvedAlign = contentAlign || "left";
+  const isNewsletter = contentType === "newsletter";
+  const normalizedTitle = String(title || "").trim();
+  const normalizedContent = String(content || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .trim();
+  const [isImageHovered, setIsImageHovered] = React.useState(false);
+  const [activeDrag, setActiveDrag] = React.useState(null);
+  const imgContainerRef = React.useRef(null);
+  const [isImageHoveredNL, setIsImageHoveredNL] = React.useState(false);
+  const [activeDragNL, setActiveDragNL] = React.useState(null);
+  const nlImgContainerRef = React.useRef(null);
+
+  const startResizeNL = React.useCallback((e, dir) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startH = newsletterImageHeight || (nlImgContainerRef.current?.querySelector("img")?.offsetHeight || 180);
+    const startW = newsletterImageWidth != null ? newsletterImageWidth : 100;
+    const colW = nlImgContainerRef.current?.offsetWidth || 300;
+    setActiveDragNL(dir);
+    const onMove = (e2) => {
+      const dx = e2.clientX - startX;
+      const dy = e2.clientY - startY;
+      if (dir.includes("s")) onNewsletterImageHeightChange?.(Math.max(40, Math.round(startH + dy)));
+      if (dir.includes("n")) onNewsletterImageHeightChange?.(Math.max(40, Math.round(startH - dy)));
+      if (dir.includes("e")) onNewsletterImageWidthChange?.(Math.round(Math.max(20, Math.min(100, startW + (dx / colW) * 100))));
+      if (dir.includes("w")) onNewsletterImageWidthChange?.(Math.round(Math.max(20, Math.min(100, startW - (dx / colW) * 100))));
+    };
+    const onUp = () => {
+      setActiveDragNL(null);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [newsletterImageHeight, newsletterImageWidth, onNewsletterImageHeightChange, onNewsletterImageWidthChange]);
+
+  const startResize = React.useCallback((e, dir) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startH = imageHeight || (imgContainerRef.current?.querySelector("img")?.offsetHeight || 200);
+    const startW = imageWidth != null ? imageWidth : 100;
+    const colW = imgContainerRef.current?.offsetWidth || 300;
+    setActiveDrag(dir);
+
+    const onMove = (e2) => {
+      const dx = e2.clientX - startX;
+      const dy = e2.clientY - startY;
+      if (dir.includes("s")) {
+        onImageHeightChange?.(Math.max(40, Math.round(startH + dy)));
+      }
+      if (dir.includes("n")) {
+        onImageHeightChange?.(Math.max(40, Math.round(startH - dy)));
+      }
+      if (dir.includes("e")) {
+        const pct = Math.round(Math.max(20, Math.min(100, startW + (dx / colW) * 100)));
+        onImageWidthChange?.(pct);
+      }
+      if (dir.includes("w")) {
+        const pct = Math.round(Math.max(20, Math.min(100, startW - (dx / colW) * 100)));
+        onImageWidthChange?.(pct);
+      }
+    };
+    const onUp = () => {
+      setActiveDrag(null);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [imageHeight, imageWidth, onImageHeightChange, onImageWidthChange]);
+
+  const HANDLE_SIZE = 10;
+  const HANDLE_BASE = {
+    position: "absolute", width: HANDLE_SIZE, height: HANDLE_SIZE,
+    background: "#fff", border: "2px solid #0ea5e9", borderRadius: 2,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.25)", zIndex: 10,
+  };
+  const handles = [
+    { dir: "n",  style: { top: -HANDLE_SIZE/2, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" } },
+    { dir: "s",  style: { bottom: -HANDLE_SIZE/2, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize" } },
+    { dir: "e",  style: { right: -HANDLE_SIZE/2, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" } },
+    { dir: "w",  style: { left: -HANDLE_SIZE/2, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize" } },
+    { dir: "ne", style: { top: -HANDLE_SIZE/2, right: -HANDLE_SIZE/2, cursor: "nesw-resize" } },
+    { dir: "nw", style: { top: -HANDLE_SIZE/2, left: -HANDLE_SIZE/2, cursor: "nwse-resize" } },
+    { dir: "se", style: { bottom: -HANDLE_SIZE/2, right: -HANDLE_SIZE/2, cursor: "nwse-resize" } },
+    { dir: "sw", style: { bottom: -HANDLE_SIZE/2, left: -HANDLE_SIZE/2, cursor: "nesw-resize" } },
+  ];
+
+  const nlBtnBg = newsletterButtonColor || "#2563eb";
+  const nlBtnText = newsletterButtonTextColor || "#ffffff";
+
+  const inlineEditStyle = (base) => ({
+    ...base,
+    outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none",
+    borderRadius: 6,
+    padding: editor ? "2px 4px" : 0,
+  });
+
+  return (
+    <article style={{ borderRadius: 18, border: PREMIUM_BORDER, background: cardBackgroundColor || "#f8fafc", padding: compact ? 14 : 18, boxShadow: "0 10px 24px rgba(15,23,42,0.08)", textAlign: resolvedAlign, ...cardStyle }}>
+      {overlay}
+      <div style={{ position: "relative", zIndex: 1 }}>
+      {isNewsletter ? (
+        <>
+          {(newsletterImage || editor) ? (
+            <div
+              ref={nlImgContainerRef}
+              onMouseEnter={() => editor && setIsImageHoveredNL(true)}
+              onMouseLeave={() => { if (!activeDragNL) setIsImageHoveredNL(false); }}
+              style={{ position: "relative", marginBottom: 12, display: "inline-block", width: newsletterImageWidth != null ? `${newsletterImageWidth}%` : "100%" }}
+            >
+              {newsletterImage ? (
+                <img
+                  src={newsletterImage}
+                  alt="Newsletter image"
+                  draggable={false}
+                  style={{ width: "100%", height: newsletterImageHeight ? `${newsletterImageHeight}px` : undefined, aspectRatio: newsletterImageHeight ? undefined : "16 / 9", objectFit: "cover", borderRadius: 12, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+                />
+              ) : (
+                editor ? <div style={{ ...sharedStyles.galleryPlaceholder, borderRadius: 12, marginBottom: 0, minHeight: 80, fontSize: 12, opacity: 0.6 }}>Upload image above form</div> : null
+              )}
+              {editor && newsletterImage && (isImageHoveredNL || activeDragNL) && (
+                <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 12, pointerEvents: "none" }} />
+              )}
+              {editor && newsletterImage && (isImageHoveredNL || activeDragNL) && handles.map(({ dir, style }) => (
+                <div key={dir} onMouseDown={(e) => startResizeNL(e, dir)} style={{ ...HANDLE_BASE, ...style }} />
+              ))}
+            </div>
+          ) : null}
+          <h3
+            contentEditable={editor} suppressContentEditableWarning
+            onBlur={(e) => onPatchNewsletter?.({ newsletterHeading: e.currentTarget.textContent })}
+            style={inlineEditStyle({ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 17 : 20, fontWeight: 600 })}
+          >{newsletterHeading || (editor ? "Newsletter Heading" : "Stay Updated")}</h3>
+          {(newsletterSubtitle || editor) ? (
+            <p
+              contentEditable={editor} suppressContentEditableWarning
+              onBlur={(e) => onPatchNewsletter?.({ newsletterSubtitle: e.currentTarget.textContent })}
+              style={inlineEditStyle({ margin: "6px 0 0", color: bodyTextColor || "#475569", fontSize: compact ? 13 : 14, lineHeight: 1.5 })}
+            >{newsletterSubtitle || (editor ? "Your subtitle here." : "")}</p>
+          ) : null}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            {(newsletterFields && newsletterFields.length > 0 ? newsletterFields : [{ type: "email", placeholder: "Email address" }]).map((field, fi) => (
+              editor ? (
+                <div key={fi} style={{ borderRadius: 10, minHeight: 40, border: "1px solid #cbd5e1", background: "#ffffff", display: "flex", alignItems: "center", paddingLeft: 12, color: "#94a3b8", fontSize: 16 }}>
+                  {field.placeholder || field.label || field.type}
+                </div>
+              ) : String(field?.type || "").toLowerCase() === "textarea" ? (
+                <textarea
+                  key={fi}
+                  name={field?.name || `newsletter-field-${fi}`}
+                  placeholder={field?.placeholder || field?.label || "Enter details"}
+                  required={!!field?.required}
+                  rows={4}
+                  style={{ borderRadius: 10, minHeight: 108, border: "1px solid #cbd5e1", background: "#ffffff", display: "block", width: "100%", padding: "12px", color: "#0f172a", fontSize: 16, font: "inherit", boxSizing: "border-box", resize: "vertical" }}
+                />
+              ) : (
+                <input
+                  key={fi}
+                  type={String(field?.type || "text").toLowerCase()}
+                  name={field?.name || `newsletter-field-${fi}`}
+                  placeholder={field?.placeholder || field?.label || "Enter details"}
+                  required={!!field?.required}
+                  style={{ borderRadius: 10, minHeight: 40, border: "1px solid #cbd5e1", background: "#ffffff", display: "block", width: "100%", padding: "0 12px", color: "#0f172a", fontSize: 16, font: "inherit", boxSizing: "border-box" }}
+                />
+              )
+            ))}
+            {editor ? (
+              <div
+                style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: 10, padding: "0 12px", minHeight: 40, fontWeight: 600, fontSize: 16, cursor: "text", whiteSpace: "nowrap", alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <div
+                  data-website-inline-editor="true"
+                  data-text-prop="newsletterButtonText"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                    if (event.key === " ") {
+                      event.preventDefault();
+                      try {
+                        document.execCommand("insertText", false, " ");
+                      } catch {}
+                    }
+                  }}
+                  onBlur={(e) => onPatchNewsletter?.({ newsletterButtonText: e.currentTarget.textContent })}
+                  style={{
+                    outline: "1px dashed rgba(255,255,255,0.45)",
+                    borderRadius: 6,
+                    padding: "2px 4px",
+                    minWidth: 36,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {newsletterButtonText || "Subscribe"}
+                </div>
+              </div>
+            ) : (
+              <button type="button" style={{ background: nlBtnBg, color: nlBtnText, border: "none", borderRadius: 10, padding: "0 12px", minHeight: 40, fontWeight: 600, fontSize: 16, cursor: "pointer", whiteSpace: "nowrap", alignSelf: "stretch" }}>
+                {newsletterButtonText || "Subscribe"}
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {image ? (
+            <div
+              ref={imgContainerRef}
+              onMouseEnter={() => editor && setIsImageHovered(true)}
+              onMouseLeave={() => { if (!activeDrag) setIsImageHovered(false); }}
+              style={{ position: "relative", marginBottom: (normalizedTitle || normalizedContent) ? 12 : 0, display: "inline-block", width: imageWidth != null ? `${imageWidth}%` : "100%" }}
+            >
+              <img
+                src={image}
+                alt={title || "Column image"}
+                draggable={false}
+                style={{ width: "100%", height: imageHeight ? `${imageHeight}px` : undefined, aspectRatio: imageHeight ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+              />
+              {editor && (isImageHovered || activeDrag) && (
+                <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 14, pointerEvents: "none" }} />
+              )}
+              {editor && (isImageHovered || activeDrag) && handles.map(({ dir, style }) => (
+                <div
+                  key={dir}
+                  onMouseDown={(e) => startResize(e, dir)}
+                  style={{ ...HANDLE_BASE, ...style }}
+                />
+              ))}
+            </div>
+          ) : null}
+          {normalizedTitle ? (
+            <h3
+              data-website-inline-editor="true"
+              data-text-prop={titleProp}
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onBlur={(event) => onTitleChange?.(event.currentTarget.innerText)}
+              style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 600, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+            >
+              {title}
+            </h3>
+          ) : null}
+          {normalizedContent ? (
+            <div
+              data-website-inline-editor="true"
+              data-text-prop={contentProp}
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
+              style={{ marginTop: normalizedTitle ? 8 : 0, color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0 }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(content) }}
+            />
+          ) : null}
+        </>
+      )}
+      </div>
+    </article>
+  );
+}
+
+function FAQAccordionItems({ items, compact, editor = false, props, openItems, onToggleItem, onPatchItem, propPrefix = "items" }) {
+  const sourceSplitVariant = props.faqVariant === "source-split";
+  const sourceHeaderBackground = "linear-gradient(34deg, rgba(13, 141, 222, 0.2), rgba(8, 140, 202, 0.09))";
+  const sourceArrowBackground = props.arrowBackgroundColor || "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)";
+  return (
+    <div style={sharedStyles.stack}>
+      {items.map((item, idx) => {
+        const isOpen = openItems.includes(idx);
+        return (
+          <ScrollReveal
+            key={item.id || `${item.question}-${idx}`}
+            animationName={sourceSplitVariant ? (props.faqAnimation || "fade-up") : "fade-up"}
+            delay={(sourceSplitVariant ? Number(props.faqAnimationDelay || 0) : 0) + (idx * 0.06)}
+            speed={sourceSplitVariant ? props.faqAnimationSpeed : undefined}
+            disabled={editor}
+            style={{
+              ...sharedStyles.faqItem,
+              ...(sourceSplitVariant ? {
+                background: "rgba(3, 18, 28, 0.16)",
+                border: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+                borderRadius: 15,
+                overflow: "hidden",
+                padding: 0,
+                boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
+                gap: 0,
+                marginBottom: 15,
+              } : {
+                background: props.itemBackgroundColor || sharedStyles.faqItem.background,
+                border: `1px solid ${props.itemBorderColor || props.borderColor || "#cbd5e1"}`,
+              }),
+            }}
+          >
+            <div style={{
+              ...sharedStyles.faqTrigger,
+              ...(sourceSplitVariant ? {
+                display: "grid",
+                gridTemplateColumns: `${compact ? 36 : 40}px minmax(0, 1fr)`,
+                alignItems: "center",
+                gap: compact ? 14 : 20,
+                padding: compact ? "20px" : "30px",
+                background: sourceHeaderBackground,
+              } : {}),
+            }}>
+              <button
+                type="button"
+                onClick={() => onToggleItem(idx)}
+                style={{
+                  ...sharedStyles.faqChevronButton,
+                  color: props.chevronColor || "#2563eb",
+                  ...(sourceSplitVariant ? {
+                    width: compact ? 44 : 52,
+                    height: compact ? 44 : 52,
+                    alignSelf: "center",
+                    justifySelf: "start",
+                    flex: "0 0 auto",
+                    borderRadius: 6,
+                    background: sourceArrowBackground,
+                    boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
+                  } : {}),
+                }}
+                aria-expanded={isOpen}
+                aria-label={isOpen ? "Collapse FAQ item" : "Expand FAQ item"}
+              >
+                <span style={{ ...sharedStyles.faqChevron, color: sourceSplitVariant ? "#ffffff" : (props.chevronColor || "#2563eb"), ...(sourceSplitVariant ? { fontSize: compact ? 18 : 22, fontWeight: 800, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" } : {}) }}>
+                  {isOpen ? <FaArrowDown /> : <FaArrowRight />}
+                </span>
+              </button>
+              <div
+                data-website-inline-editor="true"
+                data-text-prop={`${propPrefix}.${idx}.question`}
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => onPatchItem(idx, { question: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={{
+                  ...sharedStyles.faqQ,
+                  color: props.questionColor || (sourceSplitVariant ? "#ffffff" : "#0f172a"),
+                  fontSize: compact ? Math.max(17, Number(props.questionFontSize || 18) - 1) : Number(props.questionFontSize || 18),
+                  fontWeight: props.questionFontWeight || (sourceSplitVariant ? "700" : "inherit"),
+                  fontFamily: sourceSplitVariant ? "Poppins, sans-serif" : undefined,
+                  lineHeight: props.questionLineHeight || (sourceSplitVariant ? "23.4px" : undefined),
+                  letterSpacing: sourceSplitVariant ? "0.3px" : undefined,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: sourceSplitVariant ? 10 : 8,
+                  padding: editor ? "4px 6px" : 0,
+                  flex: 1,
+                  minWidth: 0,
+                  cursor: editor ? "text" : "default",
+                  boxSizing: "border-box",
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(item.question) }}
+              />
+            </div>
+            {isOpen ? (
+              <div
+                data-website-inline-editor="true"
+                data-text-prop={`${propPrefix}.${idx}.answer`}
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => onPatchItem(idx, { answer: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={{
+                  ...sharedStyles.faqA,
+                  color: props.answerColor || props.textColor || "#475569",
+                  fontSize: compact ? Math.max(12, Number(props.answerFontSize || MIN_TEXT_SIZE) - 1) : Number(props.answerFontSize || MIN_TEXT_SIZE),
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: sourceSplitVariant ? 15 : 8,
+                  padding: editor ? "6px 8px" : (sourceSplitVariant ? "30px" : 0),
+                  ...(sourceSplitVariant ? {
+                    borderTop: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+                    fontFamily: "Inter, sans-serif",
+                    lineHeight: props.answerLineHeight || "28.8px",
+                    background: "rgba(2, 12, 18, 0.34)",
+                  } : {}),
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(item.answer) }}
+              />
+            ) : null}
+          </ScrollReveal>
+        );
+      })}
+    </div>
+  );
+}
+
+function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sectionAnimationStyle, assets }) {
+  const sourceItems = asArray(props.items).map((item, idx) => {
+    const question = item?.question || item?.heading || item?.q || `Question ${idx + 1}`;
+    const answer = item?.answer || item?.content || item?.a || "Answer";
+    return {
+      ...item,
+      id: item?.id || `faq-item-${idx}`,
+      question,
+      answer,
+      heading: question,
+      content: answer,
+    };
+  });
+  const items = sourceItems;
+  const faqBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
+  const [openItems, setOpenItems] = React.useState(() => {
+    if (props.faqStartCollapsed) return [];
+    return items.length ? [0] : [];
+  });
+  const allowMultipleOpen = !!props.faqAllowMultipleOpen;
+
+  React.useEffect(() => {
+    if (!items.length) {
+      setOpenItems([]);
+      return;
+    }
+    setOpenItems((current) => {
+      const next = current.filter((idx) => idx >= 0 && idx < items.length);
+      if (next.length) return next;
+      return props.faqStartCollapsed ? [] : [0];
+    });
+  }, [items.length, props.faqStartCollapsed]);
+
+  function toggleItem(itemIndex) {
+    setOpenItems((current) => {
+      const isOpen = current.includes(itemIndex);
+      if (allowMultipleOpen) {
+        return isOpen ? current.filter((idx) => idx !== itemIndex) : [...current, itemIndex];
+      }
+      if (isOpen) return [];
+      return [itemIndex];
+    });
+  }
+
+  function patchItem(itemIndex, patch) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    const nextItems = sourceItems.map((item, currentIndex) => {
+      if (currentIndex !== itemIndex) return item;
+      const nextQuestion = patch.question ?? item.question;
+      const nextAnswer = patch.answer ?? item.answer;
+      return {
+        ...item,
+        question: nextQuestion,
+        heading: nextQuestion,
+        answer: nextAnswer,
+        content: nextAnswer,
+      };
+    });
+    onChangeBlock({ ...props, items: nextItems });
+  }
+
+  const faqOuterStyle = {
+    width: "100%",
+    borderRadius: compact ? 16 : 22,
+    padding: compact ? "20px" : scaleBoxPadding("30px", spacingMultiplier(props)),
+    background: props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? props.blockBackgroundColor : "transparent",
+    ...(faqBackgroundImage ? {
+      backgroundImage: `linear-gradient(180deg, ${colorWithAlpha(props.blockBackgroundColor || "#0f172a", props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? (Number(props.backgroundOverlayOpacity ?? 55) / 100) : (Number(props.backgroundOverlayOpacity ?? 28) / 100))}, ${colorWithAlpha(props.blockBackgroundColor || "#0f172a", props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? (Number(props.backgroundOverlayOpacity ?? 55) / 100) : (Number(props.backgroundOverlayOpacity ?? 28) / 100))}), url(${faqBackgroundImage})`,
+      backgroundSize: props.backgroundSize || "cover",
+      backgroundPosition: props.backgroundPosition || "center center",
+      backgroundRepeat: props.backgroundRepeat || "no-repeat",
+    } : {}),
+  };
+
+  const faqPanelStyle = {
+    ...sharedStyles.cardSection(compact, { ...props, backgroundColor: props.faqPanelBackgroundColor || props.backgroundColor || "#ffffff" }),
+    width: "100%",
+    maxWidth: `${Math.max(320, Number(props.faqMaxWidth || 980))}px`,
+    marginLeft: "auto",
+    marginRight: "auto",
+  };
+
+  return (
+    <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqOuterStyle)}>
+      <div style={asStyleObject(faqPanelStyle)}>
+      <h2
+        data-website-inline-editor="true"
+        data-text-prop="title"
+        contentEditable={editor}
+        suppressContentEditableWarning
+        onBlur={(event) => {
+          if (!editor || typeof onChangeBlock !== "function") return;
+          onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+        }}
+        style={{
+          ...sharedStyles.sectionTitle(compact),
+          ...headingTypography(props),
+          fontSize: compact ? Math.max(18, Number(props.headlineFontSize || 28) - 4) : Number(props.headlineFontSize || 28),
+          color: props.headlineColor || headingTypography(props).color,
+          outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+          borderRadius: 8,
+          padding: editor ? "4px 6px" : 0,
+        }}
+        dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Questions") }}
+      />
+      <FAQAccordionItems items={items} compact={compact} editor={editor} props={props} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="items" />
+      </div>
+    </ScrollReveal>
+  );
+}
+
+function resolveSplitFaqBlockProps(props = {}) {
+  return {
+    ...(props.faqBlock || {}),
+    items: asArray(props.faqBlock?.items || props.items).map((item, idx) => {
+      const question = item?.question || item?.heading || item?.q || `Question ${idx + 1}`;
+      const answer = item?.answer || item?.content || item?.a || "Answer";
+      return {
+        ...item,
+        id: item?.id || `split-faq-item-${idx}`,
+        question,
+        answer,
+        heading: question,
+        content: answer,
+      };
+    }),
+    faqStartCollapsed: props.faqBlock?.faqStartCollapsed ?? props.faqStartCollapsed,
+    faqAllowMultipleOpen: props.faqBlock?.faqAllowMultipleOpen ?? props.faqAllowMultipleOpen,
+    itemBackgroundColor: props.faqBlock?.itemBackgroundColor ?? props.itemBackgroundColor,
+    itemBorderColor: props.faqBlock?.itemBorderColor ?? props.itemBorderColor,
+    arrowBackgroundColor: props.faqBlock?.arrowBackgroundColor ?? props.arrowBackgroundColor,
+    chevronColor: props.faqBlock?.chevronColor ?? props.chevronColor,
+    questionColor: props.faqBlock?.questionColor ?? props.questionColor,
+    answerColor: props.faqBlock?.answerColor ?? props.answerColor,
+    questionFontWeight: props.faqBlock?.questionFontWeight ?? props.questionFontWeight,
+    questionFontSize: props.faqBlock?.questionFontSize ?? props.questionFontSize,
+    answerFontSize: props.faqBlock?.answerFontSize ?? props.answerFontSize,
+    questionLineHeight: props.faqBlock?.questionLineHeight ?? props.questionLineHeight,
+    answerLineHeight: props.faqBlock?.answerLineHeight ?? props.answerLineHeight,
+    faqVariant: props.faqBlock?.faqVariant ?? props.faqVariant ?? "source-split",
+    faqAnimation: props.faqBlock?.faqAnimation ?? props.faqAnimation ?? "fade-up",
+    faqAnimationDelay: props.faqBlock?.faqAnimationDelay ?? props.faqAnimationDelay ?? 0.18,
+    faqAnimationSpeed: props.faqBlock?.faqAnimationSpeed ?? props.faqAnimationSpeed ?? 0.9,
+    sectionAnimation: props.faqBlock?.sectionAnimation ?? "fade-up",
+    sectionAnimationDelay: props.faqBlock?.sectionAnimationDelay ?? 0.12,
+    sectionAnimationSpeed: props.faqBlock?.sectionAnimationSpeed ?? 0.9,
+    faqPanelBackgroundColor: props.faqBlock?.faqPanelBackgroundColor ?? props.faqPanelBackgroundColor,
+    faqPanelBorderColor: props.faqBlock?.faqPanelBorderColor ?? props.faqPanelBorderColor,
+    faqMaxWidth: props.faqBlock?.faqMaxWidth ?? props.faqMaxWidth,
+  };
+}
+
+function resolveSplitHeadlineBlockProps(props = {}) {
+  return {
+    ...(props.headlineBlock || {}),
+    content: props.headlineBlock?.content ?? props.headline ?? "",
+    animation: props.headlineBlock?.animation ?? props.textAnimation ?? "fade-up",
+    animationDelay: props.headlineBlock?.animationDelay ?? props.textAnimationDelay ?? 0,
+    animationSpeed: props.headlineBlock?.animationSpeed ?? props.textAnimationSpeed ?? 0.8,
+    fontSize: props.headlineBlock?.fontSize ?? props.headlineFontSize ?? 48,
+    lineHeight: props.headlineBlock?.lineHeight ?? props.headlineLineHeight ?? 1.2,
+    fontFamily: props.headlineBlock?.fontFamily ?? props.headlineFontFamily ?? "Poppins, sans-serif",
+    fontWeight: props.headlineBlock?.fontWeight ?? props.headlineFontWeight ?? "400",
+    color: props.headlineBlock?.color ?? props.headlineColor ?? "#61ce70",
+    alignment: props.headlineBlock?.alignment ?? props.headlineAlignment ?? "left",
+  };
+}
+
+function resolveSplitBodyBlockProps(props = {}) {
+  return {
+    ...(props.bodyBlock || {}),
+    content: props.bodyBlock?.content ?? props.subheadline ?? "",
+    animation: props.bodyBlock?.animation ?? props.subheadlineAnimation ?? "fade-in",
+    animationDelay: props.bodyBlock?.animationDelay ?? props.subheadlineAnimationDelay ?? 0.12,
+    animationSpeed: props.bodyBlock?.animationSpeed ?? props.subheadlineAnimationSpeed ?? 0.9,
+    fontSize: props.bodyBlock?.fontSize ?? props.subheadlineFontSize ?? props.textFontSize ?? 18,
+    lineHeight: props.bodyBlock?.lineHeight ?? props.subheadlineLineHeight ?? props.textLineHeight ?? 1.6,
+    fontFamily: props.bodyBlock?.fontFamily ?? props.fontFamily ?? "Arial",
+    fontWeight: props.bodyBlock?.fontWeight ?? props.fontWeight ?? "400",
+    color: props.bodyBlock?.color ?? props.textColor ?? "#bdbcbf",
+    alignment: props.bodyBlock?.alignment ?? props.alignment ?? "left",
+  };
+}
+
+function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionAnimationStyle, assets, layoutWidth = null }) {
+  const faqBlockProps = resolveSplitFaqBlockProps(props);
+  const headlineBlockProps = resolveSplitHeadlineBlockProps(props);
+  const bodyBlockProps = resolveSplitBodyBlockProps(props);
+  const items = faqBlockProps.items;
+  const splitBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
+  const [viewportWidth, setViewportWidth] = React.useState(() => (typeof window !== "undefined" ? window.innerWidth : 1440));
+  const [openItems, setOpenItems] = React.useState(() => {
+    if (faqBlockProps.faqStartCollapsed) return [];
+    return items.length ? [0] : [];
+  });
+  const allowMultipleOpen = !!faqBlockProps.faqAllowMultipleOpen;
+  const isTabletLike = !compact && viewportWidth <= 1100;
+  const shouldRunAnimations = !editor;
+  const splitParallaxEnabled = !!splitBackgroundImage && !!props.enableParallax;
+  const splitParallaxActive = splitParallaxEnabled && !compact;
+  const splitContentWidth = Math.max(320, Number(props.blockMaxWidth || layoutWidth || props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    if (!items.length) {
+      setOpenItems([]);
+      return;
+    }
+    setOpenItems((current) => {
+      const next = current.filter((idx) => idx >= 0 && idx < items.length);
+      if (next.length) return next;
+      return faqBlockProps.faqStartCollapsed ? [] : [0];
+    });
+  }, [items.length, faqBlockProps.faqStartCollapsed]);
+
+  function toggleItem(itemIndex) {
+    setOpenItems((current) => {
+      const isOpen = current.includes(itemIndex);
+      if (allowMultipleOpen) {
+        return isOpen ? current.filter((idx) => idx !== itemIndex) : [...current, itemIndex];
+      }
+      if (isOpen) return [];
+      return [itemIndex];
+    });
+  }
+
+  function patchItem(itemIndex, patch) {
+    if (!editor || typeof onChangeBlock !== "function") return;
+    const nextItems = items.map((item, currentIndex) => {
+      if (currentIndex !== itemIndex) return item;
+      const nextQuestion = patch.question ?? item.question;
+      const nextAnswer = patch.answer ?? item.answer;
+      return {
+        ...item,
+        question: nextQuestion,
+        heading: nextQuestion,
+        answer: nextAnswer,
+        content: nextAnswer,
+      };
+    });
+    onChangeBlock({
+      ...props,
+      faqBlock: {
+        ...(props.faqBlock || {}),
+        items: nextItems,
+      },
+    });
+  }
+
+  const splitRatioMap = {
+    "43-57": "434fr 563fr",
+    "50-50": "1fr 1fr",
+    "45-55": "0.9fr 1.1fr",
+    "55-45": "1.1fr 0.9fr",
+  };
+  const sectionSurface = {
+    position: "relative",
+    width: "100%",
+    maxWidth: `${splitContentWidth}px`,
+    marginLeft: "auto",
+    marginRight: "auto",
+    boxSizing: "border-box",
+    borderRadius: editor ? (compact ? 12 : 18) : undefined,
+    background: props.sectionBackgroundColor || "#000000",
+    boxShadow: "none",
+    border: "none",
+    padding: 0,
+    // CSS transforms on ancestors affect position:sticky — skip section animation when parallax is active
+    ...(splitParallaxActive ? {} : sectionAnimationStyle),
+  };
+  const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
+  const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
+  // Left panel width as viewport percentage — used to size fixed-attachment background correctly
+  const splitLayoutLeftPercents = { "50-50": 50, "40-60": 40, "60-40": 60, "33-67": 33.333, "67-33": 66.667 };
+  const leftPanelVw = splitLayoutLeftPercents[props.splitLayout] || 50;
+  const panelShell = {
+    display: "grid",
+    gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
+    minHeight: compact ? undefined : props.minHeight || "760px",
+    borderRadius: 0,
+    overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
+    alignItems: "stretch",
+    background: props.sectionBackgroundColor || "#000000",
+    border: "none",
+    boxShadow: "none",
+  };
+  const textPanelOverlap = !compact ? Number(props.textPanelOverlap || 0) : 0;
+  const mediaPanelStyle = splitBackgroundImage
+    ? {
+        position: "relative",
+        overflow: "hidden",
+        zIndex: textPanelOverlap > 0 ? 1 : undefined,
+        // When JS parallax is active, hand the image to ParallaxImageLayer; use only solid bg here
+        ...(splitParallaxActive
+          ? { backgroundColor: props.backgroundColor || "#0f172a" }
+          : {
+              backgroundImage: `url(${splitBackgroundImage})`,
+              backgroundPosition: props.backgroundPosition || "center center",
+              backgroundSize: props.backgroundSize || "cover",
+              backgroundRepeat: props.backgroundRepeat || "no-repeat",
+              backgroundColor: props.backgroundColor || "#0f172a",
+            }),
+      }
+    : {
+        position: "relative",
+        overflow: "hidden",
+        zIndex: textPanelOverlap > 0 ? 1 : undefined,
+        minHeight: compact ? 122 : undefined,
+        background: props.backgroundColor || "#0f172a",
+      };
+  const contentPanelStyle = {
+    position: "relative",
+    zIndex: textPanelOverlap > 0 ? 2 : undefined,
+    marginLeft: textPanelOverlap > 0 ? `-${textPanelOverlap}%` : undefined,
+    background: props.contentPanelBackgroundColor || "transparent",
+    padding: compact ? "44px 20px 56px" : (isTabletLike ? "115px 20px 115px 40px" : "115px 120px 115px 120px"),
+    display: "grid",
+    alignContent: "start",
+    gap: compact ? 16 : 20,
+  };
+  const faqWrapStyle = {
+    width: "100%",
+    maxWidth: `${compact ? 312 : Math.max(280, Number(faqBlockProps.faqMaxWidth || 720))}px`,
+  };
+  const faqSurfaceStyle = {
+    width: "100%",
+    borderRadius: compact ? 18 : 24,
+    padding: compact ? "14px" : "18px",
+    background: faqBlockProps.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)",
+    border: `1px solid ${faqBlockProps.faqPanelBorderColor || faqBlockProps.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
+    boxShadow: "0 18px 38px rgba(0,0,0,0.18)",
+  };
+
+  return (
+    <ScrollReveal
+      as="section"
+      animationName={splitParallaxActive ? "" : (props.sectionAnimation || "fade-up")}
+      delay={props.sectionAnimationDelay || 0.06}
+      speed={props.sectionAnimationSpeed}
+      disabled={editor || splitParallaxActive}
+      style={asStyleObject(sectionSurface)}
+    >
+      <div style={asStyleObject(panelShell)}>
+          <ScrollReveal
+            as="div"
+            animationName={splitParallaxActive ? "" : (props.leftPanelAnimation || "none")}
+            delay={Number(props.leftPanelAnimationDelay ?? 0)}
+            speed={props.leftPanelAnimationSpeed}
+            disabled={editor || splitParallaxActive}
+            style={mediaPanelStyle}
+          >
+            {splitParallaxEnabled && !compact && splitBackgroundImage ? (
+              <StableParallaxLayer
+                speed={Number(props.parallaxStrength ?? 0.78)}
+                target="section"
+                backgroundStyle={{
+                  backgroundImage: `url(${splitBackgroundImage})`,
+                  backgroundSize: props.backgroundSize || "cover",
+                  backgroundPosition: props.backgroundPosition || "center center",
+                  backgroundRepeat: props.backgroundRepeat || "no-repeat",
+                  backgroundColor: props.backgroundColor || "#0f172a",
+                }}
+              />
+            ) : null}
+            {!splitBackgroundImage && editor ? (
+              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
+                Upload a background image
+              </div>
+            ) : null}
+            {splitBackgroundImage && Number(props.imageOverlayOpacity || 0) > 0 ? (
+              <div style={{ position: "absolute", inset: 0, background: props.imageOverlayColor || "#000000", opacity: Number(props.imageOverlayOpacity) / 100, pointerEvents: "none", zIndex: 2 }} />
+            ) : null}
+          </ScrollReveal>
+          <ScrollReveal
+            as="div"
+            animationName={props.rightPanelAnimation || "none"}
+            delay={Number(props.rightPanelAnimationDelay ?? 0)}
+            speed={props.rightPanelAnimationSpeed}
+            disabled={editor}
+            style={asStyleObject(contentPanelStyle)}
+          >
+            {(editor || !!stripPlaceholder(props.eyebrow)) ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0,
+                  marginBottom: compact ? 8 : 10,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: "inline-block",
+                    width: compact ? 44 : 70,
+                    height: 2,
+                    background: props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)",
+                    marginRight: 12,
+                    borderRadius: 999,
+                    flex: "0 0 auto",
+                  }}
+                />
+                <p
+                data-website-inline-editor="true"
+                data-text-prop="eyebrow"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                  onChangeBlock({ ...props, eyebrow: (cleaned === "Section label" || cleaned === "Section Label") ? "" : cleaned });
+                }}
+                style={{
+                  margin: 0,
+                  fontSize: compact ? 16 : 16,
+                  lineHeight: Number(props.eyebrowLineHeight || 1.2),
+                  fontWeight: 600,
+                  letterSpacing: "0.45px",
+                  textTransform: "capitalize",
+                  backgroundImage: props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  color: "transparent",
+                  textAlign: headlineBlockProps.alignment || "left",
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                  ...(shouldRunAnimations ? getAnimationStyle(headlineBlockProps.animation, Math.max(0, Number(headlineBlockProps.animationDelay || 0) - 0.08), headlineBlockProps.animationSpeed) : {}),
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.eyebrow) || (editor ? "Section label" : "")) }}
+                />
+              </div>
+            ) : null}
+            <ScrollReveal
+              as="div"
+              animationName={headlineBlockProps.animation || "fade-up"}
+              delay={headlineBlockProps.animationDelay || 0}
+              speed={headlineBlockProps.animationSpeed}
+              disabled={editor}
+              style={{ width: "100%" }}
+            >
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="headlineBlock.content"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  const content = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                  onChangeBlock({
+                    ...props,
+                    headline: content,
+                    headlineBlock: {
+                      ...(props.headlineBlock || {}),
+                      content,
+                    },
+                  });
+                }}
+                style={{
+                  margin: 0,
+                  fontSize: compact ? Math.max(30, Math.min(40, Number(headlineBlockProps.fontSize || 48))) : Math.max(32, Number(headlineBlockProps.fontSize || 48)),
+                  lineHeight: Number(headlineBlockProps.lineHeight || 1.2),
+                  fontWeight: headlineBlockProps.fontWeight || "400",
+                  fontFamily: headlineBlockProps.fontFamily || "Poppins, sans-serif",
+                  color: headlineBlockProps.color || "#61ce70",
+                  textAlign: headlineBlockProps.alignment || "left",
+                  letterSpacing: compact ? "-0.3px" : "-0.6px",
+                  marginBottom: 10,
+                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                  borderRadius: 8,
+                  padding: editor ? "4px 6px" : 0,
+                }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(headlineBlockProps.content || (editor ? "Headline" : "")) }}
+              />
+            </ScrollReveal>
+            {(bodyBlockProps.content || editor) ? (
+              <ScrollReveal
+                as="div"
+                animationName={bodyBlockProps.animation || "fade-in"}
+                delay={bodyBlockProps.animationDelay || 0}
+                speed={bodyBlockProps.animationSpeed}
+                disabled={editor}
+                style={{ width: "100%" }}
+              >
+                <p
+                  data-website-inline-editor="true"
+                  data-text-prop="bodyBlock.content"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => {
+                    if (!editor || typeof onChangeBlock !== "function") return;
+                    const content = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                    onChangeBlock({
+                      ...props,
+                      subheadline: content,
+                      bodyBlock: {
+                        ...(props.bodyBlock || {}),
+                        content,
+                      },
+                    });
+                  }}
+                  style={{
+                    margin: 0,
+                    fontSize: compact ? Math.max(16, Math.min(20, Number(bodyBlockProps.fontSize || 18))) : Math.max(14, Number(bodyBlockProps.fontSize || 18)),
+                    lineHeight: Number(bodyBlockProps.lineHeight || 1.6),
+                    color: bodyBlockProps.color || "#bdbcbf",
+                    fontFamily: bodyBlockProps.fontFamily || undefined,
+                    fontWeight: bodyBlockProps.fontWeight || undefined,
+                    textAlign: bodyBlockProps.alignment || "left",
+                    width: "100%",
+                    marginBottom: compact ? 20 : 35,
+                    outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                    borderRadius: 8,
+                    padding: editor ? "4px 6px" : 0,
+                  }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(bodyBlockProps.content || (editor ? "Supporting copy" : "")) }}
+                />
+              </ScrollReveal>
+            ) : null}
+            <div style={asStyleObject(faqWrapStyle)}>
+              <ScrollReveal as="div" animationName={faqBlockProps.sectionAnimation || "fade-up"} delay={faqBlockProps.sectionAnimationDelay || 0.12} speed={faqBlockProps.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqSurfaceStyle)}>
+                <FAQAccordionItems items={items} compact={compact} editor={editor} props={faqBlockProps} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="faqBlock.items" />
+              </ScrollReveal>
+            </div>
+          </ScrollReveal>
+        </div>
+        {Number(props.sectionOverlayOpacity || 0) > 0 ? (
+          <div style={{ position: "absolute", inset: 0, background: props.sectionOverlayColor || "#000000", opacity: Number(props.sectionOverlayOpacity) / 100, pointerEvents: "none", zIndex: 10 }} />
+        ) : null}
+    </ScrollReveal>
+  );
+}
+
+function renderOverlayGuides(guides) {
+  if (!guides?.active && !guides?.showX && !guides?.showY) return null;
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: guides.showX ? 2 : 1,
+          background: guides.showX ? "rgba(14,165,233,0.96)" : "rgba(14,165,233,0.28)",
+          boxShadow: guides.showX ? "0 0 0 1px rgba(255,255,255,0.24), 0 0 18px rgba(14,165,233,0.24)" : "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          height: guides.showY ? 2 : 1,
+          background: guides.showY ? "rgba(14,165,233,0.96)" : "rgba(14,165,233,0.28)",
+          boxShadow: guides.showY ? "0 0 0 1px rgba(255,255,255,0.24), 0 0 18px rgba(14,165,233,0.24)" : "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: guides.showX || guides.showY ? 12 : 8,
+          height: guides.showX || guides.showY ? 12 : 8,
+          borderRadius: 999,
+          background: guides.showX || guides.showY ? "#38bdf8" : "rgba(148,163,184,0.5)",
+          border: "2px solid rgba(255,255,255,0.85)",
+          boxShadow: guides.showX || guides.showY ? "0 0 18px rgba(56,189,248,0.28)" : "none",
+        }}
+      />
+    </div>
+  );
+}
+
+function getOverlayGuideState(x, y, rect) {
+  const safeWidth = Math.max(rect?.width || 1, 1);
+  const safeHeight = Math.max(rect?.height || 1, 1);
+  const xThreshold = Math.max(1, (12 / safeWidth) * 100);
+  const yThreshold = Math.max(1, (12 / safeHeight) * 100);
+  const snappedX = Math.abs(x - 50) <= xThreshold ? 50 : x;
+  const snappedY = Math.abs(y - 50) <= yThreshold ? 50 : y;
+
+  return {
+    snappedX,
+    snappedY,
+    showX: snappedX === 50,
+    showY: snappedY === 50,
+  };
+}
+
+function getPixelGuideState(x, y, width, height, rect, threshold = 10) {
+  const safeWidth = Math.max(rect?.width || 1, 1);
+  const safeHeight = Math.max(rect?.height || 1, 1);
+  const centerX = x + (width / 2);
+  const centerY = y + (height / 2);
+  const targetX = safeWidth / 2;
+  const targetY = safeHeight / 2;
+  const showX = Math.abs(centerX - targetX) <= threshold;
+  const showY = Math.abs(centerY - targetY) <= threshold;
+
+  return {
+    snappedX: showX ? targetX - (width / 2) : x,
+    snappedY: showY ? targetY - (height / 2) : y,
+    showX,
+    showY,
+  };
+}
+
+function renderCanvasCenterGuides(guides) {
+  if (!guides?.active && !guides?.showX && !guides?.showY) return null;
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 999 }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: "50%",
+          width: guides.showX ? 2 : 1,
+          background: guides.showX ? "rgba(56,189,248,0.98)" : "rgba(56,189,248,0.28)",
+          boxShadow: guides.showX ? "0 0 0 1px rgba(255,255,255,0.28), 0 0 20px rgba(56,189,248,0.32)" : "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          height: guides.showY ? 2 : 1,
+          background: guides.showY ? "rgba(56,189,248,0.98)" : "rgba(56,189,248,0.28)",
+          boxShadow: guides.showY ? "0 0 0 1px rgba(255,255,255,0.28), 0 0 20px rgba(56,189,248,0.32)" : "none",
+        }}
+      />
+    </div>
+  );
+}
+
+function getOverlayBoundsElement(shell) {
+  if (!shell) return null;
+  return shell.closest?.('[data-overlay-bounds="true"]') || shell.parentElement || null;
+}
+
+function useOverlayBounds(shellRef) {
+  const [bounds, setBounds] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const shell = shellRef.current;
+    const boundsNode = getOverlayBoundsElement(shell);
+    if (!boundsNode) return undefined;
+
+    const updateBounds = () => {
+      const rect = boundsNode.getBoundingClientRect();
+      // getBoundingClientRect() returns scaled pixel dimensions when the canvas
+      // is CSS-transformed (e.g. scale(0.4) to fit desktop canvas into builder pane).
+      // Divide by the canvas scale so maxUsableWidth is based on the real layout size.
+      const canvasScale = Number(boundsNode.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1) || 1;
+      setBounds({ width: (rect.width || 0) / canvasScale, height: (rect.height || 0) / canvasScale });
+    };
+
+    updateBounds();
+
+    let observer;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(updateBounds);
+      observer.observe(boundsNode);
+    }
+
+    window.addEventListener("resize", updateBounds);
+    return () => {
+      observer?.disconnect?.();
+      window.removeEventListener("resize", updateBounds);
+    };
+  }, [shellRef]);
+
+  return bounds;
+}
+
+function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align = "center", vertical = "center", children, overlayEnabled = false, contentShellStyle = null }) {
+  const dragRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const latestPropsRef = React.useRef(props || {});
+  const draftPatchRef = React.useRef(null);
+  const onChangeBlockRef = React.useRef(onChangeBlock);
+  onChangeBlockRef.current = onChangeBlock;
+  const [guides, setGuides] = React.useState({ showX: false, showY: false, active: false });
+  const [draftPatch, setDraftPatch] = React.useState(null);
+  const [isActive, setIsActive] = React.useState(false);
+  const bounds = useOverlayBounds(shellRef);
+  const canManipulate = !!editor && !compact;
+  const xPct = Number(props?.contentX ?? 50);
+  const yPct = Number(props?.contentY ?? 50);
+  const boxWidth = Math.max(240, Number(props?.contentWidth ?? 760));
+  const boxHeight = Math.max(100, Number(props?.contentHeight ?? 220));
+  const displayX = Number(draftPatch?.contentX ?? xPct);
+  const displayY = Number(draftPatch?.contentY ?? yPct);
+  const displayBoxWidth = Math.max(240, Number(draftPatch?.contentWidth ?? boxWidth));
+  const displayBoxHeight = Math.max(100, Number(draftPatch?.contentHeight ?? boxHeight));
+  const maxUsableWidth = bounds.width ? Math.max(180, bounds.width - 24) : boxWidth;
+  const maxUsableHeight = bounds.height ? Math.max(80, bounds.height - 24) : boxHeight;
+  const effectiveWidth = Math.min(displayBoxWidth, maxUsableWidth);
+  const effectiveHeight = Math.min(displayBoxHeight, maxUsableHeight);
+  const constrainedWidth = `min(${effectiveWidth}px, calc(100% - 24px))`;
+  const constrainedLeft = `clamp(calc(${effectiveWidth}px / 2), ${displayX}%, calc(100% - (${effectiveWidth}px / 2)))`;
+  const constrainedTop = `clamp(calc(${effectiveHeight}px / 2), ${displayY}%, calc(100% - (${effectiveHeight}px / 2)))`;
+
+  React.useEffect(() => {
+    latestPropsRef.current = props || {};
+  }, [props]);
+
+  React.useEffect(() => {
+    if (!editor) return undefined;
+
+    const handleOutsidePointer = (event) => {
+      const shell = shellRef.current;
+      if (!shell || shell.contains(event.target)) return;
+      dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
+      setGuides({ showX: false, showY: false, active: false });
+      setIsActive(false);
+      if (shell.contains(document.activeElement) && typeof document.activeElement?.blur === "function") {
+        document.activeElement.blur();
+      }
+      if (window.getSelection) {
+        const selection = window.getSelection();
+        if (selection && typeof selection.removeAllRanges === "function") selection.removeAllRanges();
+      }
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointer, true);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointer, true);
+  }, [editor]);
+
+  React.useEffect(() => {
+    if (!editor || !canManipulate) return undefined;
+
+    const handleMove = (event) => {
+      const current = dragRef.current;
+      if (!current) return;
+      const dx = (event.clientX - current.startX) / (current.canvasScale || 1);
+      const dy = (event.clientY - current.startY) / (current.canvasScale || 1);
+
+      if (current.mode === "resize") {
+        let nextWidth = current.baseWidth;
+        let nextHeight = current.baseHeight;
+
+        if (["left", "nw", "sw"].includes(current.handle)) nextWidth = current.baseWidth - dx;
+        if (["right", "ne", "se"].includes(current.handle)) nextWidth = current.baseWidth + dx;
+        if (["top", "nw", "ne"].includes(current.handle)) nextHeight = current.baseHeight - dy;
+        if (["bottom", "sw", "se"].includes(current.handle)) nextHeight = current.baseHeight + dy;
+
+        nextWidth = clampValue(nextWidth, 180, current.rect.width);
+        nextHeight = clampValue(nextHeight, 80, current.rect.height);
+
+        const halfWidthPct = (nextWidth / current.rect.width) * 50;
+        const halfHeightPct = (nextHeight / current.rect.height) * 50;
+        const guideState = getOverlayGuideState(
+          clampValue(current.baseX, halfWidthPct, 100 - halfWidthPct),
+          clampValue(current.baseY, halfHeightPct, 100 - halfHeightPct),
+          current.rect,
+        );
+
+        const patch = {
+          contentWidth: Math.round(nextWidth),
+          contentHeight: Math.round(nextHeight),
+          contentX: Math.round(guideState.snappedX),
+          contentY: Math.round(guideState.snappedY),
+        };
+        draftPatchRef.current = patch;
+        setDraftPatch(patch);
+        setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
+        return;
+      }
+
+      const halfWidthPct = (current.baseWidth / current.rect.width) * 50;
+      const halfHeightPct = (current.baseHeight / current.rect.height) * 50;
+      const guideState = getOverlayGuideState(
+        clampValue(current.baseX + ((dx / current.rect.width) * 100), halfWidthPct, 100 - halfWidthPct),
+        clampValue(current.baseY + ((dy / current.rect.height) * 100), halfHeightPct, 100 - halfHeightPct),
+        current.rect,
+      );
+
+      const patch = { contentX: Math.round(guideState.snappedX), contentY: Math.round(guideState.snappedY) };
+      draftPatchRef.current = patch;
+      setDraftPatch(patch);
+      setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
+    };
+
+    const handleUp = () => {
+      const patch = draftPatchRef.current;
+      dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
+      setGuides({ showX: false, showY: false, active: false });
+      if (patch) onChangeBlockRef.current?.({ ...latestPropsRef.current, ...patch });
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [editor, canManipulate]);
+
+  function startInteraction(event, mode = "move", handle = "se") {
+    if (!editor || !canManipulate) return;
+    setIsActive(true);
+    setGuides((prev) => ({ ...prev, active: true }));
+    event.preventDefault();
+    event.stopPropagation();
+    const rectRaw = getOverlayBoundsElement(shellRef.current)?.getBoundingClientRect();
+    if (!rectRaw) return;
+    const canvasScale = Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1);
+    const rect = { ...rectRaw, width: rectRaw.width / canvasScale, height: rectRaw.height / canvasScale };
+    dragRef.current = {
+      mode,
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: xPct,
+      baseY: yPct,
+      baseWidth: effectiveWidth,
+      baseHeight: effectiveHeight,
+      rect,
+      canvasScale,
+    };
+  }
+
+  function maybeStartMove(event) {
+    const target = event.target;
+    if (target?.closest?.('[contenteditable="true"], button, a, input, textarea, select, [data-overlay-resize="true"]')) {
+      return;
+    }
+    startInteraction(event, "move");
+  }
+
+  if (!overlayEnabled || compact) {
+    return (
+      <div style={{ position: "relative", zIndex: 3, width: "100%" }}>
+        <div style={{ width: "100%", maxWidth: "100%" }}>{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {editor ? renderOverlayGuides(guides) : null}
+      <div
+        ref={shellRef}
+        onPointerDownCapture={() => setIsActive(true)}
+        onMouseDownCapture={() => setIsActive(true)}
+        onFocusCapture={() => setIsActive(true)}
+        onPointerDown={maybeStartMove}
+        onMouseDown={maybeStartMove}
+        style={{
+          position: "absolute",
+          left: constrainedLeft,
+          top: constrainedTop,
+          transform: "translate(-50%, -50%)",
+          width: constrainedWidth,
+          maxWidth: "100%",
+          minHeight: `${effectiveHeight}px`,
+          zIndex: isActive ? 4 : 3,
+          border: editor ? "1px dashed rgba(125,211,252,0.9)" : "none",
+          borderRadius: 14,
+          padding: editor ? "30px 0 6px" : 0,
+          background: editor && isActive ? "rgba(15,23,42,0.06)" : "transparent",
+          boxSizing: "border-box",
+          touchAction: "none",
+          cursor: editor ? "move" : "default",
+          pointerEvents: "auto",
+        }}
+      >
+        {editor ? (
+          <div
+            data-overlay-drag-handle="true"
+            onPointerDown={(event) => startInteraction(event, "move")}
+            onMouseDown={(event) => startInteraction(event, "move")}
+            style={{ position: "absolute", top: 4, left: 8, right: 8, zIndex: 5, cursor: "move", display: "flex", justifyContent: align === "right" ? "flex-end" : align === "left" ? "flex-start" : "center" }}
+          >
+            <span style={sharedStyles.editorChip}>Drag Text Box</span>
+          </div>
+        ) : null}
+        {editor ? (
+          <button
+            type="button"
+            title="Delete text block"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...latestPropsRef.current, hideTextOverlay: true }); }}
+            style={{ position: "absolute", top: 4, right: 6, zIndex: 10, width: 22, height: 22, borderRadius: "50%", background: "#ef4444", border: "2px solid #fff", color: "#fff", fontSize: 13, fontWeight: 700, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(239,68,68,0.5)" }}
+          >
+            ✕
+          </button>
+        ) : null}
+        <div
+          style={{
+            width: "100%",
+            minHeight: Math.max(80, effectiveHeight),
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: vertical === "top" ? "flex-start" : vertical === "bottom" ? "flex-end" : "center",
+            alignItems: "stretch",
+            textAlign: align,
+            overflow: editor ? "hidden" : "visible",
+            boxSizing: "border-box",
+            background: props?.contentBackground || (editor ? "rgba(15,23,42,0.08)" : "transparent"),
+            borderRadius: 16,
+            padding: (editor || (props?.contentBackground && props.contentBackground !== "transparent")) ? (compact ? 12 : 18) : 0,
+            backdropFilter: props?.contentBackground && props.contentBackground !== "transparent" ? "blur(2px)" : "none",
+            ...(contentShellStyle || {}),
+          }}
+        >
+          {children}
+        </div>
+        {editor && isActive ? [
+          { key: "left", left: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
+          { key: "right", right: -7, top: "50%", transform: "translateY(-50%)", cursor: "ew-resize", width: 14, height: 28 },
+          { key: "top", top: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
+          { key: "bottom", bottom: -7, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize", width: 28, height: 14 },
+          { key: "nw", left: -7, top: -7, cursor: "nwse-resize", width: 14, height: 14 },
+          { key: "ne", right: -7, top: -7, cursor: "nesw-resize", width: 14, height: 14 },
+          { key: "sw", left: -7, bottom: -7, cursor: "nesw-resize", width: 14, height: 14 },
+          { key: "se", right: -7, bottom: -7, cursor: "nwse-resize", width: 14, height: 14 },
+        ].map((handle) => (
+          <div
+            key={handle.key}
+            data-overlay-resize="true"
+            onPointerDown={(event) => startInteraction(event, "resize", handle.key)}
+            onMouseDown={(event) => startInteraction(event, "resize", handle.key)}
+            style={{ position: "absolute", borderRadius: 999, background: "#0ea5e9", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(14,165,233,0.35)", ...handle }}
+          />
+        )) : null}
+      </div>
+    </>
+  );
+}
+
+function resolveColumnCardStyle(props, prefix, compact) {
+  const bg = props?.[`${prefix}BackgroundColor`] || props?.columnBackgroundColor || props?.cardBackgroundColor || "#f8fafc";
+  const borderColor = props?.[`${prefix}BorderColor`] || props?.columnBorderColor || "rgba(148,163,184,0.28)";
+  const radius = Number(props?.[`${prefix}Radius`] ?? props?.columnRadius ?? 18);
+  const padding = Number(props?.[`${prefix}Padding`] ?? props?.columnPadding ?? (compact ? 14 : 18));
+  const marginTop = Number(props?.[`${prefix}MarginTop`] ?? 0);
+  const minHeight = Number(props?.[`${prefix}MinHeight`] ?? 0);
+  const shadowPreset = String(props?.[`${prefix}Shadow`] || props?.columnShadow || "soft");
+  const align = String(props?.[`${prefix}ContentAlign`] || props?.columnContentAlign || "left");
+  const overlayColor = String(props?.[`${prefix}OverlayColor`] || props?.columnOverlayColor || "transparent");
+  const gradient = String(props?.[`${prefix}Gradient`] || props?.columnGradient || "").trim();
+  const shadowMap = {
+    none: "none",
+    soft: "0 10px 24px rgba(15,23,42,0.08)",
+    medium: "0 18px 36px rgba(15,23,42,0.14)",
+    strong: "0 26px 48px rgba(15,23,42,0.18)",
+  };
+
+  return {
+    marginTop,
+    align,
+    bodyTextColor: props?.[`${prefix}BodyColor`] || props?.columnBodyColor || props?.textColor || "#334155",
+    titleTextColor: props?.[`${prefix}TitleColor`] || props?.columnTitleColor || props?.textColor || "#0f172a",
+    style: {
+      background: gradient || bg,
+      border: `1px solid ${borderColor}`,
+      borderRadius: Math.max(0, radius),
+      padding: Math.max(0, padding),
+      boxShadow: shadowMap[shadowPreset] || shadowMap.soft,
+      minHeight: minHeight > 0 ? minHeight : undefined,
+      position: "relative",
+      overflow: "hidden",
+    },
+    overlay: overlayColor && overlayColor !== "transparent" ? (
+      <div style={{ position: "absolute", inset: 0, background: overlayColor, pointerEvents: "none" }} />
+    ) : null,
+  };
+}
+
+function normalizeGridSectionItems(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return [{ icon: "", iconName: "", iconGlyph: "", iconFontFamily: "", iconImage: "", iconAssetId: "", title: "", content: "", image: "" }];
+  }
+
+  return items.map((item) => ({
+    icon: String(item?.icon || ""),
+    iconName: String(item?.iconName || ""),
+    iconGlyph: String(item?.iconGlyph || ""),
+    iconFontFamily: String(item?.iconFontFamily || ""),
+    iconImage: String(item?.iconImage || ""),
+    iconAssetId: String(item?.iconAssetId || ""),
+    title: String(item?.title || ""),
+    eyebrow: String(item?.eyebrow || ""),
+    content: String(item?.content || ""),
+    link: String(item?.link || ""),
+    image: String(item?.image || ""),
+    imageAlt: String(item?.imageAlt || ""),
+    imageHeight: item?.imageHeight,
+  }));
+}
+
+function renderGridSectionIcon(item, color, size) {
+  if (item?.iconImage) {
+    return <img src={item.iconImage} alt={item?.title || "Grid icon"} style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
+  }
+  if (item?.iconGlyph && item?.iconFontFamily) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: item.iconFontFamily,
+          fontSize: size,
+          lineHeight: 1,
+          color,
+          display: "block",
+          fontStyle: "normal",
+          fontWeight: 400,
+          WebkitFontSmoothing: "antialiased",
+          MozOsxFontSmoothing: "grayscale",
+        }}
+      >
+        {item.iconGlyph}
+      </span>
+    );
+  }
+  const namedIcon = renderGridLibraryIcon(item?.iconName, { size, color });
+  if (namedIcon) {
+    return namedIcon;
+  }
+  if (item?.icon) {
+    return <span style={{ fontSize: size, lineHeight: 1, color }}>{item.icon}</span>;
+  }
+  return null;
+}
+
+function resolveServicesStylePreset(props = {}) {
+  switch (String(props?.servicesStylePreset || "style-01").trim()) {
+    case "style-02":
+      return {
+        cardRadius: 24,
+        badgeRadius: 18,
+        panelRadius: 20,
+        panelInset: { left: 20, right: 20, bottom: 20 },
+        panelPadding: "22px 26px",
+        panelBackground: "rgba(12,18,34,0.76)",
+        panelHoverBackground: "rgba(12,18,34,0.88)",
+        cardSurface: "linear-gradient(180deg, rgba(9,16,30,0.98), rgba(18,30,52,0.98))",
+        badgePosition: { top: 18, left: 18, right: "auto" },
+        contentAlign: "center",
+        titleWeight: 700,
+        panelShadow: "0 18px 34px rgba(0,0,0,0.2)",
+      };
+    case "style-03":
+      return {
+        cardRadius: 18,
+        badgeRadius: 16,
+        panelRadius: 0,
+        panelInset: { left: 24, right: 24, bottom: 28 },
+        panelPadding: "0px",
+        panelBackground: "transparent",
+        panelHoverBackground: "transparent",
+        cardSurface: "linear-gradient(180deg, rgba(8,12,24,0.98), rgba(18,27,46,0.98))",
+        badgePosition: { top: 18, right: 18 },
+        contentAlign: "left",
+        titleWeight: 600,
+        panelShadow: "none",
+      };
+    default:
+      return {
+        cardRadius: 15,
+        badgeRadius: 15,
+        panelRadius: 15,
+        panelInset: { left: 12.5, right: 12.5, bottom: 20 },
+        panelPadding: "25px 40px",
+        panelBackground: "linear-gradient(290deg, rgba(15,23,42,0.9), rgba(3,34,47,0.92))",
+        panelHoverBackground: "linear-gradient(290deg, rgba(17,24,39,0.92), rgba(8,47,73,0.94))",
+        cardSurface: "linear-gradient(180deg, rgba(15,23,42,0.92), rgba(30,41,59,0.96))",
+        badgePosition: { top: 0, right: 20 },
+        contentAlign: "left",
+        titleWeight: 400,
+        panelShadow: "0 2px 28px rgba(0,0,0,0.09)",
+        useImageBackground: false,
+      };
+  }
+}
+
+function resolveServicesColorPreset(props = {}) {
+  switch (String(props?.servicesColorPreset || "blue").trim()) {
+    case "green":
+      return {
+        badgeBackground: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+        badgeShadow: "rgba(34,197,94,0.24)",
+        badgeGlow: "rgba(190,242,100,0.2)",
+        eyebrowGradient: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+        titleColor: "#86efac",
+        bodyColor: "rgba(248,250,252,0.92)",
+        sectionTitleColor: "#dcfce7",
+      };
+    default:
+      return {
+        badgeBackground: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+        badgeShadow: "rgba(12,140,233,0.28)",
+        badgeGlow: "rgba(56,189,248,0.22)",
+        eyebrowGradient: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        titleColor: "#7dd3fc",
+        bodyColor: "rgba(248,250,252,0.92)",
+        sectionTitleColor: "#dbeafe",
+      };
+  }
+}
+
+function ServicesGridCard({
+  item,
+  itemIndex,
+  compact,
+  editor,
+  props,
+  baseDelay,
+  serviceTileRadius,
+  tileHeight,
+  topIconNode,
+  ghostIconNode,
+  imageStyle,
+  iconStyle,
+  titleStyle,
+  bodyStyle,
+  eyebrowFontSize,
+  serviceIconBadgeWidth,
+  serviceIconBadgeHeight,
+  serviceIconBadgePadding,
+  cardTitleFontSize,
+  cardBodyFontSize,
+  onUpdate,
+}) {
+  const [hovered, setHovered] = React.useState(false);
+  const stylePreset = resolveServicesStylePreset(props);
+  const colorPreset = resolveServicesColorPreset(props);
+  const navigateHref = String(item?.link || "").trim();
+  const cardLinkEnabled = !!navigateHref && !editor;
+  const badgeMotionStyle = editor
+    ? {}
+    : {
+        ...ambientMotionStyle("float", baseDelay * 0.3),
+        animationDuration: hovered ? "3.1s" : "7.2s",
+      };
+  const ghostMotionStyle = editor
+    ? {}
+    : {
+        ...ambientMotionStyle("pulse", baseDelay * 0.25),
+        animationDuration: hovered ? "2.2s" : "4.8s",
+      };
+  const cardSurface = stylePreset.cardSurface;
+  const cardBorder = props?.columnBorderColor || "rgba(148,163,184,0.28)";
+  const cardInset = hovered
+    ? "inset 0 0 0 1px rgba(255,255,255,0.16)"
+    : "inset 0 0 0 1px rgba(255,255,255,0.08)";
+  const contentPanelBackground = hovered ? stylePreset.panelHoverBackground : stylePreset.panelBackground;
+  const showCardImage = stylePreset.useImageBackground !== false && !!item.image;
+  const activateCardLink = React.useCallback((event) => {
+    if (!navigateHref || typeof window === "undefined") return;
+    const interactiveTarget = event?.target?.closest?.("a,button,input,textarea,select,label");
+    if (interactiveTarget) return;
+    window.location.assign(navigateHref);
+  }, [navigateHref]);
+
+  // Flip card variant — front shows image+title, hover reveals grey back with description + "Learn More"
+  if (props?.cardFlipEffect) {
+    const flipHeight = tileHeight || (compact ? 260 : 360);
+    const flipRadius = Number(stylePreset.cardRadius) || 16;
+    const backBg = props.cardFlipBackColor || "#374151";
+    const btnBg = props.buttonBackgroundColor || colorPreset.badgeBackground || "#0ea5e9";
+    const btnLabel = props.cardFlipButtonText || "Learn More";
+    const backDescription = item.content || item.eyebrow || "";
+
+    return (
+      <article
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        style={{ position: "relative", height: flipHeight, perspective: "1200px", cursor: "default" }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            transformStyle: "preserve-3d",
+            transform: hovered ? "rotateY(180deg)" : "rotateY(0deg)",
+            transition: "transform 620ms cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          {/* Front face */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              borderRadius: flipRadius,
+              overflow: "hidden",
+              background: cardSurface,
+              border: `1px solid ${cardBorder}`,
+            }}
+          >
+            {showCardImage ? (
+              <img
+                src={item.image}
+                alt={item.imageAlt || item.title || ""}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            ) : null}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(180deg, rgba(2,6,23,0.0) 38%, rgba(2,6,23,0.78) 100%)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: 16,
+                right: 16,
+                bottom: 20,
+                zIndex: 2,
+              }}
+            >
+              {item.title ? (
+                <div style={{ color: "#fff", fontSize: compact ? 18 : 22, fontWeight: 700, lineHeight: 1.25 }}>
+                  {item.title}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Back face */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              transform: "rotateY(180deg)",
+              borderRadius: flipRadius,
+              overflow: "hidden",
+              background: backBg,
+              border: `1px solid ${props.cardFlipBorderColor || "rgba(156,163,175,0.25)"}`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: compact ? "20px 16px" : "28px 24px",
+              textAlign: "center",
+              gap: 14,
+            }}
+          >
+            {topIconNode ? (
+              <div
+                style={{
+                  width: serviceIconBadgeWidth,
+                  height: serviceIconBadgeHeight,
+                  borderRadius: stylePreset.badgeRadius,
+                  background: colorPreset.badgeBackground,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  padding: serviceIconBadgePadding,
+                  boxSizing: "border-box",
+                  flexShrink: 0,
+                }}
+              >
+                {topIconNode}
+              </div>
+            ) : null}
+            <div style={{ color: props.cardFlipTitleColor || "#f9fafb", fontSize: compact ? 18 : 22, fontWeight: 700, lineHeight: 1.25 }}>
+              {item.title}
+            </div>
+            {backDescription ? (
+              <div
+                style={{
+                  color: props.cardFlipBodyColor || "rgba(249,250,251,0.78)",
+                  fontSize: compact ? 13 : 15,
+                  lineHeight: 1.65,
+                  flexGrow: 1,
+                  maxWidth: 260,
+                }}
+              >
+                {backDescription}
+              </div>
+            ) : null}
+            {navigateHref ? (
+              <a
+                href={navigateHref}
+                style={{
+                  display: "inline-block",
+                  marginTop: 2,
+                  padding: compact ? "8px 20px" : "10px 26px",
+                  borderRadius: 9999,
+                  background: btnBg,
+                  color: props.cardFlipButtonTextColor || "#fff",
+                  fontSize: compact ? 13 : 14,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  flexShrink: 0,
+                }}
+              >
+                {btnLabel}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      onClick={cardLinkEnabled ? activateCardLink : undefined}
+      onKeyDown={cardLinkEnabled ? (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        activateCardLink(event);
+      } : undefined}
+      role={cardLinkEnabled ? "link" : undefined}
+      tabIndex={cardLinkEnabled ? 0 : undefined}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: stylePreset.cardRadius,
+        minHeight: tileHeight || undefined,
+        aspectRatio: compact ? undefined : "1 / 1",
+        height: compact ? (tileHeight || 260) : "auto",
+        background: cardSurface,
+        border: `1px solid ${cardBorder}`,
+        boxShadow: hovered ? `0 24px 54px rgba(2,6,23,0.34), ${cardInset}` : `0 10px 26px rgba(2,6,23,0.18), ${cardInset}`,
+        transform: hovered ? "scale(1.03)" : "scale(1)",
+        cursor: cardLinkEnabled ? "pointer" : "default",
+        transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
+      {showCardImage ? (
+        <img
+          src={item.image}
+          alt={item.imageAlt || item.title || "Grid item image"}
+          style={{
+            position: "absolute",
+            inset: -1,
+            width: "calc(100% + 2px)",
+            height: "calc(100% + 2px)",
+            objectFit: "cover",
+            borderRadius: stylePreset.cardRadius,
+            display: "block",
+            transform: hovered ? "scale(1.12)" : "scale(1)",
+            filter: hovered ? "grayscale(1)" : "grayscale(0)",
+            transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), filter 360ms ease",
+            ...imageStyle,
+          }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: stylePreset.cardRadius,
+          background: hovered
+            ? "linear-gradient(180deg, rgba(2,6,23,0.01) 0%, rgba(2,6,23,0.06) 34%, rgba(2,6,23,0.36) 58%, rgba(3,12,24,0.74) 100%)"
+            : "linear-gradient(180deg, rgba(2,6,23,0.02) 0%, rgba(2,6,23,0.08) 38%, rgba(2,6,23,0.42) 62%, rgba(3,12,24,0.66) 100%)",
+          zIndex: 1,
+          pointerEvents: "none",
+          transition: "background 320ms ease",
+        }}
+      />
+      {topIconNode ? (
+        <div
+          style={{
+            position: "absolute",
+            top: stylePreset.badgePosition?.top ?? 0,
+            right: stylePreset.badgePosition?.right ?? (compact ? 14 : 20),
+            left: stylePreset.badgePosition?.left,
+            zIndex: 4,
+            ...iconStyle,
+          }}
+        >
+          <div
+            style={{
+              width: serviceIconBadgeWidth,
+              height: serviceIconBadgeHeight,
+              borderRadius: stylePreset.badgeRadius,
+              background: colorPreset.badgeBackground,
+              backgroundSize: hovered ? "150% 150%" : "120% 120%",
+              backgroundPosition: hovered ? "34% 50%" : "80% 50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              padding: serviceIconBadgePadding,
+              boxSizing: "border-box",
+              boxShadow: hovered ? `0 16px 26px ${colorPreset.badgeShadow}` : `0 8px 16px ${colorWithAlpha(colorPreset.badgeShadow, 0.55)}`,
+              filter: hovered ? `drop-shadow(0 12px 20px ${colorPreset.badgeGlow})` : `drop-shadow(0 6px 12px ${colorWithAlpha(colorPreset.badgeShadow, 0.5)})`,
+              transform: hovered ? "translate3d(0, 6px, 0) scale(1.04)" : "translate3d(0, 0, 0) scale(1)",
+              transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), background-size 320ms ease, background-position 320ms ease, box-shadow 320ms ease, filter 320ms ease",
+              ...badgeMotionStyle,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: hovered ? "wbIconDoubleSpin 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1" : "none",
+              }}
+            >
+              {topIconNode}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          left: compact ? 10 : 12.5,
+          right: compact ? 10 : 12.5,
+          bottom: compact ? 14 : 20,
+          ...(stylePreset.panelInset || {}),
+          zIndex: 4,
+          padding: compact ? "18px 24px" : stylePreset.panelPadding,
+          borderRadius: stylePreset.panelRadius,
+          background: contentPanelBackground,
+          boxShadow: hovered ? "0 18px 34px rgba(0,0,0,0.18)" : stylePreset.panelShadow,
+          overflow: "hidden",
+          transform: hovered ? "translateY(-10px)" : "translateY(0)",
+          transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), background 320ms ease, box-shadow 320ms ease",
+          textAlign: stylePreset.contentAlign,
+        }}
+      >
+        {ghostIconNode ? (
+          <div
+            style={{
+              position: "absolute",
+              right: -10,
+              bottom: -15,
+              zIndex: 0,
+              opacity: hovered ? 0.24 : 0.1,
+              transform: hovered ? "translate3d(-8px, -4px, 0) rotate(-10deg) scale(0.98)" : "translate3d(0, 0, 0) rotate(0deg) scale(0.8)",
+              transformOrigin: "right bottom",
+              transition: "opacity 320ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+              pointerEvents: "none",
+              color: "#8ee5ff",
+              ...ghostMotionStyle,
+            }}
+          >
+            {ghostIconNode}
+          </div>
+        ) : null}
+        {item.title ? (
+          <div
+            key={`service-title-${itemIndex}-${cardTitleFontSize}`}
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { title: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...bodyStyle,
+              position: "relative",
+              zIndex: 1,
+              margin: 0,
+              color: props.cardTitleColor || colorPreset.titleColor,
+              fontSize: cardTitleFontSize,
+              lineHeight: 1.3,
+              fontWeight: stylePreset.titleWeight,
+              letterSpacing: "-0.1px",
+              outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.title || "Card title") }}
+          />
+        ) : null}
+        {item.eyebrow ? (
+          <div
+            key={`service-subtitle-${itemIndex}-${eyebrowFontSize}`}
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { eyebrow: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...titleStyle,
+              display: "inline-block",
+              width: "fit-content",
+              maxWidth: "100%",
+              position: "relative",
+              zIndex: 1,
+              margin: item.title ? "6px 0 0" : 0,
+              fontSize: eyebrowFontSize,
+              fontWeight: 500,
+              lineHeight: 1.3,
+              letterSpacing: "-0.3px",
+              color: "rgba(248,250,252,0.92)",
+              outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.eyebrow || "") }}
+          />
+        ) : null}
+        {item.content ? (
+          <div
+            data-website-inline-editor="true"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(e) => onUpdate(itemIndex, { content: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
+            style={{
+              ...bodyStyle,
+              position: "relative",
+              zIndex: 1,
+              marginTop: 8,
+              color: colorPreset.bodyColor,
+              fontSize: cardBodyFontSize,
+              lineHeight: 1.6,
+              outline: editor ? "1px dashed rgba(14,165,233,0.28)" : "none",
+              borderRadius: 8,
+              padding: editor ? "2px 4px" : 0,
+            }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(item.content || "") }}
+          />
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function isServicesGridVariant(props, items) {
+  if (String(props?.gridVariant || "").trim() === "services") return true;
+  return Array.isArray(items) && items.length >= 4 && items.every((item) => item?.image && item?.link && item?.eyebrow);
+}
+
+function resolveGridSectionCardStyle(props, compact) {
+  const borderColor = props?.columnBorderColor || "rgba(148,163,184,0.28)";
+  const radius = Number(props?.columnRadius ?? 18);
+  const padding = Number(props?.columnPadding ?? (compact ? 14 : 18));
+  const shadowPreset = String(props?.columnShadow || "soft");
+  const overlayColor = String(props?.columnOverlayColor || "transparent");
+  const gradient = String(props?.columnGradient || "").trim();
+  const shadowMap = {
+    none: "none",
+    soft: "0 10px 24px rgba(15,23,42,0.08)",
+    medium: "0 18px 36px rgba(15,23,42,0.14)",
+    strong: "0 26px 48px rgba(15,23,42,0.18)",
+  };
+
+  return {
+    align: String(props?.columnContentAlign || "left"),
+    titleTextColor: props?.columnTitleColor || props?.textColor || "#0f172a",
+    bodyTextColor: props?.columnBodyColor || "#334155",
+    iconColor: props?.iconColor || props?.textColor || "#0f172a",
+    style: {
+      background: gradient || props?.columnBackgroundColor || props?.cardBackgroundColor || "#f8fafc",
+      border: `1px solid ${borderColor}`,
+      borderRadius: Math.max(0, radius),
+      padding: Math.max(0, padding),
+      boxShadow: shadowMap[shadowPreset] || shadowMap.soft,
+      minHeight: Number(props?.gridItemMinHeight ?? 0) > 0 ? Number(props?.gridItemMinHeight) : undefined,
+      position: "relative",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      gap: compact ? 12 : 14,
+      height: "100%",
+    },
+    overlay: overlayColor && overlayColor !== "transparent" ? (
+      <div style={{ position: "absolute", inset: 0, background: overlayColor, pointerEvents: "none" }} />
+    ) : null,
+  };
+}
+
+function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
+  const dragRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const onUpdateRef = React.useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const draftRef = React.useRef(null); // never in effect deps — avoids listener churn on every pixel
+  const [draft, setDraft] = React.useState(null);
+  const [isActive, setIsActive] = React.useState(false);
+
+  const x = Number(draft?.x ?? item.x ?? 50);
+  const y = Number(draft?.y ?? item.y ?? 30);
+  const w = Math.max(80, Number(draft?.width ?? item.width ?? 320));
+  const h = Math.max(30, Number(draft?.height ?? item.height ?? 80));
+
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    const handleMove = (event) => {
+      const cur = dragRef.current;
+      if (!cur) return;
+      const { containerBounds } = cur;
+      if (!containerBounds || containerBounds.width === 0) return;
+      const dx = (event.clientX - cur.startX) / (cur.canvasScale || 1);
+      const dy = (event.clientY - cur.startY) / (cur.canvasScale || 1);
+      let next;
+      if (cur.mode === "resize") {
+        next = { x: cur.baseX, y: cur.baseY, width: Math.round(Math.max(80, cur.baseW + dx)), height: Math.round(Math.max(30, cur.baseH + dy)) };
+      } else {
+        next = {
+          x: Math.round(Math.max(0, Math.min(100, cur.baseX + (dx / containerBounds.width) * 100))),
+          y: Math.round(Math.max(0, Math.min(100, cur.baseY + (dy / containerBounds.height) * 100))),
+          width: cur.baseW,
+          height: cur.baseH,
+        };
+      }
+      draftRef.current = next;
+      setDraft({ ...next });
+    };
+    const handleUp = () => {
+      const d = draftRef.current;
+      dragRef.current = null;
+      draftRef.current = null;
+      setDraft(null);
+      if (d) onUpdateRef.current(d);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [editor]); // intentionally no draft/state in deps — draftRef keeps it current
+
+  function startDrag(event, mode = "move") {
+    if (!editor) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsActive(true);
+    // Capture bounds once at drag start — not during move
+    const container = shellRef.current?.closest?.('[data-overlay-bounds="true"]') || shellRef.current?.parentElement;
+    const canvasScale = Number(event.currentTarget.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1);
+    const cbRaw = container?.getBoundingClientRect() || null;
+    const containerBounds = cbRaw ? { ...cbRaw, width: cbRaw.width / canvasScale, height: cbRaw.height / canvasScale } : null;
+    dragRef.current = { mode, startX: event.clientX, startY: event.clientY, baseX: x, baseY: y, baseW: w, baseH: h, containerBounds, canvasScale };
+  }
+
+  const isDragging = !!dragRef.current;
+
+  return (
+    <div
+      ref={shellRef}
+      onPointerDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"]')) startDrag(event, "move"); }}
+      onMouseDown={(event) => { if (!event.target?.closest?.('[data-txt-edit="true"],[data-overlay-resize="true"]')) startDrag(event, "move"); }}
+      style={{
+        position: "absolute",
+        left: `${x}%`,
+        top: `${y}%`,
+        transform: "translate(-50%, -50%)",
+        width: `${w}px`,
+        minHeight: `${h}px`,
+        zIndex: isActive ? 12 : 10,
+        border: editor ? `2px dashed ${isActive ? "rgba(34,197,94,1)" : "rgba(34,197,94,0.55)"}` : "none",
+        borderRadius: 10,
+        background: item.background && item.background !== "transparent" ? item.background : "transparent",
+        boxSizing: "border-box",
+        touchAction: "none",
+        cursor: editor ? "grab" : "default",
+        pointerEvents: "auto",
+        padding: editor ? "20px 8px 6px" : "4px 8px",
+        userSelect: "none",
+      }}
+    >
+      {editor ? (
+        <span style={{ position: "absolute", top: 2, left: 6, fontSize: 10, fontWeight: 700, color: "#22c55e", letterSpacing: "0.1em", pointerEvents: "none", userSelect: "none" }}>
+          TEXT {isActive ? `· ${x}% ${y}%` : ""}
+        </span>
+      ) : null}
+      {editor ? (
+        <button
+          type="button"
+          data-overlay-resize="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onDelete(); }}
+          style={{ position: "absolute", top: -9, right: -9, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
+        >✕</button>
+      ) : null}
+      {editor ? (
+        <div
+          data-overlay-resize="true"
+          onPointerDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          onMouseDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          style={{ position: "absolute", right: -7, bottom: -7, width: 15, height: 15, borderRadius: 3, background: "#22c55e", border: "2px solid #fff", cursor: "se-resize", zIndex: 14 }}
+        />
+      ) : null}
+      <div
+        data-txt-edit="true"
+        contentEditable={editor}
+        suppressContentEditableWarning
+        onMouseDown={(event) => editor && event.stopPropagation()}
+        onPointerDown={(event) => editor && event.stopPropagation()}
+        onBlur={(event) => {
+          if (!editor) return;
+          onUpdateRef.current({ text: event.currentTarget.innerHTML });
+        }}
+        style={{
+          outline: "none",
+          fontSize: Number(item.fontSize || 18),
+          fontWeight: item.fontWeight || "600",
+          color: item.color || "#ffffff",
+          textAlign: item.textAlign || "center",
+          lineHeight: 1.35,
+          cursor: "text",
+          minHeight: 20,
+          wordBreak: "break-word",
+          userSelect: editor ? "text" : "none",
+        }}
+        dangerouslySetInnerHTML={{ __html: item.text || (editor ? "Click to edit" : "") }}
+      />
+    </div>
+  );
+}
+
+function ExtraCounterOverlay({ item, editor, onUpdate, onDelete }) {
+  const dragRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const onUpdateRef = React.useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const draftRef = React.useRef(null);
+  const [draft, setDraft] = React.useState(null);
+  const [isActive, setIsActive] = React.useState(false);
+  const [showEdit, setShowEdit] = React.useState(false);
+
+  const x = Number(draft?.x ?? item.x ?? 50);
+  const y = Number(draft?.y ?? item.y ?? 30);
+  const w = Math.max(100, Number(draft?.width ?? item.width ?? 280));
+  const h = Math.max(40, Number(draft?.height ?? item.height ?? 80));
+
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    const handleMove = (event) => {
+      const cur = dragRef.current;
+      if (!cur) return;
+      const { containerBounds } = cur;
+      if (!containerBounds || containerBounds.width === 0) return;
+      const dx = (event.clientX - cur.startX) / (cur.canvasScale || 1);
+      const dy = (event.clientY - cur.startY) / (cur.canvasScale || 1);
+      let next;
+      if (cur.mode === "resize") {
+        next = { x: cur.baseX, y: cur.baseY, width: Math.round(Math.max(100, cur.baseW + dx)), height: Math.round(Math.max(40, cur.baseH + dy)) };
+      } else {
+        next = {
+          x: Math.round(Math.max(0, Math.min(100, cur.baseX + (dx / containerBounds.width) * 100))),
+          y: Math.round(Math.max(0, Math.min(100, cur.baseY + (dy / containerBounds.height) * 100))),
+          width: cur.baseW,
+          height: cur.baseH,
+        };
+      }
+      draftRef.current = next;
+      setDraft({ ...next });
+    };
+    const handleUp = () => {
+      const d = draftRef.current;
+      dragRef.current = null;
+      draftRef.current = null;
+      setDraft(null);
+      if (d) onUpdateRef.current(d);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [editor]);
+
+  function startDrag(event, mode = "move") {
+    if (!editor) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsActive(true);
+    const container = shellRef.current?.closest?.('[data-overlay-bounds="true"]') || shellRef.current?.parentElement;
+    const canvasScale = Number(event.currentTarget.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1);
+    const cbRaw = container?.getBoundingClientRect() || null;
+    const containerBounds = cbRaw ? { ...cbRaw, width: cbRaw.width / canvasScale, height: cbRaw.height / canvasScale } : null;
+    dragRef.current = { mode, startX: event.clientX, startY: event.clientY, baseX: x, baseY: y, baseW: w, baseH: h, containerBounds, canvasScale };
+  }
+
+  const numSize = item.numberSize || 52;
+  const numColor = item.numberColor || "#0c8ce9";
+  const labelColor = item.labelColor || "rgba(255,255,255,0.85)";
+  const bg = item.background || "rgba(0,0,0,0.45)";
+  const suffix = item.suffix || "";
+  const label = item.label || "Site Visits";
+  const iconType = item.iconType || "diamond";
+  const iconColor = item.iconColor || "rgba(255,255,255,0.13)";
+  const iconSize = Math.max(h * 0.85, 56);
+
+  // Background watermark icon
+  const WatermarkIcon = () => {
+    if (iconType === "none") return null;
+    const sharedStyle = { position: "absolute", width: iconSize, height: iconSize, left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", overflow: "visible" };
+    if (iconType === "circle") {
+      return (
+        <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke={iconColor} strokeWidth="2.5" style={sharedStyle}>
+          <circle cx="50" cy="50" r="46" />
+        </svg>
+      );
+    }
+    if (iconType === "star") {
+      return (
+        <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke={iconColor} strokeWidth="2.5" style={sharedStyle}>
+          <polygon points="50,5 61,35 95,38 70,60 79,93 50,75 21,93 30,60 5,38 39,35" />
+        </svg>
+      );
+    }
+    if (iconType === "hexagon") {
+      return (
+        <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke={iconColor} strokeWidth="2.5" style={sharedStyle}>
+          <polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" />
+        </svg>
+      );
+    }
+    // default: diamond
+    return (
+      <svg aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke={iconColor} strokeWidth="2.5" style={sharedStyle}>
+        <polygon points="50,4 96,50 50,96 4,50" />
+      </svg>
+    );
+  };
+
+  // Inline edit panel
+  const EditPanel = () => (
+    <div
+      data-counter-resize="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      style={{ position: "absolute", top: "calc(100% + 10px)", left: 0, zIndex: 30, background: "#1e293b", border: "1px solid rgba(14,165,233,0.45)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 8px 28px rgba(0,0,0,0.65)", display: "flex", flexDirection: "column", gap: 10, minWidth: 260, width: Math.max(260, w) }}
+    >
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.08em" }}>COUNTER SETTINGS</span>
+      <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+        Label text
+        <input
+          type="text"
+          value={item.label || ""}
+          onChange={(e) => onUpdateRef.current({ label: e.target.value })}
+          style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", fontSize: 13, outline: "none" }}
+        />
+      </label>
+      <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+        Background (CSS color / rgba)
+        <input
+          type="text"
+          value={item.background || "rgba(0,0,0,0.45)"}
+          onChange={(e) => onUpdateRef.current({ background: e.target.value })}
+          placeholder="rgba(0,0,0,0.45) or #1e293b"
+          style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", fontSize: 13, outline: "none" }}
+        />
+      </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+          Number color
+          <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(item.numberColor || "") ? item.numberColor : "#0c8ce9"} onChange={(e) => onUpdateRef.current({ numberColor: e.target.value })}
+            style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+          Label color
+          <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(item.labelColor || "") ? item.labelColor : "#ffffff"} onChange={(e) => onUpdateRef.current({ labelColor: e.target.value })}
+            style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+          Icon color
+          <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(item.iconColor || "") ? item.iconColor : "#ffffff"} onChange={(e) => onUpdateRef.current({ iconColor: e.target.value })}
+            style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+        </label>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+          Number size
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <button type="button" onClick={() => onUpdateRef.current({ numberSize: Math.max(24, (item.numberSize || 52) - 4) })}
+              style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>−</button>
+            <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 13 }}>{item.numberSize || 52}</span>
+            <button type="button" onClick={() => onUpdateRef.current({ numberSize: Math.min(120, (item.numberSize || 52) + 4) })}
+              style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>+</button>
+          </div>
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" }}>
+          Background icon
+          <select value={item.iconType || "diamond"} onChange={(e) => onUpdateRef.current({ iconType: e.target.value })}
+            style={{ padding: "5px 6px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", fontSize: 13 }}>
+            <option value="diamond">Diamond</option>
+            <option value="circle">Circle</option>
+            <option value="star">Star</option>
+            <option value="hexagon">Hexagon</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+      </div>
+      <button type="button" onClick={() => setShowEdit(false)}
+        style={{ marginTop: 2, padding: "6px 0", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Done</button>
+    </div>
+  );
+
+  return (
+    <div
+      ref={shellRef}
+      onPointerDown={(event) => { if (!event.target?.closest?.('[data-counter-resize="true"]')) startDrag(event, "move"); }}
+      onMouseDown={(event) => { if (!event.target?.closest?.('[data-counter-resize="true"]')) startDrag(event, "move"); }}
+      style={{
+        position: "absolute",
+        left: `${x}%`,
+        top: `${y}%`,
+        transform: "translate(-50%, -50%)",
+        width: `${w}px`,
+        minHeight: `${h}px`,
+        zIndex: isActive ? 12 : 10,
+        border: editor ? `2px dashed ${isActive ? "rgba(14,165,233,1)" : "rgba(14,165,233,0.6)"}` : "none",
+        borderRadius: 14,
+        background: bg,
+        boxSizing: "border-box",
+        touchAction: "none",
+        cursor: editor ? "grab" : "default",
+        pointerEvents: "auto",
+        overflow: "visible",
+        padding: editor ? "22px 14px 10px" : "10px 14px",
+        backdropFilter: bg !== "transparent" ? "blur(6px)" : undefined,
+        userSelect: "none",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      {/* Background watermark icon */}
+      <WatermarkIcon />
+
+      {/* Editor label */}
+      {editor ? (
+        <span style={{ position: "absolute", top: 3, left: 8, fontSize: 10, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.1em", pointerEvents: "none", userSelect: "none" }}>
+          COUNTER {isActive ? `· ${x}% ${y}%` : ""}
+        </span>
+      ) : null}
+
+      {/* Delete button */}
+      {editor ? (
+        <button
+          type="button"
+          data-counter-resize="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); onDelete(); }}
+          style={{ position: "absolute", top: -9, right: -9, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
+        >✕</button>
+      ) : null}
+
+      {/* Edit settings button */}
+      {editor ? (
+        <button
+          type="button"
+          data-counter-resize="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => { event.stopPropagation(); setShowEdit((v) => !v); }}
+          title="Edit counter settings"
+          style={{ position: "absolute", top: -9, right: 16, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: showEdit ? "#0ea5e9" : "rgba(30,41,59,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 11, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
+        >⚙</button>
+      ) : null}
+
+      {/* Resize handle */}
+      {editor ? (
+        <div
+          data-counter-resize="true"
+          onPointerDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          onMouseDown={(event) => { event.stopPropagation(); startDrag(event, "resize"); }}
+          style={{ position: "absolute", right: -7, bottom: -7, width: 15, height: 15, borderRadius: 3, background: "#0ea5e9", border: "2px solid #fff", cursor: "se-resize", zIndex: 14 }}
+        />
+      ) : null}
+
+      {/* Counter number + label — offset right to clear the watermark icon */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: iconType !== "none" ? Math.round(iconSize * 0.7) : 0, width: "100%", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+          <IconCounterNumber
+            projectId={String(item.projectId || "")}
+            targetNumber={item.targetNumber != null ? Number(item.targetNumber) : null}
+            startNumber={Number(item.startNumber ?? 0)}
+            suffix={suffix}
+            color={numColor}
+            compact={false}
+            editor={editor}
+            fontSize={numSize}
+          />
+        </div>
+        {label ? (
+          <p style={{ margin: 0, fontSize: Math.max(12, Math.round(numSize * 0.38)), fontWeight: 600, color: labelColor, lineHeight: 1.3, flex: 1 }}>
+            {label}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Inline edit panel */}
+      {editor && showEdit ? <EditPanel /> : null}
+    </div>
+  );
+}
+
+function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUploadImage, onSelectAsset, assets, imageSrc, overlayEnabled = false, frameStyle = null, isSelected = false, imageFit = "contain", onDelete = null, imageLabel = null, onMoveLayer = null }) {
+  const dragRef = React.useRef(null);
+  const shellRef = React.useRef(null);
+  const latestPropsRef = React.useRef(props || {});
+  const draftPatchRef = React.useRef(null);
+  const onChangeBlockRef = React.useRef(onChangeBlock);
+  onChangeBlockRef.current = onChangeBlock;
+  const [guides, setGuides] = React.useState({ showX: false, showY: false, active: false });
+  const [draftPatch, setDraftPatch] = React.useState(null);
+  const [isActive, setIsActive] = React.useState(false);
+  const bounds = useOverlayBounds(shellRef);
+  const canManipulate = !!editor && !compact && !!imageSrc;
+  const showEditorControls = !!editor;
+  const overlayLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, compact ? 2 : 4) : [];
+  const xPct = Number(props?.floatingX ?? 76);
+  const yPct = Number(props?.floatingY ?? 58);
+  const boxWidth = Math.max(120, Number(props?.floatingWidth ?? 260));
+  const boxHeight = Math.max(120, Number(props?.floatingHeight ?? 260));
+  const displayX = Number(draftPatch?.floatingX ?? xPct);
+  const displayY = Number(draftPatch?.floatingY ?? yPct);
+  const displayBoxWidth = Math.max(120, Number(draftPatch?.floatingWidth ?? boxWidth));
+  const displayBoxHeight = Math.max(120, Number(draftPatch?.floatingHeight ?? boxHeight));
+  // No clamping — images can extend beyond the block edges intentionally
+  const effectiveWidth = displayBoxWidth;
+  const effectiveHeight = displayBoxHeight;
+  const constrainedWidth = `${effectiveWidth}px`;
+  const constrainedHeight = `${effectiveHeight}px`;
+  const constrainedLeft = `${displayX}%`;
+  const constrainedTop = `${displayY}%`;
+
+  React.useEffect(() => {
+    latestPropsRef.current = props || {};
+  }, [props]);
+
+  React.useEffect(() => {
+    if (!editor) return undefined;
+
+    const handleOutsidePointer = (event) => {
+      const shell = shellRef.current;
+      if (!shell || shell.contains(event.target)) return;
+      dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
+      setGuides({ showX: false, showY: false, active: false });
+      setIsActive(false);
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointer, true);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointer, true);
+  }, [editor]);
+
+  React.useEffect(() => {
+    if (!editor || !canManipulate) return undefined;
+
+    const handleMove = (event) => {
+      const current = dragRef.current;
+      if (!current) return;
+      const dx = (event.clientX - current.startX) / (current.canvasScale || 1);
+      const dy = (event.clientY - current.startY) / (current.canvasScale || 1);
+
+      if (current.mode === "resize") {
+        let nextWidth = current.baseWidth;
+        let nextHeight = current.baseHeight;
+
+        if (["left", "nw", "sw"].includes(current.handle)) nextWidth = current.baseWidth - dx;
+        if (["right", "ne", "se"].includes(current.handle)) nextWidth = current.baseWidth + dx;
+        if (["top", "nw", "ne"].includes(current.handle)) nextHeight = current.baseHeight - dy;
+        if (["bottom", "sw", "se"].includes(current.handle)) nextHeight = current.baseHeight + dy;
+
+        nextWidth = Math.max(60, nextWidth);
+        nextHeight = Math.max(60, nextHeight);
+
+        // When resizing, the center shifts by half the delta so the OPPOSITE edge stays fixed.
+        // This applies to all handles: corners shift both axes, edge handles shift one axis.
+        const changesW = ["left", "right", "nw", "ne", "sw", "se"].includes(current.handle);
+        const changesH = ["top", "bottom", "nw", "ne", "sw", "se"].includes(current.handle);
+        const newX = changesW ? current.baseX + (dx / current.rect.width * 50) : current.baseX;
+        const newY = changesH ? current.baseY + (dy / current.rect.height * 50) : current.baseY;
+
+        const patch = {
+          floatingWidth: Math.round(nextWidth),
+          floatingHeight: Math.round(nextHeight),
+          floatingX: Math.round(newX),
+          floatingY: Math.round(newY),
+        };
+        draftPatchRef.current = patch;
+        setDraftPatch(patch);
+        setGuides({ showX: false, showY: false, active: false });
+        return;
+      }
+
+      // Move — no clamping, free to go off-edge
+      const newX = current.baseX + ((dx / current.rect.width) * 100);
+      const newY = current.baseY + ((dy / current.rect.height) * 100);
+      const guideState = getOverlayGuideState(newX, newY, current.rect);
+      const patch = { floatingX: Math.round(guideState.snappedX), floatingY: Math.round(guideState.snappedY) };
+      draftPatchRef.current = patch;
+      setDraftPatch(patch);
+      setGuides({ showX: guideState.showX, showY: guideState.showY, active: true });
+    };
+
+    const handleUp = () => {
+      const patch = draftPatchRef.current;
+      dragRef.current = null;
+      draftPatchRef.current = null;
+      setDraftPatch(null);
+      setGuides({ showX: false, showY: false, active: false });
+      if (patch) onChangeBlockRef.current?.({ ...latestPropsRef.current, ...patch });
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [editor, canManipulate]);
+
+  function startInteraction(event, mode = "move", handle = "se") {
+    if (!editor || !canManipulate) return;
+    setIsActive(true);
+    setGuides((prev) => ({ ...prev, active: true }));
+    event.preventDefault();
+    event.stopPropagation();
+    const rectRaw = getOverlayBoundsElement(shellRef.current)?.getBoundingClientRect();
+    if (!rectRaw) return;
+    const canvasScale = Number(event.target.closest('[data-canvas-scale]')?.dataset?.canvasScale || 1);
+    const rect = { ...rectRaw, width: rectRaw.width / canvasScale, height: rectRaw.height / canvasScale };
+    dragRef.current = {
+      mode,
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: xPct,
+      baseY: yPct,
+      baseWidth: effectiveWidth,
+      baseHeight: effectiveHeight,
+      rect,
+      canvasScale,
+    };
+  }
+
+  function maybeStartMove(event) {
+    const target = event.target;
+    if (target?.closest?.('[data-overlay-resize="true"]')) return;
+    startInteraction(event, "move");
+  }
+
+  function applyOverlayAsset(image) {
+    if (typeof onChangeBlock !== "function" || !image?.src) return;
+    onChangeBlock({
+      ...props,
+      floatingImage: image.src || "",
+      floatingImageAssetId: image.id || "",
+      floatingX: props.floatingX ?? xPct,
+      floatingY: props.floatingY ?? yPct,
+      floatingWidth: props.floatingWidth ?? effectiveWidth,
+      floatingHeight: props.floatingHeight ?? effectiveHeight,
+    });
+  }
+
+  if (!imageSrc) return null;
+
+  if (!overlayEnabled || compact) {
+    return (
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: compact ? 18 : 24,
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            width: compact ? "100%" : `min(${boxWidth}px, 100%)`,
+            maxWidth: "100%",
+            height: `${compact ? Math.min(Math.max(180, effectiveHeight), 320) : effectiveHeight}px`,
+            overflow: "hidden",
+            borderRadius: compact ? 18 : 22,
+            boxShadow: compact ? "0 18px 34px rgba(15,23,42,0.16)" : "0 24px 48px rgba(15,23,42,0.28)",
+            background: "rgba(255,255,255,0.06)",
+            ...(frameStyle || {}),
+          }}
+        >
+          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: imageFit, display: "block" }} onError={(e) => { e.target.style.display = "none"; }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {editor ? renderOverlayGuides(guides) : null}
+      <div
+        ref={shellRef}
+        onPointerDownCapture={() => setIsActive(true)}
+        onMouseDownCapture={() => setIsActive(true)}
+        onFocusCapture={() => setIsActive(true)}
+        onPointerDown={maybeStartMove}
+        onMouseDown={maybeStartMove}
+        style={{
+          position: "absolute",
+          left: constrainedLeft,
+          top: constrainedTop,
+          transform: "translate(-50%, -50%)",
+          width: constrainedWidth,
+          height: constrainedHeight,
+          zIndex: isActive ? 5 : 2,
+          border: editor ? "1px dashed rgba(245,158,11,0.95)" : "none",
+          borderRadius: 18,
+          background: "transparent",
+          boxSizing: "border-box",
+          touchAction: "none",
+          cursor: editor ? "move" : "default",
+          pointerEvents: "auto",
+          overflow: "visible",
+        }}
+      >
+        {editor ? (
+          <div
+            onPointerDown={(event) => startInteraction(event, "move")}
+            onMouseDown={(event) => startInteraction(event, "move")}
+            style={{ position: "absolute", top: -12, left: 10, zIndex: 10, cursor: "move", display: "flex", gap: 4, alignItems: "center" }}
+          >
+            <span style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827" }}>{imageLabel || "Drag Image"}</span>
+            {onMoveLayer ? (
+              <>
+                <button
+                  type="button"
+                  data-overlay-resize="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onMoveLayer(-1); }}
+                  style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 11, cursor: "pointer" }}
+                  title="Move layer backward"
+                >↓ Back</button>
+                <button
+                  type="button"
+                  data-overlay-resize="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onMoveLayer(1); }}
+                  style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 11, cursor: "pointer" }}
+                  title="Move layer forward"
+                >↑ Front</button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "transparent", ...(frameStyle ? { borderRadius: frameStyle.borderRadius, boxShadow: frameStyle.boxShadow, border: frameStyle.border } : { borderRadius: 0 }) }}>
+          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: imageFit, display: "block", pointerEvents: "none", userSelect: "none" }} onError={(e) => { e.target.style.display = "none"; }} />
+        </div>
+        {editor && isActive ? [
+          // Corners — resize both dimensions
+          { key: "nw",     left: -7, top: -7,       cursor: "nwse-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "ne",     right: -7, top: -7,      cursor: "nesw-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "sw",     left: -7, bottom: -7,    cursor: "nesw-resize", width: 14, height: 14, dotRadius: 999 },
+          { key: "se",     right: -7, bottom: -7,   cursor: "nwse-resize", width: 14, height: 14, dotRadius: 999 },
+          // Center edges — larger transparent hit zone wraps a visible inner dot
+          { key: "top",    top: -14,    left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  width: 36, height: 28, dotRadius: 4, dotW: 28, dotH: 14, dotTop: 14, dotLeft: 4 },
+          { key: "bottom", bottom: -14, left: "50%", transform: "translateX(-50%)", cursor: "ns-resize",  width: 36, height: 28, dotRadius: 4, dotW: 28, dotH: 14, dotTop: 0,  dotLeft: 4 },
+          { key: "left",   left: -14,   top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  width: 28, height: 36, dotRadius: 4, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 14 },
+          { key: "right",  right: -14,  top: "50%",  transform: "translateY(-50%)", cursor: "ew-resize",  width: 28, height: 36, dotRadius: 4, dotW: 14, dotH: 28, dotTop: 4,  dotLeft: 0 },
+        ].map((handle) => (
+          <div
+            key={handle.key}
+            data-overlay-resize="true"
+            onPointerDown={(event) => startInteraction(event, "resize", handle.key)}
+            onMouseDown={(event) => startInteraction(event, "resize", handle.key)}
+            style={{ position: "absolute", background: "transparent", pointerEvents: "auto", zIndex: 10, boxSizing: "border-box", width: handle.width, height: handle.height, left: handle.left, right: handle.right, top: handle.top, bottom: handle.bottom, transform: handle.transform, cursor: handle.cursor }}
+          >
+            {handle.dotRadius === 999
+              ? <div style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#f59e0b", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(245,158,11,0.35)", pointerEvents: "none" }} />
+              : <div style={{ position: "absolute", top: handle.dotTop, left: handle.dotLeft, width: handle.dotW, height: handle.dotH, borderRadius: handle.dotRadius, background: "#f59e0b", border: "2px solid #fff", boxShadow: "0 6px 16px rgba(245,158,11,0.35)", pointerEvents: "none" }} />
+            }
+          </div>
+        )).concat(onDelete ? [
+          <button
+            key="delete-overlay"
+            type="button"
+            data-overlay-resize="true"
+            onPointerDown={(event) => { event.stopPropagation(); }}
+            onMouseDown={(event) => { event.stopPropagation(); }}
+            onClick={(event) => { event.stopPropagation(); onDelete(); }}
+            style={{ position: "absolute", top: -8, right: -8, zIndex: 7, width: 22, height: 22, borderRadius: 999, background: "rgba(239,68,68,0.92)", border: "2px solid #fff", color: "#fff", fontSize: 12, lineHeight: 1, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 12px rgba(239,68,68,0.4)", padding: 0 }}
+            title="Remove image"
+          >✕</button>
+        ] : []) : null}
+      </div>
+    </>
+  );
+}
+
+
+// ─── Standalone icon-counter block with inline edit panel ────────────────────
+function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimationStyle, siteId = "" }) {
+  const [showEdit, setShowEdit] = React.useState(false);
+  const panelRef = React.useRef(null);
+  const update = (patch) => onChangeBlock?.({ ...props, ...patch });
+
+  // Close panel when clicking outside
+  React.useEffect(() => {
+    if (!showEdit) return undefined;
+    const handleDown = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) setShowEdit(false);
+    };
+    window.addEventListener("pointerdown", handleDown, true);
+    return () => window.removeEventListener("pointerdown", handleDown, true);
+  }, [showEdit]);
+
+  const icBg = props.backgroundColor || "#0b0c1a";
+  const icNumberColor = props.numberColor || "#0c8ce9";
+  const icLabelColor = props.labelColor || "rgba(255,255,255,0.85)";
+  const icLabel = props.label || "Site Visits...and counting";
+  const icMinHeight = props.minHeight || "180px";
+  const icTargetNumber = props.targetNumber != null ? Number(props.targetNumber) : null;
+  const icStartNumber = props.startNumber != null ? Number(props.startNumber) : 0;
+  const icSuffix = props.suffix || "";
+  const icDiamondColor = props.diamondColor || "rgba(255,255,255,0.15)";
+  const icNumberFontSize = props.numberFontSize ? Number(props.numberFontSize) : undefined;
+  const icNumberFontFamily = props.numberFontFamily && props.numberFontFamily !== "inherit" ? props.numberFontFamily : undefined;
+  const icLabelFontSize = compact ? 16 : (props.labelFontSize ? Number(props.labelFontSize) : 22);
+  const icLabelFontFamily = props.labelFontFamily && props.labelFontFamily !== "inherit" ? props.labelFontFamily : undefined;
+  const icLabelFontWeight = props.labelFontWeight || "600";
+
+  const diamondSize = compact ? 100 : 140;
+
+  const inpStyle = { padding: "5px 8px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" };
+  const stepBtn = { width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 15, flexShrink: 0 };
+  const lbl = { display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "#94a3b8" };
+
+  return (
+    <ScrollReveal
+      as="section"
+      animationName={props.sectionAnimation}
+      delay={props.sectionAnimationDelay || 0}
+      speed={props.sectionAnimationSpeed}
+      disabled={editor}
+      style={{
+        position: "relative",
+        overflow: "visible",
+        backgroundColor: icBg,
+        minHeight: icMinHeight,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        ...sectionAnimationStyle,
+      }}
+    >
+      {/* Diamond watermark */}
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 100 100"
+        fill="none"
+        stroke={icDiamondColor}
+        strokeWidth="2.5"
+        style={{
+          position: "absolute",
+          width: diamondSize,
+          height: diamondSize,
+          left: compact ? 12 : 32,
+          top: "50%",
+          transform: "translateY(-50%)",
+          pointerEvents: "none",
+        }}
+      >
+        <polygon points="50,4 96,50 50,96 4,50" />
+      </svg>
+
+      {/* Counter + label */}
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: compact ? 20 : 36,
+        padding: compact ? "32px 24px 32px 80px" : "48px 48px 48px 120px",
+      }}>
+        <IconCounterNumber
+          projectId={String(props.projectId || siteId || "")}
+          targetNumber={icTargetNumber}
+          startNumber={icStartNumber}
+          suffix={icSuffix}
+          color={icNumberColor}
+          compact={compact}
+          editor={editor}
+          fontSize={icNumberFontSize}
+          fontFamily={icNumberFontFamily}
+        />
+        <p
+          data-website-inline-editor="true"
+          contentEditable={editor}
+          suppressContentEditableWarning
+          onMouseDown={(e) => { if (editor) e.stopPropagation(); }}
+          onPointerDown={(e) => { if (editor) e.stopPropagation(); }}
+          onBlur={(e) => {
+            if (!editor || typeof onChangeBlock !== "function") return;
+            update({ label: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
+          }}
+          style={{
+            margin: 0,
+            fontSize: icLabelFontSize,
+            fontWeight: icLabelFontWeight,
+            fontFamily: icLabelFontFamily,
+            color: icLabelColor,
+            lineHeight: 1.35,
+            maxWidth: compact ? 160 : 220,
+            outline: editor ? "1px dashed rgba(125,211,252,0.55)" : "none",
+            padding: editor ? "4px 6px" : 0,
+            borderRadius: 8,
+            cursor: editor ? "text" : "default",
+          }}
+          dangerouslySetInnerHTML={{ __html: icLabel }}
+        />
+      </div>
+
+      {/* Editor toolbar chip */}
+      {editor ? (
+        <div ref={panelRef} style={{ position: "absolute", top: 8, right: 10, zIndex: 20 }}>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setShowEdit((v) => !v); }}
+            style={{ ...sharedStyles.editorChip, background: showEdit ? "#0ea5e9" : undefined, color: showEdit ? "#fff" : undefined }}
+          >
+            {showEdit ? "✕ Close" : "✎ Edit Counter"}
+          </button>
+
+          {showEdit ? (
+            <div
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                zIndex: 30,
+                background: "#1e293b",
+                border: "1px solid rgba(14,165,233,0.45)",
+                borderRadius: 12,
+                padding: "12px 14px",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.65)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                minWidth: 280,
+                maxHeight: "70vh",
+                overflowY: "auto",
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.08em" }}>COUNTER SETTINGS</span>
+
+              <label style={lbl}>
+                Label text
+                <input type="text" value={props.label || ""} onChange={(e) => update({ label: e.target.value })} style={inpStyle} />
+              </label>
+
+              {/* Numbers */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <label style={lbl}>
+                  Target number
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button type="button" style={stepBtn} onClick={() => update({ targetNumber: Math.max(0, (Number(props.targetNumber) || 0) - 100) })}>−</button>
+                    <input type="number" value={props.targetNumber ?? 0} onChange={(e) => update({ targetNumber: Number(e.target.value) })} style={{ ...inpStyle, textAlign: "center", flex: 1, minWidth: 0 }} />
+                    <button type="button" style={stepBtn} onClick={() => update({ targetNumber: (Number(props.targetNumber) || 0) + 100 })}>+</button>
+                  </div>
+                </label>
+                <label style={lbl}>
+                  Start number
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button type="button" style={stepBtn} onClick={() => update({ startNumber: Math.max(0, (Number(props.startNumber) || 0) - 100) })}>−</button>
+                    <input type="number" value={props.startNumber ?? 0} onChange={(e) => update({ startNumber: Number(e.target.value) })} style={{ ...inpStyle, textAlign: "center", flex: 1, minWidth: 0 }} />
+                    <button type="button" style={stepBtn} onClick={() => update({ startNumber: (Number(props.startNumber) || 0) + 100 })}>+</button>
+                  </div>
+                </label>
+              </div>
+
+              <label style={lbl}>
+                Suffix (e.g. + or %)
+                <input type="text" value={props.suffix || ""} onChange={(e) => update({ suffix: e.target.value })} style={inpStyle} placeholder="+" />
+              </label>
+
+              {/* Colors */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                <label style={lbl}>
+                  Number color
+                  <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(props.numberColor || "") ? props.numberColor : "#0c8ce9"} onChange={(e) => update({ numberColor: e.target.value })}
+                    style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+                </label>
+                <label style={lbl}>
+                  Label color
+                  <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(props.labelColor || "") ? props.labelColor : "#ffffff"} onChange={(e) => update({ labelColor: e.target.value })}
+                    style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+                </label>
+                <label style={lbl}>
+                  Background
+                  <input type="color" value={/^#[0-9a-f]{3,6}$/i.test(props.backgroundColor || "") ? props.backgroundColor : "#0b0c1a"} onChange={(e) => update({ backgroundColor: e.target.value })}
+                    style={{ width: "100%", height: 30, border: "none", borderRadius: 4, cursor: "pointer", background: "transparent" }} />
+                </label>
+              </div>
+
+              {/* Font sizes */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <label style={lbl}>
+                  Number size
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button type="button" style={stepBtn} onClick={() => update({ numberFontSize: Math.max(20, (Number(props.numberFontSize) || 78) - 4) })}>−</button>
+                    <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 13 }}>{props.numberFontSize || 78}</span>
+                    <button type="button" style={stepBtn} onClick={() => update({ numberFontSize: Math.min(180, (Number(props.numberFontSize) || 78) + 4) })}>+</button>
+                  </div>
+                </label>
+                <label style={lbl}>
+                  Label size
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button type="button" style={stepBtn} onClick={() => update({ labelFontSize: Math.max(10, (Number(props.labelFontSize) || 22) - 2) })}>−</button>
+                    <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 13 }}>{props.labelFontSize || 22}</span>
+                    <button type="button" style={stepBtn} onClick={() => update({ labelFontSize: Math.min(72, (Number(props.labelFontSize) || 22) + 2) })}>+</button>
+                  </div>
+                </label>
+              </div>
+
+              <button type="button" onClick={() => setShowEdit(false)}
+                style={{ marginTop: 2, padding: "6px 0", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Done</button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </ScrollReveal>
+  );
+}
+
+
+// ─── Framer Portfolio Block (horizontal carousel, click-to-reveal) ────────────
+function FramerPortfolioBlock({ props, compact, editor, onUploadImage, onChangeBlock }) {
+  const sectionRef = React.useRef(null);
+  const scrollRef = React.useRef(null);
+  const fileInputRefs = React.useRef({});
+  const [cardW, setCardW] = React.useState(0);
+  const [hoveredIdx, setHoveredIdx] = React.useState(null);
+  const cards = Array.isArray(props.cards) ? props.cards : [];
+  const bg = props.backgroundColor || "#000";
+  const GAP = 12;
+  const CARD_HEIGHT = 600;
+
+  // Measure container so cards are exactly 1/3 in pixels
+  React.useEffect(() => {
+    if (!sectionRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width || 0;
+      setCardW(compact ? w : Math.floor((w - GAP * 2) / 3));
+    });
+    ro.observe(sectionRef.current);
+    return () => ro.disconnect();
+  }, [compact]);
+
+  const scroll = (dir) => {
+    if (!scrollRef.current || !cardW) return;
+    scrollRef.current.scrollBy({ left: dir * (cardW + GAP), behavior: "smooth" });
+  };
+
+  const handleUpload = async (cardIdx, file) => {
+    if (!file) return;
+    const asset = await Promise.resolve(onUploadImage?.("__fp_card_image__", file));
+    if (!asset?.src) return;
+    const updated = cards.map((c, i) => i === cardIdx ? { ...c, image: asset.src, imageAssetId: asset.id || "" } : c);
+    onChangeBlock?.({ ...props, cards: updated });
+  };
+
+  return (
+    <section ref={sectionRef} style={{ background: bg, width: "100%", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+
+      {/* Left arrow */}
+      <button type="button" onClick={() => scroll(-1)} style={{ position: "absolute", left: 0, top: 0, bottom: 0, zIndex: 20, width: 52, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 32, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", userSelect: "none" }}>
+        ‹
+      </button>
+
+      {/* Scroll track */}
+      <div ref={scrollRef} style={{ display: "flex", gap: GAP, padding: "0 0", overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+        {cards.map((card, idx) => {
+          const isHovered = hoveredIdx === idx;
+          return (
+            <div
+              key={card.id || idx}
+              style={{ flexShrink: 0, width: cardW || "33.333%", height: CARD_HEIGHT, scrollSnapAlign: "start", position: "relative", overflow: "hidden", background: "#111", cursor: "pointer" }}
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onDoubleClick={() => { if (editor) fileInputRefs.current[idx]?.click(); }}
+            >
+              {/* Full image — contain so nothing is cropped */}
+              {card.image
+                ? <img src={card.image} alt={card.title || ""} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", pointerEvents: "none" }} />
+                : <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "linear-gradient(135deg,#1e1b4b,#312e81)", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>No image — double-click to upload</div>
+              }
+
+              {/* Hover dark overlay */}
+              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.55)", opacity: isHovered ? 1 : 0, transition: "opacity 0.25s ease", pointerEvents: "none" }} />
+
+              {/* Editor: always-visible upload button */}
+              {editor ? (
+                <label
+                  style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 20, display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "rgba(0,0,0,0.8)", border: "2px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  📷 {card.image ? "Replace image" : "Upload image"}
+                  <input
+                    ref={(el) => { fileInputRefs.current[idx] = el; }}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleUpload(idx, f); }}
+                  />
+                </label>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Right arrow */}
+      <button type="button" onClick={() => scroll(1)} style={{ position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 20, width: 52, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 32, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", userSelect: "none" }}>
+        ›
+      </button>
+
+      <style>{`.__fp_track::-webkit-scrollbar{display:none}`}</style>
+    </section>
+  );
+}
+
+// ─── Hover Cards Block ────────────────────────────────────────────────────────
+function HoverCardsBlock({ props, compact, editor }) {
+  const [flippedIndex, setFlippedIndex] = React.useState(null);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  // measured.cardPxWidth = exact px width per card; measured.autoVC = auto-calculated visible cards (fullWidth mode)
+  const [measured, setMeasured] = React.useState({ cardPxWidth: 0, autoVC: null });
+  const viewportRef = React.useRef(null);
+
+  const cards = Array.isArray(props.cards) ? props.cards : [];
+  const fullWidth = !!props.fullWidth;
+  const minCardWidth = Number(props.minCardWidth || 280);
+  const cardGap = Number(props.cardGap || 16);
+  const propVC = Math.max(1, Math.min(cards.length || 1, Number(props.visibleCards || 3)));
+
+  // In fullWidth mode auto-derive visible card count from measured container width
+  const visibleCards = compact ? 1 : (fullWidth && measured.autoVC !== null ? measured.autoVC : propVC);
+
+  const cardHeight = Number(props.cardHeight || 320);
+  const cardRadius = Number(props.cardRadius || 12);
+  const cardPadding = Number(props.cardPadding || 20);
+  const backColor = props.overlayColor || "#000000";
+  const buttonColor = props.buttonColor || "#ffffff";
+  const buttonTextColor = props.buttonTextColor || "#0f172a";
+  const buttonText = props.buttonText || "Learn more →";
+  const arrowBg = props.arrowBg || "#ffffff";
+  const arrowColor = props.arrowColor || "#0f172a";
+  const maxIndex = Math.max(0, cards.length - visibleCards);
+  const showArrows = maxIndex > 0;
+
+  React.useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const measure = () => {
+      const vw = el.offsetWidth;
+      if (fullWidth && !compact) {
+        // Auto-fit as many cards as possible given minimum card width
+        const auto = Math.max(1, Math.floor((vw + cardGap) / (minCardWidth + cardGap)));
+        const clampedAuto = Math.min(auto, cards.length || 1);
+        const w = (vw - (clampedAuto - 1) * cardGap) / clampedAuto;
+        setMeasured({ cardPxWidth: w > 0 ? w : 0, autoVC: clampedAuto });
+      } else {
+        const vc = compact ? 1 : propVC;
+        const w = (vw - (vc - 1) * cardGap) / vc;
+        setMeasured((prev) => ({ ...prev, cardPxWidth: w > 0 ? w : 0 }));
+      }
+    };
+    measure();
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [fullWidth, compact, minCardWidth, cardGap, propVC, cards.length]);
+
+  React.useEffect(() => {
+    setCurrentIndex((prev) => Math.min(prev, maxIndex));
+  }, [maxIndex]);
+
+  const { cardPxWidth } = measured;
+  const goTo = (idx) => setCurrentIndex(Math.max(0, Math.min(maxIndex, idx)));
+  const offset = currentIndex * (cardPxWidth + cardGap);
+  const canPrev = currentIndex > 0;
+  const canNext = currentIndex < maxIndex;
+
+  const sectionSidePad = compact ? 20 : Number(props.paddingSides ?? 40);
+  const outerMaxWidth = fullWidth ? "100%" : Number(props.maxWidth || 1200);
+
+  const arrowBtn = (side, enabled, label, onClick) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!enabled}
+      aria-label={label}
+      style={{
+        position: "absolute",
+        [side]: 10,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 10,
+        width: 44,
+        height: 44,
+        borderRadius: "50%",
+        border: "2px solid rgba(0,0,0,0.1)",
+        background: arrowBg,
+        color: arrowColor,
+        fontSize: 24,
+        lineHeight: "1",
+        cursor: enabled ? "pointer" : "default",
+        opacity: enabled ? 1 : 0.35,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
+        transition: "opacity 0.2s",
+        padding: 0,
+        flexShrink: 0,
+      }}
+    >
+      {side === "left" ? "‹" : "›"}
+    </button>
+  );
+
+  return (
+    <section style={{
+      background: props.backgroundColor || "#f8fafc",
+      padding: `${Number(props.paddingTop ?? 48)}px ${sectionSidePad}px ${Number(props.paddingBottom ?? 48)}px`,
+      boxSizing: "border-box",
+      width: "100%",
+    }}>
+      {props.sectionTitle ? (
+        <h2 style={{
+          textAlign: "center",
+          fontSize: compact ? 22 : Math.max(18, Number(props.sectionTitleSize || 32)),
+          fontWeight: 700,
+          color: props.sectionTitleColor || "#0f172a",
+          margin: "0 auto 32px",
+          lineHeight: 1.2,
+          maxWidth: 860,
+        }}>
+          {props.sectionTitle}
+        </h2>
+      ) : null}
+
+      {/* Max-width centering wrapper */}
+      <div style={{ maxWidth: outerMaxWidth, margin: "0 auto" }}>
+        {/*
+          Viewport: overflow:clip clips the sliding track without creating a stacking context,
+          preserving transform-style:preserve-3d for the card flip animation.
+          Arrows are positioned INSIDE this element (overlay on cards) — no negative
+          positioning, no external clipping risk.
+        */}
+        <div ref={viewportRef} style={{ overflow: "clip", position: "relative" }}>
+          {showArrows ? arrowBtn("left", canPrev, "Previous", () => goTo(currentIndex - 1)) : null}
+          {showArrows ? arrowBtn("right", canNext, "Next", () => goTo(currentIndex + 1)) : null}
+
+          {/* Track — slides via translateX */}
+          <div style={{
+            display: "flex",
+            gap: cardGap,
+            transform: cardPxWidth > 0 ? `translateX(-${offset}px)` : "translateX(0)",
+            transition: "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
+            willChange: "transform",
+          }}>
+            {cards.map((card, idx) => {
+              const isFlipped = flippedIndex === idx;
+              const basis = cardPxWidth > 0
+                ? `${cardPxWidth}px`
+                : `calc(${100 / visibleCards}% - ${(cardGap * (visibleCards - 1)) / visibleCards}px)`;
+              return (
+                <div
+                  key={card.id || idx}
+                  style={{ flex: `0 0 ${basis}`, minWidth: basis, height: cardHeight, perspective: "1000px", flexShrink: 0 }}
+                  onMouseEnter={() => setFlippedIndex(idx)}
+                  onMouseLeave={() => setFlippedIndex(null)}
+                >
+                  {/* Flip container */}
+                  <div style={{
+                    width: "100%",
+                    height: "100%",
+                    position: "relative",
+                    transformStyle: "preserve-3d",
+                    transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                    transition: "transform 0.65s cubic-bezier(0.4,0.2,0.2,1)",
+                  }}>
+
+                    {/* ── FRONT FACE ─────────────────────────────────── */}
+                    <div style={{
+                      position: "absolute",
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                      borderRadius: cardRadius,
+                      overflow: "hidden",
+                      background: card.cardColor || props.cardColor || "#dde3ea",
+                    }}>
+                      {card.image ? (
+                        <img src={card.image} alt={card.title || ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13, fontStyle: "italic" }}>
+                          No image
+                        </div>
+                      )}
+                      <div style={{
+                        position: "absolute", bottom: 0, left: 0, right: 0,
+                        padding: `${cardPadding * 2.5}px ${cardPadding}px ${cardPadding}px`,
+                        background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)",
+                      }}>
+                        {card.title ? (
+                          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", lineHeight: 1.3, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
+                            {card.title}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* ── BACK FACE ──────────────────────────────────── */}
+                    <div style={{
+                      position: "absolute",
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)",
+                      borderRadius: cardRadius,
+                      overflow: "hidden",
+                      background: backColor,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      justifyContent: "flex-end",
+                      padding: cardPadding,
+                      boxSizing: "border-box",
+                    }}>
+                      {card.title ? (
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 8 }}>{card.title}</div>
+                      ) : null}
+                      {card.description ? (
+                        <div style={{ fontSize: 15, color: "rgba(255,255,255,0.82)", lineHeight: 1.55, marginBottom: 18 }}>{card.description}</div>
+                      ) : null}
+                      {card.link ? (
+                        <a href={card.link} style={{ display: "inline-flex", alignItems: "center", padding: "10px 22px", borderRadius: 8, background: buttonColor, color: buttonTextColor, fontSize: 15, fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>
+                          {buttonText}
+                        </a>
+                      ) : (
+                        <div style={{ display: "inline-flex", alignItems: "center", padding: "10px 22px", borderRadius: 8, background: buttonColor, color: buttonTextColor, fontSize: 15, fontWeight: 600, flexShrink: 0 }}>
+                          {buttonText}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dot indicators */}
+        {maxIndex > 0 ? (
+          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 20 }}>
+            {Array.from({ length: maxIndex + 1 }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => goTo(i)}
+                style={{
+                  width: currentIndex === i ? 22 : 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: currentIndex === i ? (props.dotsActiveColor || "#0f172a") : (props.dotsColor || "#cbd5e1"),
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  padding: 0,
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+// ─── exports ──────────────────────────────────────────────────────────────────
+export {
+  NavBarBlock,
+  clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
+  LayeredImageStackBlock, EditableImageBlock, getListMarker, ColumnEditorCard,
+  FAQAccordionItems, FAQAccordionBlock,
+  resolveSplitFaqBlockProps, resolveSplitHeadlineBlockProps, resolveSplitBodyBlockProps, SplitFaqBlock,
+  renderOverlayGuides, getOverlayGuideState, getPixelGuideState, renderCanvasCenterGuides,
+  getOverlayBoundsElement, useOverlayBounds, DraggableContentOverlay,
+  resolveColumnCardStyle, normalizeGridSectionItems, renderGridSectionIcon,
+  resolveServicesStylePreset, resolveServicesColorPreset, ServicesGridCard,
+  isServicesGridVariant, resolveGridSectionCardStyle, ExtraTextOverlay, ExtraCounterOverlay, DraggableImageOverlay,
+  IconCounterBlock,
+  HoverCardsBlock,
+  FramerPortfolioBlock,
+};

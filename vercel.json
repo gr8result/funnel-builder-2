@@ -4,7 +4,7 @@
       "maxDuration": 60
     },
     "pages/api/social/ai-generate-content.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   },
   "crons": [

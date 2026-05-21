@@ -40,5 +40,22 @@ This is a Next.js-based funnel builder application with modular components for s
 ## Common Tasks
 - Adding new funnel nodes: Extend node types in AutomationBuilder.js and NodeRenderer.js
 - New integrations: Add to `/lib/` with graceful config checks
-- UI components: Follow existing patterns in `/components/ui/` for consistency</content>
+- UI components: Follow existing patterns in `/components/ui/` for consistency
+
+## Website Builder - Design Generation
+- AI site generation: `pages/api/website/generate-site-content.js`
+- The AI is asked to return a `design` object with: `personality`, `heroVariant`, `featureVariant`, `statsVariant`, `testimonialVariant`, color tokens (`colorPrimary`, `colorAccent`, `colorBg`, `colorSurface`, `colorText`, `heroGradient`, `ctaGradient`)
+- Industry defaults in `industryDefaults` map provide fallbacks when AI design tokens are absent
+- Design tokens flow through `normalizeAiPayload` → `siteContent.design` → `buildProjectBlueprint` resolved variables
+- Available heroVariant: `split | editorial | framed | spotlight`
+- Available featureVariant: `glass-cards | editorial-strip | minimal-list | cards`
+- Available statsVariant: `spotlight-orbs | split-scoreboard | minimal-ticker | data-ribbon | editorial-band`
+- Available testimonialVariant: `wall | spotlight | bubble | stacked-card | split-banner`
+- SaaS industry always overrides to `split` hero, `split-scoreboard` stats, `wall` testimonials
+
+## Website Builder - Key Data
+- Real site row ID: `3fa13735-b2d1-42de-ab37-5e4560909dee`
+- Real site project_id: `5179b554-6092-4148-a3d8-256f0d91a3ed`
+- Published rows always beat draft rows in deduplication — never delete published rows
+- User ID: `35ab846e-0764-498b-b1f8-7d2cf27d85a5`</content>
 <parameter name="filePath">c:\Users\grant\dev\funnel-builder-clean\.github\copilot-instructions.md

@@ -1,13 +1,62 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { renderWebsiteBlock } from "../../../../../components/website-builder/WebsiteBlockRenderer";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+function SiteLoader() {
+  const r = 38;
+  const circ = 2 * Math.PI * r;
+  const arcLen = circ * 0.72;
+  return (
+    <>
+      <style>{`
+        @keyframes sl-spin{to{transform:rotate(360deg)}}
+        @keyframes sl-pulse{0%,100%{opacity:.15;transform:scale(.78);}50%{opacity:.55;transform:scale(1.08);}}
+        @keyframes sl-dot{0%,100%{opacity:.2;}50%{opacity:1;}}
+      `}</style>
+      <main style={{ minHeight:"100vh", display:"grid", placeItems:"center", background:"#05070f", fontFamily:"system-ui,sans-serif" }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
+          <div style={{ fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(255,255,255,.28)", fontWeight:700 }}>
+            🌐&nbsp; GR8 Website Studio
+          </div>
+          <div style={{ position:"relative", width:108, height:108, display:"grid", placeItems:"center" }}>
+            <div style={{ position:"absolute", width:76, height:76, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,165,233,.26) 0%,transparent 72%)", animation:"sl-pulse 2.6s ease-in-out infinite" }} />
+            <svg width="108" height="108" viewBox="0 0 108 108" style={{ position:"absolute", animation:"sl-spin 1.8s linear infinite" }}>
+              <defs>
+                <linearGradient id="sl-arc" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="60%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <circle cx="54" cy="54" r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="4.5" />
+              <circle cx="54" cy="54" r={r} fill="none" stroke="url(#sl-arc)" strokeWidth="4.5" strokeLinecap="round"
+                strokeDasharray={`${arcLen.toFixed(1)} ${(circ - arcLen).toFixed(1)}`}
+                transform="rotate(-90 54 54)" />
+              <circle cx={54 + r} cy="54" r="4" fill="#0ea5e9" style={{ filter:"drop-shadow(0 0 6px #0ea5e9)" }} />
+            </svg>
+            <div style={{ position:"relative", width:14, height:14, borderRadius:"50%", background:"linear-gradient(135deg,#0ea5e9,#8b5cf6)", boxShadow:"0 0 20px rgba(14,165,233,.8),0 0 6px rgba(14,165,233,.5)" }} />
+          </div>
+          <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,.6)", letterSpacing:"0.04em" }}>Loading preview…</div>
+          <div style={{ display:"flex", gap:7 }}>
+            {[0,1,2].map(i => (
+              <span key={i} style={{ display:"block", width:6, height:6, borderRadius:"50%", background: i===1?"rgba(99,102,241,.75)":"rgba(14,165,233,.6)", animation:`sl-dot 1.5s ease-in-out ${i*0.3}s infinite` }} />
+            ))}
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
+import { renderWebsiteBlock, websiteBlockKeyframes } from "../../../../../components/website-builder/WebsiteBlockRenderer";
 import {
+  cacheWebsiteProject,
   getWebsiteBuilderAssets,
   getWebsiteProject,
+  updateWebsiteProject,
 } from "../../../../../lib/website-builder/projectStore";
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
+import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../../../lib/website-builder/remoteProjects";
 import { supabase } from "../../../../../lib/supabaseClient";
 
 function slugify(v) {
@@ -18,7 +67,7 @@ function slugify(v) {
     .replace(/(^-|-$)/g, "");
 }
 
-function pickLayoutWidth(blocks, fallback = 1120) {
+function pickLayoutWidth(blocks, fallback = 1500) {
   for (const block of Array.isArray(blocks) ? blocks : []) {
     const value = Number(block?.props?.baseLayoutWidth || 0);
     if (Number.isFinite(value) && value > 0) return value;
@@ -34,13 +83,58 @@ function pickPageBackground(blocks, fallback = "#ffffff") {
   return fallback;
 }
 
+function isLegacyAiStarterProject(project) {
+  if (!project || String(project?.mode || "").toLowerCase() !== "ai") return false;
+  if (project?.globalNavBlock || project?.globalFooterBlock) return false;
+
+  const homePageName = Array.isArray(project?.pages) && project.pages.length
+    ? project.pages[0]?.name || "Home"
+    : "Home";
+  const homeBlocks = Array.isArray(project?.pageBlocks?.[homePageName]) ? project.pageBlocks[homePageName] : [];
+  if (!homeBlocks.length) return false;
+
+  return String(homeBlocks[0]?.type || "") === "nav-bar";
+}
+
 export default function ProjectPreviewPage() {
   const router = useRouter();
   const { id, page, viewport } = router.query;
 
   const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [project, setProject] = useState(null);
+  const [loadingDone, setLoadingDone] = useState(false);
   const [assets, setAssets] = useState({ logo: null, images: [] });
+  const projectSnapshotRef = useRef("");
+  const assetSnapshotRef = useRef("");
+
+  function syncStateIfChanged(nextProject, nextAssets) {
+    const nextProjectSnapshot = nextProject ? JSON.stringify(nextProject) : "";
+    const nextAssetSnapshot = nextAssets ? JSON.stringify(nextAssets) : "";
+
+    if (nextAssetSnapshot !== assetSnapshotRef.current) {
+      assetSnapshotRef.current = nextAssetSnapshot;
+      setAssets(nextAssets || { logo: null, images: [] });
+    }
+
+    if (nextProjectSnapshot !== projectSnapshotRef.current) {
+      projectSnapshotRef.current = nextProjectSnapshot;
+      setProject(nextProject || null);
+    }
+  }
+
+  function refreshPreviewState(projectId = id) {
+    const latestAssets = getWebsiteBuilderAssets();
+
+    if (!projectId) {
+      syncStateIfChanged(null, latestAssets);
+      return null;
+    }
+
+    const latestProject = getWebsiteProject(projectId);
+    syncStateIfChanged(latestProject, latestAssets);
+    return latestProject;
+  }
 
   useEffect(() => {
     let subscription;
@@ -49,17 +143,78 @@ export default function ProjectPreviewPage() {
         data: { session },
       } = await supabase.auth.getSession();
       setSession(session || null);
+      setAuthReady(true);
       ({
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((_e, s) => setSession(s || null)));
+      } = supabase.auth.onAuthStateChange((_e, s) => {
+        setSession(s || null);
+        setAuthReady(true);
+      }));
     })();
 
     return () => subscription?.unsubscribe?.();
   }, []);
 
   useEffect(() => {
-    setAssets(getWebsiteBuilderAssets());
-  }, []);
+    if (!id || !authReady) return;
+
+    let cancelled = false;
+
+    const loadPreviewProject = async () => {
+      let nextProject = refreshPreviewState(id);
+      // Always fetch from server in preview mode to ensure latest saved state is shown
+      if (session?.access_token) {
+        try {
+          const remoteProject = await fetchWebsiteProjectFromServer(session, id);
+          if (remoteProject) {
+            nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: false });
+            syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+          }
+        } catch (error) {
+          console.warn("Could not load preview draft from the server", error);
+        }
+      }
+
+      if (!cancelled && !nextProject) {
+        syncStateIfChanged(null, getWebsiteBuilderAssets());
+      }
+
+      if (!cancelled) setLoadingDone(true);
+    };
+
+    loadPreviewProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, authReady, session?.access_token]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncFromStorage = () => {
+      refreshPreviewState(id);
+    };
+
+    const handleStorage = (event) => {
+      if (event.key && !["gr8:website-projects:v1", "gr8:website-builder-assets:v1"].includes(event.key)) return;
+      syncFromStorage();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") syncFromStorage();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", syncFromStorage);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", syncFromStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [id]);
 
   useEffect(() => {
     if (!session?.user?.id) return undefined;
@@ -74,7 +229,7 @@ export default function ProjectPreviewPage() {
       });
 
       if (!cancelled) {
-        setAssets(mergedAssets);
+        syncStateIfChanged(project, mergedAssets);
       }
     };
 
@@ -88,10 +243,67 @@ export default function ProjectPreviewPage() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!id) return;
-    let nextProject = getWebsiteProject(id);
-    setProject(nextProject);
-  }, [id, page]);
+    if (!project?.id || !isLegacyAiStarterProject(project)) return undefined;
+
+    let cancelled = false;
+
+    const upgradeLegacyAiProject = async () => {
+      try {
+        const response = await fetch("/api/website/generate-site-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            brief: project?.brief || {},
+            pages: Array.isArray(project?.pages) ? project.pages : [],
+            buildType: project?.buildType || "website",
+            templateSlug: project?.templateSlug || "",
+          }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || "Could not refresh AI website content");
+        }
+
+        const updated = updateWebsiteProject(project.id, {
+          name: payload.name || project.name,
+          brief: {
+            ...(project?.brief || {}),
+            aiStarterVersion: "production-v2",
+          },
+          pageBlocks: payload.pageBlocks || {},
+          pagesContent: payload.pagesContent || {},
+          globalNavBlock: payload.globalNavBlock || null,
+          globalFooterBlock: payload.globalFooterBlock || null,
+          status: "saved",
+        });
+
+        if (!cancelled && updated) {
+          const latestProject = getWebsiteProject(project.id) || updated;
+          setProject(latestProject);
+          if (session?.access_token) {
+            try {
+              const syncedProject = await saveWebsiteProjectToServer(session, latestProject);
+              if (syncedProject) {
+                const cachedProject = cacheWebsiteProject(syncedProject, { onlyIfNewer: false });
+                setProject(cachedProject || latestProject);
+              }
+            } catch (error) {
+              console.warn("Could not sync upgraded preview draft to the server", error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Could not upgrade legacy AI preview project", error);
+      }
+    };
+
+    upgradeLegacyAiProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project]);
 
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
@@ -134,12 +346,15 @@ export default function ProjectPreviewPage() {
     : pageBlocks;
 
   const injectFooter = globalFooterBlock && !pageBlocks.some((b) => b.id && b.id === globalFooterBlock.id);
+  const blocksWithoutShellDuplicates = injectFooter
+    ? blocksWithoutNav.filter((b) => b.type !== "footer")
+    : blocksWithoutNav;
   const shellBlocks = [
     globalNavBlock,
-    ...blocksWithoutNav,
+    ...blocksWithoutShellDuplicates,
     globalFooterBlock,
   ].filter(Boolean);
-  const layoutWidth = pickLayoutWidth(shellBlocks, 1120);
+  const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
   const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
   const compactPreview = previewViewport === "mobile";
   const previewShellWidth = previewViewport === "mobile"
@@ -149,6 +364,7 @@ export default function ProjectPreviewPage() {
       : layoutWidth;
 
   if (!project) {
+    if (!loadingDone) return <SiteLoader />;
     return (
       <main style={styles.page("#ffffff")}><div style={styles.wrap}><h1 style={styles.h1}>Project not found</h1></div></main>
     );
@@ -158,7 +374,11 @@ export default function ProjectPreviewPage() {
     <>
       <Head>
         <title>{project.name} | Preview</title>
-        <style>{`html, body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }`}</style>
+        <style>{`
+          html { background: ${pageBackground} !important; margin: 0; padding: 0; }
+          body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }
+          ${websiteBlockKeyframes()}
+        `}</style>
       </Head>
       <main style={styles.page(pageBackground)}>
         <div style={styles.utilityBar}>
@@ -169,18 +389,18 @@ export default function ProjectPreviewPage() {
         <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
           {/* Global nav — injected above all page content */}
           {injectNav ? (
-            <Fragment key="__global-nav">
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
-            </Fragment>
+            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} style={{ overflowX: "hidden" }}>
+              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+            </div>
           ) : null}
 
           {/* Page-specific content */}
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             <>
-              {blocksWithoutNav.map((block, index) => (
-                <Fragment key={block.id || `${block.type}-${index}`}>
-                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, navigationContext, layoutWidth })}
-                </Fragment>
+              {blocksWithoutShellDuplicates.map((block, index) => (
+                <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "hidden" }}>
+                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+                </div>
               ))}
             </>
           ) : pageContent ? (
@@ -220,9 +440,9 @@ export default function ProjectPreviewPage() {
 
           {/* Global footer — injected below all page content */}
           {injectFooter ? (
-            <Fragment key="__global-footer">
-              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, navigationContext })}
-            </Fragment>
+            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} style={{ overflowX: "hidden" }}>
+              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+            </div>
           ) : null}
         </div>
       </main>
@@ -292,6 +512,7 @@ const styles = {
     margin: viewport === "desktop" ? 0 : "0 auto",
     marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
+    overflowX: "hidden",
   }),
   brandRow: {
     borderRadius: 18,

@@ -6,9 +6,34 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
 import ImageEditorCard from "../components/image-editor/ImageEditorCard";
+import { GRID_ICON_LIBRARY } from "../components/website-builder/gridIconLibrary";
 
 const INITIAL_VISIBLE_COUNT = 48;
 const GLOBAL_TEMPLATE_IMPORT_BATCH_SIZE = 25;
+
+// Serialise a rendered <svg> element to a data: URI so component icons can be
+// used anywhere an image URL is expected (e.g. counter block background).
+function svgElToDataUri(svgEl, color = "#ffffff") {
+  if (!svgEl) return "";
+  try {
+    const clone = svgEl.cloneNode(true);
+
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    if (!clone.getAttribute("viewBox")) clone.setAttribute("viewBox", "0 0 24 24");
+    clone.setAttribute("width", "64");
+    clone.setAttribute("height", "64");
+    // tint stroke/fill to the requested colour
+    clone.querySelectorAll("[stroke]").forEach((el) => {
+      if (el.getAttribute("stroke") !== "none") el.setAttribute("stroke", color);
+    });
+    clone.querySelectorAll("[fill]").forEach((el) => {
+      if (el.getAttribute("fill") !== "none") el.setAttribute("fill", color);
+    });
+    if (!clone.getAttribute("fill")) clone.setAttribute("fill", color);
+    const svgStr = clone.outerHTML;
+    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgStr)))}`;
+  } catch { return ""; }
+}
 const MOVABLE_STORAGE_PREFIXES = ["assets:", "social-images:"];
 
 function isPlatformHostedUrl(value = "") {
@@ -57,13 +82,24 @@ export default function Assets() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [permissions, setPermissions] = useState({ canManageTemplateImages: false });
   const [libraryView, setLibraryView] = useState("user");
+
+  // Client-side developer check — used as fallback if the API permissions response is missing.
+  // Mirrors the server-side isDeveloperEmail logic in lib/adminUsers.js.
+  const DEV_EMAILS = ['admin@gr8result.com', 'developer@gr8result.com', 'grant@gr8result.com', 'support@gr8result.com'];
+  const userEmail = String(session?.user?.email || '').toLowerCase().trim();
+  const isDev = permissions.canManageTemplateImages
+    || DEV_EMAILS.includes(userEmail)
+    || userEmail.endsWith('@gr8result.com')
+    || userEmail.endsWith('@gr8result.com.au');
   const [selectedImageIds, setSelectedImageIds] = useState([]);
   const [movingSelected, setMovingSelected] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [uploadingIcons, setUploadingIcons] = useState(false);
 
   useEffect(() => {
     if (!router.isReady) return;
     const nextView = String(router.query?.view || "").toLowerCase();
-    if (nextView === "generic" || nextView === "user") {
+    if (nextView === "generic" || nextView === "user" || nextView === "icons") {
       setLibraryView(nextView);
     }
   }, [router.isReady, router.query?.view]);
@@ -113,14 +149,22 @@ export default function Assets() {
   }, [session]);
 
   async function listFiles(options = {}) {
-    const { showLoader = true, includeEmailTemplateRefs = true } = options;
+    // When showLoader is false and includeEmailTemplateRefs wasn't explicitly provided,
+    // this is almost always a post-mutation refresh — bypass the server cache.
+    const {
+      showLoader = true,
+      includeEmailTemplateRefs = true,
+      noCache = (!showLoader && !('includeEmailTemplateRefs' in options)),
+    } = options;
     if (showLoader) setLoading(true);
     if (!session?.access_token) {
       setFiles([]);
       if (showLoader) setLoading(false);
       return [];
     }
-    const response = await fetch(`/api/assets/list-library?includeEmailTemplateRefs=${includeEmailTemplateRefs ? "1" : "0"}`, {
+    const params = new URLSearchParams({ includeEmailTemplateRefs: includeEmailTemplateRefs ? "1" : "0" });
+    if (noCache) params.set("noCache", "1");
+    const response = await fetch(`/api/assets/list-library?${params}`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     const payload = await response.json();
@@ -182,10 +226,30 @@ export default function Assets() {
     }
   }
 
+  async function onUploadIcons(e) {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!selected.length || !session) return;
+    setUploadingIcons(true);
+    try {
+      for (const file of selected) {
+        await uploadSingle(file, "icon");
+      }
+      await listFiles({ showLoader: false });
+      setLibraryView("icons");
+    } catch (error) {
+      alert(error.message || "Icon upload failed");
+    } finally {
+      setUploadingIcons(false);
+    }
+  }
+
   function canPromoteToGlobalTemplate(file) {
-    if (!permissions.canManageTemplateImages) return false;
     if (!file || file?.owner_scope === "generic") return false;
-    return isMovableLibraryEntry(file);
+    if (!isMovableLibraryEntry(file)) return false;
+    // Show the button to everyone; the API enforces developer-only access.
+    // This ensures the developer always sees it regardless of permissions response.
+    return true;
   }
 
   function toggleImageSelection(fileId) {
@@ -204,6 +268,47 @@ export default function Assets() {
     setSelectedImageIds(items.filter(canPromoteToGlobalTemplate).map((item) => getFileSelectionKey(item)).filter(Boolean));
   }
 
+  function selectAllManageableImages(items) {
+    setSelectedImageIds(items.filter(canManageOriginalFile).map((item) => getFileSelectionKey(item)).filter(Boolean));
+  }
+
+  async function deleteSelectedImages() {
+    if (!session?.access_token || !selectedImageIds.length) return;
+    const selectedFiles = files.filter((file) =>
+      selectedImageIds.includes(getFileSelectionKey(file)) && canManageOriginalFile(file)
+    );
+    if (!selectedFiles.length) return;
+    const ok = confirm(`Delete ${selectedFiles.length} selected image${selectedFiles.length === 1 ? "" : "s"}? This cannot be undone.`);
+    if (!ok) return;
+    setBulkDeleting(true);
+    setStatusMessage("");
+    let deletedCount = 0;
+    let failedCount = 0;
+    for (const file of selectedFiles) {
+      try {
+        const deleteParams = new URLSearchParams({ id: file?.id || '' });
+        if (String(file?.id || '').startsWith('generic:') && file?.url) {
+          deleteParams.set('url', file.url);
+        }
+        const response = await fetch(`/api/social/delete-image?${deleteParams.toString()}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'Delete failed');
+        deletedCount++;
+      } catch {
+        failedCount++;
+      }
+    }
+    clearSelectedImages();
+    await listFiles({ showLoader: false });
+    setStatusMessage(failedCount
+      ? `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}. ${failedCount} failed.`
+      : `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}.`);
+    setBulkDeleting(false);
+  }
+
   async function deleteFile(file, options = {}) {
     const { skipConfirm = false, refreshAfterDelete = true, successMessage = "" } = options;
     if (!session) return;
@@ -214,7 +319,11 @@ export default function Assets() {
     setDeletingName(file?.id || name);
     if (!skipConfirm) setStatusMessage("");
     try {
-      const response = await fetch(`/api/social/delete-image?id=${encodeURIComponent(file?.id || '')}`, {
+      const deleteParams = new URLSearchParams({ id: file?.id || '' });
+      if (String(file?.id || '').startsWith('generic:') && file?.url) {
+        deleteParams.set('url', file.url);
+      }
+      const response = await fetch(`/api/social/delete-image?${deleteParams.toString()}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -314,7 +423,7 @@ export default function Assets() {
   }
 
   async function moveSelectedToGeneric() {
-    if (!session?.access_token || !permissions.canManageTemplateImages) return;
+    if (!session?.access_token || !isDev) return;
     const selectedFiles = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file)) && canPromoteToGlobalTemplate(file));
     if (!selectedFiles.length) {
       setStatusMessage("No private images are selected.");
@@ -348,7 +457,7 @@ export default function Assets() {
 
   async function cleanupLibrary() {
     if (!session?.access_token) return;
-    if (!permissions.canManageTemplateImages) {
+    if (!isDev) {
       setStatusMessage("Only developer accounts can remove shared library duplicates.");
       return;
     }
@@ -420,7 +529,10 @@ export default function Assets() {
 
   function canManageOriginalFile(file) {
     if (!file) return false;
-    return !file.is_template || permissions.canManageTemplateImages;
+    // Non-generic (private) images: always manageable by their owner.
+    if (file?.owner_scope !== "generic") return true;
+    // Generic library images require developer access.
+    return isDev;
   }
 
   function handlePickerSelect(file) {
@@ -449,17 +561,41 @@ export default function Assets() {
     }
   }
 
-  const userOwnedFiles = files.filter((file) => file?.owner_scope !== "generic" && !isAutoMaterializedEmailTemplateImage(file));
-  const genericFiles = files.filter((file) => file?.owner_scope === "generic");
+  const iconFiles = files.filter((file) => {
+    const sp = String(file?.storage_path || "");
+    const filename = sp.split("/").pop() || "";
+    return filename.startsWith("icon-") && file?.owner_scope !== "generic";
+  });
+  const userOwnedFiles = files.filter((file) => {
+    const sp = String(file?.storage_path || "");
+    const filename = sp.split("/").pop() || "";
+    // Exclude generic, icon files, auto-materialized email template images,
+    // and raw email-template: reference entries (undeletable ghosts that re-appear every load).
+    if (file?.owner_scope === "generic") return false;
+    if (filename.startsWith("icon-")) return false;
+    if (isAutoMaterializedEmailTemplateImage(file)) return false;
+    if (sp.startsWith("email-template:")) return false;
+    return true;
+  });
+  const genericFiles = [...files.filter((file) => file?.owner_scope === "generic")].sort((a, b) => {
+    const aStored = String(a?.storage_path || "").startsWith("assets:generic/") ? 0 : 1;
+    const bStored = String(b?.storage_path || "").startsWith("assets:generic/") ? 0 : 1;
+    return aStored - bStored;
+  });
   const selectedUserImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file))).length;
   const selectedPromotableImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file)) && canPromoteToGlobalTemplate(file)).length;
-  const activeLibraryItems = libraryView === "generic" ? genericFiles : userOwnedFiles;
-  const activeLibraryTitle = libraryView === "generic" ? "Generic Site Images" : "Your Images";
+  const activeLibraryItems = libraryView === "generic" ? genericFiles : libraryView === "icons" ? iconFiles : userOwnedFiles;
+  const selectedInCurrentSectionCount = activeLibraryItems.filter((f) => selectedImageIds.includes(getFileSelectionKey(f)) && canManageOriginalFile(f)).length;
+  const activeLibraryTitle = libraryView === "generic" ? "Generic Site Images" : libraryView === "icons" ? "Icon Library" : "Your Images";
   const activeLibraryDescription = libraryView === "generic"
     ? "These are global starter images for sites and funnels."
+    : libraryView === "icons"
+    ? "Upload custom icons and graphics for use as background decorations in counter blocks and other elements."
     : "These are your private uploads and saved edits. Only you can manage them.";
   const activeEmptyText = libraryView === "generic"
     ? "No generic site images are available right now."
+    : libraryView === "icons"
+    ? "No icons uploaded yet. Upload SVG, PNG, or WebP icon files above."
     : "No user-owned images yet.";
 
   function renderFileGrid(items, emptyText, sectionKey) {
@@ -476,7 +612,7 @@ export default function Assets() {
           const url = f.url;
           const selectionKey = getFileSelectionKey(f);
           const canManageOriginal = canManageOriginalFile(f);
-          const showSelectionControl = !pickerMode && sectionKey === "user" && permissions.canManageTemplateImages;
+          const showSelectionControl = (!pickerMode || isDev) && canManageOriginal;
           const canSelectForPromotion = sectionKey === "user" && canPromoteToGlobalTemplate(f);
           const isSelected = selectedImageIds.includes(selectionKey);
           return (
@@ -487,8 +623,6 @@ export default function Assets() {
                 border: isSelected ? "1px solid #2dd4bf" : "1px solid #222",
                 borderRadius: 12,
                 padding: 12,
-                contentVisibility: "auto",
-                containIntrinsicSize: "320px",
               }}
             >
               {showSelectionControl ? (
@@ -500,25 +634,23 @@ export default function Assets() {
                     justifyContent: "space-between",
                     gap: 8,
                     marginBottom: 10,
-                    color: canSelectForPromotion ? "#ccfbf1" : "#94a3b8",
+                    color: isSelected ? "#ccfbf1" : "#94a3b8",
                     fontSize: 14,
                     fontWeight: 600,
                     padding: "8px 10px",
                     borderRadius: 8,
-                    background: canSelectForPromotion ? "rgba(13,148,136,0.14)" : "rgba(51,65,85,0.28)",
-                    border: canSelectForPromotion ? "1px solid rgba(45,212,191,0.3)" : "1px solid rgba(100,116,139,0.28)",
-                    cursor: canSelectForPromotion ? "pointer" : "not-allowed",
+                    background: isSelected ? "rgba(13,148,136,0.14)" : "rgba(30,41,59,0.50)",
+                    border: isSelected ? "1px solid rgba(45,212,191,0.45)" : "1px solid rgba(100,116,139,0.28)",
+                    cursor: "pointer",
                     width: "100%",
                     textAlign: "left",
                   }}
-                  disabled={!canSelectForPromotion}
                   onClick={(event) => {
                     event.stopPropagation();
-                    if (!canSelectForPromotion) return;
                     toggleImageSelection(selectionKey);
                   }}
                 >
-                  <span>{canSelectForPromotion ? "Select" : "Not movable"}</span>
+                  <span>{isSelected ? "Selected" : "Select"}</span>
                   <span
                     aria-hidden="true"
                     style={{
@@ -532,7 +664,7 @@ export default function Assets() {
                       fontSize: 14,
                       fontWeight: 900,
                       lineHeight: 1,
-                      border: canSelectForPromotion ? "2px solid #14b8a6" : "2px solid #64748b",
+                      border: "2px solid #14b8a6",
                       background: isSelected ? "#14b8a6" : "transparent",
                       color: isSelected ? "#042f2e" : "transparent",
                       boxShadow: isSelected ? "0 0 0 1px rgba(20,184,166,0.25)" : "none",
@@ -564,8 +696,24 @@ export default function Assets() {
                   src={url}
                   alt={f.name}
                   loading="lazy"
-                  decoding="async"
                   style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const placeholder = e.currentTarget.parentElement;
+                    if (placeholder && !placeholder.dataset.errored) {
+                      placeholder.dataset.errored = "1";
+                      placeholder.style.flexDirection = "column";
+                      placeholder.style.gap = "8px";
+                      const icon = document.createElement("span");
+                      icon.textContent = "🖼️";
+                      icon.style.cssText = "font-size:32px;opacity:0.3";
+                      const label = document.createElement("span");
+                      label.textContent = "No preview";
+                      label.style.cssText = "font-size:11px;color:#475569;text-align:center";
+                      placeholder.appendChild(icon);
+                      placeholder.appendChild(label);
+                    }
+                  }}
                 />
               </div>
               <div
@@ -603,7 +751,7 @@ export default function Assets() {
                     Insert
                   </button>
                 ) : null}
-                {!pickerMode && canPromoteToGlobalTemplate(f) ? (
+                {(!pickerMode || isDev) && canPromoteToGlobalTemplate(f) ? (
                   <button
                     onClick={() => saveAsGlobalTemplate(f)}
                     style={{ ...miniBtn, background: "#0f766e", border: "none", color: "#fff" }}
@@ -613,7 +761,7 @@ export default function Assets() {
                     {deletingName === f.id ? "Saving..." : "Save as Global Template"}
                   </button>
                 ) : null}
-                {!pickerMode && canManageOriginal ? (
+                {(!pickerMode || isDev) && canManageOriginal ? (
                   <button
                     onClick={() => deleteFile(f)}
                     style={{
@@ -729,7 +877,7 @@ export default function Assets() {
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
           {syncing ? <span style={{ color: "#cbd5e1", fontSize: 13 }}>Loading email-template images in the background...</span> : null}
           <button onClick={() => listFiles()} style={miniBtn}>Refresh</button>
-          {permissions.canManageTemplateImages ? (
+          {isDev ? (
             <button
               onClick={cleanupLibrary}
               disabled={cleaning}
@@ -760,6 +908,13 @@ export default function Assets() {
             <input type="file" accept="image/*" multiple onChange={onUploadWebsiteImages} disabled={uploadingImages} />
             <div style={uploadState}>{uploadingImages ? "Uploading images..." : "Select one or more images"}</div>
           </label>
+
+          <label style={uploadCard}>
+            <div style={uploadTitle}>Upload Icons</div>
+            <div style={uploadHint}>SVG or PNG icons for counter blocks &amp; decorations</div>
+            <input type="file" accept="image/svg+xml,image/png,image/webp,image/*" multiple onChange={onUploadIcons} disabled={uploadingIcons} />
+            <div style={uploadState}>{uploadingIcons ? "Uploading icons..." : "SVG, PNG, WEBP"}</div>
+          </label>
         </div>
       </div>
 
@@ -785,6 +940,7 @@ export default function Assets() {
                 >
                   <option value="user">Private Images</option>
                   <option value="generic">Generic Images</option>
+                  <option value="icons">Icon Library</option>
                 </select>
               </label>
             </div>
@@ -792,7 +948,33 @@ export default function Assets() {
               <h2 style={{ margin: 0, color: "#fff", fontSize: 24, fontWeight: 600 }}>{activeLibraryTitle}</h2>
               <p style={{ margin: 0, color: "#94a3b8", fontSize: 16 }}>{activeLibraryDescription}</p>
             </div>
-            {libraryView === "user" && permissions.canManageTemplateImages ? (
+            {(!pickerMode || isDev) && selectedInCurrentSectionCount > 0 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(20,184,166,0.08)", border: "1px solid rgba(45,212,191,0.28)" }}>
+                <span style={{ color: "#99f6e4", fontSize: 14, fontWeight: 600 }}>{selectedInCurrentSectionCount} image{selectedInCurrentSectionCount !== 1 ? "s" : ""} selected</span>
+                <button
+                  type="button"
+                  style={{ ...miniBtn, background: "#3a0f12", border: "1px solid #5b1a1f", color: "#ffd7db" }}
+                  onClick={deleteSelectedImages}
+                  disabled={bulkDeleting}
+                >
+                  {bulkDeleting ? "Deleting..." : `Delete Selected (${selectedInCurrentSectionCount})`}
+                </button>
+                <button type="button" style={miniBtn} onClick={clearSelectedImages} disabled={bulkDeleting}>
+                  Clear Selection
+                </button>
+              </div>
+            ) : null}
+            {(!pickerMode || isDev) && activeLibraryItems.some(canManageOriginalFile) ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                <button type="button" style={miniBtn} onClick={() => selectAllManageableImages(activeLibraryItems)} disabled={bulkDeleting}>
+                  Select All
+                </button>
+                {selectedInCurrentSectionCount > 0 ? (
+                  <button type="button" style={miniBtn} onClick={clearSelectedImages} disabled={bulkDeleting}>Clear</button>
+                ) : null}
+              </div>
+            ) : null}
+            {libraryView === "user" && isDev ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
                 <button type="button" style={miniBtn} onClick={() => selectAllPromotableImages(userOwnedFiles)} disabled={movingSelected || !userOwnedFiles.some(canPromoteToGlobalTemplate)}>
                   Select All Movable Images
@@ -809,6 +991,81 @@ export default function Assets() {
                   {movingSelected ? "Moving..." : `Move Selected to Generic Images${selectedPromotableImageCount ? ` (${selectedPromotableImageCount})` : ""}`}
                 </button>
                 <span style={{ color: "#99f6e4", fontSize: 14 }}>Developer-only bulk move. Non-movable items stay disabled.</span>
+              </div>
+            ) : null}
+            {libraryView === "icons" ? (
+              <div style={{ marginBottom: 28 }}>
+                {/* Group icons by their group property */}
+                {(() => {
+                  const groups = [];
+                  const seen = new Set();
+                  GRID_ICON_LIBRARY.forEach((entry) => {
+                    if (!seen.has(entry.group)) { seen.add(entry.group); groups.push(entry.group); }
+                  });
+                  return groups.map((group) => {
+                    const entries = GRID_ICON_LIBRARY.filter((e) => e.group === group);
+                    return (
+                      <div key={group} style={{ marginBottom: 22 }}>
+                        <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>{group}</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 8 }}>
+                          {entries.map((entry) => {
+                            const IconComp = entry.Icon || null;
+                            return (
+                              <button
+                                key={entry.key}
+                                type="button"
+                                title={entry.label}
+                                onClick={(e) => {
+                                  if (!pickerMode || !pickerChannel || typeof window === "undefined") return;
+                                  let url = entry.src || "";
+                                  if (!url && IconComp) {
+                                    const svgEl = e.currentTarget.querySelector("svg");
+                                    url = svgElToDataUri(svgEl);
+                                  }
+                                  if (!url) return;
+                                  const payload = {
+                                    type: "gr8:media-picker-select",
+                                    channel: pickerChannel,
+                                    asset: { id: entry.key, src: url, url, name: entry.label, description: entry.label, storage_path: "", owner_scope: "builtin" },
+                                  };
+                                  try {
+                                    if (window.opener && !window.opener.closed) { window.opener.postMessage(payload, window.location.origin); window.close(); }
+                                  } catch {}
+                                }}
+                                style={{
+                                  background: "#0f172a",
+                                  border: "1px solid #1e293b",
+                                  borderRadius: 10,
+                                  padding: "10px 6px 8px",
+                                  cursor: pickerMode ? "copy" : "default",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  transition: "border-color .15s",
+                                }}
+                                onMouseEnter={(e) => { if (pickerMode) e.currentTarget.style.borderColor = "#38bdf8"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e293b"; }}
+                              >
+                                {entry.src
+                                  ? <img src={entry.src} alt={entry.label} style={{ width: 36, height: 36, objectFit: "contain" }} />
+                                  : IconComp ? <IconComp size={32} color="#e2e8f0" />
+                                  : null
+                                }
+                                <span style={{ color: "#64748b", fontSize: 10, textAlign: "center", lineHeight: 1.2, maxWidth: 74, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+                {iconFiles.length > 0 ? (
+                  <>
+                    <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "24px 0 10px" }}>Your Uploaded Icons</h3>
+                  </>
+                ) : null}
               </div>
             ) : null}
             {renderFileGrid(activeLibraryItems, activeEmptyText, libraryView)}

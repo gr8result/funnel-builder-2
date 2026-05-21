@@ -3,6 +3,9 @@ import {
   buildDeletedTemplateMarkerName,
   extractTemplateSourceHashFromTags,
   isTemplateSharedMedia,
+  hashText,
+  canonicalSourceUrl,
+  clearMaterializationCaches,
 } from '../../../lib/sharedMediaLibrary';
 
 function resolveStorageTarget(storagePath = '') {
@@ -34,6 +37,21 @@ export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ ok: false, error: 'id is required' });
 
+  // Hardcoded generic library entries (id = "generic:...") have no storage file;
+  // deleting them writes a deleted-source-hash marker so they are suppressed from future loads.
+  if (String(id).startsWith('generic:')) {
+    if (!auth.isDeveloper) {
+      return res.status(403).json({ ok: false, error: 'Only the developer account can delete template library images.' });
+    }
+    const sourceUrl = String(req.query.url || '');
+    if (!sourceUrl) return res.status(400).json({ ok: false, error: 'url is required for generic entries' });
+    const sourceHash = String(hashText(canonicalSourceUrl(sourceUrl)));
+    if (!sourceHash) return res.status(400).json({ ok: false, error: 'Could not compute source hash for this entry' });
+    await writeDeletedTemplateMarker(auth.admin, `generic/${buildDeletedTemplateMarkerName(sourceHash)}`);
+    clearMaterializationCaches();
+    return res.json({ ok: true });
+  }
+
   if (String(id).startsWith('asset:')) {
     const assetPath = String(id).slice('asset:'.length);
     if (isTemplateSharedMedia(`assets:${assetPath}`) && !auth.isDeveloper) {
@@ -56,6 +74,7 @@ export default async function handler(req, res) {
       .eq('user_id', auth.user.id)
       .or(`storage_path.eq.${storagePath},url.eq.${publicUrl}`);
 
+    clearMaterializationCaches();
     return res.json({ ok: true });
   }
 
@@ -75,8 +94,16 @@ export default async function handler(req, res) {
   // Remove from storage if uploaded there
   if (img.storage_path) {
     const templateSourceHash = extractTemplateSourceHashFromTags(img.tags);
+    // Write marker using the template-source-hash tag (tracks the original template source URL).
     if (templateSourceHash) {
-      await writeDeletedTemplateMarker(auth.admin, `${auth.user.id}/${buildDeletedTemplateMarkerName(templateSourceHash)}`);
+      await writeDeletedTemplateMarker(auth.admin, `${auth.user.id}/${buildDeletedTemplateMarkerName(templateSourceHash)}`).catch(() => {});
+    }
+    // Write a second marker using the storage path hash as a fallback — prevents
+    // re-materialization even if the template-source-hash tag is absent or the
+    // source URL changed (e.g. CDN migration). The materialization code checks both.
+    const storagePathHash = String(hashText(img.storage_path));
+    if (storagePathHash) {
+      await writeDeletedTemplateMarker(auth.admin, `${auth.user.id}/${buildDeletedTemplateMarkerName(storagePathHash)}`).catch(() => {});
     }
     const target = resolveStorageTarget(img.storage_path);
     if (target?.path) await auth.admin.storage.from(target.bucket).remove([target.path]);
@@ -85,6 +112,7 @@ export default async function handler(req, res) {
       .delete()
       .eq('user_id', auth.user.id)
       .eq('storage_path', img.storage_path);
+    clearMaterializationCaches();
     return res.json({ ok: true });
   }
 

@@ -1,0 +1,4558 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { createPortal, flushSync } from "react-dom";
+import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
+import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
+import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
+import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
+import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "../gridIconLibrary";
+import RichText from "../../RichText";
+import { styles } from "./pbStyles";
+import {
+  ImageEditModal,
+  ANIMATION_PRESETS as ANIMATION_PRESETS_UTIL,
+  formatLabel, isImageField, isColorField, isLongTextField, getSelectOptions,
+  supportsSectionHeight, supportsFullWidthBackground, isFullWidthBackgroundEnabled,
+  supportsCopyRegeneration,
+  parsePixelValue,
+  createImageStackLayer, createTextStackLayer,
+  createFaqItem, normalizeFaqItems,
+  createContactField, normalizeContactFields,
+  isCssGradient, extractSolidColor, normalizeHeroBackgroundModeProps,
+  AssetLibraryModal, openSharedLibraryAssetPicker,
+  CONTACT_FORM_TEMPLATES, CONTACT_FORM_STYLE_TEMPLATES,
+  DEFAULT_ENQUIRY_BOOKING_URL, resolveContactBookingUrl, htmlToPlainText,
+  createPricingPlan, normalizePricingPlans,
+  NAVBAR_STYLE_PRESETS, BLOCK_STYLE_PRESETS, COPY_TONE_OPTIONS,
+  getHeroLayoutDefaults, applyHeroPresetLayout, withHeroOverlayDefaults,
+  TEXT_SIZE_OPTIONS,
+  readCustomStatsPreset, writeCustomStatsPreset, matchesCustomStatsPreset,
+} from "./pbEditorUtils";
+
+function BlockPresetPicker({ blockType, onApply }) {
+  const presets = BLOCK_STYLE_PRESETS[blockType] || [];
+  if (!presets.length) return null;
+
+  return (
+    <div style={styles.sectionCard}>
+      <label style={styles.propertyLabel}>Designer Presets</label>
+      <div style={styles.presetGrid}>
+        {presets.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onApply(blockType === BlockTypes.HERO ? applyHeroPresetLayout(preset.props) : preset.props)}
+            style={styles.presetChip}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NavbarPresetPicker({ value, onApply }) {
+  return (
+    <div style={styles.presetGrid}>
+      {NAVBAR_STYLE_PRESETS.map((preset) => (
+        <button
+          key={preset.id}
+          type="button"
+          onClick={() => onApply(preset.props)}
+          style={{
+            ...styles.presetChip,
+            ...(value === preset.id ? styles.presetChipActive : {}),
+          }}
+        >
+          {preset.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function NavbarLinksEditor({ links, onChange }) {
+  const safeLinks = Array.isArray(links) ? links : [];
+  const makeLinkId = () => `nav-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const makeChildLinkId = () => `nav-child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  function updateLink(idx, patch) {
+    const next = safeLinks.map((item, currentIdx) => (
+      currentIdx === idx ? { ...item, ...patch } : item
+    ));
+    onChange(next);
+  }
+
+  function removeLink(idx) {
+    onChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
+  }
+
+  function addLink() {
+    onChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "#" }]);
+  }
+
+  function moveLink(idx, direction) {
+    const nextIndex = idx + direction;
+    if (nextIndex < 0 || nextIndex >= safeLinks.length) return;
+    const next = [...safeLinks];
+    const [moved] = next.splice(idx, 1);
+    next.splice(nextIndex, 0, moved);
+    onChange(next);
+  }
+
+  function updateChildLink(parentIdx, childIdx, patch) {
+    const next = safeLinks.map((item, currentIdx) => {
+      if (currentIdx !== parentIdx) return item;
+      const children = Array.isArray(item.children) ? item.children : [];
+      return {
+        ...item,
+        children: children.map((child, currentChildIdx) => (
+          currentChildIdx === childIdx ? { ...child, ...patch } : child
+        )),
+      };
+    });
+    onChange(next);
+  }
+
+  function removeChildLink(parentIdx, childIdx) {
+    const next = safeLinks.map((item, currentIdx) => {
+      if (currentIdx !== parentIdx) return item;
+      return {
+        ...item,
+        children: (Array.isArray(item.children) ? item.children : []).filter((_, currentChildIdx) => currentChildIdx !== childIdx),
+      };
+    });
+    onChange(next);
+  }
+
+  function nestUnder(fromIdx, parentIdx) {
+    if (fromIdx === parentIdx) return;
+    const link = safeLinks[fromIdx];
+    if (!link) return;
+    const asChild = { id: link.id || makeChildLinkId(), label: link.label || "Link", href: link.href || "#" };
+    const next = safeLinks
+      .filter((_, i) => i !== fromIdx)
+      .map((item, currentIdx) => {
+        // parentIdx shifts down by 1 if fromIdx < parentIdx
+        const adjustedParentIdx = fromIdx < parentIdx ? parentIdx - 1 : parentIdx;
+        if (currentIdx !== adjustedParentIdx) return item;
+        return { ...item, children: [...(Array.isArray(item.children) ? item.children : []), asChild] };
+      });
+    onChange(next);
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeLinks.map((item, idx) => (
+        <div key={item?.id || `link-${idx}`} style={styles.linkRowCard}>
+          <div style={styles.linkRowHeader}>
+            <span style={styles.linkRowTitle}>Link {idx + 1}</span>
+            <div style={styles.linkActions}>
+              <button type="button" style={styles.linkMoveBtn} onClick={() => moveLink(idx, -1)} title="Move up">↑</button>
+              <button type="button" style={styles.linkMoveBtn} onClick={() => moveLink(idx, 1)} title="Move down">↓</button>
+              <button type="button" style={styles.linkRowDelete} onClick={() => removeLink(idx)}>
+                Remove
+              </button>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={item?.label || ""}
+            onChange={(e) => updateLink(idx, { label: e.target.value })}
+            style={styles.propertyInput}
+            placeholder="Label"
+          />
+          <input
+            type="text"
+            value={item?.href || ""}
+            onChange={(e) => updateLink(idx, { href: e.target.value })}
+            style={styles.propertyInput}
+            placeholder="#section or /page"
+          />
+          <label style={styles.inlineToggle}>
+            <input
+              type="checkbox"
+              checked={!!item?.highlighted}
+              onChange={(e) => updateLink(idx, { highlighted: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Highlight this link
+          </label>
+          {safeLinks.length > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>Nest under →</span>
+              <select
+                style={{ ...styles.propertyInput, flex: 1, padding: "4px 8px", fontSize: 12 }}
+                value=""
+                onChange={(e) => { if (e.target.value !== "") nestUnder(idx, Number(e.target.value)); }}
+              >
+                <option value="">Move under a parent…</option>
+                {safeLinks.map((other, otherIdx) => otherIdx !== idx ? (
+                  <option key={otherIdx} value={otherIdx}>{other?.label || `Link ${otherIdx + 1}`}</option>
+                ) : null)}
+              </select>
+            </div>
+          )}
+          <div style={styles.subLinkList}>
+            {(Array.isArray(item.children) ? item.children : []).map((child, childIdx) => (
+              <div key={child?.id || `child-${idx}-${childIdx}`} style={styles.subLinkCard}>
+                <div style={styles.linkRowHeader}>
+                  <span style={styles.subLinkTitle}>Dropdown {childIdx + 1}</span>
+                  <button type="button" style={styles.linkRowDelete} onClick={() => removeChildLink(idx, childIdx)}>
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={child?.label || ""}
+                  onChange={(e) => updateChildLink(idx, childIdx, { label: e.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Dropdown label"
+                />
+                <input
+                  type="text"
+                  value={child?.href || ""}
+                  onChange={(e) => updateChildLink(idx, childIdx, { href: e.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Dropdown href"
+                />
+              </div>
+            ))}
+
+          </div>
+        </div>
+      ))}
+      <button type="button" style={styles.secondaryBtn} onClick={addLink}>
+        + Add Link
+      </button>
+    </div>
+  );
+}
+
+function normalizeFeatureListItem(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `feature-item-${index}`,
+      title: String(item.title || item.label || item.text || `Feature ${index + 1}`),
+      body: String(item.body || item.description || item.copy || ""),
+      image: String(item.image || item.src || ""),
+      imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
+      imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,
+    };
+  }
+
+  return {
+    id: `feature-item-${index}`,
+    title: String(item || `Feature ${index + 1}`),
+    body: "",
+    image: "",
+    imageX: 50,
+    imageY: 50,
+  };
+}
+
+function normalizeGalleryItem(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `gallery-item-${index}`,
+      src: String(item.src || ""),
+      alt: String(item.alt || `Image ${index + 1}`),
+      caption: String(item.caption || ""),
+      imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
+      imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,
+    };
+  }
+
+  return {
+    id: `gallery-item-${index}`,
+    src: String(item || ""),
+    alt: `Image ${index + 1}`,
+    caption: "",
+    imageX: 50,
+    imageY: 50,
+  };
+}
+
+function createDefaultGalleryItem(index) {
+  return {
+    id: `gallery-item-${Date.now()}-${index}`,
+    src: `https://placehold.co/1200x900/e2e8f0/0f172a?text=${encodeURIComponent(`Gallery ${index + 1}`)}`,
+    alt: `Image ${index + 1}`,
+    caption: "Add a caption",
+    imageX: 50,
+    imageY: 50,
+  };
+}
+
+function normalizeTeamMember(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `team-member-${index}`,
+      name: String(item.name || `Team Member ${index + 1}`),
+      role: String(item.role || "Role"),
+      bio: String(item.bio || "Add a short team bio."),
+      image: String(item.image || item.src || ""),
+      imageAssetId: String(item.imageAssetId || ""),
+      hierarchyRow: Number.isFinite(Number(item.hierarchyRow)) ? Math.max(0, Number(item.hierarchyRow)) : 0,
+      imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
+      imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,
+    };
+  }
+
+  return {
+    id: `team-member-${index}`,
+    name: `Team Member ${index + 1}`,
+    role: "Role",
+    bio: "Add a short team bio.",
+    image: "",
+    imageAssetId: "",
+    hierarchyRow: 0,
+    imageX: 50,
+    imageY: 50,
+  };
+}
+
+function normalizeTeamRowSizes(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(",");
+  return source
+    .map((entry) => parseInt(String(entry || "").trim(), 10))
+    .filter((size) => Number.isFinite(size) && size > 0)
+    .slice(0, 8);
+}
+
+function formatTeamRowSizes(value) {
+  return normalizeTeamRowSizes(value).join(", ");
+}
+
+function deriveTeamRowSizesFromMembers(members) {
+  const safeMembers = Array.isArray(members) ? members.map((item, index) => normalizeTeamMember(item, index)) : [];
+  const counts = [];
+  safeMembers.forEach((member) => {
+    counts[member.hierarchyRow] = (counts[member.hierarchyRow] || 0) + 1;
+  });
+  return counts.filter((count) => Number.isFinite(count) && count > 0);
+}
+
+function rebalanceTeamMembersForRows(members, rowSizes) {
+  const safeMembers = Array.isArray(members) ? members.map((item, index) => normalizeTeamMember(item, index)) : [];
+  const normalizedRows = normalizeTeamRowSizes(rowSizes);
+  if (!normalizedRows.length) {
+    return safeMembers.map((member) => ({ ...member, hierarchyRow: 0 }));
+  }
+
+  let cursor = 0;
+  const nextMembers = safeMembers.map((member) => ({ ...member }));
+  normalizedRows.forEach((size, rowIndex) => {
+    for (let slot = 0; slot < size && cursor < nextMembers.length; slot += 1) {
+      nextMembers[cursor] = { ...nextMembers[cursor], hierarchyRow: rowIndex };
+      cursor += 1;
+    }
+  });
+
+  while (cursor < nextMembers.length) {
+    nextMembers[cursor] = { ...nextMembers[cursor], hierarchyRow: normalizedRows.length - 1 };
+    cursor += 1;
+  }
+
+  return nextMembers;
+}
+
+function buildEditableTeamRows(members, rowSizes) {
+  const safeMembers = Array.isArray(members) ? members.map((item, index) => normalizeTeamMember(item, index)) : [];
+  const normalizedRows = normalizeTeamRowSizes(rowSizes);
+  const inferredRowCount = safeMembers.reduce((maxRows, member) => Math.max(maxRows, member.hierarchyRow + 1), 0);
+  const rowCount = Math.max(normalizedRows.length, inferredRowCount, 1);
+
+  return Array.from({ length: rowCount }, (_, rowIndex) => ({
+    rowIndex,
+    members: safeMembers.filter((member) => member.hierarchyRow === rowIndex),
+  }));
+}
+
+function normalizeStatItem(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `stat-item-${index}`,
+      number: String(item.number || item.value || `0${index + 1}`),
+      label: String(item.label || item.title || `Metric ${index + 1}`),
+      detail: String(item.detail || item.description || "Add a short line of context."),
+    };
+  }
+
+  return {
+    id: `stat-item-${index}`,
+    number: String(item || `0${index + 1}`),
+    label: `Metric ${index + 1}`,
+    detail: "Add a short line of context.",
+  };
+}
+
+function StatsItemsEditor({ stats, onChange }) {
+  const safeStats = Array.isArray(stats) ? stats : [];
+
+  function updateStat(index, patch) {
+    onChange(safeStats.map((item, itemIndex) => (
+      itemIndex === index ? { ...normalizeStatItem(item, itemIndex), ...patch } : item
+    )));
+  }
+
+  function moveStat(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= safeStats.length) return;
+    const nextStats = [...safeStats];
+    const [moved] = nextStats.splice(index, 1);
+    nextStats.splice(targetIndex, 0, moved);
+    onChange(nextStats);
+  }
+
+  function addStat() {
+    onChange([
+      ...safeStats,
+      {
+        id: `stat-item-${Date.now()}-${safeStats.length}`,
+        number: `${(safeStats.length + 1) * 10}+`,
+        label: `Metric ${safeStats.length + 1}`,
+        detail: "Add a short line of context.",
+      },
+    ]);
+  }
+
+  function removeStat(index) {
+    onChange(safeStats.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeStats.map((rawStat, index) => {
+        const stat = normalizeStatItem(rawStat, index);
+        return (
+          <div key={`${index}-${stat.id}`} style={styles.linkRowCard}>
+            <div style={styles.linkRowHeader}>
+              <span style={styles.linkRowTitle}>Card {index + 1}</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" style={styles.secondaryBtn} onClick={() => moveStat(index, -1)} disabled={index === 0}>Up</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => moveStat(index, 1)} disabled={index === safeStats.length - 1}>Down</button>
+                <button type="button" style={styles.linkRowDelete} onClick={() => removeStat(index)}>Remove</button>
+              </div>
+            </div>
+            <div style={styles.colorGrid}>
+              <div>
+                <label style={styles.propertyLabel}>Number</label>
+                <input
+                  type="text"
+                  value={stat.number || ""}
+                  onChange={(event) => updateStat(index, { number: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="5+"
+                />
+              </div>
+              <div>
+                <label style={styles.propertyLabel}>Label</label>
+                <input
+                  type="text"
+                  value={stat.label || ""}
+                  onChange={(event) => updateStat(index, { label: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Tools replaced"
+                />
+              </div>
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Detail</label>
+            <textarea
+              value={stat.detail || ""}
+              onChange={(event) => updateStat(index, { detail: event.target.value })}
+              style={{ ...styles.propertyInput, minHeight: 88 }}
+              placeholder="Add a short line of context."
+            />
+          </div>
+        );
+      })}
+      <button type="button" style={styles.secondaryBtn} onClick={addStat}>+ Add Stat Card</button>
+    </div>
+  );
+}
+
+function normalizeTestimonialItemForEditor(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `testimonial-${index}`,
+      text: String(item.text || item.quote || ""),
+      author: String(item.author || ""),
+      role: String(item.role || ""),
+      rating: Number.isFinite(Number(item.rating)) ? Math.max(1, Math.min(5, Number(item.rating))) : 5,
+      avatarUrl: String(item.avatarUrl || item.avatar || item.image || ""),
+      avatarAssetId: String(item.avatarAssetId || ""),
+    };
+  }
+  return { id: `testimonial-${index}`, text: "", author: "", role: "", rating: 5, avatarUrl: "", avatarAssetId: "" };
+}
+
+function normalizeTrustBadgeItem(item, index) {
+  if (item && typeof item === "object" && !Array.isArray(item)) {
+    return {
+      id: item.id || `trust-badge-${index}`,
+      icon: item.icon != null ? String(item.icon) : "✓",
+      label: item.label != null ? String(item.label) : `Badge ${index + 1}`,
+    };
+  }
+
+  return {
+    id: `trust-badge-${index}`,
+    icon: "✓",
+    label: String(item || `Badge ${index + 1}`),
+  };
+}
+
+function TrustBadgesEditor({ badges, onChange }) {
+  const safeBadges = (Array.isArray(badges) && badges.length)
+    ? badges.map(normalizeTrustBadgeItem)
+    : [normalizeTrustBadgeItem({}, 0), normalizeTrustBadgeItem({}, 1), normalizeTrustBadgeItem({}, 2)];
+
+  const updateBadge = (index, patch) => {
+    onChange(safeBadges.map((badge, currentIndex) => (
+      currentIndex === index ? { ...badge, ...patch } : badge
+    )));
+  };
+
+  const removeBadge = (index) => {
+    const next = safeBadges.filter((_, currentIndex) => currentIndex !== index);
+    onChange(next.length ? next : [normalizeTrustBadgeItem({}, 0)]);
+  };
+
+  const addBadge = () => {
+    onChange([...safeBadges, normalizeTrustBadgeItem({}, safeBadges.length)]);
+  };
+
+  return (
+    <div style={styles.stackSm}>
+      {safeBadges.map((badge, index) => (
+        <div key={badge.id || `trust-${index}`} style={styles.linkRowCard}>
+          <div style={styles.linkRowHeader}>
+            <span style={styles.linkRowTitle}>Badge {index + 1}</span>
+            <button type="button" style={styles.linkRowDelete} onClick={() => removeBadge(index)}>Remove</button>
+          </div>
+          <div style={styles.colorGrid}>
+            <div>
+              <label style={styles.propertyLabel}>Icon</label>
+              <input
+                type="text"
+                value={badge.icon || ""}
+                onChange={(e) => updateBadge(index, { icon: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="✓"
+              />
+            </div>
+            <div style={{ gridColumn: "span 2" }}>
+              <label style={styles.propertyLabel}>Label</label>
+              <input
+                type="text"
+                value={badge.label || ""}
+                onChange={(e) => updateBadge(index, { label: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Trusted by 2,000+ customers"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button type="button" style={styles.secondaryBtn} onClick={addBadge}>+ Add Badge</button>
+    </div>
+  );
+}
+
+function CustomHtmlPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>{"</>"} Custom HTML / Embed</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Embed Code / HTML</label>
+          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
+            Paste any HTML, iframe, or third-party widget script here. Scripts will execute on the live published page.
+          </p>
+          <textarea
+            value={props.html || ""}
+            onChange={(e) => update({ html: e.target.value })}
+            placeholder={"<div>Your embed code here...</div>\n<script>/* scripts run on live page */</script>"}
+            style={{ ...styles.propertyInput, minHeight: 220, fontFamily: "monospace", fontSize: 12, resize: "vertical" }}
+            spellCheck={false}
+          />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background Color</label>
+          <input type="color" value={props.backgroundColor && props.backgroundColor !== "transparent" ? props.backgroundColor : "#ffffff"} onChange={(e) => update({ backgroundColor: e.target.value })} style={styles.colorInput} />
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => update({ backgroundColor: "transparent" })}>Clear (transparent)</button>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Padding</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Top (px)" value={Number(props.paddingTop ?? 0)} min={0} max={200} onChange={(v) => update({ paddingTop: v })} />
+            <NumberField label="Bottom (px)" value={Number(props.paddingBottom ?? 0)} min={0} max={200} onChange={(v) => update({ paddingBottom: v })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+  const savedLogo = brandAssets?.logo || null;
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const variantLabels = {
+    "pill-row": "Pill Row",
+    "soft-cards": "Soft Cards",
+    "dark-glass": "Dark Glass",
+    "logo-strip": "Logo Strip",
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🛡️ Edit: Trust Badges</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Style</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+            {Object.entries(variantLabels).map(([value, label]) => {
+              const active = String(props.trustBadgeVariant || "pill-row") === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => update({ trustBadgeVariant: value })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    justifyContent: "center",
+                    background: active ? "#2563eb" : undefined,
+                    color: active ? "#ffffff" : undefined,
+                    border: active ? "1px solid #2563eb" : undefined,
+                    fontWeight: active ? 600 : undefined,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Badges</label>
+          <TrustBadgesEditor badges={props.badges} onChange={(badges) => update({ badges })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background</label>
+          <ColorSelector label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Badge Background" value={props.badgeBackgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(value) => update({ badgeBackgroundColor: value })} />
+          <ColorSelector label="Badge Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Badge Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Sizing</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Icon Size" value={Number(props.badgeIconSize || 18)} min={10} max={48} onChange={(value) => update({ badgeIconSize: value })} />
+            <NumberField label="Text Size" value={Number(props.badgeFontSize || 15)} min={10} max={32} onChange={(value) => update({ badgeFontSize: value })} />
+            <NumberField label="Pill Padding" value={Number(props.badgePadding || 14)} min={6} max={36} onChange={(value) => update({ badgePadding: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+            >
+              Choose From Library
+            </button>
+            {savedLogo ? (
+              <button type="button" style={styles.assetChip} onClick={() => onSelectAsset(index, "backgroundImage", savedLogo)}>
+                Use Logo
+              </button>
+            ) : null}
+            {props.backgroundImage ? (
+              <button
+                type="button"
+                style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                onClick={() => update({ backgroundImage: "" })}
+              >
+                Remove Image
+              </button>
+            ) : null}
+            {savedImages.slice(0, 6).map((image) => (
+              <button
+                key={`trust-bg-${image.id}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TestimonialItemsEditor({ items, onChange, brandAssets }) {
+  const safeItems = (Array.isArray(items) && items.length)
+    ? items.map(normalizeTestimonialItemForEditor)
+    : [normalizeTestimonialItemForEditor({}, 0)];
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+
+  function updateItem(index, patch) {
+    onChange(safeItems.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  function removeItem(index) {
+    const next = safeItems.filter((_, i) => i !== index);
+    onChange(next.length ? next : [normalizeTestimonialItemForEditor({}, 0)]);
+  }
+
+  function addItem() {
+    onChange([...safeItems, normalizeTestimonialItemForEditor({}, safeItems.length)]);
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeItems.map((item, index) => (
+        <div key={item.id || `t-${index}`} style={styles.linkRowCard}>
+          <div style={styles.linkRowHeader}>
+            <span style={styles.linkRowTitle}>Review {index + 1}</span>
+            <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
+          </div>
+          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12 }}>Click quote, name, and role directly on the canvas to edit.</p>
+          <label style={{ ...styles.propertyLabel, marginBottom: 4 }}>Star Rating</label>
+          <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => updateItem(index, { rating: n })}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 22,
+                  color: n <= (item.rating || 5) ? "#f59e0b" : "#cbd5e1",
+                  padding: "2px 1px",
+                  lineHeight: 1,
+                }}
+                aria-label={`${n} star${n > 1 ? "s" : ""}`}
+              >★</button>
+            ))}
+          </div>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Avatar
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  const asset = await createStoredAsset(file);
+                  updateItem(index, { avatarUrl: asset.src, avatarAssetId: asset.id || "" });
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatarAssetId: asset.id || "" }))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`tav-${index}-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => updateItem(index, { avatarUrl: image.src, avatarAssetId: image.id || "" })}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          {item.avatarUrl ? (
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatarAssetId: "" })}>Remove Avatar</button>
+          ) : null}
+        </div>
+      ))}
+      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Review</button>
+    </div>
+  );
+}
+
+function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const variantLabels = {
+    cards: "Cards Grid",
+    spotlight: "Spotlight",
+    bubble: "Bubble",
+    wall: "Colour Wall",
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>⭐ Edit: Testimonials</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Style</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+            {["cards", "spotlight", "bubble", "wall"].map((v) => {
+              const active = String(props.testimonialVariant || "cards") === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => update({ testimonialVariant: v })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    justifyContent: "center",
+                    background: active ? "#2563eb" : undefined,
+                    color: active ? "#ffffff" : undefined,
+                    border: active ? "1px solid #2563eb" : undefined,
+                    fontWeight: active ? 600 : undefined,
+                  }}
+                >{variantLabels[v]}</button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Reviews</label>
+          <TestimonialItemsEditor
+            items={props.items}
+            onChange={(items) => update({ items })}
+            brandAssets={brandAssets}
+          />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout</label>
+          <NumberField
+            label="Card Width (px)"
+            value={Number(props.cardWidth) || 320}
+            min={180}
+            max={900}
+            onChange={(value) => update({ cardWidth: value })}
+          />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Section Background" value={props.backgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+            <CompactColorField label="Border" value={props.borderColor || "rgba(148,163,184,0.28)"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
+            <CompactColorField label="Accent / Stars" value={props.accentColor || "#f59e0b"} fallback="#f59e0b" onChange={(value) => update({ accentColor: value })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewsletterPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const variantLabels = {
+    "centered": "Centered",
+    "dark-banner": "Dark Banner",
+    "split": "Split",
+    "card-highlight": "Card Highlight",
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>📧 Edit: Newsletter Signup</h3>
+      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 12 }}>Click heading, subtitle, and button text directly on the page to edit.</p>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Style</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+            {["centered", "dark-banner", "split", "card-highlight"].map((v) => {
+              const active = String(props.newsletterVariant || "centered") === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => update({ newsletterVariant: v })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    justifyContent: "center",
+                    background: active ? "#2563eb" : undefined,
+                    color: active ? "#ffffff" : undefined,
+                    border: active ? "1px solid #2563eb" : undefined,
+                    fontWeight: active ? 600 : undefined,
+                  }}
+                >{variantLabels[v]}</button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Button Style</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Button Background" value={props.buttonColor || "#2563eb"} fallback="#2563eb" onChange={(value) => update({ buttonColor: value })} />
+            <CompactColorField label="Button Text" value={props.buttonTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ buttonTextColor: value })} />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={styles.propertyLabel}>Button Link / Mailto</label>
+            <input
+              type="text"
+              value={String(props.buttonLink || "")}
+              onChange={(e) => update({ buttonLink: e.target.value })}
+              style={styles.propertyInput}
+              placeholder="mailto:hello@example.com or https://..."
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={styles.propertyLabel}>Button Corner Radius</label>
+            <input
+              type="range"
+              min={0}
+              max={40}
+              step={1}
+              value={Number.isFinite(Number(props.buttonRadius)) ? Math.max(0, Math.min(Number(props.buttonRadius), 40)) : 40}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                update({ buttonRadius: v });
+              }}
+              style={{ width: "100%", marginTop: 4 }}
+            />
+            <span style={{ color: "#64748b", fontSize: 12 }}>
+              {`${Math.max(0, Math.min(Number(props.buttonRadius) || 40, 40))}px`}
+            </span>
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Background" value={props.backgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const updateNavLink = (i, field, value) => {
+    const links = [...(Array.isArray(props.navLinks) ? props.navLinks : [])];
+    links[i] = { ...links[i], [field]: value };
+    update({ navLinks: links });
+  };
+  const addNavLink = () => update({ navLinks: [...(props.navLinks || []), { label: "New Link", href: "#" }] });
+  const removeNavLink = (i) => update({ navLinks: (props.navLinks || []).filter((_, idx) => idx !== i) });
+
+  const updateExtraLink = (i, field, value) => {
+    const links = [...(Array.isArray(props.extraLinks) ? props.extraLinks : [])];
+    links[i] = { ...links[i], [field]: value };
+    update({ extraLinks: links });
+  };
+  const addExtraLink = () => update({ extraLinks: [...(props.extraLinks || []), { label: "New Link", href: "#" }] });
+  const removeExtraLink = (i) => update({ extraLinks: (props.extraLinks || []).filter((_, idx) => idx !== i) });
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🔻 Edit: Footer</h3>
+      <div style={styles.propertyGrid}>
+
+        {/* Background colour */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Background" value={props.backgroundColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ backgroundColor: v })} />
+            <CompactColorField label="Text" value={props.textColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(v) => update({ textColor: v })} />
+            <CompactColorField label="Link / Muted" value={props.linkColor || "#94a3b8"} fallback="#94a3b8" onChange={(v) => update({ linkColor: v })} />
+            <CompactColorField label="Border" value={props.borderColor || "rgba(148,163,184,0.2)"} fallback="rgba(148,163,184,0.2)" onChange={(v) => update({ borderColor: v })} />
+          </div>
+        </div>
+
+        {/* Logo */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Logo / Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Logo
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  onUploadImage?.(index, "logo", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => update({ logo: asset.src || "", logoAssetId: asset.id || "", logoWidth: props.logoWidth || 48 }))}
+            >
+              Choose From Library
+            </button>
+            {brandAssets?.logo ? (
+              <button
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => update({ logo: brandAssets.logo.src, logoWidth: props.logoWidth || 48 })}
+                title="Use brand logo"
+              >
+                <img src={brandAssets.logo.src} alt="Brand logo" style={styles.assetThumbPreview} />
+              </button>
+            ) : null}
+          </div>
+          {props.logo ? (
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, marginTop: 8 }}
+              onClick={() => onOpenSimpleImageEditor?.(index, "logo", props.logo)}
+            >
+              ✂️ Crop / Edit Logo
+            </button>
+          ) : null}
+          <div style={{ marginTop: 8 }}>
+            <NumberField label="Logo Width (px)" value={Number(props.logoWidth) || 48} min={20} max={300} onChange={(v) => update({ logoWidth: v })} />
+          </div>
+        </div>
+
+        {/* Brand & tagline */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Brand Name</label>
+          <input type="text" value={String(props.brand || "")} onChange={(e) => update({ brand: e.target.value })} style={styles.propertyInput} placeholder="Your Brand" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Tagline</label>
+          <input type="text" value={String(props.tagline || "")} onChange={(e) => update({ tagline: e.target.value })} style={styles.propertyInput} placeholder="Your tagline." />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Heading</label>
+          <input type="text" value={String(props.contactHeading || "")} onChange={(e) => update({ contactHeading: e.target.value })} style={styles.propertyInput} placeholder="Contact" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Email</label>
+          <input type="text" value={String(props.contactEmail || "")} onChange={(e) => update({ contactEmail: e.target.value })} style={styles.propertyInput} placeholder="hello@yourbrand.com" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Phone</label>
+          <input type="text" value={String(props.contactPhone || "")} onChange={(e) => update({ contactPhone: e.target.value })} style={styles.propertyInput} placeholder="(555) 010-2026" />
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Contact Address</label>
+          <input type="text" value={String(props.contactAddress || "")} onChange={(e) => update({ contactAddress: e.target.value })} style={styles.propertyInput} placeholder="Your city, state" />
+        </div>
+
+        {/* Navigation links */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Navigation Heading</label>
+          <input type="text" value={String(props.navHeading || "")} onChange={(e) => update({ navHeading: e.target.value })} style={styles.propertyInput} placeholder="Navigation" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Nav Links</label>
+          {(Array.isArray(props.navLinks) ? props.navLinks : []).map((link, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
+              <input type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+              <input type="text" value={link.href || ""} onChange={(e) => updateNavLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeNavLink(i)}>✕</button>
+            </div>
+          ))}
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addNavLink}>+ Add Nav Link</button>
+        </div>
+
+        {/* Extra links */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Extra Column Heading</label>
+          <input type="text" value={String(props.extraHeading || "")} onChange={(e) => update({ extraHeading: e.target.value })} style={styles.propertyInput} placeholder="Company" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Extra Links</label>
+          {(Array.isArray(props.extraLinks) ? props.extraLinks : []).map((link, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
+              <input type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+              <input type="text" value={link.href || ""} onChange={(e) => updateExtraLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeExtraLink(i)}>✕</button>
+            </div>
+          ))}
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addExtraLink}>+ Add Link</button>
+        </div>
+
+        {/* Newsletter */}
+        <div style={styles.sectionCard}>
+          <label style={styles.inlineToggle}>
+            <input type="checkbox" checked={props.showNewsletter !== false} onChange={(e) => update({ showNewsletter: e.target.checked })} style={styles.checkboxInput} />
+            Show newsletter signup column
+          </label>
+          {props.showNewsletter !== false ? (
+            <>
+              <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Newsletter Heading</label>
+              <input type="text" value={String(props.newsletterHeading || "")} onChange={(e) => update({ newsletterHeading: e.target.value })} style={styles.propertyInput} placeholder="Stay Updated" />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
+              <input type="text" value={String(props.newsletterSubtitle || "")} onChange={(e) => update({ newsletterSubtitle: e.target.value })} style={styles.propertyInput} placeholder="Get the latest news." />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Signup Destination</label>
+              <input
+                type="text"
+                value={String(props.newsletterActionUrl || "")}
+                onChange={(e) => update({ newsletterActionUrl: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="https://..., /api/subscribe, or hello@example.com"
+              />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Submit Method</label>
+              <select
+                value={String(props.newsletterSubmitMethod || "post")}
+                onChange={(e) => update({ newsletterSubmitMethod: e.target.value })}
+                style={styles.propertyInput}
+              >
+                <option value="post">POST</option>
+                <option value="get">GET</option>
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Fallback Email</label>
+              <input
+                type="text"
+                value={String(props.newsletterFallbackEmail || "")}
+                onChange={(e) => update({ newsletterFallbackEmail: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Defaults to Contact Email if blank"
+              />
+              <div style={{ ...styles.colorGrid, marginTop: 10 }}>
+                <CompactColorField label="Button Background" value={props.newsletterButtonColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ newsletterButtonColor: v })} />
+                <CompactColorField label="Button Text" value={props.newsletterButtonTextColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ newsletterButtonTextColor: v })} />
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* Copyright */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Copyright Text</label>
+          <input type="text" value={String(props.copyrightText || "")} onChange={(e) => update({ copyrightText: e.target.value })} style={styles.propertyInput} placeholder="© 2025 Your Brand." />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const [heightDraft, setHeightDraft] = useState(String(parsePixelValue(props.minHeight, 220)));
+
+  useEffect(() => {
+    setHeightDraft(String(parsePixelValue(props.minHeight, 220)));
+  }, [block?.id, props.minHeight]);
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>📝 Edit: Text Section</h3>
+      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 12 }}>Click text directly on the page to edit.</p>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Height</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={heightDraft}
+            onChange={(e) => setHeightDraft(e.target.value.replace(/[^\d]/g, ""))}
+            onBlur={() => {
+              const px = Math.max(120, Number(heightDraft) || 220);
+              setHeightDraft(String(px));
+              update({ minHeight: `${px}px` });
+            }}
+            placeholder="220"
+            style={styles.propertyInput}
+          />
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.fullWidthBackground !== false}
+              onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Full width background
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.enableParallax}
+              onChange={(e) => update({ enableParallax: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Enable parallax background
+          </label>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`text-bg-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          {props.backgroundImage ? (
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => update({ backgroundImage: "" })}>Remove Background</button>
+          ) : null}
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Background" value={props.backgroundColor || "#111827"} fallback="#111827" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#e6eef5"} fallback="#e6eef5" onChange={(value) => update({ textColor: value })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Font Size</label>
+          <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content Width</label>
+          <NumberField label="Max width (px)" value={Number(props.baseLayoutWidth || 1080)} min={320} max={1800} onChange={(value) => update({ baseLayoutWidth: value })} />
+        </div>
+        <BlockPresetPicker
+          blockType={block.type}
+          onApply={(patch) => update(patch)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatsPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const [customPreset, setCustomPreset] = useState(() => readCustomStatsPreset());
+  const statsStyleLabels = {
+    "editorial-band": "Editorial Band",
+    "spotlight-orbs": "Spotlight Orbs",
+    "split-scoreboard": "Split Scoreboard",
+    "minimal-ticker": "Minimal Ticker",
+    "data-ribbon": "Data Ribbon",
+  };
+  const hasCustomPreset = !!customPreset;
+  const customPresetActive = hasCustomPreset && matchesCustomStatsPreset(props, customPreset);
+
+  useEffect(() => {
+    setCustomPreset(readCustomStatsPreset());
+  }, []);
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>📊 Edit: Stats Cards</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout & Formatting</label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 8 }}>
+            {getSelectOptions("statsVariant").map((option) => {
+              const active = String(props.statsVariant || "editorial-band") === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => update({ statsVariant: option })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    justifyContent: "center",
+                    background: active ? "#dbeafe" : "#ffffff",
+                    borderColor: active ? "#2563eb" : "rgba(148,163,184,0.24)",
+                    color: active ? "#0f172a" : "#334155",
+                    fontWeight: active ? 600 : 600,
+                  }}
+                >
+                  {statsStyleLabels[option] || option}
+                </button>
+              );
+            })}
+            {hasCustomPreset ? (
+              <button
+                type="button"
+                onClick={() => update(customPreset)}
+                style={{
+                  ...styles.secondaryBtn,
+                  justifyContent: "center",
+                  background: customPresetActive ? "#dbeafe" : "#ffffff",
+                  borderColor: customPresetActive ? "#2563eb" : "rgba(148,163,184,0.24)",
+                  color: customPresetActive ? "#0f172a" : "#334155",
+                  fontWeight: 600,
+                  gridColumn: "1 / -1",
+                }}
+              >
+                Saved Custom Style
+              </button>
+            ) : null}
+          </div>
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => setCustomPreset(writeCustomStatsPreset(props))}
+              style={{ ...styles.secondaryBtn, justifyContent: "center" }}
+            >
+              Save Current Style as Option
+            </button>
+            <span style={{ fontSize: 12, lineHeight: 1.5, color: "#64748b" }}>
+              Saves this stats card's layout variant and colour treatment into a reusable option here.
+            </span>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 12 }}>
+            <NumberField label="Block Max Width" value={Number(props.blockMaxWidth) || 1200} min={320} max={1800} onChange={(value) => update({ blockMaxWidth: value })} />
+            <NumberField label="Card Gap" value={Number(props.statsCardGap ?? 18)} min={0} max={80} onChange={(value) => update({ statsCardGap: value })} />
+            <NumberField label="Card Min Width" value={Number(props.statsCardMinWidth ?? 220)} min={140} max={520} onChange={(value) => update({ statsCardMinWidth: value })} />
+            {String(props.statsVariant || "editorial-band") === "data-ribbon" ? (
+              <NumberField label="Left Col %" value={Math.min(80, Math.max(20, Number(props.statsLeftColPct ?? 40)))} min={20} max={70} onChange={(value) => update({ statsLeftColPct: value })} />
+            ) : null}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Stat Cards</label>
+          <StatsItemsEditor stats={props.stats} onChange={(stats) => update({ stats })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Typography</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Section Title" value={Number(props.sectionTitleSize || 28)} min={14} max={96} onChange={(value) => update({ sectionTitleSize: value })} />
+            <NumberField label="Section Subtitle" value={Number(props.sectionSubtitleSize || 16)} min={12} max={72} onChange={(value) => update({ sectionSubtitleSize: value })} />
+            <NumberField label="Number" value={Number(props.numberSize || 48)} min={14} max={120} onChange={(value) => update({ numberSize: value })} />
+            <NumberField label="Card Title" value={Number(props.labelSize || 14)} min={10} max={56} onChange={(value) => update({ labelSize: value })} />
+            <NumberField label="Card Subtitle" value={Number(props.detailSize || 14)} min={10} max={56} onChange={(value) => update({ detailSize: value })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+            <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
+            <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
+            <CompactColorField label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ accentColor: value })} />
+            <CompactColorField label="Section Title" value={props.sectionTitleColor || props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ sectionTitleColor: value })} />
+            <CompactColorField label="Section Subtitle" value={props.sectionSubtitleColor || props.textColor || "#475569"} fallback="#475569" onChange={(value) => update({ sectionSubtitleColor: value })} />
+            <CompactColorField label="Number" value={props.numberColor || props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ numberColor: value })} />
+            <CompactColorField label="Card Title" value={props.labelColor || props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ labelColor: value })} />
+            <CompactColorField label="Card Subtitle" value={props.detailColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ detailColor: value })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            {[
+              { key: "sectionAnimation", label: "Section" },
+              { key: "cardAnimation", label: "Cards" },
+              { key: "numberAnimation", label: "Number" },
+              { key: "labelAnimation", label: "Card Title" },
+              { key: "detailAnimation", label: "Card Subtitle" },
+            ].map((field) => (
+              <div key={field.key} style={styles.propertyField}>
+                <label style={styles.propertyLabel}>{field.label}</label>
+                <select value={String(props[field.key] || (field.key === "cardAnimation" ? "fade-up" : field.key === "sectionAnimation" ? "fade-up" : "fade-in"))} onChange={(event) => update({ [field.key]: event.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`${field.key}-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Surface Speed" value={Math.round((Number(props.surfaceAnimationSpeed ?? 0.9) || 0.9) * 100)} min={25} max={300} onChange={(value) => update({ surfaceAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Card Stagger" value={Math.round((Number(props.cardStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ cardStagger: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContainerImageControls({ src, imageX, imageY, onChange, onEditImage }) {
+  const safeX = Number.isFinite(Number(imageX)) ? Math.max(0, Math.min(100, Number(imageX))) : 50;
+  const safeY = Number.isFinite(Number(imageY)) ? Math.max(0, Math.min(100, Number(imageY))) : 50;
+
+  return (
+    <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button type="button" style={styles.secondaryBtn} disabled={!src} onClick={() => onEditImage?.()}>
+          Crop / Remove BG
+        </button>
+        <button type="button" style={styles.secondaryBtn} onClick={() => onChange?.({ imageX: 50, imageY: 50 })}>
+          Reset Focus
+        </button>
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        <label style={styles.propertyLabel}>
+          Focus X: {Math.round(safeX)}%
+          <input type="range" min={0} max={100} value={safeX} onChange={(event) => onChange?.({ imageX: Number(event.target.value) })} style={{ width: "100%", marginTop: 6 }} />
+        </label>
+        <label style={styles.propertyLabel}>
+          Focus Y: {Math.round(safeY)}%
+          <input type="range" min={0} max={100} value={safeY} onChange={(event) => onChange?.({ imageY: Number(event.target.value) })} style={{ width: "100%", marginTop: 6 }} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function TeamMembersEditor({ members, onChange, brandAssets, onOpenImageEditor, onUploadImage, isHierarchyLayout = false }) {
+  const safeMembers = Array.isArray(members) ? members : [];
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+
+  function updateMember(index, patch) {
+    onChange(safeMembers.map((item, itemIndex) => (
+      itemIndex === index ? { ...normalizeTeamMember(item, itemIndex), ...patch } : item
+    )));
+  }
+
+  function removeMember(index) {
+    onChange(safeMembers.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addMember() {
+    onChange([...safeMembers, {
+      id: `team-member-${Date.now()}-${safeMembers.length}`,
+      name: `Team Member ${safeMembers.length + 1}`,
+      role: "Role",
+      bio: "Add a short team bio.",
+      image: `https://placehold.co/900x1100/e2e8f0/0f172a?text=${encodeURIComponent(`Member ${safeMembers.length + 1}`)}`,
+      imageAssetId: "",
+      hierarchyRow: isHierarchyLayout && safeMembers.length ? normalizeTeamMember(safeMembers[safeMembers.length - 1], safeMembers.length - 1).hierarchyRow : 0,
+      imageX: 50,
+      imageY: 50,
+    }]);
+  }
+
+  async function uploadMemberImage(memberIndex, file) {
+    // Use a __ prefix so handleCanvasImageUpload skips applyAssetToCanvasBlock,
+    // which would otherwise mis-apply the asset to the block's top-level image prop.
+    const uploadedAsset = await Promise.resolve(onUploadImage?.(memberIndex, "__team_member_image__", file));
+    if (uploadedAsset?.id) {
+      updateMember(memberIndex, {
+        image: uploadedAsset.src || "",
+        imageAssetId: uploadedAsset.id,
+      });
+      return;
+    }
+    // Fallback when onUploadImage is missing or returns nothing (e.g. canvas route).
+    const fallbackAsset = await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
+    const existingImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+    const dedupedImages = existingImages.filter((img) => img?.src && img.src !== fallbackAsset.src && img.name !== fallbackAsset.name);
+    saveWebsiteBuilderAssets({ ...brandAssets, images: [fallbackAsset, ...dedupedImages] });
+    updateMember(memberIndex, { image: fallbackAsset.src || "", imageAssetId: fallbackAsset.id || "" });
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeMembers.map((rawMember, index) => {
+        const member = normalizeTeamMember(rawMember, index);
+        const memberAsset = getAssetFromLibrary(brandAssets, member.imageAssetId) || savedImages.find((image) => image?.id && image.id === member.imageAssetId) || null;
+        const memberImageSrc = memberAsset?.src || member.image;
+        return (
+          <div key={`${index}-${member.id}`} style={styles.linkRowCard}>
+            <div style={styles.linkRowHeader}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={styles.linkRowTitle}>Member {index + 1}</span>
+                {isHierarchyLayout ? (
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#475569", fontSize: 16, fontWeight: 600 }}>
+                    Row
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={member.hierarchyRow + 1}
+                      onChange={(e) => {
+                        const nextRow = Math.max(1, Number.parseInt(e.target.value, 10) || 1) - 1;
+                        updateMember(index, { hierarchyRow: nextRow });
+                      }}
+                      style={{ ...styles.propertyInput, width: 72, minWidth: 72, padding: "6px 10px" }}
+                    />
+                  </label>
+                ) : null}
+              </div>
+              <button type="button" style={styles.linkRowDelete} onClick={() => removeMember(index)}>Remove</button>
+            </div>
+            <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12 }}>Click name, role, or bio directly on the page to edit.</p>
+            <input
+              type="text"
+              value={memberImageSrc}
+              onChange={(e) => updateMember(index, { image: e.target.value, imageAssetId: "" })}
+              style={styles.propertyInput}
+              placeholder="Image URL"
+            />
+            <div style={{ ...styles.assetPicker, marginTop: 8 }}>
+              <label style={styles.assetUploadCta}>
+                Upload Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={styles.hiddenInput}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    await uploadMemberImage(index, file);
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => openSharedLibraryAssetPicker((asset) => updateMember(index, {
+                  image: String(asset.src || "").startsWith("data:") ? "" : (asset.src || ""),
+                  imageAssetId: asset.id || "",
+                }))}
+              >
+                Choose From Library
+              </button>
+              {savedImages.map((image) => (
+                <button
+                  key={`team-member-${index}-${image.id || image.src}`}
+                  type="button"
+                  style={styles.assetThumbBtn}
+                  onClick={() => updateMember(index, {
+                    image: String(image.src || "").startsWith("data:") ? "" : (image.src || ""),
+                    imageAssetId: image.id || "",
+                  })}
+                  title={image.name}
+                >
+                  <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+                </button>
+              ))}
+            </div>
+            <ContainerImageControls
+              src={memberImageSrc}
+              imageX={member.imageX}
+              imageY={member.imageY}
+              onChange={(patch) => updateMember(index, patch)}
+              onEditImage={() => onOpenImageEditor?.(index, "image", memberImageSrc)}
+            />
+          </div>
+        );
+      })}
+      <button type="button" style={styles.secondaryBtn} onClick={addMember}>+ Add Member</button>
+    </div>
+  );
+}
+
+function TeamPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor, onUploadImage }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const isHierarchyLayout = String(props.teamVariant || "studio-cards") === "hierarchy-layout";
+  const teamStyleLabels = {
+    "studio-cards": "Studio Cards",
+    "editorial-split": "Editorial Split",
+    "spotlight-strip": "Spotlight Strip",
+    "minimal-list": "Minimal List",
+    "hierarchy-layout": "Hierarchy Layout",
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>👥 Edit: Team Section</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Team Style</label>
+          <select value={String(props.teamVariant || "studio-cards")} onChange={(e) => update({ teamVariant: e.target.value })} style={styles.propertyInput}>
+            {getSelectOptions("teamVariant").map((option) => (
+              <option key={option} value={option}>{teamStyleLabels[option] || option}</option>
+            ))}
+          </select>
+          {isHierarchyLayout ? <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>Set the row number on each team member card.</p> : null}
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Team Members</label>
+          <TeamMembersEditor members={props.members} onChange={(members) => update({ members })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "members", itemIndex, imageKey, src)} onUploadImage={(itemIndex, imageKey, file) => onUploadImage?.(index, imageKey, file, itemIndex)} isHierarchyLayout={isHierarchyLayout} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+            <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ensureGalleryImagesCount(images, count) {
+  const safeImages = Array.isArray(images) ? images.map((item, index) => normalizeGalleryItem(item, index)) : [];
+  const targetCount = Math.max(1, Number(count) || 1);
+  if (safeImages.length >= targetCount) return safeImages;
+
+  const nextImages = [...safeImages];
+  for (let index = safeImages.length; index < targetCount; index += 1) {
+    nextImages.push(createDefaultGalleryItem(index));
+  }
+  return nextImages;
+}
+
+function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
+  const safeItems = Array.isArray(items) ? items : [];
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+
+  function updateItem(index, patch) {
+    onChange(safeItems.map((item, itemIndex) => (
+      itemIndex === index ? { ...normalizeFeatureListItem(item, itemIndex), ...patch } : item
+    )));
+  }
+
+  function removeItem(index) {
+    onChange(safeItems.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addItem() {
+    onChange([...safeItems, {
+      id: `feature-item-${Date.now()}-${safeItems.length}`,
+      title: `List item ${safeItems.length + 1}`,
+      body: "Add a short supporting sentence.",
+      image: `https://placehold.co/960x720/e2e8f0/0f172a?text=${encodeURIComponent(`Item ${safeItems.length + 1}`)}`,
+      imageX: 50,
+      imageY: 50,
+    }]);
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeItems.map((rawItem, index) => {
+        const item = normalizeFeatureListItem(rawItem, index);
+        return (
+        <div key={`${index}-${item.id}`} style={styles.linkRowCard}>
+          <div style={styles.linkRowHeader}>
+            <span style={styles.linkRowTitle}>Item {index + 1}</span>
+            <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
+          </div>
+          <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
+            Edit the item title and copy directly on the page. Use SVG icons or normal images here.
+          </p>
+          <input
+            type="text"
+            value={item.image}
+            onChange={(e) => updateItem(index, { image: e.target.value })}
+            style={{ ...styles.propertyInput, marginTop: 10 }}
+            placeholder="Icon or image URL"
+          />
+          <div style={{ ...styles.assetPicker, marginTop: 8 }}>
+            <label style={styles.assetUploadCta}>
+              Upload Icon / Image
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  const asset = await createStoredAsset(file);
+                  updateItem(index, { image: asset.src });
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { image: asset.src || "" }))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`feature-item-${index}-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => updateItem(index, { image: image.src || "" })}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          <ContainerImageControls
+            src={item.image}
+            imageX={item.imageX}
+            imageY={item.imageY}
+            onChange={(patch) => updateItem(index, patch)}
+            onEditImage={() => onOpenImageEditor?.(index, "image", item.image)}
+          />
+        </div>
+      );})}
+      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Item</button>
+    </div>
+  );
+}
+
+function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const [cardWidthDraft, setCardWidthDraft] = useState("");
+  const featureStyleLabels = {
+    cards: "Showcase Cards",
+    "glass-cards": "Glass Gallery",
+    "editorial-strip": "Editorial Split",
+    "minimal-list": "Minimal Thumb List",
+  };
+
+  useEffect(() => {
+    setCardWidthDraft(String(Math.max(220, Number(props.featureCardWidth) || 320)));
+  }, [props.featureCardWidth]);
+
+  const commitCardWidthDraft = () => {
+    const nextWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || 320));
+    const nextValue = String(nextWidth);
+    setCardWidthDraft(nextValue);
+    update({ featureCardWidth: nextWidth });
+  };
+
+  const displayCardWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || Number(props.featureCardWidth) || 320));
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>☰ Edit: List Block</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>List Items / Icons</label>
+          <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>List Style</label>
+          <select value={String(props.featureVariant || "cards")} onChange={(e) => update({ featureVariant: e.target.value })} style={styles.propertyInput}>
+            {getSelectOptions("featureVariant").map((option) => (
+              <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
+            ))}
+          </select>
+          <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
+            Card Width: {Math.round(displayCardWidth)}px
+          </label>
+          <input
+            type="text"
+            value={cardWidthDraft}
+            onChange={(e) => setCardWidthDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
+            onBlur={commitCardWidthDraft}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitCardWidthDraft();
+              }
+            }}
+            inputMode="numeric"
+            placeholder="320"
+            style={{ ...styles.propertyInput, marginTop: 8 }}
+          />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.colorField}>
+              <span style={styles.colorLabel}>Section Background</span>
+              <input type="color" value={normalizeColorInput(props.backgroundColor, "#ffffff")} onChange={(e) => update({ backgroundColor: e.target.value })} style={styles.colorInput} />
+              <div style={styles.colorSwatchRow}>
+                {STANDARD_COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={`feature-section-${swatch}`}
+                    type="button"
+                    title={swatch}
+                    onClick={() => update({ backgroundColor: swatch })}
+                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.backgroundColor || "#ffffff").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={styles.colorField}>
+              <span style={styles.colorLabel}>Item Background</span>
+              <input type="color" value={normalizeColorInput(props.itemBackgroundColor, "#eff6ff")} onChange={(e) => update({ itemBackgroundColor: e.target.value })} style={styles.colorInput} />
+              <div style={styles.colorSwatchRow}>
+                {STANDARD_COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={`feature-item-${swatch}`}
+                    type="button"
+                    title={swatch}
+                    onClick={() => update({ itemBackgroundColor: swatch })}
+                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.itemBackgroundColor || "#eff6ff").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={styles.colorField}>
+              <span style={styles.colorLabel}>Text</span>
+              <input type="color" value={normalizeColorInput(props.textColor, "#0f172a")} onChange={(e) => update({ textColor: e.target.value })} style={styles.colorInput} />
+              <div style={styles.colorSwatchRow}>
+                {STANDARD_COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={`feature-text-${swatch}`}
+                    type="button"
+                    title={swatch}
+                    onClick={() => update({ textColor: swatch })}
+                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.textColor || "#0f172a").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GalleryImagesEditor({ images, onChange, brandAssets, onOpenImageEditor }) {
+  const safeImages = Array.isArray(images) ? images : [];
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+
+  function updateImage(index, patch) {
+    onChange(safeImages.map((item, itemIndex) => (
+      itemIndex === index ? { ...normalizeGalleryItem(item, itemIndex), ...patch } : item
+    )));
+  }
+
+  function removeImage(index) {
+    onChange(safeImages.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addImage() {
+    onChange([...safeImages, createDefaultGalleryItem(safeImages.length)]);
+  }
+
+  return (
+    <div style={styles.stackSm}>
+      {safeImages.map((rawItem, index) => {
+        const item = normalizeGalleryItem(rawItem, index);
+        return (
+          <div key={`${index}-${item.id}`} style={styles.linkRowCard}>
+            <div style={styles.linkRowHeader}>
+              <span style={styles.linkRowTitle}>Image {index + 1}</span>
+              <button type="button" style={styles.linkRowDelete} onClick={() => removeImage(index)}>Remove</button>
+            </div>
+            <input type="text" value={item.src} onChange={(e) => updateImage(index, { src: e.target.value })} style={styles.propertyInput} placeholder="Image URL" />
+            <input type="text" value={item.alt} onChange={(e) => updateImage(index, { alt: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Alt text" />
+            <input type="text" value={item.caption} onChange={(e) => updateImage(index, { caption: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Caption" />
+            <div style={{ ...styles.assetPicker, marginTop: 8 }}>
+              <label style={styles.assetUploadCta}>
+                Upload From Computer
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={styles.hiddenInput}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    const asset = await createStoredAsset(file);
+                    updateImage(index, { src: asset.src, alt: asset.name || item.alt });
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                style={styles.secondaryBtn}
+                onClick={() => openSharedLibraryAssetPicker((asset) => updateImage(index, { src: asset.src || "", alt: asset.name || item.alt }))}
+              >
+                Choose From Library
+              </button>
+              {savedImages.map((image) => (
+                <button
+                  key={`gallery-item-${index}-${image.id || image.src}`}
+                  type="button"
+                  style={styles.assetThumbBtn}
+                  onClick={() => updateImage(index, { src: image.src || "", alt: image.name || item.alt })}
+                  title={image.name}
+                >
+                  <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+                </button>
+              ))}
+            </div>
+            <ContainerImageControls
+              src={item.src}
+              imageX={item.imageX}
+              imageY={item.imageY}
+              onChange={(patch) => updateImage(index, patch)}
+              onEditImage={() => onOpenImageEditor?.(index, "src", item.src)}
+            />
+          </div>
+        );
+      })}
+      <button type="button" style={styles.secondaryBtn} onClick={addImage}>+ Add Image</button>
+    </div>
+  );
+}
+
+function ImageGalleryPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const syncColumns = (nextColumns) => {
+    const safeColumns = Math.max(1, Math.min(5, Number(nextColumns) || 3));
+    onChange(index, {
+      ...props,
+      columns: safeColumns,
+      images: ensureGalleryImagesCount(props.images, safeColumns),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🖼️ Edit: Image Gallery</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Title</label>
+          <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Gallery Style</label>
+          <select value={String(props.galleryVariant || "balanced-grid")} onChange={(e) => update({ galleryVariant: e.target.value })} style={styles.propertyInput}>
+            {getSelectOptions("galleryVariant").map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          <div style={{ marginTop: 10 }}>
+            <label style={styles.propertyLabel}>Columns</label>
+            <input type="number" min={1} max={5} value={Number(props.columns || 3)} onChange={(e) => syncColumns(e.target.value)} style={styles.propertyInput} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Images</label>
+          <GalleryImagesEditor images={props.images} onChange={(images) => update({ images })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "images", itemIndex, imageKey, src)} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <CompactColorField label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+            <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PricingTablePropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const plans = normalizePricingPlans(props.plans);
+  const replace = (nextProps) => onChange(index, nextProps);
+  const update = (patch) => replace({ ...props, ...patch });
+  const pricingSectionShells = [
+    { background: "linear-gradient(180deg,#10243e,#153255)", borderColor: "#2f6fca" },
+    { background: "linear-gradient(180deg,#12372d,#184a3c)", borderColor: "#2da66d" },
+    { background: "linear-gradient(180deg,#341f4e,#4b2d73)", borderColor: "#8f63d8" },
+    { background: "linear-gradient(180deg,#2f2435,#4b2f52)", borderColor: "#c061a6" },
+  ];
+  const planEditorShells = [
+    { background: "linear-gradient(180deg,#102d4f,#153f6d)", borderColor: "#4ea1ff" },
+    { background: "linear-gradient(180deg,#153b2f,#1b5a46)", borderColor: "#4ed39a" },
+    { background: "linear-gradient(180deg,#3b2251,#5b2f7d)", borderColor: "#b27cff" },
+    { background: "linear-gradient(180deg,#49242e,#6b3242)", borderColor: "#ff7cb0" },
+  ];
+
+  const updatePlan = (planIndex, patch) => {
+    const normalizedPatch = {
+      ...patch,
+      ...(Object.prototype.hasOwnProperty.call(patch, "name") ? { name: htmlToPlainText(patch.name) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "price") ? { price: htmlToPlainText(patch.price) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "description") ? { description: htmlToPlainText(patch.description) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "cta") ? { cta: htmlToPlainText(patch.cta) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "includedFeatures") ? { includedFeatures: (Array.isArray(patch.includedFeatures) ? patch.includedFeatures : []).map((item) => htmlToPlainText(item)) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "features") ? { features: (Array.isArray(patch.features) ? patch.features : []).map((item) => htmlToPlainText(item)) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "extras") ? { extras: (Array.isArray(patch.extras) ? patch.extras : []).map((item) => htmlToPlainText(item)) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "cardBackgroundColor") ? { cardBackgroundColor: String(patch.cardBackgroundColor || "") } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "textColor") ? { textColor: String(patch.textColor || "") } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "subtleTextColor") ? { subtleTextColor: String(patch.subtleTextColor || "") } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, "ctaTextColor") ? { ctaTextColor: String(patch.ctaTextColor || "") } : {}),
+    };
+    const nextPlans = plans.map((plan, currentIndex) => (
+      currentIndex === planIndex
+        ? {
+            ...plan,
+            ...normalizedPatch,
+            features: Object.prototype.hasOwnProperty.call(normalizedPatch, "includedFeatures") ? normalizedPatch.includedFeatures : plan.features,
+          }
+        : plan
+    ));
+    update({ plans: nextPlans });
+  };
+
+  const updateFeature = (planIndex, featureIndex, nextValue) => {
+    const plan = plans[planIndex] || {};
+    const includedFeatures = Array.isArray(plan.includedFeatures) ? [...plan.includedFeatures] : [];
+    includedFeatures[featureIndex] = htmlToPlainText(nextValue);
+    updatePlan(planIndex, { includedFeatures, features: includedFeatures });
+  };
+
+  const updateExtra = (planIndex, extraIndex, nextValue) => {
+    const plan = plans[planIndex] || {};
+    const extras = Array.isArray(plan.extras) ? [...plan.extras] : [];
+    extras[extraIndex] = htmlToPlainText(nextValue);
+    updatePlan(planIndex, { extras });
+  };
+
+  const addPlan = () => {
+    update({
+      plans: [
+        ...plans,
+        createPricingPlan(plans.length),
+      ],
+    });
+  };
+
+  const removePlan = (planIndex) => {
+    update({ plans: plans.filter((_, currentIndex) => currentIndex !== planIndex) });
+  };
+
+  const addFeature = (planIndex) => {
+    const plan = plans[planIndex] || {};
+    const includedFeatures = Array.isArray(plan.includedFeatures) ? [...plan.includedFeatures, `Included ${((plan.includedFeatures || []).length || 0) + 1}`] : ["Included 1"];
+    updatePlan(planIndex, { includedFeatures, features: includedFeatures });
+  };
+
+  const removeFeature = (planIndex, featureIndex) => {
+    const plan = plans[planIndex] || {};
+    const includedFeatures = Array.isArray(plan.includedFeatures) ? plan.includedFeatures.filter((_, currentIndex) => currentIndex !== featureIndex) : [];
+    updatePlan(planIndex, { includedFeatures, features: includedFeatures });
+  };
+
+  const addExtra = (planIndex) => {
+    const plan = plans[planIndex] || {};
+    const extras = Array.isArray(plan.extras) ? [...plan.extras, `Extra ${((plan.extras || []).length || 0) + 1}`] : ["Extra 1"];
+    updatePlan(planIndex, { extras });
+  };
+
+  const removeExtra = (planIndex, extraIndex) => {
+    const plan = plans[planIndex] || {};
+    const extras = Array.isArray(plan.extras) ? plan.extras.filter((_, currentIndex) => currentIndex !== extraIndex) : [];
+    updatePlan(planIndex, { extras });
+  };
+
+  const setHighlightedPlan = (planIndex, checked) => {
+    update({
+      plans: plans.map((plan, currentIndex) => ({
+        ...plan,
+        highlighted: checked ? currentIndex === planIndex : (currentIndex === planIndex ? false : plan.highlighted),
+        badge: "",
+      })),
+    });
+  };
+
+  const resetPricingTable = () => {
+    const defaults = BlockDefinitions[BlockTypes.PRICING_TABLE]?.defaultProps || {};
+    replace({
+      ...defaults,
+      plans: normalizePricingPlans(defaults.plans),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <div style={styles.propertiesHeaderRow}>
+        <h3 style={styles.propertiesTitle}>💳 Edit: Pricing Table</h3>
+        <button type="button" style={styles.ghostBtn} onClick={resetPricingTable}>Reset</button>
+      </div>
+      <div style={styles.propertyGrid}>
+        <div style={{ ...styles.sectionCard, ...pricingSectionShells[0] }}>
+          <label style={styles.propertyLabel}>Section Title</label>
+          <input type="text" value={htmlToPlainText(props.title || "")} onChange={(e) => update({ title: htmlToPlainText(e.target.value) })} style={styles.propertyInput} />
+        </div>
+        <div style={{ ...styles.sectionCard, ...pricingSectionShells[1] }}>
+          <label style={styles.propertyLabel}>Pricing Variant</label>
+          <select value={String(props.pricingVariant || "premium")} onChange={(e) => update({ pricingVariant: e.target.value })} style={styles.propertyInput}>
+            {getSelectOptions("pricingVariant").map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          <div style={{ marginTop: 8 }}>
+            <NumberField label="Card Width" value={Number(props.pricingCardWidth || 260)} min={180} max={520} onChange={(value) => update({ pricingCardWidth: value })} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <NumberField label="Card Gap" value={Number(props.pricingCardGap || 24)} min={8} max={64} onChange={(value) => update({ pricingCardGap: value })} />
+          </div>
+        </div>
+        <div style={{ ...styles.sectionCard, ...pricingSectionShells[2] }}>
+          <label style={styles.propertyLabel}>Colour Controls</label>
+          <div style={styles.pricingColorGrid}>
+            <CompactColorField label="Section Background" value={props.backgroundColor || "#f8fbff"} fallback="#f8fbff" onChange={(value) => update({ backgroundColor: value })} />
+            <CompactColorField label="Section Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
+            <CompactColorField label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ accentColor: value })} />
+            <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
+            <CompactColorField label="Highlight Card" value={props.highlightedCardBackgroundColor || "#eff6ff"} fallback="#eff6ff" onChange={(value) => update({ highlightedCardBackgroundColor: value })} />
+            <CompactColorField label="Feature Surface" value={props.featureBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ featureBackgroundColor: value })} />
+            <CompactColorField label="Extras Surface" value={props.extrasBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ extrasBackgroundColor: value })} />
+            <CompactColorField label="CTA Background" value={props.ctaBackgroundColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ ctaBackgroundColor: value })} />
+            <CompactColorField label="CTA Text" value={props.ctaTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ ctaTextColor: value })} />
+            <CompactColorField label="Main Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+            <CompactColorField label="Muted Text" value={props.subtleTextColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ subtleTextColor: value })} />
+          </div>
+        </div>
+        <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
+          <label style={styles.propertyLabel}>Plans</label>
+          <div style={styles.propertyGrid}>
+            {plans.map((plan, planIndex) => (
+              <div
+                key={`plan-${planIndex}`}
+                style={{
+                  ...styles.linkRowCard,
+                  ...planEditorShells[planIndex % planEditorShells.length],
+                  ...(plan.highlighted ? { boxShadow: "0 0 0 1px rgba(125,211,252,0.3), 0 14px 28px rgba(15,23,42,0.24)" } : {}),
+                }}
+              >
+                <div style={styles.linkRowHeader}>
+                  <span style={styles.linkRowTitle}>{plan.name || `Plan ${planIndex + 1}`}</span>
+                  <div style={styles.linkActions}>
+                    <label style={styles.inlineToggle}>
+                      <input
+                        type="checkbox"
+                        checked={!!plan.highlighted}
+                        onChange={(e) => setHighlightedPlan(planIndex, e.target.checked)}
+                        style={styles.checkboxInput}
+                      />
+                      Highlighted
+                    </label>
+                    <button type="button" style={styles.iconDeleteBtn} aria-label="Delete plan" title="Delete plan" onClick={() => removePlan(planIndex)}>×</button>
+                  </div>
+                </div>
+                <input type="text" value={String(plan.name || "")} onChange={(e) => updatePlan(planIndex, { name: e.target.value })} style={styles.propertyInput} placeholder="Plan name" />
+                <input type="text" value={String(plan.price || "")} onChange={(e) => updatePlan(planIndex, { price: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="$49" />
+                <input type="text" value={String(plan.description || "")} onChange={(e) => updatePlan(planIndex, { description: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Short description" />
+                <input type="text" value={String(plan.cta || "")} onChange={(e) => updatePlan(planIndex, { cta: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Button text" />
+                <div style={{ marginTop: 8 }}>
+                  <CompactColorField
+                    label="Card Background"
+                    value={plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff"))}
+                    fallback={plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff")}
+                    onChange={(value) => updatePlan(planIndex, { cardBackgroundColor: value })}
+                  />
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <CompactColorField
+                    label="Main Text"
+                    value={plan.textColor || (props.textColor || "#0f172a")}
+                    fallback={props.textColor || "#0f172a"}
+                    onChange={(value) => updatePlan(planIndex, { textColor: value })}
+                  />
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <CompactColorField
+                    label="Muted Text"
+                    value={plan.subtleTextColor || (props.subtleTextColor || "#64748b")}
+                    fallback={props.subtleTextColor || "#64748b"}
+                    onChange={(value) => updatePlan(planIndex, { subtleTextColor: value })}
+                  />
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <CompactColorField
+                    label="CTA Text"
+                    value={plan.ctaTextColor || (props.ctaTextColor || "#ffffff")}
+                    fallback={props.ctaTextColor || "#ffffff"}
+                    onChange={(value) => updatePlan(planIndex, { ctaTextColor: value })}
+                  />
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <label style={styles.propertyLabel}>Feature Icon</label>
+                  <select value={String(plan.featureIcon || "tick")} onChange={(e) => updatePlan(planIndex, { featureIcon: e.target.value })} style={styles.propertyInput}>
+                    {getSelectOptions("featureIcon").map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                  <label style={styles.propertyLabel}>Included Features</label>
+                  {(Array.isArray(plan.includedFeatures) ? plan.includedFeatures : []).map((feature, featureIndex) => (
+                    <div key={`plan-${planIndex}-feature-${featureIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
+                      <input
+                        type="text"
+                        value={String(feature || "")}
+                        onChange={(e) => updateFeature(planIndex, featureIndex, e.target.value)}
+                        style={styles.propertyInput}
+                        placeholder={`Feature ${featureIndex + 1}`}
+                      />
+                      <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete feature ${featureIndex + 1}`} title="Delete feature" onClick={() => removeFeature(planIndex, featureIndex)}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addFeature(planIndex)}>+ Add Included Feature</button>
+                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                  <label style={styles.propertyLabel}>Extras</label>
+                  {(Array.isArray(plan.extras) ? plan.extras : []).map((extra, extraIndex) => (
+                    <div key={`plan-${planIndex}-extra-${extraIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
+                      <input
+                        type="text"
+                        value={String(extra || "")}
+                        onChange={(e) => updateExtra(planIndex, extraIndex, e.target.value)}
+                        style={styles.propertyInput}
+                        placeholder={`Extra ${extraIndex + 1}`}
+                      />
+                      <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete extra ${extraIndex + 1}`} title="Delete extra" onClick={() => removeExtra(planIndex, extraIndex)}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addExtra(planIndex)}>+ Add Extra</button>
+              </div>
+            ))}
+          </div>
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={addPlan}>+ Add Plan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const items = normalizeFaqItems(props.items);
+
+  function update(patch) {
+    onChange(index, { ...props, ...patch });
+  }
+
+  function addItem() {
+    update({
+      items: [
+        ...items,
+        createFaqItem(items.length),
+      ],
+    });
+  }
+
+  function updateItem(itemIndex, patch) {
+    update({
+      items: items.map((item, currentIndex) => {
+        if (currentIndex !== itemIndex) return item;
+        const nextQuestion = Object.prototype.hasOwnProperty.call(patch, "question")
+          ? String(patch.question || "")
+          : item.question;
+        const nextAnswer = Object.prototype.hasOwnProperty.call(patch, "answer")
+          ? String(patch.answer || "")
+          : item.answer;
+        return {
+          ...item,
+          ...patch,
+          question: nextQuestion,
+          heading: nextQuestion,
+          answer: nextAnswer,
+          content: nextAnswer,
+        };
+      }),
+    });
+  }
+
+  function removeItem(itemIndex) {
+    update({ items: items.filter((_, currentIndex) => currentIndex !== itemIndex) });
+  }
+
+  function moveItem(itemIndex, direction) {
+    const nextIndex = itemIndex + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) return;
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(itemIndex, 1);
+    nextItems.splice(nextIndex, 0, movedItem);
+    update({ items: nextItems });
+  }
+
+  function applySplitColorPreset(value) {
+    if (String(value) === "blue") {
+      update({
+        splitColorPreset: "blue",
+        headlineColor: "#7dd3fc",
+        eyebrowColor: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        chevronColor: "#ffffff",
+        arrowBackgroundColor: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+      });
+      return;
+    }
+
+    update({
+      splitColorPreset: "green",
+      headlineColor: "#61ce70",
+      eyebrowColor: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+      chevronColor: "#ffffff",
+      arrowBackgroundColor: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+    });
+  }
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>❓ Edit: FAQ Section</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Block Surface</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`faq-bg-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" style={styles.secondaryBtn} onClick={() => update({ backgroundImage: "" })}>Remove Background Image</button>
+          </div>
+          {props.backgroundImage ? (
+            <>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
+              <select value={String(props.backgroundPosition || "center center")} onChange={(e) => update({ backgroundPosition: e.target.value })} style={styles.propertyInput}>
+                <option value="top center">Top</option>
+                <option value="center center">Center</option>
+                <option value="bottom center">Bottom</option>
+                <option value="center left">Left</option>
+                <option value="center right">Right</option>
+                <option value="top left">Top Left</option>
+                <option value="top right">Top Right</option>
+                <option value="bottom left">Bottom Left</option>
+                <option value="bottom right">Bottom Right</option>
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Image Fit</label>
+              <select value={String(props.backgroundSize || "cover")} onChange={(e) => update({ backgroundSize: e.target.value })} style={styles.propertyInput}>
+                <option value="cover">Cover (fill &amp; crop)</option>
+                <option value="contain">Contain (show full image)</option>
+                <option value="100% auto">Full Width</option>
+                <option value="auto">Auto</option>
+              </select>
+              <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+                <input type="checkbox" checked={String(props.backgroundRepeat || "no-repeat") !== "no-repeat"} onChange={(e) => update({ backgroundRepeat: e.target.checked ? "repeat" : "no-repeat" })} style={styles.checkboxInput} />
+                Repeat image
+              </label>
+              <NumberField label="Overlay Opacity %" value={Number(props.backgroundOverlayOpacity ?? 55)} min={0} max={100} onChange={(value) => update({ backgroundOverlayOpacity: Number(value) })} />
+            </>
+          ) : null}
+          <ColorSelector label="Block Background" value={props.blockBackgroundColor || "transparent"} fallback="#0f172a" allowTransparent onChange={(value) => update({ blockBackgroundColor: value })} />
+          <ColorSelector label="Panel Background" value={props.faqPanelBackgroundColor || props.backgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ faqPanelBackgroundColor: value, backgroundColor: value })} />
+          <ColorSelector label="Panel Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Accordion Cards</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Block Width" value={Number(props.faqMaxWidth || 980)} min={320} max={1800} onChange={(value) => update({ faqMaxWidth: value })} />
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.faqStartCollapsed}
+              onChange={(e) => update({ faqStartCollapsed: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Collapse all items by default
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.faqAllowMultipleOpen}
+              onChange={(e) => update({ faqAllowMultipleOpen: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Allow multiple items open
+          </label>
+          <ColorSelector label="Item Background" value={props.itemBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ itemBackgroundColor: value })} />
+          <ColorSelector label="Item Border" value={props.itemBorderColor || props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ itemBorderColor: value })} />
+          <ColorSelector label="Chevron Color" value={props.chevronColor || "#2563eb"} fallback="#2563eb" onChange={(value) => update({ chevronColor: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>FAQ Items</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add New Question</button>
+          </div>
+          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+            {items.length ? items.map((item, itemIndex) => (
+              <div key={item.id || `faq-item-${itemIndex}`} style={styles.sectionCard}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <span style={styles.colorLabel}>Question {itemIndex + 1}</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, -1)} disabled={itemIndex === 0}>↑ Move Up</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, 1)} disabled={itemIndex === items.length - 1}>↓ Move Down</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => removeItem(itemIndex)}>Remove</button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={String(item.question || "")}
+                  onChange={(event) => updateItem(itemIndex, { question: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Question"
+                />
+                <textarea
+                  value={String(item.answer || "")}
+                  onChange={(event) => updateItem(itemIndex, { answer: event.target.value })}
+                  style={{ ...styles.propertyInput, minHeight: 96 }}
+                  placeholder="Answer"
+                />
+              </div>
+            )) : (
+              <p style={styles.noSelection}>No FAQ items yet. Add your first question above.</p>
+            )}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Spacing</label>
+          <div style={{ marginTop: 10 }}>
+            <label style={styles.propertyLabel}>Spacing Scale</label>
+            <select value={String(props.spacingScale || "normal")} onChange={(e) => update({ spacingScale: e.target.value })} style={styles.propertyInput}>
+              {getSelectOptions("spacingScale").map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block?.props || {};
+  const [activeTab, setActiveTab] = useState("content");
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const headlineBlock = {
+    ...(props.headlineBlock || {}),
+    content: props.headlineBlock?.content ?? props.headline,
+    animation: props.headlineBlock?.animation ?? props.textAnimation ?? "fade-up",
+    animationDelay: props.headlineBlock?.animationDelay ?? props.textAnimationDelay ?? 0,
+    animationSpeed: props.headlineBlock?.animationSpeed ?? props.textAnimationSpeed ?? 0.8,
+    fontSize: props.headlineBlock?.fontSize ?? props.headlineFontSize ?? 48,
+    lineHeight: props.headlineBlock?.lineHeight ?? props.headlineLineHeight ?? 1.2,
+    fontFamily: props.headlineBlock?.fontFamily ?? props.headlineFontFamily ?? "Poppins, sans-serif",
+    fontWeight: props.headlineBlock?.fontWeight ?? props.headlineFontWeight ?? "400",
+    color: props.headlineBlock?.color ?? props.headlineColor ?? "#61ce70",
+    alignment: props.headlineBlock?.alignment ?? props.headlineAlignment ?? "left",
+  };
+  const bodyBlock = {
+    ...(props.bodyBlock || {}),
+    content: props.bodyBlock?.content ?? props.subheadline,
+    animation: props.bodyBlock?.animation ?? props.subheadlineAnimation ?? "fade-in",
+    animationDelay: props.bodyBlock?.animationDelay ?? props.subheadlineAnimationDelay ?? 0.12,
+    animationSpeed: props.bodyBlock?.animationSpeed ?? props.subheadlineAnimationSpeed ?? 0.9,
+    fontSize: props.bodyBlock?.fontSize ?? props.subheadlineFontSize ?? props.textFontSize ?? 18,
+    lineHeight: props.bodyBlock?.lineHeight ?? props.subheadlineLineHeight ?? props.textLineHeight ?? 1.6,
+    fontFamily: props.bodyBlock?.fontFamily ?? props.fontFamily ?? "Arial",
+    fontWeight: props.bodyBlock?.fontWeight ?? props.fontWeight ?? "400",
+    color: props.bodyBlock?.color ?? props.textColor ?? "#bdbcbf",
+    alignment: props.bodyBlock?.alignment ?? props.alignment ?? "left",
+  };
+  const faqBlock = {
+    ...(props.faqBlock || {}),
+    items: normalizeFaqItems(props.faqBlock?.items || props.items),
+    faqStartCollapsed: props.faqBlock?.faqStartCollapsed ?? props.faqStartCollapsed,
+    faqAllowMultipleOpen: props.faqBlock?.faqAllowMultipleOpen ?? props.faqAllowMultipleOpen,
+    itemBackgroundColor: props.faqBlock?.itemBackgroundColor ?? props.itemBackgroundColor,
+    itemBorderColor: props.faqBlock?.itemBorderColor ?? props.itemBorderColor,
+    arrowBackgroundColor: props.faqBlock?.arrowBackgroundColor ?? props.arrowBackgroundColor,
+    chevronColor: props.faqBlock?.chevronColor ?? props.chevronColor,
+    questionFontSize: props.faqBlock?.questionFontSize ?? props.questionFontSize,
+    answerFontSize: props.faqBlock?.answerFontSize ?? props.answerFontSize,
+    questionLineHeight: props.faqBlock?.questionLineHeight ?? props.questionLineHeight,
+    answerLineHeight: props.faqBlock?.answerLineHeight ?? props.answerLineHeight,
+    faqPanelBackgroundColor: props.faqBlock?.faqPanelBackgroundColor ?? props.faqPanelBackgroundColor,
+    faqMaxWidth: props.faqBlock?.faqMaxWidth ?? props.faqMaxWidth,
+    sectionAnimation: props.faqBlock?.sectionAnimation ?? "fade-up",
+    sectionAnimationDelay: props.faqBlock?.sectionAnimationDelay ?? 0.12,
+    sectionAnimationSpeed: props.faqBlock?.sectionAnimationSpeed ?? 0.9,
+    faqAnimation: props.faqBlock?.faqAnimation ?? props.faqAnimation ?? "fade-up",
+    faqAnimationDelay: props.faqBlock?.faqAnimationDelay ?? props.faqAnimationDelay ?? 0.18,
+    faqAnimationSpeed: props.faqBlock?.faqAnimationSpeed ?? props.faqAnimationSpeed ?? 0.9,
+  };
+  const items = faqBlock.items;
+  const currentBackgroundPreview = resolveAssetField(props, "backgroundImage", brandAssets);
+
+  function update(patch) {
+    onChange(index, { ...props, ...patch });
+  }
+
+  function updateFaqBlock(patch) {
+    onChange(index, {
+      ...props,
+      faqBlock: {
+        ...(props.faqBlock || {}),
+        ...patch,
+      },
+    });
+  }
+
+  function updateHeadlineBlock(patch) {
+    const nextHeadlineBlock = {
+      ...(props.headlineBlock || {}),
+      ...patch,
+    };
+    const next = {
+      ...props,
+      headlineBlock: nextHeadlineBlock,
+    };
+    if (Object.prototype.hasOwnProperty.call(patch, "content")) next.headline = nextHeadlineBlock.content;
+    if (Object.prototype.hasOwnProperty.call(patch, "animation")) next.textAnimation = nextHeadlineBlock.animation;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationDelay")) next.textAnimationDelay = nextHeadlineBlock.animationDelay;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationSpeed")) next.textAnimationSpeed = nextHeadlineBlock.animationSpeed;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontSize")) next.headlineFontSize = nextHeadlineBlock.fontSize;
+    if (Object.prototype.hasOwnProperty.call(patch, "lineHeight")) next.headlineLineHeight = nextHeadlineBlock.lineHeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontFamily")) next.headlineFontFamily = nextHeadlineBlock.fontFamily;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontWeight")) next.headlineFontWeight = nextHeadlineBlock.fontWeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "color")) next.headlineColor = nextHeadlineBlock.color;
+    if (Object.prototype.hasOwnProperty.call(patch, "alignment")) next.headlineAlignment = nextHeadlineBlock.alignment;
+    onChange(index, next);
+  }
+
+  function updateBodyBlock(patch) {
+    const nextBodyBlock = {
+      ...(props.bodyBlock || {}),
+      ...patch,
+    };
+    const next = {
+      ...props,
+      bodyBlock: nextBodyBlock,
+    };
+    if (Object.prototype.hasOwnProperty.call(patch, "content")) next.subheadline = nextBodyBlock.content;
+    if (Object.prototype.hasOwnProperty.call(patch, "animation")) next.subheadlineAnimation = nextBodyBlock.animation;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationDelay")) next.subheadlineAnimationDelay = nextBodyBlock.animationDelay;
+    if (Object.prototype.hasOwnProperty.call(patch, "animationSpeed")) next.subheadlineAnimationSpeed = nextBodyBlock.animationSpeed;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontSize")) {
+      next.subheadlineFontSize = nextBodyBlock.fontSize;
+      next.textFontSize = nextBodyBlock.fontSize;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "lineHeight")) {
+      next.subheadlineLineHeight = nextBodyBlock.lineHeight;
+      next.textLineHeight = nextBodyBlock.lineHeight;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "fontFamily")) next.fontFamily = nextBodyBlock.fontFamily;
+    if (Object.prototype.hasOwnProperty.call(patch, "fontWeight")) next.fontWeight = nextBodyBlock.fontWeight;
+    if (Object.prototype.hasOwnProperty.call(patch, "color")) next.textColor = nextBodyBlock.color;
+    if (Object.prototype.hasOwnProperty.call(patch, "alignment")) next.alignment = nextBodyBlock.alignment;
+    onChange(index, next);
+  }
+
+  function addItem() {
+    updateFaqBlock({
+      items: [
+        ...items,
+        createFaqItem(items.length),
+      ],
+    });
+  }
+
+  function updateItem(itemIndex, patch) {
+    updateFaqBlock({
+      items: items.map((item, currentIndex) => {
+        if (currentIndex !== itemIndex) return item;
+        const nextQuestion = Object.prototype.hasOwnProperty.call(patch, "question")
+          ? String(patch.question || "")
+          : item.question;
+        const nextAnswer = Object.prototype.hasOwnProperty.call(patch, "answer")
+          ? String(patch.answer || "")
+          : item.answer;
+        return {
+          ...item,
+          ...patch,
+          question: nextQuestion,
+          heading: nextQuestion,
+          answer: nextAnswer,
+          content: nextAnswer,
+        };
+      }),
+    });
+  }
+
+  function removeItem(itemIndex) {
+    updateFaqBlock({ items: items.filter((_, currentIndex) => currentIndex !== itemIndex) });
+  }
+
+  function moveItem(itemIndex, direction) {
+    const nextIndex = itemIndex + direction;
+    if (nextIndex < 0 || nextIndex >= items.length) return;
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(itemIndex, 1);
+    nextItems.splice(nextIndex, 0, movedItem);
+    updateFaqBlock({ items: nextItems });
+  }
+
+  function applySplitColorPreset(value) {
+    if (String(value) === "blue") {
+      update({
+        splitColorPreset: "blue",
+        headlineColor: "#7dd3fc",
+        eyebrowColor: "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        chevronColor: "#ffffff",
+        arrowBackgroundColor: "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+      });
+      return;
+    }
+
+    update({
+      splitColorPreset: "green",
+      headlineColor: "#61ce70",
+      eyebrowColor: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+      chevronColor: "#ffffff",
+      arrowBackgroundColor: "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+    });
+  }
+
+  function renderAnimationControlCard(label, animationKey, delayKey, speedKey, defaults = {}) {
+    return (
+      <div style={styles.sectionCard}>
+        <label style={styles.propertyLabel}>{label}</label>
+        <select
+          value={String(props?.[animationKey] || defaults.animation || "none")}
+          onChange={(event) => update({ [animationKey]: event.target.value })}
+          style={styles.propertyInput}
+        >
+          {ANIMATION_PRESETS.map((preset) => (
+            <option key={`${animationKey}-${preset.value}`} value={preset.value}>{preset.label}</option>
+          ))}
+        </select>
+        <div style={styles.colorGrid}>
+          <NumberField
+            label="Delay (s)"
+            value={Number(props?.[delayKey] ?? defaults.delay ?? 0)}
+            min={0}
+            max={4}
+            onChange={(value) => update({ [delayKey]: Number(value) })}
+          />
+          <NumberField
+            label="Speed (s)"
+            value={Number(props?.[speedKey] ?? defaults.speed ?? 0.9)}
+            min={0.2}
+            max={4}
+            onChange={(value) => update({ [speedKey]: Number(value) })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>↔️ Edit: Split Block</h3>
+      <div style={styles.tabRow}>
+        {[
+          { id: "content", label: "Content" },
+          { id: "layout", label: "Layout" },
+          { id: "style", label: "Style" },
+          { id: "faq", label: `FAQ (${items.length})` },
+          { id: "animations", label: "Animations" },
+        ].map((tab) => (
+          <button
+            key={`split-tab-${tab.id}`}
+            type="button"
+            style={{ ...styles.tabChip, ...(activeTab === tab.id ? styles.tabChipActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.propertyGrid}>
+        {activeTab === "layout" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Parallax Side</label>
+          {currentBackgroundPreview ? (
+            <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+              <div style={{ width: "100%", minHeight: 148, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "#0f172a" }}>
+                <img src={currentBackgroundPreview} alt="Split block background" style={{ width: "100%", height: 148, objectFit: props.backgroundSize === "contain" ? "contain" : "cover", display: "block" }} />
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>Current image used for the parallax half.</div>
+            </div>
+          ) : null}
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Background
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  update({ backgroundStyle: "image" });
+                  onUploadImage(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`split-bg-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "backgroundImage", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          {(currentBackgroundPreview || props.backgroundImage || props.backgroundImageAssetId) ? (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+              <button type="button" style={styles.secondaryBtn} onClick={() => onChange(index, { ...props, backgroundImage: "", backgroundImageAssetId: undefined, enableParallax: false })}>Remove Background</button>
+            </div>
+          ) : null}
+          <div style={styles.colorGrid}>
+            <NumberField label="Section Height" value={parsePixelValue(props.minHeight, 760)} min={320} max={1600} onChange={(value) => update({ minHeight: `${value}px` })} />
+            <select value={String(props.splitLayout || "43-57")} onChange={(event) => update({ splitLayout: event.target.value })} style={styles.propertyInput}>
+              <option value="43-57">43 / 57</option>
+              <option value="50-50">50 / 50</option>
+              <option value="45-55">45 / 55</option>
+              <option value="55-45">55 / 45</option>
+            </select>
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.fullWidthBackground !== false}
+              onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Full width section
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.enableParallax}
+              onChange={(e) => update({ enableParallax: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Enable parallax image half
+          </label>
+          <div style={styles.colorGrid}>
+            <ColorSelector label="Image Overlay Colour" value={props.imageOverlayColor || "#000000"} fallback="#000000" onChange={(value) => update({ imageOverlayColor: value })} />
+            <NumberField label="Image Overlay %" value={Number(props.imageOverlayOpacity || 0)} min={0} max={100} onChange={(value) => update({ imageOverlayOpacity: Number(value) })} />
+          </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background Position</label>
+          <select value={String(props.backgroundPosition || "center center")} onChange={(event) => update({ backgroundPosition: event.target.value, backgroundStyle: "image" })} style={styles.propertyInput}>
+            <option value="top center">Top</option>
+            <option value="center center">Middle</option>
+            <option value="bottom center">Bottom</option>
+            <option value="center left">Left</option>
+            <option value="center right">Right</option>
+          </select>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Image Fit</label>
+          <select value={String(props.backgroundSize || "cover")} onChange={(event) => update({ backgroundSize: event.target.value, backgroundStyle: "image" })} style={styles.propertyInput}>
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+          </select>
+          <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5, marginTop: 8 }}>
+            Use Cover to fill the whole half and crop the edges. Use Contain to keep the full image visible.
+          </div>
+        </div>
+        ) : null}
+
+        {activeTab === "content" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content Side</label>
+          <input
+            type="text"
+            value={String(props.eyebrow || "")}
+            onChange={(event) => update({ eyebrow: event.target.value })}
+            style={styles.propertyInput}
+            placeholder="Small label"
+          />
+          <textarea
+            value={htmlToPlainText(headlineBlock.content || "")}
+            onChange={(event) => updateHeadlineBlock({ content: event.target.value })}
+            style={{ ...styles.propertyInput, minHeight: 88, resize: "vertical", marginTop: 8 }}
+            placeholder="Headline"
+          />
+          <textarea
+            value={htmlToPlainText(bodyBlock.content || "")}
+            onChange={(event) => updateBodyBlock({ content: event.target.value })}
+            style={{ ...styles.propertyInput, minHeight: 110, resize: "vertical", marginTop: 8 }}
+            placeholder="Supporting copy"
+          />
+        </div>
+        ) : null}
+
+        {activeTab === "style" ? (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content Styling</label>
+          <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+            <label style={styles.propertyLabel}>Color Styles</label>
+            <select
+              value={String(props.splitColorPreset || "green")}
+              onChange={(event) => applySplitColorPreset(event.target.value)}
+              style={styles.propertyInput}
+            >
+              <option value="green">Green</option>
+              <option value="blue">Blue</option>
+            </select>
+          </div>
+          <ColorSelector label="Section Background" value={props.sectionBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ sectionBackgroundColor: value })} />
+          <div style={styles.colorGrid}>
+            <ColorSelector label="Section Overlay Colour" value={props.sectionOverlayColor || "#000000"} fallback="#000000" onChange={(value) => update({ sectionOverlayColor: value })} />
+            <NumberField label="Section Overlay %" value={Number(props.sectionOverlayOpacity || 0)} min={0} max={100} onChange={(value) => update({ sectionOverlayOpacity: Number(value) })} />
+          </div>
+          <ColorSelector label="Content Panel" value={props.contentPanelBackgroundColor || ""} fallback="#ffffff" allowTransparent={true} onChange={(value) => update({ contentPanelBackgroundColor: value })} />
+          <NumberField label="Text Overlap %" value={Number(props.textPanelOverlap || 0)} min={0} max={40} onChange={(value) => update({ textPanelOverlap: Number(value) })} />
+          <ColorSelector label="FAQ Block Background" value={props.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)"} fallback="#0f172a" onChange={(value) => update({ faqPanelBackgroundColor: value })} />
+          <ColorSelector label="Eyebrow Gradient / Rule" value={props.eyebrowColor || "linear-gradient(15deg, rgb(12, 140, 233) 15%, rgb(108, 92, 231) 10%, rgb(18, 213, 187) 45%, rgb(28, 165, 241) 130%)"} fallback="#0ea5e9" onChange={(value) => update({ eyebrowColor: value })} />
+          <ColorSelector label="Headline Color" value={headlineBlock.color || "#0f172a"} fallback="#0f172a" onChange={(value) => updateHeadlineBlock({ color: value })} />
+          <ColorSelector label="Body Color" value={bodyBlock.color || "#475569"} fallback="#475569" onChange={(value) => updateBodyBlock({ color: value })} />
+          <div style={styles.colorGrid}>
+            <NumberField label="Headline Size" value={Number(headlineBlock.fontSize || 48)} min={20} max={120} onChange={(value) => updateHeadlineBlock({ fontSize: value })} />
+            <NumberField label="Headline Line Height" value={Number(headlineBlock.lineHeight || 1.2)} min={0.8} max={3} onChange={(value) => updateHeadlineBlock({ lineHeight: Number(value) })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Body Size" value={Number(bodyBlock.fontSize || 18)} min={12} max={42} onChange={(value) => updateBodyBlock({ fontSize: Number(value) })} />
+            <NumberField label="Body Line Height" value={Number(bodyBlock.lineHeight || 1.6)} min={1} max={3} onChange={(value) => updateBodyBlock({ lineHeight: Number(value) })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="FAQ Width" value={Number(faqBlock.faqMaxWidth || props.faqMaxWidth || 720)} min={280} max={1200} onChange={(value) => updateFaqBlock({ faqMaxWidth: value })} />
+            <div />
+          </div>
+        </div>
+        ) : null}
+
+        {activeTab === "faq" ? (
+        <>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Nested FAQ Block</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Question Size" value={Number(faqBlock.questionFontSize || 24)} min={16} max={44} onChange={(value) => updateFaqBlock({ questionFontSize: value })} />
+            <NumberField label="Answer Size" value={Number(faqBlock.answerFontSize || 18)} min={12} max={32} onChange={(value) => updateFaqBlock({ answerFontSize: value })} />
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Question Line Height" value={Number(faqBlock.questionLineHeight || 1.4)} min={1} max={3} onChange={(value) => updateFaqBlock({ questionLineHeight: Number(value) })} />
+            <NumberField label="Answer Line Height" value={Number(faqBlock.answerLineHeight || 1.6)} min={1} max={3} onChange={(value) => updateFaqBlock({ answerLineHeight: Number(value) })} />
+          </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!faqBlock.faqStartCollapsed}
+              onChange={(e) => updateFaqBlock({ faqStartCollapsed: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Collapse all items by default
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!faqBlock.faqAllowMultipleOpen}
+              onChange={(e) => updateFaqBlock({ faqAllowMultipleOpen: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Allow multiple items open
+          </label>
+          <ColorSelector label="FAQ Block Background" value={faqBlock.faqPanelBackgroundColor || "rgba(3, 18, 28, 0.26)"} fallback="#0f172a" onChange={(value) => updateFaqBlock({ faqPanelBackgroundColor: value })} />
+          <ColorSelector label="Item Background" value={faqBlock.itemBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => updateFaqBlock({ itemBackgroundColor: value })} />
+          <ColorSelector label="Item Border" value={faqBlock.itemBorderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => updateFaqBlock({ itemBorderColor: value })} />
+          <ColorSelector label="Arrow Background" value={faqBlock.arrowBackgroundColor || "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)"} fallback="#22c55e" onChange={(value) => updateFaqBlock({ arrowBackgroundColor: value })} />
+          <ColorSelector label="Chevron Color" value={faqBlock.chevronColor || "#2563eb"} fallback="#2563eb" onChange={(value) => updateFaqBlock({ chevronColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>FAQ Items</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add New Question</button>
+          </div>
+          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+            {items.length ? items.map((item, itemIndex) => (
+              <div key={item.id || `split-item-${itemIndex}`} style={styles.sectionCard}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                  <span style={styles.colorLabel}>Question {itemIndex + 1}</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, -1)} disabled={itemIndex === 0}>↑ Move Up</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => moveItem(itemIndex, 1)} disabled={itemIndex === items.length - 1}>↓ Move Down</button>
+                    <button type="button" style={styles.secondaryBtn} onClick={() => removeItem(itemIndex)}>Remove</button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={String(item.question || "")}
+                  onChange={(event) => updateItem(itemIndex, { question: event.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="Question"
+                />
+                <textarea
+                  value={String(item.answer || "")}
+                  onChange={(event) => updateItem(itemIndex, { answer: event.target.value })}
+                  style={{ ...styles.propertyInput, minHeight: 96 }}
+                  placeholder="Answer"
+                />
+              </div>
+            )) : (
+              <p style={styles.noSelection}>No FAQ items yet. Add your first question above.</p>
+            )}
+          </div>
+        </div>
+        </>
+        ) : null}
+
+        {activeTab === "animations" ? (
+        <>
+          {renderAnimationControlCard("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", { animation: "fade-up", delay: 0.06, speed: 0.9 })}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Left Panel (Image Column)</label>
+            <select value={String(props.leftPanelAnimation || "none")} onChange={(event) => update({ leftPanelAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-left-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(props.leftPanelAnimationDelay ?? 0)} min={0} max={4} onChange={(value) => update({ leftPanelAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(props.leftPanelAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => update({ leftPanelAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Right Panel (Content Column)</label>
+            <select value={String(props.rightPanelAnimation || "none")} onChange={(event) => update({ rightPanelAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-right-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(props.rightPanelAnimationDelay ?? 0)} min={0} max={4} onChange={(value) => update({ rightPanelAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(props.rightPanelAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => update({ rightPanelAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Headline Block</label>
+            <select value={String(headlineBlock.animation || "fade-up")} onChange={(event) => updateHeadlineBlock({ animation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-headline-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(headlineBlock.animationDelay ?? 0)} min={0} max={4} onChange={(value) => updateHeadlineBlock({ animationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(headlineBlock.animationSpeed ?? 0.8)} min={0.2} max={4} onChange={(value) => updateHeadlineBlock({ animationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Body Block</label>
+            <select value={String(bodyBlock.animation || "fade-in")} onChange={(event) => updateBodyBlock({ animation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-body-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(bodyBlock.animationDelay ?? 0.12)} min={0} max={4} onChange={(value) => updateBodyBlock({ animationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(bodyBlock.animationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateBodyBlock({ animationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Nested FAQ Block</label>
+            <select value={String(faqBlock.sectionAnimation || "fade-up")} onChange={(event) => updateFaqBlock({ sectionAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-faq-block-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(faqBlock.sectionAnimationDelay ?? 0.12)} min={0} max={4} onChange={(value) => updateFaqBlock({ sectionAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(faqBlock.sectionAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateFaqBlock({ sectionAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Nested Accordion Items</label>
+            <select value={String(faqBlock.faqAnimation || "fade-up")} onChange={(event) => updateFaqBlock({ faqAnimation: event.target.value })} style={styles.propertyInput}>
+              {ANIMATION_PRESETS.map((preset) => <option key={`split-faq-items-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+            </select>
+            <div style={styles.colorGrid}>
+              <NumberField label="Delay (s)" value={Number(faqBlock.faqAnimationDelay ?? 0.18)} min={0} max={4} onChange={(value) => updateFaqBlock({ faqAnimationDelay: Number(value) })} />
+              <NumberField label="Speed (s)" value={Number(faqBlock.faqAnimationSpeed ?? 0.9)} min={0.2} max={4} onChange={(value) => updateFaqBlock({ faqAnimationSpeed: Number(value) })} />
+            </div>
+          </div>
+        </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function NumberField({ label, value, min = 0, max = 200, onChange }) {
+  return (
+    <div style={styles.numberField}>
+      <span style={styles.colorLabel}>{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={Number(value || 0)}
+        onChange={(e) => onChange(Number(e.target.value || 0))}
+        style={styles.propertyInput}
+      />
+    </div>
+  );
+}
+
+function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor }) {
+  const props = block?.props || {};
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🖼️ Edit: Image Block</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Image</label>
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload Image
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onUploadImage(index, "src", file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "src", asset))}
+            >
+              Choose From Library
+            </button>
+            {savedImages.map((image) => (
+              <button
+                key={`image-block-${image.id || image.src}`}
+                type="button"
+                style={styles.assetThumbBtn}
+                onClick={() => onSelectAsset(index, "src", image)}
+                title={image.name}
+              >
+                <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+              </button>
+            ))}
+          </div>
+          {props.src ? (
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, marginTop: 8 }}
+              onClick={() => onOpenImageEditor?.(index, "src", props.src)}
+            >
+              ✂️ Crop / Edit Image
+            </button>
+          ) : null}
+          <div style={styles.colorGrid}>
+            <NumberField label="Width" value={parsePixelValue(props.width, 720)} min={160} max={1800} onChange={(value) => update({ width: `${value}px` })} />
+            <NumberField label="Height" value={parsePixelValue(props.height, 400)} min={120} max={1400} onChange={(value) => update({ height: `${value}px` })} />
+          </div>
+          <input type="text" value={String(props.alt || "")} onChange={(e) => update({ alt: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Alt text" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Text Overlay</label>
+          <label style={styles.inlineToggle}>
+            <input
+              type="checkbox"
+              checked={!!props.showOverlayText}
+              onChange={(e) => update({
+                showOverlayText: e.target.checked,
+                headline: e.target.checked ? (props.headline || "Add image headline") : props.headline,
+                subheadline: e.target.checked ? (props.subheadline || "Add supporting text") : props.subheadline,
+              })}
+              style={styles.checkboxInput}
+            />
+            Show headline over image
+          </label>
+          <div style={{ marginTop: 8 }}>
+            <label style={styles.propertyLabel}>Headline</label>
+            <RichText
+              value={String(props.headline || "")}
+              onChange={(nextHtml) => update({ headline: nextHtml, showOverlayText: true })}
+              placeholder="Write headline..."
+            />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <label style={styles.propertyLabel}>Supporting Text</label>
+            <RichText
+              value={String(props.subheadline || "")}
+              onChange={(nextHtml) => update({ subheadline: nextHtml, showOverlayText: true })}
+              placeholder="Write supporting text..."
+            />
+          </div>
+          <div style={styles.inlineChipRow}>
+            {[
+              { value: "left", label: "Left" },
+              { value: "center", label: "Center" },
+              { value: "right", label: "Right" },
+            ].map((option) => (
+              <button key={option.value} type="button" style={{ ...styles.presetChip, ...(String(props.overlayTextAlign || "center") === option.value ? styles.presetChipActive : {}) }} onClick={() => update({ overlayTextAlign: option.value, showOverlayText: true })}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div style={styles.inlineChipRow}>
+            {[
+              { value: "top", label: "Top" },
+              { value: "center", label: "Middle" },
+              { value: "bottom", label: "Bottom" },
+            ].map((option) => (
+              <button key={option.value} type="button" style={{ ...styles.presetChip, ...(String(props.overlayTextVerticalAlign || "center") === option.value ? styles.presetChipActive : {}) }} onClick={() => update({ overlayTextVerticalAlign: option.value, showOverlayText: true })}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div style={styles.colorGrid}>
+            <NumberField label="Headline Size" value={Number(props.headlineFontSize || 46)} min={18} max={120} onChange={(value) => update({ headlineFontSize: value, showOverlayText: true })} />
+            <NumberField label="Body Size" value={Number(props.subheadlineFontSize || 20)} min={12} max={72} onChange={(value) => update({ subheadlineFontSize: value, showOverlayText: true })} />
+            <NumberField label="Text Width" value={Number(props.overlayTextWidth || 420)} min={180} max={1800} onChange={(value) => update({ overlayTextWidth: value, showOverlayText: true, overlayTextXRatio: null })} />
+            <NumberField label="Text X" value={Number(props.overlayTextX || 0)} min={0} max={1800} onChange={(value) => update({ overlayTextX: value, showOverlayText: true, overlayTextXRatio: null })} />
+            <NumberField label="Text Y" value={Number(props.overlayTextY || 0)} min={0} max={1400} onChange={(value) => update({ overlayTextY: value, showOverlayText: true, overlayTextYRatio: null })} />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" style={styles.secondaryBtn} onClick={() => update({ overlayTextWidth: 420, overlayTextX: 0, overlayTextY: 0, overlayTextXRatio: null, overlayTextYRatio: null, overlayTextAlign: "center", overlayTextVerticalAlign: "center", showOverlayText: true })}>
+              Reset Text Box Position
+            </button>
+          </div>
+          <ColorSelector label="Headline Color" value={props.overlayTextColor || props.headlineColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ overlayTextColor: value, headlineColor: value, showOverlayText: true })} />
+          <ColorSelector label="Body Color" value={props.overlaySubheadlineColor || props.textColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ overlaySubheadlineColor: value, textColor: value, showOverlayText: true })} />
+          <ColorSelector label="Overlay Background" value={props.overlayTextBackground || "transparent"} fallback="#000000" allowTransparent onChange={(value) => update({ overlayTextBackground: value, showOverlayText: true })} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAsset, update }) {
+  const savedLogo = brandAssets?.logo || null;
+  const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+
+  return (
+    <div style={styles.sectionCard}>
+      <label style={styles.propertyLabel}>Logo</label>
+      <label style={styles.inlineToggle}>
+        <input
+          type="checkbox"
+          checked={!!props.showLogo}
+          onChange={(e) => update({ showLogo: e.target.checked })}
+          style={styles.checkboxInput}
+        />
+        Show logo in navbar
+      </label>
+      <div style={styles.assetPicker}>
+        <label style={styles.assetUploadCta}>
+          Upload Logo
+          <input
+            type="file"
+            accept="image/*"
+            style={styles.hiddenInput}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              onUploadImage(index, "logo", file);
+              update({ showLogo: true });
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          style={styles.secondaryBtn}
+          onClick={() => openSharedLibraryAssetPicker((asset) => {
+            onSelectAsset(index, "logo", asset);
+            update({ showLogo: true });
+          })}
+        >
+          Choose From Library
+        </button>
+        {savedLogo ? (
+          <button
+            type="button"
+            style={styles.assetChip}
+            onClick={() => {
+              onSelectAsset(index, "logo", savedLogo);
+              update({ showLogo: true });
+            }}
+          >
+            Use Shared Logo
+          </button>
+        ) : null}
+        {savedImages.slice(0, 6).map((image) => (
+          <button
+            key={`nav-logo-${image.id}`}
+            type="button"
+            style={styles.assetThumbBtn}
+            onClick={() => {
+              onSelectAsset(index, "logo", image);
+              update({ showLogo: true });
+            }}
+            title={image.name}
+          >
+            <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
+          </button>
+        ))}
+      </div>
+      <NumberField
+        label="Logo width"
+        value={props.logoWidth || 44}
+        min={20}
+        max={180}
+        onChange={(next) => update({ logoWidth: next })}
+      />
+    </div>
+  );
+}
+
+function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+  const props = block.props || {};
+  const [section, setSection] = useState("setup");
+  const navbarSectionShells = [
+    { background: "linear-gradient(180deg, #1f3048 0%, #18283d 100%)", borderColor: "rgba(125,211,252,0.28)" },
+    { background: "linear-gradient(180deg, #243148 0%, #1a2436 100%)", borderColor: "rgba(167,139,250,0.24)" },
+    { background: "linear-gradient(180deg, #223741 0%, #17262f 100%)", borderColor: "rgba(74,222,128,0.22)" },
+    { background: "linear-gradient(180deg, #3a2b45 0%, #241b30 100%)", borderColor: "rgba(244,114,182,0.18)" },
+  ];
+  const sections = [
+    { id: "setup", label: "Setup" },
+    { id: "brand", label: "Brand" },
+    { id: "menu", label: "Menu" },
+    { id: "style", label: "Style" },
+  ];
+
+  function update(patch) {
+    onChange(index, { ...props, ...patch });
+  }
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🎨 Edit: Navigation Bar</h3>
+      <div style={styles.tabRow}>
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            style={{ ...styles.tabChip, ...(section === item.id ? styles.tabChipActive : {}) }}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.propertyGrid}>
+        {section === "setup" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navbar Style</label>
+              <NavbarPresetPicker value={props.variant || "split-dark"} onApply={update} />
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[1] }}>
+              <label style={styles.propertyLabel}>Layout Variant</label>
+              <select
+                value={String(props.variant || "split-dark")}
+                onChange={(e) => update({ variant: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("variant").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
+              <label style={styles.propertyLabel}>Behaviour</label>
+              <label style={styles.propertyLabel}>Sticky Mode</label>
+              <select
+                value={String(props.stickyMode || "normal")}
+                onChange={(e) => update({ stickyMode: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("stickyMode").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Mobile Menu</label>
+              <select
+                value={String(props.mobileMenuStyle || "hamburger")}
+                onChange={(e) => update({ mobileMenuStyle: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("mobileMenuStyle").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : null}
+
+        {section === "brand" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Brand Text</label>
+              <input
+                type="text"
+                value={props.brand || ""}
+                onChange={(e) => update({ brand: e.target.value })}
+                style={styles.propertyInput}
+              />
+            </div>
+
+            <NavbarLogoPicker
+              index={index}
+              props={props}
+              brandAssets={brandAssets}
+              onUploadImage={onUploadImage}
+              onSelectAsset={onSelectAsset}
+              update={update}
+            />
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
+              <label style={styles.propertyLabel}>Typography</label>
+              <div style={styles.colorGrid}>
+                <NumberField
+                  label="Brand size"
+                  value={props.brandFontSize || 16}
+                  min={16}
+                  max={48}
+                  onChange={(next) => update({ brandFontSize: next })}
+                />
+                <NumberField
+                  label="Link size"
+                  value={props.linkFontSize || 16}
+                  min={16}
+                  max={32}
+                  onChange={(next) => update({ linkFontSize: next })}
+                />
+                <NumberField
+                  label="Button size"
+                  value={props.ctaFontSize || 16}
+                  min={16}
+                  max={28}
+                  onChange={(next) => update({ ctaFontSize: next })}
+                />
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {section === "menu" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navigation Links</label>
+              <NavbarLinksEditor
+                links={props.links}
+                onChange={(links) => update({ links })}
+              />
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[1] }}>
+              <label style={styles.propertyLabel}>CTA Text</label>
+              <input
+                type="text"
+                value={props.ctaText || ""}
+                onChange={(e) => update({ ctaText: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="Get Started"
+              />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA Link</label>
+              <input
+                type="text"
+                value={props.ctaLink || ""}
+                onChange={(e) => update({ ctaLink: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="#contact"
+              />
+            </div>
+          </>
+        ) : null}
+
+        {section === "style" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Hover & Highlight</label>
+              <select
+                value={String(props.linkHoverEffect || "fill")}
+                onChange={(e) => update({ linkHoverEffect: e.target.value })}
+                style={styles.propertyInput}
+              >
+                {getSelectOptions("linkHoverEffect").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <div style={{ ...styles.colorGrid, marginTop: 10 }}>
+                <CompactColorField label="Hover Background" value={props.linkHoverBackgroundColor || "#334155"} fallback="#334155" onChange={(value) => update({ linkHoverBackgroundColor: value })} />
+                <CompactColorField label="Hover Text" value={props.linkHoverTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ linkHoverTextColor: value })} />
+                <CompactColorField label="Highlighted Background" value={props.activeLinkBackgroundColor || "#475569"} fallback="#475569" onChange={(value) => update({ activeLinkBackgroundColor: value })} />
+                <CompactColorField label="Highlighted Text" value={props.activeLinkTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ activeLinkTextColor: value })} />
+              </div>
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Navbar Colours</label>
+              <div style={styles.colorGrid}>
+                <CompactColorField label="Navbar Background" value={props.backgroundColor || "#0b1220"} fallback="#0b1220" onChange={(value) => update({ backgroundColor: value })} />
+                <CompactColorField label="Navbar Text" value={props.textColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ textColor: value })} />
+                <CompactColorField label="Navbar Border" value={rgbToHex(props.borderColor || "rgba(148,163,184,0.24)", "#94a3b8")} fallback="#94a3b8" onChange={(value) => update({ borderColor: value })} />
+                <CompactColorField label="Button Background" value={props.buttonColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ buttonColor: value })} />
+                <CompactColorField label="Button Text" value={props.buttonTextColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ buttonTextColor: value })} />
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function normalizeColorInput(value, fallback) {
+  const text = String(value || "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(text) ? text : fallback;
+}
+
+const STANDARD_COLOR_SWATCHES = [
+  "#000000",
+  "#081120",
+  "#444444",
+  "#666666",
+  "#999999",
+  "#cccccc",
+  "#ffffff",
+  "#c00000",
+  "#ff0000",
+  "#ffc000",
+  "#ffff00",
+  "#92d050",
+  "#00b050",
+  "#00b0f0",
+  "#0070c0",
+  "#002060",
+  "#7030a0",
+  "#ec4899",
+  "#0f172a",
+];
+
+const PRICING_COLOR_SWATCHES = [
+  "#2563eb",
+  "#0ea5e9",
+  "#06b6d4",
+  "#10b981",
+  "#22c55e",
+  "#84cc16",
+  "#f59e0b",
+  "#f97316",
+  "#ec4899",
+  "#8b5cf6",
+  "#ffffff",
+  "#0f172a",
+];
+
+function ColorSelector({ label, value, fallback = "#0f172a", allowTransparent = false, onChange }) {
+  const rawValue = String(value || "").trim() || (allowTransparent ? "transparent" : fallback);
+  const pickerValue = normalizeColorInput(rawValue, fallback);
+
+  return (
+    <div style={styles.sectionCard}>
+      <label style={styles.propertyLabel}>{label}</label>
+      <div style={styles.colorGrid}>
+        <div style={styles.colorField}>
+          <span style={styles.colorLabel}>Picker</span>
+          <input
+            type="color"
+            value={pickerValue}
+            onChange={(e) => onChange(e.target.value)}
+            style={styles.colorInput}
+          />
+        </div>
+        <div style={{ ...styles.colorField, gridColumn: "span 2" }}>
+          <span style={styles.colorLabel}>Value</span>
+          <input
+            type="text"
+            value={rawValue}
+            onChange={(e) => onChange(e.target.value)}
+            style={styles.propertyInput}
+            placeholder={allowTransparent ? "transparent or #ffffff" : "#0f172a"}
+          />
+        </div>
+      </div>
+      <div style={styles.colorSwatchRow}>
+        {allowTransparent ? (
+          <button
+            type="button"
+            style={{ ...styles.colorSwatch, color: "#e6eef5", fontSize: 11, width: "auto", padding: "0 8px" }}
+            onClick={() => onChange("transparent")}
+          >
+            Transparent
+          </button>
+        ) : null}
+        {STANDARD_COLOR_SWATCHES.map((swatch) => (
+          <button
+            key={`${label}-${swatch}`}
+            type="button"
+            onClick={() => onChange(swatch)}
+            title={swatch}
+            style={{ ...styles.colorSwatch, background: swatch, borderColor: rawValue === swatch ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompactColorField({ label, value, fallback = "#0f172a", onChange, swatches = PRICING_COLOR_SWATCHES }) {
+  const rawValue = String(value || "").trim() || fallback;
+  const pickerValue = normalizeColorInput(rawValue, fallback);
+
+  return (
+    <div style={styles.compactColorField}>
+      <label style={styles.compactColorLabel}>{label}</label>
+      <div style={styles.compactColorRow}>
+        <input
+          type="color"
+          value={pickerValue}
+          onChange={(e) => onChange(e.target.value)}
+          style={styles.compactColorInput}
+        />
+        <div style={styles.compactColorSwatches}>
+          {swatches.map((swatch) => (
+            <button
+              key={`${label}-${swatch}`}
+              type="button"
+              onClick={() => onChange(swatch)}
+              style={{
+                ...styles.colorSwatch,
+                width: 20,
+                height: 20,
+                minWidth: 20,
+                minHeight: 20,
+                background: swatch,
+                borderColor: rawValue.toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function rgbToHex(value, fallback = "#ffffff") {
+  const text = String(value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(text)) return text;
+  const match = text.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return fallback;
+  const toHex = (part) => Number(part).toString(16).padStart(2, "0");
+  return `#${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}`;
+}
+
+function stripEditorArtifacts(html) {
+  return String(html || "")
+    .replace(/\u200b/g, "")
+    .replace(/<span\b([^>]*)>\s*<\/span>/gi, "")
+    .replace(/\sdata-temp-selection="[^"]*"/gi, "");
+}
+
+const TEXT_TOOLBAR_FONTS = [
+  { value: "Segoe UI", label: "Segoe UI" },
+  { value: "Aptos", label: "Aptos" },
+  { value: "Arial", label: "Arial" },
+  { value: "Helvetica", label: "Helvetica" },
+  { value: "Inter", label: "Inter" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Open Sans", label: "Open Sans" },
+  { value: "Lato", label: "Lato" },
+  { value: "Montserrat", label: "Montserrat" },
+  { value: "Poppins", label: "Poppins" },
+  { value: "Nunito", label: "Nunito" },
+  { value: "Raleway", label: "Raleway" },
+  { value: "Oswald", label: "Oswald" },
+  { value: "Merriweather", label: "Merriweather" },
+  { value: "Playfair Display", label: "Playfair Display" },
+  { value: "DM Serif Display", label: "DM Serif Display" },
+  { value: "Cormorant Garamond", label: "Cormorant Garamond" },
+  { value: "Trebuchet MS", label: "Trebuchet MS" },
+  { value: "Verdana", label: "Verdana" },
+  { value: "Tahoma", label: "Tahoma" },
+  { value: "Gill Sans", label: "Gill Sans" },
+  { value: "Century Gothic", label: "Century Gothic" },
+  { value: "Lucida Sans Unicode", label: "Lucida Sans Unicode" },
+  { value: "Franklin Gothic Medium", label: "Franklin Gothic" },
+  { value: "Futura", label: "Futura" },
+  { value: "Avenir Next", label: "Avenir Next" },
+  { value: "Bebas Neue", label: "Bebas Neue" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Times New Roman", label: "Times New Roman" },
+  { value: "Garamond", label: "Garamond" },
+  { value: "Palatino Linotype", label: "Palatino Linotype" },
+  { value: "Book Antiqua", label: "Book Antiqua" },
+  { value: "Cambria", label: "Cambria" },
+  { value: "Baskerville", label: "Baskerville" },
+  { value: "Courier New", label: "Courier New" },
+  { value: "Consolas", label: "Consolas" },
+  { value: "Lucida Console", label: "Lucida Console" },
+  { value: "Impact", label: "Impact" },
+  { value: "Brush Script MT", label: "Brush Script MT" },
+  { value: "Copperplate", label: "Copperplate" },
+  { value: "Papyrus", label: "Papyrus" },
+];
+
+const TEXT_TOOLBAR_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 84, 96];
+const TEXT_TOOLBAR_LINE_HEIGHTS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2];
+const ANIMATION_PRESETS = [
+  { value: "none", label: "None" },
+  { value: "fade-in", label: "Fade In" },
+  { value: "fade-up", label: "Fade Up" },
+  { value: "fade-down", label: "Fade Down" },
+  { value: "fade-left", label: "Fade Left" },
+  { value: "fade-right", label: "Fade Right" },
+  { value: "slide-left", label: "Slide Left" },
+  { value: "slide-right", label: "Slide Right" },
+  { value: "slide-up", label: "Slide Up" },
+  { value: "sweep-left", label: "Sweep Left" },
+  { value: "sweep-right", label: "Sweep Right" },
+  { value: "edge-left", label: "From Left Edge" },
+  { value: "edge-right", label: "From Right Edge" },
+  { value: "edge-up", label: "From Bottom Edge" },
+  { value: "edge-down", label: "From Top Edge" },
+  { value: "zoom", label: "Zoom In" },
+  { value: "pop-in", label: "Pop In" },
+  { value: "blur-in", label: "Blur In" },
+  { value: "flip-up", label: "Flip Up" },
+  { value: "drift-left", label: "Drift Left" },
+  { value: "drift-right", label: "Drift Right" },
+  { value: "drift-edge-left", label: "Drift From Left Edge" },
+  { value: "drift-edge-right", label: "Drift From Right Edge" },
+  { value: "light-speed-in", label: "Light Speed In" },
+  { value: "rotate-in-down-right", label: "Rotate In Down Right" },
+  { value: "rubber-band", label: "Rubber Band" },
+];
+const ANIMATION_DELAY_OPTIONS = [0, 0.1, 0.2, 0.35, 0.5, 0.75, 1, 1.2];
+const ANIMATION_SPEED_OPTIONS = [0.5, 0.7, 0.8, 1, 1.2, 1.5, 1.8, 2.2];
+const BLOCK_TYPE_STYLE_PRESETS = {
+  P: { fontSize: "18px", fontWeight: "400", lineHeight: "1.7" },
+  H1: { fontSize: "48px", fontWeight: "600", lineHeight: "1.08" },
+  H2: { fontSize: "36px", fontWeight: "600", lineHeight: "1.14" },
+  H3: { fontSize: "28px", fontWeight: "600", lineHeight: "1.2" },
+};
+
+function getTextAnimationBinding(block, editable) {
+  const propName = String(editable?.getAttribute?.("data-text-prop") || "").trim();
+  if (!block || !propName) return null;
+
+  if (propName === "headline" || propName === "headlineBlock.content") {
+    return {
+      label: "Headline Motion",
+      animationKey: "textAnimation",
+      speedKey: "textAnimationSpeed",
+      delayKey: "textAnimationDelay",
+    };
+  }
+
+  if (propName === "subheadline" || propName === "bodyBlock.content") {
+    return {
+      label: "Body Motion",
+      animationKey: "subheadlineAnimation",
+      speedKey: "subheadlineAnimationSpeed",
+      delayKey: "subheadlineAnimationDelay",
+    };
+  }
+
+  if (propName === "text") {
+    return {
+      label: "Text Motion",
+      animationKey: "textAnimation",
+      speedKey: "textAnimationSpeed",
+      delayKey: "textAnimationDelay",
+    };
+  }
+
+  return null;
+}
+
+function getSelectionStyleSource(editable, selection) {
+  if (!editable) return null;
+  const activeSelection = selection || (typeof window !== "undefined" ? window.getSelection?.() : null);
+  const node = activeSelection?.focusNode || activeSelection?.anchorNode || null;
+  const element = node?.nodeType === 3 ? node.parentElement : node;
+  if (element instanceof Element && editable.contains(element)) {
+    return element;
+  }
+  return editable;
+}
+
+function getEditableBackgroundTarget(editable) {
+  if (!(editable instanceof Element)) return null;
+  if (editable.hasAttribute?.("data-layer-editor")) {
+    return editable.parentElement instanceof Element ? editable.parentElement : editable;
+  }
+  return editable;
+}
+
+function parseBackgroundImageUrl(value) {
+  const text = String(value || "").trim();
+  if (!text || text === "none") return "";
+  const match = text.match(/url\((['"]?)(.*?)\1\)/i);
+  return match?.[2] || "";
+}
+
+function normalizeToolbarBackgroundColor(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text || text === "transparent") return "transparent";
+  const rgbaMatch = text.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d*\.?\d+)\)$/i);
+  if (rgbaMatch && Number(rgbaMatch[4]) === 0) return "transparent";
+  return text;
+}
+
+function normalizeComputedLineHeight(lineHeightValue, fontSizeValue, fallback = 1.5) {
+  const parsedFontSize = Number.parseFloat(fontSizeValue || 0);
+  const raw = String(lineHeightValue || "").trim().toLowerCase();
+  if (!raw || raw === "normal") return fallback;
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (raw.endsWith("px") && parsedFontSize > 0) {
+    return Math.max(0.8, Math.min(3, Number((parsed / parsedFontSize).toFixed(2))));
+  }
+  return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
+  if (!visible) return null;
+
+  const backgroundFileInputRef = useRef(null);
+
+  const keepSelection = (event, callback) => {
+    event.preventDefault();
+    callback?.();
+  };
+
+  const startHeaderDrag = (event) => {
+    if (event.target?.closest?.("button, select, input, label")) return;
+    onDragStart?.(event);
+  };
+
+  const blockButtons = [
+    { value: "P", label: "P", title: "Paragraph" },
+    { value: "H1", label: "H1", title: "Heading 1" },
+    { value: "H2", label: "H2", title: "Heading 2" },
+    { value: "H3", label: "H3", title: "Heading 3" },
+  ];
+
+  const textButtons = [
+    { label: "B", title: "Bold", action: () => onCommand("bold") },
+    { label: "I", title: "Italic", action: () => onCommand("italic") },
+    { label: "U", title: "Underline", action: () => onCommand("underline") },
+  ];
+
+  const alignButtons = [
+    { label: "Left", title: "Align left", action: () => onCommand("justifyLeft") },
+    { label: "Center", title: "Align center", action: () => onCommand("justifyCenter") },
+    { label: "Right", title: "Align right", action: () => onCommand("justifyRight") },
+  ];
+
+  const utilityButtons = [
+    { label: "•", title: "Bullet list", action: () => onCommand("insertUnorderedList") },
+    { label: "1.", title: "Numbered list", action: () => onCommand("insertOrderedList") },
+    { label: "Link", title: "Add link", action: () => onCommand("createLink") },
+    { label: "Clear", title: "Clear formatting", action: () => onCommand("removeFormat") },
+  ];
+
+  return (
+    <div
+      style={{
+        ...styles.textToolbar,
+        left: position?.x ?? 240,
+        top: position?.y ?? 120,
+        width: position?.width ?? 1120,
+      }}
+      data-text-toolbar="true"
+      onMouseDownCapture={() => onPreserveSelection?.()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div style={styles.textToolbarHeader} onMouseDown={startHeaderDrag}>
+        <span style={styles.toolbarDragGlyph}>⋮⋮</span>
+        <span style={styles.textToolbarTitle}>Text Controls</span>
+        <span style={styles.textToolbarSubtitle}>Quick inline editor</span>
+        <button type="button" style={styles.textToolbarDoneBtn} onMouseDown={(event) => keepSelection(event, onClose)}>
+          Hide
+        </button>
+      </div>
+      <div style={styles.textToolbarBody}>
+        <div style={styles.textToolbarInlineGroup}>
+          <label style={styles.textToolbarLabel}>
+            Hierarchy
+            <select
+              value={blockType || "P"}
+              style={{ ...styles.textToolbarSelect, minWidth: 110, marginTop: 6 }}
+              onMouseDownCapture={() => onPreserveSelection?.()}
+              onChange={(event) => onBlockType?.(event.target.value)}
+            >
+              {blockButtons.map((item) => (
+                <option key={item.value} value={item.value}>{item.title}</option>
+              ))}
+            </select>
+          </label>
+          <select
+            value={fontFamily || "Arial"}
+            style={{ ...styles.textToolbarSelect, minWidth: 220 }}
+            onMouseDownCapture={() => onPreserveSelection?.()}
+            onChange={(event) => onFontFamily?.(event.target.value)}
+          >
+            {TEXT_TOOLBAR_FONTS.map((font) => (
+              <option key={font.value} value={font.value}>{font.label}</option>
+            ))}
+          </select>
+          <select
+            value={String(fontSize || 18)}
+            style={{ ...styles.textToolbarSelect, minWidth: 86 }}
+            onMouseDownCapture={() => onPreserveSelection?.()}
+            onChange={(event) => onFontSize?.(Number(event.target.value))}
+          >
+            {TEXT_TOOLBAR_SIZES.map((size) => (
+              <option key={size} value={size}>{size}px</option>
+            ))}
+          </select>
+          <select
+            value={String(lineHeight || 1.5)}
+            style={{ ...styles.textToolbarSelect, minWidth: 94 }}
+            onMouseDownCapture={() => onPreserveSelection?.()}
+            onChange={(event) => onLineHeight?.(Number(event.target.value))}
+          >
+            {TEXT_TOOLBAR_LINE_HEIGHTS.map((value) => (
+              <option key={value} value={value}>{value} lh</option>
+            ))}
+          </select>
+        </div>
+        <div style={styles.textToolbarInlineDivider} />
+        <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarFormattingGroup }}>
+          <div style={styles.textToolbarButtonRow}>
+            {textButtons.map((item) => (
+              <button key={item.title} type="button" title={item.title} style={styles.textToolbarIconBtn} onMouseDown={(event) => keepSelection(event, item.action)}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div style={styles.textToolbarButtonRow}>
+            {alignButtons.map((item) => (
+              <button key={item.title} type="button" title={item.title} style={styles.textToolbarMiniActionChip} onMouseDown={(event) => keepSelection(event, item.action)}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={styles.textToolbarInlineDivider} />
+        <div style={styles.textToolbarInlineGroup}>
+          {utilityButtons.map((item) => (
+            <button key={item.title} type="button" title={item.title} style={item.label.length <= 2 ? styles.textToolbarIconBtn : styles.textToolbarActionChip} onMouseDown={(event) => keepSelection(event, item.action)}>
+              {item.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            style={styles.textToolbarActionChip}
+            onMouseDown={(event) => keepSelection(event, () => onOpenAnimations?.(event.currentTarget))}
+          >
+            Animations
+          </button>
+        </div>
+        <div style={styles.textToolbarInlineDivider} />
+        <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarColorGroupWrap }}>
+          <label style={styles.textToolbarLabel}>
+            Text
+            <input type="color" value={textColor} onMouseDownCapture={() => onPreserveSelection?.()} onChange={(e) => onTextColor(e.target.value)} style={styles.textToolbarColor} />
+          </label>
+          <label style={{ ...styles.textToolbarLabel, ...styles.textToolbarLabelSpaced }}>
+            Highlight
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
+              <input type="color" value={highlightColor} onMouseDownCapture={() => onPreserveSelection?.()} onChange={(e) => onHighlightColor(e.target.value)} style={{ ...styles.textToolbarColor, marginTop: 0 }} />
+              <button
+                type="button"
+                title="Remove highlight"
+                style={{ ...styles.textToolbarActionChip, padding: "2px 6px", fontSize: 11, lineHeight: 1 }}
+                onMouseDown={(event) => keepSelection(event, () => onHighlightColor("transparent"))}
+              >None</button>
+            </div>
+          </label>
+          <div style={styles.textToolbarSwatchesInline}>
+            {STANDARD_COLOR_SWATCHES.map((swatch) => (
+              <button
+                key={`toolbar-${swatch}`}
+                type="button"
+                title={swatch}
+                onMouseDown={(event) => keepSelection(event, () => onTextColor?.(swatch))}
+                style={{
+                  ...styles.textToolbarSwatch,
+                  background: swatch,
+                  borderColor: String(textColor || "").toLowerCase() === swatch.toLowerCase() ? "#0f172a" : "rgba(121,85,0,0.28)",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        {canStyleBox ? (
+          <>
+            <div style={styles.textToolbarInlineDivider} />
+            <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarColorGroupWrap }}>
+              <label style={styles.textToolbarLabel}>
+                Text Box
+              </label>
+              <div style={styles.textToolbarButtonRow}>
+                <button
+                  type="button"
+                  style={styles.textToolbarActionChip}
+                  onMouseDown={(event) => keepSelection(event, () => onClearBoxBackground?.())}
+                >
+                  Remove Background
+                </button>
+                <button
+                  type="button"
+                  style={styles.textToolbarActionChip}
+                  onMouseDown={(event) => keepSelection(event, () => backgroundFileInputRef.current?.click())}
+                >
+                  Background Image
+                </button>
+                {boxBackgroundImage ? (
+                  <button
+                    type="button"
+                    style={styles.textToolbarActionChip}
+                    onMouseDown={(event) => keepSelection(event, () => onClearBoxBackgroundImage?.())}
+                  >
+                    Remove Image
+                  </button>
+                ) : null}
+              </div>
+              <label style={styles.textToolbarLabel}>
+                Block Width
+                <input
+                  type="number"
+                  min={120}
+                  max={1800}
+                  value={Number(boxWidth || 360)}
+                  style={{ ...styles.textToolbarSelect, minWidth: 112, marginTop: 6 }}
+                  onMouseDownCapture={() => onPreserveSelection?.()}
+                  onChange={(event) => onBoxWidthChange?.(Number(event.target.value))}
+                />
+              </label>
+              <input
+                ref={backgroundFileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onMouseDownCapture={() => onPreserveSelection?.()}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  onBoxBackgroundImageUpload?.(file);
+                }}
+              />
+              <div style={styles.textToolbarSwatchesInline}>
+                {STANDARD_COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={`toolbar-box-${swatch}`}
+                    type="button"
+                    title={swatch}
+                    onMouseDown={(event) => keepSelection(event, () => onBoxBackgroundColor?.(swatch))}
+                    style={{
+                      ...styles.textToolbarSwatch,
+                      background: swatch,
+                      borderColor: String(boxBackgroundColor || "").toLowerCase() === swatch.toLowerCase() ? "#0f172a" : "rgba(121,85,0,0.28)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BlockAnimationPopover({ visible, block, position, onClose, onApply, onDragStart, onPreview }) {
+  if (!visible || !block) return null;
+
+  const props = block?.props || {};
+  const hasHeadline = Object.prototype.hasOwnProperty.call(props, "headline");
+  const hasBody = Object.prototype.hasOwnProperty.call(props, "subheadline") || Object.prototype.hasOwnProperty.call(props, "text");
+
+  const startHeaderDrag = (event) => {
+    if (event.target?.closest?.("button, select, input, label")) return;
+    onDragStart?.(event);
+  };
+
+  const renderAnimationControls = (label, animationKey, delayKey, speedKey) => (
+    <div style={styles.animationFieldset}>
+      <label style={styles.propertyLabel}>{label}</label>
+      <div style={styles.animationPresetGrid}>
+        {ANIMATION_PRESETS.map((option) => (
+          <button
+            key={`${animationKey}-${option.value}`}
+            type="button"
+            style={{
+              ...styles.animationPresetChip,
+              ...(String(props?.[animationKey] || "none") === option.value ? styles.animationPresetChipActive : {}),
+            }}
+            onClick={() => onApply({ [animationKey]: option.value })}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.animationOptionsGrid}>
+        <div style={styles.animationOptionGroup}>
+          <div style={styles.animationMiniLabel}>Speed</div>
+          <div style={styles.animationChipRow}>
+            {ANIMATION_SPEED_OPTIONS.map((option) => (
+              <button
+                key={`${speedKey}-${option}`}
+                type="button"
+                style={{
+                  ...styles.animationValueChip,
+                  ...(Number(props?.[speedKey] || 0.8) === option ? styles.animationValueChipActive : {}),
+                }}
+                onClick={() => onApply({ [speedKey]: Number(option) })}
+              >
+                {option.toFixed(1)}s
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={styles.animationOptionGroup}>
+          <div style={styles.animationMiniLabel}>Delay</div>
+          <div style={styles.animationChipRow}>
+            {ANIMATION_DELAY_OPTIONS.map((option) => (
+              <button
+                key={`${delayKey}-${option}`}
+                type="button"
+                style={{
+                  ...styles.animationValueChip,
+                  ...(Number(props?.[delayKey] || 0) === option ? styles.animationValueChipActive : {}),
+                }}
+                onClick={() => onApply({ [delayKey]: Number(option) })}
+              >
+                {option === 0 ? "0s" : `${option.toFixed(option < 1 ? 2 : 1)}s`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        ...styles.animationPopover,
+        left: position?.x ?? 24,
+        top: position?.y ?? 120,
+        width: position?.width ?? 980,
+      }}
+      data-animation-popover="true"
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div style={styles.animationPopoverHeader} onMouseDown={startHeaderDrag}>
+        <div style={styles.animationPopoverHeaderMain}>
+          <span style={styles.toolbarDragGlyph}>⋮⋮</span>
+          <div>
+          <div style={styles.animationPopoverTitle}>Animation Settings</div>
+          <div style={styles.animationPopoverSubtitle}>{block?.type || "block"}</div>
+        </div>
+        </div>
+        <div style={styles.animationPopoverActions}>
+          <button type="button" style={styles.animationPreviewBtn} onClick={onPreview}>▶ Trigger</button>
+          <button type="button" style={styles.textToolbarDoneBtn} onClick={onClose}>Hide</button>
+        </div>
+      </div>
+      <div style={styles.animationPopoverBody}>
+        {renderAnimationControls("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed")}
+        {hasHeadline ? renderAnimationControls("Headline", "textAnimation", "textAnimationDelay", "textAnimationSpeed") : null}
+        {hasBody ? renderAnimationControls(hasHeadline ? "Body Copy" : "Text", hasHeadline ? "subheadlineAnimation" : "textAnimation", hasHeadline ? "subheadlineAnimationDelay" : "textAnimationDelay", hasHeadline ? "subheadlineAnimationSpeed" : "textAnimationSpeed") : null}
+      </div>
+    </div>
+  );
+}
+
+function formatSavedAgo(ts) {
+  if (!ts) return "";
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
+}
+
+function pickGlobalStyleValue(blocks, keys, fallback) {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const props = block?.props || {};
+    for (const key of keys) {
+      const value = props?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return value;
+      }
+    }
+  }
+  return fallback;
+}
+
+function GlobalStylePanel({ blocks, onApplyGlobal }) {
+  const [section, setSection] = useState("text");
+  const headingFont = pickGlobalStyleValue(blocks, ["headlineFontFamily", "headingFontFamily"], "Arial");
+  const bodyFont = pickGlobalStyleValue(blocks, ["fontFamily", "bodyFontFamily"], "Arial");
+  const headingSize = Number(pickGlobalStyleValue(blocks, ["headlineFontSize"], 52));
+  const bodySize = Number(pickGlobalStyleValue(blocks, ["subheadlineFontSize", "textFontSize", "linkFontSize"], 18));
+  const primaryColor = pickGlobalStyleValue(blocks, ["buttonColor", "activeLinkBackgroundColor"], "#f59e0b");
+  const headingColor = pickGlobalStyleValue(blocks, ["headlineColor"], "#ffffff");
+  const bodyColor = pickGlobalStyleValue(blocks, ["textColor"], "#e2e8f0");
+  const pageBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
+  const sectionBackground = pickGlobalStyleValue(blocks, ["backgroundColor"], "#0f172a");
+  const buttonTextColor = pickGlobalStyleValue(blocks, ["buttonTextColor"], "#ffffff");
+  const cardBackgroundColor = pickGlobalStyleValue(blocks, ["cardBackgroundColor", "itemBackgroundColor"], "#f8fafc");
+  const buttonRadius = Number(pickGlobalStyleValue(blocks, ["buttonRadius"], 999));
+  const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500));
+  const layoutMode = blocks.some((block) => isFullWidthBackgroundEnabled(block)) ? "full" : "contained";
+  const textAlign = pickGlobalStyleValue(blocks, ["headlineAlignment", "alignment"], "left");
+  const colorSchemes = [
+    { id: "coastal", label: "Coastal Blue", patch: { primaryColor: "#0ea5e9", headingColor: "#082f49", bodyColor: "#164e63", pageBackground: "linear-gradient(180deg,#f0f9ff 0%,#dbeafe 48%,#eff6ff 100%)", cardBackgroundColor: "rgba(255,255,255,0.82)", buttonTextColor: "#ffffff" } },
+    { id: "graphite", label: "Graphite Gold", patch: { primaryColor: "#d4a017", headingColor: "#f8fafc", bodyColor: "#cbd5e1", pageBackground: "linear-gradient(180deg,#020617 0%,#111827 52%,#1f2937 100%)", cardBackgroundColor: "rgba(15,23,42,0.76)", buttonTextColor: "#111827" } },
+    { id: "forest", label: "Forest Sage", patch: { primaryColor: "#2f855a", headingColor: "#16311f", bodyColor: "#355244", pageBackground: "linear-gradient(180deg,#f0fdf4 0%,#dcfce7 46%,#bbf7d0 100%)", cardBackgroundColor: "rgba(255,255,255,0.72)", buttonTextColor: "#ffffff" } },
+    { id: "terracotta", label: "Terracotta Sand", patch: { primaryColor: "#c2410c", headingColor: "#431407", bodyColor: "#7c5a4a", pageBackground: "linear-gradient(180deg,#fff7ed 0%,#fed7aa 55%,#fdba74 100%)", cardBackgroundColor: "rgba(255,247,237,0.78)", buttonTextColor: "#fff7ed" } },
+    { id: "ink", label: "Ink Cyan", patch: { primaryColor: "#06b6d4", headingColor: "#ecfeff", bodyColor: "#bae6fd", pageBackground: "radial-gradient(circle at top,#164e63 0%,#082f49 42%,#020617 100%)", cardBackgroundColor: "rgba(8,47,73,0.72)", buttonTextColor: "#083344" } },
+    { id: "rose", label: "Rose Linen", patch: { primaryColor: "#e11d48", headingColor: "#4c0519", bodyColor: "#881337", pageBackground: "linear-gradient(180deg,#fff1f2 0%,#ffe4e6 52%,#fecdd3 100%)", cardBackgroundColor: "rgba(255,255,255,0.68)", buttonTextColor: "#fff1f2" } },
+  ];
+  const quickThemePresets = [
+    { id: "midnight-editorial", label: "Midnight Editorial", patch: { primaryColor: "#f59e0b", headingColor: "#f8fafc", bodyColor: "#cbd5e1", pageBackground: "linear-gradient(135deg,#09111f,#14253d 58%,#1d4ed8)", cardBackgroundColor: "rgba(15,23,42,0.86)", buttonTextColor: "#0f172a" } },
+    { id: "linen-studio", label: "Linen Studio", patch: { primaryColor: "#9a3412", headingColor: "#2f241b", bodyColor: "#6b5a4c", pageBackground: "linear-gradient(180deg,#fff8ef,#f3e4cf)", cardBackgroundColor: "#fffaf2", buttonTextColor: "#fffaf2" } },
+    { id: "electric-cyan", label: "Electric Cyan", patch: { primaryColor: "#22d3ee", headingColor: "#ecfeff", bodyColor: "#bae6fd", pageBackground: "radial-gradient(circle at top,#164e63 0%,#082f49 45%,#020617 100%)", cardBackgroundColor: "rgba(8,47,73,0.84)", buttonTextColor: "#083344" } },
+    { id: "terracotta-sun", label: "Terracotta Sun", patch: { primaryColor: "#ea580c", headingColor: "#431407", bodyColor: "#7c2d12", pageBackground: "linear-gradient(180deg,#fff7ed,#fed7aa)", cardBackgroundColor: "#ffedd5", buttonTextColor: "#fff7ed" } },
+    { id: "emerald-brand", label: "Emerald Brand", patch: { primaryColor: "#15803d", headingColor: "#052e16", bodyColor: "#14532d", pageBackground: "linear-gradient(180deg,#ecfdf5,#bbf7d0)", cardBackgroundColor: "#dcfce7", buttonTextColor: "#f0fdf4" } },
+    { id: "mono-minimal", label: "Mono Minimal", patch: { primaryColor: "#111827", headingColor: "#0f172a", bodyColor: "#334155", pageBackground: "#e5e7eb", cardBackgroundColor: "#ffffff", buttonTextColor: "#ffffff" } },
+  ];
+  const sections = [
+    { id: "text", label: "Text Styling" },
+    { id: "colors", label: "Color Palette" },
+    { id: "layout", label: "Website Layout" },
+    { id: "page", label: "Page Styling" },
+  ];
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🎛️ Global Styling</h3>
+      <div style={styles.tabRow}>
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            style={{ ...styles.tabChip, ...(section === item.id ? styles.tabChipActive : {}) }}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div style={styles.propertyGrid}>
+        {section === "text" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text Styling</label>
+            <p style={styles.aiHint}>Update headings, body copy, and alignment across this page.</p>
+            <label style={styles.propertyLabel}>Heading Font</label>
+            <select value={headingFont} onChange={(e) => onApplyGlobal({ headingFontFamily: e.target.value })} style={styles.propertyInput}>
+              {TEXT_TOOLBAR_FONTS.map((font) => (
+                <option key={`heading-${font.value}`} value={font.value}>{font.label}</option>
+              ))}
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Body Font</label>
+            <select value={bodyFont} onChange={(e) => onApplyGlobal({ bodyFontFamily: e.target.value })} style={styles.propertyInput}>
+              {TEXT_TOOLBAR_FONTS.map((font) => (
+                <option key={`body-${font.value}`} value={font.value}>{font.label}</option>
+              ))}
+            </select>
+            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+              <NumberField label="Heading Size" value={headingSize} min={20} max={96} onChange={(value) => onApplyGlobal({ headingSize: value })} />
+              <NumberField label="Body Size" value={bodySize} min={12} max={42} onChange={(value) => onApplyGlobal({ bodySize: value })} />
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Default Alignment</label>
+            <select value={textAlign} onChange={(e) => onApplyGlobal({ textAlign: e.target.value })} style={styles.propertyInput}>
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        ) : null}
+
+        {section === "colors" ? (
+          <>
+            <ColorSelector label="Primary Accent" value={primaryColor} fallback="#f59e0b" onChange={(value) => onApplyGlobal({ primaryColor: value })} />
+            <ColorSelector label="Heading Colour" value={headingColor} fallback="#ffffff" onChange={(value) => onApplyGlobal({ headingColor: value })} />
+            <ColorSelector label="Body Text Colour" value={bodyColor} fallback="#e2e8f0" onChange={(value) => onApplyGlobal({ bodyColor: value })} />
+            <ColorSelector label="Whole Site Background" value={pageBackground} fallback="#ffffff" allowTransparent onChange={(value) => onApplyGlobal({ pageBackground: value })} />
+            <ColorSelector label="Button Text Colour" value={buttonTextColor} fallback="#ffffff" onChange={(value) => onApplyGlobal({ buttonTextColor: value })} />
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Standard Colour Schemes</label>
+              <div style={styles.presetGrid}>
+                {colorSchemes.map((scheme) => (
+                  <button key={scheme.id} type="button" style={styles.presetChip} onClick={() => onApplyGlobal(scheme.patch)}>
+                    {scheme.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {section === "layout" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Website Layout</label>
+            <label style={styles.propertyLabel}>Layout Style</label>
+            <select value={layoutMode} onChange={(e) => onApplyGlobal({ layoutMode: e.target.value })} style={styles.propertyInput}>
+              <option value="full">Full Width</option>
+              <option value="contained">Contained</option>
+            </select>
+            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+              <NumberField label="Page Width" value={pageWidth} min={720} max={1800} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
+              <NumberField label="Button Radius" value={buttonRadius >= 999 ? 32 : buttonRadius} min={0} max={40} onChange={(value) => onApplyGlobal({ buttonRadius: value >= 32 ? 999 : value })} />
+            </div>
+          </div>
+        ) : null}
+
+        {section === "page" ? (
+          <>
+            <ColorSelector label="Whole Page Background" value={pageBackground} fallback="#ffffff" allowTransparent onChange={(value) => onApplyGlobal({ pageBackground: value })} />
+            <ColorSelector label="Site Surface" value={cardBackgroundColor} fallback="#f8fafc" onChange={(value) => onApplyGlobal({ cardBackgroundColor: value })} />
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Quick Theme Presets</label>
+              <div style={styles.presetGrid}>
+                {quickThemePresets.map((preset) => (
+                  <button key={preset.id} type="button" style={styles.presetChip} onClick={() => onApplyGlobal(preset.patch)}>{preset.label}</button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const BlockLibraryPanel = ({ onDragStart }) => {
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const categories = useMemo(() => {
+    const cats = {};
+    Object.entries(BlockDefinitions).forEach(([key, def]) => {
+      if (def?.hiddenInLibrary) return;
+      if (!cats[def.category]) cats[def.category] = [];
+      cats[def.category].push({ type: key, ...def });
+    });
+    return cats;
+  }, []);
+
+  const categoryOptions = ["All", ...Object.keys(categories)];
+  const filteredCategories = Object.entries(categories).reduce((acc, [category, items]) => {
+    if (activeCategory !== "All" && activeCategory !== category) return acc;
+    const filtered = items.filter((block) => {
+      const query = String(search || "").trim().toLowerCase();
+      if (!query) return true;
+      return String(block.name || "").toLowerCase().includes(query)
+        || String(block.description || "").toLowerCase().includes(query)
+        || String(category || "").toLowerCase().includes(query);
+    });
+    if (filtered.length) acc[category] = filtered;
+    return acc;
+  }, {});
+
+  return (
+    <div style={styles.library}>
+      <h3 style={styles.libraryTitle}>🧩 Widgets Panel</h3>
+      <p style={styles.librarySubtitle}>Drag widgets onto the page</p>
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search widgets..."
+        style={{ ...styles.propertyInput, marginBottom: 10 }}
+      />
+      <div style={styles.widgetFilterRow}>
+        {categoryOptions.map((category) => (
+          <button
+            key={category}
+            type="button"
+            style={{ ...styles.widgetFilterChip, ...(activeCategory === category ? styles.widgetFilterChipActive : {}) }}
+            onClick={() => setActiveCategory(category)}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+      <div style={styles.categoryList}>
+        {Object.entries(filteredCategories).map(([category, blocks]) => (
+          <div key={category} style={styles.categoryGroup}>
+            <h4 style={styles.categoryTitle}>{category}</h4>
+            <div style={styles.blocksList}>
+              {blocks.map((block) => (
+                <div
+                  key={block.type}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, block.type)}
+                  style={styles.blockCard}
+                  title={block.description}
+                >
+                  <div style={styles.blockIcon}>{block.icon}</div>
+                  <div style={styles.blockName}>{block.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+function PageSectionsPanel({ blocks, selectedIndex, onSelect, onMove }) {
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>📑 Page Sections</h3>
+      <div style={styles.propertyGrid}>
+        {(Array.isArray(blocks) ? blocks : []).map((block, index) => (
+          <div key={block.id || `${block.type}-${index}`} style={{ ...styles.linkRowCard, ...(selectedIndex === index ? { borderColor: "#7df9a1", boxShadow: "0 0 0 1px rgba(125,249,161,0.35)" } : {}) }}>
+            <div style={styles.linkRowHeader}>
+              <span style={styles.linkRowTitle}>{BlockDefinitions[block.type]?.name || block.type}</span>
+              <div style={styles.linkActions}>
+                <button type="button" style={styles.linkMoveBtn} onClick={() => onMove(index, -1)} title="Move up">↑</button>
+                <button type="button" style={styles.linkMoveBtn} onClick={() => onMove(index, 1)} title="Move down">↓</button>
+              </div>
+            </div>
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, width: "100%" }}
+              onClick={() => onSelect(index)}
+            >
+              Edit Section
+            </button>
+          </div>
+        ))}
+        {!blocks?.length ? (
+          <div style={styles.sectionCard}>
+            <p style={styles.aiHint}>Add some widgets first to see your page sections here.</p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Icon Counter Properties Panel ───────────────────────────────────────────
+const IC_FONT_OPTIONS = [
+  { value: "inherit", label: "Default (site font)" },
+  { value: "Poppins", label: "Poppins" },
+  { value: "Inter", label: "Inter" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Montserrat", label: "Montserrat" },
+  { value: "Oswald", label: "Oswald" },
+  { value: "Bebas Neue", label: "Bebas Neue" },
+  { value: "Arial", label: "Arial" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Tahoma", label: "Tahoma" },
+  { value: "Trebuchet MS", label: "Trebuchet MS" },
+  { value: "Lato", label: "Lato" },
+  { value: "Open Sans", label: "Open Sans" },
+  { value: "Nunito", label: "Nunito" },
+  { value: "Playfair Display", label: "Playfair Display" },
+];
+
+function IconCounterPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const selectStyle = {
+    width: "100%",
+    padding: "6px 8px",
+    borderRadius: 6,
+    border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(30,41,59,0.8)",
+    color: "#e2e8f0",
+    fontSize: 13,
+    marginTop: 4,
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🔢 Edit: Site Visit Counter</h3>
+      <div style={styles.propertyGrid}>
+
+        {/* Content */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Content</label>
+          <div style={styles.propertyRow}>
+            <label style={styles.propertyLabel}>Label text</label>
+            <input
+              type="text"
+              value={props.label ?? "Site Visits...and counting"}
+              style={styles.propertyInput}
+              placeholder="e.g. Site Visits...and counting"
+              onChange={(e) => update({ label: e.target.value })}
+            />
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Target number" value={Number(props.targetNumber ?? 0)} min={0} max={9999999} onChange={(v) => update({ targetNumber: v })} />
+            <NumberField label="Start number" value={Number(props.startNumber ?? 0)} min={0} max={9999999} onChange={(v) => update({ startNumber: v })} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <label style={styles.propertyLabel}>Suffix (e.g. +, %)</label>
+            <input
+              type="text"
+              value={props.suffix ?? ""}
+              style={styles.propertyInput}
+              placeholder="e.g. + or %"
+              onChange={(e) => update({ suffix: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {/* Number styling */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Number styling</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Font size (px)" value={Number(props.numberFontSize ?? 78)} min={20} max={180} onChange={(v) => update({ numberFontSize: v })} />
+          </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Font family</label>
+          <select
+            value={props.numberFontFamily ?? "inherit"}
+            style={selectStyle}
+            onChange={(e) => update({ numberFontFamily: e.target.value })}
+          >
+            {IC_FONT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <div style={{ marginTop: 8 }}>
+            <ColorSelector label="Number color" value={props.numberColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ numberColor: v })} />
+          </div>
+        </div>
+
+        {/* Label styling */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Label styling</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Font size (px)" value={Number(props.labelFontSize ?? 22)} min={10} max={72} onChange={(v) => update({ labelFontSize: v })} />
+          </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Font family</label>
+          <select
+            value={props.labelFontFamily ?? "inherit"}
+            style={selectStyle}
+            onChange={(e) => update({ labelFontFamily: e.target.value })}
+          >
+            {IC_FONT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Font weight</label>
+          <select
+            value={props.labelFontWeight ?? "600"}
+            style={selectStyle}
+            onChange={(e) => update({ labelFontWeight: e.target.value })}
+          >
+            <option value="400">Regular (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semi-bold (600)</option>
+            <option value="700">Bold (700)</option>
+            <option value="800">Extra-bold (800)</option>
+          </select>
+          <div style={{ marginTop: 8 }}>
+            <ColorSelector label="Label color" value={props.labelColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ labelColor: v })} />
+          </div>
+        </div>
+
+        {/* Background */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background</label>
+          <ColorSelector label="Section background" value={props.backgroundColor || "#1e293b"} fallback="#1e293b" allowTransparent onChange={(v) => update({ backgroundColor: v })} />
+          <ColorSelector label="Diamond color" value={props.diamondColor || "#2563eb"} fallback="#2563eb" allowTransparent onChange={(v) => update({ diamondColor: v })} />
+          <div style={{ marginTop: 8 }}>
+            <NumberField label="Min height (px)" value={Number(props.minHeight ?? 280)} min={80} max={800} onChange={(v) => update({ minHeight: v })} />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
+// ─── exports ──────────────────────────────────────────────────────────────────
+export {
+  BlockPresetPicker, NavbarPresetPicker, NavbarLinksEditor,
+  normalizeFeatureListItem, normalizeGalleryItem, createDefaultGalleryItem,
+  normalizeTeamMember, normalizeTeamRowSizes, formatTeamRowSizes, deriveTeamRowSizesFromMembers,
+  rebalanceTeamMembersForRows, buildEditableTeamRows,
+  normalizeStatItem, StatsItemsEditor,
+  normalizeTestimonialItemForEditor, normalizeTrustBadgeItem, TrustBadgesEditor,
+  CustomHtmlPropertiesPanel, TrustBadgesPropertiesPanel, IconCounterPropertiesPanel,
+  TestimonialItemsEditor, TestimonialPropertiesPanel,
+  NewsletterPropertiesPanel, FooterPropertiesPanel,
+  TextPropertiesPanel, StatsPropertiesPanel,
+  ContainerImageControls,
+  TeamMembersEditor, TeamPropertiesPanel,
+  ensureGalleryImagesCount, ListItemsEditor, FeatureListPropertiesPanel,
+  GalleryImagesEditor, ImageGalleryPropertiesPanel,
+  PricingTablePropertiesPanel,
+  FAQPropertiesPanel, SplitBlockPropertiesPanel,
+  NumberField, ImagePropertiesPanel,
+  NavbarLogoPicker, NavbarPropertiesPanel,
+  normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
+  ColorSelector, CompactColorField,
+  rgbToHex, stripEditorArtifacts,
+  TEXT_TOOLBAR_FONTS, TEXT_TOOLBAR_SIZES, TEXT_TOOLBAR_LINE_HEIGHTS,
+  ANIMATION_PRESETS, ANIMATION_DELAY_OPTIONS, ANIMATION_SPEED_OPTIONS, BLOCK_TYPE_STYLE_PRESETS,
+  getTextAnimationBinding, getSelectionStyleSource, getEditableBackgroundTarget,
+  parseBackgroundImageUrl, normalizeToolbarBackgroundColor, normalizeComputedLineHeight,
+  TextEditingToolbar, BlockAnimationPopover,
+  formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
+  BlockLibraryPanel, PageSectionsPanel,
+};

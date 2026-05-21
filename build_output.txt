@@ -1,0 +1,644 @@
+﻿node.exe :  ÔÜá Linting is disabled.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\grant\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( ÔÜá Linting is disabled.:String) 
+    [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   Ôû▓ Next.js 15.5.12
+   - Environments: .env.local, .env.production, .env
+
+   Checking validity of types ...
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully in 16.4s
+   Collecting page data ...
+   Generating static pages (0/181) ...
+   Generating static pages (45/181) 
+   Generating static pages (90/181) 
+   Generating static pages (135/181) 
+ Ô£ô Generating static pages (181/181)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (pages)                                                                     Size  First Load JS
+Ôöî ãÆ /                                                                            244 B         222 kB
+Ôö£   /_app                                                                          0 B         222 kB
+Ôö£ ãÆ /[slug]                                                                      794 B         223 kB
+Ôö£ Ôùï /404 (770 ms)                                                                830 B         223 kB
+Ôö£ Ôùï /500 (769 ms)                                                                599 B         222 kB
+Ôö£ ãÆ /a/[code]                                                                    250 B         222 kB
+Ôö£ Ôùï /account (679 ms)                                                          14.3 kB         236 kB
+Ôö£ Ôùï /account/billing (679 ms)                                                    626 B         222 kB
+Ôö£ Ôùï /admin/dashboard (725 ms)                                                  5.61 kB         227 kB
+Ôö£ Ôùï /admin/social-developer-config (679 ms)                                    6.38 kB         228 kB
+Ôö£ Ôùï /admin/user/[id] (670 ms)                                                  2.89 kB         225 kB
+Ôö£ Ôùï /affiliate-application (674 ms)                                              399 B         222 kB
+Ôö£ Ôùï /analytics (684 ms)                                                          549 B         222 kB
+Ôö£ ãÆ /api/_debug-env                                                                0 B         222 kB
+Ôö£ ãÆ /api/account/application-received                                              0 B         222 kB
+Ôö£ ãÆ /api/account/assets/list                                                       0 B         222 kB
+Ôö£ ãÆ /api/account/assets/uploads                                                    0 B         222 kB
+Ôö£ ãÆ /api/account/brand                                                             0 B         222 kB
+Ôö£ ãÆ /api/account/generate                                                          0 B         222 kB
+Ôö£ ãÆ /api/account/onboard                                                           0 B         222 kB
+Ôö£ ãÆ /api/account/send-phone-otp                                                    0 B         222 kB
+Ôö£ ãÆ /api/admin/approve-affiliate                                                   0 B         222 kB
+Ôö£ ãÆ /api/admin/approve-user                                                        0 B         222 kB
+Ôö£ ãÆ /api/admin/deny-affiliate                                                      0 B         222 kB
+Ôö£ ãÆ /api/admin/get-all-affiliates                                                  0 B         222 kB
+Ôö£ ãÆ /api/admin/get-pending-affiliates                                              0 B         222 kB
+Ôö£ ãÆ /api/admin/get-pending-users                                                   0 B         222 kB
+Ôö£ ãÆ /api/admin/pause-user                                                          0 B         222 kB
+Ôö£ ãÆ /api/admin/reject-affiliate                                                    0 B         222 kB
+Ôö£ ãÆ /api/admin/reject-user                                                         0 B         222 kB
+Ôö£ ãÆ /api/admin/resume-user                                                         0 B         222 kB
+Ôö£ ãÆ /api/admin/social-credential-status                                            0 B         222 kB
+Ôö£ ãÆ /api/admin/social-oauth-debug                                                  0 B         222 kB
+Ôö£ ãÆ /api/admin/vendor-products                                                     0 B         222 kB
+Ôö£ ãÆ /api/affiliate-application-status                                              0 B         222 kB
+Ôö£ ãÆ /api/affiliate/applications                                                    0 B         222 kB
+Ôö£ ãÆ /api/affiliate/apply                                                           0 B         222 kB
+Ôö£ ãÆ /api/affiliate/approve                                                         0 B         222 kB
+Ôö£ ãÆ /api/affiliate/approved                                                        0 B         222 kB
+Ôö£ ãÆ /api/affiliate/auto-approve                                                    0 B         222 kB
+Ôö£ ãÆ /api/affiliate/check-status                                                    0 B         222 kB
+Ôö£ ãÆ /api/affiliate/commissions                                                     0 B         222 kB
+Ôö£ ãÆ /api/affiliate/confirm-email                                                   0 B         222 kB
+Ôö£ ãÆ /api/affiliate/create-affiliate                                                0 B         222 kB
+Ôö£ ãÆ /api/affiliate/ensure-link                                                     0 B         222 kB
+Ôö£ ãÆ /api/affiliate/links,                                                          0 B         222 kB
+Ôö£ ãÆ /api/affiliate/list-applications                                               0 B         222 kB
+Ôö£ ãÆ /api/affiliate/login                                                           0 B         222 kB
+Ôö£ ãÆ /api/affiliate/notify-vendor                                                   0 B         222 kB
+Ôö£ ãÆ /api/affiliate/offers                                                          0 B         222 kB
+Ôö£ ãÆ /api/affiliate/product-assets                                                  0 B         222 kB
+Ôö£ ãÆ /api/affiliate/programs                                                        0 B         222 kB
+Ôö£ ãÆ /api/affiliate/send-confirmation                                               0 B         222 kB
+Ôö£ ãÆ /api/affiliate/status                                                          0 B         222 kB
+Ôö£ ãÆ /api/affiliate/update-application-status                                       0 B         222 kB
+Ôö£ ãÆ /api/affiliatePayout                                                           0 B         222 kB
+Ôö£ ãÆ /api/ai/copy                                                                   0 B         222 kB
+Ôö£ ãÆ /api/ai/generate-funnel                                                        0 B         222 kB
+Ôö£ ãÆ /api/ai/generate-image                                                         0 B         222 kB
+Ôö£ ãÆ /api/ai/generate-product                                                       0 B         222 kB
+Ôö£ ãÆ /api/ai/generate-subject-preheader                                             0 B         222 kB
+Ôö£ ãÆ /api/ai/generate-tags                                                          0 B         222 kB
+Ôö£ ãÆ /api/ai/subject-lines                                                          0 B         222 kB
+Ôö£ ãÆ /api/ai/write-email-block                                                      0 B         222 kB
+Ôö£ ãÆ /api/analytics/sales                                                           0 B         222 kB
+Ôö£ ãÆ /api/analytics/visitors                                                        0 B         222 kB
+Ôö£ ãÆ /api/assets/import-library                                                     0 B         222 kB
+Ôö£ ãÆ /api/assets/list-library                                                       0 B         222 kB
+Ôö£ ãÆ /api/assets/remove-bg                                                          0 B         222 kB
+Ôö£ ãÆ /api/assets/reset-template-library                                             0 B         222 kB
+Ôö£ ãÆ /api/assets/upload                                                             0 B         222 kB
+Ôö£ ãÆ /api/auth/send-2fa                                                             0 B         222 kB
+Ôö£ ãÆ /api/auth/verify-2fa                                                           0 B         222 kB
+Ôö£ ãÆ /api/automation/crm-flows                                                      0 B         222 kB
+Ôö£ ãÆ /api/automation/crm-transfer                                                   0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/check-storage                                           0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/diagnose                                                0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/enroll                                                  0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/fix-campaign-id                                         0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/get-or-create-campaign                                  0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/kick                                                    0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/node-stats                                              0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/requeue                                                 0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/sendgrid-event                                          0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/start                                                   0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/status-check                                            0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/tick                                                    0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/trigger-lead                                            0 B         222 kB
+Ôö£ ãÆ /api/automation/engine/trigger-scan                                            0 B         222 kB
+Ôö£ ãÆ /api/automation/enroll-list                                                    0 B         222 kB
+Ôö£ ãÆ /api/automation/flow-members                                                   0 B         222 kB
+Ôö£ ãÆ /api/automation/flow-remove-member                                             0 B         222 kB
+Ôö£ ãÆ /api/automation/flow-transfer-member                                           0 B         222 kB
+Ôö£ ãÆ /api/automation/flows/[id]/reset                                               0 B         222 kB
+Ôö£ ãÆ /api/automation/flows/save                                                     0 B         222 kB
+Ôö£ ãÆ /api/automation/lists                                                          0 B         222 kB
+Ôö£ ãÆ /api/automation/members/add-list                                               0 B         222 kB
+Ôö£ ãÆ /api/automation/members/add-person                                             0 B         222 kB
+Ôö£ ãÆ /api/automation/members/remove-person                                          0 B         222 kB
+Ôö£ ãÆ /api/automation/node-stats                                                     0 B         222 kB
+Ôö£ ãÆ /api/automation/reset-node-stats                                               0 B         222 kB
+Ôö£ ãÆ /api/automation/search-leads                                                   0 B         222 kB
+Ôö£ ãÆ /api/autoresponders/enroll-existing                                            0 B         222 kB
+Ôö£ ãÆ /api/autoresponders/save                                                       0 B         222 kB
+Ôö£ ãÆ /api/billing/apply-plan                                                        0 B         222 kB
+Ôö£ ãÆ /api/billing/checkout                                                          0 B         222 kB
+Ôö£ ãÆ /api/billing/create-session                                                    0 B         222 kB
+Ôö£ ãÆ /api/billing/get-prices                                                        0 B         222 kB
+Ôö£ ãÆ /api/billing/modules                                                           0 B         222 kB
+Ôö£ ãÆ /api/billing/webhook                                                           0 B         222 kB
+Ôö£ ãÆ /api/calendar/cancel-booking                                                   0 B         222 kB
+Ôö£ ãÆ /api/calendar/confirm-booking                                                  0 B         222 kB
+Ôö£ ãÆ /api/calendar/create-custom-field                                              0 B         222 kB
+Ôö£ ãÆ /api/calendar/create-service                                                   0 B         222 kB
+Ôö£ ãÆ /api/calendar/create-stripe-price                                              0 B         222 kB
+Ôö£ ãÆ /api/calendar/delete-service                                                   0 B         222 kB
+Ôö£ ãÆ /api/calendar/get-bookings                                                     0 B         222 kB
+Ôö£ ãÆ /api/calendar/get-services                                                     0 B         222 kB
+Ôö£ ãÆ /api/calendar/get-user-by-username                                             0 B         222 kB
+Ôö£ ãÆ /api/calendar/process-reminders                                                0 B         222 kB
+Ôö£ ãÆ /api/calendar/public-page-data                                                 0 B         222 kB
+Ôö£ ãÆ /api/calendar/reschedule-booking                                               0 B         222 kB
+Ôö£ ãÆ /api/calendar/save-booking-settings                                            0 B         222 kB
+Ôö£ ãÆ /api/calendar/save-service-page-settings                                       0 B         222 kB
+Ôö£ ãÆ /api/calendar/send-reminders                                                   0 B         222 kB
+Ôö£ ãÆ /api/calendar/send-verify-code                                                 0 B         222 kB
+Ôö£ ãÆ /api/calendar/setup-tables                                                     0 B         222 kB
+Ôö£ ãÆ /api/calendar/update-service                                                   0 B         222 kB
+Ôö£ ãÆ /api/checkout-complete                                                         0 B         222 kB
+Ôö£ ãÆ /api/checkout-start                                                            0 B         222 kB
+Ôö£ ãÆ /api/connect-sendgrid                                                          0 B         222 kB
+Ôö£ ãÆ /api/contacts/[id]                                                             0 B         222 kB
+Ôö£ ãÆ /api/contacts/[id]/notes                                                       0 B         222 kB
+Ôö£ ãÆ /api/courses/create-checkout-session                                           0 B         222 kB
+Ôö£ ãÆ /api/create-checkout-session                                                   0 B         222 kB
+Ôö£ ãÆ /api/crm/append-lead-note                                                      0 B         222 kB
+Ôö£ ãÆ /api/crm/calls                                                                 0 B         222 kB
+Ôö£ ãÆ /api/crm/contacts                                                              0 B         222 kB
+Ôö£ ãÆ /api/crm/lead-call-recordings                                                  0 B         222 kB
+Ôö£ ãÆ /api/crm/lead-lists                                                            0 B         222 kB
+Ôö£ ãÆ /api/crm/leads                                                                 0 B         222 kB
+Ôö£ ãÆ /api/crm/leads/add-note                                                        0 B         222 kB
+Ôö£ ãÆ /api/crm/leads/append-note                                                     0 B         222 kB
+Ôö£ ãÆ /api/crm/stages                                                                0 B         222 kB
+Ôö£ ãÆ /api/crm/tasks/create                                                          0 B         222 kB
+Ôö£ ãÆ /api/cron/automation-tick                                                      0 B         222 kB
+Ôö£ ãÆ /api/cron/process-campaign-queue                                               0 B         222 kB
+Ôö£ ãÆ /api/debug-env                                                                 0 B         222 kB
+Ôö£ ãÆ /api/debug-sms-queue                                                           0 B         222 kB
+Ôö£ ãÆ /api/debug/check-sms-config                                                    0 B         222 kB
+Ôö£ ãÆ /api/dev                                                                       0 B         222 kB
+Ôö£ ãÆ /api/dev/diag                                                                  0 B         222 kB
+Ôö£ ãÆ /api/dev/metrics                                                               0 B         222 kB
+Ôö£ ãÆ /api/dev/session                                                               0 B         222 kB
+Ôö£ ãÆ /api/dev/spreadsheet-data                                                      0 B         222 kB
+Ôö£ ãÆ /api/diag/stripe-check                                                         0 B         222 kB
+Ôö£ ãÆ /api/dkim/check-verification                                                   0 B         222 kB
+Ôö£ ãÆ /api/dkim/generate                                                             0 B         222 kB
+Ôö£ ãÆ /api/email/ai-generate                                                         0 B         222 kB
+Ôö£ ãÆ /api/email/ai-image                                                            0 B         222 kB
+Ôö£ ãÆ /api/email/automations/[id]                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/automations/doctor                                                  0 B         222 kB
+Ôö£ ãÆ /api/email/automations/scheduler                                               0 B         222 kB
+Ôö£ ãÆ /api/email/automations/trigger                                                 0 B         222 kB
+Ôö£ ãÆ /api/email/automations/worker                                                  0 B         222 kB
+Ôö£ ãÆ /api/email/autoresponders/enroll-existing                                      0 B         222 kB
+Ôö£ ãÆ /api/email/autoresponders/process-queue                                        0 B         222 kB
+Ôö£ ãÆ /api/email/autoresponders/save                                                 0 B         222 kB
+Ôö£ ãÆ /api/email/autoresponders/stats                                                0 B         222 kB
+Ôö£ ãÆ /api/email/blocks                                                              0 B         222 kB
+Ôö£ ãÆ /api/email/builder-doc-delete                                                  0 B         222 kB
+Ôö£ ãÆ /api/email/builder-doc-list                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/builder-doc-load                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/builder-doc-save                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/campaigns/save                                                      0 B         222 kB
+Ôö£ ãÆ /api/email/campaigns/worker                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/debug-env                                                           0 B         222 kB
+Ôö£ ãÆ /api/email/debug-sendgrid                                                      0 B         222 kB
+Ôö£ ãÆ /api/email/editor-images                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/editor-load                                                         0 B         222 kB
+Ôö£ ãÆ /api/email/editor-save                                                         0 B         222 kB
+Ôö£ ãÆ /api/email/ensure-blocks-table                                                 0 B         222 kB
+Ôö£ ãÆ /api/email/get-saved-email                                                     0 B         222 kB
+Ôö£ ãÆ /api/email/get-template                                                        0 B         222 kB
+Ôö£ ãÆ /api/email/list-builder-images                                                 0 B         222 kB
+Ôö£ ãÆ /api/email/list-saved-emails                                                   0 B         222 kB
+Ôö£ ãÆ /api/email/lists                                                               0 B         222 kB
+Ôö£ ãÆ /api/email/local-gallery-templates                                             0 B         222 kB
+Ôö£ ãÆ /api/email/log-broadcast                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/metrics-daily                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/metrics-summary                                                     0 B         222 kB
+Ôö£ ãÆ /api/email/my-templates                                                        0 B         222 kB
+Ôö£ ãÆ /api/email/process-autoresponder-queue                                         0 B         222 kB
+Ôö£ ãÆ /api/email/process-campaign-queue                                              0 B         222 kB
+Ôö£ ãÆ /api/email/process-campaign-queue-impl                                         0 B         222 kB
+Ôö£ ãÆ /api/email/process-queue                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/resend-broadcast                                                    0 B         222 kB
+Ôö£ ãÆ /api/email/run-campaigns                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/save-base-template                                                  0 B         222 kB
+Ôö£ ãÆ /api/email/save-template                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/send-booking                                                        0 B         222 kB
+Ôö£ ãÆ /api/email/send-booking-update                                                 0 B         222 kB
+Ôö£ ãÆ /api/email/send-broadcast                                                      0 B         222 kB
+Ôö£ ãÆ /api/email/send-crm-lead                                                       0 B         222 kB
+Ôö£ ãÆ /api/email/sendgrid/templates                                                  0 B         222 kB
+Ôö£ ãÆ /api/email/sg-test                                                             0 B         222 kB
+Ôö£ ãÆ /api/email/start-campaign                                                      0 B         222 kB
+Ôö£ ãÆ /api/email/subscribe                                                           0 B         222 kB
+Ôö£ ãÆ /api/email/template-delete                                                     0 B         222 kB
+Ôö£ ãÆ /api/email/test-send                                                           0 B         222 kB
+Ôö£ ãÆ /api/email/unsubscribe                                                         0 B         222 kB
+Ôö£ ãÆ /api/email/upload-assets                                                       0 B         222 kB
+Ôö£ ãÆ /api/entitlements/start                                                        0 B         222 kB
+Ôö£ ãÆ /api/fix-sms-column                                                            0 B         222 kB
+Ôö£ ãÆ /api/fix-sms-queue                                                             0 B         222 kB
+Ôö£ ãÆ /api/form-submit                                                               0 B         222 kB
+Ôö£ ãÆ /api/forms/submit                                                              0 B         222 kB
+Ôö£ ãÆ /api/forms/webhook                                                             0 B         222 kB
+Ôö£ ãÆ /api/funnels                                                                   0 B         222 kB
+Ôö£ ãÆ /api/funnels/ai-generate                                                       0 B         222 kB
+Ôö£ ãÆ /api/funnels/create-with-pages                                                 0 B         222 kB
+Ôö£ ãÆ /api/funnels/import-html                                                       0 B         222 kB
+Ôö£ ãÆ /api/funnels/public-page                                                       0 B         222 kB
+Ôö£ ãÆ /api/funnels/template-image                                                    0 B         222 kB
+Ôö£ ãÆ /api/generate-affiliate-pdf                                                    0 B         222 kB
+Ôö£ ãÆ /api/generate-description                                                      0 B         222 kB
+Ôö£ ãÆ /api/generate-product-ai                                                       0 B         222 kB
+Ôö£ ãÆ /api/generate-tags                                                             0 B         222 kB
+Ôö£ ãÆ /api/hello                                                                     0 B         222 kB
+Ôö£ ãÆ /api/integrations/xero/callback                                                0 B         222 kB
+Ôö£ ãÆ /api/integrations/xero/start                                                   0 B         222 kB
+Ôö£ ãÆ /api/lead                                                                      0 B         222 kB
+Ôö£ ãÆ /api/lead/import-csv                                                           0 B         222 kB
+Ôö£ ãÆ /api/lead/submit                                                               0 B         222 kB
+Ôö£ ãÆ /api/list-marketplace-offer                                                    0 B         222 kB
+Ôö£ ãÆ /api/lists                                                                     0 B         222 kB
+Ôö£ ãÆ /api/lists/[id]                                                                0 B         222 kB
+Ôö£ ãÆ /api/lists/[id]/export                                                         0 B         222 kB
+Ôö£ ãÆ /api/lists/[id]/subscribers                                                    0 B         222 kB
+Ôö£ ãÆ /api/lists/add-subscriber                                                      0 B         222 kB
+Ôö£ ãÆ /api/lists/create                                                              0 B         222 kB
+Ôö£ ãÆ /api/lists/intake/[listId]                                                     0 B         222 kB
+Ôö£ ãÆ /api/marketplace-password-reset/confirm                                        0 B         222 kB
+Ôö£ ãÆ /api/marketplace-password-reset/request                                        0 B         222 kB
+Ôö£ ãÆ /api/marketplace-user                                                          0 B         222 kB
+Ôö£ ãÆ /api/marketplace-user-upsert                                                   0 B         222 kB
+Ôö£ ãÆ /api/marketplace/affiliate-access                                              0 B         222 kB
+Ôö£ ãÆ /api/marketplace/course-vendor-context                                         0 B         222 kB
+Ôö£ ãÆ /api/marketplace/vendor-access                                                 0 B         222 kB
+Ôö£ ãÆ /api/marketplace/vendor-affiliate-products                                     0 B         222 kB
+Ôö£ ãÆ /api/marketplace/vendor-digital-products                                       0 B         222 kB
+Ôö£ ãÆ /api/marketplace/vendor-physical-products                                      0 B         222 kB
+Ôö£ ãÆ /api/marketplace/vendor-upload-product-image                                   0 B         222 kB
+Ôö£ ãÆ /api/media/list                                                                0 B         222 kB
+Ôö£ ãÆ /api/media/upload                                                              0 B         222 kB
+Ôö£ ãÆ /api/merchant/approvals                                                        0 B         222 kB
+Ôö£ ãÆ /api/merchant/approve                                                          0 B         222 kB
+Ôö£ ãÆ /api/merchant/commissions                                                      0 B         222 kB
+Ôö£ ãÆ /api/notify-signup                                                             0 B         222 kB
+Ôö£ ãÆ /api/onboarding/approve-application                                            0 B         222 kB
+Ôö£ ãÆ /api/pages                                                                     0 B         222 kB
+Ôö£ ãÆ /api/paypal/capture-order                                                      0 B         222 kB
+Ôö£ ãÆ /api/paypal/create-order                                                       0 B         222 kB
+Ôö£ ãÆ /api/paypal/webhook                                                            0 B         222 kB
+Ôö£ ãÆ /api/ping                                                                      0 B         222 kB
+Ôö£ ãÆ /api/sales/webhook                                                             0 B         222 kB
+Ôö£ ãÆ /api/send-verification-email                                                   0 B         222 kB
+Ôö£ ãÆ /api/sms/apply                                                                 0 B         222 kB
+Ôö£ ãÆ /api/sms/set-sender-id                                                         0 B         222 kB
+Ôö£ ãÆ /api/sms/verify-code                                                           0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/_debug-auth                                                     0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/dlr                                                             0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/flush-queue                                                     0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/import-history                                                  0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/launch-sequence                                                 0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/ping                                                            0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/send-bulk                                                       0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/send-single                                                     0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/sms-inbound                                                     0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/smsglobal-config                                                0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/SMSGlobalSMSSend                                                0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/SMSSend                                                         0 B         222 kB
+Ôö£ ãÆ /api/smsglobal/templates                                                       0 B         222 kB
+Ôö£ ãÆ /api/social/ai-generate-content                                                0 B         222 kB
+Ôö£ ãÆ /api/social/ai-generate-images                                                 0 B         222 kB
+Ôö£ ãÆ /api/social/bot-conversations                                                  0 B         222 kB
+Ôö£ ãÆ /api/social/bot-rules                                                          0 B         222 kB
+Ôö£ ãÆ /api/social/bot-subscribe-page                                                 0 B         222 kB
+Ôö£ ãÆ /api/social/calendar-board                                                     0 B         222 kB
+Ôö£ ãÆ /api/social/cleanup-image-library                                              0 B         222 kB
+Ôö£ ãÆ /api/social/connections                                                        0 B         222 kB
+Ôö£ ãÆ /api/social/create-campaign                                                    0 B         222 kB
+Ôö£ ãÆ /api/social/create-post                                                        0 B         222 kB
+Ôö£ ãÆ /api/social/cron/process-queue                                                 0 B         222 kB
+Ôö£ ãÆ /api/social/cron/process-schedule                                              0 B         222 kB
+Ôö£ ãÆ /api/social/cron/refresh-tokens                                                0 B         222 kB
+Ôö£ ãÆ /api/social/delete-campaign                                                    0 B         222 kB
+Ôö£ ãÆ /api/social/delete-image                                                       0 B         222 kB
+Ôö£ ãÆ /api/social/delete-post                                                        0 B         222 kB
+Ôö£ ãÆ /api/social/generate-ai-posts                                                  0 B         222 kB
+Ôö£ ãÆ /api/social/get-campaigns                                                      0 B         222 kB
+Ôö£ ãÆ /api/social/get-posts                                                          0 B         222 kB
+Ôö£ ãÆ /api/social/import-token                                                       0 B         222 kB
+Ôö£ ãÆ /api/social/list-images                                                        0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/linkedin/callback                                            0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/linkedin/start                                               0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/meta/callback                                                0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/meta/start                                                   0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/pinterest/callback                                           0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/pinterest/start                                              0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/refresh/tiktok                                               0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/tiktok/callback                                              0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/tiktok/start                                                 0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/x/callback                                                   0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/x/start                                                      0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/youtube/callback                                             0 B         222 kB
+Ôö£ ãÆ /api/social/oauth/youtube/start                                                0 B         222 kB
+Ôö£ ãÆ /api/social/platform-settings                                                  0 B         222 kB
+Ôö£ ãÆ /api/social/process-queue                                                      0 B         222 kB
+Ôö£ ãÆ /api/social/process-schedule                                                   0 B         222 kB
+Ôö£ ãÆ /api/social/publish-now                                                        0 B         222 kB
+Ôö£ ãÆ /api/social/purge-ai-images                                                    0 B         222 kB
+Ôö£ ãÆ /api/social/remove-schedule                                                    0 B         222 kB
+Ôö£ ãÆ /api/social/save-image                                                         0 B         222 kB
+Ôö£ ãÆ /api/social/schedule-campaign                                                  0 B         222 kB
+Ôö£ ãÆ /api/social/schedule-post                                                      0 B         222 kB
+Ôö£ ãÆ /api/social/update-post                                                        0 B         222 kB
+Ôö£ ãÆ /api/store/create-checkout-session                                             0 B         222 kB
+Ôö£ ãÆ /api/store/stripe-webhook                                                      0 B         222 kB
+Ôö£ ãÆ /api/stripe-session                                                            0 B         222 kB
+Ôö£ ãÆ /api/stripe-verify                                                             0 B         222 kB
+Ôö£ ãÆ /api/stripe/calendar-portal                                                    0 B         222 kB
+Ôö£ ãÆ /api/stripe/create-booking-checkout                                            0 B         222 kB
+Ôö£ ãÆ /api/stripe/create-calendar-subscription                                       0 B         222 kB
+Ôö£ ãÆ /api/stripe/create-checkout-session                                            0 B         222 kB
+Ôö£ ãÆ /api/stripe/create-connect-account                                             0 B         222 kB
+Ôö£ ãÆ /api/stripe/create-connect-link                                                0 B         222 kB
+Ôö£ ãÆ /api/stripe/webhook                                                            0 B         222 kB
+Ôö£ ãÆ /api/telephony/_twilio                                                         0 B         222 kB
+Ôö£ ãÆ /api/telephony/env-check                                                       0 B         222 kB
+Ôö£ ãÆ /api/telephony/hangup                                                          0 B         222 kB
+Ôö£ ãÆ /api/telephony/make-call                                                       0 B         222 kB
+Ôö£ ãÆ /api/telephony/send-sms                                                        0 B         222 kB
+Ôö£ ãÆ /api/telephony/sms-broadcast                                                   0 B         222 kB
+Ôö£ ãÆ /api/telephony/sms-delivery-webhook                                            0 B         222 kB
+Ôö£ ãÆ /api/telephony/sms-global-config                                               0 B         222 kB
+Ôö£ ãÆ /api/telephony/sms-status                                                      0 B         222 kB
+Ôö£ ãÆ /api/telephony/SmsComposer                                                     0 B         222 kB
+Ôö£ ãÆ /api/telephony/twilio-sanity                                                   0 B         222 kB
+Ôö£ ãÆ /api/telephony/twilio-sanity-auth                                              0 B         222 kB
+Ôö£ ãÆ /api/telephony/voice-token                                                     0 B         222 kB
+Ôö£ ãÆ /api/templates/get                                                             0 B         222 kB
+Ôö£ ãÆ /api/templates/import                                                          0 B         222 kB
+Ôö£ ãÆ /api/templates/list                                                            0 B         222 kB
+Ôö£ ãÆ /api/templates/ping                                                            0 B         222 kB
+Ôö£ ãÆ /api/templates/read                                                            0 B         222 kB
+Ôö£ ãÆ /api/templates/rename                                                          0 B         222 kB
+Ôö£ ãÆ /api/templates/save                                                            0 B         222 kB
+Ôö£ ãÆ /api/test-sendgrid                                                             0 B         222 kB
+Ôö£ ãÆ /api/tools/remove-background                                                   0 B         222 kB
+Ôö£ ãÆ /api/track/c                                                                   0 B         222 kB
+Ôö£ ãÆ /api/track/convert                                                             0 B         222 kB
+Ôö£ ãÆ /api/track/open                                                                0 B         222 kB
+Ôö£ ãÆ /api/track/render-thumbnail                                                    0 B         222 kB
+Ôö£ ãÆ /api/trigger-event                                                             0 B         222 kB
+Ôö£ ãÆ /api/twilio/_debug-auth                                                        0 B         222 kB
+Ôö£ ãÆ /api/twilio/[...twilio]                                                        0 B         222 kB
+Ôö£ ãÆ /api/twilio/callback-status                                                    0 B         222 kB
+Ôö£ ãÆ /api/twilio/debug-call                                                         0 B         222 kB
+Ôö£ ãÆ /api/twilio/list-call-recordings                                               0 B         222 kB
+Ôö£ ãÆ /api/twilio/list-calls                                                         0 B         222 kB
+Ôö£ ãÆ /api/twilio/recording                                                          0 B         222 kB
+Ôö£ ãÆ /api/twilio/recording-audio                                                    0 B         222 kB
+Ôö£ ãÆ /api/twilio/recording-callback                                                 0 B         222 kB
+Ôö£ ãÆ /api/twilio/recording-status                                                   0 B         222 kB
+Ôö£ ãÆ /api/twilio/status-callback                                                    0 B         222 kB
+Ôö£ ãÆ /api/twilio/test-call                                                          0 B         222 kB
+Ôö£ ãÆ /api/twilio/transcribe-recording                                               0 B         222 kB
+Ôö£ ãÆ /api/twilio/voice-client                                                       0 B         222 kB
+Ôö£ ãÆ /api/twilio/voice-complete                                                     0 B         222 kB
+Ôö£ ãÆ /api/twilio/voice-inbound                                                      0 B         222 kB
+Ôö£ ãÆ /api/upgrade-email-plan                                                        0 B         222 kB
+Ôö£ ãÆ /api/usage/check-limits                                                        0 B         222 kB
+Ôö£ ãÆ /api/vendor/create-agreement                                                   0 B         222 kB
+Ôö£ ãÆ /api/vendor/ensure-profile                                                     0 B         222 kB
+Ôö£ ãÆ /api/vendor/find-agreement                                                     0 B         222 kB
+Ôö£ ãÆ /api/vendor/get-vendor                                                         0 B         222 kB
+Ôö£ ãÆ /api/vendor/lookup-account                                                     0 B         222 kB
+Ôö£ ãÆ /api/vendor/lookup-or-create-user                                              0 B         222 kB
+Ôö£ ãÆ /api/vendor/resolve-marketplace-user                                           0 B         222 kB
+Ôö£ ãÆ /api/vendor/send-verification                                                  0 B         222 kB
+Ôö£ ãÆ /api/vendor/update-agreement-token                                             0 B         222 kB
+Ôö£ ãÆ /api/vendor/verify                                                             0 B         222 kB
+Ôö£ ãÆ /api/vendor/verify-affiliate                                                   0 B         222 kB
+Ôö£ ãÆ /api/webhooks/facebook                                                         0 B         222 kB
+Ôö£ ãÆ /api/webhooks/facebook-data-deletion                                           0 B         222 kB
+Ôö£ ãÆ /api/webhooks/sendgrid-events                                                  0 B         222 kB
+Ôö£ ãÆ /api/webhooks/stripe                                                           0 B         222 kB
+Ôö£ ãÆ /api/website-builder/defaults                                                  0 B         222 kB
+Ôö£ ãÆ /api/website-builder/icon-library                                              0 B         222 kB
+Ôö£ ãÆ /api/website-builder/launch                                                    0 B         222 kB
+Ôö£ ãÆ /api/website-builder/local-bus/[...path]                                       0 B         222 kB
+Ôö£ ãÆ /api/website-builder/local-mail/[...path]                                      0 B         222 kB
+Ôö£ ãÆ /api/website-builder/projects                                                  0 B         222 kB
+Ôö£ ãÆ /api/website-builder/visual-host/[[...path]]                                   0 B         222 kB
+Ôö£ ãÆ /api/website/assistant-chat                                                    0 B         222 kB
+Ôö£ ãÆ /api/website/external-templates                                                0 B         222 kB
+Ôö£ ãÆ /api/website/generate-description                                              0 B         222 kB
+Ôö£ ãÆ /api/website/generate-image                                                    0 B         222 kB
+Ôö£ ãÆ /api/website/generate-page-objectives                                          0 B         222 kB
+Ôö£ ãÆ /api/website/generate-site-content                                             0 B         222 kB
+Ôö£ ãÆ /api/website/generate-site-plan                                                0 B         222 kB
+Ôö£ ãÆ /api/website/import-html                                                       0 B         222 kB
+Ôö£ ãÆ /api/website/lead-capture                                                      0 B         222 kB
+Ôö£ ãÆ /api/website/regenerate-section-copy                                           0 B         222 kB
+Ôö£ ãÆ /api/website/track-visit                                                       0 B         222 kB
+Ôö£ ãÆ /api/websites/domains                                                          0 B         222 kB
+Ôö£ ãÆ /api/websites/publish                                                          0 B         222 kB
+Ôö£ ãÆ /api/websites/search-domain                                                    0 B         222 kB
+Ôö£ ãÆ /api/websites/verify-domain                                                    0 B         222 kB
+Ôö£ Ôùï /assets                                                                    9.07 kB         257 kB
+Ôö£ Ôùï /billing (668 ms)                                                          5.33 kB         227 kB
+Ôö£ Ôùï /blocks/[pageId] (668 ms)                                                    828 B         223 kB
+Ôö£ Ôùï /book/[business] (667 ms)                                                    833 B         223 kB
+Ôö£ Ôùï /book/[business]/[service] (684 ms)                                        1.55 kB         223 kB
+Ôö£ Ôùï /booking-success                                                             635 B         222 kB
+Ôö£ Ôùï /cancel/[token]                                                              954 B         223 kB
+Ôö£ Ôùï /checkout                                                                  2.29 kB         224 kB
+Ôö£ Ôùï /checkout/cancel                                                             483 B         222 kB
+Ôö£ Ôùï /checkout/success                                                          1.27 kB         223 kB
+Ôö£ Ôùï /components/DashCard                                                         570 B         222 kB
+Ôö£ Ôùï /components/Layout                                                           372 B         222 kB
+Ôö£ Ôùï /dashboard                                                                 4.07 kB         226 kB
+Ôö£ Ôùï /data-deletion-instructions                                                  978 B         223 kB
+Ôö£ ãÆ /dev                                                                         246 B         222 kB
+Ôö£ Ôùï /dev/login                                                                   950 B         223 kB
+Ôö£ Ôùï /dev/session                                                                 535 B         222 kB
+Ôö£ Ôùï /dev/spreadsheet (637 ms)                                                  3.78 kB         226 kB
+Ôö£ Ôùï /draft/[id]                                                                  629 B         222 kB
+Ôö£ Ôùï /editor/[id]                                                               2.96 kB         225 kB
+Ôö£ Ôùï /export                                                                    1.84 kB         224 kB
+Ôö£ ãÆ /export-funnel                                                               252 B         222 kB
+Ôö£ ãÆ /export-funnels                                                              253 B         222 kB
+Ôö£ ãÆ /f/[id]                                                                    1.57 kB         223 kB
+Ôö£ Ôùï /f/[id]/[pageId] (633 ms)                                                    826 B         223 kB
+Ôö£ Ôùï /f/[id]/blocks (636 ms)                                                      260 B         222 kB
+Ôö£ ãÆ /funnels                                                                     247 B         222 kB
+Ôö£ Ôùï /import (632 ms)                                                           1.57 kB         223 kB
+Ôö£ ãÆ /import-funnel                                                               253 B         222 kB
+Ôö£ ãÆ /import-funnels                                                              253 B         222 kB
+Ôö£ Ôùï /integrations (630 ms)                                                       538 B         222 kB
+Ôö£ Ôùï /leads                                                                     6.76 kB         257 kB
+Ôö£ Ôùï /legal/privacy-policy (631 ms)                                               198 B         225 kB
+Ôö£ Ôùï /legal/terms-and-conditions (629 ms)                                       4.34 kB         226 kB
+Ôö£ Ôùï /legal/vendor-agreement                                                    6.54 kB         228 kB
+Ôö£ Ôùï /login (631 ms)                                                            2.52 kB         224 kB
+Ôö£ Ôùï /logout                                                                      331 B         222 kB
+Ôö£ Ôùï /marketplace                                                               10.7 kB         358 kB
+Ôö£ Ôùï /marketplace/affiliate-login                                                 880 B         223 kB
+Ôö£ Ôùï /marketplace/AffiliateProductCard                                            211 B         224 kB
+Ôö£ Ôùï /marketplace/apply                                                         5.33 kB         227 kB
+Ôö£ Ôùï /marketplace/CommentsPanel                                                   684 B         222 kB
+Ôö£ Ôùï /marketplace/confirm-email                                                   873 B         223 kB
+Ôö£ Ôùï /marketplace/login                                                         1.85 kB         224 kB
+Ôö£ Ôùï /marketplace/reset-password                                                1.42 kB         223 kB
+Ôö£ Ôùï /modules/_guard                                                              975 B         223 kB
+Ôö£ Ôùï /modules/_shared/VendorTemplate                                              590 B         222 kB
+Ôö£ Ôùï /modules/accounting                                                        2.99 kB         225 kB
+Ôö£ Ôùï /modules/affiliates (667 ms)                                               1.99 kB         224 kB
+Ôö£ Ôùï /modules/affiliates/affiliate-marketplace/affiliate_analytics (768 ms)     7.39 kB         339 kB
+Ôö£ Ôùï /modules/affiliates/affiliate-marketplace/affiliate_applications (681 ms)  3.84 kB         226 kB
+Ôö£ Ôùï /modules/affiliates/affiliate-marketplace/approved-offers (667 ms)         2.15 kB         224 kB
+Ôö£ Ôùï /modules/affiliates/affiliate-marketplace/offers/apply                       387 B         222 kB
+Ôö£ Ôùï /modules/affiliates/merchant/commissions (666 ms)                           1.7 kB         224 kB
+Ôö£ Ôùï /modules/agency (666 ms)                                                   1.59 kB         223 kB
+Ôö£ Ôùï /modules/billing/calendar-plans (658 ms)                                   2.44 kB         224 kB
+Ôö£ Ôùï /modules/billing/dashboard (662 ms)                                        1.54 kB         223 kB
+Ôö£ Ôùï /modules/billing/email-plans                                               2.42 kB         224 kB
+Ôö£ Ôùï /modules/billing/email-plans         old (662 ms)                          2.09 kB         224 kB
+Ôö£ Ôùï /modules/billing/email-plans   old                                         2.49 kB         224 kB
+Ôö£ Ôùï /modules/billing/sms-plans                                                 3.64 kB         225 kB
+Ôö£ Ôùï /modules/billing/social-plans                                              3.04 kB         225 kB
+Ôö£ Ôùï /modules/booking-calendar                                                  2.34 kB         224 kB
+Ôö£ Ôùï /modules/business-automation                                               1.06 kB         223 kB
+Ôö£ Ôùï /modules/calendar/analytics                                                1.68 kB         223 kB
+Ôö£ Ôùï /modules/calendar/availability                                               315 B         222 kB
+Ôö£ Ôùï /modules/calendar/booking-page                                             5.23 kB         227 kB
+Ôö£ Ôùï /modules/calendar/bookings                                                 2.42 kB         224 kB
+Ôö£ Ôùï /modules/calendar/cancel-booking                                             618 B         222 kB
+Ôö£ Ôùï /modules/calendar/create-stripe-price                                      2.01 kB         224 kB
+Ôö£ Ôùï /modules/calendar/dashboard                                                2.93 kB         225 kB
+Ôö£ Ôùï /modules/calendar/services                                                 2.24 kB         224 kB
+Ôö£ Ôùï /modules/calendar/settings                                                 2.82 kB         225 kB
+Ôö£ Ôùï /modules/communities (671 ms)                                              8.22 kB         230 kB
+Ôö£ Ôùï /modules/email (454 ms)                                                    7.52 kB         229 kB
+Ôö£ Ôùï /modules/email/analytics/summary (680 ms)                                  1.28 kB         223 kB
+Ôö£ Ôùï /modules/email/automation (454 ms)                                         56.8 kB         307 kB
+Ôö£   Ôöö css/d1e1fa7731bfdccb.css                                                 1.56 kB
+Ôö£ Ôùï /modules/email/autoresponders (670 ms)                                     5.87 kB         228 kB
+Ôö£ Ôùï /modules/email/autoresponders/open (675 ms)                                4.41 kB         226 kB
+Ôö£ Ôùï /modules/email/billing/email-plans (674 ms)                                1.61 kB         223 kB
+Ôö£ Ôùï /modules/email/broadcast (337 ms)                                          9.57 kB         279 kB
+Ôö£ Ôùï /modules/email/broadcast/import (671 ms)                                   2.87 kB         225 kB
+Ôö£ Ôùï /modules/email/broadcast/view (669 ms)                                     3.16 kB         225 kB
+Ôö£ Ôùï /modules/email/campaigns (669 ms)                                          4.36 kB         226 kB
+Ôö£ Ôùï /modules/email/campaigns/new (337 ms)                                      7.34 kB         229 kB
+Ôö£ Ôùï /modules/email/crm (335 ms)                                                1.92 kB         224 kB
+Ôö£ Ôùï /modules/email/crm/call-log (339 ms)                                       3.85 kB         226 kB
+Ôö£ Ôùï /modules/email/crm/calls (336 ms)                                          50.7 kB         272 kB
+Ôö£ Ôùï /modules/email/crm/deals (335 ms)                                          4.74 kB         250 kB
+Ôö£ Ôùï /modules/email/crm/pipelines (335 ms)                                      27.8 kB         273 kB
+Ôö£ Ôùï /modules/email/crm/quotes (335 ms)                                         6.75 kB         229 kB
+Ôö£ Ôùï /modules/email/crm/reports (634 ms)                                         9.7 kB         347 kB
+Ôö£ Ôùï /modules/email/crm/sms-dashboard (455 ms)                                  2.45 kB         224 kB
+Ôö£ Ôùï /modules/email/crm/sms-marketing (456 ms)                                  10.2 kB         232 kB
+Ôö£ Ôùï /modules/email/crm/tasks (457 ms)                                          8.63 kB         254 kB
+Ôö£ Ôùï /modules/email/crm/teams (456 ms)                                          3.34 kB         225 kB
+Ôö£ Ôùï /modules/email/crm/workspace (704 ms)                                      8.57 kB         346 kB
+Ôö£ Ôùï /modules/email/editor (454 ms)                                             12.9 kB         282 kB
+Ôö£ Ôùï /modules/email/lists (688 ms)                                              4.58 kB         255 kB
+Ôö£ Ôùï /modules/email/lists/new (680 ms)                                          2.19 kB         224 kB
+Ôö£ Ôùï /modules/email/lists/pipeline (680 ms)                                     2.56 kB         224 kB
+Ôö£ Ôùï /modules/email/new (682 ms)                                                2.44 kB         224 kB
+Ôö£ Ôùï /modules/email/previews (682 ms)                                           2.77 kB         225 kB
+Ôö£ Ôùï /modules/email/reports (768 ms)                                            5.38 kB         227 kB
+Ôö£ Ôùï /modules/email/reports/all (704 ms)                                        6.66 kB         338 kB
+Ôö£ Ôùï /modules/email/reports/automations (705 ms)                                5.73 kB         337 kB
+Ôö£ Ôùï /modules/email/reports/autoresponders (678 ms)                             3.87 kB         226 kB
+Ôö£ Ôùï /modules/email/reports/broadcasts                                          7.07 kB         338 kB
+Ôö£ Ôùï /modules/email/reports/calls (773 ms)                                      4.08 kB         226 kB
+Ôö£ Ôùï /modules/email/reports/campaigns                                           5.57 kB         337 kB
+Ôö£ Ôùï /modules/email/reports/sms                                                 6.97 kB         338 kB
+Ôö£ Ôùï /modules/email/templates/import                                            2.25 kB         224 kB
+Ôö£ Ôùï /modules/email/templates/new (769 ms)                                      1.66 kB         223 kB
+Ôö£ Ôùï /modules/email/templates/select                                            9.65 kB         231 kB
+Ôö£   Ôöö css/63f54ed78e83e5da.css                                                 1.07 kB
+Ôö£ Ôùï /modules/email/thumbnail (769 ms)                                            932 B         223 kB
+Ôö£ Ôùï /modules/funnels                                                           5.74 kB         228 kB
+Ôö£ Ôùï /modules/funnels/ai-wizard (768 ms)                                        1.17 kB         223 kB
+Ôö£ Ôùï /modules/funnels/edit/[id] (730 ms)                                        30.7 kB         346 kB
+Ôö£ Ôùï /modules/funnels/new                                                          8 kB         460 kB
+Ôö£ ãÆ /modules/funnels/templates                                                   262 B         222 kB
+Ôö£ Ôùï /modules/integrations/sms-clients                                          2.35 kB         224 kB
+Ôö£ Ôùï /modules/phone/calls                                                       3.88 kB         226 kB
+Ôö£ Ôùï /modules/pipelines                                                         1.11 kB         223 kB
+Ôö£ Ôùï /modules/social_media/ads                                                  11.1 kB         233 kB
+Ôö£ Ôùï /modules/social_media/calendar (728 ms)                                    5.22 kB         227 kB
+Ôö£ Ôùï /modules/social_media/calendar-day (737 ms)                                7.63 kB         229 kB
+Ôö£ Ôùï /modules/social_media/campaigns (725 ms)                                   3.89 kB         226 kB
+Ôö£ Ôùï /modules/social_media/connect-complete (724 ms)                            1.87 kB         224 kB
+Ôö£ Ôùï /modules/social_media/create (686 ms)                                        21 kB         249 kB
+Ôö£ Ôùï /modules/social_media/dashboard                                            7.89 kB         230 kB
+Ôö£ Ôùï /modules/social_media/images (727 ms)                                        312 B         222 kB
+Ôö£ Ôùï /modules/social_media/import-token (727 ms)                                3.92 kB         226 kB
+Ôö£ Ôùï /modules/social_media/inbox                                                8.39 kB         230 kB
+Ôö£ Ôùï /modules/social_media/review                                               15.6 kB         237 kB
+Ôö£ Ôùï /modules/social_media/roi                                                  8.16 kB         230 kB
+Ôö£ Ôùï /modules/social_media/schedule                                               312 B         222 kB
+Ôö£ Ôùï /modules/social_media/setup                                                5.22 kB         227 kB
+Ôö£ Ôùï /modules/subaccounts                                                       2.94 kB         225 kB
+Ôö£ Ôùï /modules/tools/image-editor                                                 3.5 kB         232 kB
+Ôö£ Ôùï /modules/vendor (685 ms)                                                   2.93 kB         225 kB
+Ôö£ Ôùï /modules/vendor/affiliates/active_affiliates                                2.5 kB         224 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products                                 2.19 kB         224 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/edit-product-details            4.18 kB         226 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/my-products                     2.87 kB         225 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/performance-reports             8.12 kB         345 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/set-application-status             1 kB         346 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/submit (689 ms)                 4.25 kB         226 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/TabbedSectors                    1.2 kB         223 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/upload-assets (703 ms)          4.71 kB         227 kB
+Ôö£ Ôùï /modules/vendor/affiliates/manage-products/vendor-applications (688 ms)    3.98 kB         226 kB
+Ôö£ Ôùï /modules/vendor/courses (687 ms)                                           2.77 kB         225 kB
+Ôö£ Ôùï /modules/vendor/digital (684 ms)                                           4.41 kB         226 kB
+Ôö£ Ôùï /modules/vendor/physical                                                    4.5 kB         226 kB
+Ôö£ Ôùï /modules/webinars (687 ms)                                                 2.22 kB         224 kB
+Ôö£ Ôùï /modules/website-builder                                                   7.81 kB         366 kB
+Ôö£   Ôöö css/3eb368bae3c016db.css                                                 2.42 kB
+Ôö£ Ôùï /modules/website-builder/cards                                             1.76 kB         224 kB
+Ôö£ Ôùï /modules/website-builder/domains                                           7.53 kB         366 kB
+Ôö£ Ôùï /modules/website-builder/new                                               10.3 kB         369 kB
+Ôö£ Ôùï /modules/website-builder/preview                                           4.25 kB         441 kB
+Ôö£ Ôùï /modules/website-builder/prices                                            1.22 kB         223 kB
+Ôö£ Ôùï /modules/website-builder/project/[id]                                        479 B         222 kB
+Ôö£ Ôùï /modules/website-builder/project/[id]/canvas (898 ms)                      3.27 kB         514 kB
+Ôö£ Ôùï /modules/website-builder/project/[id]/preview (636 ms)                      5.5 kB         442 kB
+Ôö£ Ôùï /modules/website-builder/visual-builder (706 ms)                           11.3 kB         522 kB
+Ôö£ Ôùï /p/[slug] (636 ms)                                                         5.09 kB         227 kB
+Ôö£ Ôùï /privacy-policy (636 ms)                                                     245 B         225 kB
+Ôö£ ãÆ /r                                                                           244 B         222 kB
+Ôö£ ãÆ /r/[code]                                                                    248 B         222 kB
+Ôö£ Ôùï /reschedule/[token] (635 ms)                                                1.4 kB         223 kB
+Ôö£ Ôùï /reset-password (634 ms)                                                   1.75 kB         224 kB
+Ôö£ ãÆ /sites/[...slug]                                                           6.74 kB         307 kB
+Ôö£ Ôùï /social-test (634 ms)                                                        771 B         223 kB
+Ôö£ Ôùï /store/dashboard (889 ms)                                                  13.3 kB         259 kB
+Ôö£ Ôùï /store/test-checkout (894 ms)                                               1.2 kB         223 kB
+Ôö£ Ôùï /submissions (883 ms)                                                      2.37 kB         224 kB
+Ôö£ Ôùï /support (894 ms)                                                            536 B         222 kB
+Ôö£ Ôùï /terms-of-use (888 ms)                                                     7.25 kB         229 kB
+Ôö£ ãÆ /test                                                                        780 B         223 kB
+Ôö£ ãÆ /track                                                                       246 B         222 kB
+Ôö£ Ôùï /u/[username] (707 ms)                                                     6.23 kB         228 kB
+Ôö£ Ôùï /unsubscribe (891 ms)                                                      2.82 kB         225 kB
+Ôö£ Ôùï /verified (892 ms)                                                           681 B         222 kB
+Ôö£ Ôùï /verify-email (705 ms)                                                       482 B         222 kB
+Ôö£ Ôùï /verify-login (705 ms)                                                     2.57 kB         224 kB
+Ôöö Ôùï /welcome (705 ms)                                                            667 B         222 kB
++ First Load JS shared by all                                                   252 kB
+  Ôö£ chunks/framework-3d2ddd6ce2b3433a.js                                       66.3 kB
+  Ôö£ chunks/main-34cedad24e5b9938.js                                            34.5 kB
+  Ôö£ chunks/pages/_app-2380e8c4a8060b7c.js                                       119 kB
+  Ôö£ css/65c17b79b3530691.css                                                   29.8 kB
+  Ôöö other shared chunks (total)                                                   2 kB
+
+ãÆ Middleware                                                                   34.5 kB
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

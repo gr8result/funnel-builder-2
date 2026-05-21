@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; font-family: sans-serif; }
+
+  .fp-section {
+    width: 100%;
+    position: relative;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .fp-track {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+  .fp-track::-webkit-scrollbar { display: none; }
+
+  .fp-card {
+    flex-shrink: 0;
+    width: calc(33.3333% - 8px);
+    height: 600px;
+    scroll-snap-align: start;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a2e;
+    cursor: pointer;
+  }
+
+  .fp-card img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+  }
+
+  .fp-card .no-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.35);
+    font-size: 14px;
+  }
+
+  .fp-hover-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.55);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+  .fp-card:hover .fp-hover-overlay {
+    opacity: 1;
+  }
+
+  .fp-arrow {
+    position: absolute;
+    top: 0; bottom: 0;
+    z-index: 20;
+    width: 52px;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #fff;
+    font-size: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .fp-arrow:hover { background: rgba(0,0,0,0.75); }
+  .fp-arrow.left { left: 0; }
+  .fp-arrow.right { right: 0; }
+
+  .upload-hint {
+    position: absolute;
+    bottom: 12px; left: 0; right: 0;
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="fp-section" id="fp">
+  <button class="fp-arrow left" onclick="scroll(-1)">&#8249;</button>
+
+  <div class="fp-track" id="track">
+    <!-- Cards injected by JS below -->
+  </div>
+
+  <button class="fp-arrow right" onclick="scroll(1)">&#8250;</button>
+</div>
+
+<script>
+  const images = [
+    "/templates/gallery/framer-animated-portfolio/project1.jpg",
+    "/templates/gallery/framer-animated-portfolio/project2.jpg",
+    "/templates/gallery/framer-animated-portfolio/project3.jpg",
+    null, null, null
+  ];
+
+  // Force images to bypass cache
+  const track = document.getElementById("track");
+
+  images.forEach((src, i) => {
+    const card = document.createElement("div");
+    card.className = "fp-card";
+
+    if (src) {
+      const img = document.createElement("img");
+      img.src = src + "?v=" + Date.now();
+      img.onerror = () => {
+        img.remove();
+        const ph = document.createElement("div");
+        ph.className = "no-img";
+        ph.textContent = "No image — double-click to upload";
+        card.insertBefore(ph, card.firstChild);
+      };
+      card.appendChild(img);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "no-img";
+      placeholder.textContent = "Double-click to upload";
+      card.appendChild(placeholder);
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "fp-hover-overlay";
+    card.appendChild(overlay);
+
+    const hint = document.createElement("div");
+    hint.className = "upload-hint";
+    hint.textContent = "Double-click to upload image";
+    card.appendChild(hint);
+
+    card.addEventListener("dblclick", () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        let img = card.querySelector("img");
+        if (!img) {
+          img = document.createElement("img");
+          card.insertBefore(img, card.firstChild);
+          card.querySelector(".no-img")?.remove();
+        }
+        img.src = url;
+        hint.textContent = "Double-click to replace";
+      };
+      input.click();
+    });
+
+    track.appendChild(card);
+  });
+
+  function scroll(dir) {
+    const cardW = document.querySelector(".fp-card").offsetWidth;
+    track.scrollBy({ left: dir * cardW, behavior: "smooth" });
+  }
+</script>
+
+</body>
+</html>
