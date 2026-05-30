@@ -735,16 +735,15 @@ export default function Billing() {
             "social":          { tier: socialPlanTier,    path: "/modules/billing/social-plans",    key: "socialPlan",   strip: "Social Media — ",      btnBg: null },
             "crm":             { tier: crmPlanTier,       path: "/modules/billing/crm-plans",       key: "crmPlan",      strip: "CRM — ",               btnBg: "#ec4899" },
             "funnels":         { tier: funnelPackTier,    path: "/modules/billing/funnel-plans",    key: "funnelPlan",   strip: "Funnels — ",           btnBg: "#ef465d" },
-            "website-builder": { tier: websitePlanTier,  path: "/modules/billing/website-plans",   key: "websitePlan",  strip: "Website Builder — ",   btnBg: "#3b82f6" },
-            "job-board":       { tier: jobBoardPlanTier,  path: "/modules/billing/job-board-plans", key: "jobBoardPlan", strip: "Job Board — ",          btnBg: "#fb923c" },
-            "gantt":           { tier: ganttPlanTier,     path: "/modules/billing/gantt-plans",     key: "ganttPlan",    strip: "Gantt Charts — ",       btnBg: "#10b981" },
+            "website-builder": { tier: websitePlanTier,    path: "/modules/billing/website-plans",       key: "websitePlan",      strip: "Website Builder — ",   btnBg: "#3b82f6" },
+            "projects-hub":    { tier: projectsHubPlanTier, path: "/modules/billing/projects-hub-plans",  key: "projectsHubPlan",  strip: "Projects Hub — ",      btnBg: "#f97316" },
           };
           const tierCfg  = TIER_CFG[m.id];
           const tier      = tierCfg?.tier || null;
           const isSelected = selected.includes(m.id);
           const isActive   = activeModules.has(m.id);
           const planName   = selectedPlan ? BASE_PLANS.find(p => p.id === selectedPlan)?.name : null;
-          const deltaKey   = m.id === "website-builder" ? "website" : m.id === "job-board" ? "jobBoard" : m.id;
+          const deltaKey   = m.id === "website-builder" ? "website" : m.id === "projects-hub" ? "projectsHub" : m.id;
 
           // Top-right corner badge
           let cornerBadge = null;
@@ -797,226 +796,25 @@ export default function Billing() {
             <span className="icon">{m.emoji ? <span style={{ fontSize: 24, lineHeight: 1 }}>{m.emoji}</span> : m.icon({ size: 28 })}</span>
             <div className="card-info">
               <h3>{m.name}</h3>
-              {m.id === "email" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {emailPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[emailPlanTier]?.name?.replace("Email Marketing — ", "") || emailPlanTier} · {getModuleDeltaLabel("email", emailPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.email ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/email-plans"));
-                    }}
-                  >
-                    {emailPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "sms" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {smsPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[smsPlanTier]?.name?.replace("SMS Marketing — ", "") || smsPlanTier} · {getModuleDeltaLabel("sms", smsPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.sms ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn sms-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/sms-plans"));
-                    }}
-                  >
-                    {smsPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "calendar" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {calendarPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[calendarPlanTier]?.name?.replace("Calendar — ", "") || calendarPlanTier} · {getModuleDeltaLabel("calendar", calendarPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.calendar ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/calendar-plans"));
-                    }}
-                  >
-                    {calendarPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "social" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {socialPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[socialPlanTier]?.name?.replace("Social Media — ", "") || socialPlanTier} · {getModuleDeltaLabel("social", socialPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.social ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/social-plans"));
-                    }}
-                  >
-                    {socialPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "crm" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {crmPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[crmPlanTier]?.name?.replace("CRM — ", "") || crmPlanTier} · {getModuleDeltaLabel("crm", crmPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.crm ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    style={{ background: "#ec4899" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/crm-plans", "crmPlan", crmPlanTier));
-                    }}
-                  >
-                    {crmPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "funnels" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {funnelPackTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[funnelPackTier]?.name?.replace("Funnels — ", "") || funnelPackTier} · {getModuleDeltaLabel("funnels", funnelPackTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && (BASE_PLAN_INCLUDES[selectedPlan]?.funnels?.included || 0) > 0 ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · {BASE_PLAN_INCLUDES[selectedPlan].funnels.included} funnel{BASE_PLAN_INCLUDES[selectedPlan].funnels.included > 1 ? "s" : ""} included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    style={{ background: "#ef465d" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/funnel-plans", "funnelPlan", funnelPackTier));
-                    }}
-                  >
-                    {funnelPackTier ? "Manage / Upgrade Plan" : "See Plans / Add Funnels"}
-                  </button>
-                </>
-              ) : m.id === "website-builder" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {websitePlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[websitePlanTier]?.name?.replace("Website Builder — ", "") || websitePlanTier} · {getModuleDeltaLabel("website", websitePlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.website ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    style={{ background: "#3b82f6" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/website-plans", "websitePlan", websitePlanTier));
-                    }}
-                  >
-                    {websitePlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "job-board" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {jobBoardPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[jobBoardPlanTier]?.name?.replace("Job Board — ", "") || jobBoardPlanTier} · {getModuleDeltaLabel("jobBoard", jobBoardPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.jobBoard ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    style={{ background: "#fb923c" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/job-board-plans", "jobBoardPlan", jobBoardPlanTier));
-                    }}
-                  >
-                    {jobBoardPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
-              ) : m.id === "gantt" ? (
-                <>
-                  <div style={{ position: "absolute", top: 8, right: 8 }}>
-                    {ganttPlanTier ? (
-                      <span style={{ fontSize: "16px", color: "#fff", background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600 }}>
-                        {PRICING[ganttPlanTier]?.name?.replace("Gantt Charts — ", "") || ganttPlanTier} · {getModuleDeltaLabel("gantt", ganttPlanTier, selectedPlan)}
-                      </span>
-                    ) : selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.gantt ? (
-                      <span style={{ fontSize: "16px", color: "#86efac", background: "rgba(34,197,94,0.12)", borderRadius: "6px", padding: "3px 10px", fontWeight: 600, border: "1px solid rgba(34,197,94,0.25)" }}>
-                        {BASE_PLANS.find(p => p.id === selectedPlan)?.name} · Included
-                      </span>
-                    ) : null}
-                  </div>
-                  <button
-                    className="upgrade-btn"
-                    style={{ background: "#38bdf8", color: "#000" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(buildPlanPageUrl("/modules/billing/gantt-plans", "ganttPlan", ganttPlanTier));
-                    }}
-                  >
-                    {ganttPlanTier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
-                  </button>
-                </>
+              {tierCfg ? (
+                <button
+                  className="upgrade-btn"
+                  style={tierCfg.btnBg ? { background: tierCfg.btnBg, color: tierCfg.btnBg === "#38bdf8" ? "#000" : "#fff" } : {}}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(buildPlanPageUrl(tierCfg.path, tierCfg.key, tier));
+                  }}
+                >
+                  {tier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
+                </button>
               ) : (
                 <p>A${m.price} / month</p>
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
-
       <div className="discount-box">
         <h2>Enter Discount Code</h2>
         <div className="discount-row">
@@ -1047,8 +845,7 @@ export default function Billing() {
         <p>CRM Plan: <span>{crmPlanTier ? `${PRICING[crmPlanTier]?.name || crmPlanTier} (${getModuleDeltaLabel("crm", crmPlanTier, selectedPlan)})` : "-"}</span></p>
         <p>Funnels Pack: <span>{funnelPackTier ? `${PRICING[funnelPackTier]?.name || funnelPackTier} (${getModuleDeltaLabel("funnels", funnelPackTier, selectedPlan)})` : "-"}</span></p>
         <p>Website Builder Plan: <span>{websitePlanTier ? `${PRICING[websitePlanTier]?.name || websitePlanTier} (${getModuleDeltaLabel("website", websitePlanTier, selectedPlan)})` : "-"}</span></p>
-        <p>Job Board Plan: <span>{jobBoardPlanTier ? `${PRICING[jobBoardPlanTier]?.name || jobBoardPlanTier} (${getModuleDeltaLabel("jobBoard", jobBoardPlanTier, selectedPlan)})` : "-"}</span></p>
-        <p>Gantt Charts Plan: <span>{ganttPlanTier ? `${PRICING[ganttPlanTier]?.name || ganttPlanTier} (${getModuleDeltaLabel("gantt", ganttPlanTier, selectedPlan)})` : "-"}</span></p>
+        <p>Projects Hub Plan: <span>{projectsHubPlanTier ? `${PRICING[projectsHubPlanTier]?.name || projectsHubPlanTier} (${getModuleDeltaLabel("projectsHub", projectsHubPlanTier, selectedPlan)})` : "-"}</span></p>
         {privateNumbers > 0 && (
           <p>Private Phone Numbers: <span>{privateNumbers} × $35 = ${privateNumbers * 35}/mo</span></p>
         )}
