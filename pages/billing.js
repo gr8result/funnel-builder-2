@@ -784,7 +784,7 @@ export default function Billing() {
             )}
 
             {/* Top-right corner badge */}
-            {!isActive && cornerBadge && (
+            {cornerBadge && (
               <div style={{ position: "absolute", top: 8, right: 8 }}>{cornerBadge}</div>
             )}
 
@@ -927,10 +927,13 @@ export default function Billing() {
         .clear { background: #ef4444; color: #fff; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin-bottom: 30px; }
         .card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 2px solid; border-radius: 12px; transition: all 0.25s ease; background: #0c121a; cursor: pointer; }
-        .card:not(.active-module):not(.dead-module):hover { border-width: 3px; }
-        .card.tier-selected:not(.active-module):not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
-        .card.tier-selected:not(.active-module):not(.dead-module):hover { opacity: 0.85; }
-        .card.active-module { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card:not(.dead-module):hover { border-width: 3px; }
+        /* Fill when base plan chosen AND card is in selected (drives Select All / Clear) */
+        .plan-active .card.selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .plan-active .card.selected:not(.dead-module):hover { opacity: 0.85; }
+        /* Fill when module tier explicitly chosen from sub-page */
+        .card.tier-selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card.tier-selected:not(.dead-module):hover { opacity: 0.85; }
         .card.dead-module { border-color: #2a3347; color: #4b5563; cursor: default; opacity: 0.5; }
         .card-info { flex: 1; }
         .card-info h3 { margin: 0; font-size: 30px; font-weight: 600;}
