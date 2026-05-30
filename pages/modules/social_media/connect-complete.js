@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 const PLATFORM_LABELS = {
@@ -60,22 +60,31 @@ export default function ConnectCompletePage() {
   );
 
   useEffect(() => {
-    if (!router.isReady || !window.opener) return;
-    window.opener.postMessage({
-      type: 'social-oauth-complete',
-      platform,
-      status: connect,
-      message,
-    }, window.location.origin);
-  }, [router.isReady, platform, connect, message]);
+    if (!router.isReady) return;
 
-  useEffect(() => {
-    if (!router.isReady || window.opener) return;
-    const timer = window.setTimeout(() => {
-      window.location.replace(returnPath);
-    }, isSuccess ? 1200 : 2200);
-    return () => window.clearTimeout(timer);
-  }, [router.isReady, isSuccess, returnPath]);
+    let messageDelivered = false;
+    if (window.opener) {
+      try {
+        window.opener.postMessage({
+          type: 'social-oauth-complete',
+          platform,
+          status: connect,
+          message,
+        }, window.location.origin);
+        messageDelivered = true;
+      } catch {
+        // COOP blocked postMessage — fall through to redirect
+      }
+    }
+
+    // If opener is missing or postMessage was blocked, redirect after a short delay
+    if (!messageDelivered) {
+      const timer = window.setTimeout(() => {
+        window.location.replace(returnPath);
+      }, isSuccess ? 1200 : 2200);
+      return () => window.clearTimeout(timer);
+    }
+  }, [router.isReady, platform, connect, message, isSuccess, returnPath]);
 
   return (
     <div style={S.page}>
@@ -126,22 +135,22 @@ const S = {
   title: { margin: 0, fontSize: 32, lineHeight: 1.1 },
   message: { margin: '14px 0 0', fontSize: 17, lineHeight: 1.6, color: 'rgba(255,255,255,0.78)' },
   successNote: {
-    marginTop: 18, fontSize: 15, lineHeight: 1.6, color: '#86efac',
+    marginTop: 18, fontSize: 16, lineHeight: 1.6, color: '#86efac',
     background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.24)',
     borderRadius: 10, padding: '12px 14px',
   },
   warningNote: {
-    marginTop: 18, fontSize: 15, lineHeight: 1.6, color: '#FCD34D',
+    marginTop: 18, fontSize: 16, lineHeight: 1.6, color: '#FCD34D',
     background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
     borderRadius: 10, padding: '12px 14px',
   },
   actions: { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 22 },
   primaryBtn: {
     padding: '13px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-    background: 'linear-gradient(90deg,#059669,#10B981)', color: '#fff', fontWeight: 700, fontSize: 15,
+    background: 'linear-gradient(90deg,#059669,#10B981)', color: '#fff', fontWeight: 600, fontSize: 16,
   },
   secondaryBtn: {
     padding: '13px 18px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.28)', cursor: 'pointer',
-    background: 'rgba(15,23,42,0.9)', color: '#e5e7eb', fontWeight: 600, fontSize: 15,
+    background: 'rgba(15,23,42,0.9)', color: '#e5e7eb', fontWeight: 600, fontSize: 16,
   },
 };

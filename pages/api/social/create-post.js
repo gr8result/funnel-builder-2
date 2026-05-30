@@ -3,6 +3,7 @@
 import { requireUser } from '../../../lib/social/auth';
 import { createClient } from '@supabase/supabase-js';
 import { checkSocialLimit } from '../../../lib/social/checkSocialLimit';
+import { withAuth } from "../../../lib/withWorkspace";
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } };
 
@@ -11,7 +12,7 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
@@ -107,3 +108,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

@@ -1,7 +1,8 @@
 // pages/api/affiliate/list-applications.js
 import { getAffiliateApplications } from '../../../lib/affiliateApplications';
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const data = await getAffiliateApplications();
     res.status(200).json(data);
@@ -9,3 +10,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: e.message });
   }
 }
+
+export default withAdmin(handler);

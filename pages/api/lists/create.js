@@ -1,9 +1,10 @@
-﻿// pages/api/lists/create.js
+// pages/api/lists/create.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 const ROOT = path.join(process.cwd(), "data", "crm", "lists");
 
-export default function handler(req,res){
+async function handler(req,res){
   if(req.method!=="POST") return res.status(405).json({ok:false});
   try{
     const { name, description="" } = req.body || {};
@@ -26,3 +27,4 @@ export default function handler(req,res){
 function ensureDir(p){ if(!fs.existsSync(p)) fs.mkdirSync(p,{recursive:true}); }
 function slug(s){ return s.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-").replace(/-+/g,"-"); }
 
+export default withAuth(handler);

@@ -2,6 +2,7 @@
 // FULL REPLACEMENT — STRICT FLOW-ONLY COUNTS (NO GHOST DATA)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -12,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const flow_id = String(req.query?.flow_id || "").trim();
     if (!flow_id) {
@@ -94,3 +95,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

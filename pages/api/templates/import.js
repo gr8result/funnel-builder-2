@@ -1,10 +1,11 @@
-﻿// /pages/api/email/templates/import.js
+// /pages/api/email/templates/import.js
 // FULL REPLACEMENT / NEW FILE
 //
 // GET ?scope=public|user&path=...&name=...
 // Uses SUPABASE_SERVICE_ROLE_KEY to read Storage reliably (bypasses browser policies)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,7 +13,7 @@ const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PUBLIC_BUCKET = "email-assets";
 const USER_BUCKET = "email-user-assets";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") return res.status(405).json({ ok: false, error: "GET only" });
 
@@ -58,3 +59,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Unknown error" });
   }
 }
+
+export default withAuth(handler);

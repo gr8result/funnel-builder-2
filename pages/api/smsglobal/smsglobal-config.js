@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // ============================================
 // /pages/api/smsglobal/smsglobal-config.js
 // ============================================
@@ -217,3 +218,5 @@ export async function smsGlobalSend({ to, message, origin }) {
 
   return await sendLegacyHttp({ to, message, origin });
 }
+
+export default withAuth(handler);

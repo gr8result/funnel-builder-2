@@ -31,7 +31,7 @@ function getBearer(req) {
   return m ? m[1] : null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -119,3 +119,5 @@ export default async function handler(req, res) {
       .json({ ok: false, error: err?.message || String(err) });
   }
 }
+
+export default withWorkspace(handler);

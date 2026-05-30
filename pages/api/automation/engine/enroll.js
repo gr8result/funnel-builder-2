@@ -25,6 +25,7 @@
 //    { lead_id, flow_id, event: "manual" }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -213,7 +214,7 @@ async function tryRunDbEngine(flow_id) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const debug = {
     flow_id: null,
     lead_id: null,
@@ -422,3 +423,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg(err), debug });
   }
 }
+
+export default withAuth(handler);

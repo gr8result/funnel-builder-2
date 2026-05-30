@@ -32,6 +32,8 @@ export default function CheckoutSuccess() {
           typeof router.query.calendarPlan === "string" ? router.query.calendarPlan : null;
         const socialPlanTier =
           typeof router.query.socialPlan === "string" ? router.query.socialPlan : null;
+        const basePlan =
+          typeof router.query.plan === "string" ? router.query.plan : null;
         const selectedModules =
           typeof router.query.selected === "string"
             ? router.query.selected.split(",").filter(Boolean)
@@ -45,6 +47,7 @@ export default function CheckoutSuccess() {
             "Authorization": `Bearer ${token}`,
           },
           body: JSON.stringify({
+            basePlan: basePlan || null,
             emailPlan: emailPlanTier || null,
             smsPlan: smsPlanTier || null,
             calendarPlan: calendarPlanTier || null,

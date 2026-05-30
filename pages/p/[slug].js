@@ -1,4 +1,4 @@
-// pages/p/[slug].js
+﻿// pages/p/[slug].js
 // Public funnel page — renders the GrapesJS-saved HTML for each step.
 // Routes: /p/my-funnel         → step 1
 //         /p/my-funnel?step=2  → step 2
@@ -388,7 +388,7 @@ export default function PublicFunnelPage() {
               ← Back
             </button>
           )}
-          <span style={{ color: "#6a7a89", fontSize: 13 }}>
+          <span style={{ color: "#6a7a89", fontSize: 16 }}>
             Step {stepIndex + 1} of {totalSteps}
           </span>
           {stepIndex < totalSteps - 1 && (
@@ -473,7 +473,7 @@ const backBtn = {
   background: "#151a21",
   color: "#e6eef5",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
 };
 
 const nextBtn = {
@@ -483,5 +483,5 @@ const nextBtn = {
   background: "#2d6cdf",
   color: "#fff",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
 };

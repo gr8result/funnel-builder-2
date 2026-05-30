@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabase-client";
+import { useWorkspace } from "../hooks/useWorkspace";
 import EditListModal from "../components/lists/EditListModal";
 
 // ✅ Shared avatar logic (single source of truth)
@@ -50,6 +51,7 @@ function isNewLead(lead) {
 }
 
 export default function LeadsPage() {
+  const { workspaceId } = useWorkspace();
   const [lists, setLists] = useState([]);
   const [leads, setLeads] = useState([]);
   const [allMode, setAllMode] = useState(false);
@@ -167,11 +169,11 @@ export default function LeadsPage() {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !workspaceId) return;
     loadLists();
     loadStages();
     loadTeams();
-  }, [userId]);
+  }, [userId, workspaceId]);
 
   function loadTeams() {
     const storedTeams = readStoredJson(
@@ -205,7 +207,7 @@ export default function LeadsPage() {
   }
 
   async function loadLists() {
-    if (!userId) {
+    if (!workspaceId) {
       setLists([]);
       setLeads([]);
       setLoading(false);
@@ -214,7 +216,7 @@ export default function LeadsPage() {
     const { data, error } = await supabase
       .from("lead_lists")
       .select("id,name")
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .order("created_at");
 
     if (error) console.error(error);
@@ -232,7 +234,7 @@ export default function LeadsPage() {
   async function loadLeads(listId) {
     setLoading(true);
 
-    const query = supabase.from("leads").select("*").eq("user_id", userId);
+    const query = supabase.from("leads").select("*").eq("workspace_id", workspaceId);
 
     if (!allMode) {
       query.eq("list_id", listId);
@@ -256,7 +258,7 @@ export default function LeadsPage() {
     const { data, error } = await supabase
       .from("leads")
       .select("*")
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .order(sortField, { ascending: sortDir === "asc" });
 
     if (error) console.error(error);
@@ -388,9 +390,7 @@ export default function LeadsPage() {
             const baseLead = {
               ...lead,
               user_id: userId,
-              list_id: selectedList.id,
-              pipeline_id: pipelineId,
-              stage: stageId,
+                workspace_id: workspaceId,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
@@ -491,6 +491,7 @@ export default function LeadsPage() {
     const insertPayload = {
       ...restFields,
       user_id: userId || restFields.user_id || null,
+      workspace_id: workspaceId || restFields.workspace_id || null,
       name: newName.trim(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -627,6 +628,7 @@ export default function LeadsPage() {
     const payload = {
       ...form,
       user_id: userId,
+      workspace_id: workspaceId,
       list_id: selectedList?.id || null,
       ...(pipeline_id ? { pipeline_id } : {}),
       ...(stage ? { stage } : {}),
@@ -744,7 +746,7 @@ export default function LeadsPage() {
         <div className="inner">
           <div className="banner">
             <div className="banner-left">
-              <span className="banner-icon">👥</span>
+              <span className="banner-icon">📥</span>
               <div>
                 <h1 className="banner-title">Leads</h1>
                 <p className="banner-sub">Manage your subscribers.</p>

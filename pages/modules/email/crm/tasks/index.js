@@ -1,4 +1,4 @@
-// /pages/modules/email/crm/tasks.js
+﻿// /pages/modules/email/crm/tasks.js
 // CRM Tasks & Reminders – control dashboard + structured tasks
 
 import { useEffect, useState, useMemo } from "react";
@@ -688,7 +688,7 @@ export default function CRMTasks() {
                 borderRadius: 999,
                 padding: "8px 18px",
                 fontSize: 18,
-                fontWeight: 800,
+                fontWeight: 600,
                 color:
                   selectedTasks.length === 0 ? "#9ca3af" : "#fef2f2",
                 cursor:
@@ -1116,7 +1116,7 @@ const styles = {
   },
   bannerTitle: {
     fontSize: 32,
-    fontWeight: 700,
+    fontWeight: 600,
     margin: 0,
   },
   bannerSubtitle: {
@@ -1135,7 +1135,7 @@ const styles = {
     padding: "8px 12px",
     color: "#fff",
     textDecoration: "none",
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 18,
   },
 
@@ -1168,7 +1168,7 @@ const styles = {
   },
   metricPrimary: {
     fontSize: 26,
-    fontWeight: 900,
+    fontWeight: 600,
   },
   metricSecondary: {
     fontSize: 18,
@@ -1193,7 +1193,7 @@ const styles = {
   cardTitle: {
     fontSize: 22,
     margin: 0,
-    fontWeight: 800,
+    fontWeight: 600,
   },
   cardSubtitle: {
     fontSize: 18,
@@ -1206,7 +1206,7 @@ const styles = {
     border: "none",
     borderRadius: 999,
     padding: "8px 18px",
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 18,
     color: "#0b1120",
     cursor: "pointer",
@@ -1241,7 +1241,7 @@ const styles = {
     color: "#0b1120",
     cursor: "pointer",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   list: {
@@ -1306,7 +1306,7 @@ const styles = {
   },
   taskTitle: {
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   taskNotes: {
     marginTop: 4,
@@ -1332,7 +1332,7 @@ const styles = {
   },
   statusPill: {
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     borderRadius: 999,
     padding: "4px 10px",
     color: "#020617",
@@ -1427,7 +1427,7 @@ const styles = {
   },
   calendarHeader: {
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 4,
   },
   calendarBody: {},
@@ -1446,7 +1446,7 @@ const styles = {
   },
   calendarPreviewTitle: {
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     marginRight: 4,
   },
   calendarPreviewText: {
@@ -1477,7 +1477,7 @@ const styles = {
     border: "none",
     padding: "8px 20px",
     fontSize: 18,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#020617",
     cursor: "pointer",
   },

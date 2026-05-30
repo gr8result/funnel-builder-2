@@ -1,3 +1,4 @@
+import withAdmin from "../../../lib/withAdmin";
 // /pages/api/smsglobal/_debug-auth.js
 // FULL REPLACEMENT — shows what SMSGlobal auth is actually available at runtime (masked)
 
@@ -12,7 +13,7 @@ function mask(v) {
   return `${x.slice(0, 3)}***${x.slice(-3)}`;
 }
 
-export default function handler(req, res) {
+async function handler(req, res) {
   const bearer =
     s(process.env.SMSGLOBAL_BEARER_TOKEN) ||
     s(process.env.SMSGLOBAL_TOKEN) ||
@@ -46,3 +47,5 @@ export default function handler(req, res) {
     origin: origin || null,
   });
 }
+
+export default withAdmin(handler);

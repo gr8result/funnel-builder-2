@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const EXPORT_ROOT = path.join(process.cwd(), "email", "sendgrid-export");
 
@@ -130,7 +131,7 @@ async function collectSingleSends() {
   return out;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -176,3 +177,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

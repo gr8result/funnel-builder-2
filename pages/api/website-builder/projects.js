@@ -1,4 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
+import { getLimit } from "../../../lib/featureGates";
 
 const TABLE_NAME = "published_websites";
 
@@ -69,7 +71,7 @@ async function requireUserId(req, res) {
   return userData.user.id;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const userId = await requireUserId(req, res);
   if (!userId) return;
 
@@ -230,11 +232,51 @@ export default async function handler(req, res) {
         .eq("id", existing.data.id)
         .select("id, project_id, name, site_data, created_at, updated_at")
         .maybeSingle()
-      : await supabaseAdmin
-        .from(TABLE_NAME)
-        .insert(record)
-        .select("id, project_id, name, site_data, created_at, updated_at")
-        .maybeSingle();
+      : await (async () => {
+          // ── QUOTA CHECK on new project insert ─────────────────────────────
+          const { data: wsRow } = await supabaseAdmin
+            .from("workspaces")
+            .select("plan")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          const plan = wsRow?.plan || "starter";
+          const websiteLimit = getLimit(plan, "websites");
+
+          if (websiteLimit !== null) {
+            const { data: existingRows } = await supabaseAdmin
+              .from(TABLE_NAME)
+              .select("project_id")
+              .eq("user_id", userId);
+
+            const uniqueIds = new Set(
+              (existingRows || []).map((r) => String(r.project_id || "").replace(/^draft:/, ""))
+            );
+
+            if (uniqueIds.size >= websiteLimit) {
+              return {
+                _quotaError: true,
+                code: "WEBSITE_LIMIT_EXCEEDED",
+                error: `Website limit reached (${websiteLimit} on ${plan} plan). Upgrade to create more.`,
+                limit: websiteLimit,
+                used: uniqueIds.size,
+              };
+            }
+          }
+          // ─────────────────────────────────────────────────────────────────
+
+          return supabaseAdmin
+            .from(TABLE_NAME)
+            .insert(record)
+            .select("id, project_id, name, site_data, created_at, updated_at")
+            .maybeSingle();
+        })();
+
+    if (result?._quotaError) {
+      return res.status(429).json({ ok: false, ...result });
+    }
 
     if (result.error || !result.data) {
       if (isMissingDraftProjectsTable(result.error)) {
@@ -308,3 +350,5 @@ export default async function handler(req, res) {
   res.setHeader("Allow", "GET, POST, PATCH, DELETE");
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
+
+export default withAuth(handler);

@@ -1,8 +1,9 @@
 // /pages/api/vendor/find-agreement.js
 // Admin endpoint to find vendor agreement (bypasses RLS)
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -50,3 +51,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);

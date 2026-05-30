@@ -1,12 +1,14 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/dkim/generate.js
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { userId, domain } = req.body || {};
+    const { domain } = req.body || {};
+    const userId = req.user.id;
 
     if (!domain || typeof domain !== "string") {
       return res.status(400).json({ error: "Domain is required" });
@@ -70,3 +72,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

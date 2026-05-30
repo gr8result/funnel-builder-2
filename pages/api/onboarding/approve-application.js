@@ -13,11 +13,12 @@
 import { createSmsGlobalSubaccount } from "../../../lib/smsglobal/create-subaccount.js";
 import { topupSubaccount } from "../../../lib/smsglobal/topup-subaccount.js";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin.js";
+import withAdmin from "../../../lib/withAdmin";
 
 // Amount of initial SMS credit to give each new user (in your account currency, e.g., AUD)
 const INITIAL_SMS_CREDIT = 50;  // $50 AUD or equivalent
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -203,3 +204,5 @@ export default async function handler(req, res) {
  *   const credit = determineSmsCredit(userTier, businessType);
  *   const { ok } = await topupSubaccount(sender_id, credit, key, secret);
  */
+
+export default withAdmin(handler);

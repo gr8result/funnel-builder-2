@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/telephony/sms-global-config.js
 // FULL REPLACEMENT — Fixes "Authorization header is empty or format is incorrect."
 // Uses REST v2 if SMSGLOBAL_API_KEY + SMSGLOBAL_API_SECRET exist (Basic base64(key:secret))
@@ -36,9 +37,6 @@ function extractError(bodyText, json, status) {
 }
 
 async function sendRestV2({ to, message, origin }) {
-  // DEBUG: Log env vars to verify they are present at runtime
-  console.log("[SMSGlobal] API_KEY:", process.env.SMSGLOBAL_API_KEY);
-  console.log("[SMSGlobal] API_SECRET:", process.env.SMSGLOBAL_API_SECRET);
   const apiKey = must(process.env.SMSGLOBAL_API_KEY, "SMSGLOBAL_API_KEY");
   const apiSecret = must(process.env.SMSGLOBAL_API_SECRET, "SMSGLOBAL_API_SECRET");
 
@@ -126,3 +124,5 @@ export async function smsGlobalSend({ to, message, origin }) {
   if (hasRest) return await sendRestV2({ to, message, origin });
   return await sendLegacyHttp({ to, message, origin });
 }
+
+export default withAuth(handler);

@@ -1,38 +1,17 @@
 // /pages/api/crm/append-lead-note.js
-// NEW FILE
-//
-// ✅ Appends a timestamped note into leads.notes
-// ✅ Safe: uses service role
-//
-// Required env:
-// - NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)
-// - SUPABASE_SERVICE_ROLE_KEY
+// POST { leadId, note, workspace_id }
+// Appends a timestamped note to leads.notes.
+// Requires authentication + workspace membership verification.
+import { withWorkspace } from "../../../lib/withWorkspace";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
-import { createClient } from "@supabase/supabase-js";
-
-function pickEnv(...keys) {
-  for (const k of keys) {
-    const v = process.env[k];
-    if (v && String(v).trim()) return String(v).trim();
-  }
-  return "";
-}
-
-const SUPABASE_URL = pickEnv("NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL");
-const SERVICE_KEY = pickEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-const supabaseAdmin = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
-
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  if (!supabaseAdmin) {
-    return res.status(500).json({ ok: false, error: "Supabase admin not configured" });
-  }
-
+  const { workspaceId } = req;
   const leadId = String(req.body?.leadId || "").trim();
   const note = String(req.body?.note || "").trim();
 
@@ -40,18 +19,28 @@ export default async function handler(req, res) {
   if (!note) return res.status(400).json({ ok: false, error: "Missing note" });
 
   try {
+    // Fetch lead — enforce workspace ownership in the query itself
     const { data: lead, error: selErr } = await supabaseAdmin
       .from("leads")
       .select("id, notes")
       .eq("id", leadId)
+      .eq("workspace_id", workspaceId)
       .single();
 
-    if (selErr) throw selErr;
+    if (selErr || !lead) {
+      return res.status(404).json({ ok: false, error: "Lead not found in this workspace" });
+    }
 
     const prev = String(lead?.notes || "");
-    const merged = prev ? `${prev}\n\n${note}` : note;
+    const timestamp = new Date().toISOString();
+    const newNote = `[${timestamp}] ${note}`;
+    const merged = prev ? `${prev}\n\n${newNote}` : newNote;
 
-    const { error: updErr } = await supabaseAdmin.from("leads").update({ notes: merged }).eq("id", leadId);
+    const { error: updErr } = await supabaseAdmin
+      .from("leads")
+      .update({ notes: merged, updated_at: new Date() })
+      .eq("id", leadId)
+      .eq("workspace_id", workspaceId);
     if (updErr) throw updErr;
 
     return res.status(200).json({ ok: true });
@@ -60,3 +49,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withWorkspace(handler);

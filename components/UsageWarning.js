@@ -1,4 +1,4 @@
-// /components/UsageWarning.js
+﻿// /components/UsageWarning.js
 // Displays usage stats and warnings for Email/SMS limits
 
 import { useEffect, useState } from "react";
@@ -60,8 +60,8 @@ export default function UsageWarning() {
       }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-          <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>{label}</span>
-          <span style={{ fontSize: 14, color: c.text, fontWeight: 700 }}>{display}</span>
+          <span style={{ fontSize: 16, color: '#9ca3af', fontWeight: 500 }}>{label}</span>
+          <span style={{ fontSize: 16, color: c.text, fontWeight: 600 }}>{display}</span>
         </div>
         {limit !== 'Unlimited' && (
           <div style={{ width: 36, height: 6, background: '#374151', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>

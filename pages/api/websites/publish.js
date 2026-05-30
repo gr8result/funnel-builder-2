@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
 import {
   buildDefaultSiteDomain,
   buildHostedWebsiteUrl,
@@ -34,7 +35,7 @@ function isMissingPublishedWebsitesTable(error) {
   return message.includes("published_websites") && (message.includes("schema cache") || message.includes("does not exist") || message.includes("could not find the table"));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -166,3 +167,5 @@ export default async function handler(req, res) {
       : null,
   });
 }
+
+export default withAuth(handler);

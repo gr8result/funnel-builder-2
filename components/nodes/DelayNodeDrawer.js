@@ -1,4 +1,4 @@
-// /components/nodes/DelayNodeDrawer.js
+﻿// /components/nodes/DelayNodeDrawer.js
 
 import { useState } from "react";
 
@@ -184,7 +184,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   cancelBtn: {
@@ -192,7 +192,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
 };

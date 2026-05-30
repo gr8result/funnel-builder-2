@@ -1,4 +1,4 @@
-// modules/vendor/affiliates/manage-products/vendor-applications.js 
+﻿// modules/vendor/affiliates/manage-products/vendor-applications.js 
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
@@ -367,7 +367,7 @@ export default function VendorApplications() {
                       {app.product?.image_url ? (
                         <img src={app.product.image_url} alt={app.product?.title || 'Product'} style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '2px solid #f59e0b' }} />
                       ) : (
-                        <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#fff', fontWeight: 900 }}>🛒</div>
+                        <div style={{ width: 64, height: 64, borderRadius: 8, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#fff', fontWeight: 600 }}>🛒</div>
                       )}
                     </td>
                     <td style={{ textAlign: "center", padding: "8px 8px", borderBottom: "1px solid #1f2937" }}>{app.product?.title || `Product: ${app.product_id}`}</td>
@@ -389,14 +389,14 @@ export default function VendorApplications() {
                         borderRadius: 16,
                         background: app.status === 'approved' ? '#22c55e' : '#f59e0b',
                         color: '#222',
-                        fontWeight: 700,
+                        fontWeight: 600,
                         fontSize: 16
                       }}>{app.status === 'approved' ? 'Approved' : 'Pending'}</span>
                     </td>
                     <td style={{ textAlign: "center", padding: "8px 8px", borderBottom: "1px solid #1f2937" }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                         <button
-                          style={{ background: '#f59e0b', color: '#222', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 700, fontSize: 18, cursor: 'pointer', width: 120 }}
+                          style={{ background: '#f59e0b', color: '#222', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 600, fontSize: 18, cursor: 'pointer', width: 120 }}
                           onClick={async () => {
                             const { data: affiliateApp } = await supabase
                               .from('affiliate_applications')
@@ -408,7 +408,7 @@ export default function VendorApplications() {
                           }}
                         >Investigate</button>
                         <button
-                          style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 700, fontSize: 18, cursor: 'pointer', width: 120 }}
+                          style={{ background: '#22c55e', color: '#000', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 600, fontSize: 18, cursor: 'pointer', width: 120 }}
                           onClick={async () => {
                             await fetch('/api/affiliate-application-status', {
                               method: 'POST',
@@ -419,7 +419,7 @@ export default function VendorApplications() {
                           }}
                         >Approve</button>
                         <button
-                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 700, fontSize: 18, cursor: 'pointer', width: 120 }}
+                          style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 0', fontWeight: 600, fontSize: 18, cursor: 'pointer', width: 120 }}
                           onClick={async () => {
                             await fetch('/api/affiliate-application-status', {
                               method: 'POST',
@@ -477,14 +477,14 @@ export default function VendorApplications() {
                     ['submitted date', modalApp.submitted_date],
                   ].map(([label, value]) => (
                     <tr key={label}>
-                      <td style={{ fontWeight: 700, padding: '10px 18px', textAlign: 'right', verticalAlign: 'top', color: '#1de9b6', width: 220, fontSize: 18 }}>{label}</td>
+                      <td style={{ fontWeight: 600, padding: '10px 18px', textAlign: 'right', verticalAlign: 'top', color: '#1de9b6', width: 220, fontSize: 18 }}>{label}</td>
                       <td style={{ padding: '10px 18px', wordBreak: 'break-word', fontSize: 18 }}>{value !== undefined && value !== null ? String(value) : ''}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <div style={{ textAlign: 'right', marginTop: 32 }}>
-                <button style={{ padding: '12px 32px', borderRadius: 10, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={() => setModalApp(null)}>
+                <button style={{ padding: '12px 32px', borderRadius: 10, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: 18 }} onClick={() => setModalApp(null)}>
                   Close
                 </button>
               </div>

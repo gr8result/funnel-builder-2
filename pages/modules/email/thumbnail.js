@@ -1,4 +1,4 @@
-// /pages/modules/email/thumbnail.js
+﻿// /pages/modules/email/thumbnail.js
 // FULL REPLACEMENT
 // ✅ Removes missing dependency: chrome-aws-lambda
 // (We can re-add real thumbnail generation later via a serverless function.)
@@ -17,7 +17,7 @@ export default function EmailThumbnail() {
           color: "#111",
           padding: "18px 22px",
           borderRadius: "16px",
-          fontWeight: 800,
+          fontWeight: 600,
           fontSize: 30,
           display: "flex",
           alignItems: "center",
@@ -29,7 +29,7 @@ export default function EmailThumbnail() {
           <span style={{ fontSize: 44 }}>🖼️</span>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span>Email thumbnails</span>
-            <span style={{ fontSize: 14, fontWeight: 500, opacity: 0.9 }}>
+            <span style={{ fontSize: 16, fontWeight: 500, opacity: 0.9 }}>
               Thumbnail generation is disabled in this build.
             </span>
           </div>
@@ -40,8 +40,8 @@ export default function EmailThumbnail() {
           style={{
             background: "#111",
             color: "#fff",
-            fontSize: 14,
-            fontWeight: 700,
+            fontSize: 16,
+            fontWeight: 600,
             borderRadius: 8,
             padding: "6px 14px",
             textDecoration: "none",
@@ -62,10 +62,10 @@ export default function EmailThumbnail() {
             boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 6 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
             Status
           </div>
-          <div style={{ fontSize: 14, opacity: 0.85 }}>
+          <div style={{ fontSize: 16, opacity: 0.85 }}>
             This page previously imported <code>chrome-aws-lambda</code> which
             breaks builds unless we add heavy serverless dependencies.
             <br />

@@ -1,4 +1,4 @@
-// /pages/modules/email/broadcast/view.js
+﻿// /pages/modules/email/broadcast/view.js
 // FULL REPLACEMENT — same UI, but resend now includes Authorization Bearer token
 
 import { useEffect, useMemo, useState } from "react";
@@ -237,7 +237,7 @@ export default function ViewBroadcasts() {
           }}
         >
           <div style={{ padding: 16, display: "flex", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 20, fontWeight: 900 }}>Broadcasts</div>
+            <div style={{ fontSize: 20, fontWeight: 600 }}>Broadcasts</div>
             <button
               onClick={loadEverything}
               style={{
@@ -246,7 +246,7 @@ export default function ViewBroadcasts() {
                 borderRadius: 8,
                 border: "1px solid rgba(255,255,255,0.12)",
                 padding: "8px 14px",
-                fontWeight: 800,
+                fontWeight: 600,
                 cursor: "pointer",
                 fontSize: 16,
               }}
@@ -255,7 +255,7 @@ export default function ViewBroadcasts() {
             </button>
           </div>
 
-          {error && <div style={{ padding: "0 16px 12px", color: "#fca5a5", fontWeight: 800 }}>{error}</div>}
+          {error && <div style={{ padding: "0 16px 12px", color: "#fca5a5", fontWeight: 600 }}>{error}</div>}
 
           {loading ? (
             <div style={{ padding: 16, opacity: 0.9 }}>Loading…</div>
@@ -274,9 +274,9 @@ export default function ViewBroadcasts() {
                   borderRadius: 12,
                   background: "rgba(255,255,255,0.06)",
                   border: "1px solid rgba(255,255,255,0.08)",
-                  fontWeight: 900,
+                  fontWeight: 600,
                   color: "#fff",
-                  fontSize: 14,
+                  fontSize: 16,
                 }}
               >
                 <div>Preview</div>
@@ -343,9 +343,9 @@ export default function ViewBroadcasts() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontWeight: 900,
+                              fontWeight: 600,
                               color: "#111",
-                              fontSize: 12,
+                              fontSize: 16,
                             }}
                           >
                             No preview
@@ -354,15 +354,15 @@ export default function ViewBroadcasts() {
                       </div>
 
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 900, fontSize: 16, color: "#fff" }}>{title}</div>
-                        <div style={{ opacity: 0.85, fontSize: 13, marginTop: 2, color: "#e5e7eb" }}>
+                        <div style={{ fontWeight: 600, fontSize: 16, color: "#fff" }}>{title}</div>
+                        <div style={{ opacity: 0.85, fontSize: 16, marginTop: 2, color: "#e5e7eb" }}>
                           Subject: {subject || "—"}{" "}
-                          {ab ? <span style={{ marginLeft: 8, color: "#fbbf24", fontWeight: 900 }}>A/B enabled</span> : null}
+                          {ab ? <span style={{ marginLeft: 8, color: "#fbbf24", fontWeight: 600 }}>A/B enabled</span> : null}
                         </div>
                       </div>
 
-                      <div style={{ fontWeight: 800, color: "#fff" }}>{recipientsLabel(b)}</div>
-                      <div style={{ color: "#e5e7eb", fontWeight: 700 }}>{safeDate(b.created_at)}</div>
+                      <div style={{ fontWeight: 600, color: "#fff" }}>{recipientsLabel(b)}</div>
+                      <div style={{ color: "#e5e7eb", fontWeight: 600 }}>{safeDate(b.created_at)}</div>
 
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
                         <button
@@ -374,10 +374,10 @@ export default function ViewBroadcasts() {
                             border: "none",
                             borderRadius: 8,
                             padding: "8px 12px",
-                            fontWeight: 900,
+                            fontWeight: 600,
                             cursor: "pointer",
                             opacity: busyId === id ? 0.65 : 1,
-                            fontSize: 14,
+                            fontSize: 16,
                           }}
                         >
                           Open to edit
@@ -392,10 +392,10 @@ export default function ViewBroadcasts() {
                             border: "none",
                             borderRadius: 8,
                             padding: "8px 12px",
-                            fontWeight: 900,
+                            fontWeight: 600,
                             cursor: "pointer",
                             opacity: busyId === id ? 0.65 : 1,
-                            fontSize: 14,
+                            fontSize: 16,
                           }}
                         >
                           {busyId === id ? "Working..." : "Send again as is"}
@@ -410,10 +410,10 @@ export default function ViewBroadcasts() {
                             border: "none",
                             borderRadius: 8,
                             padding: "8px 12px",
-                            fontWeight: 900,
+                            fontWeight: 600,
                             cursor: "pointer",
                             opacity: busyId === id ? 0.65 : 1,
-                            fontSize: 14,
+                            fontSize: 16,
                           }}
                         >
                           Delete

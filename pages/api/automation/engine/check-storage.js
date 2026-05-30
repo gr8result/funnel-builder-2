@@ -1,8 +1,9 @@
 // pages/api/automation/engine/check-storage.js
 // Quick diagnostic to check if HTML files exist in storage
 import { supabaseAdmin as supabase } from "../../../../lib/supabaseAdmin.js";
+import withAdmin from "../../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { htmlPath } = req.query;
   
   if (!htmlPath) {
@@ -54,3 +55,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdmin(handler);

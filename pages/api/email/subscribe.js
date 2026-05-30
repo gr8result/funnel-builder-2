@@ -11,10 +11,14 @@ import {
 } from "../../../lib/emailDB";
 import { guardAddSubscriber } from "../../../lib/emailValidation";
 
+import { checkRateLimit, getIp } from "../../../lib/rateLimit";
+
 export const config = { api: { bodyParser: true } };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).send("Method not allowed");
+  const rl = checkRateLimit(`subscribe:${getIp(req)}`, 10, 60 * 1000);
+  if (!rl.ok) return res.status(429).send("Too many requests.");
 
   try {
     const body = normalise(req.body);

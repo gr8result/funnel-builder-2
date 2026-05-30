@@ -11,12 +11,13 @@
 //  ?sid=CAxxxx
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function s(v) {
   return String(v ?? "").trim();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const accountSid = s(process.env.TWILIO_ACCOUNT_SID);
     const authToken = s(process.env.TWILIO_AUTH_TOKEN);
@@ -67,3 +68,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

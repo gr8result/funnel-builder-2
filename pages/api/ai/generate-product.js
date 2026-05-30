@@ -1,6 +1,7 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/ai/generate-product.js
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -83,3 +84,5 @@ Make it engaging, benefit-driven, and suitable for an online marketplace.
     });
   }
 }
+
+export default withAuth(handler);

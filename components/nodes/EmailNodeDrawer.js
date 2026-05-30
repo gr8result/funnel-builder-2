@@ -1,4 +1,4 @@
-// /components/nodes/EmailNodeDrawer.js
+﻿// /components/nodes/EmailNodeDrawer.js
 // FULL REPLACEMENT — stores HTML path + preview + bucket so engine can send the right email
 // ✅ Saves: emailId, emailName, emailPreviewUrl, htmlPath, bucket
 // ✅ htmlPath is always: `${userId}/finished-emails/${emailId}.html`
@@ -265,7 +265,7 @@ export default function EmailNodeDrawer({ node, onSave, onClose, userId, flowId 
             ) : null}
           </div>
 
-          <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
+          <div style={{ marginTop: 12, fontSize: 16, opacity: 0.8 }}>
             <div><b>Bucket:</b> {bucket}</div>
             <div style={{ wordBreak: "break-all" }}><b>HTML:</b> {htmlPath || "-"}</div>
           </div>
@@ -325,13 +325,13 @@ const s = {
     border: "1px solid rgba(59, 130, 246, 0.3)",
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 16,
     opacity: 0.8,
     marginBottom: 6,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#3b82f6",
   },
   label: {
@@ -399,7 +399,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   cancelBtn: {
@@ -407,7 +407,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
 };

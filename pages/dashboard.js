@@ -1,9 +1,11 @@
-// /pages/dashboard.js
+﻿// /pages/dashboard.js
 // Workspace Builder — strategic overview with module active/inactive status
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../utils/supabase-client";
+import { useWorkspace } from "../hooks/useWorkspace";
+import ICONS from "../components/iconMap";
 
 const DASHBOARD_MODULE_ALIASES = {
   crm: "crm",
@@ -40,7 +42,7 @@ function textFor(color) { return LIGHT_COLORS.has(color) ? "#0f172a" : "#ffffff"
 const CORE_ITEMS = [
   {
     id: "core_todo",
-    title: "Priority To-Do",
+    title: "Command Centre",
     emoji: "📌",
     desc: "Tasks, orders & revenue overview",
     color: "#22c55e",
@@ -127,8 +129,16 @@ const CORE_ITEMS = [
     href: "/account",
   },
   {
+    id: "core_team",
+    title: "Team Members",
+    emoji: "👥",
+    desc: "Manage workspace members and permissions",
+    color: "#f97316",
+    href: "/modules/email/crm/teams",
+  },
+  {
     id: "core_billing",
-    title: "Billing & Modules",
+    title: "Pricing & Billing",
     emoji: "🧾",
     desc: "Manage subscriptions and activate modules",
     color: "#f59e0b",
@@ -149,6 +159,14 @@ const CORE_ITEMS = [
     desc: "Manage your accounts and finances",
     color: "#0ea5e9",
     href: "/modules/accounting",
+  },
+  {
+    id: "construction",
+    title: "Projects Hub",
+    emoji: "🗂️",
+    desc: "Job Board and work schedules — suits any industry",
+    color: "#f97316",
+    href: "/modules/construction",
   },
 ];
 
@@ -171,6 +189,14 @@ const MODULE_ITEMS = [
     desc: "Manage contacts and customer records",
     color: "#ec4899",
     href: "/modules/email/crm",
+  },
+  {
+    id: "construction",
+    title: "Projects Hub",
+    emoji: "🗂️",
+    desc: "Job Board and work schedules — suits any industry",
+    color: "#f97316",
+    href: "/modules/construction",
   },
   {
     id: "sms_marketing",
@@ -216,7 +242,8 @@ const MODULE_ITEMS = [
   {
     id: "funnels",
     title: "Sales Funnels",
-    emoji: "🧱",
+    icon: ICONS.funnels,
+
     desc: "Build and manage sales funnels",
     color: "#ef465d",
     href: "/funnels",
@@ -240,6 +267,7 @@ const MODULE_ITEMS = [
     desc: "Automated webinar funnels",
     color: "#ef4444",
     href: "/modules/webinars",
+    comingSoon: true,
   },
   {
     id: "pipelines",
@@ -248,6 +276,16 @@ const MODULE_ITEMS = [
     desc: "Track subscriptions and deal flow",
     color: "#7c3aed",
     href: "/modules/pipelines",
+    comingSoon: true,
+  },
+  {
+    id: "human_resources",
+    title: "Human Resources",
+    emoji: "👨\u200d💼",
+    desc: "Employee management and HR workflows",
+    color: "#3b82f6",
+    href: "/modules/hr",
+    comingSoon: true,
   },
 ];
 
@@ -258,6 +296,60 @@ function SolidCard({ item, active, count, coreCard }) {
     ? `${count} ${item.activityLabel}${count !== 1 ? "s" : ""}`
     : null;
   const fg = textFor(item.color);
+
+  // Coming soon modules: always show as greyed-out / coming soon
+  if (item.comingSoon) {
+    return (
+      <Link href={item.href} style={{ textDecoration: "none" }}>
+        <div style={{
+          background: "#0d1522",
+          border: "2px solid #1e293b",
+          borderRadius: 14,
+          padding: "18px 18px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          position: "relative",
+          opacity: 0.72,
+          cursor: "pointer",
+          transition: "opacity 0.15s ease",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = "1"; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "0.72"; }}
+        >
+          <div style={{
+            position: "absolute", top: 12, right: 12,
+            fontSize: 16, fontWeight: 600, padding: "3px 10px",
+            borderRadius: 20, background: "rgba(30,41,59,0.95)",
+            color: "#64748b", whiteSpace: "nowrap", userSelect: "none",
+          }}>
+            🚧 Coming Soon
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, paddingRight: 110 }}>
+            <div style={{
+              fontSize: 22, width: 44, height: 44, display: "grid",
+              placeItems: "center", background: item.color + "14",
+              border: `1px solid ${item.color}28`, borderRadius: 10, flexShrink: 0,
+            }}>
+              {item.icon ? <item.icon size={22} color={item.color} /> : item.emoji}
+            </div>
+            <div style={{ fontWeight: 600, fontSize: 18, color: "#475569", lineHeight: 1.3 }}>
+              {item.title}
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: "#334155", lineHeight: 1.4 }}>{item.desc}</div>
+          <span style={{
+            display: "inline-block", fontSize: 16, fontWeight: 600,
+            padding: "5px 12px", borderRadius: 8,
+            background: "rgba(30,41,59,0.8)", color: "#64748b",
+            border: "1px solid #1e293b",
+          }}>
+            View Details →
+          </span>
+        </div>
+      </Link>
+    );
+  }
 
   // Inactive module cards: dark with coloured border
   if (!coreCard && !active) {
@@ -286,7 +378,7 @@ function SolidCard({ item, active, count, coreCard }) {
             placeItems: "center", background: item.color + "18",
             border: `1px solid ${item.color}33`, borderRadius: 10, flexShrink: 0,
           }}>
-            {item.emoji}
+            {item.icon ? <item.icon size={22} color={item.color} /> : item.emoji}
           </div>
           <div style={{ fontWeight: 600, fontSize: 18, color: "#64748b", lineHeight: 1.3 }}>
             {item.title}
@@ -350,7 +442,7 @@ function SolidCard({ item, active, count, coreCard }) {
             placeItems: "center", background: "rgba(0,0,0,0.18)",
             borderRadius: 10, flexShrink: 0,
           }}>
-            {item.emoji}
+            {item.icon ? <item.icon size={22} color="#fff" /> : item.emoji}
           </div>
           <div style={{ fontWeight: 600, fontSize: 18, color: fg, lineHeight: 1.25 }}>
             {item.title}
@@ -362,16 +454,6 @@ function SolidCard({ item, active, count, coreCard }) {
           {activityText ?? item.desc}
         </div>
 
-        {/* CTA */}
-        <div style={{
-          display: "inline-block", alignSelf: "flex-start",
-          fontSize: 16, fontWeight: 600,
-          padding: "6px 14px", borderRadius: 8,
-          background: "rgba(0,0,0,0.22)", color: fg,
-          border: `1px solid rgba(0,0,0,0.18)`,
-        }}>
-          Manage →
-        </div>
       </div>
     </Link>
   );
@@ -409,11 +491,72 @@ function SectionLabel({ label, note }) {
   );
 }
 
+// ─── Impact stats bar ───────────────────────────────────────────────────────
+function ImpactBar({ stats, loading }) {
+  const items = [
+    { emoji: "👥", label: "Total contacts",    key: "contacts",    color: "#ec4899" },
+    { emoji: "📧", label: "Emails sent (30d)", key: "emailsSent",  color: "#facc15" },
+    { emoji: "💬", label: "SMS sent (30d)",    key: "smsSent",     color: "#38bdf8" },
+    { emoji: "⚙️", label: "Live automations",  key: "automations", color: "#fb923c" },
+    { emoji: "🏗️", label: "Active funnels",    key: "funnels",     color: "#ef465d" },
+  ];
+
+  return (
+    <div style={{
+      width: "100%", maxWidth: 1320, marginBottom: 32,
+      background: "#0d1522", border: "1px solid #1e2d42",
+      borderRadius: 14, padding: "16px 20px",
+      display: "flex", alignItems: "stretch", gap: 12, flexWrap: "wrap",
+      justifyContent: "space-between",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center",
+        fontSize: 12, fontWeight: 700, color: "#4b6480",
+        textTransform: "uppercase", letterSpacing: "0.9px",
+        marginRight: 4, flexShrink: 0, writingMode: "horizontal-tb",
+      }}>
+        Your platform
+      </div>
+      {items.map(item => (
+        <div key={item.key} style={{
+          flex: "1 1 150px",
+          background: "#111827", borderRadius: 10, padding: "12px 16px",
+          border: `1px solid ${item.color}28`,
+          display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "#f9fafb", lineHeight: 1 }}>
+            {loading || !stats ? "—" : (stats[item.key] ?? 0).toLocaleString()}
+          </div>
+          <div style={{ fontSize: 12, color: "#6b7280", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+            <span>{item.emoji}</span> {item.label}
+          </div>
+        </div>
+      ))}
+      <div style={{ display: "flex", alignItems: "flex-end", flexShrink: 0 }}>
+        <Link href="/import-contacts" style={{ textDecoration: "none" }}>
+          <div style={{
+            background: "linear-gradient(135deg, #2563eb, #4f46e5)",
+            borderRadius: 10, padding: "10px 16px",
+            fontSize: 13, fontWeight: 600, color: "#fff",
+            whiteSpace: "nowrap", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            <span>📥</span> Import from Klaviyo / Mailchimp
+          </div>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard page ───────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const { role } = useWorkspace();
+  const isOwner = !role || role === "owner";
   const [activeModules, setActiveModules] = useState(new Set());
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [impactStats, setImpactStats] = useState(null);
 
   useEffect(() => {
     async function loadWorkspace() {
@@ -463,6 +606,33 @@ export default function Dashboard() {
         } catch { cm["website_builder"] = 0; }
 
         setCounts(cm);
+
+        // Impact stats — graceful degradation if any table is missing
+        try {
+          const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          const [
+            { count: contactCount },
+            { count: emailCount },
+            { count: smsCount },
+            { count: automationCount },
+            { count: funnelCount },
+          ] = await Promise.all([
+            supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", uid),
+            supabase.from("email_sends").select("id", { count: "exact", head: true }).eq("user_id", uid).gte("sent_at", since30d),
+            supabase.from("sms_sent_history").select("id", { count: "exact", head: true }).eq("user_id", uid).gte("created_at", since30d),
+            supabase.from("email_automations").select("id", { count: "exact", head: true }).eq("user_id", uid),
+            supabase.from("funnels").select("id", { count: "exact", head: true }).eq("user_id", uid),
+          ]);
+          setImpactStats({
+            contacts:    contactCount    ?? 0,
+            emailsSent:  emailCount      ?? 0,
+            smsSent:     smsCount        ?? 0,
+            automations: automationCount ?? 0,
+            funnels:     funnelCount     ?? 0,
+          });
+        } catch {
+          // Non-critical — dashboard still works without impact stats
+        }
       } catch (err) {
         console.error("Dashboard load error:", err);
       } finally {
@@ -521,11 +691,16 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Impact stats */}
+      <ImpactBar stats={impactStats} loading={loading} />
+
       {/* Core Platform */}
       <div style={{ width: "100%", maxWidth: 1320, marginBottom: 40 }}>
         <SectionLabel label="Core Platform" note="Always included" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-          {CORE_ITEMS.map(item => (
+          {CORE_ITEMS.filter(item =>
+            isOwner || (item.id !== "core_account" && item.id !== "core_billing")
+          ).map(item => (
             <SolidCard key={item.id} item={item} active coreCard count={counts[item.id]} />
           ))}
         </div>
@@ -550,7 +725,7 @@ export default function Dashboard() {
       </div>
 
       {/* Billing CTA */}
-      {hasInactive && (
+      {isOwner && hasInactive && (
         <div style={{
           width: "100%",
           maxWidth: 1320,
@@ -558,14 +733,15 @@ export default function Dashboard() {
           background: "linear-gradient(135deg, #111a2a, #0d1522)",
           border: "1px solid #1e2d42",
           borderRadius: 14,
-          padding: "22px 28px",
+          padding: "28px 28px",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
           gap: 16,
-          flexWrap: "wrap",
+          textAlign: "center",
         }}>
-          <div>
+          <div style={{ textAlign: "center" }}>
             <div style={{ fontWeight: 600, fontSize: 20, color: "#f1f5f9" }}>Unlock more modules</div>
             <div style={{ fontSize: 18, color: "#4f94f4", marginTop: 4 }}>
               Activate modules from Billing & Modules to expand your workspace.

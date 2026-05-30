@@ -2,12 +2,13 @@
 // Sends a confirmation email to the user when they submit their account application.
 
 import { Resend } from "resend";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "no-reply@gr8result.com";
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@gr8result.com";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -56,3 +57,5 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, warning: "Email send failed" });
   }
 }
+
+export default withAuth(handler);

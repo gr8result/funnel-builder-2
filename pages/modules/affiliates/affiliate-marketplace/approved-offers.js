@@ -156,7 +156,7 @@ export default function ApprovedOffers() {
                   color: "#fff",
                   border: "none",
                   borderRadius: 8,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   fontSize: 17,
                   cursor: "pointer",
                   position: "absolute",
@@ -269,7 +269,7 @@ export default function ApprovedOffers() {
                               border: "1px solid #333",
                               background: "#181d36",
                               color: "#fff",
-                              fontSize: 15,
+                              fontSize: 16,
                             }}
                           />
                           <button
@@ -297,7 +297,7 @@ export default function ApprovedOffers() {
                         style={{
                           background: "#00CCBB",
                           color: "#222",
-                          fontWeight: 700,
+                          fontWeight: 600,
                           padding: "10px 25px",
                           fontSize: 16,
                           border: "none",
@@ -328,7 +328,7 @@ export default function ApprovedOffers() {
 
 const th = {
   padding: 15,
-  fontWeight: 700,
+  fontWeight: 600,
   fontSize: 16,
   color: "#fff",
   borderBottom: "1px solid rgba(255,255,255,0.1)",
@@ -336,7 +336,7 @@ const th = {
 
 const td = {
   padding: 15,
-  fontSize: 15,
+  fontSize: 16,
   color: "#fff",
   verticalAlign: "middle",
 };

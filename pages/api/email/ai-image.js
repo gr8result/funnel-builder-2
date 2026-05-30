@@ -2,11 +2,12 @@
 // Generate an image via DALL-E 3, download it, upload to Supabase, return public URL
 import { createClient } from "@supabase/supabase-js";
 import { persistImageForUser } from "../social/save-image";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "POST only" });
@@ -15,9 +16,9 @@ export default async function handler(req, res) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return res.status(500).json({ ok: false, error: "OPENAI_API_KEY not configured" });
 
-  const { prompt, userId, size = "1024x1024" } = req.body || {};
+  const { prompt, size = "1024x1024" } = req.body || {};
+  const userId = req.user.id;
   if (!prompt) return res.status(400).json({ ok: false, error: "Missing prompt" });
-  if (!userId) return res.status(400).json({ ok: false, error: "Missing userId" });
 
   const VALID_SIZES = ["1024x1024", "1792x1024", "1024x1792"];
   const safeSize = VALID_SIZES.includes(size) ? size : "1024x1024";
@@ -67,3 +68,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e.message || "AI image failed" });
   }
 }
+
+export default withAuth(handler);

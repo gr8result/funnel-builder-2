@@ -1,4 +1,4 @@
-export default function Custom500() {
+﻿export default function Custom500() {
   return (
     <div
       style={{
@@ -23,7 +23,7 @@ export default function Custom500() {
         <h1
           style={{
             fontSize: 48,
-            fontWeight: 700,
+            fontWeight: 600,
             marginBottom: 20,
             color: "white",
           }}

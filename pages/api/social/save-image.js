@@ -5,6 +5,7 @@
 import { requireUser } from '../../../lib/social/auth';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
+import { withAuth } from "../../../lib/withWorkspace";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -127,7 +128,7 @@ export async function persistImageForUser(auth, { imageUrl, description = '', ta
   return data;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -145,3 +146,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
+
+export default withAuth(handler);

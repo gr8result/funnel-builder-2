@@ -84,6 +84,7 @@ function AutomationBuilder() {
   const fileMenuRef = useRef();
 
   const [saveAsOpen, setSaveAsOpen] = useState(false);
+  const [flowUsage, setFlowUsage] = useState(null);
 
   const [triggerColor, setTriggerColor] = useState("#22c55e");
   const [emailColor, setEmailColor] = useState("#eab308");
@@ -181,6 +182,18 @@ function AutomationBuilder() {
     return data?.session?.access_token || null;
   }, []);
 
+  const fetchUsage = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch("/api/automation/flows/usage", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => null);
+      if (j?.ok) setFlowUsage(j);
+    } catch {}
+  }, [getToken]);
+
   const openLeadFromMembers = (lead) => {
     if (!lead?.id && !lead?.lead_id) return;
     setMembersOpen(false);
@@ -243,6 +256,7 @@ function AutomationBuilder() {
 
       await fetchFlows(acctId, user.id);
       await loadColorSettings(user.id);
+      await fetchUsage();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -375,6 +389,7 @@ function AutomationBuilder() {
         setIsTemplateFlow(!!j.flow.is_standard);
 
       await fetchFlows(accountId, authUserId);
+      await fetchUsage();
       toastMsg(j.action || "Saved");
     } catch (err) {
       alert("Error saving flow: " + (err?.message || String(err)));
@@ -589,7 +604,7 @@ function AutomationBuilder() {
           <div
             style={{
               fontSize: 18,
-              fontWeight: 700,
+              fontWeight: 600,
               letterSpacing: 1.5,
               textTransform: "uppercase",
               color: "#9ca3af",
@@ -647,7 +662,7 @@ function AutomationBuilder() {
               <div style={{ fontSize: 48 }}>⚙️</div>
 
               <div>
-                <div style={{ fontSize: 48, fontWeight: 700 }}>
+                <div style={{ fontSize: 48, fontWeight: 600 }}>
                   Automation Builder
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 400 }}>
@@ -669,7 +684,7 @@ function AutomationBuilder() {
                   borderRadius: 999,
                   padding: "10px 16px",
                   cursor: "pointer",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
                   fontSize: 18,
                   opacity: flowId ? 1 : 0.6,
@@ -755,13 +770,99 @@ function AutomationBuilder() {
                     />
                     <DropdownItem
                       label="📄 Save As…"
+                      disabled={!!flowUsage?.atLimit}
                       onClick={() => {
+                        if (flowUsage?.atLimit) return;
                         setSaveAsOpen(true);
                         setFileMenuOpen(false);
                       }}
                     />
 
                     <Divider />
+
+                    {flowUsage && (
+                      <div style={{ padding: "8px 14px 6px" }}>
+                        <div
+                          style={{
+                            background: "rgba(255,255,255,0.06)",
+                            borderRadius: 10,
+                            padding: "8px 12px",
+                            border: flowUsage.atLimit
+                              ? "1px solid rgba(239,68,68,0.4)"
+                              : "1px solid rgba(255,255,255,0.08)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: flowUsage.limit ? 6 : 0,
+                              fontSize: 16,
+                            }}
+                          >
+                            <span style={{ color: "#cbd5e1", fontWeight: 600 }}>
+                              Flows:{" "}
+                              <span style={{ color: "#f8fafc" }}>
+                                {flowUsage.used}
+                                {flowUsage.limit
+                                  ? ` / ${flowUsage.limit}`
+                                  : " (unlimited)"}
+                              </span>
+                            </span>
+                            {flowUsage.atLimit && (
+                              <span
+                                style={{
+                                  color: "#f87171",
+                                  fontWeight: 600,
+                                  fontSize: 16,
+                                }}
+                              >
+                                Limit reached
+                              </span>
+                            )}
+                          </div>
+                          {flowUsage.limit && (
+                            <div
+                              style={{
+                                height: 4,
+                                borderRadius: 4,
+                                background: "rgba(255,255,255,0.1)",
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: 4,
+                                  borderRadius: 4,
+                                  background: flowUsage.atLimit
+                                    ? "#ef4444"
+                                    : flowUsage.used / flowUsage.limit > 0.8
+                                    ? "#f59e0b"
+                                    : "#22c55e",
+                                  width: `${Math.min(
+                                    100,
+                                    (flowUsage.used / flowUsage.limit) * 100
+                                  )}%`,
+                                  transition: "width 0.3s",
+                                }}
+                              />
+                            </div>
+                          )}
+                          {flowUsage.atLimit && (
+                            <div
+                              style={{
+                                marginTop: 6,
+                                fontSize: 16,
+                                color: "#fca5a5",
+                              }}
+                            >
+                              Upgrade your plan to create more flows.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div
                       style={{
@@ -874,7 +975,7 @@ function AutomationBuilder() {
               gap: 12,
             }}
           >
-            <div style={{ fontWeight: 900, fontSize: 16, color: "#e5e7eb" }}>
+            <div style={{ fontWeight: 600, fontSize: 16, color: "#e5e7eb" }}>
               Current Flow:{" "}
               <span style={{ color: "#93c5fd" }}>{flowName || "Untitled"} </span>
               <span style={{ color: "#22c55e", marginLeft: 10 }}>
@@ -899,7 +1000,7 @@ function AutomationBuilder() {
                   borderRadius: 999,
                   fontWeight: 600,
                   cursor: "pointer",
-                  fontSize: 12,
+                  fontSize: 16,
                   boxShadow: "0 0 12px rgba(124, 58, 237, 0.2)",
                 }}
               >
@@ -916,7 +1017,7 @@ function AutomationBuilder() {
                     color: "#ffffff",
                     padding: "8px 14px",
                     borderRadius: 999,
-                    fontWeight: 900,
+                    fontWeight: 600,
                     cursor: flushingQueue ? "not-allowed" : "pointer",
                     boxShadow: "0 0 18px rgba(245,158,11,0.18)",
                     opacity: flushingQueue ? 0.6 : 1,
@@ -928,15 +1029,22 @@ function AutomationBuilder() {
 
               <button
                 onClick={saveFlow}
+                disabled={!flowId && !!flowUsage?.atLimit}
+                title={
+                  !flowId && flowUsage?.atLimit
+                    ? `Automation limit reached (${flowUsage.limit} on ${flowUsage.plan} plan). Upgrade to create more.`
+                    : undefined
+                }
                 style={{
                   background: "#22c55e",
                   border: "none",
                   color: "#071022",
                   padding: "8px 14px",
                   borderRadius: 999,
-                  fontWeight: 900,
-                  cursor: "pointer",
+                  fontWeight: 600,
+                  cursor: !flowId && flowUsage?.atLimit ? "not-allowed" : "pointer",
                   boxShadow: "0 0 18px rgba(34,197,94,0.18)",
+                  opacity: !flowId && flowUsage?.atLimit ? 0.5 : 1,
                 }}
               >
                 💾 Save
@@ -1039,6 +1147,7 @@ function AutomationBuilder() {
               setFlowName(j.flow?.name || newName);
 
               await fetchFlows(accountId, authUserId);
+              await fetchUsage();
               toastMsg("Flow Saved As New");
               setSaveAsOpen(false);
             } catch (e) {
@@ -1130,7 +1239,7 @@ function AutomationBuilder() {
                   padding: "10px 20px",
                   borderRadius: 6,
                   cursor: isResetting ? "not-allowed" : "pointer",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   boxShadow: "0 0 12px rgba(239, 68, 68, 0.3)",
                   opacity: isResetting ? 0.7 : 1,
                 }}
@@ -1451,7 +1560,7 @@ function FlowMembersModal({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontWeight: 700 }}>👥 Flow Members</div>
+            <div style={{ fontWeight: 600 }}>👥 Flow Members</div>
             <div style={{ color: "#dfbe2dff", fontSize: 16 }}>
               {flowName || "Untitled"} • {flowId}
             </div>
@@ -1518,7 +1627,7 @@ function FlowMembersModal({
                 color: "#071022",
                 padding: "10px 14px",
                 borderRadius: 999,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: busy ? "not-allowed" : "pointer",
                 opacity: busy ? 0.65 : 1,
               }}
@@ -1532,7 +1641,7 @@ function FlowMembersModal({
                 padding: "10px 12px",
                 borderRadius: 999,
                 border: "1px solid rgba(148,163,184,0.22)",
-                fontWeight: 700,
+                fontWeight: 600,
                 color: "#e5e7eb",
               }}
             >
@@ -1556,7 +1665,7 @@ function FlowMembersModal({
               style={{
                 padding: "10px 12px",
                 background: "rgba(148,163,184,0.06)",
-                fontWeight: 700,
+                fontWeight: 600,
                 color: "#e5e7eb",
                 display: "flex",
                 justifyContent: "space-between",
@@ -1606,7 +1715,7 @@ function FlowMembersModal({
                           (e.currentTarget.style.opacity = 1)
                         }
                       >
-                        <div style={{ fontWeight: 700 }}>
+                        <div style={{ fontWeight: 600 }}>
                           {m.name || m.email || m.phone || m.lead_id}
                         </div>
                         <div style={{ fontSize: 16, color: "#94a3b8" }}>
@@ -1632,7 +1741,7 @@ function FlowMembersModal({
                           color: "#fecaca",
                           padding: "8px 12px",
                           borderRadius: 999,
-                          fontWeight: 900,
+                          fontWeight: 600,
                           cursor:
                             busyDeleteId === String(leadId)
                               ? "not-allowed"
@@ -1662,7 +1771,7 @@ function FlowMembersModal({
                 borderRadius: 12,
                 border: "1px solid rgba(148,163,184,0.18)",
                 background: "rgba(2,6,23,0.65)",
-                fontWeight: 700,
+                fontWeight: 600,
                 color: "#e5e7eb",
                 whiteSpace: "pre-wrap",
               }}
@@ -1682,7 +1791,7 @@ function FlowMembersModal({
               }}
             >
               <summary
-                style={{ cursor: "pointer", fontWeight: 900, color: "#93c5fd" }}
+                style={{ cursor: "pointer", fontWeight: 600, color: "#93c5fd" }}
               >
                 DEBUG (click to open)
               </summary>
@@ -1691,7 +1800,7 @@ function FlowMembersModal({
                   marginTop: 10,
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
-                  fontSize: 13,
+                  fontSize: 16,
                   color: "#e5e7eb",
                 }}
               >
@@ -1745,7 +1854,7 @@ function SaveAsModal({ isOpen, onClose, currentName, onSaveAs }) {
             justifyContent: "space-between",
           }}
         >
-          <div style={{ fontWeight: 700 }}>📄 Save As…</div>
+          <div style={{ fontWeight: 600 }}>📄 Save As…</div>
           <button
             onClick={onClose}
             style={{
@@ -1793,7 +1902,7 @@ function SaveAsModal({ isOpen, onClose, currentName, onSaveAs }) {
                 color: "#071022",
                 padding: "10px 14px",
                 borderRadius: 999,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: "pointer",
               }}
             >
@@ -1808,7 +1917,7 @@ function SaveAsModal({ isOpen, onClose, currentName, onSaveAs }) {
                 color: "#e5e7eb",
                 padding: "10px 14px",
                 borderRadius: 999,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: "pointer",
               }}
             >
@@ -1858,24 +1967,26 @@ function Divider() {
   );
 }
 
-function DropdownItem({ label, onClick }) {
+function DropdownItem({ label, onClick, disabled }) {
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       style={{
         width: "100%",
         textAlign: "left",
         background: "transparent",
         border: "none",
         padding: "10px 16px",
-        color: "#e5e7eb",
-        cursor: "pointer",
+        color: disabled ? "#6b7280" : "#e5e7eb",
+        cursor: disabled ? "not-allowed" : "pointer",
         fontSize: 16,
         fontWeight: 600,
+        opacity: disabled ? 0.6 : 1,
       }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background = "rgba(148,163,184,0.08)")
-      }
+      onMouseEnter={(e) => {
+        if (!disabled)
+          e.currentTarget.style.background = "rgba(148,163,184,0.08)";
+      }}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
       {label}

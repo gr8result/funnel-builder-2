@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 const SECTORS = [
   {
@@ -73,7 +73,7 @@ export default function TabbedSectors() {
             style={{
               background: s.color,
               color: "#fff",
-              fontWeight: 700,
+              fontWeight: 600,
               border: "none",
               borderRadius: 8,
               padding: "12px 24px",
@@ -90,16 +90,16 @@ export default function TabbedSectors() {
       </div>
       {/* Sector Card */}
       <div style={{ background: sector.color, borderRadius: 12, padding: 24, color: "#fff", marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800 }}>{sector.label}</h2>
-        <p style={{ fontSize: 18, fontWeight: 700 }}>Revenue: ${sector.revenue.toFixed(2)}</p>
+        <h2 style={{ fontSize: 22, fontWeight: 600 }}>{sector.label}</h2>
+        <p style={{ fontSize: 18, fontWeight: 600 }}>Revenue: ${sector.revenue.toFixed(2)}</p>
         <p style={{ fontSize: 16 }}>Sales: {sector.sales}</p>
         <p style={{ fontSize: 16 }}>Affiliates: {sector.affiliates}</p>
       </div>
       {/* Drill-down sales table */}
       {sector.salesList && sector.salesList.length > 0 && (
         <div style={{ background: "#181f2e", borderRadius: 12, padding: 18, color: "#fff" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Individual Sales</h3>
-          <table style={{ width: "100%", color: "#fff", fontSize: 15, borderCollapse: "collapse" }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Individual Sales</h3>
+          <table style={{ width: "100%", color: "#fff", fontSize: 16, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#232e47" }}>
                 <th style={{ padding: "10px 8px" }}>Sale ID</th>

@@ -1,4 +1,4 @@
-// FILE: /components/CheckoutModal.js
+﻿// FILE: /components/CheckoutModal.js
 // FULL REPLACEMENT
 
 import { useEffect, useState } from "react";
@@ -98,12 +98,12 @@ const styles = {
 
   header: {
     fontSize: 22,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 12,
   },
 
   email: {
-    fontSize: 14,
+    fontSize: 16,
     opacity: 0.8,
     marginBottom: 18,
   },
@@ -118,7 +118,7 @@ const styles = {
 
   title: {
     fontSize: 20,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 12,
   },
 
@@ -133,7 +133,7 @@ const styles = {
     border: "none",
     padding: "12px 18px",
     borderRadius: 10,
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 16,
     cursor: "pointer",
     width: "100%",

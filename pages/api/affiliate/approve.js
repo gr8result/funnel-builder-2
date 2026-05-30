@@ -1,13 +1,15 @@
-// /pages/api/affiliate/approve.js
+﻿// /pages/api/affiliate/approve.js
 // Called by admin dashboard when approving an affiliate application.
 // Marks the application approved, generates a verification token,
 // and sends a verification email. When the applicant clicks the link,
 // /api/vendor/verify-affiliate.js inserts them into the vendors table.
+import crypto from "crypto";
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { sendEmail } from '../../../lib/sendEmail';
+import { withAdmin } from '../../../lib/withAdmin';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { id } = req.body;
@@ -24,8 +26,8 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Application not found' });
   }
 
-  // Generate a unique verification token
-  const token = Math.random().toString(36).substring(2) + Date.now();
+  // Generate a cryptographically secure verification token
+  const token = crypto.randomBytes(32).toString('hex');
 
   // Mark approved and store token
   const { error: updateErr } = await supabaseAdmin
@@ -59,13 +61,17 @@ export default async function handler(req, res) {
     await sendEmail({
       to: app.email,
       from: 'no-reply@gr8result.com',
-      subject: 'Your Affiliate Application Has Been Approved — Please Verify',
+      subject: 'Your Affiliate Application Has Been Approved â€” Please Verify',
       html,
     });
   } catch (emailErr) {
-    // Don't fail the whole request if email fails — approval is still saved
+    // Don't fail the whole request if email fails â€” approval is still saved
     console.error('Failed to send approval email:', emailErr.message);
   }
 
   return res.status(200).json({ ok: true });
 }
+
+export default withAdmin(handler);
+
+

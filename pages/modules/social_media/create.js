@@ -1,4 +1,4 @@
-import Head from 'next/head';
+﻿import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../utils/supabase-client';
@@ -384,7 +384,7 @@ function GeneratingOverlay({ stage, onDismiss }) {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             pointerEvents: 'none',
           }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em' }}>
+            <div style={{ fontSize: 36, fontWeight: 600, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em' }}>
               {current.pct}%
             </div>
             {isDone ? (
@@ -400,10 +400,10 @@ function GeneratingOverlay({ stage, onDismiss }) {
 
         {/* Label */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 6, letterSpacing: '-0.01em' }}>
+          <div style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 6, letterSpacing: '-0.01em' }}>
             {current.label}
           </div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.42)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.42)', lineHeight: 1.5 }}>
             {current.sub}
           </div>
         </div>
@@ -415,7 +415,7 @@ function GeneratingOverlay({ stage, onDismiss }) {
             const isComplete = i < idx;
             return (
               <div key={s.key} style={{
-                padding: '5px 15px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+                padding: '5px 15px', borderRadius: 999, fontSize: 16, fontWeight: 600,
                 background: isActive || isComplete ? `rgba(129,140,248,0.15)` : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${isActive ? 'rgba(129,140,248,0.7)' : isComplete ? 'rgba(34,197,94,0.45)' : 'rgba(255,255,255,0.1)'}`,
                 color: isComplete ? '#86efac' : isActive ? '#c7d2fe' : 'rgba(255,255,255,0.28)',
@@ -576,7 +576,7 @@ function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your 
         : <div style={{ width: '100%', minHeight: 90, background: 'linear-gradient(135deg,#E60023,#8b0016)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📌</div>}
       <div style={{ padding: '7px 9px 4px', flex: 1 }}>{editing ? ta : txt()}</div>
       <div style={{ padding: '4px 9px 8px', display: 'flex', justifyContent: 'flex-end' }}>
-        <span style={{ background: '#E60023', color: '#fff', fontSize: 16, padding: '3px 10px', borderRadius: 12, fontWeight: 700 }}>Save</span>
+        <span style={{ background: '#E60023', color: '#fff', fontSize: 16, padding: '3px 10px', borderRadius: 12, fontWeight: 600 }}>Save</span>
       </div>
     </div>
   );
@@ -593,7 +593,7 @@ function PostCard({ post, theme, onToggle, onEdit, onPreview, brandName = 'Your 
       </div>
       <div style={{ padding: '6px 9px 3px', color: '#fff', flex: 1 }}>{editing ? ta : txt()}</div>
       <div style={{ padding: '3px 9px 8px', display: 'flex', gap: 10 }}>
-        {['❤️', '💬', '🔁', '⬆️'].map((a, i) => <span key={i} style={{ fontSize: 12 }}>{a}</span>)}
+        {['❤️', '💬', '🔁', '⬆️'].map((a, i) => <span key={i} style={{ fontSize: 16 }}>{a}</span>)}
       </div>
     </div>
   );
@@ -1530,10 +1530,10 @@ export default function CreateContent() {
           onPreview={() => openPostPreview(platform, post.id)}
         />
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-          <button onClick={() => openPostPreview(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }}>Preview</button>
-          <button onClick={() => chooseImageFromLibrary(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }}>Media Library</button>
-          <button onClick={() => chooseImageUpload(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14 }} disabled={isBusy}>{isBusy ? 'Uploading...' : 'Upload Image'}</button>
-          <button onClick={() => assignManualImage(platform, post.id, null)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 14, opacity: post.image ? 1 : 0.5 }} disabled={!post.image}>Remove Image</button>
+          <button onClick={() => openPostPreview(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 16 }}>Preview</button>
+          <button onClick={() => chooseImageFromLibrary(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 16 }}>Media Library</button>
+          <button onClick={() => chooseImageUpload(platform, post.id)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 16 }} disabled={isBusy}>{isBusy ? 'Uploading...' : 'Upload Image'}</button>
+          <button onClick={() => assignManualImage(platform, post.id, null)} style={{ ...S.slimBtn, padding: '6px 10px', fontSize: 16, opacity: post.image ? 1 : 0.5 }} disabled={!post.image}>Remove Image</button>
         </div>
       </div>
     );
@@ -1625,13 +1625,13 @@ export default function CreateContent() {
                   <div style={S.cardLabel}>Topic / Niche</div>
                   <button
                     onClick={() => setDoNotRewrite(v => !v)}
-                    style={{ padding: '5px 14px', borderRadius: 8, border: `1px solid ${doNotRewrite ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.15)'}`, background: doNotRewrite ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.04)', color: doNotRewrite ? '#FCD34D' : 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ padding: '5px 14px', borderRadius: 8, border: `1px solid ${doNotRewrite ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.15)'}`, background: doNotRewrite ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.04)', color: doNotRewrite ? '#FCD34D' : 'rgba(255,255,255,0.45)', fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {doNotRewrite ? '✋ Do Not Rewrite: ON' : 'Do Not Rewrite'}
                   </button>
                 </div>
                 {doNotRewrite && (
-                  <p style={{ margin: '0 0 8px', fontSize: 14, color: '#FCD34D', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 8, padding: '8px 12px' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 16, color: '#FCD34D', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 8, padding: '8px 12px' }}>
                     AI will use your text exactly as written — paste your content, website copy or existing posts below. Each paragraph becomes one post.
                   </p>
                 )}
@@ -1724,8 +1724,8 @@ export default function CreateContent() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: 14,
-                                  fontWeight: 900,
+                                  fontSize: 16,
+                                  fontWeight: 600,
                                   lineHeight: 1,
                                   flexShrink: 0,
                                   boxSizing: 'border-box',
@@ -1802,11 +1802,11 @@ export default function CreateContent() {
                     rows={3}
                     style={{ ...S.input, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', minHeight: 72 }}
                   />
-                  <div style={{ marginTop: 4, fontSize: 13, color: 'rgba(255,255,255,0.42)' }}>
+                  <div style={{ marginTop: 4, fontSize: 16, color: 'rgba(255,255,255,0.42)' }}>
                     Tell the AI exactly what to put in the image. When blank, it guesses from your post copy — which often gets it wrong.
                   </div>
                 </div>
-                <div style={{ marginTop: 10, fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
+                <div style={{ marginTop: 10, fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>
                   Realistic uses photo-style ads, Graphic uses designed promotional layouts, and Mixed alternates both. Text is added after generation so it stays readable.
                 </div>
                 {/* Campaign duration */}
@@ -1818,7 +1818,7 @@ export default function CreateContent() {
                       <div style={{ display: 'flex', gap: 6 }}>
                         {[1,2,3,4].map(w => (
                           <button key={w} onClick={() => setCampaignWeeks(w)}
-                            style={{ flex: 1, padding: '11px 0', borderRadius: 7, cursor: 'pointer', fontWeight: 700, fontSize: 16,
+                            style={{ flex: 1, padding: '11px 0', borderRadius: 7, cursor: 'pointer', fontWeight: 600, fontSize: 16,
                               background: campaignWeeks === w ? 'rgba(129,38,233,0.35)' : 'rgba(255,255,255,0.05)',
                               border: `1.5px solid ${campaignWeeks === w ? 'rgba(129,38,233,0.6)' : 'rgba(255,255,255,0.1)'}`,
                               color: campaignWeeks === w ? '#c084fc' : '#fff' }}>
@@ -1851,7 +1851,7 @@ export default function CreateContent() {
               {/* Post Ingredients — collapsible */}
               <div style={S.card}>
                 <button onClick={() => setShowIngredients(v => !v)} style={{ ...S.toggleBtn, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: '#e2e8f0' }}>Post Ingredients — CTA / URL / Phone</span>
+                  <span style={{ fontWeight: 600, fontSize: 16, color: '#e2e8f0' }}>Post Ingredients — CTA / URL / Phone</span>
                   <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>{showIngredients ? '▲ Hide' : '▼ Show'}</span>
                 </button>
                 {showIngredients && (
@@ -1884,8 +1884,8 @@ export default function CreateContent() {
               {/* Lead Capture Form — collapsible */}
               <div style={S.card}>
                 <button onClick={() => setShowLeadForm(v => !v)} style={{ ...S.toggleBtn, display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: '#e2e8f0' }}>Lead Capture Form Builder</span>
-                  <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>{showLeadForm ? '▲ Hide' : '▼ Show'}</span>
+                  <span style={{ fontWeight: 600, fontSize: 16, color: '#e2e8f0' }}>Lead Capture Form Builder</span>
+                  <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16 }}>{showLeadForm ? '▲ Hide' : '▼ Show'}</span>
                 </button>
                 {showLeadForm && (
                   <div style={{ marginTop: 12 }}>
@@ -1917,29 +1917,29 @@ export default function CreateContent() {
 
                         {/* ── Form Template Save / Load ── */}
                         <div style={{ marginTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
-                          <span style={{ ...S.cardLabel, fontSize: 13, marginBottom: 8 }}>Form Templates</span>
+                          <span style={{ ...S.cardLabel, fontSize: 16, marginBottom: 8 }}>Form Templates</span>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
                             <input
                               value={formTemplateName}
                               onChange={e => setFormTemplateName(e.target.value)}
                               placeholder={aiLeadForm.title || 'Template name…'}
-                              style={{ ...S.input, flex: 1, minWidth: 140, fontSize: 14, padding: '7px 10px' }}
+                              style={{ ...S.input, flex: 1, minWidth: 140, fontSize: 16, padding: '7px 10px' }}
                             />
-                            <button onClick={saveFormTemplate} style={{ ...S.slimBtn, fontSize: 14 }}>Save Template</button>
+                            <button onClick={saveFormTemplate} style={{ ...S.slimBtn, fontSize: 16 }}>Save Template</button>
                             <div style={{ position: 'relative' }}>
                               <button
                                 onClick={() => setShowFormDropdown(v => !v)}
-                                style={{ ...S.slimBtn, fontSize: 14 }}
+                                style={{ ...S.slimBtn, fontSize: 16 }}
                               >
                                 Load {savedForms.length > 0 ? `(${savedForms.length})` : ''} ▾
                               </button>
                               {showFormDropdown && (
                                 <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 30, background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, minWidth: 220, marginTop: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
                                   {savedForms.length === 0
-                                    ? <div style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>No saved form templates</div>
+                                    ? <div style={{ padding: '10px 14px', color: 'rgba(255,255,255,0.4)', fontSize: 16 }}>No saved form templates</div>
                                     : savedForms.map(f => (
                                       <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                                        <button onClick={() => loadFormTemplate(f)} style={{ flex: 1, background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', textAlign: 'left', fontSize: 14 }}>{f.displayName}</button>
+                                        <button onClick={() => loadFormTemplate(f)} style={{ flex: 1, background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', textAlign: 'left', fontSize: 16 }}>{f.displayName}</button>
                                         <button onClick={() => deleteFormTemplate(f.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>×</button>
                                       </div>
                                     ))}
@@ -1989,7 +1989,7 @@ export default function CreateContent() {
               }}
               disabled={aiPurging}
               title="Delete all auto-generated AI images from your library to start fresh"
-              style={{ ...S.slimBtn, fontSize: 14, padding: '16px 12px', opacity: aiPurging ? 0.5 : 0.7, flexShrink: 0 }}
+              style={{ ...S.slimBtn, fontSize: 16, padding: '16px 12px', opacity: aiPurging ? 0.5 : 0.7, flexShrink: 0 }}
             >
               {aiPurging ? 'Clearing...' : '🗑 Clear AI Image Cache'}
             </button>
@@ -2244,7 +2244,7 @@ const S = {
   cardLabel:   { fontSize: 24, fontWeight: 600, color: '#c2410c', letterSpacing: 0.5, marginBottom: 14, textTransform: 'uppercase' },
   label:       { fontSize: 16, color: '#2a8ee0', display: 'block', marginBottom: 5, fontWeight: 500 },
   input:       { width: '100%', background: '#0c121a', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 7, fontSize: 16, boxSizing: 'border-box' },
-  primaryBtn:  { width: '100%', background: 'rgba(129,38,233,0.2)', border: '1px solid rgba(129,38,233,0.4)', color: '#c084fc', padding: 14, borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 16 },
+  primaryBtn:  { width: '100%', background: 'rgba(129,38,233,0.2)', border: '1px solid rgba(129,38,233,0.4)', color: '#c084fc', padding: 14, borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: 16 },
   slimBtn:     { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', padding: '9px 14px', borderRadius: 7, cursor: 'pointer', fontSize: 16, whiteSpace: 'nowrap' },
   toggleBtn:   { background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, fontSize: 16 },
   dropdown:    { position: 'absolute', top: '110%', right: 0, zIndex: 50, background: '#1F2937', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 8, minWidth: 240, maxHeight: 280, overflowY: 'auto', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' },
@@ -2252,9 +2252,9 @@ const S = {
   previewBackdrop:{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.82)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
   previewModal:{ width: 'min(1100px, 96vw)', maxHeight: '92vh', overflowY: 'auto', background: '#0f172a', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 18, padding: 18, boxShadow: '0 30px 80px rgba(0,0,0,0.45)' },
   previewHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 },
-  previewEyebrow:{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700 },
-  previewTitle:{ fontSize: 22, fontWeight: 700, color: '#f8fafc' },
-  previewCloseBtn:{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(15,23,42,0.8)', color: '#e2e8f0', cursor: 'pointer', fontSize: 14, fontWeight: 600 },
+  previewEyebrow:{ fontSize: 16, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600 },
+  previewTitle:{ fontSize: 22, fontWeight: 600, color: '#f8fafc' },
+  previewCloseBtn:{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(15,23,42,0.8)', color: '#e2e8f0', cursor: 'pointer', fontSize: 16, fontWeight: 600 },
   previewImageWrap:{ marginBottom: 14, background: '#020617', borderRadius: 16, border: '1px solid rgba(148,163,184,0.16)', overflow: 'hidden', minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   previewImage:{ width: '100%', maxHeight: '70vh', objectFit: 'contain', display: 'block', background: '#020617' },
   previewImageEmpty:{ color: '#94a3b8', fontSize: 16, padding: 32 },

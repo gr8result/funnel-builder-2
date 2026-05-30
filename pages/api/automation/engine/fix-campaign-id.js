@@ -1,5 +1,6 @@
 // Make campaign_id nullable in email_campaigns_queue
 import { createClient } from "@supabase/supabase-js";
+import withAdmin from "../../../../lib/withAdmin";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,7 +9,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     // Try to alter the table to make campaign_id nullable
     const { error } = await supabase.rpc('exec_sql', {
@@ -36,3 +37,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdmin(handler);

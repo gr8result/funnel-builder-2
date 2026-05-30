@@ -1,42 +1,57 @@
-// /pages/modules/business-automation/index.js
-// BUSINESS AUTOMATION — Coming Soon placeholder with full banner + Back button
-
+﻿// /pages/modules/business-automation.js
 import Link from "next/link";
-import ICONS from "../../../components/iconMap"; // only ../.. to go up 3 levels
+import ICONS from "../../../components/iconMap";
 
 export default function BusinessAutomation() {
   return (
     <div style={styles.wrap}>
-      {/* Banner */}
-      <div style={styles.banner}>
-        <div style={styles.bannerLeft}>
-          <div style={styles.iconBox}>
-            {ICONS.automation({ size: 48 })}
+      <div style={styles.inner}>
+
+        {/* Banner */}
+        <div style={styles.banner}>
+          <div style={styles.bannerLeft}>
+            <div style={styles.bannerIconWrap}>
+              <span style={{ fontSize: 38, lineHeight: 1 }}>⚙️</span>
+            </div>
+            <div>
+              <h1 style={styles.bannerTitle}>Business Automation</h1>
+              <p style={styles.bannerDesc}>
+                Automate workflows, triggers and multi-step business processes.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 style={styles.title}>Business Automation</h1>
-            <p style={styles.desc}>
-              Workflows, triggers & automated actions to streamline everything.
-            </p>
+          <Link href="/dashboard">
+            <button style={styles.backBtn}>← Back</button>
+          </Link>
+        </div>
+
+        {/* Coming Soon */}
+        <div style={styles.comingSoonBox}>
+          <div style={styles.comingSoonEmoji}>⚙️</div>
+          <h2 style={styles.comingSoonTitle}>Coming Soon</h2>
+          <p style={styles.comingSoonDate}>Expected Delivery: July / August 2026</p>
+          <p style={styles.comingSoonDesc}>
+            Business Automation will let you build powerful multi-step workflows that connect your CRM,
+            email, SMS, calendar and third-party tools — all triggered by real customer actions.
+          </p>
+          <div style={styles.featureGrid}>
+            {[
+              { icon: "🔗", label: "Multi-Step Workflows" },
+              { icon: "⚡", label: "Event Triggers" },
+              { icon: "📧", label: "Email + SMS Actions" },
+              { icon: "🔀", label: "Conditional Logic" },
+              { icon: "🕐", label: "Delay & Scheduling" },
+              { icon: "🔌", label: "Third-Party Integrations" },
+            ].map((f) => (
+              <div key={f.label} style={styles.featureCard}>
+                <span style={styles.featureIcon}>{f.icon}</span>
+                <span style={styles.featureLabel}>{f.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <Link href="/dashboard">
-          <button style={styles.backBtn}>← Back</button>
-        </Link>
       </div>
-
-      {/* Coming Soon Content */}
-      <div style={styles.contentBox}>
-        <h2 style={{ margin: 0, fontSize: 32, fontWeight: 600 }}>
-          🚀 Coming Soon
-        </h2>
-        <p style={{ fontSize: 24, opacity: 0.85, marginTop: 12 }}>
-          Visual workflow automation, triggers, AI actions, delays, webhooks and more.
-          <br/>
-          Expected Delivery July 2026
-        </p>
-            </div>
     </div>
   );
 }
@@ -45,75 +60,79 @@ const styles = {
   wrap: {
     minHeight: "100vh",
     background: "#0c121a",
-    color: "#fff",
+    color: "#ffffff",
     padding: "28px 22px",
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    fontFamily:
-      "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    justifyContent: "center",
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
-
+  inner: { width: "100%", maxWidth: 1320 },
   banner: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    background: "#fb923c",
-    padding: "18px 40px",
+    background: "#c2410c",
     borderRadius: 12,
-    width: "100%",
-    maxWidth: 1320,
-    marginBottom: 35,
+    padding: "14px 18px",
+    marginBottom: 28,
   },
-
-  bannerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 14,
-  },
-
-  iconBox: {
-    width: 60,
-    height: 60,
+  bannerLeft: { display: "flex", alignItems: "center", gap: 14 },
+  bannerIconWrap: {
+    width: 58,
+    height: 58,
     borderRadius: 12,
-    background: "rgba(0,0,0,0.25)",
+    background: "rgba(0,0,0,0.2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-
-  title: {
-    fontSize: 48,
-    fontWeight: 600,
-    margin: 0,
-  },
-
-  desc: {
-    fontSize: 20,
-    opacity: 0.9,
-    margin: 0,
-    marginTop: 2,
-  },
-
+  bannerTitle: { margin: 0, fontSize: 40, fontWeight: 600, lineHeight: 1.1 },
+  bannerDesc: { margin: "4px 0 0", fontSize: 18, opacity: 0.9 },
   backBtn: {
     background: "#0c121a",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.25)",
+    color: "#ffffff",
+    border: "2px solid rgba(255,255,255,0.25)",
     borderRadius: 8,
     padding: "8px 16px",
+    fontSize: 16,
     fontWeight: 600,
-    fontSize: 18,
     cursor: "pointer",
   },
-
-  contentBox: {
+  comingSoonBox: {
     background: "#111827",
-    borderRadius: 14,
-    border: "1px solid #fb923c",
-    padding: "40px 28px",
-    maxWidth: 900,
-    width: "100%",
+    border: "1px dashed #fb923c",
+    borderRadius: 16,
+    padding: "48px 32px",
     textAlign: "center",
   },
+  comingSoonEmoji: { fontSize: 64, lineHeight: 1, marginBottom: 16 },
+  comingSoonTitle: { margin: "0 0 8px", fontSize: 36, fontWeight: 600 },
+  comingSoonDate: { margin: "0 0 20px", fontSize: 18, color: "#fb923c", fontWeight: 600 },
+  comingSoonDesc: {
+    margin: "0 auto 36px",
+    fontSize: 18,
+    opacity: 0.75,
+    maxWidth: 680,
+    lineHeight: 1.6,
+  },
+  featureGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 16,
+    maxWidth: 800,
+    margin: "0 auto",
+  },
+  featureCard: {
+    background: "rgba(251,146,60,0.08)",
+    border: "1px solid rgba(251,146,60,0.25)",
+    borderRadius: 10,
+    padding: "16px 12px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
+  },
+  featureIcon: { fontSize: 28 },
+  featureLabel: { fontSize: 16, fontWeight: 600, opacity: 0.9 },
 };

@@ -207,7 +207,7 @@ export default function EmailMarketingHub() {
           <div className="banner">
             <div className="banner-left">
               <div className="banner-icon" aria-hidden>
-                <Icon name="mail" size={48} />
+                <span style={{ fontSize: 38, lineHeight: 1 }}>📧</span>
               </div>
               <div className="banner-text">
                 <h1 className="banner-title">Email Marketing</h1>

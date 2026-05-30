@@ -1,4 +1,4 @@
-// /pages/modules/social_media/setup.js
+﻿// /pages/modules/social_media/setup.js
 // User-facing account connection page.
 // Users simply click "Connect" per platform — they never enter app credentials.
 
@@ -425,7 +425,7 @@ const S = {
     border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 22,
   },
   introIcon: { fontSize: 48, flexShrink: 0 },
-  introTitle: { fontSize: 24, fontWeight: 700, marginBottom: 8 },
+  introTitle: { fontSize: 24, fontWeight: 600, marginBottom: 8 },
   introText: { fontSize: 18, opacity: 0.7, lineHeight: 1.7 },
   introCallout: {
     marginTop: 14, fontSize: 16, lineHeight: 1.6, color: '#FCD34D',
@@ -448,7 +448,7 @@ const S = {
   },
   platformLogoImage: { width: 48, height: 48, display: 'block', objectFit: 'contain' },
   cardContent: { flex: 1, minWidth: 0 },
-  platformName: { fontSize: 22, fontWeight: 700, marginBottom: 6 },
+  platformName: { fontSize: 22, fontWeight: 600, marginBottom: 6 },
   platformDesc: { fontSize: 17, opacity: 0.65, lineHeight: 1.65, marginBottom: 6 },
   platformNote: { fontSize: 16, opacity: 0.45, lineHeight: 1.5, marginTop: 4 },
   platformSafetyNote: {

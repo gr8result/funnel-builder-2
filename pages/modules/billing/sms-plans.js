@@ -1,4 +1,4 @@
-// /pages/modules/billing/sms-plans.js
+﻿// /pages/modules/billing/sms-plans.js
 // SMS Marketing subscription plans and pricing
 
 import Link from "next/link";
@@ -6,21 +6,31 @@ import { supabase } from "../../../utils/supabase-client";
 import ICONS from "../../../components/iconMap";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { BASE_PLAN_INCLUDES } from "../../../data/pricing";
+
+const SMS_TIER_ORDER  = ["sms-starter", "sms-growth", "sms-professional", "sms-business", "sms-enterprise"];
+const SMS_TIER_PRICES = { "sms-starter": 25, "sms-growth": 120, "sms-professional": 229, "sms-business": 429, "sms-enterprise": null };
 
 export default function SmsPlans() {
     const asParam = (value) => (typeof value === "string" ? value : "");
 
     const buildBillingUrl = (next) => {
       const params = new URLSearchParams();
-      const emailPlan = next?.emailPlan || asParam(router.query.emailPlan);
-      const smsPlan = next?.smsPlan || asParam(router.query.smsPlan);
+      const basePlan    = asParam(router.query.basePlan);
+      const emailPlan   = next?.emailPlan    || asParam(router.query.emailPlan);
+      const smsPlan     = next?.smsPlan      || asParam(router.query.smsPlan);
       const calendarPlan = next?.calendarPlan || asParam(router.query.calendarPlan);
-      const socialPlan = next?.socialPlan || asParam(router.query.socialPlan);
+      const socialPlan  = next?.socialPlan   || asParam(router.query.socialPlan);
+      const crmPlan     = next?.crmPlan      || asParam(router.query.crmPlan);
+      const funnelPlan  = next?.funnelPlan   || asParam(router.query.funnelPlan);
 
-      if (emailPlan) params.set("emailPlan", emailPlan);
-      if (smsPlan) params.set("smsPlan", smsPlan);
-      if (calendarPlan) params.set("calendarPlan", calendarPlan);
-      if (socialPlan) params.set("socialPlan", socialPlan);
+      if (basePlan)      params.set("basePlan",     basePlan);
+      if (emailPlan)     params.set("emailPlan",    emailPlan);
+      if (smsPlan)       params.set("smsPlan",      smsPlan);
+      if (calendarPlan)  params.set("calendarPlan", calendarPlan);
+      if (socialPlan)    params.set("socialPlan",   socialPlan);
+      if (crmPlan)       params.set("crmPlan",      crmPlan);
+      if (funnelPlan)    params.set("funnelPlan",   funnelPlan);
 
       const query = params.toString();
       return query ? `/billing?${query}` : "/billing";
@@ -48,11 +58,42 @@ export default function SmsPlans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   useEffect(() => {
+    if (!router.isReady) return;
     (async () => {
       const { data: session } = await supabase.auth.getSession();
-      setUser(session?.session?.user || null);
+      const u = session?.session?.user || null;
+      setUser(u);
     })();
-  }, []);
+  }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Delta pricing ─────────────────────────────────────────────────────
+  const basePlanId     = typeof router.query.basePlan === "string" ? router.query.basePlan : null;
+  const includedTier   = basePlanId ? BASE_PLAN_INCLUDES[basePlanId]?.sms : null;
+  const includedId     = includedTier?.tierId || null;
+  function higherSmsTier(a, b) {
+    return (SMS_TIER_ORDER.indexOf(a ?? "sms-starter") >= SMS_TIER_ORDER.indexOf(b ?? "sms-starter")) ? a : b;
+  }
+  const currentTierId = includedId || null;
+  const currentTierPrice = SMS_TIER_PRICES[currentTierId] ?? 0;
+  function getSmsDeltaLabel(plan) {
+    if (plan.id === currentTierId) return "✓ Your Current Level";
+    const planOrder = SMS_TIER_ORDER.indexOf(plan.id);
+    const curOrder  = SMS_TIER_ORDER.indexOf(currentTierId);
+    if (planOrder < curOrder) return "Downgrade";
+    if (plan.price === "Custom" || plan.price == null) return "Contact Sales";
+    const delta = plan.price - currentTierPrice;
+    return delta === 0 ? "Included" : `+$${delta}/mo extra`;
+  }
+  function getSmsButtonLabel(plan) {
+    if (plan.id === currentTierId) return "Current Plan";
+    const planOrder = SMS_TIER_ORDER.indexOf(plan.id);
+    const curOrder  = SMS_TIER_ORDER.indexOf(currentTierId);
+    if (planOrder < curOrder) return "Downgrade";
+    if (plan.price === "Custom" || plan.price == null) return "Contact Sales";
+    const delta = plan.price - currentTierPrice;
+    return delta === 0 ? "Upgrade (included)" : `Upgrade — add $${delta}/mo`;
+  }
+  // ────────────────────────────────────────────────────────────
 
   const plans = [
     {
@@ -61,11 +102,10 @@ export default function SmsPlans() {
       price: 25,
       messages: 500,
       costPer: 0.05,
-      color: "#94a3b8",
+      color: "#6366f1",
       features: [
         "500 SMS messages/month",
         "Multi-tenant support",
-        "Scheduled campaigns (3 steps)",
         "Single SMS sending",
         "Lead-based targeting",
         "Delivery tracking",
@@ -80,7 +120,7 @@ export default function SmsPlans() {
       price: 120,
       messages: 2500,
       costPer: 0.048,
-      color: "#facc15",
+      color: "#22c55e",
       features: [
         "2,500 SMS messages/month",
         "Multi-tenant support",
@@ -97,11 +137,11 @@ export default function SmsPlans() {
     },
     {
       id: "sms-professional",
-      name: "Professional",
+      name: "Scale",
       price: 229,
       messages: 5000,
       costPer: 0.046,
-      color: "#38bdf8",
+      color: "#f59e0b",
       recommended: true,
       features: [
         "5,000 SMS messages/month",
@@ -120,11 +160,11 @@ export default function SmsPlans() {
     },
     {
       id: "sms-business",
-      name: "Business",
+      name: "Professional",
       price: 429,
       messages: 10000,
       costPer: 0.043,
-      color: "#10b981",
+      color: "#7c3aed",
       features: [
         "10,000 SMS messages/month",
         "Multi-tenant support",
@@ -214,7 +254,7 @@ export default function SmsPlans() {
         <div style={styles.banner}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={styles.iconBox}>
-              {ICONS.sms({ size: 48, strokeWidth: 2.5 })}
+              <span style={{ fontSize: 42, lineHeight: 1 }}>💬</span>
             </div>
             <div>
               <h1 style={styles.title}>SMS Marketing Plans</h1>
@@ -227,21 +267,29 @@ export default function SmsPlans() {
             <button style={styles.backBtn}>← Back</button>
           </Link>
         </div>
+        {/* Base plan context banner */}
+        {currentTierId !== "sms-starter" && (
+          <div style={{ marginBottom: 20, padding: "10px 16px", background: "#111827", borderRadius: 10, border: "1px solid #1f2937", color: "#9ca3af", fontSize: 16 }}>
+            {basePlanId
+              ? <><strong style={{ color: "#fff" }}>{basePlanId.charAt(0).toUpperCase() + basePlanId.slice(1)}</strong> plan includes SMS up to the <strong style={{ color: "#38bdf8" }}>{currentTierId.replace("sms-", "").charAt(0).toUpperCase() + currentTierId.replace("sms-", "").slice(1)}</strong> tier (${currentTierPrice}/mo value). You only pay the <strong style={{ color: "#22c55e" }}>extra difference</strong> to upgrade beyond that.</>
+              : <><strong style={{ color: "#38bdf8" }}>Current tier: {currentTierId}</strong> (${currentTierPrice}/mo). Upgrade cost shown is the additional monthly charge.</>}
+          </div>
+        )}
         {/* Plan Cards */}
         <div style={styles.grid}>
           {standardPlans.map((plan) => (
             <div key={plan.id} style={{ ...styles.card, borderColor: plan.color, position: "relative" }}>
-              <h2 style={styles.planName}>{plan.name}</h2>
+              <h2 style={{ ...styles.planName, color: plan.color }}>{plan.name}</h2>
               {selectedPlan === plan.id && typeof plan.price === "number" && (
                 <div style={{
                   position: "absolute",
                   top: 0,
                   right: 0,
-                  background: "#38bdf8",
-                  color: "#fff",
+                  background: plan.color,
+                  color: plan.color === "#f59e0b" ? "#000" : "#fff",
                   borderRadius: "0 8px 0 8px",
                   padding: "6px 16px",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   fontSize: 16,
                   zIndex: 2,
                 }}>
@@ -253,8 +301,11 @@ export default function SmsPlans() {
                   {plan.price === "Custom" ? "Custom" : `$${plan.price}`}
                 </span>
                 {plan.price !== "Custom" && (
-                  <span style={styles.priceUnit}>/month</span>
+                  <span style={styles.priceUnit}>/month full price</span>
                 )}
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: plan.id === currentTierId ? plan.color : SMS_TIER_ORDER.indexOf(plan.id) < SMS_TIER_ORDER.indexOf(currentTierId) ? "#6b7280" : "rgba(255,255,255,0.7)", marginBottom: 8 }}>
+                {getSmsDeltaLabel(plan)}
               </div>
               <div style={styles.messagesInfo}>
                 {typeof plan.messages === "number"
@@ -275,110 +326,31 @@ export default function SmsPlans() {
                   ))}
                 </ul>
                 <button
+                  disabled={plan.id === currentTierId}
                   onClick={() => {
+                    if (plan.id === currentTierId) return;
                     setSelectedPlan(plan.id);
                     handleSelectPlan(plan);
                   }}
                   style={{
                     ...styles.selectBtn,
-                    background: plan.recommended ? "#38bdf8" : "#1e293b",
-                    borderColor: plan.recommended ? "#38bdf8" : "#334155",
+                    background: plan.id === currentTierId ? "transparent" : plan.color,
+                    border: `2px solid ${plan.color}`,
+                    color: plan.id === currentTierId ? plan.color : (plan.color === "#f59e0b" ? "#000" : "#fff"),
+                    opacity: plan.id === currentTierId ? 0.8 : 1,
+                    cursor: plan.id === currentTierId ? "default" : "pointer",
                   }}
                 >
-                  Select {plan.name}
+                  {getSmsButtonLabel(plan)}
                 </button>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Enterprise + Add-Ons */}
-        {customPlan && (
-          <div style={styles.enterpriseAddOnsRow}>
-            <div style={styles.enterpriseCol}>
-              <h2 style={styles.addOnsTitle}>Custom Plan</h2>
-              <div style={{ ...styles.card, borderColor: customPlan.color, position: "relative" }}>
-                <h2 style={styles.planName}>{customPlan.name}</h2>
-                <div style={styles.priceWrap}>
-                  <span style={styles.price}>
-                    {customPlan.price === "Custom" ? "Custom" : `$${customPlan.price}`}
-                  </span>
-                  {customPlan.price !== "Custom" && (
-                    <span style={styles.priceUnit}>/month</span>
-                  )}
-                </div>
-                <div style={styles.messagesInfo}>
-                  {typeof customPlan.messages === "number"
-                    ? `${customPlan.messages.toLocaleString()} messages/month`
-                    : customPlan.messages}
-                </div>
-                <div style={styles.cardBody}>
-                  <ul style={styles.featureList}>
-                    {customPlan.features.map((feature, i) => (
-                      <li key={i} style={styles.feature}>
-                        <span style={styles.checkmark}>✓</span> {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={() => {
-                      setSelectedPlan(customPlan.id);
-                      handleSelectPlan(customPlan);
-                    }}
-                    style={{ ...styles.selectBtn, background: "#1e293b", borderColor: "#334155" }}
-                  >
-                    Select {customPlan.name}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.addOnsSection}>
-              <h2 style={styles.addOnsTitle}>Optional Add-Ons</h2>
-              <div style={styles.addOnsGrid}>
-                {addOns.map((addon) => (
-                  <div key={addon.id} style={styles.addOnCard}>
-                    <div style={styles.addOnIcon}>{addon.icon}</div>
-                    <div style={styles.addOnContent}>
-                      <h3 style={styles.addOnName}>{addon.name}</h3>
-                      <p style={styles.addOnDesc}>{addon.description}</p>
-                      <div style={styles.addOnPrice}>${addon.price}/month</div>
-                    </div>
-                    <button
-                      onClick={() => handleSelectAddOn(addon)}
-                      style={styles.addOnBtn}
-                    >
-                      Add to Plan
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Info Section */}
-              <div style={styles.infoBoxInRow}>
-                <h3 style={styles.infoTitle}>💡 About SMS Marketing</h3>
-                <p style={styles.infoPara}>
-                  <strong>SMS Marketing</strong> allows you to send text messages directly
-                  to your leads and customers. With industry-leading open rates (98%+),
-                  SMS is one of the most effective marketing channels available.
-                </p>
-                <p style={styles.infoPara}>
-                  All plans include multi-tenant support, scheduled campaigns, delivery
-                  tracking, and our template library. Upgrade anytime as your needs grow.
-                </p>
-                <p style={styles.infoPara}>
-                  <strong>Note:</strong> SMS requires approved sender ID registration with
-                  SMSGlobal. Our team will assist you during account setup.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
 const styles = {
   wrap: {
     minHeight: "100vh",
@@ -460,9 +432,9 @@ const styles = {
     background: "#06b6d6",
     color: "#fff",
     padding: "6px 12px",
-    fontSize: 12,
+    fontSize: 16,
     borderRadius: 8,
-    fontWeight: 700,
+    fontWeight: 600,
     zIndex: 2,
     boxShadow: "0 4px 12px rgba(6,182,214,0.5)",
   },
@@ -476,7 +448,7 @@ const styles = {
   planName: {
     margin: 0,
     fontSize: 24,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 8,
   },
 
@@ -490,7 +462,7 @@ const styles = {
 
   price: {
     fontSize: 42,
-    fontWeight: 800,
+    fontWeight: 600,
     lineHeight: 1,
   },
 
@@ -508,7 +480,7 @@ const styles = {
   },
 
   costPerMsg: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 500,
     opacity: 0.85,
   },
@@ -534,7 +506,7 @@ const styles = {
 
   checkmark: {
     color: "#38bdf8",
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 16,
     flexShrink: 0,
   },
@@ -546,7 +518,7 @@ const styles = {
     borderRadius: 10,
     color: "#fff",
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.2s",
   },
@@ -573,7 +545,7 @@ const styles = {
 
   addOnsTitle: {
     fontSize: 28,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 20,
     color: "#38bdf8",
   },
@@ -619,7 +591,7 @@ const styles = {
   addOnName: {
     margin: "0 0 6px 0",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   addOnDesc: {
@@ -630,7 +602,7 @@ const styles = {
 
   addOnPrice: {
     fontSize: 20,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#38bdf8",
   },
 
@@ -666,7 +638,7 @@ const styles = {
   infoTitle: {
     margin: "0 0 16px 0",
     fontSize: 22,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#38bdf8",
   },
 

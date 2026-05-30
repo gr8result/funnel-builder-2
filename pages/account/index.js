@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
 import { supabase } from "../../utils/supabase-client";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import Link from "next/link";
 import ICONS from "../../components/iconMap";
 import { Card } from "../../components/ui/card";
@@ -43,6 +45,15 @@ const COUNTRIES = [
 ];
 
 export default function AccountPage() {
+  const router = useRouter();
+  const { role, loading: wsLoading } = useWorkspace();
+
+  // Non-owner team members should never see this page — send them to the dashboard.
+  useEffect(() => {
+    if (!wsLoading && role && role !== "owner") {
+      router.replace("/dashboard");
+    }
+  }, [role, wsLoading, router]);
   // -----------------------------
   // STATE
   // -----------------------------
@@ -1010,7 +1021,7 @@ export default function AccountPage() {
                 background: 'rgba(0,0,0,0.3)',
                 border: '1px solid rgba(255,255,255,0.3)',
                 color: '#fff',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 600,
                 cursor: 'pointer'
               }}>← Back to Dashboard</button>
@@ -1194,10 +1205,10 @@ export default function AccountPage() {
                     marginBottom: 20,
                   }}
                 >
-                  <h4 style={{ color: emailVerified ? "#22c55e" : "#f59e0b", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                  <h4 style={{ color: emailVerified ? "#22c55e" : "#f59e0b", marginBottom: 8, fontSize: 18, fontWeight: 600 }}>
                     {emailVerified ? "✅ Email Verified" : "📧 Step 1 — Verify Your Email"}
                   </h4>
-                  <p style={{ color: "#e2e8f0", fontSize: 14, marginBottom: emailVerified ? 0 : 14 }}>
+                  <p style={{ color: "#e2e8f0", fontSize: 16, marginBottom: emailVerified ? 0 : 14 }}>
                     {emailVerified
                       ? `Email verified: ${form.email}`
                       : <>We'll send a verification link to <strong>{form.email || "your email"}</strong>. Click the link to confirm your address.</>}
@@ -1230,7 +1241,7 @@ export default function AccountPage() {
                         disabled={sendingEmailVerify}
                         style={{
                           padding: "10px 18px", borderRadius: 999, border: "none",
-                          background: "#f59e0b", color: "#111827", fontWeight: 700,
+                          background: "#f59e0b", color: "#111827", fontWeight: 600,
                           cursor: sendingEmailVerify ? "not-allowed" : "pointer",
                           opacity: sendingEmailVerify ? 0.65 : 1,
                         }}
@@ -1262,7 +1273,7 @@ export default function AccountPage() {
                         style={{
                           padding: "10px 18px", borderRadius: 999,
                           border: "1px solid #60a5fa", background: "rgba(59,130,246,0.12)",
-                          color: "#bfdbfe", fontWeight: 700,
+                          color: "#bfdbfe", fontWeight: 600,
                           cursor: checkingEmailVerify ? "not-allowed" : "pointer",
                           opacity: checkingEmailVerify ? 0.65 : 1,
                         }}
@@ -1284,12 +1295,12 @@ export default function AccountPage() {
                       marginBottom: 20,
                     }}
                   >
-                    <h4 style={{ color: phoneVerified ? "#22c55e" : "#3b82f6", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                    <h4 style={{ color: phoneVerified ? "#22c55e" : "#3b82f6", marginBottom: 8, fontSize: 18, fontWeight: 600 }}>
                       {phoneVerified ? "✅ Phone Verified" : "📱 Step 2 — Verify Your Phone"}
                     </h4>
                     {!phoneVerified && (
                       <>
-                        <p style={{ color: "#e2e8f0", fontSize: 14, marginBottom: 14 }}>
+                        <p style={{ color: "#e2e8f0", fontSize: 16, marginBottom: 14 }}>
                           We'll send a 6-digit code via SMS to <strong>{form.phone || "your phone number"}</strong>.
                         </p>
                         {!phoneCodeSent ? (
@@ -1304,14 +1315,15 @@ export default function AccountPage() {
                               setPhoneCodeSending(true);
                               setPhoneVerifyError("");
                               try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const token = session?.access_token || "";
                                 const res = await fetch("/api/account/send-phone-otp", {
                                   method: "POST",
-                                  headers: { "Content-Type": "application/json" },
+                                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                                   body: JSON.stringify({ phone: form.phone.trim() }),
                                 });
                                 const data = await res.json();
                                 if (!res.ok) throw new Error(data.error || "Failed to send SMS");
-                                setPhoneCode(data.code);
                                 setPhoneCodeSent(true);
                                 setPhoneCodeInput("");
                               } catch (err) {
@@ -1322,7 +1334,7 @@ export default function AccountPage() {
                             }}
                             style={{
                               padding: "10px 18px", borderRadius: 999, border: "none",
-                              background: "#3b82f6", color: "#fff", fontWeight: 700,
+                              background: "#3b82f6", color: "#fff", fontWeight: 600,
                               cursor: (!form.phone?.trim() || phoneCodeSending) ? "not-allowed" : "pointer",
                               opacity: (!form.phone?.trim() || phoneCodeSending) ? 0.65 : 1,
                             }}
@@ -1343,30 +1355,37 @@ export default function AccountPage() {
                             />
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 setPhoneVerifyError("");
-                                if (phoneCodeInput.trim() === phoneCode) {
+                                try {
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  const token = session?.access_token || "";
+                                  const res = await fetch("/api/account/verify-phone-otp", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                                    body: JSON.stringify({ code: phoneCodeInput.trim() }),
+                                  });
+                                  const data = await res.json();
+                                  if (!res.ok || !data.ok) throw new Error(data.error || "Incorrect code. Please try again.");
                                   setPhoneVerified(true);
                                   try {
-                                    supabase.auth.getUser().then(({ data: { user } }) => {
-                                      const phoneVerifiedKey = getPhoneVerifiedStorageKey(user?.id);
-                                      if (phoneVerifiedKey && typeof window !== "undefined") {
-                                        window.localStorage.setItem(phoneVerifiedKey, "true");
-                                      }
-                                    });
+                                    const { data: { user } } = await supabase.auth.getUser();
+                                    const phoneVerifiedKey = getPhoneVerifiedStorageKey(user?.id);
+                                    if (phoneVerifiedKey && typeof window !== "undefined") {
+                                      window.localStorage.setItem(phoneVerifiedKey, "true");
+                                    }
                                   } catch (storageErr) {
                                     console.warn("Could not persist phone verification state:", storageErr?.message || storageErr);
                                   }
-                                  setPhoneCode("");
                                   setPhoneCodeInput("");
                                   setActiveSection((prev) => Math.max(prev, 2));
-                                } else {
-                                  setPhoneVerifyError("❌ Incorrect code. Please try again.");
+                                } catch (err) {
+                                  setPhoneVerifyError("❌ " + (err.message || "Incorrect code. Please try again."));
                                 }
                               }}
                               style={{
                                 padding: "10px 18px", borderRadius: 999, border: "none",
-                                background: "#22c55e", color: "#fff", fontWeight: 700, cursor: "pointer",
+                                background: "#22c55e", color: "#fff", fontWeight: 600, cursor: "pointer",
                               }}
                             >
                               Verify Code
@@ -1377,7 +1396,7 @@ export default function AccountPage() {
                               style={{
                                 padding: "10px 14px", borderRadius: 999,
                                 border: "1px solid #6b7280", background: "transparent",
-                                color: "#9ca3af", fontSize: 13, cursor: "pointer",
+                                color: "#9ca3af", fontSize: 16, cursor: "pointer",
                               }}
                             >
                               Resend
@@ -1385,14 +1404,14 @@ export default function AccountPage() {
                           </div>
                         )}
                         {phoneVerifyError && (
-                          <p style={{ color: "#f87171", fontSize: 13, marginTop: 8 }}>{phoneVerifyError}</p>
+                          <p style={{ color: "#f87171", fontSize: 16, marginTop: 8 }}>{phoneVerifyError}</p>
                         )}
                       </>
                     )}
                     {phoneVerified && (
                       <div>
-                        <p style={{ color: "#bbf7d0", fontSize: 14, marginBottom: 6 }}>Phone number {form.phone} has been verified.</p>
-                        <p style={{ color: "#93c5fd", fontSize: 13, margin: 0 }}>
+                        <p style={{ color: "#bbf7d0", fontSize: 16, marginBottom: 6 }}>Phone number {form.phone} has been verified.</p>
+                        <p style={{ color: "#93c5fd", fontSize: 16, margin: 0 }}>
                           This only verifies your phone for onboarding. SMS sending still needs the separate SMS Activation step and access code below.
                         </p>
                       </div>
@@ -1408,7 +1427,7 @@ export default function AccountPage() {
                     style={{
                       width: "100%", padding: "16px", borderRadius: 12, border: "none",
                       background: "linear-gradient(90deg, #14b8a6, #0891b2)",
-                      color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer",
+                      color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer",
                       letterSpacing: 0.5,
                     }}
                   >
@@ -1440,7 +1459,7 @@ export default function AccountPage() {
                     alt="Business Logo"
                   />
                 ) : (
-                  <div style={{ color: "#999", fontSize: "13px" }}>
+                  <div style={{ color: "#999", fontSize: "16px" }}>
                     No logo uploaded yet
                   </div>
                 )}
@@ -1468,7 +1487,7 @@ export default function AccountPage() {
                     alt="Avatar"
                   />
                 ) : (
-                  <div style={{ color: "#999", fontSize: "13px" }}>
+                  <div style={{ color: "#999", fontSize: "16px" }}>
                     No avatar uploaded yet
                   </div>
                 )}
@@ -1567,7 +1586,7 @@ export default function AccountPage() {
                   style={{
                     marginTop: 24, width: "100%", padding: "16px", borderRadius: 12, border: "none",
                     background: "linear-gradient(90deg, #d97706, #f59e0b)",
-                    color: "#111827", fontSize: 18, fontWeight: 800, cursor: "pointer",
+                    color: "#111827", fontSize: 18, fontWeight: 600, cursor: "pointer",
                   }}
                 >
                   Continue to Agreements →
@@ -1620,7 +1639,7 @@ export default function AccountPage() {
                   style={{
                     marginTop: 24, width: "100%", padding: "16px", borderRadius: 12, border: "none",
                     background: "linear-gradient(90deg, #15803d, #22c55e)",
-                    color: "#fff", fontSize: 18, fontWeight: 800, cursor: "pointer",
+                    color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer",
                   }}
                 >
                   Continue to Account Setup →
@@ -1668,13 +1687,13 @@ export default function AccountPage() {
                     border: "2px solid #22c55e",
                   }}
                 >
-                  <p style={{ color: "#bbf7d0", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+                  <p style={{ color: "#bbf7d0", fontWeight: 600, fontSize: 18, marginBottom: 8 }}>
                     ✅ SMS Account Active
                   </p>
-                  <p style={{ color: "#e2e8f0", fontSize: 15, marginBottom: 8 }}>
+                  <p style={{ color: "#e2e8f0", fontSize: 16, marginBottom: 8 }}>
                     Your SMSGlobal Sender ID: <strong style={{ color: "#22c55e" }}>{smsSenderId}</strong>
                   </p>
-                  <p style={{ color: "#9ca3af", fontSize: 13, lineHeight: 1.5 }}>
+                  <p style={{ color: "#9ca3af", fontSize: 16, lineHeight: 1.5 }}>
                     💡 Want a dedicated number? You can add a dedicated SMS number for <strong>$35/month</strong>. Contact support.
                   </p>
                 </div>
@@ -1689,10 +1708,10 @@ export default function AccountPage() {
                         border: "2px solid #f59e0b",
                       }}
                     >
-                      <p style={{ color: "#fde68a", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                      <p style={{ color: "#fde68a", fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
                         ⚠️ Verify email first
                       </p>
-                      <p style={{ color: "#e2e8f0", fontSize: 14, margin: 0 }}>
+                      <p style={{ color: "#e2e8f0", fontSize: 16, margin: 0 }}>
                         Go to the Personal Information section above, send/complete email verification,
                         then return here to continue SMS setup.
                       </p>
@@ -1830,7 +1849,7 @@ export default function AccountPage() {
                           background: "#3b82f6",
                           color: "#fff",
                           fontSize: 16,
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: smsApplying ? "not-allowed" : "pointer",
                           opacity: smsApplying ? 0.6 : 1,
                         }}
@@ -1850,10 +1869,10 @@ export default function AccountPage() {
                           marginBottom: 24,
                         }}
                       >
-                        <p style={{ color: "#bbf7d0", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                        <p style={{ color: "#bbf7d0", fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
                           ✅ Application Submitted!
                         </p>
-                        <p style={{ color: "#e2e8f0", fontSize: 14 }}>
+                        <p style={{ color: "#e2e8f0", fontSize: 16 }}>
                           Check <strong>{smsEmail}</strong> for your access code (usually within 24 hours).
                         </p>
                       </div>
@@ -1867,7 +1886,7 @@ export default function AccountPage() {
                           border: "2px solid #3b82f6",
                         }}
                       >
-                        <h4 style={{ color: "#3b82f6", fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
+                        <h4 style={{ color: "#3b82f6", fontSize: 18, fontWeight: 600, marginBottom: 12 }}>
                           🔑 Enter Your Access Code
                         </h4>
                         <p style={{ color: "#e2e8f0", fontSize: 16, marginBottom: 16, lineHeight: 1.5 }}>
@@ -1879,7 +1898,7 @@ export default function AccountPage() {
                           background: "rgba(14,165,233,0.12)",
                           border: "1px solid rgba(56,189,248,0.35)",
                           color: "#bae6fd",
-                          fontSize: 13,
+                          fontSize: 16,
                           marginBottom: 14,
                           lineHeight: 1.5,
                         }}>
@@ -1990,7 +2009,7 @@ export default function AccountPage() {
                               background: "#22c55e",
                               color: "#fff",
                               fontSize: 16,
-                              fontWeight: 700,
+                              fontWeight: 600,
                               cursor: "pointer",
                               whiteSpace: "nowrap",
                             }}
@@ -2061,8 +2080,8 @@ export default function AccountPage() {
                       background: "rgba(34,197,94,0.12)",
                       border: "1px solid #22c55e",
                       color: "#bbf7d0",
-                      fontSize: 14,
-                      fontWeight: 700,
+                      fontSize: 16,
+                      fontWeight: 600,
                     }}
                   >
                     ✅ Your domain {form.dkimDomain || "your domain"} has now
@@ -2079,8 +2098,8 @@ export default function AccountPage() {
                       background: "rgba(248,113,113,0.12)",
                       border: "1px solid #f97316",
                       color: "#fed7aa",
-                      fontSize: 14,
-                      fontWeight: 700,
+                      fontSize: 16,
+                      fontWeight: 600,
                     }}
                   >
                     ⚠️ Domain not verified yet
@@ -2152,8 +2171,8 @@ export default function AccountPage() {
                     border: "1px solid #22c55e",
                     background: "rgba(34,197,94,0.16)",
                     color: "#bbf7d0",
-                    fontSize: 14,
-                    fontWeight: 800,
+                    fontSize: 16,
+                    fontWeight: 600,
                     cursor: "pointer",
                     whiteSpace: "nowrap",
                   }}
@@ -2195,7 +2214,7 @@ export default function AccountPage() {
                       border: "1px solid #a855f7",
                       backgroundColor: "#1a2232",
                       color: "#e2e8f0",
-                      fontSize: "15px",
+                      fontSize: "16px",
                       marginBottom: "12px",
                     }}
                   />
@@ -2307,13 +2326,13 @@ export default function AccountPage() {
                     style={{
                       padding: "12px 24px",
                       borderRadius: "10px",
-                      fontWeight: "700",
+                      fontWeight: "600",
                       backgroundColor: "#22c55e",
                       color: "#fff",
                       border: "none",
                       cursor: "pointer",
                       transition: "background 0.2s ease",
-                      fontSize: 15,
+                      fontSize: 16,
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = "#16a34a";
@@ -2335,8 +2354,8 @@ export default function AccountPage() {
                       style={{
                         marginTop: "12px",
                         color: "#10b981",
-                        fontSize: "15px",
-                        fontWeight: "700",
+                        fontSize: "16px",
+                        fontWeight: "600",
                       }}
                     >
                       ✅ DKIM + SPF records generated successfully for{" "}
@@ -2359,7 +2378,7 @@ export default function AccountPage() {
                         style={{
                           width: "100%",
                           borderCollapse: "collapse",
-                          fontSize: "13px",
+                          fontSize: "16px",
                         }}
                       >
                         <thead>
@@ -2484,9 +2503,9 @@ export default function AccountPage() {
                                       border: "none",
                                       backgroundColor: "#22c55e",
                                       color: "#fff",
-                                      fontWeight: 700,
+                                      fontWeight: 600,
                                       cursor: "pointer",
-                                      fontSize: "12px",
+                                      fontSize: "16px",
                                     }}
                                   >
                                     Copy
@@ -2509,7 +2528,7 @@ export default function AccountPage() {
                         border: "1px solid #6b7280",
                         backgroundColor: "#020617",
                         color: "#e5e7eb",
-                        fontSize: "14px",
+                        fontSize: "16px",
                         cursor: "pointer",
                       }}
                     >
@@ -2550,7 +2569,7 @@ export default function AccountPage() {
                 style={{
                   wordBreak: "break-all",
                   fontFamily: "monospace",
-                  fontSize: "13px",
+                  fontSize: "16px",
                 }}
               >
                 {apiKey}
@@ -2586,7 +2605,7 @@ export default function AccountPage() {
           style={{
             padding: "16px 34px",
             borderRadius: "10px",
-            fontWeight: "900",
+            fontWeight: "600",
             fontSize: "17px",
             cursor: "pointer",
           }}
@@ -2602,7 +2621,7 @@ export default function AccountPage() {
               marginTop: 18,
               padding: "16px 34px",
               borderRadius: "10px",
-              fontWeight: "900",
+              fontWeight: "600",
               fontSize: "17px",
               cursor: "pointer",
               background: "#635bff",
@@ -2653,7 +2672,7 @@ export default function AccountPage() {
             boxShadow: "0 8px 48px rgba(168,85,247,0.25)",
           }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ color: "#a855f7", fontSize: 26, fontWeight: 800, marginBottom: 12 }}>
+            <h2 style={{ color: "#a855f7", fontSize: 26, fontWeight: 600, marginBottom: 12 }}>
               Application Submitted!
             </h2>
             <p style={{ color: "#e2e8f0", fontSize: 16, lineHeight: 1.7, marginBottom: 8 }}>
@@ -2662,7 +2681,7 @@ export default function AccountPage() {
             <p style={{ color: "#e2e8f0", fontSize: 16, lineHeight: 1.7, marginBottom: 24 }}>
               You will receive an email at <strong style={{ color: "#a855f7" }}>{form.email}</strong> once your account has been approved.
             </p>
-            <p style={{ color: "#9ca3af", fontSize: 14, marginBottom: 28 }}>
+            <p style={{ color: "#9ca3af", fontSize: 16, marginBottom: 28 }}>
               This usually takes 1–2 business days. No further action is needed from you right now.
             </p>
             <button
@@ -2674,7 +2693,7 @@ export default function AccountPage() {
                 background: "linear-gradient(90deg, #7c3aed, #a855f7)",
                 color: "#fff",
                 fontSize: 16,
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: "pointer",
               }}
             >

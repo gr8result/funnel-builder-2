@@ -1,4 +1,4 @@
-// /pages/modules/affiliates/vendor/manage-products/performance-reports.js 
+﻿// /pages/modules/affiliates/vendor/manage-products/performance-reports.js 
 // ✅ Vendor Sales Performance Dashboard
 // Tracks vendor sales, revenue, and performance.
 
@@ -197,8 +197,8 @@ export default function VendorPerformanceReports() {
                   border: "2px solid rgba(255,255,255,0.45)",
                   borderRadius: 12,
                   padding: "10px 18px",
-                  fontSize: 15,
-                  fontWeight: 700,
+                  fontSize: 16,
+                  fontWeight: 600,
                   cursor: "pointer",
                   marginLeft: 18,
                 }}
@@ -350,9 +350,9 @@ export default function VendorPerformanceReports() {
                   }}
                 >
                   <h2 style={{ fontSize: 16, opacity: 0.9 }}>{card.label}</h2>
-                  <p style={{ fontSize: 22, fontWeight: 800 }}>${card.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  <p style={{ fontSize: 14, opacity: 0.8 }}>Sales: {card.sales}</p>
-                  <p style={{ fontSize: 14, opacity: 0.8 }}>{card.label === 'Affiliate Sales' ? 'Total Affiliates' : 'Affiliates'}: {card.affiliates}</p>
+                  <p style={{ fontSize: 22, fontWeight: 600 }}>${card.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p style={{ fontSize: 16, opacity: 0.8 }}>Sales: {card.sales}</p>
+                  <p style={{ fontSize: 16, opacity: 0.8 }}>{card.label === 'Affiliate Sales' ? 'Total Affiliates' : 'Affiliates'}: {card.affiliates}</p>
                 </div>
               );
             })}
@@ -365,20 +365,20 @@ export default function VendorPerformanceReports() {
               {/* Summary Cards */}
               <div style={page.statGrid}>
                 <div style={page.statCard}>
-                  <h2 style={{ fontSize: 14, opacity: 0.8 }}>Total Revenue</h2>
-                  <p style={{ fontSize: 26, fontWeight: 800 }}>
+                  <h2 style={{ fontSize: 16, opacity: 0.8 }}>Total Revenue</h2>
+                  <p style={{ fontSize: 26, fontWeight: 600 }}>
                     ${stats.totalRevenue.toFixed(2)}
                   </p>
                 </div>
                 <div style={page.statCard}>
-                  <h2 style={{ fontSize: 14, opacity: 0.8 }}>Total Sales</h2>
-                  <p style={{ fontSize: 26, fontWeight: 800 }}>
+                  <h2 style={{ fontSize: 16, opacity: 0.8 }}>Total Sales</h2>
+                  <p style={{ fontSize: 26, fontWeight: 600 }}>
                     {stats.totalSales}
                   </p>
                 </div>
                 <div style={page.statCard}>
-                  <h2 style={{ fontSize: 14, opacity: 0.8 }}>Average Sale</h2>
-                  <p style={{ fontSize: 26, fontWeight: 800 }}>
+                  <h2 style={{ fontSize: 16, opacity: 0.8 }}>Average Sale</h2>
+                  <p style={{ fontSize: 26, fontWeight: 600 }}>
                     ${stats.avgSale.toFixed(2)}
                   </p>
                 </div>

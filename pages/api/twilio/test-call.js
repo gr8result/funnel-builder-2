@@ -2,6 +2,7 @@
 // Simple test endpoint to make Twilio call your mobile
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
@@ -21,7 +22,7 @@ if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {
 
 const client = twilio(ACCOUNT_SID, AUTH_TOKEN);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   // --- CORS / preflight so tools don’t explode ---
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -82,3 +83,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || "Call failed." });
   }
 }
+
+export default withAuth(handler);

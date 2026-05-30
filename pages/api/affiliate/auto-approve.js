@@ -1,7 +1,8 @@
 // pages/api/affiliate/auto-approve.js
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Missing token' });
@@ -24,3 +25,5 @@ export default async function handler(req, res) {
   if (updateErr) return res.status(400).json({ error: 'Failed to approve application' });
   return res.status(200).json({ ok: true });
 }
+
+export default withAdmin(handler);

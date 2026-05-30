@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // /pages/modules/email/reports/broadcasts/index.js
 // ============================================
 // FULL DROP-IN REPLACEMENT
@@ -417,16 +417,16 @@ const styles = {
   rangeRow:{marginTop:12,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"},
   rangePill:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.55)",color:"#e6eef8",borderRadius:999,padding:"7px 12px",fontSize:16,cursor:"pointer",fontWeight:600},
   rangePillActive:{background:"rgba(250,204,21,0.20)",border:"1px solid rgba(250,204,21,0.55)"},
-  toggleBtn:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"},
+  toggleBtn:{border:"1px solid rgba(255,255,255,0.18)",background:"rgba(2,6,23,0.75)",color:"#e6eef8",borderRadius:999,padding:"10px 16px",fontSize:16,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"},
   note:{marginTop:10,padding:"10px 12px",borderRadius:12,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)",fontSize:16},
   metricsGrid:{marginTop:14,display:"grid",gridTemplateColumns:"repeat(5, minmax(0, 1fr))",gap:10},
   metricBox:{padding:12,borderRadius:12,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.10)"},
-  metricTitle:{fontSize:16,opacity:0.85,fontWeight:700},
-  metricValue:{fontSize:16,fontWeight:700,marginTop:6},
+  metricTitle:{fontSize:16,opacity:0.85,fontWeight:600},
+  metricValue:{fontSize:16,fontWeight:600,marginTop:6},
   chartWrap:{marginTop:14,padding:14,borderRadius:14,background:"rgba(2,6,23,0.55)",border:"1px solid rgba(255,255,255,0.10)"},
   tableWrap:{marginTop:14,borderRadius:12,overflow:"hidden",border:"1px solid rgba(255,255,255,0.10)"},
   tableHeadRow:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(255,255,255,0.06)"},
-  th:{fontSize:16,fontWeight:700,opacity:0.9},
+  th:{fontSize:16,fontWeight:600,opacity:0.9},
   tr:{display:"grid",gridTemplateColumns:"1.4fr 2fr 2fr .8fr .6fr .6fr .6fr 1fr",padding:"10px 12px",background:"rgba(2,6,23,0.45)",borderTop:"1px solid rgba(255,255,255,0.08)"},
   td:{fontSize:16,opacity:0.92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"},
 };

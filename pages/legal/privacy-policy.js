@@ -1,4 +1,4 @@
-// /pages/legal/privacy-policy.js
+﻿// /pages/legal/privacy-policy.js
 // Privacy Policy page — styled for dark theme (#0c121a), 1320px max width, clean typography.
 
 import Head from "next/head";
@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
 
   const heading = {
     fontSize: "2.4rem",
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: "1rem",
     color: "#00bcd4",
   };

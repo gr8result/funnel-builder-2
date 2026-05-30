@@ -29,3 +29,12 @@
 .website-builder {
   overflow-x: auto;
 }
+
+/* Fix: global CSS sets span/div font-size to 16px explicitly, which overrides
+   inheritance from the parent <p>. This rule forces all children of the text
+   block to inherit the block's font-size so sidebar + toolbar changes are visible.
+   Specificity: class (0,1,0) > type (0,0,1) so it wins over span/div rules.
+   Inline styles still override this (they always beat class selectors). */
+.wb-text-block * {
+  font-size: inherit;
+}

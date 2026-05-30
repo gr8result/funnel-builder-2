@@ -6,12 +6,13 @@
 // ✅ Finds any .html where path includes "/finished-emails/" or "/user-templates/"
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "GET only" });
   }
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
     });
 
     const bucket = String(req.query.bucket || "email-user-assets");
-    const userId = String(req.query.userId || "").trim();
+    const userId = req.user.id;
     const maxDepth = clampInt(req.query.maxDepth, 10, 2, 30);
     const maxFiles = clampInt(req.query.maxFiles, 4000, 50, 20000);
 
@@ -148,3 +149,5 @@ async function scanBucketForPremadeHtml(supabaseAdmin, bucket, { maxDepth, maxFi
 
   return out;
 }
+
+export default withAuth(handler);

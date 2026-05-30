@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../../lib/emailValidation";
+import { withWorkspace } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,7 +39,7 @@ async function findSavedAutoresponderIdByUniqueFields({ name, created_at }) {
   return null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed", data: null });
 
   try {
@@ -201,3 +202,5 @@ async function enrollMembersToQueue(autoresponderId, listId, subject, templatePa
   const skipped = (recipients.length - inserts.length) + skippedRecipients.length;
   return { ok: true, added, skipped, errors: errors.concat(skippedRecipients.length ? [{ skippedRecipients }] : []) };
 }
+
+export default withWorkspace(handler);

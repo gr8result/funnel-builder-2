@@ -1,7 +1,8 @@
-﻿// pages/api/assets/upload.js
+// pages/api/assets/upload.js
 import fs from "fs";
 import path from "path";
 import { IncomingForm } from "formidable";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 export const config = {
   api: { bodyParser: false }, // we handle multipart ourselves
@@ -9,11 +10,17 @@ export const config = {
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
+const ALLOWED_EXTENSIONS = new Set([
+  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico", ".bmp", ".avif",
+  ".mp4", ".webm", ".mov", ".mp3", ".wav", ".ogg",
+  ".pdf", ".csv",
+]);
+
 function ensureDir() {
   if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).send("Method not allowed");
     return;
@@ -38,6 +45,9 @@ export default async function handler(req, res) {
           f.forEach((file) => {
             if (!file || !file.filepath) return;
             const ext = path.extname(file.originalFilename || file.newFilename || ".bin").toLowerCase();
+            if (!ALLOWED_EXTENSIONS.has(ext)) {
+              throw new Error(`File type ${ext} is not allowed`);
+            }
             const safe = (file.originalFilename || file.newFilename || "file")
               .toLowerCase()
               .replace(/[^a-z0-9._-]+/g, "-")
@@ -70,3 +80,4 @@ export default async function handler(req, res) {
   });
 }
 
+export default withAuth(handler);

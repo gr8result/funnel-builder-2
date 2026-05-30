@@ -5,8 +5,9 @@
 // DELETE → delete rule (?id=)
 
 import { requireUser } from '../../../lib/social/auth';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const auth = await requireUser(req);
   if (auth.error) return res.status(401).json({ ok: false, error: auth.error });
 
@@ -91,3 +92,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ ok: false, error: 'Method not allowed' });
 }
+
+export default withAuth(handler);

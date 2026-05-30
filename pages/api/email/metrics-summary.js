@@ -6,12 +6,13 @@
 //   /api/email/metrics-summary?type=automation&id=<uuid>
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
 
 export const config = {
   api: { bodyParser: true },
 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Use GET" });
   }
@@ -124,3 +125,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

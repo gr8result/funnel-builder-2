@@ -3,70 +3,103 @@
 
 import "../styles/globals.css";
 import "../styles/elementor-icon-fonts.css";
-import "@chaibuilder/sdk/styles";
-import "react-image-crop/dist/ReactCrop.css";
+// NOTE: @chaibuilder/sdk/styles and react-image-crop/dist/ReactCrop.css moved
+// to the specific pages that use them, to avoid bloating the shared bundle.
 import "../styles/sidenav.css";
 import "../styles/marketplace-overhaul.css";
 import Layout from "../components/Layout";
 import { AuthProvider } from "../context/AuthContext";
+import { WorkspaceProvider } from "../hooks/useWorkspace";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
 
-// ── Thin top-of-page progress bar shown during route transitions ──────────────
+// ── Full-screen loading overlay shown during route transitions ────────────────
 function RouteProgressBar() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
-  const [width, setWidth] = useState(0);
-  const timerRef = useRef(null);
-  const crawlRef = useRef(null);
 
   useEffect(() => {
-    function start() {
-      setWidth(0);
-      setVisible(true);
-      // Quick jump to 20%, then slowly crawl toward 90%
-      setTimeout(() => setWidth(20), 10);
-      setTimeout(() => setWidth(50), 200);
-      crawlRef.current = setInterval(() => {
-        setWidth((w) => (w < 85 ? w + 2 : w));
-      }, 400);
-    }
-    function finish() {
-      clearInterval(crawlRef.current);
-      setWidth(100);
-      timerRef.current = setTimeout(() => {
-        setVisible(false);
-        setWidth(0);
-      }, 400);
-    }
-
-    router.events.on("routeChangeStart", start);
-    router.events.on("routeChangeComplete", finish);
-    router.events.on("routeChangeError", finish);
+    const show = () => setVisible(true);
+    const hide = () => setVisible(false);
+    router.events.on("routeChangeStart", show);
+    router.events.on("routeChangeComplete", hide);
+    router.events.on("routeChangeError", hide);
     return () => {
-      router.events.off("routeChangeStart", start);
-      router.events.off("routeChangeComplete", finish);
-      router.events.off("routeChangeError", finish);
-      clearInterval(crawlRef.current);
-      clearTimeout(timerRef.current);
+      router.events.off("routeChangeStart", show);
+      router.events.off("routeChangeComplete", hide);
+      router.events.off("routeChangeError", hide);
     };
   }, [router]);
 
   if (!visible) return null;
+
+  const r = 38;
+  const circ = 2 * Math.PI * r;
+  const arcLen = circ * 0.72;
+
   return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999,
-      height: 3, pointerEvents: "none",
-    }}>
+    <>
+      <style>{`
+        @keyframes rb-spin{to{transform:rotate(360deg)}}
+        @keyframes rb-pulse{0%,100%{opacity:.18;transform:scale(.8);}50%{opacity:.6;transform:scale(1.1);}}
+        @keyframes rb-dot{0%,100%{opacity:.2;}50%{opacity:1;}}
+      `}</style>
       <div style={{
-        height: "100%",
-        width: `${width}%`,
-        background: "linear-gradient(90deg, #3b82f6, #06b6d4)",
-        transition: width === 100 ? "width 0.2s ease" : "width 0.4s ease",
-        boxShadow: "0 0 8px rgba(59,130,246,0.7)",
-        borderRadius: "0 2px 2px 0",
-      }} />
-    </div>
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(5,7,15,0.82)",
+        backdropFilter: "blur(4px)",
+        display: "grid", placeItems: "center",
+        pointerEvents: "none",
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          {/* Ring + glow orb */}
+          <div style={{ position: "relative", width: 108, height: 108, display: "grid", placeItems: "center" }}>
+            {/* Pulsing glow */}
+            <div style={{
+              position: "absolute", width: 76, height: 76, borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(14,165,233,.28) 0%, transparent 72%)",
+              animation: "rb-pulse 2.6s ease-in-out infinite",
+            }} />
+            {/* Spinning arc */}
+            <svg width="108" height="108" viewBox="0 0 108 108"
+              style={{ position: "absolute", animation: "rb-spin 1.8s linear infinite" }}>
+              <defs>
+                <linearGradient id="rb-arc-g" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="60%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <circle cx="54" cy="54" r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="4.5" />
+              <circle cx="54" cy="54" r={r} fill="none" stroke="url(#rb-arc-g)" strokeWidth="4.5"
+                strokeLinecap="round"
+                strokeDasharray={`${arcLen.toFixed(1)} ${(circ - arcLen).toFixed(1)}`}
+                transform="rotate(-90 54 54)"
+              />
+              <circle cx={54 + r} cy="54" r="4" fill="#0ea5e9"
+                style={{ filter: "drop-shadow(0 0 6px #0ea5e9)" }} />
+            </svg>
+            {/* Centre jewel */}
+            <div style={{
+              position: "relative", width: 14, height: 14, borderRadius: "50%",
+              background: "linear-gradient(135deg,#0ea5e9,#8b5cf6)",
+              boxShadow: "0 0 20px rgba(14,165,233,.8), 0 0 6px rgba(14,165,233,.5)",
+            }} />
+          </div>
+
+          {/* Breathing dots */}
+          <div style={{ display: "flex", gap: 7 }}>
+            {[0, 1, 2].map(i => (
+              <span key={i} style={{
+                display: "block", width: 6, height: 6, borderRadius: "50%",
+                background: "#0ea5e9",
+                animation: `rb-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
+              }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -118,22 +151,26 @@ export default function MyApp({ Component, pageProps }) {
   if (hideLayout) {
     return (
       <AuthProvider>
-        <RouteProgressBar />
-        <Root>
-          <Component {...pageProps} />
-        </Root>
+        <WorkspaceProvider>
+          <RouteProgressBar />
+          <Root>
+            <Component {...pageProps} />
+          </Root>
+        </WorkspaceProvider>
       </AuthProvider>
     );
   }
 
   return (
     <AuthProvider>
-      <RouteProgressBar />
-      <Root>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
-      </Root>
+      <WorkspaceProvider>
+        <RouteProgressBar />
+        <Root>
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </Root>
+      </WorkspaceProvider>
     </AuthProvider>
   );
 }

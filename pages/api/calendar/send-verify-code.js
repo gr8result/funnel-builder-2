@@ -3,6 +3,7 @@
 // Called by the public booking page for phone verification.
 
 import { sendSmsGlobal } from "../../../lib/smsglobal";
+import crypto from "crypto";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -10,7 +11,7 @@ export default async function handler(req, res) {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: "Phone number required." });
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
 
   const result = await sendSmsGlobal({
     toPhone: phone,

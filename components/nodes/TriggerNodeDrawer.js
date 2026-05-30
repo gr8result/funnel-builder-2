@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 
 export default function TriggerNodeDrawer({ node, onSave, onClose }) {
   const n = node || {};
@@ -32,7 +32,7 @@ export default function TriggerNodeDrawer({ node, onSave, onClose }) {
     <div style={styles.overlay}>
       <div style={styles.panel}>
         <div style={styles.header}>
-          <div style={{ fontWeight: 800, fontSize: 18 }}>Trigger Settings</div>
+          <div style={{ fontWeight: 600, fontSize: 18 }}>Trigger Settings</div>
           <button onClick={onClose} style={styles.xBtn} aria-label="Close">
             ×
           </button>
@@ -149,8 +149,8 @@ const styles = {
   },
   label: {
     display: "block",
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     margin: "10px 0 6px",
     opacity: 0.9,
   },
@@ -176,7 +176,7 @@ const styles = {
     border: "none",
     background: "#22c55e",
     color: "#04110a",
-    fontWeight: 900,
+    fontWeight: 600,
     cursor: "pointer",
   },
   cancelBtn: {
@@ -185,7 +185,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.15)",
     background: "transparent",
     color: "#fff",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
   },
 };

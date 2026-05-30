@@ -8,6 +8,7 @@
 // ============================================
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -21,7 +22,7 @@ const supabase = createClient(SUPABASE_URL, keyToUse);
 const BUCKET = "email-user-assets";
 const FOLDER = "builder-templates";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -64,3 +65,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "Save failed", detail: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

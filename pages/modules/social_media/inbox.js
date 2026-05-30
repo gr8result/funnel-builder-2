@@ -43,30 +43,30 @@ const S = {
   banner:      { maxWidth: 1620, margin: '16px auto 0', background: 'rgba(194,7,169,0.99)', border: '1px solid rgba(167,169,250,0.2)', borderRadius: 16, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 },
   bannerLeft:  { display: 'flex', alignItems: 'center', gap: 16 },
   bannerIcon:  { width: 48, height: 48, borderRadius: 16, background: 'rgb(166,44,248)', border: '1px solid rgba(167,169,250,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 },
-  bannerTitle: { fontSize: 28, fontWeight: 700, color: '#F3F0FF', margin: 0 },
-  bannerSub:   { fontSize: 14, color: '#ffffffcc', marginTop: 2 },
+  bannerTitle: { fontSize: 28, fontWeight: 600, color: '#F3F0FF', margin: 0 },
+  bannerSub:   { fontSize: 16, color: '#ffffffcc', marginTop: 2 },
   bannerNav:   { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  bannerBtn:   { padding: '8px 16px', borderRadius: 9, border: '1px solid rgba(164,58,237,0.4)', background: 'rgb(240,233,233)', color: '#4c32b3', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
+  bannerBtn:   { padding: '8px 16px', borderRadius: 9, border: '1px solid rgba(164,58,237,0.4)', background: 'rgb(240,233,233)', color: '#4c32b3', fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap' },
   inner:       { maxWidth: 1100, margin: '0 auto', padding: '24px 20px 60px' },
   tabs:        { display: 'flex', gap: 7, marginBottom: 22, flexWrap: 'wrap' },
-  tab:  (a)  => ({ padding: '7px 18px', borderRadius: 8, border: a ? '1px solid rgba(167,169,250,0.5)' : '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', fontWeight: 600, fontSize: 14, background: a ? 'rgba(164,58,237,0.45)' : 'rgba(255,255,255,0.04)', color: a ? '#F3F0FF' : '#9CA3AF', transition: 'all 0.15s' }),
+  tab:  (a)  => ({ padding: '7px 18px', borderRadius: 8, border: a ? '1px solid rgba(167,169,250,0.5)' : '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', fontWeight: 600, fontSize: 16, background: a ? 'rgba(164,58,237,0.45)' : 'rgba(255,255,255,0.04)', color: a ? '#F3F0FF' : '#9CA3AF', transition: 'all 0.15s' }),
   card:        { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '18px 20px', marginBottom: 14 },
   form:        { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(167,169,250,0.2)', borderRadius: 14, padding: '20px 22px', marginBottom: 22 },
-  formTitle:   { fontSize: 16, fontWeight: 700, color: '#E9D5FF', marginBottom: 14, marginTop: 0 },
+  formTitle:   { fontSize: 16, fontWeight: 600, color: '#E9D5FF', marginBottom: 14, marginTop: 0 },
   row:         { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10, alignItems: 'flex-start' },
-  label:       { fontSize: 13, color: '#9CA3AF', marginBottom: 4, display: 'block' },
-  input:       { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '8px 14px', fontSize: 14, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
-  sel:         { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '8px 12px', fontSize: 14, outline: 'none', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
-  ta:          { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '9px 14px', fontSize: 14, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 70 },
-  saveBtn:     { padding: '10px 22px', borderRadius: 9, background: 'rgba(124,58,237,0.75)', border: '1px solid rgba(167,169,250,0.4)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' },
-  secBtn:      { padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#D8B4FE', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
-  dangerBtn:   { padding: '6px 12px', borderRadius: 7, background: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', fontWeight: 600, fontSize: 13, cursor: 'pointer' },
-  pill:  (c,bg) => ({ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 12, fontWeight: 600, color: c, background: bg }),
-  notice:      { padding: '10px 16px', borderRadius: 10, background: 'rgba(164,58,237,0.2)', border: '1px solid rgba(167,169,250,0.3)', fontSize: 14, color: '#D8B4FE', marginBottom: 16 },
-  err:         { padding: '10px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 14, color: '#FCA5A5', marginBottom: 16 },
-  empty:       { textAlign: 'center', padding: '40px 20px', color: '#6B7280', fontSize: 14 },
-  kw:          { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(124,58,237,0.35)', border: '1px solid rgba(167,169,250,0.3)', borderRadius: 20, padding: '3px 10px 3px 12px', fontSize: 13, color: '#E9D5FF', margin: '3px' },
-  kwX:         { cursor: 'pointer', opacity: 0.6, fontSize: 15, lineHeight: 1 },
+  label:       { fontSize: 16, color: '#9CA3AF', marginBottom: 4, display: 'block' },
+  input:       { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '8px 14px', fontSize: 16, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+  sel:         { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '8px 12px', fontSize: 16, outline: 'none', cursor: 'pointer', width: '100%', boxSizing: 'border-box' },
+  ta:          { background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(167,169,250,0.25)', borderRadius: 8, color: '#F3F0FF', padding: '9px 14px', fontSize: 16, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 70 },
+  saveBtn:     { padding: '10px 22px', borderRadius: 9, background: 'rgba(124,58,237,0.75)', border: '1px solid rgba(167,169,250,0.4)', color: '#fff', fontWeight: 600, fontSize: 16, cursor: 'pointer' },
+  secBtn:      { padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#D8B4FE', fontWeight: 600, fontSize: 16, cursor: 'pointer' },
+  dangerBtn:   { padding: '6px 12px', borderRadius: 7, background: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', fontWeight: 600, fontSize: 16, cursor: 'pointer' },
+  pill:  (c,bg) => ({ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 20, fontSize: 16, fontWeight: 600, color: c, background: bg }),
+  notice:      { padding: '10px 16px', borderRadius: 10, background: 'rgba(164,58,237,0.2)', border: '1px solid rgba(167,169,250,0.3)', fontSize: 16, color: '#D8B4FE', marginBottom: 16 },
+  err:         { padding: '10px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 16, color: '#FCA5A5', marginBottom: 16 },
+  empty:       { textAlign: 'center', padding: '40px 20px', color: '#6B7280', fontSize: 16 },
+  kw:          { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(124,58,237,0.35)', border: '1px solid rgba(167,169,250,0.3)', borderRadius: 20, padding: '3px 10px 3px 12px', fontSize: 16, color: '#E9D5FF', margin: '3px' },
+  kwX:         { cursor: 'pointer', opacity: 0.6, fontSize: 16, lineHeight: 1 },
   toggle: (on) => ({ width: 40, height: 22, borderRadius: 11, background: on ? '#7C3AED' : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }),
   toggleDot: (on) => ({ position: 'absolute', top: 3, left: on ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }),
   setupBox:    { background: 'rgba(253,224,71,0.08)', border: '1px solid rgba(253,224,71,0.3)', borderRadius: 12, padding: '16px 18px', marginBottom: 20 },
@@ -294,7 +294,7 @@ export default function BotBuilderPage() {
                         {editingRule.keywords.map(kw => (
                           <span key={kw} style={S.kw}>{kw}<span style={S.kwX} onClick={() => removeKw(kw)}>x</span></span>
                         ))}
-                        {editingRule.keywords.length === 0 && <span style={{ color: '#6B7280', fontSize: 13 }}>No keywords yet</span>}
+                        {editingRule.keywords.length === 0 && <span style={{ color: '#6B7280', fontSize: 16 }}>No keywords yet</span>}
                       </div>
                     </div>
                   )}
@@ -314,7 +314,7 @@ export default function BotBuilderPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <Toggle on={editingRule.like_comment} onChange={v => setEditingRule(r=>({...r,like_comment:v}))} />
-                    <span style={{ fontSize: 14, color: editingRule.like_comment ? '#E9D5FF' : '#6B7280' }}>Auto-like the comment</span>
+                    <span style={{ fontSize: 16, color: editingRule.like_comment ? '#E9D5FF' : '#6B7280' }}>Auto-like the comment</span>
                   </div>
 
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -322,7 +322,7 @@ export default function BotBuilderPage() {
                     <button style={S.secBtn} onClick={() => { setEditingRule(null); setErr(''); }}>Cancel</button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                       <Toggle on={editingRule.is_active} onChange={v => setEditingRule(r=>({...r,is_active:v}))} />
-                      <span style={{ fontSize: 13, color: '#9CA3AF' }}>Active</span>
+                      <span style={{ fontSize: 16, color: '#9CA3AF' }}>Active</span>
                     </div>
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function BotBuilderPage() {
                         <div style={{ width: 30, height: 30, borderRadius: 8, background: meta.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           {meta.svg(meta.color)}
                         </div>
-                        <strong style={{ fontSize: 15, color: '#E9D5FF', flex: 1 }}>{rule.name}</strong>
+                        <strong style={{ fontSize: 16, color: '#E9D5FF', flex: 1 }}>{rule.name}</strong>
                         <Toggle on={rule.is_active} onChange={() => toggleRule(rule)} />
                         <button style={S.secBtn} onClick={() => { setEditingRule({...rule}); setErr(''); setNotice(''); setKwInput(''); }}>Edit</button>
                         <button style={S.dangerBtn} onClick={() => deleteRule(rule.id)}>Delete</button>
@@ -373,7 +373,7 @@ export default function BotBuilderPage() {
                         {rule.like_comment  && <span style={S.pill('#FCA5A5','rgba(127,29,29,0.4)')}>Auto-like</span>}
                       </div>
                       {rule.reply_comment && (
-                        <div style={{ marginTop: 8, fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 8, fontSize: 16, color: '#9CA3AF', fontStyle: 'italic' }}>
                           "{rule.reply_comment.slice(0,120)}{rule.reply_comment.length>120?'...':''}"
                         </div>
                       )}
@@ -389,7 +389,7 @@ export default function BotBuilderPage() {
               <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button style={S.tab(convFilter==='all')}       onClick={() => setConvFilter('all')}>All</button>
                 <button style={S.tab(convFilter==='unmatched')} onClick={() => setConvFilter('unmatched')}>Unmatched</button>
-                <span style={{ color: '#9CA3AF', fontSize: 13, marginLeft: 'auto' }}>{convTotal} total</span>
+                <span style={{ color: '#9CA3AF', fontSize: 16, marginLeft: 'auto' }}>{convTotal} total</span>
                 <button style={S.secBtn} onClick={() => loadConvs(convPage)}>Refresh</button>
               </div>
 
@@ -404,16 +404,16 @@ export default function BotBuilderPage() {
                         <div style={{ ...S.convIcon, background: meta.color + '22' }}>{meta.svg(meta.color)}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: meta.color }}>{meta.label}</span>
+                            <span style={{ fontSize: 16, fontWeight: 600, color: meta.color }}>{meta.label}</span>
                             <span style={S.pill('#9CA3AF','rgba(255,255,255,0.06)')}>{c.event_type}</span>
                             <ActionBadge action={c.action_taken} />
-                            {c.rule_name && <span style={{ fontSize: 12, color: '#6B7280' }}>Rule: {c.rule_name}</span>}
-                            <span style={{ fontSize: 12, color: '#4B5563', marginLeft: 'auto' }}>{fmtDate(c.created_at)}</span>
+                            {c.rule_name && <span style={{ fontSize: 16, color: '#6B7280' }}>Rule: {c.rule_name}</span>}
+                            <span style={{ fontSize: 16, color: '#4B5563', marginLeft: 'auto' }}>{fmtDate(c.created_at)}</span>
                           </div>
-                          {c.sender_name && <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 3 }}>From: {c.sender_name}</div>}
-                          <div style={{ fontSize: 14, color: '#D8B4FE', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.message_in}</div>
+                          {c.sender_name && <div style={{ fontSize: 16, color: '#6B7280', marginBottom: 3 }}>From: {c.sender_name}</div>}
+                          <div style={{ fontSize: 16, color: '#D8B4FE', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.message_in}</div>
                           {c.reply_sent && (
-                            <div style={{ fontSize: 13, color: '#6EE7B7', marginTop: 4, fontStyle: 'italic' }}>Reply: {c.reply_sent.slice(0,200)}</div>
+                            <div style={{ fontSize: 16, color: '#6EE7B7', marginTop: 4, fontStyle: 'italic' }}>Reply: {c.reply_sent.slice(0,200)}</div>
                           )}
                         </div>
                       </div>
@@ -422,7 +422,7 @@ export default function BotBuilderPage() {
                   {convTotal > 30 && (
                     <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'center' }}>
                       {convPage > 1 && <button style={S.secBtn} onClick={() => loadConvs(convPage-1)}>Prev</button>}
-                      <span style={{ color: '#9CA3AF', fontSize: 14, alignSelf: 'center' }}>Page {convPage} of {Math.ceil(convTotal/30)}</span>
+                      <span style={{ color: '#9CA3AF', fontSize: 16, alignSelf: 'center' }}>Page {convPage} of {Math.ceil(convTotal/30)}</span>
                       {convPage < Math.ceil(convTotal/30) && <button style={S.secBtn} onClick={() => loadConvs(convPage+1)}>Next</button>}
                     </div>
                   )}
@@ -435,36 +435,36 @@ export default function BotBuilderPage() {
             <div>
               <div style={{ ...S.card, borderLeft: '3px solid #FCD34D' }}>
                 <h3 style={{ marginTop: 0, color: '#FCD34D', fontSize: 16 }}>One-time Meta webhook setup</h3>
-                <p style={{ color: '#D8B4FE', fontSize: 14, lineHeight: 1.7 }}>
+                <p style={{ color: '#D8B4FE', fontSize: 16, lineHeight: 1.7 }}>
                   Register your webhook with Meta once so Facebook and Instagram send comment and DM events to your server automatically.
                 </p>
-                <ol style={{ color: '#E9D5FF', fontSize: 14, lineHeight: 2.2, paddingLeft: 20 }}>
+                <ol style={{ color: '#E9D5FF', fontSize: 16, lineHeight: 2.2, paddingLeft: 20 }}>
                   <li>Go to Meta for Developers, open your App, then Webhooks</li>
                   <li>Click Subscribe to a Page</li>
-                  <li>Set Callback URL to: <code style={{ background: 'rgba(0,0,0,0.5)', padding: '4px 10px', borderRadius: 6, fontSize: 13 }}>{webhookUrl}</code></li>
+                  <li>Set Callback URL to: <code style={{ background: 'rgba(0,0,0,0.5)', padding: '4px 10px', borderRadius: 6, fontSize: 16 }}>{webhookUrl}</code></li>
                   <li>Set Verify Token to the value of META_WEBHOOK_VERIFY_TOKEN in your .env.local</li>
                   <li>Subscribe to fields: messages, feed, mention</li>
                   <li>Click Verify and Save</li>
                 </ol>
-                <p style={{ fontSize: 13, color: '#6B7280', marginTop: 8 }}>
+                <p style={{ fontSize: 16, color: '#6B7280', marginTop: 8 }}>
                   Add META_WEBHOOK_VERIFY_TOKEN=any-secret-string to your .env.local and Vercel environment variables.
                 </p>
               </div>
               <div style={{ ...S.card, borderLeft: '3px solid #6EE7B7', marginTop: 16 }}>
                 <h3 style={{ marginTop: 0, color: '#6EE7B7', fontSize: 16 }}>Step 2 — Subscribe your Facebook Pages</h3>
-                <p style={{ color: '#D8B4FE', fontSize: 14, lineHeight: 1.7, marginBottom: 14 }}>
+                <p style={{ color: '#D8B4FE', fontSize: 16, lineHeight: 1.7, marginBottom: 14 }}>
                   After registering the webhook above, each Facebook Page must also be individually subscribed. Click the button next to each page below.
                 </p>
                 {accounts.filter(a => a.platform === 'facebook').length === 0 ? (
-                  <div style={{ color: '#6B7280', fontSize: 14 }}>No Facebook pages connected yet. Go to Account Setup first.</div>
+                  <div style={{ color: '#6B7280', fontSize: 16 }}>No Facebook pages connected yet. Go to Account Setup first.</div>
                 ) : (
                   accounts.filter(a => a.platform === 'facebook').map(a => {
                     const result = subResult[a.account_id];
                     return (
                       <div key={a.account_id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, padding: '10px 14px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
-                        <span style={{ flex: 1, fontSize: 14, color: '#E9D5FF' }}>{a.account_name}</span>
+                        <span style={{ flex: 1, fontSize: 16, color: '#E9D5FF' }}>{a.account_name}</span>
                         {result === 'ok' && <span style={S.pill('#6EE7B7', 'rgba(6,78,59,0.4)')}>✓ Subscribed</span>}
-                        {result && result !== 'ok' && <span style={{ fontSize: 12, color: '#FCA5A5' }}>{result}</span>}
+                        {result && result !== 'ok' && <span style={{ fontSize: 16, color: '#FCA5A5' }}>{result}</span>}
                         <button
                           style={S.saveBtn}
                           disabled={subscribing[a.account_id]}
@@ -487,8 +487,8 @@ export default function BotBuilderPage() {
                   ['5', 'Everything is logged in the Conversation Log tab'],
                 ].map(([n, text]) => (
                   <div key={n} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(124,58,237,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{n}</div>
-                    <span style={{ fontSize: 14, color: '#D8B4FE' }}>{text}</span>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(124,58,237,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 600, flexShrink: 0 }}>{n}</div>
+                    <span style={{ fontSize: 16, color: '#D8B4FE' }}>{text}</span>
                   </div>
                 ))}
               </div>

@@ -20,6 +20,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,7 +32,7 @@ function pickFirst(obj, keys) {
   return null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (!SUPABASE_URL || !SERVICE_KEY) {
       return res.status(500).json({
@@ -151,3 +152,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

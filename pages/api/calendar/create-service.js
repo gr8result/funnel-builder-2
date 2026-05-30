@@ -1,12 +1,8 @@
 // /pages/api/calendar/create-service.js
 
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withWorkspace } from "../../../lib/withWorkspace";
 import { getCalendarPlanServer } from "../../../lib/calendar/getCalendarPlanServer";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 function buildCalendarUsagePolicy(used, limit) {
   if (!Number.isFinite(limit) || limit <= 0) {
@@ -70,28 +66,12 @@ function buildCalendarUsagePolicy(used, limit) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseAdmin.auth.getUser(token);
-
-  if (userError || !user) {
-    return res.status(401).json({ error: "Invalid user" });
-  }
-
-  const { config, hasAccess } = await getCalendarPlanServer(user.id);
+  const { config, hasAccess } = await getCalendarPlanServer(req.user.id);
 
   if (!hasAccess) {
     return res.status(403).json({
@@ -102,7 +82,7 @@ export default async function handler(req, res) {
   const { data: existing } = await supabaseAdmin
     .from("services")
     .select("id")
-    .eq("user_id", user.id);
+    .eq("user_id", req.user.id);
 
   const currentCount = existing?.length || 0;
   const projectedCount = currentCount + 1;
@@ -122,7 +102,7 @@ export default async function handler(req, res) {
   const { name, duration_minutes, price } = req.body;
 
   const { error } = await supabaseAdmin.from("services").insert({
-    user_id: user.id,
+    user_id: req.user.id,
     name,
     duration_minutes,
     price,
@@ -142,3 +122,5 @@ export default async function handler(req, res) {
     },
   });
 }
+
+export default withWorkspace(handler, { roles: ["owner", "admin"] });

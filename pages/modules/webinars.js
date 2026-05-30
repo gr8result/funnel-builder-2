@@ -48,7 +48,7 @@ export default function Webinars() {
                   justifyContent: "center",
                 }}
               >
-                {ICONS.webinars({ size: 48 })}
+                <span style={{ fontSize: 38, lineHeight: 1 }}>🎥</span>
               </div>
 
               <div>
@@ -105,7 +105,7 @@ export default function Webinars() {
             }}
           >
             🚧 <strong>Coming Soon</strong> 🚧 <br/> 
-            Expected Delivery date: Q4 2026 <br/><br/>  
+            Expected Delivery is V2 - September 2026 <br/><br/>  
             📌 Webinar hosting, replay libraries & scheduling will be added here soon.
           </div>
 

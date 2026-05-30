@@ -2,8 +2,9 @@
 // GET ?session_id=... -> verifies payment status with Stripe
 
 import Stripe from 'stripe';
+import { withAuth } from "../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).send('Method Not Allowed');
   try {
     const sid = req.query.session_id;
@@ -17,3 +18,5 @@ export default async function handler(req, res) {
     return res.status(500).send(e.message || 'error');
   }
 }
+
+export default withAuth(handler);

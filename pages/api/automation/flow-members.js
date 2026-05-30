@@ -62,7 +62,7 @@ async function getAccountIdForUser(user_id) {
   return data?.id || null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET")
     return res.status(405).json({ ok: false, error: "GET only" });
 
@@ -206,3 +206,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg(e), debug });
   }
 }
+
+export default withWorkspace(handler);

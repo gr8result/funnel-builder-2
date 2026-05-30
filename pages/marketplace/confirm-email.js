@@ -1,4 +1,4 @@
-// pages/marketplace/confirm-email.js
+﻿// pages/marketplace/confirm-email.js
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
@@ -41,9 +41,9 @@ export default function ConfirmEmail() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0b0b0b', color: '#e6edf3' }}>
       <div style={{ width: 420, padding: 32, border: '1px solid #1f2937', borderRadius: 12, background: '#0f1115', textAlign: 'center' }}>
-        <h1 style={{ margin: '0 0 18px', fontSize: 24, fontWeight: 800 }}>Confirm Email</h1>
+        <h1 style={{ margin: '0 0 18px', fontSize: 24, fontWeight: 600 }}>Confirm Email</h1>
         <div style={{ fontSize: 18, marginBottom: 24 }}>{status}</div>
-        <button onClick={handleGoMarketplace} style={{ padding: '12px 24px', borderRadius: 10, background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 18, border: 'none', cursor: 'pointer' }}>
+        <button onClick={handleGoMarketplace} style={{ padding: '12px 24px', borderRadius: 10, background: '#22c55e', color: '#fff', fontWeight: 600, fontSize: 18, border: 'none', cursor: 'pointer' }}>
           Go to Marketplace
         </button>
       </div>

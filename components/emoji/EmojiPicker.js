@@ -1,4 +1,4 @@
-// /components/emoji/EmojiPicker.js
+﻿// /components/emoji/EmojiPicker.js
 // Unified emoji picker — uses the full EMOJI_GROUPS library, supports both
 // inline mode (no open/onClose props) and overlay mode (open + onClose props).
 
@@ -58,7 +58,7 @@ export default function EmojiPicker({ onPick, open, onClose }) {
               border: activeGroup === g.id ? "1px solid rgba(148,163,184,.6)" : "1px solid rgba(148,163,184,.2)",
               background: activeGroup === g.id ? "rgba(148,163,184,.2)" : "transparent",
               color: "#e5e7eb",
-              fontSize: 12,
+              fontSize: 16,
               cursor: "pointer",
             }}
           >

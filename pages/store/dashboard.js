@@ -96,6 +96,61 @@ const MODULE_META = {
   },
 };
 
+// ─── 11 MODULE USAGE BARS — SideNav order, exact nav border colours ──────────
+// Each entry maps a nav module to its plan resource key + hex colour from SideNav.
+// resourceKey: null = module exists but usage is not yet tracked (shown as "—")
+const MODULE_USAGE_BARS = [
+  { key: "teams",      label: "Teams",      emoji: "👥", color: "#f97316", resourceKey: "team_members",    href: "/modules/email/crm/teams",              monthly: false },
+  { key: "ai_credits", label: "AI Credits", emoji: "🤖", color: "#a78bfa", resourceKey: "ai_credits_monthly", href: "/modules/ai",                        monthly: true  },
+  { key: "email",      label: "Email",      emoji: "📧", color: "#facc15", resourceKey: "email_monthly",   href: "/modules/email/reports",               monthly: true  },
+  { key: "crm",        label: "CRM",        emoji: "🗂", color: "#ec4899", resourceKey: "leads",           href: "/modules/email/crm",                   monthly: false },
+  { key: "jobboard",   label: "Job Board",  emoji: "📋", color: "#fb923c", resourceKey: null,              href: "/modules/jobboard",                    monthly: false },
+  { key: "gantt",      label: "Gantt",      emoji: "📊", color: "#38bdf8", resourceKey: null,              href: "/modules/gantt",                       monthly: false },
+  { key: "sms",        label: "SMS",        emoji: "💬", color: "#06b6d4", resourceKey: "sms_monthly",     href: "/modules/email/crm/sms-dashboard",      monthly: true  },
+  { key: "social",     label: "Social",     emoji: "📱", color: "#8126e9", resourceKey: "social_profiles", href: "/modules/social_media/dashboard",       monthly: false },
+  { key: "community",  label: "Community",  emoji: "🏘", color: "#14b8a6", resourceKey: "communities",     href: "/modules/communities",                  monthly: false },
+  { key: "calendar",   label: "Calendar",   emoji: "📅", color: "#84cc16", resourceKey: null,              href: "/modules/calendar/dashboard",           monthly: false },
+  { key: "websites",   label: "Websites",   emoji: "🌐", color: "#2d94c3", resourceKey: "websites",        href: "/modules/website-builder",              monthly: false },
+  { key: "funnels",    label: "Funnels",    emoji: "🧱", color: "#ef465d", resourceKey: "funnels",         href: "/funnels",                              monthly: false },
+  { key: "automation", label: "Automation", emoji: "⚙",  color: "#fb923c", resourceKey: "automations",     href: "/modules/business-automation",          monthly: false },
+  { key: "webinars",   label: "Webinars",   emoji: "🎥", color: "#ef4444", resourceKey: null,              href: "/modules/webinars",                     monthly: false },
+  { key: "pipelines",  label: "Pipelines",  emoji: "🌿", color: "#7c3aed", resourceKey: "pipelines",       href: "/modules/pipelines",                    monthly: false },
+  { key: "hr",         label: "HR",         emoji: "👨‍💼", color: "#3b82f6", resourceKey: null,              href: "/modules/hr",                          monthly: false },
+];
+
+// Set to true to preview bar colours/fills — flip to false for live data
+const USE_DUMMY_DATA = false;
+
+// Dummy usage data — used when USE_DUMMY_DATA = true
+const DUMMY_RESOURCES = {
+  team_members:       { key: "team_members",       used: 3,    limit: 5,     atLimit: false, untracked: false, label: "Teams"      },
+  ai_credits_monthly: { key: "ai_credits_monthly", used: 8700, limit: 10000, atLimit: false, untracked: false, label: "AI Credits" },
+  email_monthly:      { key: "email_monthly",      used: 4200, limit: 5000,  atLimit: false, untracked: false, label: "Email"      },
+  leads:              { key: "leads",              used: 238,  limit: null,  atLimit: false, untracked: false, label: "CRM"        },
+  sms_monthly:        { key: "sms_monthly",        used: 450,  limit: 1000,  atLimit: false, untracked: false, label: "SMS"        },
+  social_profiles:    { key: "social_profiles",    used: 2,    limit: 10,    atLimit: false, untracked: false, label: "Social"     },
+  communities:        { key: "communities",        used: 1,    limit: 1,     atLimit: true,  untracked: false, label: "Community"  },
+  websites:           { key: "websites",           used: 1,    limit: 3,     atLimit: false, untracked: false, label: "Websites"   },
+  funnels:            { key: "funnels",            used: 12,   limit: 20,    atLimit: false, untracked: false, label: "Funnels"    },
+  automations:        { key: "automations",        used: 8,    limit: 10,    atLimit: false, untracked: false, label: "Automation" },
+  pipelines:          { key: "pipelines",          used: 10,   limit: 10,    atLimit: true,  untracked: false, label: "Pipelines"  },
+};
+
+// Previous month final levels — overlaid as a dashed reference line on the current bars
+const DUMMY_PREV_MONTH = {
+  team_members:       { used: 2,    limit: 5     },
+  ai_credits_monthly: { used: 6200, limit: 10000 },
+  email_monthly:      { used: 3100, limit: 5000  },
+  leads:              { used: 195,  limit: null  },
+  sms_monthly:        { used: 280,  limit: 1000  },
+  social_profiles:    { used: 2,    limit: 10    },
+  communities:        { used: 0,    limit: 1     },
+  websites:           { used: 1,    limit: 3     },
+  funnels:            { used: 9,    limit: 20    },
+  automations:        { used: 6,    limit: 10    },
+  pipelines:          { used: 7,    limit: 10    },
+};
+
 // where each module card should send you
 const MODULE_ROUTES = {
   "email-marketing": "/modules/email/reports",
@@ -284,6 +339,18 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+// Returns true if hex colour is perceptually light (use dark text on top)
+function isLightColor(hex) {
+  if (!hex) return false;
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  const num = parseInt(h, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 145;
+}
+
 // ===============================
 // CALLS / VOICEMAIL SUMMARY HELPERS
 // ===============================
@@ -409,7 +476,7 @@ function parseNotes(raw) {
     body,
   };
 
-  meta.split("•").forEach((chunk) => {
+  meta.split("â€¢").forEach((chunk) => {
     const [labelRaw, valueRaw] = chunk.split(":");
     if (!labelRaw || !valueRaw) return;
     const label = labelRaw.trim().toLowerCase();
@@ -467,7 +534,7 @@ export default function StoreDashboard() {
   const [taskView, setTaskView] = useState("overdue"); // default: show overdue
   const [error, setError] = useState("");
 
-  // ðŸ†• moduleCards: initialise directly from localStorage (so hidden modules stick)
+  // Ã°Å¸â€ â€¢ moduleCards: initialise directly from localStorage (so hidden modules stick)
   const [moduleCards, setModuleCards] = useState(() => {
     if (typeof window === "undefined") {
       return DEFAULT_MODULE_CARDS;
@@ -489,9 +556,8 @@ export default function StoreDashboard() {
     return DEFAULT_MODULE_CARDS;
   });
 
-  const [showModuleConfig, setShowModuleConfig] = useState(false);
-
-  // ðŸ”‘ Card style -default glass, then read LS on first client render
+  
+  // Ã°Å¸â€â€˜ Card style -default glass, then read LS on first client render
   const [cardStyle, setCardStyle] = useState("glass");
 
   // client edit modal
@@ -502,6 +568,18 @@ export default function StoreDashboard() {
 
   // selected tasks (checkbox) -dashboard version
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
+
+  // plan usage summary
+  const [planUsage, setPlanUsage] = useState(null);
+
+  // social media stats
+  const [socialStats, setSocialStats] = useState({ total: 0, scheduled: 0, published: 0, failed: 0 });
+
+  // job board: first open task for the busiest active job
+  const [jobBoardPriority, setJobBoardPriority] = useState(null);
+  // shape: { job: { id, name, client }, nextTask: { key, label }, openCount, totalJobs }
+  // all jobs with task progress, sorted most-urgent first
+  const [allJobData, setAllJobData] = useState([]);
 
   const handleOpenLeadDetails = (lead) => {
     if (!lead) return;
@@ -524,7 +602,7 @@ export default function StoreDashboard() {
     }
   };
 
-  // ✅ Read saved card style from localStorage (glass / solid)
+  // âœ… Read saved card style from localStorage (glass / solid)
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -675,11 +753,11 @@ export default function StoreDashboard() {
           console.error("subscriber stats lookup failed:", e);
         }
 
-        // build subscriber/lead map from any contact_ids on those tasks
+        // build subscriber/lead map from contact_id, lead_id and subscriber_id
         const contactIds = Array.from(
           new Set(
             combinedTasks
-              .map((t) => t.contact_id)
+              .flatMap((t) => [t.contact_id, t.lead_id, t.subscriber_id])
               .filter((v) => v && typeof v === "string")
           )
         );
@@ -861,6 +939,98 @@ export default function StoreDashboard() {
             broadcasts7d + campaigns7d + automations7d + autoresponders7d,
         });
 
+        // SOCIAL MEDIA STATS
+        try {
+          const { data: socialData, error: socialErr } = await supabase
+            .from("social_posts")
+            .select("id, status")
+            .eq("user_id", currentUserId);
+          if (!socialErr && Array.isArray(socialData)) {
+            setSocialStats({
+              total: socialData.length,
+              scheduled: socialData.filter(r => r.status === "scheduled").length,
+              published: socialData.filter(r => r.status === "published").length,
+              failed: socialData.filter(r => r.status === "failed").length,
+            });
+          }
+        } catch (e) {
+          console.warn("social_posts stats skipped:", e.message);
+        }
+
+        // JOB BOARD PRIORITY — find the first open task for the job with the most remaining work
+        try {
+          const { data: jbJobs } = await supabase
+            .from("job_board_jobs")
+            .select("id, name, client, sort_order")
+            .eq("user_id", currentUserId)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true });
+
+          if (jbJobs?.length) {
+            const [{ data: jbBoards }, { data: jbTasksData }] = await Promise.all([
+              supabase
+                .from("job_board_boards")
+                .select("task_list")
+                .eq("user_id", currentUserId)
+                .order("sort_order", { ascending: true })
+                .limit(1),
+              supabase
+                .from("job_board_tasks")
+                .select("job_id, task_key, status, card_order")
+                .in("job_id", jbJobs.map(j => j.id)),
+            ]);
+
+            const taskList = jbBoards?.[0]?.task_list || [];
+
+            // Build a per-job lookup
+            const tasksByJob = {};
+            for (const j of jbJobs) tasksByJob[j.id] = {};
+            for (const t of jbTasksData || []) {
+              if (tasksByJob[t.job_id]) tasksByJob[t.job_id][t.task_key] = t;
+            }
+
+            // A task is "done" if its card_order contains "done" OR status === "done"
+            const isJbTaskDone = (rec) => {
+              if (!rec) return false;
+              if (rec.card_order && rec.card_order.split(",").includes("done")) return true;
+              return rec.status === "done";
+            };
+
+            // Pick the job with the most open tasks; surface its first open task
+            let bestJob = null, bestNextTask = null, bestOpenCount = -1;
+            for (const job of jbJobs) {
+              const jobTasks = tasksByJob[job.id] || {};
+              const openTasks = taskList.filter(t => !isJbTaskDone(jobTasks[t.key]));
+              if (openTasks.length > bestOpenCount) {
+                bestOpenCount = openTasks.length;
+                bestJob = job;
+                bestNextTask = openTasks[0] || null;
+              }
+            }
+
+            // Build full per-job data for the Job Board section (sorted most-urgent first)
+            const allJobsBuilt = jbJobs.map(job => {
+              const jt = tasksByJob[job.id] || {};
+              const openTasks = taskList.filter(t => !isJbTaskDone(jt[t.key]));
+              return { job, taskList, jobTasks: jt, openCount: openTasks.length, nextTask: openTasks[0] || null, totalTasks: taskList.length };
+            });
+            // keep natural sort_order (list order) — no re-sort
+            setAllJobData(allJobsBuilt);
+
+            if (bestJob && bestNextTask) {
+              setJobBoardPriority({
+                job: bestJob,
+                nextTask: bestNextTask,
+                openCount: bestOpenCount,
+                totalTasks: taskList.length,
+                totalJobs: jbJobs.length,
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("job board priority fetch skipped:", e.message);
+        }
+
         // visible tasks list -default to "overdue"
         setTasks(applyTaskFilter(combinedTasks, "overdue", taskDate));
         setSelectedTaskIds([]);
@@ -931,6 +1101,24 @@ export default function StoreDashboard() {
     }
 
     loadCallsSummary();
+  }, []);
+
+  // fetch plan usage summary
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess?.session?.access_token;
+        if (!token) return;
+        const res = await fetch("/api/usage/summary", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const j = await res.json();
+        if (j?.ok) setPlanUsage(j);
+      } catch (e) {
+        console.warn("plan usage fetch failed:", e);
+      }
+    })();
   }, []);
 
   // when tasks, view or date changes, refresh visible tasks
@@ -1105,1930 +1293,875 @@ export default function StoreDashboard() {
     tasks.length > 0 && selectedTaskIds.length === tasks.length;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#e5e7eb",
-        fontSize: 18,
-      }}
-    >
+    <div style={{
+      minHeight: "100vh",
+      background: "#0b1120",
+      color: "#f1f5f9",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    }}>
       <Head>
-        <title>Tasks & Platform Overview</title>
+        <title>Command Centre · Platform Overview</title>
       </Head>
 
-      <div style={{ maxWidth: 1320, margin: "0 auto", paddingBottom: 180 }}>
-        {/* GREEN BANNER */}
-        <div
-          style={{
-            marginTop: 24,
-            marginBottom: 24,
+      {/* ═══════ BANNER ═══════ */}
+      <div style={{ background: "#0b1120", padding: "28px 22px 0" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto" }}>
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
             background: "#22c55e",
-            padding: "18px 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontWeight: 600,
-            fontSize: 48,
-            borderRadius: 12,
-            boxShadow: "0 12px 30px rgba(0,0,0,0.55)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width:50,
-                height: 50,
-                borderRadius: "999px",
-                background: "rgba(0,0,0,0.18)",
-                fontSize: 48,
-              }}
-            >
-              📊
-            </span>
-            <div>
-              <div
-                style={{
-                  fontSize: 48,
-                  fontWeight: 600,
-                  lineHeight: 1.35,
-                }}
-              >
-                Command Centre
+            borderRadius: 16, padding: "16px 22px",
+          }}>
+            {/* Left: icon + title */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 58, height: 58, borderRadius: 14, background: "rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ fontSize: 34, lineHeight: 1 }}>📌</span>
               </div>
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  opacity: 0.92,
-                }}
-              >
-                Central control for tasks, sales and activity across your whole
-                platform.
+              <div>
+                <h1 style={{ margin: 0, fontSize: 36, fontWeight: 700, color: "#ffffff", lineHeight: 1.1 }}>Command Centre</h1>
+                <p style={{ margin: "4px 0 0", fontSize: 18, color: "rgba(255,255,255,0.85)" }}>Central control for tasks, revenue and activity</p>
               </div>
             </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {/* Voicemails pill in banner */}
-            <button
-              type="button"
-              onClick={() => router.push("/modules/email/crm/calls")}
-              style={{
-                borderRadius: 999,
-                padding: "8px 18px",
-                fontSize: 16,
-                fontWeight: 700,
-                border: hasUnheard
-                  ? "2px solid #f97316"
-                  : "2px solid rgba(15,23,42,0.9)",
-                background: hasUnheard ? "#b91c1c" : "#0f172a",
-                color: hasUnheard ? "#fff7ed" : "#e5e7eb",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: hasUnheard
-                  ? "0 0 0 2px rgba(248,113,113,0.7), 0 0 24px rgba(248,113,113,0.9)"
-                  : "0 6px 16px rgba(0,0,0,0.45)",
-                animation: hasUnheard
-                  ? "voicemailBlink 1.1s linear infinite"
-                  : "none",
-                marginRight: 6,
-              }}
-            >
-              {hasUnheard
-                ? `Voicemails waiting (${callsSummary.unreadWithRecording})`
-                : "Voicemails"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowModuleConfig((v) => !v)}
-              style={{
-                background: "#020617",
-                color: "#e5e7eb",
-                border: "1px solid rgba(15,23,42,0.85)",
-                borderRadius: 999,
-                padding: "8px 16px",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: 16,
-                boxShadow: "0 6px 16px rgba(0,0,0,0.55)",
-              }}
-            >
-              ⚙️ Customise dashboard
-            </button>
-            <Link
-              href="/dashboard"
-              style={{
-                background: "#020617",
-                color: "#e5e7eb",
-                border: "1px solid rgba(15,23,42,0.75)",
-                borderRadius: 999,
-                padding: "8px 18px",
-                cursor: "pointer",
-                fontWeight: 600,
-                textDecoration: "none",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </Link>
+            {/* Right: date + actions */}
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ fontSize: 16, color: "rgba(255,255,255,0.8)", fontWeight: 500, whiteSpace: "nowrap" }}>
+                {new Date().toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+              </div>
+              {hasUnheard && (
+                <button type="button" onClick={() => router.push("/modules/email/crm/calls")} style={{ borderRadius: 8, padding: "8px 16px", fontSize: 16, fontWeight: 600, border: "2px solid rgba(255,255,255,0.4)", background: "rgba(239,68,68,0.3)", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  📞 {callsSummary.unreadWithRecording} Voicemail{callsSummary.unreadWithRecording !== 1 ? "s" : ""}
+                </button>
+              )}
+              <Link href="/dashboard" style={{ borderRadius: 8, padding: "8px 16px", fontSize: 16, fontWeight: 600, border: "2px solid rgba(255,255,255,0.35)", background: "rgba(0,0,0,0.15)", color: "#fff", textDecoration: "none" }}>
+                ← Back
+              </Link>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* ERROR BAR */}
+      {/* ═══════ MAIN CONTENT ═══════ */}
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "28px 22px 64px" }}>
+
         {error && !loading && (
-          <div
-            style={{
-              background: "#7f1d1d",
-              color: "#fecaca",
-              padding: "10px 14px",
-              borderRadius: 8,
-              marginBottom: 18,
-              fontSize: 18,
-              border: "1px solid rgba(248,113,113,0.7)",
-            }}
-          >
-            {error}
-          </div>
+          <div style={{ background: "rgba(239,68,68,0.1)", color: "#fca5a5", padding: "14px 18px", borderRadius: 12, marginBottom: 24, fontsize: 16, border: "1px solid rgba(239,68,68,0.25)" }}>{error}</div>
         )}
 
-        {/* MAIN CARD */}
-        <div
-          style={{
-            borderRadius: 18,
-            border: "1px solid #22c55e",
-            boxShadow: "0 22px 60px rgba(0,0,0,0.7)",
-            background:
-              "linear-gradient(135deg, #020617 0%, #020617 60%, #020617 100%)",
-            padding: 28,
-          }}
-        >
-          {/* MINI CRM SUMMARY CARDS */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 16,
-              marginBottom: 20,
-            }}
-          >
-            <MiniStatCard
-              title="Subscribers"
-              primary={`${stats.subscribersTotal}`}
-              secondary={`Joined last 7 days: ${stats.subscribersLast7}`}
-              accent="#38bdf8"
-            />
-            <MiniStatCard
-              title="Tasks Today"
-              primary={`${stats.tasksToday}`}
-              secondary={`Overdue: ${stats.overdueTasks}`}
-              accent="#fbbf24"
-            />
-            <MiniStatCard
-              title="Completed Tasks"
-              primary={`${stats.completedTasks}`}
-              secondary={`Total tasks: ${stats.totalTasks}`}
-              accent="#22c55e"
-            />
-            <MiniStatCard
-              title="Email Activity (7 days)"
-              primary={`${emailStats.total7d} emails sent`}
-              secondary={`Broadcasts: ${emailStats.broadcasts7d} | Campaigns: ${emailStats.campaigns7d} | Automations: ${
-                emailStats.automations7d + emailStats.autoresponders7d
-              }`}
-              accent="#a855f7"
-            />
-          </div>
-
-          {/* CALLS & VOICEMAIL CARD */}
-          <div
-            style={{
-              borderRadius: 16,
-              border: "1px solid rgba(248,113,113,0.8)",
-              background:
-                "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,64,175,0.96))",
-              padding: 16,
-              marginBottom: 24,
-              boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 10,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 34,
-                      height: 34,
-                      borderRadius: "999px",
-                      background: "rgba(15,23,42,0.85)",
-                      boxShadow:
-                        "0 0 0 2px rgba(248,113,113,0.7),0 8px 18px rgba(0,0,0,0.7)",
-                    }}
-                  >
-                     📞
-                  </span>
-                  Calls &amp; Voicemails
-                </div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    color: "#cbd5f5",
-                    marginTop: 2,
-                    fontWeight: 400,
-                  }}
-                >
-                  Live summary pulled from your CRM call log (same data as the
-                  Calls page).
-                </div>
-              </div>
-
+        {/* ═══════ PRIORITY — what needs action right now ═══════ */}
+        {(stats.overdueTasks > 0 || jobBoardPriority?.nextTask) && (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: stats.overdueTasks > 0 && jobBoardPriority?.nextTask ? "1fr 1fr" : "1fr",
+            gap: 12,
+            marginBottom: 20,
+          }}>
+            {/* Overdue tasks alert */}
+            {stats.overdueTasks > 0 && (
               <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  justifyContent: "flex-end",
-                }}
+                onClick={() => setTaskView("overdue")}
+                style={{ background: "#111827", border: "1px solid rgba(239,68,68,0.25)", borderLeft: "4px solid #ef4444", borderRadius: 12, padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}
               >
-                <button
-                  type="button"
-                  onClick={() => router.push("/modules/email/crm/calls")}
-                  style={{
-                    borderRadius: 999,
-                    padding: "8px 18px",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    border: hasUnheard
-                      ? "2px solid #f97316"
-                      : "2px solid rgba(148,163,184,0.7)",
-                    background: hasUnheard ? "#b91c1c" : "#0f172a",
-                    color: hasUnheard ? "#fff7ed" : "#e5e7eb",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: hasUnheard
-                      ? "0 0 0 2px rgba(248,113,113,0.7), 0 0 24px rgba(248,113,113,0.9)"
-                      : "0 8px 18px rgba(0,0,0,0.6)",
-                    animation: hasUnheard
-                      ? "voicemailBlink 1.1s linear infinite"
-                      : "none",
-                  }}
-                >
-                  {hasUnheard
-                    ? `Voicemails waiting (${callsSummary.unreadWithRecording})`
-                    : "View calls"}
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 18,
-                marginTop: 4,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
-                  Total calls logged
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>
-                  {callsSummary.total}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
-                  Calls with recordings
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>
-                  {callsSummary.withRecording}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, color: "#fecaca", fontWeight: 400 }}>
-                  Unheard voicemails (recordings)
-                </div>
-                <div
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: hasUnheard ? "#fca5a5" : "#e5e7eb",
-                  }}
-                >
-                  {callsSummary.unreadWithRecording}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, color: "#e5e7eb", fontWeight: 400 }}>
-                  Unread call records
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>
-                  {callsSummary.unread}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* TASKS / DIARY */}
-          <div
-            style={{
-              borderRadius: 16,
-              border: "1px solid rgba(56,189,248,0.9)",
-              background:
-                "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(8,47,73,0.98))",
-              padding: 18,
-              marginBottom: 24,
-              boxShadow: "0 18px 45px rgba(0,0,0,0.8)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-                gap: 12,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 600,
-                    letterSpacing: 0.4,
-                  }}
-                >
-                  Today&apos;s Schedule & To-Dos
-                </div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    color: "#9ca3af",
-                    marginTop: 4,
-                    fontWeight: 400,
-                  }}
-                >
-                  Tasks imported from your CRM (reads from both{" "}
-                  <code>tasks</code> and <code>crm_tasks</code>) with subscriber
-                  coloured icons.
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  justifyContent: "flex-end",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 18,
-                    color: "#e5e7eb",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Focus date:
-                </div>
-                <input
-                  type="date"
-                  value={taskDate}
-                  onChange={(e) => setTaskDate(e.target.value)}
-                  style={{
-                    borderRadius: 999,
-                    border: "1px solid #1f2937",
-                    background: "#020617",
-                    color: "#e5e7eb",
-                    fontSize: 18,
-                    padding: "6px 10px",
-                    outline: "none",
-                    boxShadow: "0 0 0 1px rgba(15,23,42,0.9)",
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: 18,
-                    color: "#e5e7eb",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Open tasks today:{" "}
-                  <span style={{ color: "#facc15", fontWeight: 700 }}>
-                    {stats.openTasksToday}
-                  </span>
-                </div>
-                {/* Add Task links to the CRM Tasks page */}
-                <Link
-                  href="/modules/email/crm/tasks"
-                  style={{
-                    borderRadius: 999,
-                    border: "none",
-                    background: "#22c55e",
-                    color: "#f9fafb",
-                    fontWeight: 700,
-                    fontSize: 18,
-                    padding: "8px 18px",
-                    cursor: "pointer",
-                    textDecoration: "none",
-                    boxShadow: "0 10px 25px rgba(34,197,94,0.4)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  + Add Task
-                </Link>
-              </div>
-            </div>
-
-            {/* DELETE SELECTED + QUICK FILTERS (CRM-style row) */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-                flexWrap: "wrap",
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                {/* Select all */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={allTasksSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedTaskIds(tasks.map((t) => t.id));
-                      } else {
-                        setSelectedTaskIds([]);
-                      }
-                    }}
-                    style={{
-                      width: 20,
-                      height: 20,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 16,
-                      color: "#e5e7eb",
-                      fontWeight: 400,
-                    }}
-                  >
-                    Select all
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleDeleteSelectedTasks}
-                  disabled={selectedTaskIds.length === 0}
-                  style={{
-                    background:
-                      selectedTaskIds.length === 0
-                        ? "rgba(15,23,42,0.85)"
-                        : "#ef4444",
-                    border: "1px solid #ef4444",
-                    borderRadius: 999,
-                    padding: "6px 16px",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color:
-                      selectedTaskIds.length === 0 ? "#9ca3af" : "#fef2f2",
-                    cursor:
-                      selectedTaskIds.length === 0 ? "not-allowed" : "pointer",
-                    boxShadow:
-                      selectedTaskIds.length === 0
-                        ? "none"
-                        : "0 10px 22px rgba(239,68,68,0.45)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                   🗑 Delete Selected ({selectedTaskIds.length})
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 16,
-                    color: "#bbf7d0",
-                    fontWeight: 600,
-                    paddingRight: 4,
-                  }}
-                >
-                  View:
-                </span>
-                {TASK_FILTERS.map((f) => {
-                  const active = taskView === f.key;
-                  return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => setTaskView(f.key)}
-                      style={{
-                        borderRadius: 999,
-                        border: active
-                          ? "1px solid rgba(21,128,61,0.9)"
-                          : "1px solid rgba(15,23,42,0.9)",
-                        padding: "4px 12px",
-                        fontSize: 16,
-                        cursor: "pointer",
-                        background: active
-                          ? "linear-gradient(135deg,#22c55e,#16a34a)"
-                          : "rgba(15,23,42,0.95)",
-                        color: active ? "#f9fafb" : "#d1d5db",
-                        boxShadow: active
-                          ? "0 8px 16px rgba(34,197,94,0.45)"
-                          : "none",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* TASKS LIST -CRM-style cards */}
-            <div
-              style={{
-                borderRadius: 12,
-                border: "1px solid rgba(31,41,55,0.9)",
-                background: "#020617",
-                padding: tasks.length === 0 ? 12 : 10,
-                maxHeight: 680,
-                overflowY: "auto",
-                marginTop: 4,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              {tasks.length === 0 ? (
-                <div
-                  style={{
-                    fontSize: 18,
-                    color: "#ecc619ff",
-                  }}
-                >
-                  No tasks yet. Use <b>Add Task</b> to create or update tasks in
-                  the CRM module.
-                </div>
-              ) : (
-                tasks.map((t) => {
-                  const sub =
-                    t.contact_id && subscriberMap[t.contact_id]
-                      ? subscriberMap[t.contact_id]
-                      : null;
-
-                  return (
-                    <TaskRow
-                      key={t.id}
-                      task={t}
-                      subscriber={sub}
-                      selected={selectedTaskIds.includes(t.id)}
-                      onToggleSelect={() => toggleSelectTask(t.id)}
-                      onOpenLead={() =>
-                        sub ? handleOpenLeadDetails(sub) : null
-                      }
-                      onToggleStatus={() => handleToggleTaskStatus(t)}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* CORE STATS */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 24,
-              marginBottom: 34,
-            }}
-          >
-            <StatCard
-              label="Total Revenue"
-              value={formatCurrency(stats.totalRevenueCents, "AUD")}
-              accent="#22c55e"
-            />
-            <StatCard
-              label="Total Orders"
-              value={stats.totalOrders.toString()}
-              accent="#38bdf8"
-            />
-            <StatCard
-              label="Abandoned Carts"
-              value={stats.abandonedCount.toString()}
-              accent="#f97316"
-            />
-            <StatCard
-              label="Open Tasks Today"
-              value={stats.openTasksToday.toString()}
-              accent="#eab308"
-            />
-          </div>
-
-          {/* PLATFORM MODULE CARDS */}
-          <div style={{ marginBottom: 24 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 600,
-                }}
-              >
-                Platform Modules -Activity Overview
-              </div>
-              <div
-                style={{
-                  fontSize: 16,
-                  color: "#ecc619ff",
-                  fontWeight: 400,
-                }}
-              >
-                Drag cards to reorder. Hide modules you&apos;re not using (you
-                can add them back later).
-              </div>
-            </div>
-
-            {showModuleConfig && (
-              <div
-                style={{
-                  marginBottom: 12,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(148,163,184,0.5)",
-                  background: "rgba(15,23,42,0.95)",
-                  fontSize: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 600,
-                    marginBottom: 6,
-                  }}
-                >
-                  Visible modules
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    marginBottom: 8,
-                  }}
-                >
-                  {enabledCards.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => toggleModuleVisibility(c.id)}
-                      style={{
-                        borderRadius: 999,
-                        border: "1px solid rgba(148,163,184,0.7)",
-                        padding: "4px 10px",
-                        background: "rgba(34,197,94,0.1)",
-                        color: "#bbf7d0",
-                        cursor: "pointer",
-                        fontSize: 16,
-                        fontWeight: 500,
-                      }}
-                    >
-                      ✅ {c.title}
-                    </button>
-                  ))}
-                  {enabledCards.length === 0 && (
-                    <span style={{ color: "#f97316" }}>
-                      No modules enabled -turn some back on below.
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    fontWeight: 600,
-                    marginBottom: 4,
-                  }}
-                >
-                  Hidden modules
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 10,
-                  }}
-                >
-                  {disabledCards.length === 0 ? (
-                    <span style={{ color: "#ecc619ff" }}>
-                      Nothing hidden. Use the buttons above to hide modules you
-                      don&apos;t use.
-                    </span>
-                  ) : (
-                    disabledCards.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleModuleVisibility(c.id)}
-                        style={{
-                          borderRadius: 999,
-                          border: "1px solid rgba(148,163,184,0.7)",
-                          padding: "4px 10px",
-                          background: "rgba(239,68,68,0.1)",
-                          color: "#fecaca",
-                          cursor: "pointer",
-                          fontSize: 16,
-                          fontWeight: 500,
-                        }}
-                      >
-                         ➕ {c.title}
-                      </button>
-                    ))
-                  )}
-                </div>
-
-                {/* CARD STYLE SWITCHER */}
-                <div
-                  style={{
-                    marginTop: 12,
-                    paddingTop: 10,
-                    borderTop: "1px solid rgba(31,41,55,0.9)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      marginBottom: 6,
-                    }}
-                  >
-                    Module card style
+                <span style={{ fontSize: 26, flexShrink: 0 }}>⚠</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#ef4444", marginBottom: 2 }}>
+                    {stats.overdueTasks} Overdue Task{stats.overdueTasks !== 1 ? "s" : ""}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 10,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => persistCardStyle("glass")}
-                      style={{
-                        borderRadius: 999,
-                        padding: "6px 14px",
-                        fontSize: 16,
-                        border:
-                          cardStyle === "glass"
-                            ? "1px solid #22c55e"
-                            : "1px solid rgba(148,163,184,0.7)",
-                        background:
-                          cardStyle === "glass"
-                            ? "linear-gradient(135deg,rgba(34,197,94,0.2),rgba(34,197,94,0.05))"
-                            : "rgba(15,23,42,0.9)",
-                        color: "#e5e7eb",
-                        cursor: "pointer",
-                        boxShadow:
-                          cardStyle === "glass"
-                            ? "0 8px 18px rgba(34,197,94,0.45)"
-                            : "none",
-                      }}
-                    >
-                      Glass cards
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => persistCardStyle("solid")}
-                      style={{
-                        borderRadius: 999,
-                        padding: "6px 14px",
-                        fontSize: 16,
-                        border:
-                          cardStyle === "solid"
-                            ? "1px solid #f97316"
-                            : "1px solid #f97316",
-                        background:
-                          cardStyle === "solid"
-                            ? "linear-gradient(135deg,#f97316,#f97316)"
-                            : "rgba(15,23,42,0.9)",
-                        color: "#e5e7eb",
-                        cursor: "pointer",
-                        boxShadow:
-                          cardStyle === "solid"
-                            ? "0 8px 18px rgba(22, 37, 249, 0.45)"
-                            : "none",
-                      }}
-                    >
-                      Solid colour cards
-                    </button>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>Scroll down · filter set to Overdue</div>
+                </div>
+              </div>
+            )}
+            {/* Job board: next action */}
+            {jobBoardPriority?.nextTask && (
+              <div
+                onClick={() => router.push("/modules/jobboard")}
+                style={{ background: "#111827", border: "1px solid rgba(251,146,60,0.25)", borderLeft: "4px solid #fb923c", borderRadius: 12, padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}
+              >
+                <span style={{ fontSize: 26, flexShrink: 0 }}>📋</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#fb923c", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>
+                    Next · {jobBoardPriority.job.name}{jobBoardPriority.job.client ? ` · ${jobBoardPriority.job.client}` : ""}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#f9fafb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
+                    ▸ {jobBoardPriority.nextTask.label}
+                  </div>
+                  <div style={{ fontSize: 16, color: "#6b7280" }}>
+                    {jobBoardPriority.openCount} of {jobBoardPriority.totalTasks} tasks remaining · {jobBoardPriority.totalJobs} active job{jobBoardPriority.totalJobs !== 1 ? "s" : ""}
                   </div>
                 </div>
               </div>
             )}
           </div>
+        )}
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 28,
-              marginBottom: 34,
-            }}
-          >
-            {enabledCards.map((card) => (
-              <ModuleCard
-                key={card.id}
-                card={card}
-                emailStats={emailStats}
-                cardStyle={cardStyle}
-                onDragStart={handleModuleDragStart}
-                onDrop={handleModuleDrop}
-                onDragOver={handleModuleDragOver}
-                onHide={toggleModuleVisibility}
-                onOpenModule={handleOpenModuleRoute}
-              />
+        {/* ═══════ KPI STRIP ═══════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 16, marginBottom: 28 }}>
+          <KpiCard label="Total Revenue" value={formatCurrency(stats.totalRevenueCents, "AUD")} accent="#10b981" gradient="linear-gradient(135deg,#052e16,#064e3b)" icon="💰" sub="All time" />
+          <KpiCard label="Total Orders" value={stats.totalOrders} accent="#60a5fa" gradient="linear-gradient(135deg,#0c1a3a,#0f2d6e)" icon="🛍" sub={stats.abandonedCount + " abandoned"} subAlert={stats.abandonedCount > 0} />
+          <KpiCard label="Subscribers" value={stats.subscribersTotal.toLocaleString()} accent="#a78bfa" gradient="linear-gradient(135deg,#1a0938,#2d1060)" icon="👥" sub={"+" + stats.subscribersLast7 + " this week"} />
+          <KpiCard label="Overdue Tasks" value={stats.overdueTasks} accent="#f97316" gradient="linear-gradient(135deg,#2c0a00,#431407)" icon="⚠" sub={stats.completedTasks + " completed"} alert={stats.overdueTasks > 0} />
+          <KpiCard label="Emails (7 days)" value={emailStats.total7d} accent="#fbbf24" gradient="linear-gradient(135deg,#1c1000,#2a1d00)" icon="✉" sub={emailStats.broadcasts7d + " broadcasts"} />
+          <KpiCard label="Calls Logged" value={callsSummary.total} accent="#f472b6" gradient="linear-gradient(135deg,#1c0016,#2d0024)" icon="📞" sub={hasUnheard ? callsSummary.unreadWithRecording + " unheard" : "All heard"} alert={hasUnheard} />
+        </div>
+
+        {/* ═══════ JOB BOARD ═══════ */}
+        {allJobData.length > 0 && (
+          <div style={{ background: "#111827", border: "1px solid #1f2937", borderTop: "2px solid #fb923c", borderRadius: 20, padding: "22px 28px", marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📋</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: "#f9fafb" }}>Job Board</div>
+                  <div style={{ fontSize: 16, color: "#6b7280", marginTop: 2 }}>{allJobData.length} active job{allJobData.length !== 1 ? "s" : ""}</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => router.push("/modules/jobboard")} style={{ padding: "8px 18px", borderRadius: 10, background: "rgba(251,146,60,0.12)", border: "1px solid rgba(251,146,60,0.3)", color: "#fb923c", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
+                Open Job Board →
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {allJobData.map(({ job, openCount, nextTask, totalTasks }, idx) => {
+                const doneCount = totalTasks - openCount;
+                const pct = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
+                const allDone = openCount === 0;
+                const accentColor = allDone ? "#10b981" : openCount >= 4 ? "#ef4444" : openCount >= 2 ? "#fb923c" : "#facc15";
+                return (
+                  <div key={job.id} onClick={() => router.push("/modules/jobboard")} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: idx < allJobData.length - 1 ? "1px solid #1f2937" : "none", cursor: "pointer" }}>
+                    {/* Status dot */}
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: accentColor, flexShrink: 0 }} />
+                    {/* Job name + client */}
+                    <div style={{ minWidth: 0, width: 220, flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f9fafb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{job.name}</div>
+                      {job.client && <div style={{ fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{job.client}</div>}
+                    </div>
+                    {/* Next task */}
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: allDone ? "#10b981" : "#3b82f6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {allDone ? "✓ All tasks complete" : "▸ " + (nextTask?.label || "")}
+                    </div>
+                    {/* Progress bar + fraction */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      <div style={{ width: 80, height: 4, background: "#1f2937", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: pct + "%", background: accentColor, borderRadius: 2 }} />
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6b7280", width: 32, textAlign: "right" }}>{doneCount}/{totalTasks}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════ EMAIL MARKETING ═══════ */}
+        <div style={{ background: "#111827", border: "1px solid #1f2937", borderTop: "2px solid #facc15", borderRadius: 20, padding: "22px 28px", marginBottom: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(250,204,21,0.15)", border: "1px solid rgba(250,204,21,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📧</div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "#f9fafb" }}>Email Marketing</div>
+                <div style={{ fontSize: 16, color: "#6b7280", marginTop: 2 }}>Last 7 days</div>
+              </div>
+            </div>
+            <button type="button" onClick={() => router.push("/modules/email/reports")} style={{ padding: "8px 18px", borderRadius: 10, background: "rgba(250,204,21,0.12)", border: "1px solid rgba(250,204,21,0.3)", color: "#facc15", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
+              Open Reports →
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0,1fr))", gap: 14 }}>
+            {[
+              { label: "Total Emails",    value: emailStats.total7d,          icon: "✉",  color: "#facc15", bg: "rgba(250,204,21,0.08)",   border: "rgba(250,204,21,0.22)",   desc: "Sent this week" },
+              { label: "Broadcasts",      value: emailStats.broadcasts7d,     icon: "📢", color: "#fb923c", bg: "rgba(251,146,60,0.08)",   border: "rgba(251,146,60,0.22)",   desc: "One-off sends" },
+              { label: "Campaigns",       value: emailStats.campaigns7d,      icon: "🎯", color: "#60a5fa", bg: "rgba(96,165,250,0.08)",   border: "rgba(96,165,250,0.22)",   desc: "Campaign series" },
+              { label: "Automations",     value: emailStats.automations7d,    icon: "⚙",  color: "#a78bfa", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.22)", desc: "Auto-triggered" },
+              { label: "Autoresponders",  value: emailStats.autoresponders7d, icon: "🔄", color: "#34d399", bg: "rgba(52,211,153,0.08)",   border: "rgba(52,211,153,0.22)",   desc: "Sequence emails" },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, border: "1px solid " + s.border, borderRadius: 16, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 24 }}>{s.icon}</span>
+                  <span style={{ fontSize: 32, fontWeight: 600, color: s.color, lineHeight: 1 }}>{s.value}</span>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#e5e7eb" }}>{s.label}</div>
+                <div style={{ fontSize: 16, color: "#6b7280" }}>{s.desc}</div>
+              </div>
             ))}
           </div>
+        </div>
 
-          {/* ORDERS + CHECKOUTS */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 28,
-              marginTop: 8,
-            }}
-          >
-            <div
-              style={{
-                background:
-                  "linear-gradient(180deg, #020617 0%, #020617 55%, #020617)",
-                borderRadius: 14,
-                border: "1px solid #38bdf8",
-                padding: 14,
-                minHeight: 220,
-                boxShadow: "0 18px 40px rgba(0,0,0,0.7)",
-              }}
-            >
-              <SectionHeader
-                title="Recent Orders"
-                subtitle={`Last ${orders.length} orders`}
-              />
+        {/* ═══════ SOCIAL MEDIA ═══════ */}
+        <div style={{ background: "#111827", border: "1px solid #1f2937", borderTop: "2px solid #22d3ee", borderRadius: 20, padding: "22px 28px", marginBottom: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📱</div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: "#f9fafb" }}>Social Media</div>
+                <div style={{ fontSize: 16, color: "#6b7280", marginTop: 2 }}>Posts overview · all time</div>
+              </div>
+            </div>
+            <button type="button" onClick={() => router.push("/modules/social_media/dashboard")} style={{ padding: "8px 18px", borderRadius: 10, background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.3)", color: "#22d3ee", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
+              Open Social →
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14 }}>
+            {[
+              { label: "Total Posts", value: socialStats.total, icon: "📝", color: "#22d3ee", bg: "rgba(6,182,212,0.1)", border: "rgba(6,182,212,0.25)", desc: "All content created" },
+              { label: "Published", value: socialStats.published, icon: "✅", color: "#34d399", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.25)", desc: "Posted & live" },
+              { label: "Scheduled", value: socialStats.scheduled, icon: "🗓", color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.25)", desc: "Upcoming posts" },
+              { label: "Needs Attention", value: socialStats.failed, icon: socialStats.failed > 0 ? "⚠" : "💚", color: socialStats.failed > 0 ? "#fca5a5" : "#6b7280", bg: socialStats.failed > 0 ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.03)", border: socialStats.failed > 0 ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.06)", desc: socialStats.failed > 0 ? "Failed — retry required" : "All good" },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, border: "1px solid " + s.border, borderRadius: 16, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 24 }}>{s.icon}</span>
+                  <span style={{ fontSize: 32, fontWeight: 600, color: s.color, lineHeight: 1 }}>{s.value}</span>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#e5e7eb" }}>{s.label}</div>
+                <div style={{ fontSize: 16, color: "#6b7280" }}>{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-              {orders.length === 0 ? (
-                <EmptyCopy>No orders yet.</EmptyCopy>
-              ) : (
-                <ScrollTable>
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      fontSize: 16,
-                    }}
-                  >
-                    <thead>
-                      <tr>
-                        <Th>Date</Th>
-                        <Th>Amount</Th>
-                        <Th>Status</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((o) => (
-                        <tr
-                          key={o.id}
-                          style={{
-                            borderTop: "1px solid rgba(31,41,55,0.9)",
-                          }}
-                        >
-                          <Td>{formatDateTime(o.created_at)}</Td>
-                          <Td>
-                            {formatCurrency(
-                              o.amount_cents || 0,
-                              o.currency || "AUD"
-                            )}
-                          </Td>
-                          <Td
-                            style={{
-                              textTransform: "capitalize",
-                              color:
-                                o.status === "paid" ? "#4ade80" : "#eab308",
-                            }}
-                          >
-                            {o.status || "-"}
-                          </Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollTable>
-              )}
+        {/* ═══════ TASKS + SIDEBAR ═══════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 356px", gap: 24, marginBottom: 28, alignItems: "start" }}>
+
+          {/* TASKS PANEL */}
+          <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 20, overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "18px 24px", borderBottom: "1px solid #1f2937", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0d1525" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#f9fafb" }}>Today's Schedule & To-Dos</div>
+                  <div style={{ fontSize: 16, color: "#6b7280", marginTop: 2 }}>
+                    <span style={{ color: "#60a5fa", fontWeight: 600 }}>Tasks</span>
+                    <span style={{ color: "#374151" }}> · </span>
+                    <span style={{ color: "#a78bfa", fontWeight: 600 }}>CRM Tasks</span>
+                    <span style={{ color: "#374151" }}> · </span>
+                    <span style={{ color: "#6b7280" }}>Labels</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <input type="date" value={taskDate} onChange={e => setTaskDate(e.target.value)}
+                  style={{ borderRadius: 8, padding: "7px 12px", background: "#1f2937", border: "1px solid #374151", color: "#f9fafb", fontSize: 16, cursor: "pointer" }} />
+                {stats.openTasksToday > 0 && (
+                  <span style={{ background: "rgba(96,165,250,0.15)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 8, padding: "4px 12px", fontSize: 16, fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {stats.openTasksToday} open today
+                  </span>
+                )}
+                <button type="button" onClick={() => router.push("/modules/email/crm/tasks")} style={{ borderRadius: 8, padding: "8px 16px", fontSize: 16, fontweight: 600, background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  + Add Task
+                </button>
+              </div>
             </div>
 
-            <div
-              style={{
-                background:
-                  "linear-gradient(180deg, #020617 0%, #020617 55%, #020617)",
-                borderRadius: 14,
-                border: "1px solid #f97316",
-                padding: 14,
-                minHeight: 220,
-                boxShadow: "0 18px 40px rgba(0,0,0,0.7)",
-              }}
-            >
-              <SectionHeader
-                title="Open & Abandoned Checkouts"
-                subtitle={`Last ${checkouts.length} sessions`}
-              />
+            {/* Delete selected */}
+            {selectedTaskIds.length > 0 && (
+              <div style={{ background: "rgba(239,68,68,0.07)", borderBottom: "1px solid rgba(239,68,68,0.12)", padding: "10px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={allTasksSelected} onChange={() => { if (allTasksSelected) setSelectedTaskIds([]); else setSelectedTaskIds(tasks.map(t => t.id)); }} style={{ accentColor: "#10b981" }} />
+                  <span style={{ fontsize: 16, color: "#94a3b8" }}>{selectedTaskIds.length} selected</span>
+                </div>
+                <button type="button" onClick={handleDeleteSelectedTasks} style={{ borderRadius: 8, padding: "6px 14px", fontsize: 16, fontweight: 600, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", cursor: "pointer" }}>Delete Selected</button>
+              </div>
+            )}
 
-              {checkouts.length === 0 ? (
-                <EmptyCopy>
-                  No open or abandoned checkouts yet. Once you start sending
-                  traffic to a checkout, they will show up here.
-                </EmptyCopy>
-              ) : (
-                <ScrollTable>
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      fontSize: 16,
-                    }}
-                  >
-                    <thead>
-                      <tr>
-                        <Th>Updated</Th>
-                        <Th>Status</Th>
-                        <Th>Cart</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {checkouts.map((s) => (
-                        <tr
-                          key={s.id}
-                          style={{
-                            borderTop: "1px solid rgba(31,41,55,0.9)",
-                          }}
-                        >
-                          <Td>{formatDateTime(s.updated_at)}</Td>
-                          <Td>
-                            <span
-                              style={{
-                                padding: "4px 12px",
-                                borderRadius: 999,
-                                fontSize: 16,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.4,
-                                background:
-                                  s.status === "abandoned"
-                                    ? "rgba(239,68,68,0.15)"
-                                    : "rgba(234,179,8,0.15)",
-                                border:
-                                  s.status === "abandoned"
-                                    ? "1px solid rgba(239,68,68,0.6)"
-                                    : "1px solid rgba(234,179,8,0.6)",
-                                color:
-                                  s.status === "abandoned"
-                                    ? "#fca5a5"
-                                    : "#facc15",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {s.status}
-                            </span>
-                          </Td>
-                          <Td>{renderCartSummary(s.cart_items)}</Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollTable>
-              )}
+            {/* Filter tabs */}
+            <div style={{ padding: "10px 20px", borderBottom: "1px solid #1f2937", display: "flex", gap: 4, background: "rgba(0,0,0,0.2)" }}>
+              {TASK_FILTERS.map(f => (
+                <button key={f.key} type="button" onClick={() => setTaskView(f.key)} style={{ borderRadius: 8, padding: "6px 14px", fontsize: 16, fontWeight: 600, cursor: "pointer", border: "none", background: taskView === f.key ? "#1d4ed8" : "transparent", color: taskView === f.key ? "#bfdbfe" : "#6b7280" }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Task list */}
+            <div style={{ maxHeight: 520, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {tasks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#4b5563" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontsize: 16, fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>All clear!</div>
+                  <div style={{ fontsize: 16, color: "#4b5563" }}>No tasks for this date</div>
+                </div>
+              ) : tasks.map(task => {
+                const sub = subscriberMap[task.lead_id] || subscriberMap[task.subscriber_id] || null;
+                return (
+                  <TaskRow key={task.id} task={task} subscriber={sub}
+                    selected={selectedTaskIds.includes(task.id)}
+                    onToggleSelect={() => toggleSelectTask(task.id)}
+                    onOpenLead={() => handleOpenLeadDetails(sub)}
+                    onToggleStatus={() => handleToggleTaskStatus(task)}
+                  />
+                );
+              })}
             </div>
           </div>
 
-          {loading && (
-            <div
-              style={{
-                marginTop: 18,
-                fontSize: 18,
-                color: "#9ca3af",
-              }}
-            >
-              Loading dataâ€¦
+          {/* SIDEBAR */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Calls alert */}
+            {callsSummary.total > 0 && (
+              <div style={{ borderRadius: 16, border: hasUnheard ? "1px solid rgba(239,68,68,0.45)" : "1px solid #1f2937", borderLeft: hasUnheard ? "3px solid #ef4444" : "1px solid #1f2937", background: "#111827", padding: "16px 20px", cursor: "pointer", animation: hasUnheard ? "ccPulse 2s ease-in-out infinite" : "none" }} onClick={() => router.push("/modules/email/crm/calls")}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ fontsize: 16, fontweight: 600, color: hasUnheard ? "#fca5a5" : "#f9fafb" }}>{hasUnheard ? "🔴 Voicemails Waiting" : "📞 Calls"}</div>
+                  <span style={{ fontSize: 26, fontweight: 600, color: hasUnheard ? "#ef4444" : "#94a3b8" }}>{callsSummary.total}</span>
+                </div>
+                <div style={{ fontsize: 16, color: hasUnheard ? "#fca5a5" : "#6b7280" }}>
+                  {hasUnheard ? callsSummary.unreadWithRecording + " unheard recording" + (callsSummary.unreadWithRecording !== 1 ? "s" : "") : callsSummary.total + " total logged"}
+                </div>
+              </div>
+            )}
+
+            {/* 2x2 stat grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <MiniStatCard title="Subscribers" primary={stats.subscribersTotal.toLocaleString()} secondary={"+" + stats.subscribersLast7 + " this week"} accent="#a78bfa" />
+              <MiniStatCard title="Tasks Today" primary={"" + stats.tasksToday} secondary={"Overdue: " + stats.overdueTasks} accent="#f97316" />
+              <MiniStatCard title="Completed" primary={"" + stats.completedTasks} secondary={"Total: " + stats.totalTasks} accent="#10b981" />
+              <MiniStatCard title="Emails (7d)" primary={"" + emailStats.total7d} secondary={"Broadcasts: " + emailStats.broadcasts7d} accent="#fbbf24" />
             </div>
-          )}
+
+            {/* Revenue + Orders */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <MiniStatCard title="Revenue" primary={formatCurrency(stats.totalRevenueCents, "AUD")} secondary="All time" accent="#10b981" />
+              <MiniStatCard title="Orders" primary={"" + stats.totalOrders} secondary={stats.abandonedCount + " abandoned"} accent="#60a5fa" />
+            </div>
+
+            {/* Module configurator — auto-shown when any card is hidden */}
+            {disabledCards.length > 0 && (
+              <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 16, padding: "16px 18px" }}>
+                <div style={{ fontsize: 16, fontweight: 600, color: "#6b7280", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Hidden Modules</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {disabledCards.map(c => (
+                    <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #1f2937" }}>
+                      <span style={{ fontsize: 16, color: "#94a3b8" }}>{c.title}</span>
+                      <button type="button" onClick={() => toggleModuleVisibility(c.id)} style={{ borderRadius: 6, padding: "4px 12px", fontsize: 16, fontweight: 600, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)", color: "#34d399", cursor: "pointer" }}>Show</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* ═══════ PLATFORM MODULES ═══════ */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 18, fontweight: 600, color: "#f9fafb" }}>Platform Modules</div>
+              <div style={{ fontsize: 16, color: "#6b7280", marginTop: 2 }}>{enabledCards.length} visible · drag to reorder</div>
+            </div>
+            <div style={{ fontsize: 16, color: "#4b5563" }}>Drag to reorder · ✖ to hide</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+            {enabledCards.map(card => (
+              <ModuleCard key={card.id} card={card} emailStats={emailStats}
+                onDragStart={handleModuleDragStart} onDrop={handleModuleDrop} onDragOver={e => e.preventDefault()}
+                onHide={toggleModuleVisibility}
+                onOpenModule={id => { const route = MODULE_ROUTES[id]; if (route) router.push(route); }}
+              />
+            ))}
+            {enabledCards.length === 0 && (
+              <div style={{ gridColumn: "1/-1", padding: "40px 20px", textAlign: "center", borderRadius: 16, border: "1px dashed #374151", color: "#4b5563", fontsize: 16 }}>
+                No modules visible. Open Customise to add them back.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════ PLATFORM USAGE — 11 module bars (SideNav colours) ═══════ */}
+        {planUsage && (
+          <div style={{ background: "#111827", border: "1px solid #1f2937", borderRadius: 20, padding: "26px 28px 22px", marginBottom: 28 }}>
+            {/* Header row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#f9fafb", letterSpacing: -0.3 }}>Platform Usage</div>
+                <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
+                  {planUsage.planName} Plan &middot; {planUsage.monthLabel} &middot; Full bar = limit reached &middot; <span style={{ borderBottom: "1.5px dashed rgba(255,255,255,0.4)", paddingBottom: 1 }}>&nbsp;&nbsp;&nbsp;&nbsp;</span> last month
+                </div>
+              </div>
+              <Link href="/billing" style={{ padding: "9px 20px", borderRadius: 10, background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none", boxShadow: "0 4px 14px rgba(16,185,129,0.3)", whiteSpace: "nowrap" }}>
+                Manage Plan
+              </Link>
+            </div>
+
+            {/* 14 module bars — fill from bottom; dashed line = last month */}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", position: "relative" }}>
+              {MODULE_USAGE_BARS.map((bar, idx) => {
+                const resource = (USE_DUMMY_DATA && bar.resourceKey)
+                  ? (DUMMY_RESOURCES[bar.resourceKey] ?? null)
+                  : (planUsage.resources?.find(r => r.key === bar.resourceKey) ?? null);
+                const prevResource = bar.resourceKey ? (DUMMY_PREV_MONTH[bar.resourceKey] ?? null) : null;
+                return <ModuleUsageSingleBar key={bar.key} bar={bar} resource={resource} prevResource={prevResource} />;
+              })}
+              {/* SVG dashed line connecting previous-month markers across tracked bars */}
+              {(() => {
+                const n = MODULE_USAGE_BARS.length;
+                const pts = MODULE_USAGE_BARS.map((bar, i) => {
+                  if (!bar.resourceKey) return null;
+                  const prev = DUMMY_PREV_MONTH[bar.resourceKey];
+                  if (!prev) return null;
+                  const pct = prev.limit != null ? Math.min(100, (prev.used / prev.limit) * 100) : 100;
+                  return { x: (i + 0.5) / n * 100, y: (1 - pct / 100) * 100 };
+                });
+                const segments = [];
+                let run = [];
+                pts.forEach(p => {
+                  if (p) { run.push(p); }
+                  else if (run.length > 1) { segments.push(run); run = []; }
+                  else { run = []; }
+                });
+                if (run.length > 1) segments.push(run);
+                if (!segments.length) return null;
+                return (
+                  <svg
+                    key="prev-line"
+                    style={{ position: "absolute", top: BAR_LABEL_TOP_H, left: 0, width: "100%", height: BAR_TRACK_H, pointerEvents: "none", zIndex: 3 }}
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
+                    {segments.map((seg, si) => (
+                      <polyline
+                        key={si}
+                        points={seg.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")}
+                        fill="none"
+                        stroke="rgba(255,255,255,0.45)"
+                        strokeWidth="2"
+                        strokeDasharray="6 4"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    ))}
+                  </svg>
+                );
+              })()}
+            </div>
+
+            {/* Warning strip — only shown when ≥1 resource is at/near limit */}
+            {planUsage.resources.some(r => !r.untracked && (r.atLimit || (r.limit && r.used !== null && r.used / r.limit >= 0.8))) && (
+              <div style={{ marginTop: 20, padding: "12px 18px", borderRadius: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 14, color: "#fca5a5" }}>
+                  {planUsage.resources.filter(r => r.atLimit).length > 0
+                    ? "⚠ " + planUsage.resources.filter(r => r.atLimit).map(r => r.label).join(", ") + " " + (planUsage.resources.filter(r => r.atLimit).length === 1 ? "has" : "have") + " reached the limit."
+                    : "⚡ Some resources are approaching their limit."}
+                </div>
+                <Link href="/billing" style={{ whiteSpace: "nowrap", padding: "7px 16px", borderRadius: 9, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Upgrade</Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══════ ORDERS + CHECKOUTS ═══════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 20 }}>
+          {/* Orders */}
+          <div style={{ background: "#111827", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ padding: "16px 22px", borderBottom: "1px solid #1f2937", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(16,185,129,0.04)" }}>
+              <div style={{ fontsize: 16, fontweight: 600, color: "#f9fafb" }}>Recent Orders</div>
+              <div style={{ fontsize: 16, color: "#6b7280", background: "#1f2937", padding: "3px 10px", borderRadius: 6 }}>Last {orders.length}</div>
+            </div>
+            {orders.length === 0 ? (
+              <div style={{ padding: "40px 18px", textAlign: "center", color: "#4b5563", fontsize: 16 }}>No orders yet.</div>
+            ) : (
+              <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontsize: 16 }}>
+                  <thead>
+                    <tr style={{ background: "#0d1525" }}>
+                      {["Date", "Amount", "Status"].map(h => <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#6b7280", fontweight: 600, fontsize: 16, textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #1f2937" }}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map(o => (
+                      <tr key={o.id} style={{ borderBottom: "1px solid #1f2937" }}>
+                        <td style={{ padding: "11px 16px", color: "#94a3b8", fontsize: 16 }}>{formatDateTime(o.created_at)}</td>
+                        <td style={{ padding: "11px 16px", color: "#ffffff", fontweight: 600, fontSize: 16 }}>{formatCurrency(o.amount_cents || 0, o.currency || "AUD")}</td>
+                        <td style={{ padding: "11px 16px" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: 6, fontsize: 16, fontweight: 600, background: o.status === "paid" ? "rgba(16,185,129,0.15)" : "rgba(234,179,8,0.15)", color: o.status === "paid" ? "#34d399" : "#fbbf24", border: o.status === "paid" ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(234,179,8,0.3)" }}>
+                            {o.status || "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Checkouts */}
+          <div style={{ background: "#111827", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 20, overflow: "hidden" }}>
+            <div style={{ padding: "16px 22px", borderBottom: "1px solid #1f2937", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(249,115,22,0.04)" }}>
+              <div style={{ fontsize: 16, fontweight: 600, color: "#f9fafb" }}>Open &amp; Abandoned Checkouts</div>
+              <div style={{ fontsize: 16, color: "#6b7280", background: "#1f2937", padding: "3px 10px", borderRadius: 6 }}>Last {checkouts.length}</div>
+            </div>
+            {checkouts.length === 0 ? (
+              <div style={{ padding: "40px 18px", textAlign: "center", color: "#4b5563", fontsize: 16 }}>No open or abandoned checkouts yet.</div>
+            ) : (
+              <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontsize: 16 }}>
+                  <thead>
+                    <tr style={{ background: "#0d1525" }}>
+                      {["Updated", "Status", "Cart"].map(h => <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: "#6b7280", fontweight: 600, fontsize: 16, textTransform: "uppercase", letterSpacing: 1, borderBottom: "1px solid #1f2937" }}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {checkouts.map(s => (
+                      <tr key={s.id} style={{ borderBottom: "1px solid #1f2937" }}>
+                        <td style={{ padding: "11px 16px", color: "#94a3b8", fontsize: 16 }}>{formatDateTime(s.updated_at)}</td>
+                        <td style={{ padding: "11px 16px" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: 6, fontsize: 16, fontweight: 600, textTransform: "uppercase", background: s.status === "abandoned" ? "rgba(239,68,68,0.15)" : "rgba(234,179,8,0.15)", color: s.status === "abandoned" ? "#fca5a5" : "#fbbf24", border: s.status === "abandoned" ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(234,179,8,0.3)" }}>
+                            {s.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "11px 16px", color: "#94a3b8" }}>{renderCartSummary(s.cart_items)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {loading && (
+          <div style={{ textAlign: "center", padding: "28px", color: "#6b7280", fontsize: 16, marginTop: 24 }}>Loading data…</div>
+        )}
       </div>
 
-      {/* CLIENT EDIT MODAL */}
       <LeadDetailsModal
         isOpen={isLeadModalOpen}
         lead={selectedLead}
         stages={stages}
         userId={userId}
         fontScale={1.35}
-        onClose={() => {
-          setIsLeadModalOpen(false);
-          setSelectedLead(null);
-        }}
-        onNotesUpdated={() => {
-          // optional -keep this dashboard's tasks/leads in sync if needed
-        }}
+        onClose={() => { setIsLeadModalOpen(false); setSelectedLead(null); }}
+        onNotesUpdated={() => {}}
       />
 
-      {/* keyframes for flashing voicemail pill */}
       <style jsx>{`
-        @keyframes voicemailBlink {
-          0% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-1px);
-            opacity: 0.4;
-          }
-          100% {
-            transform: translateY(0);
-            opacity: 1;
-          }
+        @keyframes ccPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.65; }
         }
       `}</style>
     </div>
   );
 }
 
-/* TASK ROW -CRM-style for dashboard */
+/* ═══════════════════════════════════════════════════════
+   KPI CARD — gradient hero metric tile
+═══════════════════════════════════════════════════════ */
+function KpiCard({ label, value, accent, gradient, icon, sub, subAlert, alert }) {
+  return (
+    <div style={{
+      borderRadius: 14,
+      background: "#111827",
+      border: "1px solid " + (alert ? accent + "66" : "#1f2937"),
+      borderLeft: "4px solid " + accent,
+      padding: "20px 22px",
+      animation: alert ? "ccPulse 2s ease-in-out infinite" : "none",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{ fontSize: 26 }}>{icon}</div>
+        {alert && <span style={{ width: 8, height: 8, borderRadius: "50%", background: accent, display: "inline-block" }} />}
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 600, color: "#ffffff", lineHeight: 1, marginBottom: 6, letterSpacing: -0.8 }}>{value}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: accent, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+      {sub && <div style={{ fontSize: 13, color: subAlert ? accent : "#6b7280", marginTop: 4, fontWeight: subAlert ? 700 : 400 }}>{sub}</div>}
+    </div>
+  );
+}
 
-function TaskRow({
-  task,
-  subscriber,
-  selected,
-  onToggleSelect,
-  onOpenLead,
-  onToggleStatus,
-}) {
+/* ═══════════════════════════════════════════════════════
+   TASK ROW — clean left-border status row
+═══════════════════════════════════════════════════════ */
+function TaskRow({ task, subscriber, selected, onToggleSelect, onOpenLead, onToggleStatus }) {
   const parsed = parseNotes(task.notes || "");
-  const taskDate = getTaskDate(task);
-
-  const dueDateStr = task.due_date || (taskDate ? taskDate.slice(0, 10) : "");
+  const taskDateVal = getTaskDate(task);
+  const dueDateStr = task.due_date || (taskDateVal ? taskDateVal.slice(0, 10) : "");
   let dueLabel = "No date";
   if (dueDateStr) {
     const d = new Date(dueDateStr);
-    if (!Number.isNaN(d.getTime())) {
-      dueLabel = d.toLocaleDateString("en-AU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    }
+    if (!isNaN(d.getTime())) dueLabel = d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
   }
-
   const completed = isTaskCompleted(task);
-
-  // status pill logic
-  let statusLabel = "Scheduled";
-  let statusColor = "#38bdf8";
-
-  if (completed) {
-    statusLabel = "Completed";
-    statusColor = "#22c55e";
-  } else if (dueDateStr) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const d = new Date(dueDateStr);
-    d.setHours(0, 0, 0, 0);
-
-    if (d < today) {
-      statusLabel = "Overdue";
-      statusColor = "#f97316";
-    } else if (d.getTime() === today.getTime()) {
-      statusLabel = "Due today";
-      statusColor = "#eab308";
-    }
+  let statusLabel = "Scheduled"; let statusColor = "#3b82f6"; let borderColor = "#1d4ed8";
+  if (completed) { statusLabel = "Done"; statusColor = "#10b981"; borderColor = "#059669"; }
+  else if (dueDateStr) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = new Date(dueDateStr); d.setHours(0, 0, 0, 0);
+    if (d < today) { statusLabel = "Overdue"; statusColor = "#ef4444"; borderColor = "#b91c1c"; }
+    else if (d.getTime() === today.getTime()) { statusLabel = "Due Today"; statusColor = "#f59e0b"; borderColor = "#b45309"; }
   }
-
-  const name =
-    (subscriber &&
-      (subscriber.name ||
-        subscriber.full_name ||
-        [subscriber.first_name, subscriber.last_name]
-          .filter(Boolean)
-          .join(" "))) ||
-    "No subscriber";
-
-  const email = subscriber && subscriber.email ? subscriber.email : "";
-
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  const handleLeadClick = () => {
-    if (subscriber && onOpenLead) onOpenLead();
-  };
-
+  const name = (subscriber && (subscriber.name || subscriber.full_name || [subscriber.first_name, subscriber.last_name].filter(Boolean).join(" "))) || "No contact";
+  const email = subscriber ? subscriber.email || "" : "";
+  const initials = name.split(" ").filter(Boolean).map(p => p[0]).join("").toUpperCase().slice(0, 2);
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: 16,
-        padding: "10px 12px",
-        borderRadius: 14,
-        background:
-          "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.96))",
-        border: "1px solid rgba(31,41,55,0.9)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 10,
-          flex: 1,
-        }}
-      >
-        {/* checkbox -replaces old 00:00 column */}
-        <input
-          type="checkbox"
-          checked={!!selected}
-          onChange={onToggleSelect}
-          style={{
-            width: 22,
-            height: 22,
-            marginTop: 6,
-          }}
-        />
-
-        <div style={{ flex: 1 }}>
-          {/* subscriber avatar + name */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 4,
-              cursor: subscriber ? "pointer" : "default",
-            }}
-            onClick={handleLeadClick}
-          >
-            {subscriber ? (
-              <SubscriberAvatar lead={subscriber} size={30} fontSize={16} />
-            ) : (
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "999px",
-                  background: "#38bdf8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#020617",
-                  boxShadow:
-                    "0 0 0 2px rgba(15,23,42,0.9), 0 0 12px rgba(0,0,0,0.6)",
-                }}
-              >
-                {initials}
-              </div>
-            )}
-            <div>
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: completed ? "#9ca3af" : "#e5e7eb",
-                }}
-              >
-                {name}
-              </div>
-              {email && (
-                <div
-                  style={{
-                    fontSize: 16,
-                    color: "#9ca3af",
-                    fontWeight: 400,
-                  }}
-                >
-                  {email}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* type pill */}
-          <div style={{ marginBottom: 4 }}>
-            <span
-              style={{
-                display: "inline-block",
-                fontSize: 16,
-                padding: "2px 10px",
-                borderRadius: 999,
-                background: "rgba(56,189,248,0.15)",
-                border: "1px solid rgba(56,189,248,0.7)",
-                fontWeight: 500,
-              }}
-            >
-              {parsed.type || "Task"}
-            </span>
-          </div>
-
-          {/* title */}
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 700,
-              textDecoration: completed ? "line-through" : "none",
-              opacity: completed ? 0.7 : 1,
-            }}
-          >
-            {task.title || "Untitled task"}
-          </div>
-
-          {/* notes body */}
-          {parsed.body && (
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 16,
-                color: "#d1d5db",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {parsed.body}
-            </div>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 12, background: completed ? "rgba(16,185,129,0.04)" : "#1a2232", border: "1px solid #1f2937", borderLeft: "3px solid " + borderColor }}>
+      <input type="checkbox" checked={!!selected} onChange={onToggleSelect} style={{ width: 15, height: 15, marginTop: 3, accentColor: "#10b981", cursor: "pointer", flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, cursor: subscriber ? "pointer" : "default" }} onClick={subscriber ? onOpenLead : undefined}>
+          {subscriber ? (
+            <SubscriberAvatar lead={subscriber} size={26} fontSize={11} />
+          ) : (
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1d4ed8", display: "flex", alignItems: "center", justifyContent: "center", fontsize: 16, fontweight: 600, color: "#fff", flexShrink: 0 }}>{initials}</div>
           )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontsize: 16, fontWeight: 600, color: completed ? "#6b7280" : "#e5e7eb", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+            {email && <div style={{ fontsize: 16, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email}</div>}
+          </div>
+        </div>
+        <div style={{ fontsize: 16, fontWeight: 600, color: completed ? "#6b7280" : "#f9fafb", textDecoration: completed ? "line-through" : "none", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {task.title || "Untitled task"}
+        </div>
+        {parsed.body && <div style={{ fontsize: 16, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{parsed.body}</div>}
+        <div style={{ marginTop: 6 }}>
+          <span style={{ display: "inline-block", fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.2)", color: "#60a5fa", fontWeight: 600 }}>
+            {parsed.type || "Task"}
+          </span>
         </div>
       </div>
-
-      {/* right side -due + status */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          whiteSpace: "nowrap",
-        }}
-      >
-        <div style={{ textAlign: "right" }}>
-          <div
-            style={{
-              fontSize: 16,
-              color: "#9ca3af",
-              fontWeight: 400,
-            }}
-          >
-            Due
-          </div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-            }}
-          >
-            {dueLabel}
-          </div>
-        </div>
-
-        <span
-          onClick={onToggleStatus}
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            borderRadius: 999,
-            padding: "4px 10px",
-            color: "#020617",
-            background: statusColor,
-            cursor: "pointer",
-          }}
-          title="Click to toggle completed"
-        >
-          {statusLabel}
-        </span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+        <div style={{ fontsize: 16, color: "#6b7280" }}>{dueLabel}</div>
+        <span onClick={onToggleStatus} style={{ fontsize: 16, fontweight: 600, borderRadius: 7, padding: "4px 10px", color: "#fff", background: statusColor, cursor: "pointer", whiteSpace: "nowrap" }}>{statusLabel}</span>
       </div>
     </div>
   );
 }
 
-/* MODULE CARDS -supports glass + solid */
-
-function ModuleCard({
-  card,
-  emailStats,
-  cardStyle,
-  onDragStart,
-  onDrop,
-  onDragOver,
-  onHide,
-  onOpenModule,
-}) {
+/* ═══════════════════════════════════════════════════════
+   MODULE CARD — solid accent colour matching SideNav
+═══════════════════════════════════════════════════════ */
+function ModuleCard({ card, emailStats, onDragStart, onDrop, onDragOver, onHide, onOpenModule }) {
   const meta = MODULE_META[card.id] || {};
-  const borderColor = meta.color || "#38bdf8";
+  const accent = meta.color || "#3b82f6";
   const Icon = meta.Icon || null;
-
-  const placeholderToday = 0;
-  const placeholderWeek = 0;
-  const placeholderMonth = 0;
-
   const isEmail = card.id === "email-marketing";
-
-  const handleClick = () => {
-    if (onOpenModule) onOpenModule(card.id);
-  };
-
-  const broadcastCount = emailStats?.broadcasts7d || 0;
-  const campaignsCount = emailStats?.campaigns7d || 0;
-  const autoCount =
-    (emailStats?.automations7d || 0) + (emailStats?.autoresponders7d || 0);
-  const autoresCount = emailStats?.autoresponders7d || 0;
-
-  const baseProps = {
-    draggable: true,
-    onDragStart: (e) => onDragStart(e, card.id),
-    onDragOver,
-    onDrop: (e) => onDrop(e, card.id),
-    onClick: handleClick,
-  };
-
-  if (cardStyle === "solid") {
-    // SOLID COLOUR VERSION
-    return (
-      <div
-        {...baseProps}
-        style={{
-          borderRadius: 14,
-          background: borderColor,
-          padding: 18,
-          boxShadow: "0 14px 36px rgba(0,0,0,0.85)",
-          cursor: "pointer",
-          color: "#0f172a",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: 8,
-          }}
-        >
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 12,
-                  background: "rgba(255,255,255,0.24)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 26,
-              }}
-            >
-              {Icon ? <Icon color="#0f172a" size={26} /> : "?"}
-            </div>
-
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#ffffff" }}>{card.title}</div>
-              <div style={{ fontSize: 16, opacity: 0.9, fontWeight: 400 }}>
-                {card.subtitle}
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onHide(card.id);
-            }}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: "#0f172a",
-              cursor: "pointer",
-              fontSize: 22,
-              fontWeight: 900,
-              paddingLeft: 6,
-            }}
-          >
-             ✖
-          </button>
-        </div>
-
-        {isEmail ? (
-          <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: 10,
-                marginTop: 6,
-              }}
-            >
-              <SmallMetric label="Broadcasts sent (7d)" value={broadcastCount} labelColor="#0f172a" valueColor="#0f172a" />
-              <SmallMetric
-                label="campaigns emails (7d)"
-                value={campaignsCount}
-                labelColor="#0f172a"
-                valueColor="#0f172a"
-              />
-              <SmallMetric label="Automation emails (7d)" value={autoCount} labelColor="#0f172a" valueColor="#0f172a" />
-              <SmallMetric
-                label="Autoresponder sends (7d)"
-                value={autoresCount}
-                labelColor="#0f172a"
-                valueColor="#0f172a"
-              />
-            </div>
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 16,
-                color: "#0f172a",
-                opacity: 0.9,
-                fontWeight: 400,
-              }}
-            >
-              Live counts are pulled from your email send tables.
-            </div>
-          </>
-        ) : (
-          <>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 10,
-              }}
-            >
-              <div>
-                <div
-                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
-                >
-                  Today
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700 }}>
-                  {placeholderToday}
-                </div>
-              </div>
-
-              <div>
-                <div
-                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
-                >
-                  This week
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700 }}>
-                  {placeholderWeek}
-                </div>
-              </div>
-
-              <div>
-                <div
-                  style={{ fontSize: 16, color: "#0f172a", opacity: 0.85, fontWeight: 400 }}
-                >
-                  This month
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700 }}>
-                  {placeholderMonth}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 16,
-                color: "#0f172a",
-                opacity: 0.9,
-                fontWeight: 400,
-              }}
-            >
-              Placeholder stats -connected shortly to real data.
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  // GLASS VERSION (current look)
+  const broadcastCount = emailStats ? emailStats.broadcasts7d || 0 : 0;
+  const campaignsCount = emailStats ? emailStats.campaigns7d || 0 : 0;
+  const autoCount = emailStats ? emailStats.automations7d || 0 : 0;
+  const autoresCount = emailStats ? emailStats.autoresponders7d || 0 : 0;
+  const textColor = isLightColor(accent) ? "#111827" : "#ffffff";
+  const mutedColor = isLightColor(accent) ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)";
   return (
-    <div
-      {...baseProps}
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${borderColor}`,
-        background: `linear-gradient(135deg, rgba(4, 2, 29, 0.98), ${hexToRgba(
-          borderColor,
-          0.65
-        )})`,
-        padding: 14,
-        boxShadow: "0 14px 36px rgba(0,0,0,0.75)",
-        cursor: "pointer",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: 8,
-        }}
-      >
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 999,
-              background: "#020617",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 22,
-              boxShadow: `0 0 0 2px ${borderColor}`,
-            }}
-          >
-            {Icon ? <Icon color={borderColor} size={22} /> : "?"}
+    <div draggable onDragStart={e => onDragStart(e, card.id)} onDragOver={onDragOver} onDrop={e => onDrop(e, card.id)} onClick={() => onOpenModule && onOpenModule(card.id)}
+      style={{ borderRadius: 18, border: "1px solid " + accent, background: accent, padding: "18px 20px", cursor: "pointer", position: "relative", overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(0,0,0,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {Icon ? <Icon color={textColor} size={20} /> : "?"}
           </div>
           <div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-              }}
-            >
-              {card.title}
-            </div>
-            <div
-              style={{
-                fontSize: 16,
-                color: "#9ca3af",
-                fontWeight: 400,
-              }}
-            >
-              {card.subtitle}
-            </div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: textColor }}>{card.title}</div>
+            <div style={{ fontSize: 16, color: mutedColor, marginTop: 1 }}>{card.subtitle}</div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation(); // don't trigger navigation when hiding
-            onHide(card.id);
-          }}
-          style={{
-            border: "none",
-            background: "transparent",
-            color: "#9ca3af",
-            cursor: "pointer",
-            fontSize: 18,
-          }}
-          title="Hide this module"
-        >
-           ✖
-        </button>
+        <button type="button" onClick={e => { e.stopPropagation(); onHide(card.id); }} style={{ border: "none", background: "rgba(0,0,0,0.15)", borderRadius: 6, color: textColor, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: "4px 7px" }} title="Hide">✖</button>
       </div>
-
       {isEmail ? (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 10,
-              marginTop: 6,
-            }}
-          >
-            <SmallMetric label="Broadcasts sent (7d)" value={broadcastCount} />
-            <SmallMetric label="campaigns emails (7d)" value={campaignsCount} />
-            <SmallMetric label="Automation emails (7d)" value={autoCount} />
-            <SmallMetric
-              label="Autoresponder sends (7d)"
-              value={autoresCount}
-            />
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              fontSize: 16,
-              color: "#6b7280",
-              fontWeight: 400,
-            }}
-          >
-            Live counts are pulled from your email send tables. If any numbers
-            stay on zero, the table names/columns just need a quick tweak in
-            the dashboard code.
-          </div>
-        </>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <SmallMetric label="Broadcasts"    value={broadcastCount}  labelColor={mutedColor} valueColor={textColor} />
+          <SmallMetric label="Campaigns"     value={campaignsCount}  labelColor={mutedColor} valueColor={textColor} />
+          <SmallMetric label="Automations"   value={autoCount}       labelColor={mutedColor} valueColor={textColor} />
+          <SmallMetric label="Autoresponders" value={autoresCount}   labelColor={mutedColor} valueColor={textColor} />
+        </div>
       ) : (
-        <>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginTop: 6,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
-                Today
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>
-                {placeholderToday}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
-                This week
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>
-                {placeholderWeek}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>
-                This month
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>
-                {placeholderMonth}
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 8,
-              fontSize: 16,
-              color: "#6b7280",
-              fontWeight: 400,
-            }}
-          >
-            Placeholder stats for now -will be wired to live data from this
-            module (signups, revenue, posts, etc.).
-          </div>
-        </>
+        <div style={{ marginTop: 10, fontSize: 15, color: mutedColor, fontStyle: "italic" }}>Click to open module</div>
       )}
     </div>
   );
 }
 
-function SmallMetric({ label, value, labelColor = "#9ca3af", valueColor = "inherit" }) {
+function SmallMetric({ label, value, labelColor, valueColor }) {
   return (
     <div>
-      <div style={{ fontSize: 16, color: labelColor, fontWeight: 400 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor }}>{value}</div>
+      <div style={{ fontSize: 10, color: labelColor || "#6b7280" }}>{label}</div>
+      <div style={{ fontSize: 20, fontweight: 600, color: valueColor || "#f9fafb" }}>{value}</div>
     </div>
   );
 }
 
-/* MINI SUMMARY CARDS (top row) */
+/* ═══════════════════════════════════════════════════════
+   BAR GAUGE — vertical colored bar chart tile
+   Colors keyed to each resource type
+═══════════════════════════════════════════════════════ */
+const RESOURCE_BAR_COLORS = {
+  funnels:           "#f97316",   // orange
+  websites:          "#8b5cf6",   // violet
+  automations:       "#f59e0b",   // amber
+  leads:             "#f43f5e",   // rose
+  team_members:      "#0ea5e9",   // sky
+  communities:       "#14b8a6",   // teal
+  sms_monthly:       "#06b6d4",   // cyan
+  email_monthly:     "#ffd11b",   // yellow
+  ai_credits_monthly:"#a78bfa",   // purple
+};
+function BarGauge({ r }) {
+  const isUntracked = r.untracked;
+  const isUnlimited = !isUntracked && r.limit === null;
+  const pct = (!isUntracked && r.limit && r.used !== null) ? Math.min(100, (r.used / r.limit) * 100) : (isUnlimited ? 60 : 0);
+  const color = r.atLimit ? "#ef4444" : pct >= 80 ? "#f59e0b" : (RESOURCE_BAR_COLORS[r.key] || "#60a5fa");
+  const usedLabel = r.used !== null ? (r.used >= 1000 ? (r.used / 1000).toFixed(1) + "k" : String(r.used)) : "—";
+  const limitLabel = r.limit != null ? (r.limit >= 1000 ? (r.limit / 1000).toFixed(0) + "k" : String(r.limit)) : null;
+  return (
+    <Link href={r.href} style={{ textDecoration: "none", flex: 1, minWidth: 52, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      {/* used / limit above bar */}
+      <div style={{ fontSize: 12, fontWeight: 700, color: color, lineHeight: 1 }}>
+        {isUnlimited ? "∞" : isUntracked ? "—" : usedLabel}
+      </div>
+      {limitLabel && !isUnlimited && !isUntracked && (
+        <div style={{ fontSize: 10, color: "#4b5563", lineHeight: 1 }}>/ {limitLabel}</div>
+      )}
+      {/* vertical bar — flex grows to fill height */}
+      <div style={{ width: "100%", flex: 1, background: "#1f2937", borderRadius: 8, position: "relative", overflow: "hidden", minHeight: 60 }}>
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          height: (isUntracked ? 0 : pct) + "%",
+          background: "linear-gradient(to top, " + color + ", " + color + "99)",
+          borderRadius: 8,
+          transition: "height 0.7s ease",
+          boxShadow: "inset 0 0 0 1px " + color + "44, 0 0 10px " + color + "33",
+        }} />
+        {!isUntracked && !isUnlimited && pct > 10 && (
+          <div style={{ position: "absolute", bottom: 5, left: 0, right: 0, textAlign: "center", fontSize: 10, fontWeight: 700, color: pct > 35 ? "rgba(255,255,255,0.9)" : color }}>
+            {Math.round(pct)}%
+          </div>
+        )}
+        {r.atLimit && (
+          <div style={{ position: "absolute", top: 4, left: 0, right: 0, textAlign: "center", fontSize: 12 }}>⚠</div>
+        )}
+      </div>
+      {/* label */}
+      <div style={{ fontSize: 10, color: "#9ca3af", textAlign: "center", fontWeight: 600, lineHeight: 1.2, textTransform: "uppercase", letterSpacing: 0.3, paddingTop: 2 }}>
+        {r.icon} {r.label}
+      </div>
+      {r.monthly && <div style={{ fontSize: 9, color: "#4b5563", textAlign: "center", lineHeight: 1 }}>monthly</div>}
+      {isUnlimited && <div style={{ fontSize: 9, color: "#10b981" }}>Unlimited</div>}
+      {isUntracked && <div style={{ fontSize: 9, color: "#4b5563" }}>Soon</div>}
+      {r.atLimit && <div style={{ fontSize: 9, color: "#ef4444", fontWeight: 700 }}>⚠ Limit</div>}
+    </Link>
+  );
+}
 
+/* ═══════════════════════════════════════════════════════
+   MODULE USAGE SINGLE BAR
+   Tall vertical bar (300 px track = 100%) for one nav module.
+   Color is exact match of that module's SideNav border colour.
+   - Fills from the bottom  →  used / limit
+   - At-limit: bar turns red + ⚠ badge
+   - Near-limit (≥80%): bar turns amber
+   - Unlimited: full-height faint shimmer + ∞ label
+   - Untracked (no resourceKey): grey track, "—" label
+═══════════════════════════════════════════════════════ */
+const BAR_TRACK_H     = 300; // px — identical "100%" height across every bar
+const BAR_LABEL_TOP_H = 44;  // fixed zone above track — keeps all bar tops aligned
+const BAR_LABEL_BOT_H = 96;  // fixed zone below track — extra height for rotated labels
+
+function ModuleUsageSingleBar({ bar, resource, prevResource }) {
+  const isUntracked = !resource || resource.untracked === true;
+  const isUnlimited = !isUntracked && resource.limit === null;
+
+  const pct = isUntracked
+    ? 0
+    : isUnlimited
+    ? 100
+    : resource.limit > 0 && resource.used !== null
+    ? Math.min(100, (resource.used / resource.limit) * 100)
+    : 0;
+
+  const isAtLimit   = !isUntracked && !isUnlimited && !!resource?.atLimit;
+  const isNearLimit = !isAtLimit && pct >= 80 && !isUnlimited;
+
+  // MODULE COLOUR IS ALWAYS USED — warnings show via border/badge only, NEVER override the fill colour
+  const barColor = bar.color;
+  const fillPx   = Math.round((pct / 100) * BAR_TRACK_H);
+
+  const prevPct     = prevResource ? (prevResource.limit != null ? Math.min(100, (prevResource.used / prevResource.limit) * 100) : 100) : null;
+  const prevMarkerY = prevPct !== null ? Math.round((1 - prevPct / 100) * BAR_TRACK_H) : null;
+
+  const fmt      = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(".0", "") + "k" : String(n);
+  const usedStr  = !isUntracked && resource?.used  != null ? fmt(resource.used)  : null;
+  const limitStr = !isUntracked && !isUnlimited && resource?.limit != null ? fmt(resource.limit) : null;
+
+  return (
+    <a href={bar.href || "#"} style={{ textDecoration: "none", flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+
+      {/* ── TOP LABEL (fixed 44 px) — counts sit flush at the bottom of this zone ── */}
+      <div style={{ height: BAR_LABEL_TOP_H, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", paddingBottom: 6, textAlign: "center" }}>
+        {isUnlimited ? (
+          <span style={{ fontSize: 16, fontWeight: 700, color: barColor }}>∞</span>
+        ) : isUntracked ? (
+          <span style={{ fontSize: 16, color: "#374151" }}>—</span>
+        ) : (
+          <>
+            <span style={{ fontSize: 16, fontWeight: 700, color: barColor, lineHeight: 1 }}>{usedStr}</span>
+            {limitStr && <span style={{ fontSize: 16, color: "#4b5563", lineHeight: 1.3 }}>/{limitStr}</span>}
+          </>
+        )}
+      </div>
+
+      {/* ── BAR TRACK (fixed 300 px) ── */}
+      <div style={{
+        width: "100%", height: BAR_TRACK_H, flexShrink: 0,
+        background: "#151e30", borderRadius: 10, position: "relative", overflow: "hidden",
+        border: isAtLimit
+          ? "1px solid rgba(239,68,68,0.6)"
+          : isNearLimit
+          ? "1px solid rgba(245,158,11,0.5)"
+          : `1px solid ${barColor}28`,
+        boxShadow: isAtLimit ? "0 0 0 2px rgba(239,68,68,0.14)" : "none",
+      }}>
+        {/* Per-module background glow */}
+        <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at bottom, ${barColor}14 0%, transparent 65%)`, pointerEvents: "none" }} />
+
+        {/* FILL — always the module colour */}
+        {!isUntracked && (
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, height: fillPx,
+            background: isUnlimited
+              ? `linear-gradient(to top, ${barColor}70, ${barColor}28)`
+              : `linear-gradient(to top, ${barColor}, ${barColor}cc)`,
+            borderRadius: 10,
+            transition: "height 0.9s cubic-bezier(.4,0,.2,1)",
+            boxShadow: `0 0 20px ${barColor}44, inset 0 1px 0 rgba(255,255,255,0.2)`,
+          }} />
+        )}
+
+        {/* % inside fill when bar is tall enough to read */}
+        {!isUntracked && !isUnlimited && pct > 14 && (
+          <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", fontSize: 16, fontWeight: 700, color: pct > 30 ? "rgba(255,255,255,0.93)" : barColor, pointerEvents: "none" }}>
+            {Math.round(pct)}%
+          </div>
+        )}
+
+        {/* At-limit ⚠ badge at top of fill */}
+        {isAtLimit && <div style={{ position: "absolute", top: 8, left: 0, right: 0, textAlign: "center", fontSize: 16, pointerEvents: "none" }}>⚠</div>}
+        {/* Previous month reference line */}
+        {prevMarkerY !== null && (
+          <div style={{ position: "absolute", left: 4, right: 4, top: prevMarkerY, height: 2, background: "rgba(255,255,255,0.35)", borderRadius: 1, pointerEvents: "none", zIndex: 2 }} />
+        )}
+      </div>
+
+      {/* ── FOOTER — emoji + label rotated -50° for full readability ── */}
+      <div style={{ height: BAR_LABEL_BOT_H, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", paddingTop: 6, overflow: "visible" }}>
+        <div style={{ fontSize: 13, lineHeight: 1, marginBottom: 5 }}>{bar.emoji}</div>
+        <div style={{
+          fontSize: 11, fontWeight: 700,
+          color: isUnlimited ? "#10b981" : "#9ca3af",
+          textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 1,
+          whiteSpace: "nowrap",
+          transform: "rotate(-50deg)",
+          transformOrigin: "top center",
+        }}>
+          {bar.label}
+        </div>
+      </div>
+    </a>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   MINI STAT CARD — sidebar metric tile
+═══════════════════════════════════════════════════════ */
 function MiniStatCard({ title, primary, secondary, accent }) {
   return (
-    <div
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${accent}`,
-        padding: "10px 14px",
-        background:
-          "linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.96))",
-        boxShadow: "0 10px 26px rgba(0,0,0,0.7)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 16,
-          fontWeight: 600,
-          marginBottom: 6,
-          color: "#e5e7eb",
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          fontSize: 22,
-          fontWeight: 700,
-          marginBottom: 2,
-          color: accent,
-        }}
-      >
-        {primary}
-      </div>
-      <div
-        style={{
-          fontSize: 16,
-          color: "#9ca3af",
-          fontWeight: 400,
-        }}
-      >
-        {secondary}
-      </div>
+    <div style={{ borderRadius: 14, border: "1px solid #1f2937", borderLeft: "3px solid " + accent, padding: "14px 16px", background: "#111827" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 22, fontWeight: 600, color: accent, lineHeight: 1, marginBottom: 3 }}>{primary}</div>
+      <div style={{ fontSize: 13, color: "#4b5563" }}>{secondary}</div>
     </div>
-  );
-}
-
-/* PRESENTATIONAL HELPERS */
-
-function StatCard({ label, value, accent }) {
-  return (
-    <div
-      style={{
-        background:
-          "linear-gradient(135deg, rgba(15,23,42,0.96), rgba(15,23,42,1))",
-        borderRadius: 14,
-        border: `1px solid ${accent}`,
-        padding: "14px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        boxShadow: "0 12px 30px rgba(0,0,0,0.7)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 18,
-          textTransform: "uppercase",
-          letterSpacing: 0.6,
-          color: "#9ca3af",
-          fontWeight: 500,
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ fontSize: 28, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
-
-function SectionHeader({ title, subtitle, titleColor = "#e5e7eb", subtitleColor = "#6b7280" }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-          color: titleColor,
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          fontSize: 16,
-          color: subtitleColor,
-          fontWeight: 400,
-        }}
-      >
-        {subtitle}
-      </div>
-    </div>
-  );
-}
-
-function ScrollTable({ children }) {
-  return (
-    <div
-      style={{
-        maxHeight: 460,
-        overflowY: "auto",
-        borderRadius: 10,
-        border: "1px solid rgba(31,41,55,0.8)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function EmptyCopy({ children, color = "#6b7280" }) {
-  return (
-    <div
-      style={{ fontSize: 16, color, marginTop: 4, fontWeight: 400 }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Th({ children, color = "#9ca3af" }) {
-  return (
-    <th
-      style={{
-        textAlign: "left",
-        padding: "8px 10px",
-        fontSize: 16,
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-        color,
-        borderBottom: "1px solid rgba(31,41,55,0.9)",
-        position: "sticky",
-        top: 0,
-        background: "#020617",
-        fontWeight: 600,
-      }}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({ children, style, color = "#e5e7eb" }) {
-  return (
-    <td
-      style={{
-        padding: "7px 10px",
-        fontSize: 16,
-        color,
-        verticalAlign: "top",
-        fontWeight: 400,
-        ...style,
-      }}
-    >
-      {children}
-    </td>
   );
 }

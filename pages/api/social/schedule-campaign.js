@@ -2,6 +2,7 @@
 // FULL FILE — distributes posts across calendar
 
 import { requireUser } from "../../../lib/social/auth";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function getNextDates(startDate, daysOfWeek, count, time) {
   const dates = [];
@@ -20,7 +21,7 @@ function getNextDates(startDate, daysOfWeek, count, time) {
   return dates;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false });
   }
@@ -79,3 +80,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e.message });
   }
 }
+
+export default withAuth(handler);

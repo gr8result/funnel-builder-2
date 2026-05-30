@@ -1,4 +1,4 @@
-// pages/blocks/[pageId].js
+﻿// pages/blocks/[pageId].js
 // FULL REPLACEMENT
 // Fixes broken import path that referenced "./[id]/utils/supabase-client".
 // This page now loads safely without any weird relative imports.
@@ -52,7 +52,7 @@ export default function BlockPage() {
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
-      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Blocks Page</h1>
+      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Blocks Page</h1>
       <p style={{ opacity: 0.8, marginTop: 8 }}>
         Page ID: <b>{String(pageId || "")}</b>
       </p>

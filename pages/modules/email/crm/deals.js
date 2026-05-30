@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../../../utils/supabase-client";
 import LeadDetailsModal from "../../../../components/crm/LeadDetailsModal";
@@ -113,8 +113,8 @@ function StatusPill({ value }) {
         justifyContent: "center",
         padding: "4px 8px",
         borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
+        fontSize: 16,
+        fontWeight: 600,
         background: tone.bg,
         color: tone.color,
         border: `1px solid ${tone.border}`,
@@ -428,7 +428,7 @@ export default function CRMDealsPage() {
                     return (
                       <tr key={lead.id} style={styles.tr}>
                         <td style={styles.td}>
-                          <div style={{ fontWeight: 700, color: "#fff" }}>{lead.name || lead.email || "Unnamed lead"}</div>
+                          <div style={{ fontWeight: 600, color: "#fff" }}>{lead.name || lead.email || "Unnamed lead"}</div>
                           <div style={styles.subtleText}>{lead.email || lead.phone || meta.source || "—"}</div>
                         </td>
                         <td style={styles.td}>
@@ -534,7 +534,7 @@ const styles = {
   bannerTitle: {
     margin: 0,
     fontSize: 42,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#fff",
   },
   bannerSub: {
@@ -554,7 +554,7 @@ const styles = {
     background: "#fff",
     color: "#7c2d12",
     padding: "10px 14px",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     textDecoration: "none",
   },
@@ -564,7 +564,7 @@ const styles = {
     background: "rgba(9,9,11,0.18)",
     color: "#fff",
     padding: "10px 14px",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
     textDecoration: "none",
   },
@@ -574,7 +574,7 @@ const styles = {
     background: "rgba(9,9,11,0.18)",
     color: "#fff",
     padding: "10px 14px",
-    fontWeight: 700,
+    fontWeight: 600,
     textDecoration: "none",
   },
   container: {
@@ -594,8 +594,8 @@ const styles = {
     padding: 16,
   },
   metricLabel: {
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     color: "#94a3b8",
@@ -603,7 +603,7 @@ const styles = {
   },
   metricValue: {
     fontSize: 28,
-    fontWeight: 800,
+    fontWeight: 600,
   },
   filtersCard: {
     marginTop: 18,
@@ -615,12 +615,12 @@ const styles = {
   sectionTitle: {
     margin: 0,
     fontSize: 24,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#fff",
   },
   sectionSub: {
     margin: "6px 0 0",
-    fontSize: 14,
+    fontSize: 16,
     color: "#94a3b8",
   },
   filtersGrid: {
@@ -635,8 +635,8 @@ const styles = {
     gap: 6,
   },
   fieldLabel: {
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     color: "#cbd5e1",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
@@ -649,7 +649,7 @@ const styles = {
     background: "#08111f",
     color: "#fff",
     padding: "0 12px",
-    fontWeight: 700,
+    fontWeight: 600,
   },
   tableCard: {
     marginTop: 18,
@@ -672,7 +672,7 @@ const styles = {
   },
   th: {
     textAlign: "left",
-    fontSize: 12,
+    fontSize: 16,
     color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
@@ -684,12 +684,12 @@ const styles = {
   },
   td: {
     padding: "12px",
-    fontSize: 14,
+    fontSize: 16,
     color: "#e2e8f0",
     verticalAlign: "top",
   },
   subtleText: {
-    fontSize: 12,
+    fontSize: 16,
     color: "#94a3b8",
     marginTop: 4,
   },
@@ -699,7 +699,7 @@ const styles = {
     background: "#2563eb",
     color: "#fff",
     padding: "8px 10px",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
@@ -707,6 +707,6 @@ const styles = {
     padding: "26px 12px",
     color: "#94a3b8",
     textAlign: "center",
-    fontSize: 15,
+    fontSize: 16,
   },
 };

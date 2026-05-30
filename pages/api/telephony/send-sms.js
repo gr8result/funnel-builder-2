@@ -1,5 +1,6 @@
 // /pages/api/telephony/send-sms.js
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function pickEnv(...keys) {
   for (const k of keys) {
@@ -14,7 +15,7 @@ function must(v, name) {
   return v;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
   try {
@@ -46,3 +47,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg });
   }
 }
+
+export default withAuth(handler);

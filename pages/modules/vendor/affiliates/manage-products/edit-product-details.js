@@ -1,4 +1,4 @@
-// /pages/modules/affiliates/vendor/manage-products/edit-product-details.js
+﻿// /pages/modules/affiliates/vendor/manage-products/edit-product-details.js
 // FULL REPLACEMENT
 //
 // ✅ Banner: title 48px weight 600, subtitle 18px, back btn 18px
@@ -287,7 +287,7 @@ export default function EditProductDetails() {
               color: '#fff',
               padding: '12px 32px',
               borderRadius: 10,
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: 20,
               marginLeft: 32,
               marginRight: 12,

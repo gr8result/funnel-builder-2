@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
 
 export const config = {
   api: {
@@ -25,7 +26,7 @@ function extensionFromName(name) {
   return (parts.pop() || "bin").toLowerCase();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -133,3 +134,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error?.message || "Failed to upload image" });
   }
 }
+
+export default withAuth(handler);

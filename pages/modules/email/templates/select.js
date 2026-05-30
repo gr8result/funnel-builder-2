@@ -1,4 +1,4 @@
-// /pages/modules/email/templates/select.js
+﻿// /pages/modules/email/templates/select.js
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
@@ -471,7 +471,7 @@ function TemplateCardPreview({ tpl }) {
         placeItems: "center",
         background: "linear-gradient(135deg,#f8fafc,#e2e8f0)",
         color: "#334155",
-        fontWeight: 700,
+        fontWeight: 600,
         textAlign: "center",
         padding: 12,
       }}
@@ -962,7 +962,7 @@ export default function TemplateSelector() {
               </h2>
               <p
                 style={{
-                  fontSize: 14,
+                  fontSize: 16,
                   color: "#e5e7eb",
                   textAlign: "center",
                   marginBottom: 20,
@@ -1003,7 +1003,7 @@ export default function TemplateSelector() {
                     border: "none",
                     background: "#ef4444",
                     color: "#fff",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: "pointer",
                     minWidth: 140,
                   }}

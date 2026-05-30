@@ -10,8 +10,9 @@
 // /pages/api/vendor/send-verification.js
 // Sends a verification email to the vendor with a link to verify and redirect to /modules/vendor
 import { sendEmail } from '../../../lib/sendEmail';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { email, name, phone, token } = req.body;
   if (!email || !token) return res.status(400).json({ error: 'Missing email or token' });
@@ -44,3 +45,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAuth(handler);

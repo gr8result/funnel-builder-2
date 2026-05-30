@@ -1,6 +1,7 @@
-﻿import { readDB, writeDB, nid } from "../../../utils/affdb";
+import { readDB, writeDB, nid } from "../../../utils/affdb";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   const { applicationId, action } = req.body || {};
   if (!applicationId || !["approve", "decline"].includes(action)) {
@@ -32,3 +33,4 @@ export default async function handler(req, res) {
   res.status(200).json({ ok: true, application: app });
 }
 
+export default withAdmin(handler);

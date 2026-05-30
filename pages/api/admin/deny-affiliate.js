@@ -1,12 +1,13 @@
-// /pages/api/admin/deny-affiliate.js
-// Admin API — Deny affiliate application
+﻿// /pages/api/admin/deny-affiliate.js
+// Admin API â€” Deny affiliate application
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { sendEmail } from '../../../lib/sendEmail';
+import { withAdmin } from '../../../lib/withAdmin';
 
 const FROM = process.env.SENDGRID_FROM_EMAIL || 'no-reply@gr8result.com';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Missing affiliate id' });
@@ -25,13 +26,13 @@ export default async function handler(req, res) {
       .eq('id', id);
     if (error) throw error;
 
-    // Send denial notification email — non-fatal
+    // Send denial notification email â€” non-fatal
     if (existing?.email) {
       const firstName = (existing.name || 'Applicant').split(' ')[0];
       const emailResult = await sendEmail({
         to: existing.email,
         from: FROM,
-        subject: 'An Update on Your Affiliate Application — GR8 RESULT',
+        subject: 'An Update on Your Affiliate Application â€” GR8 RESULT',
         html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#0a0f1a;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f1a;padding:40px 16px;">
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
         <td style="background:#060d18;padding:36px 40px 28px;text-align:center;border-bottom:3px solid #3b82f6;">
           <div style="font-size:36px;font-weight:900;letter-spacing:3px;color:#f97316;line-height:1;">GR8 RESULT</div>
           <div style="font-size:11px;color:#64748b;margin-top:6px;letter-spacing:2px;text-transform:uppercase;">Digital Solutions</div>
-          <div style="font-size:13px;color:#94a3b8;margin-top:14px;letter-spacing:1px;text-transform:uppercase;">Xchange Marketplace · Affiliate Program</div>
+          <div style="font-size:13px;color:#94a3b8;margin-top:14px;letter-spacing:1px;text-transform:uppercase;">Xchange Marketplace Â· Affiliate Program</div>
         </td>
       </tr>
 
@@ -83,7 +84,7 @@ export default async function handler(req, res) {
           <p style="font-size:13px;color:#475569;margin:0;line-height:1.7;">
             We wish you all the best in your endeavours.<br>
             <strong style="color:#f97316;">The GR8 RESULT Team</strong>
-            &nbsp;·&nbsp;
+            &nbsp;Â·&nbsp;
             <a href="https://www.gr8result.com.au" style="color:#3b82f6;text-decoration:none;">gr8result.com.au</a>
           </p>
         </td>
@@ -106,3 +107,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

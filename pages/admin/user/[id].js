@@ -1,4 +1,4 @@
-// /pages/admin/user/[id].js
+﻿// /pages/admin/user/[id].js
 // Admin detail view for individual onboarding applications — now includes Submitted Application Data section
 
 
@@ -257,13 +257,13 @@ export default function UserDetails() {
         {/* Admin Action Buttons */}
         <div style={{ display: 'flex', gap: 16, marginTop: 32 }}>
           <button
-            style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontWeight: 700, fontSize: 18, cursor: 'pointer' }}
+            style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontWeight: 600, fontSize: 18, cursor: 'pointer' }}
             onClick={() => handleAction('approve')}
           >
             Approve
           </button>
           <button
-            style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontWeight: 700, fontSize: 18, cursor: 'pointer' }}
+            style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: 8, fontWeight: 600, fontSize: 18, cursor: 'pointer' }}
             onClick={() => handleAction('deny')}
           >
             Deny
@@ -280,7 +280,7 @@ const styles = {
       color: '#facc15',
       marginBottom: 16,
       marginTop: 0,
-      fontWeight: 700,
+      fontWeight: 600,
       letterSpacing: 0.5,
     },
     heading3: {

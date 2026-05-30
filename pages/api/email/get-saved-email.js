@@ -4,6 +4,7 @@
 // Returns raw HTML from Supabase Storage (bucket: email-user-assets)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -13,7 +14,7 @@ const SERVICE_KEY =
 
 const BUCKET = "email-user-assets";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") return res.status(405).send("GET only");
 
@@ -47,3 +48,5 @@ export default async function handler(req, res) {
     return res.status(500).send(e?.message || "Server error");
   }
 }
+
+export default withAuth(handler);

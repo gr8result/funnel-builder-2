@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,7 +16,7 @@ function SiteLoader() {
       `}</style>
       <main style={{ minHeight:"100vh", display:"grid", placeItems:"center", background:"#05070f", fontFamily:"system-ui,sans-serif" }}>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
-          <div style={{ fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(255,255,255,.28)", fontWeight:700 }}>
+          <div style={{ fontSize:16, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(255,255,255,.28)", fontWeight:600 }}>
             🌐&nbsp; GR8 Website Studio
           </div>
           <div style={{ position:"relative", width:108, height:108, display:"grid", placeItems:"center" }}>
@@ -37,7 +37,7 @@ function SiteLoader() {
             </svg>
             <div style={{ position:"relative", width:14, height:14, borderRadius:"50%", background:"linear-gradient(135deg,#0ea5e9,#8b5cf6)", boxShadow:"0 0 20px rgba(14,165,233,.8),0 0 6px rgba(14,165,233,.5)" }} />
           </div>
-          <div style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,.6)", letterSpacing:"0.04em" }}>Loading preview…</div>
+          <div style={{ fontSize:16, fontWeight:600, color:"rgba(255,255,255,.6)", letterSpacing:"0.04em" }}>Loading preview…</div>
           <div style={{ display:"flex", gap:7 }}>
             {[0,1,2].map(i => (
               <span key={i} style={{ display:"block", width:6, height:6, borderRadius:"50%", background: i===1?"rgba(99,102,241,.75)":"rgba(14,165,233,.6)", animation:`sl-dot 1.5s ease-in-out ${i*0.3}s infinite` }} />
@@ -53,6 +53,7 @@ import {
   cacheWebsiteProject,
   getWebsiteBuilderAssets,
   getWebsiteProject,
+  restoreWebsiteProjectFromBackup,
   updateWebsiteProject,
 } from "../../../../../lib/website-builder/projectStore";
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
@@ -85,6 +86,8 @@ function pickPageBackground(blocks, fallback = "#ffffff") {
 
 function isLegacyAiStarterProject(project) {
   if (!project || String(project?.mode || "").toLowerCase() !== "ai") return false;
+  if (project?.brief?.aiStarterVersion) return false;
+  if (project?.status === "saved") return false;
   if (project?.globalNavBlock || project?.globalFooterBlock) return false;
 
   const homePageName = Array.isArray(project?.pages) && project.pages.length
@@ -104,6 +107,7 @@ export default function ProjectPreviewPage() {
   const [authReady, setAuthReady] = useState(false);
   const [project, setProject] = useState(null);
   const [loadingDone, setLoadingDone] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [assets, setAssets] = useState({ logo: null, images: [] });
   const projectSnapshotRef = useRef("");
   const assetSnapshotRef = useRef("");
@@ -127,7 +131,8 @@ export default function ProjectPreviewPage() {
     const latestAssets = getWebsiteBuilderAssets();
 
     if (!projectId) {
-      syncStateIfChanged(null, latestAssets);
+      // id is not ready yet (router hasn't hydrated) — bail quietly without
+      // wiping any project state that may already be loaded.
       return null;
     }
 
@@ -161,25 +166,107 @@ export default function ProjectPreviewPage() {
     let cancelled = false;
 
     const loadPreviewProject = async () => {
+      // Step 1: Try localStorage first — this is always the freshest copy because
+      // handlePreviewPage in the builder tab calls forceSaveBlockPage (which writes
+      // to localStorage synchronously) BEFORE navigating this tab to the preview URL.
       let nextProject = refreshPreviewState(id);
-      // Always fetch from server in preview mode to ensure latest saved state is shown
+
+      if (nextProject && !cancelled) {
+        // Project is in localStorage — show it immediately. The server fetch below
+        // will run in the background and silently refresh if it finds a newer copy.
+        setLoadingDone(true);
+      }
+
+      // Step 2: Fetch from server to pick up any published/server-only state.
+      // Use the same merge strategy as syncProjectToServer in the builder tab:
+      // always trust local pageBlocks/globalNav/globalFooter over the server copy.
+      // The builder calls forceSaveBlockPage (localStorage write) before opening
+      // this tab, so local blocks are guaranteed to be the freshest.  A queued
+      // autosave can race the force-save and put a slightly older snapshot on the
+      // server with an equal or newer timestamp; onlyIfNewer:true alone is not
+      // sufficient in that case — prefer local blocks explicitly.
       if (session?.access_token) {
         try {
           const remoteProject = await fetchWebsiteProjectFromServer(session, id);
-          if (remoteProject) {
-            nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: false });
-            syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+          if (remoteProject && !cancelled) {
+            // Re-read local now that the async fetch has returned — another tab
+            // or a queued sync may have updated localStorage since Step 1.
+            const localNow = getWebsiteProject(id);
+            const hasLocalBlocks = localNow && Object.keys(localNow.pageBlocks || {}).length > 0;
+            // Merge: keep server-side metadata (publish status, custom domain,
+            // pinned blocks, etc.) but always prefer local page content.
+            const mergedForCache = hasLocalBlocks ? {
+              ...remoteProject,
+              pageBlocks: localNow.pageBlocks,
+              ...("globalNavBlock" in Object(localNow) ? { globalNavBlock: localNow.globalNavBlock } : {}),
+              ...("globalFooterBlock" in Object(localNow) ? { globalFooterBlock: localNow.globalFooterBlock } : {}),
+            } : remoteProject;
+            const cached = cacheWebsiteProject(mergedForCache, { onlyIfNewer: false });
+            // Only update nextProject if cacheWebsiteProject returned something —
+            // never overwrite a good local project with a null result.
+            if (cached) {
+              nextProject = cached;
+              syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+            }
           }
         } catch (error) {
           console.warn("Could not load preview draft from the server", error);
         }
       }
 
-      if (!cancelled && !nextProject) {
-        syncStateIfChanged(null, getWebsiteBuilderAssets());
-      }
+      // Step 3: Finish loading.
+      // IMPORTANT: if there's still no project AND no session token (auth hasn't
+      // restored yet), do NOT mark loading as done — the effect will re-run once
+      // session?.access_token arrives and will load the project from the server then.
+      if (!cancelled) {
+        if (!nextProject) {
+          if (!session?.access_token) return; // wait for auth to restore, then re-run
 
-      if (!cancelled) setLoadingDone(true);
+          // Retry up to 3 times (800 ms apart) before giving up. This covers
+          // transient server errors, token refresh races, and the edge case where
+          // the builder tab is still flushing to localStorage when the preview tab
+          // first runs its effect.
+          for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            if (cancelled) return;
+
+            // Re-check localStorage
+            const retryLocal = refreshPreviewState(id);
+            if (retryLocal) { nextProject = retryLocal; break; }
+
+            // Fallback: backup storage (written before server overwrites)
+            const backup = restoreWebsiteProjectFromBackup(id);
+            if (backup) {
+              const cached = cacheWebsiteProject(backup, { onlyIfNewer: false });
+              if (cached) {
+                nextProject = cached;
+                syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+                break;
+              }
+            }
+
+            // Re-try server fetch
+            try {
+              const retryRemote = await fetchWebsiteProjectFromServer(session, id);
+              if (retryRemote && !cancelled) {
+                const cached = cacheWebsiteProject(retryRemote, { onlyIfNewer: false });
+                if (cached) {
+                  nextProject = cached;
+                  syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+                  break;
+                }
+              }
+            } catch {
+              // continue to next retry
+            }
+          }
+
+          if (!nextProject && !cancelled) {
+            syncStateIfChanged(null, getWebsiteBuilderAssets());
+          }
+        }
+        if (!cancelled) setLoadingDone(true);
+      }
     };
 
     loadPreviewProject();
@@ -187,7 +274,7 @@ export default function ProjectPreviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, authReady, session?.access_token]);
+  }, [id, authReady, session?.access_token, retryCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -345,7 +432,7 @@ export default function ProjectPreviewPage() {
     ? pageBlocks.filter((b) => b.type !== "nav-bar")
     : pageBlocks;
 
-  const injectFooter = globalFooterBlock && !pageBlocks.some((b) => b.id && b.id === globalFooterBlock.id);
+  const injectFooter = !!globalFooterBlock;
   const blocksWithoutShellDuplicates = injectFooter
     ? blocksWithoutNav.filter((b) => b.type !== "footer")
     : blocksWithoutNav;
@@ -365,8 +452,34 @@ export default function ProjectPreviewPage() {
 
   if (!project) {
     if (!loadingDone) return <SiteLoader />;
+    const builderUrl = id
+      ? `/modules/website-builder/visual-builder?projectId=${encodeURIComponent(String(id))}`
+      : "/modules/website-builder";
     return (
-      <main style={styles.page("#ffffff")}><div style={styles.wrap}><h1 style={styles.h1}>Project not found</h1></div></main>
+      <main style={styles.page("#0f172a")}>
+        <div style={{ ...styles.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, textAlign: "center" }}>
+          <div style={{ fontSize: 48, lineHeight: 1 }}>🔍</div>
+          <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>Project not found</h1>
+          <p style={{ color: "#94a3b8", fontSize: 16, margin: 0, maxWidth: 380, lineHeight: 1.6 }}>
+            This project could not be loaded. It may have been deleted, or there may be a temporary connection issue.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => { setLoadingDone(false); setRetryCount((n) => n + 1); }}
+              style={{ padding: "10px 20px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: 16 }}
+            >
+              Try Again
+            </button>
+            <a
+              href={builderUrl}
+              style={{ padding: "10px 20px", borderRadius: 8, background: "transparent", color: "#94a3b8", border: "1px solid rgba(148,163,184,0.3)", fontWeight: 600, textDecoration: "none", fontSize: 16 }}
+            >
+              Back to Builder
+            </a>
+          </div>
+        </div>
+      </main>
     );
   }
 
@@ -389,8 +502,8 @@ export default function ProjectPreviewPage() {
         <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
           {/* Global nav — injected above all page content */}
           {injectNav ? (
-            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} style={{ overflowX: "hidden" }}>
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} style={{ overflowX: "clip", minWidth: 0 }}>
+              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
 
@@ -398,8 +511,8 @@ export default function ProjectPreviewPage() {
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             <>
               {blocksWithoutShellDuplicates.map((block, index) => (
-                <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "hidden" }}>
-                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+                <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "clip", minWidth: 0 }}>
+                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
                 </div>
               ))}
             </>
@@ -440,8 +553,8 @@ export default function ProjectPreviewPage() {
 
           {/* Global footer — injected below all page content */}
           {injectFooter ? (
-            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} style={{ overflowX: "hidden" }}>
-              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
+            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} style={{ overflowX: "clip", minWidth: 0 }}>
+              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
         </div>
@@ -503,6 +616,7 @@ const styles = {
     margin: 0,
     padding: 0,
     display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr)",
     gap: 0,
   },
   previewViewport: (viewport, previewShellWidth) => ({
@@ -512,7 +626,7 @@ const styles = {
     margin: viewport === "desktop" ? 0 : "0 auto",
     marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
-    overflowX: "hidden",
+    overflowX: "clip",
   }),
   brandRow: {
     borderRadius: 18,

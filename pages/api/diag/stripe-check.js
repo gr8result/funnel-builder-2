@@ -1,7 +1,8 @@
 // pages/api/diag/stripe-check.js
 import Stripe from 'stripe';
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const key = process.env.STRIPE_SECRET_KEY || '';
     if (!key) return res.status(500).json({ ok: false, reason: 'missing STRIPE_SECRET_KEY' });
@@ -22,3 +23,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: String(e.message || e) });
   }
 }
+
+export default withAdmin(handler);

@@ -1,8 +1,9 @@
-﻿// pages/api/dev/metrics.js
+// pages/api/dev/metrics.js
 // Lightweight metrics endpoint sharing the same detection logic as spreadsheet-data.
 // Returns usersOnline, activeSubs, mrr, modules[], revenueSeries[].
 
 import { createClient } from "@supabase/supabase-js";
+import { withAdmin } from "../../../lib/withAdmin";
 
 function sb() {
   const url = process.env.SUPABASE_URL;
@@ -32,7 +33,7 @@ function mock() {
   };
 }
 
-export default async function handler(_req, res) {
+async function handler(_req, res) {
   try {
     const client = sb();
     if (!client) return res.status(200).json(mock());
@@ -75,3 +76,4 @@ export default async function handler(_req, res) {
   }
 }
 
+export default withAdmin(handler);

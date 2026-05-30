@@ -1,4 +1,6 @@
 import { requireUser } from '../../../lib/social/auth';
+import { withAuth } from "../../../lib/withWorkspace";
+import { clearListLibraryCache } from '../../api/assets/list-library';
 import {
   buildDeletedTemplateMarkerName,
   extractTemplateSourceHashFromTags,
@@ -28,7 +30,7 @@ async function writeDeletedTemplateMarker(admin, markerPath = '') {
   });
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'DELETE') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -49,6 +51,7 @@ export default async function handler(req, res) {
     if (!sourceHash) return res.status(400).json({ ok: false, error: 'Could not compute source hash for this entry' });
     await writeDeletedTemplateMarker(auth.admin, `generic/${buildDeletedTemplateMarkerName(sourceHash)}`);
     clearMaterializationCaches();
+    clearListLibraryCache(auth.user.id);
     return res.json({ ok: true });
   }
 
@@ -75,6 +78,7 @@ export default async function handler(req, res) {
       .or(`storage_path.eq.${storagePath},url.eq.${publicUrl}`);
 
     clearMaterializationCaches();
+    clearListLibraryCache(auth.user.id);
     return res.json({ ok: true });
   }
 
@@ -113,6 +117,7 @@ export default async function handler(req, res) {
       .eq('user_id', auth.user.id)
       .eq('storage_path', img.storage_path);
     clearMaterializationCaches();
+    clearListLibraryCache(auth.user.id);
     return res.json({ ok: true });
   }
 
@@ -124,5 +129,8 @@ export default async function handler(req, res) {
 
   if (error) return res.status(500).json({ ok: false, error: error.message });
 
+  clearListLibraryCache(auth.user.id);
   return res.json({ ok: true });
 }
+
+export default withAuth(handler);

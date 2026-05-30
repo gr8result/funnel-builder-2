@@ -27,6 +27,9 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase/**/*"
+    "supabase/**/*",
+    "tmp/**/*",
+    "tmp-trade-check/**/*",
+    "transcribe-local/**/*"
   ]
 }

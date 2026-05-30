@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -26,23 +27,20 @@ function maskIp(ip) {
   return ip.replace(/\.\d+$/, ".***");
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
 
   const projectId = String(req.query.projectId || "").trim();
   if (!projectId) return res.status(400).json({ error: "projectId required" });
 
-  // Auth check — only the project owner (matched via user session or service key query) should see this.
-  // For now we verify the projectId exists in website_builder_projects.
-  const { data: proj, error: projError } = await supabaseAdmin
+  // Try to fetch project name — but don't block if it's not in the DB yet (localStorage-only projects)
+  const { data: proj } = await supabaseAdmin
     .from("website_builder_projects")
     .select("id, name, user_id")
     .eq("id", projectId)
     .maybeSingle();
 
-  if (projError || !proj) {
-    return res.status(404).json({ error: "Project not found" });
-  }
+  const projectName = proj?.name || null;
 
   const days = Math.min(90, Math.max(7, parseInt(req.query.days || "30", 10)));
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -122,7 +120,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     projectId,
-    projectName: proj.name || projectId,
+    projectName: projectName || projectId,
     totalVisits: totalResult.count || 0,
     uniqueVisitors: uniqueResult.count || 0,
     todayVisits: todayCount,
@@ -132,3 +130,5 @@ export default async function handler(req, res) {
     recentVisits,
   });
 }
+
+export default withAuth(handler);

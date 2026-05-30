@@ -1,4 +1,4 @@
-﻿// /pages/api/email/templates/list.js
+// /pages/api/email/templates/list.js
 // Lists templates from Supabase Storage:
 // - Public:  bucket "email-assets"      folder "templates" (recursive-ish: we scan one level deep)
 // - User:    bucket "email-user-assets" folder "<userId>/finished-emails"  (your screenshot)
@@ -7,6 +7,7 @@
 // Each item: { id, scope, name, htmlPath, previewPath, previewUrl }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -139,15 +140,14 @@ async function listUserTemplates(client, userId) {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const client = sb();
 
-    // IMPORTANT: we require userId for user templates, but public can be listed without it.
-    const userId = req.query?.userId ? String(req.query.userId) : null;
+    const userId = req.user.id;
 
     const publicTemplates = await listPublicTemplates(client);
-    const userTemplates = userId ? await listUserTemplates(client, userId) : [];
+    const userTemplates = await listUserTemplates(client, userId);
 
     return res.status(200).json({
       ok: true,
@@ -162,3 +162,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "list failed" });
   }
 }
+
+export default withAuth(handler);

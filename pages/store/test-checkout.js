@@ -1,4 +1,4 @@
-// pages/store/test-checkout.js
+﻿// pages/store/test-checkout.js
 // Simple test page: one button that calls /api/store/create-checkout-session
 
 import { useState } from "react";
@@ -68,7 +68,7 @@ export default function TestCheckoutPage() {
         }}
       >
         <h1 style={{ fontSize: 24, marginBottom: 8 }}>Store Test Checkout</h1>
-        <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 20 }}>
+        <p style={{ fontSize: 16, color: "#9ca3af", marginBottom: 20 }}>
           Click the button below to create a Stripe checkout session using the
           new store API.
         </p>
@@ -95,7 +95,7 @@ export default function TestCheckoutPage() {
           <div
             style={{
               marginTop: 16,
-              fontSize: 13,
+              fontSize: 16,
               color: "#fecaca",
               background: "#7f1d1d",
               padding: "8px 10px",
@@ -109,8 +109,8 @@ export default function TestCheckoutPage() {
         <div
           style={{
             marginTop: 16,
-            fontSize: 12,
-            color: "#6b7280",
+            fontSize: 16,
+            color: "#9ca3af",
           }}
         >
           This is only a test page for wiring up the store checkout. You can

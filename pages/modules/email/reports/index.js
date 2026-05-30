@@ -1,4 +1,4 @@
-// /pages/modules/email/reports/index.js
+﻿// /pages/modules/email/reports/index.js
 // Email analytics control centre — collapsible section summaries + drill-down.
 // LIVE version (reads from email_sends).
 //
@@ -616,7 +616,7 @@ const styles = {
     background: "rgba(2,6,23,0.25)",
     border: "1px solid rgba(2,6,23,0.35)",
     color: "rgba(2,6,23,0.85)",
-    fontWeight: 900,
+    fontWeight: 600,
   },
 
   sectionBody: {
@@ -641,7 +641,7 @@ const styles = {
     alignItems: "center",
   },
   pillLabel: { opacity: 0.9 },
-  pillValue: { fontWeight: 800 },
+  pillValue: { fontWeight: 600 },
 
   summaryGrid: {
     display: "grid",
@@ -655,8 +655,8 @@ const styles = {
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
   },
-  metricTitle: { fontSize: 18, opacity: 0.85, fontWeight: 700 },
-  metricValue: { fontSize: 18, fontWeight: 800, marginTop: 6 },
+  metricTitle: { fontSize: 18, opacity: 0.85, fontWeight: 600 },
+  metricValue: { fontSize: 18, fontWeight: 600, marginTop: 6 },
 
   deepLink: {
     display: "inline-block",
@@ -667,7 +667,7 @@ const styles = {
     borderRadius: 999,
     padding: "10px 16px",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   recentWrap: {
@@ -677,7 +677,7 @@ const styles = {
     background: "rgba(2,6,23,0.55)",
     border: "1px solid rgba(255,255,255,0.10)",
   },
-  recentTitle: { fontSize: 18, fontWeight: 900 },
+  recentTitle: { fontSize: 18, fontWeight: 600 },
   recentSub: { fontSize: 18, opacity: 0.9, marginTop: 3 },
   recentEmpty: { fontSize: 18, opacity: 0.8, marginTop: 8 },
 
@@ -694,7 +694,7 @@ const styles = {
     padding: "10px 12px",
     background: "rgba(255,255,255,0.06)",
   },
-  th: { fontSize: 18, fontWeight: 900, opacity: 0.9 },
+  th: { fontSize: 18, fontWeight: 600, opacity: 0.9 },
   tr: {
     display: "grid",
     gridTemplateColumns: "1.4fr 2fr 1fr 0.6fr 0.6fr 1fr",

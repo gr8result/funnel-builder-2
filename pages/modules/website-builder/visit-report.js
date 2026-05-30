@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+﻿import React, { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -12,9 +12,9 @@ const RANGE_OPTIONS = [
 function StatCard({ label, value, sub, color = "#0ea5e9" }) {
   return (
     <div style={{ background: "#1e293b", borderRadius: 14, padding: "20px 24px", minWidth: 160, flex: 1 }}>
-      <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>{label}</div>
-      <div style={{ fontSize: 36, fontWeight: 800, color, lineHeight: 1.1 }}>{value ?? "—"}</div>
-      {sub && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{sub}</div>}
+      <div style={{ fontSize: 16, color: "#94a3b8", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>{label}</div>
+      <div style={{ fontSize: 36, fontWeight: 600, color, lineHeight: 1.1 }}>{value ?? "—"}</div>
+      {sub && <div style={{ fontSize: 62, color: "#64748b", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -45,7 +45,7 @@ function MiniBarChart({ data }) {
           );
         })}
       </svg>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 11, color: "#475569" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 16, color: "#475569" }}>
         <span>{data[0]?.date}</span>
         <span>{data[data.length - 1]?.date}</span>
       </div>
@@ -63,7 +63,7 @@ function BrowserBadge({ browser }) {
       display: "inline-block", padding: "2px 8px", borderRadius: 999,
       background: (colors[browser] || "#374151") + "22",
       color: colors[browser] || "#6b7280",
-      fontSize: 12, fontWeight: 600,
+      fontSize: 16, fontWeight: 600,
     }}>
       {browser}
     </span>
@@ -109,16 +109,16 @@ export default function VisitReportPage() {
       <div style={{ minHeight: "100vh", background: "#0f172a", color: "#e2e8f0", fontFamily: "system-ui, sans-serif" }}>
         {/* Header */}
         <div style={{ background: "#1e293b", borderBottom: "1px solid #334155", padding: "14px 28px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <Link href="/modules/website-builder" style={{ color: "#94a3b8", fontSize: 13, textDecoration: "none" }}>
+          <Link href="/modules/website-builder" style={{ color: "#94a3b8", fontSize: 16, textDecoration: "none" }}>
             ← Website Builder
           </Link>
           {projectId && (
-            <Link href={`/modules/website-builder/visual-builder?projectId=${projectId}`} style={{ color: "#94a3b8", fontSize: 13, textDecoration: "none" }}>
+            <Link href={`/modules/website-builder/visual-builder?projectId=${projectId}`} style={{ color: "#94a3b8", fontSize: 16, textDecoration: "none" }}>
               ← Back to Editor
             </Link>
           )}
           <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#f1f5f9" }}>
             📊 {data?.projectName || "Visitor Report"}
           </div>
           <div style={{ flex: 1 }} />
@@ -128,7 +128,7 @@ export default function VisitReportPage() {
                 key={o.value}
                 onClick={() => setDays(o.value)}
                 style={{
-                  padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                  padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 16, fontWeight: 600,
                   background: days === o.value ? "#0ea5e9" : "#334155",
                   color: days === o.value ? "#fff" : "#94a3b8",
                 }}
@@ -138,7 +138,7 @@ export default function VisitReportPage() {
           <button
             onClick={load}
             disabled={loading}
-            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "#334155", color: "#94a3b8" }}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 16, fontWeight: 600, background: "#334155", color: "#94a3b8" }}
           >{loading ? "..." : "↻ Refresh"}</button>
         </div>
 
@@ -171,7 +171,7 @@ export default function VisitReportPage() {
 
               {/* Daily chart */}
               <div style={{ background: "#1e293b", borderRadius: 14, padding: "20px 24px", marginBottom: 24 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 14, letterSpacing: "0.06em" }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", marginBottom: 14, letterSpacing: "0.06em" }}>
                   VISITS PER DAY — LAST {days} DAYS
                 </div>
                 <MiniBarChart data={data.dailyChart} />
@@ -179,14 +179,14 @@ export default function VisitReportPage() {
 
               {/* Recent visits table */}
               <div style={{ background: "#1e293b", borderRadius: 14, padding: "20px 24px" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 16, letterSpacing: "0.06em" }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", marginBottom: 16, letterSpacing: "0.06em" }}>
                   RECENT VISITS (last {data.recentVisits.length})
                 </div>
                 {data.recentVisits.length === 0 ? (
                   <div style={{ color: "#475569", textAlign: "center", padding: "30px 0" }}>No visits recorded yet.</div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
                       <thead>
                         <tr style={{ borderBottom: "1px solid #334155" }}>
                           {["Date & Time", "IP Address", "Browser", "Page", "Referrer", "Type"].map((h) => (
@@ -222,14 +222,14 @@ export default function VisitReportPage() {
                               </td>
                               <td style={{ padding: "9px 12px" }}>
                                 {v.isReturning
-                                  ? <span style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700 }}>↩ RETURNING</span>
-                                  : <span style={{ color: "#34d399", fontSize: 11, fontWeight: 700 }}>✦ NEW</span>}
+                                  ? <span style={{ color: "#a78bfa", fontSize: 16, fontWeight: 600 }}>↩ RETURNING</span>
+                                  : <span style={{ color: "#34d399", fontSize: 16, fontWeight: 600 }}>✦ NEW</span>}
                               </td>
                             </tr>
                             {expandedRow === i && (
                               <tr style={{ background: "#0f172a" }}>
                                 <td colSpan={6} style={{ padding: "10px 16px 14px" }}>
-                                  <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.8 }}>
+                                  <div style={{ fontSize: 16, color: "#64748b", lineHeight: 1.8 }}>
                                     <strong style={{ color: "#94a3b8" }}>User-Agent:</strong>{" "}
                                     <span style={{ fontFamily: "monospace", wordBreak: "break-all" }}>{v.userAgent || "—"}</span>
                                   </div>
@@ -244,7 +244,7 @@ export default function VisitReportPage() {
                 )}
               </div>
 
-              <div style={{ marginTop: 16, fontSize: 11, color: "#334155", textAlign: "center" }}>
+              <div style={{ marginTop: 16, fontSize: 16, color: "#334155", textAlign: "center" }}>
                 IP addresses are partially masked for privacy. Click any row to see the full user-agent string.
                 Unique visitors are identified by a persistent browser cookie (wbv_visitor_id).
               </div>

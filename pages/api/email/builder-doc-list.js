@@ -5,6 +5,7 @@
 // ============================================
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -26,7 +27,7 @@ async function downloadJson(path) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const userId = String(req.query?.userId || "").trim();
     if (!userId) return res.status(400).json({ ok: false, error: "Missing userId" });
@@ -66,3 +67,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "List failed", detail: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

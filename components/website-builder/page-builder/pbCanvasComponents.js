@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
@@ -38,7 +38,9 @@ import {
   ContainerImageControls, TeamMembersEditor, TeamPropertiesPanel,
   ensureGalleryImagesCount, ListItemsEditor, FeatureListPropertiesPanel,
   GalleryImagesEditor, ImageGalleryPropertiesPanel,
-  PricingTablePropertiesPanel, FAQPropertiesPanel, SplitBlockPropertiesPanel,
+  PricingTablePropertiesPanel, FAQPropertiesPanel, SplitBlockPropertiesPanel, FeatureAccordionPropertiesPanel,
+  ScrollStackPropertiesPanel,
+  CompetitorComparisonPropertiesPanel,
   NumberField, ImagePropertiesPanel, NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
   ColorSelector, CompactColorField, rgbToHex, stripEditorArtifacts,
@@ -73,10 +75,12 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, canvasScale = 1 }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
+  const [hoveredSlot, setHoveredSlot] = useState(null);
+  const isDragTarget = activeDragIndex !== null && activeDragIndex !== index && block.type === "columns-2";
   const stickyMode = String(block?.props?.stickyMode || "normal");
   const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
@@ -125,16 +129,41 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
         ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
-        ...(block?.type === "space" ? { padding: 0, background: "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px", border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(block?.props?.height || "40").replace("px", "")) || 40, boxShadow: "none" } : {}),
+        ...(block?.type === "space" ? (() => {
+          const sp    = block.props || {};
+          const spBg  = sp.backgroundStyle === "color"    ? sp.backgroundColor || "transparent"
+                      : sp.backgroundStyle === "gradient" ? sp.backgroundGradient || "transparent"
+                      : sp.backgroundStyle === "image" && sp.backgroundImage
+                          ? `url(${JSON.stringify(sp.backgroundImage)}) ${sp.backgroundPosition || "center center"} / ${sp.backgroundSize || "cover"} no-repeat`
+                      : "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px";
+          return { padding: 0, background: spBg, border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
+        })() : {}),
         ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "grid-section" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
         ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
       }}
       data-canvas-block-index={index}
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("existingBlockIndex", String(index));
+        onBlockDragStart?.(index);
+      }}
+      onDragEnd={() => {
+        setHoveredSlot(null);
+        onBlockDragEnd?.();
+      }}
       onClick={() => onSelect(index)}
       onMouseEnter={() => onHover?.(index)}
       onMouseLeave={() => onHover?.(null)}
-      onDragOver={(e) => onBlockDragOver(e, index)}
-      onDrop={(e) => onBlockDrop(e, index)}
+      onDragOver={(e) => {
+        if (activeDragIndex !== null) return; // column slot overlay handles this
+        onBlockDragOver(e, index);
+      }}
+      onDrop={(e) => {
+        if (activeDragIndex !== null) return;
+        onBlockDrop(e, index);
+      }}
     >
       {showOverlay ? (
         <div style={styles.blockActionBar}>
@@ -142,6 +171,21 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             <span style={styles.blockActionLabel}>{def?.name || block.type}</span>
           </div>
           <div style={styles.blockActionButtons}>
+            <button
+              type="button"
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("existingBlockIndex", String(index));
+                onBlockDragStart?.(index);
+              }}
+              style={{ ...styles.blockActionBtnIcon, cursor: "grab", touchAction: "none" }}
+              title="Drag to reorder or drop into a column"
+              aria-label="Drag block"
+            >
+              ⠿
+            </button>
             <button
               type="button"
               style={styles.blockActionBtnIcon}
@@ -229,7 +273,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
               <>
                 <button
                   type="button"
-                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSaveAsGlobal(block, "nav");
@@ -240,7 +284,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                 </button>
                 <button
                   type="button"
-                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+                  style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSaveAsGlobal(block, "footer");
@@ -254,7 +298,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             {!compactPreview && onSaveBlockDefault ? (
               <button
                 type="button"
-                style={{ ...styles.blockActionBtn, background: "#132036", color: "#c4b5fd", border: "1px solid #7c3aed", fontSize: 11, padding: "2px 7px" }}
+                style={{ ...styles.blockActionBtn, background: "#132036", color: "#c4b5fd", border: "1px solid #7c3aed", fontSize: 16, padding: "2px 7px" }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSaveBlockDefault(block);
@@ -288,6 +332,39 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             onSelectAsset={onSelectAsset}
             replayToken={animationReplayToken}
           />
+          {isDragTarget ? (
+            <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "1fr 1fr", zIndex: 30, pointerEvents: "all" }}>
+              {[{ key: "leftColumnBlock", label: "Left Column" }, { key: "rightColumnBlock", label: "Right Column" }].map(({ key, label }) => (
+                <div
+                  key={key}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setHoveredSlot(key); }}
+                  onDragLeave={(e) => { e.stopPropagation(); setHoveredSlot(null); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setHoveredSlot(null);
+                    onColumnSlotDrop?.(activeDragIndex, index, key);
+                  }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    background: hoveredSlot === key ? "rgba(14,165,233,0.35)" : "rgba(14,165,233,0.12)",
+                    border: hoveredSlot === key ? "3px solid #0ea5e9" : "2px dashed rgba(14,165,233,0.6)",
+                    borderRadius: 8,
+                    transition: "background 0.15s, border 0.15s",
+                    margin: 4,
+                    cursor: "copy",
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>📦</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: hoveredSlot === key ? "#fff" : "#7dd3fc", textAlign: "center" }}>Drop into {label}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
       {supportsSectionHeight(block.type) ? (
@@ -329,25 +406,25 @@ function CounterLiveStats({ projectId, startNumber }) {
   return (
     <div style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8", letterSpacing: "0.08em" }}>LIVE VISIT DATA</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.08em" }}>LIVE VISIT DATA</span>
         <button
           type="button"
           onClick={fetchStats}
           disabled={loading}
-          style={{ fontSize: 11, padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(14,165,233,0.4)", background: "transparent", color: "#38bdf8", cursor: loading ? "default" : "pointer", opacity: loading ? 0.5 : 1 }}
+          style={{ fontSize: 16, padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(14,165,233,0.4)", background: "transparent", color: "#38bdf8", cursor: loading ? "default" : "pointer", opacity: loading ? 0.5 : 1 }}
         >{loading ? "…" : "↻ Refresh"}</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#0ea5e9", lineHeight: 1 }}>{totalShown.toLocaleString()}</div>
-          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>shown on counter</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#0ea5e9", lineHeight: 1 }}>{totalShown.toLocaleString()}</div>
+          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>shown on counter</div>
         </div>
         <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#10b981", lineHeight: 1 }}>{realVisits.toLocaleString()}</div>
-          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>real visits tracked</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#10b981", lineHeight: 1 }}>{realVisits.toLocaleString()}</div>
+          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>real visits tracked</div>
         </div>
       </div>
-      <p style={{ margin: "8px 0 0", fontSize: 10, color: "#64748b", lineHeight: 1.4 }}>
+      <p style={{ margin: "8px 0 0", fontSize: 16, color: "#64748b", lineHeight: 1.4 }}>
         Visits are recorded when someone opens your <strong style={{ color: "#94a3b8" }}>Preview</strong> or <strong style={{ color: "#94a3b8" }}>live published page</strong> — not this editor.
       </p>
     </div>
@@ -386,7 +463,7 @@ function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 10px", background: "#1e293b", borderRadius: 8, border: "1px solid #334155" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, minWidth: 22 }}>#{index + 1}</span>
+        <span style={{ color: "#94a3b8", fontSize: 16, fontWeight: 600, minWidth: 22 }}>#{index + 1}</span>
         {/* Icon preview / pick button */}
         <button
           type="button"
@@ -416,14 +493,14 @@ function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
             type="button"
             title="Remove icon"
             onClick={() => { update({ iconKey: undefined }); setPickerOpen(false); }}
-            style={{ padding: "2px 6px", borderRadius: 4, border: "none", fontSize: 10, cursor: "pointer", background: "#334155", color: "#94a3b8", flexShrink: 0 }}
+            style={{ padding: "2px 6px", borderRadius: 4, border: "none", fontSize: 16, cursor: "pointer", background: "#334155", color: "#94a3b8", flexShrink: 0 }}
           >no icon</button>
         )}
         {/* Delete item button */}
         <button
           type="button"
           onClick={onRemove}
-          style={{ padding: "2px 6px", borderRadius: 4, border: "none", fontSize: 11, cursor: "pointer", background: "#334155", color: "#f87171", flexShrink: 0 }}
+          style={{ padding: "2px 6px", borderRadius: 4, border: "none", fontSize: 16, cursor: "pointer", background: "#334155", color: "#f87171", flexShrink: 0 }}
           title="Remove item"
         >✕</button>
       </div>
@@ -431,7 +508,7 @@ function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
       {pickerOpen && (
         <div style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #334155", padding: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>Pick an icon</span>
+            <span style={{ fontSize: 16, color: "#94a3b8" }}>Pick an icon</span>
             <button type="button" onClick={() => setPickerOpen(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16 }}>✕</button>
           </div>
           <input
@@ -459,7 +536,7 @@ function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
                 <span style={{ fontSize: 18, display: "flex", alignItems: "center" }}>
                   {renderGridLibraryIcon(entry.key, { size: 18 })}
                 </span>
-                <span style={{ fontSize: 8, color: "#64748b", lineHeight: 1.2, textAlign: "center", wordBreak: "break-all" }}>
+                <span style={{ fontSize: 16, color: "#64748b", lineHeight: 1.2, textAlign: "center", wordBreak: "break-all" }}>
                   {entry.label}
                 </span>
               </button>
@@ -528,7 +605,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
             </button>
             <button
               type="button"
-              style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 11, padding: "2px 7px" }}
+              style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
               onClick={(event) => {
                 event.stopPropagation();
                 onSaveAsGlobal?.(block, role);
@@ -1035,6 +1112,8 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
           const imageValue = resolveAssetField(props, column.imageKey, brandAssets) || props?.[column.imageKey] || "";
           const colContentType = String(props?.[`${column.prefix}ContentType`] || "text");
           const isNewsletter = colContentType === "newsletter";
+          const isBlock = colContentType === "block";
+          const embeddedBlock = props?.[`${column.prefix}Block`] || null;
           return (
             <div key={column.id} style={styles.sectionCard}>
               <label style={styles.propertyLabel}>{column.label}</label>
@@ -1046,13 +1125,36 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
 
               {/* Column type selector */}
               <div style={styles.inlineChipRow}>
-                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }].map((opt) => (
+                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }, { value: "block", label: "📦 Embedded Block" }].map((opt) => (
                   <button key={opt.value} type="button"
                     style={{ ...styles.presetChip, ...(colContentType === opt.value ? styles.presetChipActive : {}) }}
                     onClick={() => update({ [`${column.prefix}ContentType`]: opt.value })}
                   >{opt.label}</button>
                 ))}
               </div>
+
+              {isBlock ? (
+                <div style={{ marginTop: 8 }}>
+                  {embeddedBlock ? (
+                    <>
+                      <p style={{ margin: "0 0 8px", fontSize: 13, color: "#94a3b8" }}>
+                        Embedded: <strong style={{ color: "#e2e8f0" }}>{BlockDefinitions[embeddedBlock.type]?.name || embeddedBlock.type}</strong>
+                      </p>
+                      <button
+                        type="button"
+                        style={{ ...styles.secondaryBtn, borderColor: "rgba(239,68,68,0.4)", color: "#fca5a5" }}
+                        onClick={() => update({ [`${column.prefix}Block`]: null, [`${column.prefix}ContentType`]: "text" })}
+                      >
+                        Remove Embedded Block
+                      </button>
+                    </>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+                      Drag any block from the canvas using its ⠿ drag handle and drop it onto the column slot that appears on this block.
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               {isNewsletter ? (
                 /* Newsletter column config */
@@ -1237,10 +1339,68 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                         style={{ ...styles.input, width: 90 }}
                       />
                       {props?.[`${column.prefix}ImageHeight`] ? (
-                        <button type="button" style={{ ...styles.assetChip, fontSize: 11, padding: "2px 8px" }} onClick={() => update({ [`${column.prefix}ImageHeight`]: undefined })}>Auto</button>
+                        <button type="button" style={{ ...styles.assetChip, fontSize: 16, padding: "2px 8px" }} onClick={() => update({ [`${column.prefix}ImageHeight`]: undefined })}>Auto</button>
                       ) : null}
                     </div>
                   ) : null}
+
+                  {/* Additional stacked images */}
+                  {(() => {
+                    const extraKey = `${column.prefix}ExtraImages`;
+                    const extras = Array.isArray(props?.[extraKey]) ? props[extraKey] : [];
+                    const setExtras = (next) => update({ [extraKey]: next });
+                    return (
+                      <div style={{ marginTop: 12 }}>
+                        <label style={styles.propertyLabel}>Additional Images (stacked below)</label>
+                        {extras.map((ei, eiIdx) => (
+                          <div key={eiIdx} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 10px", background: "#1e293b", borderRadius: 8, border: "1px solid #334155", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600, minWidth: 20 }}>#{eiIdx + 2}</span>
+                              {ei.src ? (
+                                <img src={ei.src} alt="" style={{ width: 40, height: 28, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} />
+                              ) : null}
+                              <div style={{ flex: 1, display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                <label style={{ ...styles.assetUploadCta, margin: 0, fontSize: 12 }}>
+                                  Upload
+                                  <input type="file" accept="image/*" style={styles.hiddenInput} onChange={async (event) => {
+                                    const file = event.target.files?.[0];
+                                    event.target.value = "";
+                                    if (!file) return;
+                                    const asset = await Promise.resolve(onUploadImage?.(index, `${extraKey}_${eiIdx}`, file));
+                                    if (asset?.src) {
+                                      const next = extras.map((e2, i2) => i2 === eiIdx ? { ...e2, src: asset.src } : e2);
+                                      setExtras(next);
+                                    }
+                                  }} />
+                                </label>
+                                <button type="button" style={{ ...styles.secondaryBtn, margin: 0, fontSize: 12, padding: "3px 8px" }} onClick={() => openSharedLibraryAssetPicker((asset) => {
+                                  const next = extras.map((e2, i2) => i2 === eiIdx ? { ...e2, src: asset.src || "" } : e2);
+                                  setExtras(next);
+                                })}>Library</button>
+                              </div>
+                              <button type="button" style={{ padding: "2px 7px", borderRadius: 5, border: "none", background: "#334155", color: "#f87171", cursor: "pointer", flexShrink: 0 }} onClick={() => setExtras(extras.filter((_, i2) => i2 !== eiIdx))}>✕</button>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <label style={{ ...styles.label, fontSize: 12 }}>Height (px)</label>
+                              <input type="number" min={40} max={1200} step={10} value={ei.height || ""} placeholder="Auto" onChange={(e) => {
+                                const val = e.target.value === "" ? undefined : Number(e.target.value);
+                                const next = extras.map((e2, i2) => i2 === eiIdx ? { ...e2, height: val } : e2);
+                                setExtras(next);
+                              }} style={{ ...styles.input, width: 80 }} />
+                              <label style={{ ...styles.label, fontSize: 12, marginLeft: 4 }}>Gap (px)</label>
+                              <input type="number" min={0} max={120} step={4} value={ei.gap ?? 8} onChange={(e) => {
+                                const next = extras.map((e2, i2) => i2 === eiIdx ? { ...e2, gap: Number(e.target.value) } : e2);
+                                setExtras(next);
+                              }} style={{ ...styles.input, width: 60 }} />
+                            </div>
+                          </div>
+                        ))}
+                        <button type="button" style={{ ...styles.secondaryBtn, width: "100%", marginTop: 4 }} onClick={() => setExtras([...extras, { src: "", height: undefined, gap: 8 }])}>
+                          + Add Image
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </>
               )}
 
@@ -1360,7 +1520,7 @@ function renderGridEditorIcon(item, color, size) {
   if (item?.icon) {
     return <span style={{ fontSize: size, lineHeight: 1, color }}>{item.icon}</span>;
   }
-  return <span style={{ fontSize: Math.max(16, Math.round(size * 0.72)), fontWeight: 700, color }}>Icon</span>;
+  return <span style={{ fontSize: Math.max(16, Math.round(size * 0.72)), fontWeight: 600, color }}>Icon</span>;
 }
 
 function GridIconLibraryModal({ open, searchValue, onSearchChange, onClose, onSelect, entries = [] }) {
@@ -1408,7 +1568,7 @@ function GridIconLibraryModal({ open, searchValue, onSearchChange, onClose, onSe
       <div style={{ width: "min(1160px, calc(100vw - 24px))", maxHeight: "min(860px, calc(100vh - 24px))", overflow: "hidden", borderRadius: 24, border: "1px solid rgba(148,163,184,0.24)", background: "#ffffff", boxShadow: "0 32px 80px rgba(2,6,23,0.28)", display: "grid", gridTemplateRows: "auto auto auto minmax(0, 1fr)" }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "22px 24px 16px", borderBottom: "1px solid rgba(148,163,184,0.22)" }}>
           <div style={{ display: "grid", gap: 4 }}>
-            <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 700 }}>Icon Library</div>
+            <div style={{ color: "#0f172a", fontSize: 22, fontWeight: 600 }}>Icon Library</div>
             <div style={{ color: "#475569", fontSize: 16, fontWeight: 500 }}>Choose an icon. This is separate from the image library.</div>
           </div>
           <button type="button" style={{ ...styles.secondaryBtn, minWidth: 0 }} onClick={onClose}>Close</button>
@@ -1433,7 +1593,7 @@ function GridIconLibraryModal({ open, searchValue, onSearchChange, onClose, onSe
                   background: isActive ? "#dbeafe" : "#ffffff",
                   color: isActive ? "#1e3a8a" : "#334155",
                   fontSize: 16,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
@@ -1456,7 +1616,7 @@ function GridIconLibraryModal({ open, searchValue, onSearchChange, onClose, onSe
                   {entry.src ? <img src={entry.src} alt={entry.label || "Icon"} style={{ width: 32, height: 32, objectFit: "contain", display: "block" }} /> : entry.fontFamily && entry.glyph ? renderGridFontIcon({ iconGlyph: entry.glyph, iconFontFamily: entry.fontFamily }, "#e2e8f0", 32) : renderGridLibraryIcon(entry.key, { size: 32, color: "#e2e8f0" })}
                 </div>
                 <div style={{ display: "grid", gap: 2 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25 }}>{entry.label}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25 }}>{entry.label}</div>
                   <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.25 }}>{resolveGridIconLibraryName(entry)}</div>
                 </div>
               </button>
@@ -1557,6 +1717,10 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
   const updateItemText = (itemIndex, key, value) => {
     updateItem(itemIndex, { [key]: htmlToPlainText(value) });
   };
+  const safeItemsRef = useRef(safeItems);
+  safeItemsRef.current = safeItems;
+  const updateItemRef = useRef(updateItem);
+  updateItemRef.current = updateItem;
   const openLibraryFallback = () => {
     if (typeof window === "undefined") return;
     window.open("/assets?view=generic", "_blank", "noopener,noreferrer");
@@ -1566,10 +1730,10 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
       view: "generic",
       onPick: (asset) => {
         if (!asset?.src) return;
-        updateItem(itemIndex, {
+        updateItemRef.current(itemIndex, {
           image: asset.src || "",
           imageAssetId: asset.id || "",
-          imageAlt: htmlToPlainText(asset.name || safeItems[itemIndex]?.imageAlt || ""),
+          imageAlt: htmlToPlainText(asset.name || safeItemsRef.current[itemIndex]?.imageAlt || ""),
         });
       },
       onBlocked: openLibraryFallback,
@@ -1811,7 +1975,7 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
                     {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 36, height: 36, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 22)}
                   </div>
                   <div style={{ minWidth: 0, display: "grid", gap: 6 }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#f8fafc", lineHeight: 1.3, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.title || item.eyebrow || `Card ${itemIndex + 1}`)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "#f8fafc", lineHeight: 1.3, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.title || item.eyebrow || `Card ${itemIndex + 1}`)}</div>
                     <div style={{ fontSize: 16, fontWeight: 500, color: "#cbd5e1", lineHeight: 1.35, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.eyebrow || item.link || "Click to edit this card")}</div>
                   </div>
                 </button>
@@ -1825,7 +1989,7 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
                       onClick={() => openGridImagePicker(itemIndex)}
                       style={{ display: "grid", gap: 10, padding: 12, borderRadius: 14, background: "#1a2940", border: "1px solid #41577a", textAlign: "left", cursor: "pointer" }}
                     >
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Image</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "#e2e8f0" }}>Image</div>
                       <div style={{ width: "100%", minHeight: 132, borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", overflow: "hidden" }}>
                         {resolvedImage ? <img src={resolvedImage} alt={item.imageAlt || item.title || `Card ${itemIndex + 1} image`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 16, fontWeight: 600, color: "#cbd5e1" }}>Choose image</span>}
                       </div>
@@ -1839,7 +2003,7 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
                       onClick={() => openGridIconLibrary(itemIndex)}
                       style={{ display: "grid", gap: 10, padding: 12, borderRadius: 14, background: "#1a2940", border: "1px solid #41577a", textAlign: "left", cursor: "pointer" }}
                     >
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Icon</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "#e2e8f0" }}>Icon</div>
                       <div style={{ width: "100%", minHeight: 132, borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", overflow: "hidden" }}>
                         {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 64, height: 64, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 28)}
                       </div>
@@ -2049,6 +2213,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
             <NumberField label="Card Radius (px)" value={Number(props.cardRadius || 12)} min={0} max={48} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Gap Between Cards (px)" value={Number(props.cardGap || 16)} min={0} max={64} onChange={(v) => update({ cardGap: v })} />
             <NumberField label="Card Padding (px)" value={Number(props.cardPadding || 20)} min={8} max={60} onChange={(v) => update({ cardPadding: v })} />
+            <NumberField label="Auto-Play Interval (ms)" value={Number(props.autoPlayInterval || 3500)} min={1000} max={10000} onChange={(v) => update({ autoPlayInterval: v })} />
           </div>
         </div>
 
@@ -2089,6 +2254,8 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
               <input type="color" value={overlayHex} onChange={(e) => setOverlay(e.target.value, overlayOpacity)} style={styles.colorSwatch} />
             </div>
             <NumberField label="Opacity (%)" value={overlayOpacity} min={10} max={100} onChange={(v) => setOverlay(overlayHex, v)} />
+            <NumberField label="Title Size (px)" value={Number(props.backTitleSize || 20)} min={10} max={64} onChange={(v) => update({ backTitleSize: v })} />
+            <NumberField label="Description Size (px)" value={Number(props.backDescSize || 15)} min={8} max={48} onChange={(v) => update({ backDescSize: v })} />
           </div>
         </div>
 
@@ -2136,13 +2303,13 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "rgba(255,255,255,0.05)", cursor: "pointer" }}
                     onClick={() => setExpandedCard(isOpen ? -1 : cardIndex)}
                   >
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {card.title || `Card ${cardIndex + 1}`}
                     </span>
                     {cards.length > 1 ? (
-                      <button type="button" style={{ ...styles.linkMoveBtn, color: "#f87171", fontSize: 12 }} onClick={(e) => { e.stopPropagation(); removeCard(cardIndex); }} title="Remove">✕</button>
+                      <button type="button" style={{ ...styles.linkMoveBtn, color: "#f87171", fontSize: 16 }} onClick={(e) => { e.stopPropagation(); removeCard(cardIndex); }} title="Remove">✕</button>
                     ) : null}
-                    <span style={{ color: "#94a3b8", fontSize: 11 }}>{isOpen ? "▲" : "▼"}</span>
+                    <span style={{ color: "#94a3b8", fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
                   </div>
                   {isOpen ? (
                     <div style={{ padding: "10px 10px 14px", display: "grid", gap: 8 }}>
@@ -2809,19 +2976,176 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.FEATURE_ACCORDION) {
+    return (
+      <FeatureAccordionPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+      />
+    );
+  }
+
+  if (block.type === BlockTypes.SCROLL_STACK) {
+    return (
+      <ScrollStackPropertiesPanel
+        block={block}
+        index={index}
+        onChange={onChange}
+        onUploadImage={onUploadImage}
+      />
+    );
+  }
+
   if (block.type === BlockTypes.CUSTOM_HTML) {
     return <CustomHtmlPropertiesPanel block={block} index={index} onChange={onChange} />;
   }
 
+  if (block.type === BlockTypes.COMPETITOR_COMPARISON) {
+    return <CompetitorComparisonPropertiesPanel block={block} index={index} onChange={onChange} />;
+  }
+
   if (block.type === BlockTypes.SPACE) {
-    const spacerPx = parsePixelValue(block.props?.height, 40);
+    const spacerPx   = parsePixelValue(block.props?.height, 40);
+    const p          = block.props || {};
+    const bgStyle    = p.backgroundStyle || "none";
+    const updateSpacer = (patch) => onChange(index, { ...p, ...patch });
     return (
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>⬆️ Edit: Spacer</h3>
         <div style={styles.propertyGrid}>
+
+          {/* ── Size ── */}
           <div style={styles.sectionCard}>
-            <NumberField label="Height (px)" value={spacerPx} min={4} max={600} onChange={(value) => onChange(index, { ...block.props, height: `${value}px` })} />
+            <NumberField label="Height (px)" value={spacerPx} min={4} max={600} onChange={(value) => updateSpacer({ height: `${value}px` })} />
           </div>
+
+          {/* ── Background type selector ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Background</label>
+            <select
+              value={bgStyle}
+              onChange={(e) => updateSpacer({ backgroundStyle: e.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="none">None (transparent)</option>
+              <option value="color">Solid colour</option>
+              <option value="gradient">Gradient</option>
+              <option value="image">Image</option>
+            </select>
+          </div>
+
+          {/* ── Solid colour ── */}
+          {bgStyle === "color" && (
+            <div style={styles.sectionCard}>
+              <ColorSelector
+                label="Background Colour"
+                value={p.backgroundColor || "#ffffff"}
+                fallback="#ffffff"
+                allowTransparent
+                onChange={(v) => updateSpacer({ backgroundColor: v })}
+              />
+            </div>
+          )}
+
+          {/* ── Gradient ── */}
+          {bgStyle === "gradient" && (
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>CSS Gradient</label>
+              <input
+                type="text"
+                value={p.backgroundGradient || ""}
+                onChange={(e) => updateSpacer({ backgroundGradient: e.target.value })}
+                style={styles.propertyInput}
+                placeholder="e.g. linear-gradient(135deg,#0f172a,#1e3a5f)"
+              />
+              <p style={styles.aiHint}>Paste any CSS gradient — linear, radial, or conic.</p>
+              <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                {[
+                  "linear-gradient(135deg,#0f172a,#1e3a5f)",
+                  "linear-gradient(90deg,#7c3aed,#3b82f6)",
+                  "linear-gradient(180deg,#f59e0b,#ef4444)",
+                  "radial-gradient(circle,#1e293b,#0f172a)",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    style={{ ...styles.secondaryBtn, background: preset, color: "#fff", fontSize: 13, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+                    onClick={() => updateSpacer({ backgroundGradient: preset })}
+                  >
+                    {preset.split("(")[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Image ── */}
+          {bgStyle === "image" && (
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Background Image</label>
+              {p.backgroundImage && (
+                <div style={{ marginBottom: 8 }}>
+                  <img src={p.backgroundImage} alt="Spacer background" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(148,163,184,0.24)" }} />
+                </div>
+              )}
+              <div style={styles.assetPicker}>
+                <label style={styles.assetUploadCta}>
+                  Upload Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={styles.hiddenInput}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      onUploadImage(index, "backgroundImage", file);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  style={styles.secondaryBtn}
+                  onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+                >
+                  Library
+                </button>
+                {p.backgroundImage && (
+                  <button
+                    type="button"
+                    style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                    onClick={() => updateSpacer({ backgroundImage: "", backgroundImageAssetId: undefined })}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Image Size</label>
+              <select
+                value={p.backgroundSize || "cover"}
+                onChange={(e) => updateSpacer({ backgroundSize: e.target.value })}
+                style={styles.propertyInput}
+              >
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+                <option value="auto">Auto</option>
+              </select>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Image Position</label>
+              <select
+                value={p.backgroundPosition || "center center"}
+                onChange={(e) => updateSpacer({ backgroundPosition: e.target.value })}
+                style={styles.propertyInput}
+              >
+                <option value="center center">Centre</option>
+                <option value="top center">Top</option>
+                <option value="bottom center">Bottom</option>
+                <option value="left center">Left</option>
+                <option value="right center">Right</option>
+              </select>
+            </div>
+          )}
+
         </div>
       </div>
     );
@@ -2855,6 +3179,186 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   if (block.type === BlockTypes.HOVER_CARDS) {
     return <HoverCardsPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
+  }
+
+  if (block.type === BlockTypes.VIDEO_HERO) {
+    const vp = block.props || {};
+    const updateVH = (patch) => onChange(index, { ...vp, ...patch });
+    const vhHeight = String(vp.heightMode || "full");
+    const vhFixed  = Number(vp.minHeight) || 620;
+    const vhOverlayOpacity = Number(vp.overlayOpacity ?? 0.42);
+    const vhObjectFit  = String(vp.objectFit || "cover");
+    const vhObjectPos  = String(vp.objectPosition || "top center");
+    const vhPadTop     = Number(vp.paddingTop ?? 0);
+    const vhPadBottom  = Number(vp.paddingBottom ?? 0);
+
+    const handleVideoUpload = async (file) => {
+      if (!file) return;
+      // Set a local blob URL immediately so the block shows the video right away.
+      const blobUrl = URL.createObjectURL(file);
+      updateVH({ videoSrc: blobUrl });
+      // Upload to server in the background and replace with the CDN URL.
+      try {
+        const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_src__", file));
+        if (asset?.src) updateVH({ videoSrc: asset.src });
+      } catch {
+        // blob URL stays as a local preview if server upload fails
+      }
+    };
+    const handlePosterUpload = async (file) => {
+      if (!file) return;
+      const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_poster__", file));
+      if (asset?.src) updateVH({ posterSrc: asset.src });
+    };
+
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>🎬 Edit: Video Hero</h3>
+        <div style={styles.propertyGrid}>
+
+          {/* ── Media ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Video File</label>
+            {vp.videoSrc ? (
+              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop playsInline
+                style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
+            ) : null}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <label style={{ ...styles.assetUploadCta, cursor: "pointer" }}>
+                📹 {vp.videoSrc ? "Replace Video" : "Upload Video"}
+                <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={styles.hiddenInput}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
+              </label>
+              {vp.videoSrc ? (
+                <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                  onClick={() => updateVH({ videoSrc: "" })}>Remove</button>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Poster / Thumbnail</label>
+            {vp.posterSrc ? (
+              <img src={vp.posterSrc} alt="poster" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8 }} />
+            ) : null}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <label style={{ ...styles.assetUploadCta, cursor: "pointer" }}>
+                🖼️ {vp.posterSrc ? "Replace Poster" : "Upload Poster"}
+                <input type="file" accept="image/*" style={styles.hiddenInput}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handlePosterUpload(f); }} />
+              </label>
+              {vp.posterSrc ? (
+                <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
+                  onClick={() => updateVH({ posterSrc: "" })}>Remove</button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* ── Text overlay ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text Overlay</label>
+            <label style={{ ...styles.propertyLabel, fontWeight: 400 }}>Eyebrow</label>
+            <input value={String(vp.eyebrow || "")} onChange={(e) => updateVH({ eyebrow: e.target.value })} placeholder="Optional eyebrow label" style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Headline</label>
+            <input value={String(vp.title || "")} onChange={(e) => updateVH({ title: e.target.value })} placeholder="Hero headline" style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subheadline</label>
+            <input value={String(vp.subtitle || "")} onChange={(e) => updateVH({ subtitle: e.target.value })} placeholder="Supporting sentence" style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA Button Text</label>
+            <input value={String(vp.ctaText || "")} onChange={(e) => updateVH({ ctaText: e.target.value })} placeholder="Leave blank to hide" style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA URL</label>
+            <input value={String(vp.ctaUrl || "")} onChange={(e) => updateVH({ ctaUrl: e.target.value })} placeholder="#" style={styles.propertyInput} />
+            <div style={{ marginTop: 10, display: "flex", gap: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#94a3b8", cursor: "pointer" }}>
+                <input type="checkbox" checked={vp.showText !== false} onChange={(e) => updateVH({ showText: e.target.checked })} />
+                Show text overlay
+              </label>
+            </div>
+          </div>
+
+          {/* ── Overlay / Colours ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Overlay &amp; Colours</label>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#94a3b8" }}>
+                Overlay colour
+                <input type="color" value={String(vp.overlayColor || "#000000")} onChange={(e) => updateVH({ overlayColor: e.target.value })}
+                  style={{ width: 28, height: 28, border: "none", borderRadius: 4, cursor: "pointer", padding: 0 }} />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#94a3b8" }}>
+                Accent
+                <input type="color" value={String(vp.accentColor || "#6366f1")} onChange={(e) => updateVH({ accentColor: e.target.value })}
+                  style={{ width: 28, height: 28, border: "none", borderRadius: 4, cursor: "pointer", padding: 0 }} />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, color: "#94a3b8" }}>
+                Text colour
+                <input type="color" value={String(vp.textColor || "#ffffff")} onChange={(e) => updateVH({ textColor: e.target.value })}
+                  style={{ width: 28, height: 28, border: "none", borderRadius: 4, cursor: "pointer", padding: 0 }} />
+              </label>
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Overlay Opacity</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input type="range" min={0} max={0.9} step={0.01} value={vhOverlayOpacity}
+                onChange={(e) => updateVH({ overlayOpacity: parseFloat(e.target.value) })} style={{ flex: 1 }} />
+              <span style={{ fontSize: 13, color: "#64748b", minWidth: 36 }}>{Math.round(vhOverlayOpacity * 100)}%</span>
+            </div>
+          </div>
+
+          {/* ── Height & sizing ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Height</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["full", "Full screen"], ["fixed", "Fixed px"]].map(([m, label]) => (
+                <button key={m} type="button"
+                  style={{ ...styles.secondaryBtn, ...(vhHeight === m ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
+                  onClick={() => updateVH({ heightMode: m })}>{label}</button>
+              ))}
+            </div>
+            {vhHeight === "fixed" ? (
+              <div style={{ marginTop: 8 }}>
+                <NumberField label="Height (px)" value={vhFixed} min={200} max={1200} onChange={(v) => updateVH({ minHeight: v })} />
+              </div>
+            ) : null}
+
+            <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Object Fit</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["cover", "contain"].map((fit) => (
+                <button key={fit} type="button"
+                  style={{ ...styles.secondaryBtn, ...(vhObjectFit === fit ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
+                  onClick={() => updateVH({ objectFit: fit })}>{fit}</button>
+              ))}
+            </div>
+
+            <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Video Position</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["top center", "Top"], ["center center", "Mid"], ["bottom center", "Bottom"]].map(([val, label]) => (
+                <button key={val} type="button"
+                  style={{ ...styles.secondaryBtn, ...(vhObjectPos === val ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
+                  onClick={() => updateVH({ objectPosition: val })}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Padding ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Padding</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Top (px)" value={vhPadTop} min={0} max={400} onChange={(v) => updateVH({ paddingTop: v })} />
+              <NumberField label="Bottom (px)" value={vhPadBottom} min={0} max={400} onChange={(v) => updateVH({ paddingBottom: v })} />
+            </div>
+          </div>
+
+          {/* ── Options ── */}
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Options</label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#94a3b8", cursor: "pointer" }}>
+              <input type="checkbox" checked={vp.unmuteOnScroll === true} onChange={(e) => updateVH({ unmuteOnScroll: e.target.checked })} />
+              🔊 Unmute when scrolled into view
+            </label>
+          </div>
+
+        </div>
+      </div>
+    );
   }
 
   if (block.type === BlockTypes.MARQUEE_STRIP) {
@@ -2897,7 +3401,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             <label style={styles.propertyLabel}>Marquee Style</label>
             <div style={styles.colorGrid}>
               <NumberField label="Speed (s)" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
-              <NumberField label="Text Size" value={Number(marqueeProps.fontSize || 12)} min={10} max={48} onChange={(value) => updateMarquee({ fontSize: value })} />
+              <NumberField label="Text Size" value={Number(marqueeProps.fontSize || 16)} min={10} max={48} onChange={(value) => updateMarquee({ fontSize: value })} />
               <NumberField label="Outline Width" value={Number(marqueeProps.textStrokeWidth || 0)} min={0} max={8} onChange={(value) => updateMarquee({ textStrokeWidth: value })} />
               <NumberField label="Divider Size" value={Number(marqueeProps.dividerSize || 14)} min={8} max={48} onChange={(value) => updateMarquee({ dividerSize: value })} />
               <NumberField label="Animation Duration" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
@@ -3013,6 +3517,143 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             value={String(marqueeProps.accentColor || "#7dd3fc")}
             fallback="#7dd3fc"
             onChange={(nextValue) => updateMarquee({ accentColor: nextValue })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === BlockTypes.COMPETITOR_COMPARISON) {
+    const ccProps = block.props || {};
+    const updateCC = (patch) => onChange(index, { ...ccProps, ...patch });
+    const safeRows = Array.isArray(ccProps.rows) ? ccProps.rows : [];
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>💸 Edit: Competitor Comparison</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Header Text</label>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Eyebrow</label>
+            <input type="text" value={String(ccProps.eyebrow || "")} onChange={(e) => updateCC({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="e.g. All-in-One Platform" />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Title</label>
+            <input type="text" value={String(ccProps.title || "")} onChange={(e) => updateCC({ title: e.target.value })} style={styles.propertyInput} placeholder="e.g. What you'd pay elsewhere" />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
+            <input type="text" value={String(ccProps.subtitle || "")} onChange={(e) => updateCC({ subtitle: e.target.value })} style={styles.propertyInput} placeholder="e.g. We replace every tool below..." />
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Your Plan Row (bottom)</label>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Name</label>
+            <input type="text" value={String(ccProps.planName || "")} onChange={(e) => updateCC({ planName: e.target.value })} style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Price ($/mo)</label>
+            <input type="number" value={Number(ccProps.planPrice ?? 199)} min={0} onChange={(e) => updateCC({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Tagline</label>
+            <input type="text" value={String(ccProps.planTagline || "")} onChange={(e) => updateCC({ planTagline: e.target.value })} style={styles.propertyInput} placeholder="e.g. Everything above, included" />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Unique Feature Label</label>
+            <input type="text" value={String(ccProps.uniqueLabel || "")} onChange={(e) => updateCC({ uniqueLabel: e.target.value })} style={styles.propertyInput} placeholder={`Unique to ${ccProps.planName || "us"}`} />
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Comparison Rows</label>
+            <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
+              {safeRows.map((row, rowIdx) => (
+                <div key={rowIdx} style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 12, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ color: "#94a3b8", fontSize: 16, fontWeight: 600 }}>Row {rowIdx + 1}</span>
+                    <button
+                      type="button"
+                      style={{ background: "rgba(239,68,68,0.13)", border: "1px solid rgba(239,68,68,0.35)", color: "#fca5a5", borderRadius: 8, padding: "4px 12px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
+                      onClick={() => updateCC({ rows: safeRows.filter((_, i) => i !== rowIdx) })}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <label style={styles.propertyLabel}>Category / Feature Name</label>
+                  <input
+                    type="text"
+                    value={String(row.category || "")}
+                    onChange={(e) => {
+                      const next = safeRows.map((r, i) => i === rowIdx ? { ...r, category: e.target.value } : r);
+                      updateCC({ rows: next });
+                    }}
+                    style={{ ...styles.propertyInput, marginBottom: 8 }}
+                  />
+                  <label style={styles.propertyLabel}>Competitor Logos</label>
+                  <div style={{ display: "grid", gap: 6, marginBottom: 8 }}>
+                    {(Array.isArray(row.logos) ? row.logos : []).map((logo, logoIdx) => (
+                      <div key={logoIdx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={String(logo.domain || "")}
+                          onChange={(e) => {
+                            const nextLogos = row.logos.map((l, li) => li === logoIdx ? { ...l, domain: e.target.value } : l);
+                            const next = safeRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                            updateCC({ rows: next });
+                          }}
+                          style={styles.propertyInput}
+                          placeholder="domain.com"
+                        />
+                        <input
+                          type="text"
+                          value={String(logo.name || "")}
+                          onChange={(e) => {
+                            const nextLogos = row.logos.map((l, li) => li === logoIdx ? { ...l, name: e.target.value } : l);
+                            const next = safeRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                            updateCC({ rows: next });
+                          }}
+                          style={styles.propertyInput}
+                          placeholder="Tool name"
+                        />
+                        <button
+                          type="button"
+                          style={{ background: "rgba(239,68,68,0.13)", border: "1px solid rgba(239,68,68,0.35)", color: "#fca5a5", borderRadius: 8, padding: "4px 8px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
+                          onClick={() => {
+                            const nextLogos = row.logos.filter((_, li) => li !== logoIdx);
+                            const next = safeRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                            updateCC({ rows: next });
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    style={{ ...styles.secondaryBtn, marginBottom: 10 }}
+                    onClick={() => {
+                      const nextLogos = [...(Array.isArray(row.logos) ? row.logos : []), { domain: "", name: "" }];
+                      const next = safeRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                      updateCC({ rows: next });
+                    }}
+                  >
+                    + Add Logo
+                  </button>
+                  <label style={styles.propertyLabel}>Cost ($/mo) — set 0 for &ldquo;Unique to us&rdquo;</label>
+                  <input
+                    type="number"
+                    value={Number(row.price ?? 0)}
+                    min={0}
+                    onChange={(e) => {
+                      const next = safeRows.map((r, i) => i === rowIdx ? { ...r, price: Number(e.target.value) } : r);
+                      updateCC({ rows: next });
+                    }}
+                    style={styles.propertyInput}
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              style={styles.secondaryBtn}
+              onClick={() => updateCC({ rows: [...safeRows, { category: "NEW FEATURE", logos: [{ domain: "", name: "" }], price: 0 }] })}
+            >
+              + Add Row
+            </button>
+          </div>
+          <ColorSelector
+            label="Background Color"
+            value={String(ccProps.backgroundColor || "#070c18")}
+            fallback="#070c18"
+            onChange={(v) => updateCC({ backgroundColor: v })}
           />
         </div>
       </div>
@@ -3492,7 +4133,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   onChange(index, { ...block.props, extraTextOverlays: next });
                 };
                 return (
-                  <div key={txt.id || tIdx} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                  <div key={txt.id || tIdx} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6, minWidth: 0 }}>
                     <div style={{ flex: 1, fontSize: 16, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "4px 8px" }}>
                       {(txt.text || "(empty)").replace(/<[^>]*>/g, "").trim() || "(empty)"}
                     </div>
@@ -3513,9 +4154,29 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
                 };
                 const imgSrc = resolveAssetField(img, "src", brandAssets) || img?.src || "";
+                const replaceInputId = `replace-float-img-${index}-${iIdx}`;
                 return (
-                  <div key={img.id || iIdx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, padding: 8, borderRadius: 8, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(0,0,0,0.15)" }}>
-                    {imgSrc ? <img src={imgSrc} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} /> : <div style={{ width: 44, height: 44, borderRadius: 6, background: "rgba(255,255,255,0.05)", flexShrink: 0 }} />}
+                  <div key={img.id || iIdx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, padding: 8, borderRadius: 8, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(0,0,0,0.15)", minWidth: 0 }}>
+                    <label htmlFor={replaceInputId} title="Click to replace image" style={{ cursor: "pointer", flexShrink: 0, position: "relative" }}>
+                      {imgSrc ? <img src={imgSrc} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, display: "block" }} /> : <div style={{ width: 44, height: 44, borderRadius: 6, background: "rgba(255,255,255,0.05)" }} />}
+                      <div style={{ position: "absolute", inset: 0, borderRadius: 6, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                        onMouseLeave={e => e.currentTarget.style.opacity = "0"}
+                      >
+                        <span style={{ fontSize: 18, color: "#fff" }}>✎</span>
+                      </div>
+                      <input id={replaceInputId} type="file" accept="image/*,image/gif" style={{ display: "none" }} onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        Promise.resolve(onUploadImage?.(index, "__addFloatingImage", file)).then((asset) => {
+                          if (!asset?.src) return;
+                          const current = Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : [];
+                          const next = current.map((fi, i) => i !== iIdx ? fi : { ...fi, src: asset.src, assetId: asset.id || "" });
+                          onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
+                        });
+                      }} />
+                    </label>
                     <span style={{ flex: 1, fontSize: 16, color: "#94a3b8" }}>Image {iIdx + 1}</span>
                     <button type="button" onClick={deleteImg} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px", flexShrink: 0 }}>Remove</button>
                   </div>
@@ -3535,7 +4196,64 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 }} />
               </label>
             </div>
-            {/* Counter overlays */}
+            {/* Orbit feature cards editor */}
+            {block?.props?.heroVariant === "orbit" ? (
+              <div style={styles.sectionCard}>
+                <label style={styles.propertyLabel}>Orbit Feature Cards</label>
+                <p style={styles.aiHint}>6 floating cards shown around your avatar. Customize the title, icon (emoji), and up to 2 lines each.</p>
+                {(Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
+                  ? block.props.orbitCards
+                  : [
+                    { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
+                    { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
+                    { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
+                    { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
+                    { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
+                    { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
+                  ]
+                ).slice(0, 6).map((card, cIdx) => {
+                  const updateCard = (patch) => {
+                    const base = Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
+                      ? block.props.orbitCards
+                      : [
+                        { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
+                        { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
+                        { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
+                        { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
+                        { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
+                        { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
+                      ];
+                    const next = base.map((c, i) => i !== cIdx ? c : { ...c, ...patch });
+                    onChange(index, { ...block.props, orbitCards: next });
+                  };
+                  const SLOT_LABELS = ["Top Left", "Top Right", "Mid Left", "Mid Right", "Bot Left", "Bot Right"];
+                  return (
+                    <div key={card.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.18)", borderRadius: 10, padding: "10px 10px 8px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", marginBottom: 8 }}>Card {cIdx + 1} — {SLOT_LABELS[cIdx] || ""}</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 52px", gap: 6, marginBottom: 6 }}>
+                        <div>
+                          <label style={styles.propertyLabel}>Icon</label>
+                          <input type="text" value={card.icon || ""} onChange={(e) => updateCard({ icon: e.target.value })} style={{ ...styles.propertyInput, textAlign: "center", fontSize: 18 }} placeholder="📊" maxLength={4} />
+                        </div>
+                        <div>
+                          <label style={styles.propertyLabel}>Title</label>
+                          <input type="text" value={card.title || ""} onChange={(e) => updateCard({ title: e.target.value })} style={styles.propertyInput} placeholder="Feature name" />
+                        </div>
+                        <div>
+                          <label style={styles.propertyLabel}>Accent</label>
+                          <input type="color" value={card.accent || "#6366f1"} onChange={(e) => updateCard({ accent: e.target.value })} style={{ ...styles.propertyInput, padding: 2, height: 32, cursor: "pointer" }} title="Card accent colour" />
+                        </div>
+                      </div>
+                      <label style={styles.propertyLabel}>Line 1</label>
+                      <input type="text" value={(card.lines || [])[0] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[0] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. 1,240 visits" />
+                      <label style={{ ...styles.propertyLabel, marginTop: 5 }}>Line 2</label>
+                      <input type="text" value={(card.lines || [])[1] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[1] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. +8.4% this week" />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+            {/* Counter Widgets */}
             {(Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).length > 0 ? (
               <div style={styles.sectionCard}>
                 <label style={styles.propertyLabel}>Counter Widgets</label>
@@ -3553,7 +4271,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     <div key={ctr.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.2)", borderRadius: 10, padding: "10px 10px 6px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8" }}>Counter {cIdx + 1}</span>
-                        <button type="button" onClick={deleteCtr} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "2px 8px", fontSize: 11 }}>Remove</button>
+                        <button type="button" onClick={deleteCtr} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "2px 8px", fontSize: 16 }}>Remove</button>
                       </div>
                       <label style={styles.propertyLabel}>Label</label>
                       <input type="text" value={ctr.label || ""} onChange={(e) => updateCtr({ label: e.target.value })} style={styles.propertyInput} placeholder="e.g. Site Visits" />
@@ -3888,7 +4606,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         ) : null}
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections
           if (Array.isArray(value) || (typeof value === "object" && value !== null)) return null;

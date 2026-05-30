@@ -120,7 +120,7 @@ async function upsertRunWithFallback(admin, baseRow, startNodeId) {
   throw new Error("Could not write run: neither current_node_id nor current_node exists.");
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
   if (!SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) {
@@ -271,3 +271,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg(e), debug });
   }
 }
+
+function withCronSecret(h) {
+  return async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers['x-cron-secret'] !== secret) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return h(req, res);
+  };
+}
+
+export default withCronSecret(handler);

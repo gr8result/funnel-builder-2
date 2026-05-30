@@ -7,6 +7,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { listMergedSharedMediaLibrary } from "../../../lib/sharedMediaLibrary";
 import { persistImageForUser } from "../social/save-image";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -135,10 +136,9 @@ async function deleteSharedImageForUser(userId, url) {
   return true;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
-    const userId = String(req.query.userId || req.body?.userId || "").trim();
-    if (!userId) return bad(res, 400, "Missing userId", "Sign in required to manage image library");
+  const userId = req.user.id;
     const folderOverride = String(req.body?.folder || req.query?.folder || "").replace(/[^a-zA-Z0-9_-]/g, "");
     const basePath = `${userId}/${folderOverride || FOLDER}`;
 
@@ -233,3 +233,5 @@ export default async function handler(req, res) {
     return bad(res, 500, "Image library error", e?.message || String(e));
   }
 }
+
+export default withAuth(handler);

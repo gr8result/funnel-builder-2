@@ -10,6 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -112,7 +113,7 @@ async function loadHtml(userId, templateId) {
   return null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -329,3 +330,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

@@ -5,8 +5,9 @@ import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
 import { postToTikTok, refreshTikTokAccountAccess } from "../../../lib/social/tiktok";
 import { postToYouTube } from "../../../lib/social/youtube";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -161,3 +162,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
+
+export default withAuth(handler);

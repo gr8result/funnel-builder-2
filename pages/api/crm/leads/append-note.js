@@ -5,6 +5,7 @@
 // ✅ Safe: verifies lead belongs to logged-in user using Bearer token user_id match
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -15,7 +16,7 @@ function stamp() {
   return new Date().toLocaleString("en-AU", { hour12: true });
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
   try {
@@ -76,3 +77,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

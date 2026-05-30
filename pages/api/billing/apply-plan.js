@@ -21,9 +21,9 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
   if (authErr || !user) return res.status(401).json({ error: "Unauthorized" });
 
-  const { emailPlan, smsPlan, calendarPlan, socialPlan, selectedModules } = req.body || {};
+  const { emailPlan, smsPlan, calendarPlan, socialPlan, selectedModules, basePlan, stripeSubscriptionId, stripeCustomerId } = req.body || {};
 
-  if (!emailPlan && !smsPlan && !calendarPlan && !socialPlan && (!selectedModules || selectedModules.length === 0)) {
+  if (!basePlan && !emailPlan && !smsPlan && !calendarPlan && !socialPlan && (!selectedModules || selectedModules.length === 0)) {
     return res.status(400).json({ error: "No plan tiers provided" });
   }
 
@@ -124,6 +124,30 @@ export default async function handler(req, res) {
     }
   }
 
-  console.log(`✅ apply-plan: ${user.email} → calendarPlan=${calendarPlan} emailPlan=${emailPlan} smsPlan=${smsPlan} socialPlan=${socialPlan} modules=${(selectedModules||[]).join(",")}`);
+  console.log(`✅ apply-plan: ${user.email} → plan=${basePlan} calendarPlan=${calendarPlan} emailPlan=${emailPlan} smsPlan=${smsPlan} socialPlan=${socialPlan} modules=${(selectedModules||[]).join(",")}`);
+
+  // Write/update the subscriptions record for the base plan
+  if (basePlan) {
+    const subPayload = {
+      account_id: user.id,
+      plan_id: basePlan,
+      status: "active",
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (stripeSubscriptionId) subPayload.stripe_subscription_id = stripeSubscriptionId;
+    if (stripeCustomerId)     subPayload.stripe_customer_id     = stripeCustomerId;
+
+    const { error: subErr } = await supabaseAdmin
+      .from("subscriptions")
+      .upsert(subPayload, { onConflict: "account_id" });
+
+    if (subErr) {
+      // Non-fatal — log but don't block activation
+      console.warn("apply-plan: subscriptions upsert warning:", subErr.message);
+    }
+  }
+
   return res.status(200).json({ ok: true });
 }

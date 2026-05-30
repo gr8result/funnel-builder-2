@@ -3,6 +3,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { buildSmsGlobalMacHeader } from "../../../lib/smsglobal/macAuth";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY =
@@ -117,7 +118,7 @@ async function fetchSmsGlobalMessages({ apiKey, apiSecret, limit = 100, maxPages
   return all;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -222,3 +223,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

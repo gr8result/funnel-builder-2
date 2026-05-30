@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
@@ -71,6 +71,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
+  const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const [showLibrary, setShowLibrary] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
@@ -100,6 +101,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const [animationReplayState, setAnimationReplayState] = useState({ index: null, tick: 0 });
   const [saveNotice, setSaveNotice] = useState(null);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [historyLen, setHistoryLen] = useState(0);
+  const [futureLen, setFutureLen] = useState(0);
   const [imageEditState, setImageEditState] = useState(null);
   const activeEditableRef = useRef(null);
   const latestBlocksRef = useRef(Array.isArray(pageBlocks) ? pageBlocks : []);
@@ -112,6 +115,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const skipNextAutosaveRef = useRef(true);
   const handleSaveRef = useRef(null);
   const pendingLocalBlocksRef = useRef(false);
+  const onSaveRef = useRef(onSave);
+  const onForceSaveRef = useRef(onForceSave);
+  const prevOnSaveRef = useRef(null);
+  const historyRef = useRef([]);
+  const futureRef = useRef([]);
+  const propEditSessionRef = useRef(false);
+  const propEditTimerRef = useRef(null);
+  const handleUndoRef = useRef(null);
+  const handleRedoRef = useRef(null);
   const suppressBlurUpdateRef = useRef(false);
   const selectedIndexRef = useRef(null);
   const selectedGlobalRoleRef = useRef(null);
@@ -130,6 +142,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   latestBlocksRef.current = blocks;
   selectedIndexRef.current = selectedIndex;
   selectedGlobalRoleRef.current = selectedGlobalRole;
+  onSaveRef.current = onSave;
+  onForceSaveRef.current = onForceSave;
 
   // Dev helper: allows external code (e.g. Playwright) to inject a block into the canvas
   React.useEffect(() => {
@@ -150,6 +164,26 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     };
     return () => { delete window.__injectBlock; delete window.__deleteBlock; };
   }, []);
+
+  // When the user switches pages, flush any pending local edits to the page being left
+  // BEFORE the canvas loads the new page's blocks. Without this, the autosave timer
+  // fires after the page switch with the old blocks but the new activePage, silently
+  // writing the wrong content to the wrong page.
+  useEffect(() => {
+    if (prevOnSaveRef.current !== null && pendingLocalBlocksRef.current) {
+      // Cancel the pending autosave — we're flushing immediately instead
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+      // Save the current blocks to the page we're navigating AWAY from
+      const prevSave = prevOnSaveRef.current;
+      Promise.resolve(prevSave(latestBlocksRef.current)).catch(() => {});
+      pendingLocalBlocksRef.current = false;
+    }
+    // Capture the current onSave so the NEXT page switch can call it as "prev"
+    prevOnSaveRef.current = onSaveRef.current;
+  }, [activePage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const nextBlocks = Array.isArray(pageBlocks) ? pageBlocks : [];
@@ -199,7 +233,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       skipNextAutosaveRef.current = false;
       return undefined;
     }
-    if (typeof onSave !== "function") return undefined;
+    if (typeof onSaveRef.current !== "function") return undefined;
 
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -207,7 +241,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
-      Promise.resolve(onSave(latestBlocksRef.current)).then((saved) => {
+      // Use onSaveRef so the timer always calls the latest save function at fire-time
+      Promise.resolve(onSaveRef.current(latestBlocksRef.current)).then((saved) => {
         if (saved) setLastSavedAt(Date.now());
       }).catch(() => {});
     }, 1500);
@@ -218,7 +253,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         autosaveTimerRef.current = null;
       }
     };
-  }, [blocks, onSave]);
+  }, [blocks]); // onSave intentionally omitted — always accessed via onSaveRef to avoid page-switch race
+
+  // Flush any pending autosave edits to localStorage when the user navigates away.
+  // This covers the 1500ms debounce window: if the user edits and closes the tab
+  // before the debounce fires, their changes are still persisted locally.
+  useEffect(() => {
+    const handlePageHide = () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+      if (typeof onSaveRef.current === "function") {
+        onSaveRef.current(latestBlocksRef.current);
+      }
+      // Best-effort server sync: use force-save if available so the 5s throttle is bypassed.
+      // The browser may not complete async work on pagehide, but desktop browsers typically do.
+      if (typeof onForceSaveRef.current === "function") {
+        Promise.resolve(onForceSaveRef.current(latestBlocksRef.current)).catch(() => {});
+      }
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, []); // empty — all values accessed via refs
 
   useEffect(() => {
     if (selectedGlobalRole === "nav" && !project?.globalNavBlock) {
@@ -360,9 +417,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     const computeIsNarrowLayout = () => {
       const viewportWidth = window.innerWidth || 1440;
-      if (showLibrary && showProperties) return viewportWidth < 1120;
-      if (showLibrary || showProperties) return viewportWidth < 960;
-      return viewportWidth < 840;
+      if (showLibrary && showProperties) return viewportWidth < 1000;
+      if (showLibrary || showProperties) return viewportWidth < 820;
+      return viewportWidth < 700;
     };
 
     const onResize = () => setIsNarrowLayout(computeIsNarrowLayout());
@@ -398,7 +455,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const handleEditableClick = (event) => {
       const editable = findEditable(event.target);
       if (!editable) return;
-      textToolbarDraggedRef.current = false;
+      // Only reset the drag flag when the toolbar is first being revealed (not already visible).
+      // If the toolbar is already showing and the user just clicks into a different word/element,
+      // keep the toolbar where they dragged it.
+      if (!showTextToolbarRef.current) {
+        textToolbarDraggedRef.current = false;
+      }
       syncToolbarForEditable(editable, window.getSelection?.(), { reveal: true });
     };
 
@@ -414,7 +476,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         if (pendingEditable && pendingEditable !== inEditable) {
           cleanupEditableMarkup();
           syncActiveEditableToBlock(latestBlocksRef.current);
-          suppressBlurUpdateRef.current = true;
+          // Only suppress the blur-triggered handleUpdateBlock when syncActiveEditableToBlock
+          // already saved this editable's content (i.e. it has data-text-prop). Blocks that
+          // use onBlur to commit their content (e.g. FeatureAccordionBlock) don't have
+          // data-text-prop, so their blur update must NOT be suppressed.
+          suppressBlurUpdateRef.current = !!pendingEditable.getAttribute?.("data-text-prop");
           // The native blur fires synchronously during focus transfer; reset after.
           if (typeof window !== "undefined") {
             window.requestAnimationFrame(() => { suppressBlurUpdateRef.current = false; });
@@ -435,7 +501,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         if (pendingEditable && typeof pendingEditable.blur === "function") {
           cleanupEditableMarkup();
           syncActiveEditableToBlock(latestBlocksRef.current);
-          suppressBlurUpdateRef.current = true;
+          // Only suppress the blur-triggered handleUpdateBlock when syncActiveEditableToBlock
+          // already saved this editable's content. Blocks without data-text-prop use onBlur
+          // as their only save mechanism, so we must not suppress it.
+          suppressBlurUpdateRef.current = !!pendingEditable.getAttribute?.("data-text-prop");
           pendingEditable.blur();
           suppressBlurUpdateRef.current = false;
         } else {
@@ -460,9 +529,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       }
     };
 
+    // Intercept Enter key inside any inline-editable element.
+    // Default browser behavior creates a new block element (<div> or <p>) that has no
+    // inline style spans, causing the toolbar to jump to the block's CSS base font-size
+    // and wrecking the formatting. Instead, insert a <br> (line break) which stays within
+    // the same element structure and preserves all surrounding span styles.
+    const handleEditableKeyDown = (event) => {
+      if (event.key !== "Enter") return;
+      const editable = findEditable(document.activeElement);
+      if (!editable) return;
+      event.preventDefault();
+      try {
+        // insertLineBreak creates a <br> without a new block — formatting is preserved.
+        document.execCommand("insertLineBreak");
+      } catch {}
+      // selectionchange + keyup events (already registered) will sync the toolbar.
+    };
+
     document.addEventListener("selectionchange", syncTextToolbar);
     document.addEventListener("mouseup", syncTextToolbar, true);
     document.addEventListener("keyup", syncTextToolbar, true);
+    document.addEventListener("keydown", handleEditableKeyDown, true);
     document.addEventListener("click", handleEditableClick, true);
     document.addEventListener("dblclick", handleEditableClick, true);
     document.addEventListener("pointerdown", handleOutside, true);
@@ -471,6 +558,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       document.removeEventListener("selectionchange", syncTextToolbar);
       document.removeEventListener("mouseup", syncTextToolbar, true);
       document.removeEventListener("keyup", syncTextToolbar, true);
+      document.removeEventListener("keydown", handleEditableKeyDown, true);
       document.removeEventListener("click", handleEditableClick, true);
       document.removeEventListener("dblclick", handleEditableClick, true);
       document.removeEventListener("pointerdown", handleOutside, true);
@@ -523,13 +611,76 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return () => document.removeEventListener("keydown", handleCtrlS);
   }, []);
 
+  // Ctrl+Z (undo) / Ctrl+Y or Ctrl+Shift+Z (redo)
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const handleUndoRedo = (event) => {
+      const isUndo = (event.ctrlKey || event.metaKey) && event.key === "z" && !event.shiftKey;
+      const isRedo = (event.ctrlKey || event.metaKey) && (event.key === "y" || (event.key === "z" && event.shiftKey));
+      if (!isUndo && !isRedo) return;
+      // Don't intercept while editing text inline
+      const activeEl = document.activeElement;
+      if (activeEl?.isContentEditable) return;
+      if (activeEl?.closest?.('[contenteditable="true"]')) return;
+      const tag = activeEl?.tagName?.toLowerCase?.();
+      if (tag === "input" || tag === "textarea") return;
+      event.preventDefault();
+      if (isUndo) handleUndoRef.current?.();
+      else handleRedoRef.current?.();
+    };
+    document.addEventListener("keydown", handleUndoRedo);
+    return () => document.removeEventListener("keydown", handleUndoRedo);
+  }, []);
+
+  const pushHistory = (snapshot) => {
+    const h = historyRef.current;
+    h.push(snapshot);
+    if (h.length > 50) h.shift();
+    futureRef.current = [];
+    setHistoryLen(h.length);
+    setFutureLen(0);
+  };
+
+  const handleUndo = () => {
+    const h = historyRef.current;
+    if (h.length === 0) return;
+    const prev = h.pop();
+    futureRef.current.push(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
+    latestBlocksRef.current = prev;
+    setBlocks(prev);
+    setHistoryLen(h.length);
+    setFutureLen(futureRef.current.length);
+  };
+  handleUndoRef.current = handleUndo;
+
+  const handleRedo = () => {
+    const f = futureRef.current;
+    if (f.length === 0) return;
+    const next = f.pop();
+    historyRef.current.push(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
+    latestBlocksRef.current = next;
+    setBlocks(next);
+    setHistoryLen(historyRef.current.length);
+    setFutureLen(f.length);
+  };
+  handleRedoRef.current = handleRedo;
+
   const workspaceColumns = useMemo(() => {
     if (isNarrowLayout) return "1fr";
     const columns = [];
     if (showLibrary) columns.push("248px");
     columns.push("minmax(0, 1.85fr)");
-    if (showProperties) columns.push("minmax(332px, 360px)");
+    if (showProperties) columns.push("minmax(220px, 280px)");
     return columns.join(" ");
+  }, [isNarrowLayout, showLibrary, showProperties]);
+
+  const workspaceRows = useMemo(() => {
+    if (!isNarrowLayout) return undefined;
+    const libRow = showLibrary ? "minmax(180px, auto)" : "0px";
+    const propRow = showProperties ? "minmax(260px, auto)" : "0px";
+    return `${libRow} minmax(60px, 1fr) ${propRow}`;
   }, [isNarrowLayout, showLibrary, showProperties]);
 
   const handleDragStart = (e, blockType) => {
@@ -555,6 +706,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const newBlock = createNewBlock(newBlockType);
       const updated = [...blocks];
       updated.splice(safeIndex, 0, newBlock);
+      pushHistory(latestBlocksRef.current.slice());
       pendingLocalBlocksRef.current = true;
       latestBlocksRef.current = updated;
       setBlocks(updated);
@@ -581,6 +733,44 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return offsetY < rect.height / 2 ? blockIndex : blockIndex + 1;
   };
 
+  const handleBlockDragStart = (index) => {
+    setDraggedBlockIndex(index);
+    setDropIndex(null);
+  };
+
+  const handleBlockDragEnd = () => {
+    setDraggedBlockIndex(null);
+  };
+
+  const handleColumnSlotDrop = (sourceBlockIndex, targetColumnsBlockIndex, slotKey) => {
+    const sourceBlock = latestBlocksRef.current[sourceBlockIndex];
+    if (!sourceBlock) return;
+    // Remove source block from list
+    const without = latestBlocksRef.current.filter((_, i) => i !== sourceBlockIndex);
+    // Adjust target index after removal
+    const adjustedTarget = sourceBlockIndex < targetColumnsBlockIndex ? targetColumnsBlockIndex - 1 : targetColumnsBlockIndex;
+    const targetBlock = without[adjustedTarget];
+    if (!targetBlock || (targetBlock.type !== "columns-2" && targetBlock.type !== "columns-3")) return;
+    const ctKey = slotKey.replace("Block", "ContentType"); // e.g. rightColumnBlock → rightColumnContentType
+    const updated = without.map((b, i) => {
+      if (i !== adjustedTarget) return b;
+      return {
+        ...b,
+        props: {
+          ...b.props,
+          [slotKey]: { type: sourceBlock.type, id: sourceBlock.id, props: sourceBlock.props },
+          [ctKey]: "block",
+        },
+      };
+    });
+    pushHistory(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
+    latestBlocksRef.current = updated;
+    setBlocks(updated);
+    selectCanvasBlock(adjustedTarget);
+    setDraggedBlockIndex(null);
+  };
+
   const handleBlockDragOver = (event, blockIndex) => {
     event.preventDefault();
     event.stopPropagation();
@@ -598,6 +788,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handleDelete = (index) => {
     const updated = blocks.filter((_, i) => i !== index);
+    pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
@@ -630,6 +821,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       id: Date.now(),
     };
     const updated = [...blocks.slice(0, index + 1), copy, ...blocks.slice(index + 1)];
+    pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
@@ -642,6 +834,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.splice(nextIndex, 0, moved);
+    pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
@@ -653,6 +846,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...blocks];
     const [moved] = updated.splice(index, 1);
     updated.unshift(moved);
+    pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
@@ -661,6 +855,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handleUpdateBlock = (index, newProps) => {
     if (suppressBlurUpdateRef.current) return;
+    // Push history once at the START of a prop-editing session (debounced)
+    if (!propEditSessionRef.current) {
+      pushHistory(latestBlocksRef.current.slice());
+      propEditSessionRef.current = true;
+    }
+    if (propEditTimerRef.current) clearTimeout(propEditTimerRef.current);
+    propEditTimerRef.current = setTimeout(() => { propEditSessionRef.current = false; }, 1200);
     const updated = [...blocks];
     updated[index] = { ...blocks[index], props: newProps };
     pendingLocalBlocksRef.current = true;
@@ -881,6 +1082,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const insertAt = typeof selectedIndex === "number" ? selectedIndex + 1 : blocks.length;
     const updated = [...blocks];
     updated.splice(insertAt, 0, newBlock);
+    pushHistory(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     setSelectedIndex(insertAt);
@@ -890,14 +1093,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
 
-  // Auto-scale canvas to match preview proportions on any screen size
+  // Auto-scale canvas to fit the panel width
   useEffect(() => {
     const el = canvasMeasureRef.current;
     if (!el) return undefined;
     let raf = null;
     const compute = (w) => {
       if (previewMode === "desktop" && w > 0 && pageCanvasWidth > 0) {
-        const next = Math.min(1, Math.max(0.2, w / pageCanvasWidth));
+        const next = Math.max(0.2, w / pageCanvasWidth);
         setCanvasScale((prev) => (Math.abs(prev - next) > 0.002 ? next : prev));
       } else {
         setCanvasScale(1);
@@ -914,8 +1117,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return () => { observer.disconnect(); cancelAnimationFrame(raf); };
   }, [pageCanvasWidth, previewMode]);
 
-  // Measure natural (un-scaled) height of the blocks container so the wrapper
-  // can set its own height to blocksNaturalHeight * canvasScale — collapsing the
+  // Measure natural (un-scaled) height so the wrapper can collapse the
   // whitespace that transform:scale() leaves behind.
   useEffect(() => {
     const el = blocksContainerRef.current;
@@ -927,7 +1129,6 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setBlocksNaturalHeight(Math.round(el.offsetHeight));
     return () => observer.disconnect();
   }, []);
-
 
   const canvasBlockEntries = useMemo(() => {
     const hasGlobalNav = !!project?.globalNavBlock;
@@ -1133,18 +1334,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const nextHtml = stripEditorArtifacts(editable.innerHTML);
     const updated = [...sourceBlocks];
     const currentBlock = updated[selectedIndex];
-    const computed = typeof window !== "undefined" ? window.getComputedStyle(editable) : null;
-    const fontSize = Math.max(12, Math.round(parseFloat(computed?.fontSize || "18") || 18));
-    const lineHeight = normalizeComputedLineHeight(computed?.lineHeight, computed?.fontSize, 1.6);
-    const fontFamily = String(computed?.fontFamily || "Arial").split(",")[0].replace(/["']/g, "").trim() || "Arial";
-    const fontWeight = String(computed?.fontWeight || "400");
-    const textColor = rgbToHex(computed?.color, "#111827");
-    const textAlign = String(computed?.textAlign || "left");
-    const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
-    const backgroundComputed = typeof window !== "undefined" ? window.getComputedStyle(backgroundTarget) : null;
-    const boxBackgroundColor = normalizeToolbarBackgroundColor(backgroundComputed?.backgroundColor);
-    const boxBackgroundImage = parseBackgroundImageUrl(backgroundComputed?.backgroundImage);
 
+    // For image-stack layers we still need background geometry — read from the
+    // layer container (not the text node) so we only get layout, not typography.
     if (editable.hasAttribute?.("data-layer-editor") && currentBlock?.type === BlockTypes.IMAGE_STACK) {
       const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex)
         ? currentBlock.props.selectedLayerIndex
@@ -1153,6 +1345,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       if (layerIndex == null || !Array.isArray(currentBlock?.props?.images)) {
         return sourceBlocks;
       }
+
+      const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
+      const backgroundComputed = typeof window !== "undefined" ? window.getComputedStyle(backgroundTarget) : null;
+      const boxBackgroundColor = normalizeToolbarBackgroundColor(backgroundComputed?.backgroundColor);
+      const boxBackgroundImage = parseBackgroundImageUrl(backgroundComputed?.backgroundImage);
+
+      // Read typography from the selection cursor position, not the outer container,
+      // so we don't accidentally inherit a parent default (e.g. 16px) and overwrite
+      // an intentional per-span size.
+      const styleSource = getSelectionStyleSource(editable, typeof window !== "undefined" ? window.getSelection?.() : null) || editable;
+      const computed = typeof window !== "undefined" ? window.getComputedStyle(styleSource) : null;
+      const fontSize = Math.max(12, Math.round(parseFloat(computed?.fontSize || "18") || 18));
+      const lineHeight = normalizeComputedLineHeight(computed?.lineHeight, computed?.fontSize, 1.6);
+      const fontFamily = String(computed?.fontFamily || "Arial").split(",")[0].replace(/["']/g, "").trim() || "Arial";
+      const fontWeight = String(computed?.fontWeight || "400");
+      const textColor = rgbToHex(computed?.color, "#111827");
+      const textAlign = String(computed?.textAlign || "left");
 
       updated[selectedIndex] = {
         ...currentBlock,
@@ -1187,87 +1396,33 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const propName = editable.getAttribute?.("data-text-prop");
     if (!propName) return sourceBlocks;
 
+    // Only patch the HTML content — never overwrite block-level typography props
+    // (fontSize, color, fontFamily, etc.) from computed style here.
+    //
+    // Rationale: getComputedStyle(editable) reads the *container* element's
+    // inherited style (often 16px), not the style of the text at the cursor.
+    // Writing that back as headlineFontSize/textColor/etc. clobbers intentional
+    // per-block sizing and colours every time the user types.
+    //
+    // Typography prop updates happen exclusively through the text toolbar
+    // (applyTextToolbarCommand), which reads from getSelectionStyleSource and
+    // writes correct values.
     const nextProps = applyInlinePropPatch(currentBlock?.props || {}, propName, nextHtml);
 
+    // For headline/subheadline keep the content field on the block object in sync,
+    // but preserve all existing typography props unchanged.
     if (propName === "headline" || propName === "headlineBlock.content") {
       nextProps.headlineBlock = {
-        ...(nextProps.headlineBlock || {}),
+        ...(currentBlock.props?.headlineBlock || {}),
         content: nextHtml,
-        fontSize,
-        lineHeight,
-        fontFamily,
-        fontWeight,
-        color: textColor,
-        alignment: textAlign,
       };
       nextProps.headline = nextHtml;
-      nextProps.headlineFontSize = fontSize;
-      nextProps.headlineLineHeight = lineHeight;
-      nextProps.headlineFontFamily = fontFamily;
-      nextProps.headlineFontWeight = fontWeight;
-      nextProps.headlineColor = textColor;
-      nextProps.headlineAlignment = textAlign;
     } else if (propName === "subheadline" || propName === "bodyBlock.content") {
       nextProps.bodyBlock = {
-        ...(nextProps.bodyBlock || {}),
+        ...(currentBlock.props?.bodyBlock || {}),
         content: nextHtml,
-        fontSize,
-        lineHeight,
-        fontFamily,
-        fontWeight,
-        color: textColor,
-        alignment: textAlign,
       };
       nextProps.subheadline = nextHtml;
-      nextProps.subheadlineFontSize = fontSize;
-      nextProps.subheadlineLineHeight = lineHeight;
-      nextProps.fontFamily = fontFamily;
-      nextProps.fontWeight = fontWeight;
-      nextProps.textColor = textColor;
-      nextProps.alignment = textAlign;
-      nextProps.textFontSize = fontSize;
-    } else if (/^items\.\d+\.question$/.test(propName)) {
-      nextProps.questionFontSize = fontSize;
-      nextProps.questionLineHeight = lineHeight;
-      nextProps.fontFamily = fontFamily;
-      nextProps.questionFontWeight = fontWeight;
-      nextProps.questionColor = textColor;
-      nextProps.alignment = textAlign;
-    } else if (/^items\.\d+\.answer$/.test(propName)) {
-      nextProps.answerFontSize = fontSize;
-      nextProps.answerLineHeight = lineHeight;
-      nextProps.fontFamily = fontFamily;
-      nextProps.fontWeight = fontWeight;
-      nextProps.answerColor = textColor;
-      nextProps.alignment = textAlign;
-    } else if (/^faqBlock\.items\.\d+\.question$/.test(propName)) {
-      nextProps.faqBlock = {
-        ...(nextProps.faqBlock || {}),
-        questionFontSize: fontSize,
-        questionLineHeight: lineHeight,
-        fontFamily,
-        questionFontWeight: fontWeight,
-        questionColor: textColor,
-        alignment: textAlign,
-      };
-    } else if (/^faqBlock\.items\.\d+\.answer$/.test(propName)) {
-      nextProps.faqBlock = {
-        ...(nextProps.faqBlock || {}),
-        answerFontSize: fontSize,
-        answerLineHeight: lineHeight,
-        fontFamily,
-        fontWeight,
-        answerColor: textColor,
-        alignment: textAlign,
-      };
-    } else {
-      nextProps.textFontSize = fontSize;
-      nextProps.textLineHeight = lineHeight;
-      nextProps.lineHeight = lineHeight;
-      nextProps.fontFamily = fontFamily;
-      nextProps.fontWeight = fontWeight;
-      nextProps.textColor = textColor;
-      nextProps.alignment = textAlign;
     }
 
     updated[selectedIndex] = {
@@ -1307,12 +1462,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
-    const saved = await Promise.resolve(onSave?.(committedBlocks));
+    // Use forceSave so the server copy is up-to-date before the preview tab fetches it
+    const saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks));
     if (!saved) {
       previewWindow.close();
       showSavePopup("Could not save before preview", "error");
       return;
     }
+    // saved._saveError: forceSaveBlockPage hit an error but still returned truthy — proceed to preview anyway
     const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
     const pageSlug = pageName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "home";
     const previewUrl = new URL(
@@ -1331,12 +1488,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
-    const saved = await Promise.resolve(onSave?.(committedBlocks));
+    // Use forceSave so the server copy is up-to-date before the preview tab fetches it
+    const saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks));
     if (!saved) {
       previewWindow.close();
       showSavePopup("Could not save before preview", "error");
       return;
     }
+    // saved._saveError: proceed to preview with whatever was last saved
     const previewUrl = new URL(
       `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewMode)}`,
       window.location.origin,
@@ -1359,7 +1518,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const selection = window.getSelection?.();
     if (!selection) return;
     selection.removeAllRanges();
-    selection.addRange(savedRange);
+    try {
+      selection.addRange(savedRange);
+    } catch {
+      // Range may reference a stale DOM node (e.g. from a previous innerHTML rebuild).
+      // Clear the stale reference so subsequent operations start fresh.
+      selectionRangeRef.current = null;
+    }
   };
 
   const getActiveSelectionRange = () => {
@@ -1385,11 +1550,31 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const cleanupEditableMarkup = () => {
     const editable = activeEditableRef.current;
-    if (!editable) return;
-    const cleanedHtml = stripEditorArtifacts(editable.innerHTML);
-    if (cleanedHtml !== editable.innerHTML) {
-      editable.innerHTML = cleanedHtml;
+    if (!editable || typeof document === "undefined") return;
+    // Remove zero-width spaces from text nodes in-place (preserves live DOM selection).
+    // Previously this used editable.innerHTML = cleanedHtml which destroyed the DOM and
+    // killed the selection, causing the toolbar to fall back to the block's CSS base
+    // font-size (usually 16px) and leaving selectionRangeRef pointing to dead nodes.
+    const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT, null);
+    const zwsNodes = [];
+    let twNode;
+    while ((twNode = walker.nextNode())) {
+      if (twNode.nodeValue && twNode.nodeValue.includes("\u200b")) {
+        zwsNodes.push(twNode);
+      }
     }
+    zwsNodes.forEach((n) => { n.nodeValue = n.nodeValue.replace(/\u200b/g, ""); });
+    // Remove empty/whitespace-only leaf spans in-place.
+    const spans = Array.from(editable.querySelectorAll("span"));
+    for (const span of spans) {
+      if (!span.children.length && /^\s*$/.test(span.textContent)) {
+        span.parentNode?.removeChild(span);
+      }
+    }
+    // Strip data-temp-selection attributes.
+    editable.querySelectorAll("[data-temp-selection]").forEach((el) => {
+      el.removeAttribute("data-temp-selection");
+    });
   };
 
   const applyStyleToActiveEditable = (stylePatch = {}) => {
@@ -1455,7 +1640,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const editable = activeEditableRef.current;
     const target = getEditableBackgroundTarget(editable);
     if (target && patch.width !== undefined) {
-      target.style.width = `${Math.max(120, Math.min(1800, Number(patch.width) || 360))}px`;
+      target.style.width = `${Math.max(120, Math.min(5600, Number(patch.width) || 360))}px`;
     }
 
     refreshToolbarFromEditable();
@@ -1466,7 +1651,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (typeof document === "undefined" || typeof window === "undefined") return false;
     const editable = activeEditableRef.current;
     const range = getActiveSelectionRange();
-    if (!editable || !range) return false;
+    if (!editable) return false;
+    if (!range) {
+      if (options.fallbackToEditable) {
+        return applyStyleToActiveEditable(stylePatch);
+      }
+      return false;
+    }
 
     if (range.collapsed) {
       if (options.fallbackToEditable) {
@@ -1475,8 +1666,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return false;
     }
 
+    // Before extracting, capture the computed font-size from the range's parent.
+    // If the patch doesn't set fontSize and the parent has a size different from the
+    // editable root (e.g. a <span style="font-size:48px"> wrapper), preserve it on the
+    // new wrapper so text doesn't visually jump to the block's base size.
+    const rangeParentEl = range.commonAncestorContainer?.nodeType === 3
+      ? range.commonAncestorContainer.parentElement
+      : (range.commonAncestorContainer instanceof Element ? range.commonAncestorContainer : null);
+    let preservedFontSize = null;
+    if (!stylePatch.fontSize && rangeParentEl instanceof Element && editable.contains(rangeParentEl) && rangeParentEl !== editable) {
+      const parentComputedSize = window.getComputedStyle(rangeParentEl).fontSize;
+      const editableBaseSize = window.getComputedStyle(editable).fontSize;
+      if (parentComputedSize && parentComputedSize !== editableBaseSize) {
+        preservedFontSize = parentComputedSize;
+      }
+    }
+
     const extracted = range.extractContents();
     const wrapper = document.createElement("span");
+    if (preservedFontSize) {
+      wrapper.style.fontSize = preservedFontSize;
+    }
     Object.entries(stylePatch).forEach(([key, val]) => {
       wrapper.style[key] = val;
     });
@@ -1499,6 +1709,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const selection = window.getSelection?.();
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
     const computed = window.getComputedStyle(styleSource);
+    // Read font-size using the computed style of the element directly containing the
+    // cursor/selection. This correctly reflects inherited sizes from CSS classes (e.g.
+    // h1 font-size) and inline spans, regardless of whether a colour-only span was just
+    // applied. Previously this only walked inline style.fontSize, causing the toolbar
+    // to show the block's CSS default (16px) after applying a colour span.
+    const editableComputed = window.getComputedStyle(editable);
     const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
     const backgroundComputed = window.getComputedStyle(backgroundTarget);
     const tagName = String(editable.tagName || "P").toUpperCase();
@@ -1506,8 +1722,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .split(",")[0]
       .replace(/["']/g, "")
       .trim() || "Arial";
-    const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
-    const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
+    const getExplicitFontSize = () => {
+      const focusNode = selection?.focusNode || selection?.anchorNode;
+      const el = focusNode?.nodeType === 3 ? focusNode.parentElement : (focusNode instanceof Element ? focusNode : null);
+      if (el instanceof Element && editable.contains(el)) {
+        // Use the computed style of the immediate element at the cursor — this gives
+        // the actual rendered size including CSS-class sizes and inherited inline sizes.
+        return window.getComputedStyle(el).fontSize || null;
+      }
+      return null;
+    };
+    const explicitFontSize = getExplicitFontSize();
+    const fontSizeValue = Math.max(12, Math.round(parseFloat(explicitFontSize || editableComputed.fontSize || "18") || 18));
+    const lineHeightValue = normalizeComputedLineHeight(editableComputed.lineHeight, editableComputed.fontSize, tagName === "P" ? 1.7 : 1.2);
     const currentBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
     const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
     const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
@@ -1601,8 +1828,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
 
+    // Helper: select all content inside the active editable so applyInlineStyleToSelection
+    // can wrap it in a span. This is needed when the user changes font-size/family without
+    // first highlighting text — the style change must land inside innerHTML (persisted) not
+    // on the element's own style property (overwritten by React on next render).
+    const selectAllInEditable = () => {
+      if (!editable || typeof document === "undefined") return;
+      const sel = window.getSelection?.();
+      if (!sel) return;
+      const range = document.createRange();
+      range.selectNodeContents(editable);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      selectionRangeRef.current = range.cloneRange();
+    };
+
     if (command === "fontSize") {
-      applyInlineStyleToSelection({ fontSize: `${Number(nextValue || 18)}px` }, { fallbackToEditable: true });
+      const pxValue = `${Number(nextValue || 18)}px`;
+      // Try to apply only to selected text first; if nothing is selected, apply to all.
+      let applied = applyInlineStyleToSelection({ fontSize: pxValue });
+      if (!applied) {
+        selectAllInEditable();
+        applyInlineStyleToSelection({ fontSize: pxValue });
+      }
       setTextToolbarState((prev) => ({ ...prev, fontSize: Number(nextValue || 18) }));
       finishTextCommand();
       return;
@@ -1616,33 +1864,46 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     if (command === "fontName") {
-      if (hasTextSelection) {
-        try { document.execCommand("fontName", false, String(nextValue || "Arial")); } catch {}
-      } else {
-        applyStyleToActiveEditable({ fontFamily: String(nextValue || "Arial") });
+      const fontValue = String(nextValue || "Arial");
+      // Use span-based approach (consistent with fontSize/color) — avoids deprecated
+      // <font face> elements that can conflict with inline style spans.
+      let applied = applyInlineStyleToSelection({ fontFamily: fontValue });
+      if (!applied) {
+        selectAllInEditable();
+        applyInlineStyleToSelection({ fontFamily: fontValue });
       }
-      setTextToolbarState((prev) => ({ ...prev, fontFamily: String(nextValue || "Arial") }));
+      setTextToolbarState((prev) => ({ ...prev, fontFamily: fontValue }));
       finishTextCommand();
       return;
     }
 
     if (command === "foreColor") {
+      const colorValue = String(nextValue || "#111827");
       if (hasTextSelection) {
-        try { document.execCommand("foreColor", false, String(nextValue || "#111827")); } catch {}
+        // Use span-based approach to avoid <font> elements that reset font-size
+        const applied = applyInlineStyleToSelection({ color: colorValue });
+        if (!applied) {
+          applyStyleToActiveEditable({ color: colorValue });
+        }
       } else {
-        applyStyleToActiveEditable({ color: String(nextValue || "#111827") });
+        applyStyleToActiveEditable({ color: colorValue });
       }
-      setTextToolbarState((prev) => ({ ...prev, color: String(nextValue || prev.color) }));
+      setTextToolbarState((prev) => ({ ...prev, color: colorValue }));
       finishTextCommand();
       return;
     }
 
     if (command === "hiliteColor") {
       const isRemove = nextValue === "transparent" || nextValue === "none" || !nextValue;
+      const bgValue = isRemove ? "transparent" : String(nextValue);
       if (hasTextSelection) {
-        try { document.execCommand("hiliteColor", false, isRemove ? "transparent" : String(nextValue)); } catch {}
+        // Use span-based approach to avoid <font> elements that reset font-size
+        const applied = applyInlineStyleToSelection({ backgroundColor: bgValue });
+        if (!applied) {
+          applyStyleToActiveEditable({ backgroundColor: bgValue });
+        }
       } else {
-        applyStyleToActiveEditable({ backgroundColor: isRemove ? "transparent" : String(nextValue) });
+        applyStyleToActiveEditable({ backgroundColor: bgValue });
       }
       if (!isRemove) {
         setTextToolbarState((prev) => ({ ...prev, highlight: String(nextValue) }));
@@ -1717,7 +1978,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleTextBoxWidthChange = (value) => {
-    const nextWidth = Math.max(120, Math.min(1800, Number(value) || 360));
+    const nextWidth = Math.max(120, Math.min(5600, Number(value) || 360));
     updateActiveTextLayer({ width: nextWidth });
   };
 
@@ -1812,8 +2073,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       // Use onForceSave (awaits cloud sync) if available, otherwise fall back to onSave
       const saveFn = typeof onForceSave === "function" ? onForceSave : onSave;
       const saved = await Promise.resolve(saveFn?.(committedBlocks));
-      if (!saved) {
-        showSavePopup("Could not save page", "error");
+      // saved._saveError means forceSaveBlockPage already showed its own error toast — don't double-report
+      if (!saved || saved?._saveError) {
+        if (!saved) showSavePopup("Could not save page", "error");
+        // else: error already shown by forceSaveBlockPage via flashNotice
         return;
       }
       setLastSavedAt(Date.now());
@@ -1880,6 +2143,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         <div style={styles.header}>
           <h2 style={styles.headerTitle}>🛠️ Website Page Builder</h2>
           <div style={styles.headerActions}>
+            <button
+              type="button"
+              title="Undo (Ctrl+Z)"
+              style={{ ...styles.panelToggleBtn, minWidth: 36, opacity: historyLen > 0 ? 1 : 0.35, cursor: historyLen > 0 ? "pointer" : "default" }}
+              onClick={() => handleUndoRef.current?.()}
+              disabled={historyLen === 0}
+            >
+              ↩
+            </button>
+            <button
+              type="button"
+              title="Redo (Ctrl+Y)"
+              style={{ ...styles.panelToggleBtn, minWidth: 36, opacity: futureLen > 0 ? 1 : 0.35, cursor: futureLen > 0 ? "pointer" : "default" }}
+              onClick={() => handleRedoRef.current?.()}
+              disabled={futureLen === 0}
+            >
+              ↪
+            </button>
             <button
               type="button"
               style={{ ...styles.panelToggleBtn, ...(showLibrary ? styles.panelToggleBtnActive : {}) }}
@@ -1965,26 +2246,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 {isFullWidthBackgroundEnabled(selectedBlock) ? "Full Width On" : "Full Width Off"}
               </button>
             ) : null}
-            <div style={styles.primaryActionGroup}>
-              {project?.templateSlug && onSaveTemplatePage ? (
-                <button type="button" style={styles.previewBtn} onClick={handleSaveCurrentPageAsTemplate}>
-                  Save Page to Template
-                </button>
-              ) : null}
-              {project?.templateSlug && onSaveTemplateSite ? (
-                <button type="button" style={styles.previewBtn} onClick={handleSaveCurrentSiteAsTemplate}>
-                  Save Site to Template
-                </button>
-              ) : null}
-              {project?.id ? (
-                <button type="button" style={styles.previewBtn} onClick={handlePreviewPage}>
-                  👁 Preview Page
-                </button>
-              ) : null}
-              <button style={styles.saveBtn} onClick={handleSave}>
-                💾 Save  {lastSavedAt ? <span style={{ fontSize: 11, opacity: 0.7, marginLeft: 4 }}>· ✓ {formatSavedAgo(lastSavedAt)}</span> : null}
+          </div>
+          <div style={{ ...styles.primaryActionGroup, flexShrink: 0 }}>
+            {project?.id ? (
+              <button type="button" style={styles.previewBtn} onClick={handlePreviewPage}>
+                👁 Preview Page
               </button>
-            </div>
+            ) : null}
+            <button style={styles.saveBtn} onClick={handleSave}>
+              💾 Save  {lastSavedAt ? <span style={{ fontSize: 16, opacity: 0.7, marginLeft: 4 }}>· ✓ {formatSavedAgo(lastSavedAt)}</span> : null}
+            </button>
           </div>
         </div>
       ) : null}
@@ -2080,6 +2351,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           ...styles.workspace,
           ...(isNarrowLayout ? styles.workspaceNarrow : {}),
           gridTemplateColumns: workspaceColumns,
+          ...(workspaceRows ? { gridTemplateRows: workspaceRows, overflow: "auto" } : {}),
         }}
       >
         {showLibrary ? (
@@ -2110,10 +2382,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           <div ref={canvasMeasureRef} style={styles.canvasViewport}>
             <div
               style={{
-                height: previewMode === "desktop" && blocksNaturalHeight > 0
+                height: previewMode === "desktop" && blocksNaturalHeight > 0 && canvasScale < 1
                   ? `${Math.round(blocksNaturalHeight * canvasScale)}px`
                   : undefined,
-                overflow: previewMode === "desktop" ? "hidden" : undefined,
+                overflow: previewMode === "desktop" && canvasScale < 1 ? "hidden" : undefined,
               }}
             >
             <div
@@ -2121,10 +2393,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               data-canvas-scale={previewMode === "desktop" ? canvasScale : 1}
               style={{
                 ...styles.blocksList,
-                width: previewMode === "desktop" ? `${pageCanvasWidth}px` : previewWidth,
-                maxWidth: previewMode === "desktop" ? `${pageCanvasWidth}px` : previewWidth,
+                width: previewMode === "desktop" ? (canvasScale >= 1 ? "100%" : `${pageCanvasWidth}px`) : previewWidth,
+                maxWidth: previewMode === "desktop" ? (canvasScale >= 1 ? "100%" : `${pageCanvasWidth}px`) : previewWidth,
                 margin: "0 auto",
-                transform: previewMode === "desktop" ? `scale(${canvasScale})` : undefined,
+                transform: previewMode === "desktop" ? (canvasScale >= 1 ? undefined : `scale(${canvasScale})`) : undefined,
                 transformOrigin: previewMode === "desktop" ? "top left" : undefined,
               }}
             >
@@ -2187,6 +2459,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         onSelectAsset={handleCanvasAssetSelect}
                         onBlockDragOver={handleBlockDragOver}
                         onBlockDrop={handleBlockDrop}
+                        activeDragIndex={draggedBlockIndex}
+                        onBlockDragStart={handleBlockDragStart}
+                        onBlockDragEnd={handleBlockDragEnd}
+                        onColumnSlotDrop={handleColumnSlotDrop}
                         onSaveAsGlobal={onSaveAsGlobal}
                         onSaveBlockDefault={onSaveBlockDefault}
                       />
@@ -2228,7 +2504,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         </div>
 
         {showProperties ? (
-          <div data-builder-sidepanel="true" style={styles.sidePanelShell}>
+          <div data-builder-sidepanel="true" style={{ ...styles.sidePanelShell, ...(isNarrowLayout ? { alignSelf: "stretch" } : {}) }}>
             {rightPanelMode === "global" ? (
               <GlobalStylePanel blocks={blocks} onApplyGlobal={applyGlobalStyles} />
             ) : rightPanelMode === "sections" ? (

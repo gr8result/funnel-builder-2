@@ -1,4 +1,4 @@
-// /pages/modules/tools/image-editor.js
+﻿// /pages/modules/tools/image-editor.js
 import Head from "next/head";
 import { useRouter } from "next/router";
 import ImageEditorCard from "../../../components/image-editor/ImageEditorCard";
@@ -49,7 +49,7 @@ export default function ImageEditorPage() {
               "linear-gradient(135deg,#22c55e 0%,#3b82f6 50%,#a855f7 100%)",
             color: "#020617",
             fontSize: 18,
-            fontWeight: 700,
+            fontWeight: 600,
             textDecoration: "none",
             marginBottom: 16,
           }}

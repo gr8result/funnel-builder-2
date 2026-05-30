@@ -157,6 +157,27 @@ export default async function handler(req, res) {
           console.error("accounts plan update error:", planUpdateErr);
         }
 
+        // ✅ Write base plan to subscriptions table
+        const basePlan = session.metadata?.plan || null;
+        if (basePlan) {
+          await supabaseAdmin
+            .from("subscriptions")
+            .upsert(
+              {
+                account_id: userId,
+                plan_id: basePlan,
+                status: "active",
+                stripe_customer_id: customerId,
+                stripe_subscription_id: subscriptionId,
+                current_period_start: new Date().toISOString(),
+                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "account_id" }
+            );
+          console.log(`✅ Base plan '${basePlan}' written to subscriptions for ${email}`);
+        }
+
         if (session.metadata?.calendarPlan || slugs.includes("calendar")) {
           const legacyStatus = session.metadata?.calendarPlan
             ? `active:${session.metadata.calendarPlan}`

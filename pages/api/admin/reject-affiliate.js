@@ -1,9 +1,10 @@
-// /pages/api/admin/reject-affiliate.js
-// Admin API — Reject affiliate application
+﻿// /pages/api/admin/reject-affiliate.js
+// Admin API â€” Reject affiliate application
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { withAdmin } from '../../../lib/withAdmin';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Missing affiliate id' });
@@ -18,3 +19,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

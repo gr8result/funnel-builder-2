@@ -1,4 +1,4 @@
-// /components/TopNav.js
+﻿// /components/TopNav.js
 export default function TopNav() {
   return (
     <div
@@ -11,12 +11,12 @@ export default function TopNav() {
         justifyContent: "space-between",
       }}
     >
-      <div style={{ fontWeight: 600, fontSize: 15, color: "#22c55e" }}>
+      <div style={{ fontWeight: 600, fontSize: 16, color: "#22c55e" }}>
         Gr8 Result Digital Solutions
       </div>
       <div
         style={{
-          fontSize: 13,
+          fontSize: 16,
           opacity: 0.8,
         }}
       >

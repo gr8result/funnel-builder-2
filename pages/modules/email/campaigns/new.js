@@ -1,4 +1,4 @@
-// /pages/modules/email/campaigns/new.js
+﻿// /pages/modules/email/campaigns/new.js
 // FULL REPLACEMENT — Fix mojibake icons (Back arrow / DKIM / Test) by using safe UTF-8 characters
 // ✅ Replaces all broken “â€” â† âœ… âš  ðŸ§ª …” with real symbols
 // ✅ No Waite & Sea hardcoding
@@ -554,7 +554,7 @@ export default function Newcampaigns() {
           {dkimVerified === true && (
             <div style={page.dkimBarOk}>
               ✅ Your domain{" "}
-              <span style={{ fontWeight: 800 }}>{dkimDomain || "your domain"}</span>{" "}
+              <span style={{ fontWeight: 600 }}>{dkimDomain || "your domain"}</span>{" "}
               has now been fully verified and can be used to send emails.
             </div>
           )}
@@ -564,7 +564,7 @@ export default function Newcampaigns() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 32 }}>📣</span>
               <div>
-                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600 }}>
                   {campaignsId ? "Edit campaigns" : "Create New campaigns"}
                 </h1>
                 <p style={{ margin: 0, fontSize: 18 }}>
@@ -1030,7 +1030,7 @@ const page = {
     borderRadius: 8,
     padding: "8px 12px",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     textAlign: "center",
     border: "1px solid #10b981",
   },
@@ -1077,7 +1077,7 @@ const page = {
     padding: "8px 18px",
     fontSize: 18,
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 600,
   },
   card: {
     maxWidth: 1320,
@@ -1121,7 +1121,7 @@ const page = {
     marginTop: 22,
     marginBottom: 10,
     fontSize: 20,
-    fontWeight: 800,
+    fontWeight: 600,
   },
   emailCard: {
     background: "#0f766e",
@@ -1132,7 +1132,7 @@ const page = {
   },
   emailTitle: {
     fontSize: 22,
-    fontWeight: 800,
+    fontWeight: 600,
     marginBottom: 12,
   },
   saveBtn: {
@@ -1141,7 +1141,7 @@ const page = {
     border: "none",
     borderRadius: 8,
     padding: "10px 22px",
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 18,
     cursor: "pointer",
     color: "#fff",
@@ -1197,7 +1197,7 @@ const page = {
     border: "none",
     borderRadius: 8,
     padding: "10px 20px",
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 18,
     cursor: "pointer",
     color: "#fff",
@@ -1222,7 +1222,7 @@ const page = {
   previewHeader: {
     padding: "8px 12px",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     background: "#0f172a",
     borderBottom: "1px solid #111827",
   },

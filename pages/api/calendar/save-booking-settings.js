@@ -2,8 +2,9 @@
 // Saves booking page appearance to booking_page_settings table (standalone — no ALTER TABLE needed).
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withWorkspace } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const authHeader = req.headers.authorization || "";
@@ -33,3 +34,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true });
 }
+
+export default withWorkspace(handler);

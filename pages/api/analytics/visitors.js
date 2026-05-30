@@ -1,5 +1,6 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // Returns last 12 weeks of visitor counts (stub until wired to DB)
-export default function handler(req, res) {
+async function handler(req, res) {
   const weeks = 12;
   const points = Array.from({ length: weeks }, (_, i) => ({
     week: i + 1,
@@ -8,3 +9,4 @@ export default function handler(req, res) {
   res.status(200).json({ points });
 }
 
+export default withAuth(handler);

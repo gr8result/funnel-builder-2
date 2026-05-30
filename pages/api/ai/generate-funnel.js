@@ -1,5 +1,7 @@
 import { OpenAI } from "openai";
 import { supabase } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
+import { getLimit } from "../../../lib/featureGates";
 
 // --- Template for a multi-page funnel ---
 const FUNNEL_PAGES = [
@@ -26,12 +28,26 @@ const SECTION_TEMPLATES = {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
   const { businessName, industry, offer, audience, goal, style } = req.body || {};
   if (!businessName || !offer) return res.status(400).json({ ok: false, error: "Missing required info" });
 
   try {
+    // Quota check
+    const authUserId = req.user?.id;
+    if (authUserId) {
+      const { data: ws } = await supabase.from("workspaces").select("plan").eq("owner_id", authUserId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      const plan = ws?.plan || "starter";
+      const limit = getLimit(plan, "funnels");
+      if (limit !== null) {
+        const { count } = await supabase.from("funnels").select("id", { count: "exact", head: true }).eq("owner_user_id", authUserId);
+        if ((count || 0) >= limit) {
+          return res.status(429).json({ ok: false, code: "FUNNEL_LIMIT_EXCEEDED", error: `Funnel limit reached (${limit} on ${plan} plan). Upgrade to create more.`, limit, used: count });
+        }
+      }
+    }
+
     // 1. Create funnel in DB
     const { data: funnel, error: funnelErr } = await supabase
       .from("funnels")
@@ -97,3 +113,5 @@ Goal: ${goal}.
 Style: ${style}.
 Output only valid HTML for this section, styled inline, ready for GrapesJS. Use world-class copywriting and design. No explanations.`;
 }
+
+export default withAuth(handler);

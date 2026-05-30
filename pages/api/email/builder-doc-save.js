@@ -5,6 +5,7 @@
 // ============================================
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -15,7 +16,7 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE || ANON);
 const BUCKET = "email-user-assets";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -71,3 +72,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "Save failed", detail: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

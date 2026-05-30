@@ -1,9 +1,10 @@
-﻿// pages/api/lists/add-subscriber.js
+// pages/api/lists/add-subscriber.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 const ROOT = path.join(process.cwd(),"data","crm","lists");
 
-export default function handler(req,res){
+async function handler(req,res){
   if(req.method!=="POST") return res.status(405).json({ok:false});
   try{
     const { listId, name="", email } = req.body||{};
@@ -30,3 +31,4 @@ export default function handler(req,res){
   }
 }
 
+export default withAuth(handler);

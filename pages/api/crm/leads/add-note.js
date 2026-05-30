@@ -1,37 +1,19 @@
 // /pages/api/crm/leads/add-note.js
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { withWorkspace } from "../../../../lib/withWorkspace";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
-  auth: { persistSession: false },
-});
-
-function getBearerToken(req) {
-  const h = req.headers.authorization || "";
-  if (!h.toLowerCase().startsWith("bearer ")) return "";
-  return h.slice(7).trim();
-}
-
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
+  const { workspaceId } = req;
+  const userId = req.user.id;
+
+  const { lead_id, note, meta } = req.body || {};
+  if (!lead_id) return res.status(400).json({ ok: false, error: "lead_id required" });
+  if (!String(note || "").trim()) return res.status(400).json({ ok: false, error: "note required" });
+
   try {
-    const token = getBearerToken(req);
-    if (!token) return res.status(401).json({ ok: false, error: "Missing auth token" });
-
-    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userData?.user) return res.status(401).json({ ok: false, error: "Invalid auth token" });
-
-    const userId = userData.user.id;
-
-    const { lead_id, note, meta } = req.body || {};
-    if (!lead_id) return res.status(400).json({ ok: false, error: "lead_id required" });
-    if (!String(note || "").trim()) return res.status(400).json({ ok: false, error: "note required" });
-
-    // 1) Try insert into lead_notes (best)
-    // Expected-ish columns: user_id, lead_id, note, meta
+    // 1) Try insert into lead_notes
     const tryInsert = await supabaseAdmin
       .from("lead_notes")
       .insert({
@@ -47,12 +29,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, mode: "lead_notes", id: tryInsert.data.id });
     }
 
-    // 2) Fallback: append to leads.notes (text)
-    // If leads.notes doesn't exist, this will error and we return the lead_notes error message for visibility.
+    // 2) Fallback: append to leads.notes — verify lead belongs to this workspace first
     const { data: leadRow, error: leadErr } = await supabaseAdmin
       .from("leads")
       .select("id, notes")
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .eq("id", lead_id)
       .single();
 
@@ -70,7 +51,7 @@ export default async function handler(req, res) {
     const { error: updErr } = await supabaseAdmin
       .from("leads")
       .update({ notes: next })
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .eq("id", lead_id);
 
     if (updErr) {
@@ -85,3 +66,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }
+
+export default withWorkspace(handler);
+

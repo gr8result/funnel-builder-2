@@ -14,6 +14,7 @@
 // - PUBLIC_BASE_URL (your ngrok URL, e.g. https://xxxx.ngrok-free.dev)
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function pickEnv(...keys) {
   for (const k of keys) {
@@ -52,7 +53,7 @@ function normalizePhone(raw) {
   return v;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -122,3 +123,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

@@ -1,4 +1,4 @@
-// components/email/editor2/AiGenerateModal.jsx
+﻿// components/email/editor2/AiGenerateModal.jsx
 // Full-email AI generator modal
 import { useState } from "react";
 
@@ -72,7 +72,7 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
           <span style={{ fontSize: 28 }}>✨</span>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Generate Email with AI</h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Generate Email with AI</h2>
         </div>
 
         <Label>Brand / Company Name</Label>
@@ -124,8 +124,8 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
             }} />
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#f1f5f9" }}>Auto-generate images with DALL-E 3</div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{userId ? "Images will be generated and uploaded automatically (~30s)" : "Sign in required to generate images"}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#f1f5f9" }}>Auto-generate images with DALL-E 3</div>
+            <div style={{ fontSize: 16, color: "#64748b", marginTop: 2 }}>{userId ? "Images will be generated and uploaded automatically (~30s)" : "Sign in required to generate images"}</div>
           </div>
         </div>
 
@@ -133,7 +133,7 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           {[["replace", "Replace current email"], ["append", "Append to current email"]].map(([v, l]) => (
             <button key={v} onClick={() => setMode(v)} style={{
-              flex: 1, padding: "9px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+              flex: 1, padding: "9px 0", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer",
               background: mode === v ? "#2563eb" : "#1e293b",
               color: mode === v ? "#fff" : "#94a3b8",
               border: mode === v ? "2px solid #3b82f6" : "2px solid #334155",
@@ -142,7 +142,7 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
         </div>
 
         {error && (
-          <div style={{ background: "#450a0a", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#fca5a5" }}>
+          <div style={{ background: "#450a0a", border: "1px solid #ef4444", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 16, color: "#fca5a5" }}>
             {error}
           </div>
         )}
@@ -150,12 +150,12 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{
             flex: 1, padding: "11px 0", borderRadius: 10, background: "#1e293b",
-            color: "#94a3b8", border: "1px solid #334155", fontWeight: 600, fontSize: 14, cursor: "pointer",
+            color: "#94a3b8", border: "1px solid #334155", fontWeight: 600, fontSize: 16, cursor: "pointer",
           }}>Cancel</button>
           <button onClick={generate} disabled={loading} style={{
             flex: 2, padding: "11px 0", borderRadius: 10,
             background: loading ? "#1e40af" : "linear-gradient(135deg,#7c3aed,#2563eb)",
-            color: "#fff", border: "none", fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
+            color: "#fff", border: "none", fontWeight: 600, fontSize: 16, cursor: loading ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexDirection: "column",
           }}>
             {loading ? (
@@ -171,7 +171,7 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
 }
 
 function Label({ children }) {
-  return <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{children}</div>;
+  return <div style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{children}</div>;
 }
 
 function Spinner() {
@@ -186,7 +186,7 @@ function Spinner() {
 
 const inputStyle = {
   width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #334155",
-  background: "#1e293b", color: "#f1f5f9", fontSize: 14, marginBottom: 16,
+  background: "#1e293b", color: "#f1f5f9", fontSize: 16, marginBottom: 16,
   outline: "none", boxSizing: "border-box",
 };
 

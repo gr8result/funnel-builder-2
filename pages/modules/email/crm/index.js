@@ -23,8 +23,7 @@ export default function CRMDashboard() {
         >
           <div style={styles.bannerLeft}>
             <div style={styles.iconCircle}>
-              {/* Use ICONS.account for CRM icon */}
-              {ICONS.account({ size: 48 })}
+              <span style={{ fontSize: 38, lineHeight: 1 }}>🗂️</span>
             </div>
 
             {/* ✅ Title + Subtitle on LEFT next to icon */}

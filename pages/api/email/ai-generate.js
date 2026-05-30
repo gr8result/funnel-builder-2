@@ -1,7 +1,8 @@
-// /pages/api/email/ai-generate.js
+﻿// /pages/api/email/ai-generate.js
 // Generate a full email block array from a natural-language prompt using GPT-4o
 // Optionally auto-generates images via DALL-E 3 and uploads them to Supabase
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -34,7 +35,7 @@ async function generateAndUploadImage(prompt, userId, key) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "POST only" });
@@ -43,7 +44,8 @@ export default async function handler(req, res) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return res.status(500).json({ ok: false, error: "OPENAI_API_KEY not configured" });
 
-  const { description, tone = "professional", goal = "general", brandName = "", generateImages = false, userId = "" } = req.body || {};
+  const { description, tone = "professional", goal = "general", brandName = "", generateImages = false } = req.body || {};
+  const userId = req.user.id;
   if (!description) return res.status(400).json({ ok: false, error: "Missing description" });
 
   const SYSTEM = `You are a world-class email copywriter and designer. You write genuinely compelling, specific, detailed email copy — never generic filler.
@@ -55,7 +57,7 @@ Each block: { "type": string, "props": object, "imagePrompt": string (optional) 
 Block types and props:
   header  – { title, subtitle, bgColor, textColor, logoSrc:"" }
   hero    – { headline, subtext, ctaText, ctaHref:"#", bgColor, textColor, ctaBgColor, ctaTextColor, paddingY:48, imageSrc:"" }
-  text    – { html, bgColor:"#ffffff", textColor:"#1e293b", fontSize:15, align:"left" }
+  text    – { html, bgColor:"#ffffff", textColor:"#1e293b", fontSize:16, align:"left" }
   image   – { src:"", alt, align:"center", widthPct:100, borderRadius:8, linkHref:"" }
   button  – { text, href:"#", bgColor:"#2563eb", textColor:"#ffffff", borderRadius:8, align:"center", widthMode:"auto", paddingY:14 }
   grid    – { bgColor:"#f8fafc", columns:[{ imageSrc:"", title, text, linkHref:"" }, { imageSrc:"", title, text, linkHref:"" }] }
@@ -183,3 +185,5 @@ Write compelling, SPECIFIC, DETAILED copy throughout. This email must be ready t
     return res.status(500).json({ ok: false, error: e.message || "AI failed" });
   }
 }
+
+export default withAuth(handler);

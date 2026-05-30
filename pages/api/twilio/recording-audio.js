@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/twilio/recording-audio.js
 // FULL REPLACEMENT
 //
@@ -25,7 +26,7 @@ function toMp3Url(u) {
   return url;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).send("Method not allowed");
@@ -64,3 +65,5 @@ export default async function handler(req, res) {
     return res.status(500).send("Server error");
   }
 }
+
+export default withAuth(handler);

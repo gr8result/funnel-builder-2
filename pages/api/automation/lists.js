@@ -162,7 +162,7 @@ async function loadFromTable(table, user_id, account_id) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "GET only" });
 
   try {
@@ -216,3 +216,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg(e) });
   }
 }
+
+export default withWorkspace(handler);

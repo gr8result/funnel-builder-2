@@ -1,5 +1,6 @@
 // Quick diagnostic to see flow status
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,7 +9,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { flow_id } = req.query;
 
   if (!flow_id) {
@@ -105,3 +106,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

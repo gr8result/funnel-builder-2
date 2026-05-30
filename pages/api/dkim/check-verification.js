@@ -1,11 +1,12 @@
-// /pages/api/dkim/check-verification.js
+﻿// /pages/api/dkim/check-verification.js
 //
 // Checks DKIM/domain status in SendGrid and updates accounts.dkim_verified
 
 import { supabase } from "../../../utils/supabase-client";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function isTruthyValid(v) {
-  // handle booleans + a few “truthy” variants
+  // handle booleans + a few â€œtruthyâ€ variants
   return (
     v === true ||
     v === "true" ||
@@ -22,9 +23,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { userId, domain } = req.body || {};
+    const { domain } = req.body || {};
+    const userId = req.user.id;
 
-    if (!userId || !domain) {
+    if (!domain) {
       return res
         .status(400)
         .json({ error: "Missing userId or domain in request body" });
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
         .json({ error: "SENDGRID_API_KEY env var is not configured" });
     }
 
-    // 🔍 Ask SendGrid for this domain's auth status
+    // ðŸ” Ask SendGrid for this domain's auth status
     const sgRes = await fetch(
       `https://api.sendgrid.com/v3/whitelabel/domains?domain=${encodeURIComponent(
         domain
@@ -95,7 +97,7 @@ export default async function handler(req, res) {
 
     const isVerified = strictVerified || hasAnyDns;
 
-    // 🗄 Update your accounts table
+    // ðŸ—„ Update your accounts table
     const { error: dbError } = await supabase
       .from("accounts")
       .update({ dkim_verified: isVerified })
@@ -111,7 +113,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // ✅ Always return a clean JSON payload
+    // âœ… Always return a clean JSON payload
     return res.status(200).json({
       success: true,
       verified: isVerified,
@@ -125,3 +127,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+
+

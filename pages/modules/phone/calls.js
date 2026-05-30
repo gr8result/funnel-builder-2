@@ -1,4 +1,4 @@
-// pages/modules/phone/calls.js
+﻿// pages/modules/phone/calls.js
 // Calls & Voicemails – lists inbound calls stored in crm_calls
 
 import { useEffect, useState } from "react";
@@ -216,7 +216,7 @@ export default function PhoneCallsPage() {
             !loading &&
             !error && (
               <div style={styles.emptyStateCard}>
-                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
                   Waiting for your first call…
                 </div>
                 <p style={{ margin: 0, opacity: 0.9 }}>
@@ -278,7 +278,7 @@ const styles = {
   bannerTitle: {
     fontSize: 48,
     lineHeight: "48px",
-    fontWeight: 900,
+    fontWeight: 600,
     marginBottom: 6,
     color: "#0b1120",
   },
@@ -294,7 +294,7 @@ const styles = {
     padding: "10px 20px",
     borderRadius: 12,
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#ffffff",
     textDecoration: "none",
     border: "1px solid rgba(255,255,255,0.25)",
@@ -309,7 +309,7 @@ const styles = {
     border: "1px solid rgba(34,197,94,0.6)",
     background:
       "linear-gradient(135deg, rgba(22,163,74,0.22), rgba(15,23,42,0.95))",
-    fontSize: 14,
+    fontSize: 16,
   },
 
   listWrap: {
@@ -347,8 +347,8 @@ const styles = {
   },
 
   callTitle: {
-    fontSize: 15,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     marginBottom: 2,
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -356,7 +356,7 @@ const styles = {
   },
 
   callSub: {
-    fontSize: 13,
+    fontSize: 16,
     opacity: 0.8,
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -372,7 +372,7 @@ const styles = {
   },
 
   metaChip: {
-    fontSize: 12,
+    fontSize: 16,
     padding: "3px 8px",
     borderRadius: 999,
     background: "rgba(148,163,184,0.2)",
@@ -382,11 +382,11 @@ const styles = {
     marginTop: 8,
     paddingTop: 8,
     borderTop: "1px dashed rgba(148,163,184,0.35)",
-    fontSize: 13,
+    fontSize: 16,
   },
 
   detailLabel: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     marginBottom: 4,
     opacity: 0.9,

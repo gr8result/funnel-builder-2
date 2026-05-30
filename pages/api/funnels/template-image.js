@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getServiceFallbackImageUrlBySlug } from "../../../lib/funnelSections";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function safeText(value, max = 160) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
@@ -56,7 +57,7 @@ function redirectFallback(res, { slug, variant, title, subtitle, service, slot }
   return res.redirect(fallbackUrl);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).send("Method not allowed");
@@ -169,3 +170,5 @@ export default async function handler(req, res) {
       return redirectFallback(res, { slug, variant, title, subtitle, service, slot });
   }
 }
+
+export default withAuth(handler);

@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { guardSmsSend } from "../../../lib/smsValidation";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,16 +16,15 @@ function normalizePhone(raw) {
   return v;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
-    const { user_id, list_id, message } = req.body || {};
-    const userId = String(user_id || "").trim();
+    const { list_id, message } = req.body || {};
+    const userId = req.user.id;
     const listId = String(list_id || "").trim();
     const msg = String(message || "").trim();
 
-    if (!userId) return res.status(400).json({ ok: false, error: "Missing user_id." });
     if (!listId) return res.status(400).json({ ok: false, error: "Missing list_id." });
     if (!msg) return res.status(400).json({ ok: false, error: "Missing message." });
 
@@ -183,3 +183,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Bulk send failed." });
   }
 }
+
+export default withAuth(handler);

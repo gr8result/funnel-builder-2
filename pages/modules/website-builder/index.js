@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { cacheWebsiteProjects, deleteWebsiteProject, listWebsiteProjects, updateWebsiteProject } from "../../../lib/website-builder/projectStore";
@@ -158,8 +158,8 @@ function ThemePreview({ theme }) {
                   background: "rgba(15,23,42,0.72)",
                   color: "#e0f2fe",
                   border: "1px solid rgba(125,211,252,0.28)",
-                  fontSize: 12,
-                  fontWeight: 800,
+                  fontSize: 16,
+                  fontWeight: 600,
                   letterSpacing: ".08em",
                   textTransform: "uppercase",
                 }}
@@ -175,8 +175,8 @@ function ThemePreview({ theme }) {
                     background: "rgba(255,255,255,0.14)",
                     color: "#f8fafc",
                     border: "1px solid rgba(255,255,255,0.22)",
-                    fontSize: 11,
-                    fontWeight: 700,
+                    fontSize: 16,
+                    fontWeight: 600,
                     letterSpacing: ".08em",
                     textTransform: "uppercase",
                     backdropFilter: "blur(10px)",
@@ -187,8 +187,8 @@ function ThemePreview({ theme }) {
               ) : null}
             </div>
             <div style={{ maxWidth: "100%" }}>
-              <div style={{ color: "#ffffff", fontWeight: 800, fontSize: 18, lineHeight: 1.1, textShadow: "0 6px 24px rgba(15,23,42,0.38)" }}>{theme.title}</div>
-              <div style={{ color: "rgba(226,232,240,0.92)", fontSize: 13, marginTop: 8, lineHeight: 1.45, textShadow: "0 4px 18px rgba(15,23,42,0.32)" }}>{theme.desc || "Built-in GR8 website template."}</div>
+              <div style={{ color: "#ffffff", fontWeight: 600, fontSize: 18, lineHeight: 1.1, textShadow: "0 6px 24px rgba(15,23,42,0.38)" }}>{theme.title}</div>
+              <div style={{ color: "rgba(226,232,240,0.92)", fontSize: 16, marginTop: 8, lineHeight: 1.45, textShadow: "0 4px 18px rgba(15,23,42,0.32)" }}>{theme.desc || "Built-in GR8 website template."}</div>
             </div>
           </div>
         </div>
@@ -216,6 +216,7 @@ export default function WebsiteBuilderDashboard() {
   const [renameValue, setRenameValue] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
   const [error, setError] = useState("");
+  const [websiteUsage, setWebsiteUsage] = useState(null);
 
   const selectedWebsite = useMemo(() => {
     return websites.find((site) => String(site.id) === String(selectedWebsiteId)) || websites[0] || null;
@@ -233,6 +234,16 @@ export default function WebsiteBuilderDashboard() {
 
     return () => subscription?.unsubscribe?.();
   }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch("/api/website-builder/usage", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((j) => { if (j?.ok) setWebsiteUsage(j); })
+      .catch(() => {});
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -296,11 +307,20 @@ export default function WebsiteBuilderDashboard() {
     return Number(site?.pageCount || site?.pages?.length || 1);
   }
 
-  async function openBuilder(tab = "builder", websiteId = selectedWebsite?.id) {
+  function getPagesForSite(site) {
+    if (Array.isArray(site?.pages) && site.pages.length) {
+      return site.pages.map((p) => (typeof p === "string" ? p : p?.name || "Page")).filter(Boolean);
+    }
+    const keys = Object.keys(site?.pagesContent || {});
+    if (keys.length) return keys;
+    return ["Home"];
+  }
+
+  async function openBuilder(tab = "builder", websiteId = selectedWebsite?.id, pageName = null) {
     const targetWebsite = websites.find((site) => String(site?.id) === String(websiteId)) || selectedWebsite;
     if (websiteId) {
-      const pageName = targetWebsite?.pages?.[0]?.name || "Home";
-      return router.push(`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(websiteId)}&page=${encodeURIComponent(pageName)}&name=${encodeURIComponent(targetWebsite?.name || "GR8 Website")}`);
+      const resolvedPage = pageName || targetWebsite?.pages?.[0]?.name || "Home";
+      return router.push(`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(websiteId)}&page=${encodeURIComponent(resolvedPage)}&name=${encodeURIComponent(targetWebsite?.name || "GR8 Website")}`);
     }
 
     await openSelfHostedBuilder({
@@ -314,6 +334,12 @@ export default function WebsiteBuilderDashboard() {
   async function openBlankBuilder() {
     setLaunching("blank-site");
     setError("");
+
+    if (websiteUsage?.atLimit) {
+      setError(`Website limit reached (${websiteUsage.limit} on the ${websiteUsage.planName} plan). Upgrade to create more websites.`);
+      setLaunching("");
+      return;
+    }
 
     try {
       await openSelfHostedBuilder({
@@ -332,6 +358,12 @@ export default function WebsiteBuilderDashboard() {
   async function applyTheme(theme) {
     setLaunching(String(theme.id));
     setError("");
+
+    if (websiteUsage?.atLimit) {
+      setError(`Website limit reached (${websiteUsage.limit} on the ${websiteUsage.planName} plan). Upgrade to create more websites.`);
+      setLaunching("");
+      return;
+    }
 
     try {
       await openSelfHostedBuilder({
@@ -428,11 +460,46 @@ export default function WebsiteBuilderDashboard() {
             <p className={s.heroText}>
               Choose an existing project, open a blank local builder, or load one of the built-in website templates.
             </p>
+
+            {/* Usage bar */}
+            {websiteUsage && websiteUsage.limit !== null && (
+              <div style={{ marginBottom: 18, padding: "12px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ color: "#94a3b8", fontSize: 16, fontWeight: 600 }}>Websites used</span>
+                  <span style={{
+                    fontSize: 16, fontWeight: 600,
+                    color: websiteUsage.atLimit ? "#ef4444" : websiteUsage.used / websiteUsage.limit >= 0.8 ? "#f59e0b" : "#10b981",
+                  }}>
+                    {websiteUsage.used} / {websiteUsage.limit}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: 4,
+                    width: `${Math.min(100, (websiteUsage.used / websiteUsage.limit) * 100)}%`,
+                    background: websiteUsage.atLimit ? "#ef4444" : websiteUsage.used / websiteUsage.limit >= 0.8 ? "#f59e0b" : "#10b981",
+                    transition: "width 0.3s",
+                  }} />
+                </div>
+                {websiteUsage.atLimit && (
+                  <p style={{ margin: "8px 0 0", fontSize: 16, color: "#f87171" }}>
+                    Website limit reached on <strong>{websiteUsage.planName}</strong> plan.{" "}
+                    <a href="/billing" style={{ color: "#60a5fa", textDecoration: "underline" }}>Upgrade to add more.</a>
+                  </p>
+                )}
+                {!websiteUsage.atLimit && websiteUsage.used / websiteUsage.limit >= 0.8 && (
+                  <p style={{ margin: "8px 0 0", fontSize: 16, color: "#fbbf24" }}>
+                    Approaching website limit. <a href="/billing" style={{ color: "#60a5fa", textDecoration: "underline" }}>Consider upgrading.</a>
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className={s.heroActions}>
-              <button type="button" onClick={() => router.push("/modules/website-builder/new?mode=ai&type=website")} className={s.primaryAction}>
+              <button type="button" onClick={() => router.push("/modules/website-builder/new?mode=ai&type=website")} className={s.primaryAction} disabled={!!websiteUsage?.atLimit}>
                 AI Website Wizard
               </button>
-              <button type="button" onClick={openBlankBuilder} className={s.secondaryAction} disabled={launching === "blank-site"}>
+              <button type="button" onClick={openBlankBuilder} className={s.secondaryAction} disabled={launching === "blank-site" || !!websiteUsage?.atLimit}>
                 {launching === "blank-site" ? "Opening Studio..." : "Open Website Studio"}
               </button>
               <button type="button" onClick={() => openBuilder("builder")} className={s.secondaryAction}>
@@ -474,21 +541,43 @@ export default function WebsiteBuilderDashboard() {
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") commitRename(site); if (e.key === "Escape") cancelRename(); }}
-                        style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid #3b82f6", background: "#0f172a", color: "#f1f5f9", fontSize: 15, fontWeight: 600 }}
+                        style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: "1px solid #3b82f6", background: "#0f172a", color: "#f1f5f9", fontSize: 16, fontWeight: 600 }}
                         disabled={renameSaving}
                       />
-                      <button type="button" onClick={() => commitRename(site)} disabled={renameSaving} style={{ padding: "6px 12px", borderRadius: 8, background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+                      <button type="button" onClick={() => commitRename(site)} disabled={renameSaving} style={{ padding: "6px 12px", borderRadius: 8, background: "#3b82f6", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 16 }}>
                         {renameSaving ? "…" : "Save"}
                       </button>
-                      <button type="button" onClick={cancelRename} disabled={renameSaving} style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.08)", color: "#cbd5e1", border: "none", cursor: "pointer", fontSize: 13 }}>
+                      <button type="button" onClick={cancelRename} disabled={renameSaving} style={{ padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.08)", color: "#cbd5e1", border: "none", cursor: "pointer", fontSize: 16 }}>
                         Cancel
                       </button>
                     </div>
                   ) : (
                     <h3 className={s.modeTitle}>{site.name}</h3>
                   )}
-                  <p className={s.modeDesc}>{pageCountForWebsite(site)} pages ready on this site.</p>
                   <p className={s.modeDesc}>Status: {site.projectStatus}</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "4px 0 2px" }}>
+                    {getPagesForSite(site).map((pageName) => (
+                      <button
+                        key={pageName}
+                        type="button"
+                        onClick={() => openBuilder("builder", site.id, pageName)}
+                        disabled={deletingId === String(site.id)}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 999,
+                          border: "1px solid #2d4a6e",
+                          background: "#0d1f38",
+                          color: "#93c5fd",
+                          fontSize: 16,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {pageName}
+                      </button>
+                    ))}
+                  </div>
                   <div className={s.heroActions}>
                     <button
                       type="button"

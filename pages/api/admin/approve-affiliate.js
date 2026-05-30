@@ -1,14 +1,14 @@
-// /pages/api/admin/approve-affiliate.js
-// Admin API — Approve affiliate application
+﻿// /pages/api/admin/approve-affiliate.js
+// Admin API â€” Approve affiliate application
 // Sets status=approved + verified, provisions vendors row, sends approval email.
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { sendEmail } from '../../../lib/sendEmail';
+import { withAdmin } from '../../../lib/withAdmin';
 
 const FROM = process.env.SENDGRID_FROM_EMAIL || 'no-reply@gr8result.com';
 
 function getBaseUrl(req) {
-  // Prefer explicit env override, then derive from the incoming request host
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (process.env.APP_URL) return process.env.APP_URL;
   const proto = req.headers['x-forwarded-proto'] || 'http';
@@ -16,7 +16,7 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Missing affiliate id' });
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       console.warn('Vendor provisioning failed (non-fatal):', vendorErr.message);
     }
 
-    // 3. Send approval email — MUST be awaited before res.json() or it gets killed in serverless
+    // 3. Send approval email â€” MUST be awaited before res.json() or it gets killed in serverless
     const APP_URL = getBaseUrl(req);
     if (applicant?.email) {
       const firstName = (applicant.name || 'Applicant').split(' ')[0];
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
       const emailResult = await sendEmail({
         to: applicant.email,
         from: FROM,
-        subject: 'Your Affiliate Application Has Been Approved — GR8 RESULT',
+        subject: 'Your Affiliate Application Has Been Approved â€” GR8 RESULT',
         html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#0a0f1a;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f1a;padding:40px 16px;">
@@ -129,14 +129,14 @@ export default async function handler(req, res) {
         <td style="background:#060d18;padding:36px 40px 28px;text-align:center;border-bottom:3px solid #22c55e;">
           <div style="font-size:36px;font-weight:900;letter-spacing:3px;color:#22c55e;line-height:1;">GR8 RESULT</div>
           <div style="font-size:11px;color:#64748b;margin-top:6px;letter-spacing:2px;text-transform:uppercase;">Digital Solutions</div>
-          <div style="font-size:13px;color:#94a3b8;margin-top:14px;letter-spacing:1px;text-transform:uppercase;">Xchange Marketplace · Affiliate Program</div>
+          <div style="font-size:13px;color:#94a3b8;margin-top:14px;letter-spacing:1px;text-transform:uppercase;">Xchange Marketplace Â· Affiliate Program</div>
         </td>
       </tr>
 
       <!-- STATUS BANNER -->
       <tr>
         <td style="background:#14532d;padding:14px 40px;text-align:center;">
-          <span style="font-size:16px;font-weight:800;color:#bbf7d0;letter-spacing:0.5px;">✅ &nbsp;APPLICATION APPROVED</span>
+          <span style="font-size:16px;font-weight:800;color:#bbf7d0;letter-spacing:0.5px;">âœ… &nbsp;APPLICATION APPROVED</span>
         </td>
       </tr>
 
@@ -150,7 +150,7 @@ export default async function handler(req, res) {
             Your application has been reviewed and <strong style="color:#22c55e;">approved</strong>. You are now an authorised affiliate and can start browsing offers, generating unique links, and earning commission today.
           </p>
           <p style="font-size:16px;color:#cbd5e1;line-height:1.75;margin:0 0 36px;">
-            Head to the Xchange Marketplace — your affiliate dashboard is ready and waiting.
+            Head to the Xchange Marketplace â€” your affiliate dashboard is ready and waiting.
           </p>
 
           <!-- CTA -->
@@ -186,9 +186,9 @@ export default async function handler(req, res) {
       <tr>
         <td style="background:#060d18;padding:24px 40px;border-top:1px solid #1e293b;">
           <p style="font-size:13px;color:#475569;margin:0;line-height:1.7;">
-            Questions? Simply reply to this email — we're happy to help.<br>
+            Questions? Simply reply to this email â€” we're happy to help.<br>
             <strong style="color:#22c55e;">The GR8 RESULT Team</strong>
-            &nbsp;·&nbsp;
+            &nbsp;Â·&nbsp;
             <a href="https://www.gr8result.com.au" style="color:#3b82f6;text-decoration:none;">gr8result.com.au</a>
           </p>
         </td>
@@ -219,3 +219,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

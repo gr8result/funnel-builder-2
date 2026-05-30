@@ -1,4 +1,4 @@
-// /pages/modules/email/previews.js
+﻿// /pages/modules/email/previews.js
 // ✅ GR8 RESULT – Corrected path + placeholder grid + working previews (folder structure: user_id/finished-emails)
 
 import { useEffect, useState } from "react";
@@ -136,7 +136,7 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
   },
-  title: { fontSize: "28px", fontWeight: 900, marginBottom: "24px" },
+  title: { fontSize: "28px", fontWeight: 600, marginBottom: "24px" },
   text: { opacity: 0.8, fontSize: "16px" },
   grid: {
     display: "grid",

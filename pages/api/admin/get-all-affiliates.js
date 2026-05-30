@@ -1,9 +1,10 @@
-// /pages/api/admin/get-all-affiliates.js
-// Admin API — Fetch all affiliate applications (bypasses RLS via supabaseAdmin)
+﻿// /pages/api/admin/get-all-affiliates.js
+// Admin API â€” Fetch all affiliate applications (bypasses RLS via supabaseAdmin)
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { withAdmin } from '../../../lib/withAdmin';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
   try {
     const { data, error, count } = await supabaseAdmin
@@ -20,3 +21,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

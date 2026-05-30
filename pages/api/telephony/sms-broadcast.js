@@ -1,5 +1,6 @@
 // /pages/api/telephony/sms-broadcast.js
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,7 +21,7 @@ function normalizePhone(raw) {
   return v;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return bad(res, 405, "Method not allowed");
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -106,3 +107,5 @@ export default async function handler(req, res) {
     return bad(res, 500, e.message || "Server error");
   }
 }
+
+export default withAuth(handler);

@@ -144,7 +144,7 @@ function isEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -331,3 +331,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || String(err) });
   }
 }
+
+export default withWorkspace(handler);

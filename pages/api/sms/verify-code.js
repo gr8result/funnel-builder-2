@@ -2,20 +2,22 @@
 // User enters the SMS sender code they received via email, activating SMS sending
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
   try {
-    const { userId, senderCode } = req.body;
+    const { senderCode } = req.body;
+    const userId = req.user.id;
 
-    if (!userId || !senderCode) {
-      return res.status(400).json({ ok: false, error: "Missing userId or senderCode" });
+    if (!senderCode) {
+      return res.status(400).json({ ok: false, error: "Missing senderCode" });
     }
 
     // Trim and validate sender code format (alphanumeric, 5-20 chars)
@@ -69,3 +71,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

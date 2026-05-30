@@ -1,13 +1,14 @@
-﻿// /pages/api/dev/spreadsheet-data.js
+﻿﻿// /pages/api/dev/spreadsheet-data.js
 import { supabase } from "../../../utils/supabase-client";
+import { withAdmin } from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     // helper
     const get = async (table, cols = "*") => {
       const { data, error } = await supabase.from(table).select(cols);
       if (error) {
-        console.error(`❌ ${table} error:`, error.message);
+        console.error(`? ${table} error:`, error.message);
         return [];
       }
       return data || [];
@@ -84,9 +85,9 @@ export default async function handler(req, res) {
       const total = subs.reduce((sum, s) => sum + (s.price || 0), 0);
       return {
         id,
-        name: a.full_name || a.name || "—",
+        name: a.full_name || a.name || "�",
         email: a.email,
-        company: a.business_name || a.company || "—",
+        company: a.business_name || a.company || "�",
         mrr: total,
         active: true,
         modules: subs.map((s) => ({
@@ -111,7 +112,11 @@ export default async function handler(req, res) {
       subscribers,
     });
   } catch (err) {
-    console.error("❌ Dashboard API failed:", err.message);
+    console.error("? Dashboard API failed:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+
+

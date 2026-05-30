@@ -1,4 +1,4 @@
-// FULL REPLACEMENT — FIXES BROKEN ENDPOINT WIRING + ENABLES LIST-BASED SMS CAMPAIGNS
+﻿// FULL REPLACEMENT — FIXES BROKEN ENDPOINT WIRING + ENABLES LIST-BASED SMS CAMPAIGNS
 //
 // ✅ Keeps your existing structure + banner
 // ✅ Campaign queues into sms_queue via POST /api/smsglobal/launch-sequence
@@ -160,9 +160,13 @@ export default function SmsMarketingPage() {
 
   async function apiGet(path) {
     const token = requireToken();
+    const workspaceId = typeof window !== "undefined" ? localStorage.getItem("active_workspace_id") : null;
     const r = await fetch(path, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+      },
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j?.ok === false) {
@@ -619,12 +623,12 @@ export default function SmsMarketingPage() {
         {/* Current SMS Plan banner */}
         <div style={{ maxWidth: 1320, margin: "0 auto 10px auto", padding: "12px 16px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Current SMS Plan</span>
-            <div style={{ color: smsPlanTier ? "#86efac" : "rgba(255,255,255,0.4)", fontSize: 16, fontWeight: 700, marginTop: 2 }}>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Current SMS Plan</span>
+            <div style={{ color: smsPlanTier ? "#86efac" : "rgba(255,255,255,0.4)", fontSize: 16, fontWeight: 600, marginTop: 2 }}>
               {smsPlanTier ? (SMS_PLAN_LABELS[smsPlanTier] || smsPlanTier) : "No plan selected"}
             </div>
           </div>
-          <button onClick={() => router.push("/modules/billing/sms-plans")} style={{ background: "#facc15", color: "#111827", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={() => router.push("/modules/billing/sms-plans")} style={{ background: "#facc15", color: "#111827", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
             {smsPlanTier ? "Manage / Upgrade Plan" : "Select a Plan"}
           </button>
         </div>
@@ -641,7 +645,7 @@ export default function SmsMarketingPage() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 16, fontWeight: 600 }}>Monthly SMS Usage</span>
-            <span style={{ color: "rgba(255,255,255,0.82)", fontSize: 15 }}>
+            <span style={{ color: "rgba(255,255,255,0.82)", fontSize: 16 }}>
               {smsUsage.sent.toLocaleString()} / {smsLimitDisplay}
             </span>
           </div>
@@ -691,16 +695,16 @@ export default function SmsMarketingPage() {
                 left: "calc(80% - 18px)",
                 top: -18,
                 zIndex: 3,
-                fontSize: 11,
+                fontSize: 16,
                 color: "#f59e0b",
-                fontWeight: 700,
+                fontWeight: 600,
               }}
             >
               80%
             </span>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "#94a3b8", fontSize: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "#94a3b8", fontSize: 16 }}>
             <span>0%</span>
             <span>50%</span>
             <span>100%</span>
@@ -720,7 +724,7 @@ export default function SmsMarketingPage() {
                 justifyContent: "space-between",
                 gap: 10,
                 flexWrap: "wrap",
-                fontSize: 13,
+                fontSize: 16,
               }}
             >
               <span>
@@ -735,8 +739,8 @@ export default function SmsMarketingPage() {
                   border: "none",
                   borderRadius: 8,
                   padding: "8px 10px",
-                  fontSize: 12,
-                  fontWeight: 700,
+                  fontSize: 16,
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
@@ -777,26 +781,26 @@ export default function SmsMarketingPage() {
               color: "#fef3c7",
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+            <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>
               ⚠️ SMS Sender ID Not Set
             </div>
-            <div style={{ marginBottom: 10, fontSize: 15, opacity: 0.95 }}>
+            <div style={{ marginBottom: 10, fontSize: 16, opacity: 0.95 }}>
               Your SMS sender name is not activated yet because <strong>accounts.sender_id and business_name are empty</strong>.
             </div>
-            <div style={{ marginBottom: 10, fontSize: 14, opacity: 0.9 }}>
+            <div style={{ marginBottom: 10, fontSize: 16, opacity: 0.9 }}>
               Phone verification on the account page does <strong>not</strong> fill this automatically. The missing piece is the separate SMS Activation access code / sender ID.
             </div>
-            <div style={{ marginBottom: 10, fontSize: 14, opacity: 0.9 }}>
+            <div style={{ marginBottom: 10, fontSize: 16, opacity: 0.9 }}>
               <strong>Current config:</strong>
             </div>
-            <div style={{ background: "rgba(0,0,0,0.25)", padding: 12, borderRadius: 8, fontSize: 13, fontFamily: "monospace", marginBottom: 12 }}>
+            <div style={{ background: "rgba(0,0,0,0.25)", padding: 12, borderRadius: 8, fontSize: 16, fontFamily: "monospace", marginBottom: 12 }}>
               sender_id: <strong style={{color: "#f87171"}}>{smsConfig.account?.sender_id || "(EMPTY)"}</strong><br/>
               business_name: {smsConfig.account?.business_name || "(empty)"}<br/>
               fallback: {smsConfig.env?.DEFAULT_SMS_ORIGIN || "gr8result"}<br/>
               <br/>
               <strong>SMS will send from: {smsConfig.priority?.actual_origin_used}</strong>
             </div>
-            <div style={{ fontSize: 14, marginBottom: 10 }}>
+            <div style={{ fontSize: 16, marginBottom: 10 }}>
               <strong>To fix:</strong> Go to Account page → SMS Activation section → enter the access code / sender name you received by email → click "Activate SMS"
             </div>
             <button
@@ -807,9 +811,9 @@ export default function SmsMarketingPage() {
                 background: "#facc15",
                 color: "#000",
                 border: "none",
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: "pointer",
-                fontSize: 15,
+                fontSize: 16,
               }}
             >
               Go to Account Page →
@@ -1222,7 +1226,7 @@ export default function SmsMarketingPage() {
                     background: "rgba(255,255,255,0.08)",
                     border: "1px solid rgba(255,255,255,0.14)",
                     color: "#fff",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: singleAudienceType === "manual" ? "pointer" : "not-allowed",
                     opacity: singleAudienceType === "manual" ? 1 : 0.35,
                   }}
@@ -1243,7 +1247,7 @@ export default function SmsMarketingPage() {
                       background: "rgba(34,197,94,0.18)",
                       border: "1px solid rgba(34,197,94,0.35)",
                       color: "#d7ffe6",
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: sendingSingle ? "not-allowed" : "pointer",
                     }}
                   >
@@ -1260,7 +1264,7 @@ export default function SmsMarketingPage() {
                         background: "rgba(255,255,255,0.08)",
                         border: "1px solid rgba(255,255,255,0.14)",
                         color: "#fff",
-                        fontWeight: 700,
+                        fontWeight: 600,
                         cursor: "pointer",
                       }}
                     >

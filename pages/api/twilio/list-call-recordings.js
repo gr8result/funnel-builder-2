@@ -11,6 +11,7 @@
 //   TWILIO_AUTH_TOKEN
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function s(v) {
   return String(v ?? "").trim();
@@ -25,7 +26,7 @@ function normalizePhone(v) {
   return x;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -85,3 +86,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

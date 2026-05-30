@@ -6,6 +6,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { listMergedSharedMediaLibrary } from "../../../lib/sharedMediaLibrary";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -13,10 +14,9 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const BUCKET_USER = "email-user-assets";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
-    const userId = String(req.query.userId || "").trim();
-    if (!userId) return res.status(400).json({ ok: false, error: "Missing userId" });
+const userId = req.user.id;
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return res.status(500).json({
@@ -49,3 +49,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "Server error" });
   }
 }
+
+export default withAuth(handler);

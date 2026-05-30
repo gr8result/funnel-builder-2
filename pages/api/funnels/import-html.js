@@ -1,15 +1,24 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // pages/api/funnels/import-html.js
 // POST { url?: string, html?: string } -> { blocks: [...] }
 // Fetches HTML (if url provided) or uses pasted HTML, then converts to a simple block array.
 // This is intentionally basic — good for public WordPress/ClickBank-style pages.
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
     let { url, html } = req.body || {};
     if (!html && !url) return res.status(400).json({ error: "Provide url or html" });
 
     if (url) {
+      // SSRF protection: only allow https:// to public hosts
+      let parsedUrl;
+      try { parsedUrl = new URL(url); } catch { return res.status(400).json({ error: "Invalid URL" }); }
+      if (parsedUrl.protocol !== "https:") return res.status(400).json({ error: "URL must use https" });
+      const host = parsedUrl.hostname.toLowerCase();
+      if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/.test(host)) {
+        return res.status(400).json({ error: "URL must be a public address" });
+      }
       const r = await fetch(url, { headers: { "user-agent": "Mozilla/5.0 FunnelsImporter" } });
       if (!r.ok) return res.status(400).json({ error: `Fetch failed (${r.status})` });
       html = await r.text();
@@ -53,3 +62,5 @@ export default async function handler(req, res) {
 }
 
 function rid(){ return Math.random().toString(36).slice(2,9); }
+
+export default withAuth(handler);

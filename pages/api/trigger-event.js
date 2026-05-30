@@ -1,6 +1,7 @@
-import { supabase } from "../../utils/supabase-client";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { withAuth } from "../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
@@ -17,11 +18,12 @@ export default async function handler(req, res) {
 
   console.log("Incoming trigger event:", event);
 
-  // Get flows
-  const { data: flows, error: flowsError } = await supabase
+  // Get flows for this user only
+  const { data: flows, error: flowsError } = await supabaseAdmin
     .from("automation_flows")
     .select("*")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("user_id", req.user.id);
 
   if (flowsError) {
     console.error("DB error:", flowsError);
@@ -50,7 +52,7 @@ export default async function handler(req, res) {
     }
   });
 
-  await supabase.from("trigger_logs").insert({
+  await supabaseAdmin.from("trigger_logs").insert({
     event_type: event.type || "unknown",
     payload: event,
     matched_flows: matching.map((m) => m.id),
@@ -62,3 +64,5 @@ export default async function handler(req, res) {
     matched_flows: matching.length,
   });
 }
+
+export default withAuth(handler);

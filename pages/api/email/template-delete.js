@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -9,7 +10,7 @@ const SERVICE_ROLE =
   process.env.SUPABASE_SERVICE_ROLE ||
   process.env.SUPABASE_SERVICE || "";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -51,3 +52,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Delete failed" });
   }
 }
+
+export default withAuth(handler);

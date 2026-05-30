@@ -1,4 +1,4 @@
-// /pages/modules/email/reports/all.js
+﻿// /pages/modules/email/reports/all.js
 // FULL REPLACEMENT — FIXED
 // ❌ REMOVED source_type (does NOT exist in your DB)
 // ✅ Line graph + pie chart
@@ -326,11 +326,11 @@ const styles = {
   metricsGrid:{marginTop:14,display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10},
   metricBox:{padding:12},
   metricTitle:{fontSize:16},
-  metricValue:{fontSize:16,fontWeight:700},
+  metricValue:{fontSize:16,fontWeight:600},
   chartWrap:{marginTop:14,padding:14},
   tableWrap:{marginTop:14},
   tableHeadRow:{display:"grid",gridTemplateColumns:"1.4fr 2fr 1fr .8fr .6fr .6fr .6fr 1fr"},
-  th:{fontSize:16,fontWeight:700},
+  th:{fontSize:16,fontWeight:600},
   tr:{display:"grid",gridTemplateColumns:"1.4fr 2fr 1fr .8fr .6fr .6fr .6fr 1fr"},
   td:{fontSize:16}
 };

@@ -1,8 +1,9 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // pages/api/tools/remove-background.js
 // Calls remove.bg API to remove the background from a base64 image.
 // Requires REMOVEBG_API_KEY in .env.local — get a free key at https://www.remove.bg/api
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apiKey = String(process.env.REMOVEBG_API_KEY || "").trim();
@@ -56,3 +57,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || "Background removal failed" });
   }
 }
+
+export default withAuth(handler);

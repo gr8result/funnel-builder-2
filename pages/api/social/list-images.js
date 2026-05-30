@@ -1,7 +1,8 @@
 import { requireUser } from '../../../lib/social/auth';
 import { listMergedSharedMediaLibrary } from '../../../lib/sharedMediaLibrary';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -14,3 +15,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message });
   }
 }
+
+export default withAuth(handler);

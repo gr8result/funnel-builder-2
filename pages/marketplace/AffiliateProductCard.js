@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "../../utils/supabase-client";
 
@@ -76,7 +76,7 @@ export default function AffiliateProductCard({ product, affiliateApproved, selec
             <div style={{
               background: '#facc15',
               color: '#222',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: 16,
               borderRadius: 10,
               padding: '12px 8px',
@@ -141,8 +141,8 @@ export default function AffiliateProductCard({ product, affiliateApproved, selec
             <div style={{
               background: '#ef4444',
               color: '#fff',
-              fontWeight: 700,
-              fontSize: 15,
+              fontWeight: 600,
+              fontSize: 16,
               borderRadius: 10,
               padding: '12px 8px',
               textAlign: 'center',
@@ -182,16 +182,16 @@ export default function AffiliateProductCard({ product, affiliateApproved, selec
           <h2 style={{ color: '#22c55e', fontSize: 32, marginBottom: 18 }}>Affiliate Application Submitted</h2>
           <table style={{ width: '100%', fontSize: 18, borderCollapse: 'collapse', marginBottom: 24 }}>
             <tbody>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Status</td><td style={{ padding: '10px 18px' }}>Pending</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Applied At</td><td style={{ padding: '10px 18px' }}>{new Date().toLocaleString()}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Affiliate User ID</td><td style={{ padding: '10px 18px' }}>{user?.id}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Product ID</td><td style={{ padding: '10px 18px' }}>{product.id}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Product Title</td><td style={{ padding: '10px 18px' }}>{product.title}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Sale Price</td><td style={{ padding: '10px 18px' }}>${Number(product.sale_price || 0).toFixed(2)}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Commission Type</td><td style={{ padding: '10px 18px' }}>{product.commission_type}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Commission Value</td><td style={{ padding: '10px 18px' }}>{product.commission_value}%</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Revenue per Sale</td><td style={{ padding: '10px 18px' }}>${Number(product.affiliate_revenue_per_sale || 0).toFixed(2)}</td></tr>
-              <tr><td style={{ fontWeight: 700, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Image URL</td><td style={{ padding: '10px 18px' }}>{product.image_url}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Status</td><td style={{ padding: '10px 18px' }}>Pending</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Applied At</td><td style={{ padding: '10px 18px' }}>{new Date().toLocaleString()}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Affiliate User ID</td><td style={{ padding: '10px 18px' }}>{user?.id}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Product ID</td><td style={{ padding: '10px 18px' }}>{product.id}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Product Title</td><td style={{ padding: '10px 18px' }}>{product.title}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Sale Price</td><td style={{ padding: '10px 18px' }}>${Number(product.sale_price || 0).toFixed(2)}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Commission Type</td><td style={{ padding: '10px 18px' }}>{product.commission_type}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Commission Value</td><td style={{ padding: '10px 18px' }}>{product.commission_value}%</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Revenue per Sale</td><td style={{ padding: '10px 18px' }}>${Number(product.affiliate_revenue_per_sale || 0).toFixed(2)}</td></tr>
+              <tr><td style={{ fontWeight: 600, color: '#1de9b6', padding: '10px 18px', width: 220 }}>Image URL</td><td style={{ padding: '10px 18px' }}>{product.image_url}</td></tr>
             </tbody>
           </table>
           <div style={{ fontSize: 20, marginBottom: 24 }}>
@@ -204,7 +204,7 @@ export default function AffiliateProductCard({ product, affiliateApproved, selec
               borderRadius: 8,
               background: '#22c55e',
               color: '#222',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: 18,
               border: 'none',
               cursor: 'pointer',

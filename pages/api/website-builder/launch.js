@@ -1,4 +1,5 @@
-export default async function handler(req, res) {
+import { withAuth } from "../../../lib/withWorkspace";
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -14,3 +15,5 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   return res.redirect(307, `/modules/website-builder/visual-builder?${params.toString()}`);
 }
+
+export default withAuth(handler);

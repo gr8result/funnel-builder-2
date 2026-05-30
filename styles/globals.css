@@ -13,6 +13,23 @@ select {
   box-sizing: border-box;
 }
 
+/* Checkboxes and radios must not inherit the generic input overrides */
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-width: unset !important;
+  height: auto;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  border: unset !important;
+  border-radius: 3px !important;
+  background: initial !important;
+  box-sizing: content-box !important;
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: #7dd3fc !important;

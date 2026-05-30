@@ -4,11 +4,14 @@ export const CORE = [
   { href: "/funnels",   emoji: "🧱", title: "Sales funnels" },
   { href: "/assets",    emoji: "🖼️", title: "Assets" },
   { href: "/leads",     emoji: "📥", title: "Leads" },
-  { href: "/account",   emoji: "⚙️", title: "Account" },
-  { href: "/billing",   emoji: "🧾", title: "Billing & Modules" },
+  { href: "/account",        emoji: "⚙️", title: "Account" },
+  { href: "/modules/email/crm/teams", emoji: "👥", title: "Team Members" },
+  { href: "/billing",                              emoji: "🧾", title: "Pricing & Billing" },
+  { href: "/modules/website-builder/prices",    emoji: "💰", title: "Pricing Comparison" },
 ];
 
 export const MODULES = [
+  { href: "/modules/features", emoji: "✨", title: "Feature Overview" },
   { href: "/modules/website-builder", emoji: "🧩", title: "Website builder" },
   { href: "/modules/business-automation", emoji: "⚙️", title: "Business automation" },
   { href: "/modules/email",               emoji: "📧", title: "Email marketing" },
@@ -20,6 +23,7 @@ export const MODULES = [
   { href: "/modules/subaccounts",         emoji: "👥", title: "Subaccounts" },
   { href: "/modules/pipelines",           emoji: "🌿", title: "Pipelines" },
   { href: "/modules/communities",         emoji: "💬", title: "Communities" },
+  { href: "/modules/construction",        emoji: "🗂️", title: "Projects Hub" },
 ];
 
 export const TOOLS = [

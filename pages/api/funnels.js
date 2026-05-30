@@ -1,5 +1,6 @@
 // pages/api/submit.js
 import { createClient } from '@supabase/supabase-js';
+import { withAuth } from "../../lib/withWorkspace";
 
 export const config = {
   api: { bodyParser: true }, // handles x-www-form-urlencoded + JSON
@@ -10,7 +11,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
   }
@@ -49,9 +50,11 @@ export default async function handler(req, res) {
       return res.status(400).send('Submission failed');
     }
 
-    // Optional thank-you redirect
+    // Optional thank-you redirect — only allow same-origin paths or absolute https?:// URLs
+    // Blocks protocol-relative URLs like //evil.com (open redirect)
     const redirect = (body.redirect || '').toString();
-    if (redirect && /^https?:\/\//i.test(redirect) || redirect.startsWith('/')) {
+    const isSafeRedirect = /^https?:\/\//i.test(redirect) || (redirect.startsWith('/') && !redirect.startsWith('//'));
+    if (isSafeRedirect) {
       return res.redirect(302, redirect);
     }
 
@@ -62,3 +65,5 @@ export default async function handler(req, res) {
     res.status(400).send('Bad Request');
   }
 }
+
+export default withAuth(handler);

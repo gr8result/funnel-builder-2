@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+﻿import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAdmin } from "../../../lib/withAdmin";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -6,7 +7,7 @@ const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "no-reply@gr8result.com";
 const APP_BASE_URL = process.env.EMAIL_APP_BASE_URL || "https://www.gr8result.com";
 const LOGIN_URL = `${APP_BASE_URL.replace(/\/$/, "")}/login`;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
               <p>Your account access has been restored and you can now log in again.</p>
               <p><a href="${LOGIN_URL}" style="background:#22c55e;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;">Log in</a></p>
               <br>
-              <p>– The GR8 RESULT Team</p>
+              <p>â€“ The GR8 RESULT Team</p>
             </div>
           `,
         });
@@ -64,3 +65,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message || "Internal server error" });
   }
 }
+
+export default withAdmin(handler);
+

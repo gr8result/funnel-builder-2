@@ -1,4 +1,4 @@
-// Comprehensive workspace analytics — SMS + Email combined metrics, charts & insights
+﻿// Comprehensive workspace analytics — SMS + Email combined metrics, charts & insights
 
 import Head from "next/head";
 import Link from "next/link";
@@ -712,7 +712,7 @@ const styles = {
   bannerTitle: {
     margin: 0,
     fontSize: 40,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#fff",
   },
   bannerSub: {
@@ -745,7 +745,7 @@ const styles = {
     padding: "8px 14px",
     borderRadius: 999,
     cursor: "pointer",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
   },
   rangeBtnActive: {
@@ -759,8 +759,8 @@ const styles = {
     color: "#22c55e",
     padding: "8px 14px",
     borderRadius: 999,
-    fontSize: 14,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     whiteSpace: "nowrap",
   },
   toggleBtn: {
@@ -770,7 +770,7 @@ const styles = {
     padding: "8px 14px",
     borderRadius: 999,
     cursor: "pointer",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
   },
   importNote: {
@@ -780,7 +780,7 @@ const styles = {
     background: "rgba(15,23,42,0.7)",
     border: "1px solid rgba(34,197,94,0.35)",
     color: "#e2e8f0",
-    fontSize: 14,
+    fontSize: 16,
   },
   loading: {
     textAlign: "center",
@@ -811,14 +811,14 @@ const styles = {
     overflow: "hidden",
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 16,
     opacity: 0.75,
     marginBottom: 6,
     fontWeight: 600,
   },
   summaryValue: {
     fontSize: 28,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 8,
   },
   summaryIcon: {
@@ -835,7 +835,7 @@ const styles = {
   chartTitle: {
     margin: "0 0 16px 0",
     fontSize: 20,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#fff",
   },
   twoColumn: {

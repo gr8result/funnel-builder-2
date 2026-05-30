@@ -310,6 +310,21 @@ function heroLayoutDefaults(variant, compact) {
     };
   }
 
+  if (variant === "orbit") {
+    return {
+      headlineAlignment: "center",
+      verticalAlign: "bottom",
+      contentX: 50,
+      contentY: compact ? 78 : 86,
+      contentWidth: compact ? 320 : 700,
+      contentHeight: compact ? 160 : 180,
+      floatingX: 50,
+      floatingY: compact ? 30 : 42,
+      floatingWidth: compact ? 180 : 360,
+      floatingHeight: compact ? 200 : 500,
+    };
+  }
+
   return {
     headlineAlignment: "center",
     verticalAlign: "center",
@@ -451,6 +466,39 @@ function heroVariantStyles(props, compact) {
     };
   }
 
+  if (variant === "orbit") {
+    return {
+      shell: {
+        border: "none",
+        boxShadow: "0 32px 80px rgba(2,6,23,0.5)",
+      },
+      content: {
+        maxWidth: compact ? "100%" : 700,
+        alignItems: "center",
+      },
+      contentShell: {
+        background: resolvedContentBg("transparent"),
+        border: "none",
+        boxShadow: "none",
+        backdropFilter: "none",
+        ...contentShellBorderless,
+      },
+      imageFrame: {
+        borderRadius: 0,
+        border: "none",
+        boxShadow: "none",
+      },
+      decor: null,
+      imageDefaults: {
+        x: layout.floatingX,
+        y: layout.floatingY,
+        width: layout.floatingWidth,
+        height: layout.floatingHeight,
+        contentY: layout.contentY,
+      },
+    };
+  }
+
   return {
     shell: {
       border: "none",
@@ -515,6 +563,7 @@ function featureVariantStyles(props) {
   const variant = props.featureVariant || "cards";
   const cardWidth = Math.max(220, Number(props?.featureCardWidth) || 320);
   const compactCardWidth = Math.max(220, Math.min(cardWidth, 420));
+  const imageHeight = Number(props?.featureImageHeight) || Number(props?.featureCardHeight) || 0;
 
   if (variant === "minimal-list") {
     return {
@@ -624,7 +673,7 @@ function featureVariantStyles(props) {
         maxWidth: `${cardWidth}px`,
       },
       media: {
-        aspectRatio: "4 / 5",
+        ...(imageHeight > 0 ? { height: imageHeight } : { aspectRatio: "4 / 5" }),
         borderRadius: 20,
       },
       body: {
@@ -667,7 +716,7 @@ function featureVariantStyles(props) {
       maxWidth: `${cardWidth}px`,
     },
     media: {
-      aspectRatio: "4 / 3",
+      ...(imageHeight > 0 ? { height: imageHeight } : { aspectRatio: "4 / 3" }),
       borderRadius: 18,
     },
     body: {
@@ -693,9 +742,13 @@ function testimonialVariantStyles(variant, compact, props) {
   const textCol = props.textColor;
   const cardWidth = Math.max(180, Number(props.cardWidth) || 320);
 
+  const fullWidth = props.fullWidthBackground !== false;
+  const shellRadius = fullWidth ? 0 : (compact ? 16 : 28);
+  const matchHeight = !compact && !!props.equalCardHeight;
+
   if (variant === "spotlight") {
     return {
-      shell: { background: bg || "linear-gradient(165deg,#0f172a,#1e3a5f)", borderRadius: compact ? 16 : 28 },
+      shell: { background: bg || "linear-gradient(165deg,#0f172a,#1e3a5f)", borderRadius: shellRadius },
       grid: { display: "grid", gap: 28, maxWidth: compact ? "100%" : `${Math.max(400, cardWidth)}px`, marginLeft: "auto", marginRight: "auto", marginTop: 24 },
       card: () => ({
         background: cardBg || "rgba(255,255,255,0.07)",
@@ -716,7 +769,7 @@ function testimonialVariantStyles(variant, compact, props) {
 
   if (variant === "bubble") {
     return {
-      shell: { background: bg || "#f0f9ff", borderRadius: compact ? 16 : 28 },
+      shell: { background: bg || "#f0f9ff", borderRadius: shellRadius },
       grid: {
         display: "flex",
         flexWrap: compact ? "nowrap" : "wrap",
@@ -724,9 +777,9 @@ function testimonialVariantStyles(variant, compact, props) {
         justifyContent: "center",
         gap: 20,
         marginTop: 24,
-        alignItems: "start",
+        alignItems: matchHeight ? "stretch" : "start",
       },
-      cardWrap: compact ? undefined : { width: cardWidth, maxWidth: "100%", flexShrink: 0, flexGrow: 0, boxSizing: "border-box" },
+      cardWrap: compact ? undefined : { width: cardWidth, maxWidth: "100%", flexShrink: 0, flexGrow: 0, boxSizing: "border-box", ...(matchHeight ? { display: "flex" } : {}) },
       card: () => ({
         background: cardBg || "#ffffff",
         borderLeft: `4px solid ${accent}`,
@@ -738,6 +791,7 @@ function testimonialVariantStyles(variant, compact, props) {
         boxShadow: "0 8px 28px rgba(37,99,235,0.08)",
         display: "grid",
         gap: 10,
+        ...(matchHeight ? { height: "100%", boxSizing: "border-box" } : {}),
       }),
       quote: { color: textCol || "#0f172a" },
       author: { color: textCol || "#0f172a" },
@@ -748,7 +802,7 @@ function testimonialVariantStyles(variant, compact, props) {
 
   if (variant === "wall") {
     return {
-      shell: { background: bg || "#ffffff", borderRadius: compact ? 16 : 28 },
+      shell: { background: bg || "#ffffff", borderRadius: shellRadius },
       grid: {
         display: "grid",
         gridTemplateColumns: compact ? "1fr" : "repeat(3, minmax(0, 1fr))",
@@ -779,7 +833,7 @@ function testimonialVariantStyles(variant, compact, props) {
 
   // default: "cards"
   return {
-    shell: { background: bg || "linear-gradient(165deg,#f8fafc,#ffffff)", borderRadius: compact ? 16 : 28 },
+    shell: { background: bg || "linear-gradient(165deg,#f8fafc,#ffffff)", borderRadius: shellRadius },
     grid: {
       display: "flex",
       flexWrap: compact ? "nowrap" : "wrap",
@@ -787,9 +841,9 @@ function testimonialVariantStyles(variant, compact, props) {
       justifyContent: "center",
       gap: 20,
       marginTop: 24,
-      alignItems: "start",
+      alignItems: matchHeight ? "stretch" : "start",
     },
-    cardWrap: compact ? undefined : { width: cardWidth, maxWidth: "100%", flexShrink: 0, flexGrow: 0, boxSizing: "border-box" },
+    cardWrap: compact ? undefined : { width: cardWidth, maxWidth: "100%", flexShrink: 0, flexGrow: 0, boxSizing: "border-box", ...(matchHeight ? { display: "flex" } : {}) },
     card: () => ({
       background: cardBg || "#ffffff",
       border: `1px solid ${border || "rgba(148,163,184,0.28)"}`,
@@ -798,6 +852,7 @@ function testimonialVariantStyles(variant, compact, props) {
       boxShadow: PREMIUM_SHADOW,
       display: "grid",
       gap: 12,
+      ...(matchHeight ? { height: "100%", boxSizing: "border-box" } : {}),
     }),
     quote: { color: textCol || "#0f172a", fontStyle: "italic" },
     author: { color: textCol || "#0f172a" },
@@ -810,7 +865,10 @@ function ctaButtonVariantStyles(props, compact) {
   const variant = String(props.style || "spotlight-pill");
   const size = String(props.size || "large");
   const buttonPad = size === "small" ? (compact ? "9px 14px" : "10px 16px") : size === "medium" ? (compact ? "10px 18px" : "12px 22px") : (compact ? "12px 20px" : "15px 28px");
-  const buttonFontSize = size === "small" ? 14 : size === "medium" ? 15 : 17;
+  const buttonFontSize = size === "small" ? 16 : size === "medium" ? 16 : 17;
+  const titleFs = props.titleFontSize ? Number(props.titleFontSize) : null;
+  const descFs = props.descFontSize ? Number(props.descFontSize) : null;
+  const contentMW = props.contentMaxWidth ? Number(props.contentMaxWidth) : null;
 
   if (variant === "split-banner") {
     return {
@@ -825,10 +883,10 @@ function ctaButtonVariantStyles(props, compact) {
         border: `1px solid ${props.borderColor || "rgba(148,163,184,0.22)"}`,
         boxShadow: "0 24px 54px rgba(2,6,23,0.24)",
       },
-      content: { display: "grid", gap: 8, textAlign: compact ? "center" : "left" },
-      eyebrow: { fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#f8fafc", 0.7) },
-      title: { margin: 0, fontSize: compact ? 24 : 34, lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#f8fafc" },
-      description: { margin: 0, fontSize: compact ? 14 : 16, lineHeight: 1.65, color: colorWithAlpha(props.textColor || "#f8fafc", 0.82), maxWidth: 620 },
+      content: { display: "grid", gap: 8, textAlign: compact ? "center" : "left", maxWidth: contentMW || undefined },
+      eyebrow: { fontSize: 16, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#f8fafc", 0.7) },
+      title: { margin: 0, fontSize: compact ? 24 : (titleFs || 34), lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#f8fafc" },
+      description: { margin: 0, fontSize: compact ? 16 : (descFs || 18), lineHeight: 1.65, color: colorWithAlpha(props.textColor || "#f8fafc", 0.82), maxWidth: 620 },
       note: { margin: 0, fontSize: 16, lineHeight: 1.5, color: colorWithAlpha(props.textColor || "#f8fafc", 0.68) },
       actionWrap: { display: "grid", gap: 10, justifyItems: compact ? "center" : "end", minWidth: compact ? undefined : 220 },
       action: {
@@ -859,10 +917,10 @@ function ctaButtonVariantStyles(props, compact) {
         border: `1px solid ${props.borderColor || "rgba(120,98,67,0.18)"}`,
         boxShadow: "0 22px 48px rgba(120,98,67,0.12)",
       },
-      content: { display: "grid", gap: 10, textAlign: props.alignment || "left" },
-      eyebrow: { fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#2f241b", 0.62) },
-      title: { margin: 0, fontSize: compact ? 24 : 36, lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#2f241b", maxWidth: 760 },
-      description: { margin: 0, fontSize: compact ? 15 : 17, lineHeight: 1.75, color: colorWithAlpha(props.textColor || "#2f241b", 0.8), maxWidth: 720 },
+      content: { display: "grid", gap: 10, textAlign: props.alignment || "left", maxWidth: contentMW || undefined },
+      eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#2f241b", 0.62) },
+      title: { margin: 0, fontSize: compact ? 24 : (titleFs || 36), lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#2f241b", maxWidth: 760 },
+      description: { margin: 0, fontSize: compact ? 16 : (descFs || 18), lineHeight: 1.75, color: colorWithAlpha(props.textColor || "#2f241b", 0.8), maxWidth: 720 },
       note: { margin: 0, fontSize: 16, lineHeight: 1.6, color: colorWithAlpha(props.textColor || "#2f241b", 0.62) },
       actionWrap: { display: "flex", justifyContent: props.alignment === "center" ? "center" : props.alignment === "right" ? "flex-end" : "flex-start" },
       action: {
@@ -895,12 +953,12 @@ function ctaButtonVariantStyles(props, compact) {
         border: `1px solid ${props.borderColor || "rgba(255,255,255,0.18)"}`,
         boxShadow: "0 28px 60px rgba(15,23,42,0.26)",
       },
-      content: { display: "grid", gap: 10, justifyItems: "center", maxWidth: 780 },
-      eyebrow: { fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#ffffff", 0.72) },
-      title: { margin: 0, fontSize: compact ? 26 : 40, lineHeight: 1.04, fontWeight: 600, color: props.textColor || "#ffffff" },
-      description: { margin: 0, fontSize: compact ? 15 : 18, lineHeight: 1.7, color: colorWithAlpha(props.textColor || "#ffffff", 0.86), maxWidth: 700 },
-      note: { margin: 0, fontSize: 16, lineHeight: 1.55, color: colorWithAlpha(props.textColor || "#ffffff", 0.72) },
-      actionWrap: { display: "grid", gap: 10, justifyItems: "center" },
+      content: { display: "grid", gap: 10, justifyItems: "center", textAlign: "center", maxWidth: contentMW || 780, marginLeft: "auto", marginRight: "auto" },
+      eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#ffffff", 0.72), textAlign: "center" },
+      title: { margin: 0, fontSize: compact ? 26 : (titleFs || 40), lineHeight: 1.04, fontWeight: 600, color: props.textColor || "#ffffff", textAlign: "center" },
+      description: { margin: 0, fontSize: compact ? 16 : (descFs || 18), lineHeight: 1.7, color: colorWithAlpha(props.textColor || "#ffffff", 0.86), maxWidth: 700, textAlign: "center" },
+      note: { margin: 0, fontSize: 16, lineHeight: 1.55, color: colorWithAlpha(props.textColor || "#ffffff", 0.72), textAlign: "center" },
+      actionWrap: { display: "grid", gap: 10, justifyItems: "center", textAlign: "center" },
       action: {
         display: "inline-flex",
         alignItems: "center",
@@ -930,10 +988,10 @@ function ctaButtonVariantStyles(props, compact) {
       border: `1px solid ${props.borderColor || "rgba(191,219,254,0.9)"}`,
       boxShadow: "0 18px 42px rgba(37,99,235,0.12)",
     },
-    content: { display: "grid", gap: 8, justifyItems: props.alignment === "left" ? "start" : props.alignment === "right" ? "end" : "center", maxWidth: 720 },
-    eyebrow: { fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#0f172a", 0.6) },
-    title: { margin: 0, fontSize: compact ? 24 : 34, lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#0f172a" },
-    description: { margin: 0, fontSize: compact ? 15 : 16, lineHeight: 1.7, color: colorWithAlpha(props.textColor || "#0f172a", 0.76), maxWidth: 620 },
+    content: { display: "grid", gap: 8, justifyItems: props.alignment === "left" ? "start" : props.alignment === "right" ? "end" : "center", maxWidth: contentMW || 720 },
+    eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#0f172a", 0.6) },
+    title: { margin: 0, fontSize: compact ? 24 : (titleFs || 34), lineHeight: 1.08, fontWeight: 600, color: props.textColor || "#0f172a" },
+    description: { margin: 0, fontSize: compact ? 16 : (descFs || 18), lineHeight: 1.7, color: colorWithAlpha(props.textColor || "#0f172a", 0.76), maxWidth: 620 },
     note: { margin: 0, fontSize: 16, lineHeight: 1.5, color: colorWithAlpha(props.textColor || "#0f172a", 0.62) },
     actionWrap: { display: "flex", justifyContent: props.alignment === "left" ? "flex-start" : props.alignment === "right" ? "flex-end" : "center" },
     action: {
@@ -1168,8 +1226,8 @@ function teamVariantStyles(props, compact) {
       image: () => ({ width: "100%", aspectRatio: "4 / 3.8", minHeight: compact ? 220 : 240, objectFit: "cover", borderRadius: compact ? 16 : 18, display: "block" }),
       placeholder: () => ({ width: "100%", aspectRatio: "4 / 3.8", minHeight: compact ? 220 : 240, borderRadius: compact ? 16 : 18, display: "grid", placeItems: "center", background: "rgba(191,219,254,0.42)", color: subtle }),
       name: { margin: 0, fontSize: compact ? 20 : 26, fontWeight: 600, color: text },
-      role: { margin: "6px 0 0", fontSize: compact ? 12 : 13, textTransform: "uppercase", letterSpacing: "0.14em", color: "#2563eb" },
-      bio: { margin: "12px 0 0", fontSize: compact ? 14 : 15, lineHeight: 1.7, color: text },
+      role: { margin: "6px 0 0", fontSize: compact ? 16 : 18, textTransform: "uppercase", letterSpacing: "0.14em", color: "#2563eb" },
+      bio: { margin: "12px 0 0", fontSize: compact ? 16 : 18, lineHeight: 1.7, color: text },
     };
   }
 
@@ -1192,8 +1250,8 @@ function teamVariantStyles(props, compact) {
       image: (index) => ({ width: "100%", height: compact ? 260 : (index === 0 ? "100%" : 220), minHeight: compact ? 260 : (index === 0 ? 420 : 220), objectFit: "cover", borderRadius: compact ? 18 : 24, display: "block" }),
       placeholder: (index) => ({ width: "100%", height: compact ? 260 : (index === 0 ? 420 : 220), minHeight: compact ? 260 : (index === 0 ? 420 : 220), borderRadius: compact ? 18 : 24, display: "grid", placeItems: "center", background: "rgba(120,98,67,0.08)", color: subtle }),
       name: { margin: 0, fontSize: compact ? 22 : 28, fontWeight: 600, color: text },
-      role: { margin: "6px 0 0", fontSize: compact ? 13 : 14, textTransform: "uppercase", letterSpacing: "0.12em", color: subtle },
-      bio: { margin: "14px 0 0", fontSize: compact ? 14 : 16, lineHeight: 1.7, color: text },
+      role: { margin: "6px 0 0", fontSize: compact ? 16 : 18, textTransform: "uppercase", letterSpacing: "0.12em", color: subtle },
+      bio: { margin: "14px 0 0", fontSize: compact ? 16 : 18, lineHeight: 1.7, color: text },
     };
   }
 
@@ -1214,8 +1272,8 @@ function teamVariantStyles(props, compact) {
       image: () => ({ width: "100%", aspectRatio: "4 / 4.5", objectFit: "cover", borderRadius: compact ? 16 : 20, display: "block" }),
       placeholder: () => ({ width: "100%", aspectRatio: "4 / 4.5", borderRadius: compact ? 16 : 20, display: "grid", placeItems: "center", background: "rgba(148,163,184,0.14)", color: "#cbd5e1" }),
       name: { margin: "14px 0 0", fontSize: compact ? 18 : 20, fontWeight: 600, color: "#f8fafc" },
-      role: { margin: "6px 0 0", fontSize: compact ? 12 : 13, textTransform: "uppercase", letterSpacing: "0.14em", color: "#67e8f9" },
-      bio: { margin: "12px 0 0", fontSize: compact ? 13 : 14, lineHeight: 1.7, color: "rgba(226,232,240,0.88)" },
+      role: { margin: "6px 0 0", fontSize: compact ? 16 : 18, textTransform: "uppercase", letterSpacing: "0.14em", color: "#67e8f9" },
+      bio: { margin: "12px 0 0", fontSize: compact ? 16 : 18, lineHeight: 1.7, color: "rgba(226,232,240,0.88)" },
     };
   }
 
@@ -1238,8 +1296,8 @@ function teamVariantStyles(props, compact) {
       image: () => ({ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: compact ? 16 : 18, display: "block" }),
       placeholder: () => ({ width: "100%", aspectRatio: "1 / 1", borderRadius: compact ? 16 : 18, display: "grid", placeItems: "center", background: "#e2e8f0", color: subtle }),
       name: { margin: 0, fontSize: compact ? 20 : 24, fontWeight: 600, color: text },
-      role: { margin: "4px 0 0", fontSize: compact ? 13 : 14, color: subtle },
-      bio: { margin: "10px 0 0", fontSize: compact ? 14 : 15, lineHeight: 1.7, color: text },
+      role: { margin: "4px 0 0", fontSize: compact ? 16 : 18, color: subtle },
+      bio: { margin: "10px 0 0", fontSize: compact ? 16 : 18, lineHeight: 1.7, color: text },
     };
   }
 
@@ -1259,8 +1317,8 @@ function teamVariantStyles(props, compact) {
     image: () => ({ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", marginBottom: 12 }),
     placeholder: () => ({ width: "100%", aspectRatio: "4 / 3", display: "grid", placeItems: "center", background: "#e2e8f0", color: subtle, marginBottom: 12 }),
     name: { margin: "0 16px", fontSize: compact ? 18 : 20, fontWeight: 600, color: text },
-    role: { margin: "6px 16px 0", fontSize: compact ? 12 : 13, textTransform: "uppercase", letterSpacing: "0.12em", color: subtle },
-    bio: { margin: "12px 16px 0", fontSize: compact ? 14 : 15, lineHeight: 1.7, color: text },
+    role: { margin: "6px 16px 0", fontSize: compact ? 16 : 18, textTransform: "uppercase", letterSpacing: "0.12em", color: subtle },
+    bio: { margin: "12px 16px 0", fontSize: compact ? 16 : 18, lineHeight: 1.7, color: text },
   };
 }
 
@@ -1271,6 +1329,7 @@ function normalizeStatItem(item, index) {
       number: String(item.number || item.value || `0${index + 1}`),
       label: String(item.label || item.title || `Metric ${index + 1}`),
       detail: String(item.detail || item.description || ""),
+      cardAnimation: item.cardAnimation != null ? String(item.cardAnimation) : "",
     };
   }
 
@@ -1279,6 +1338,7 @@ function normalizeStatItem(item, index) {
     number: String(item || `0${index + 1}`),
     label: `Metric ${index + 1}`,
     detail: "",
+    cardAnimation: "",
   };
 }
 
@@ -1318,8 +1378,8 @@ function statsVariantStyles(props, compact) {
         textAlign: "center",
       }),
       number: { margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || 34)) : Math.max(20, Number(props?.numberSize || 46)), lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
-      label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
-      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
+      label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 16)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 16)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     };
   }
 
@@ -1338,8 +1398,8 @@ function statsVariantStyles(props, compact) {
         boxShadow: index === 0 ? "0 26px 58px rgba(2,6,23,0.34)" : "0 18px 36px rgba(2,6,23,0.22)",
       }),
       number: (index) => ({ margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || (index === 0 ? 40 : 28))) : Math.max(20, Number(props?.numberSize || (index === 0 ? 68 : 34))), lineHeight: 0.96, fontWeight: 600, letterSpacing: "-0.05em", color: numberColor }),
-      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
-      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
+      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 16)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+      detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 16)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     };
   }
 
@@ -1360,8 +1420,8 @@ function statsVariantStyles(props, compact) {
         boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
       }),
       number: { margin: 0, fontSize: compact ? Math.max(16, Number(props?.numberSize || 26)) : Math.max(18, Number(props?.numberSize || 30)), lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
-      label: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, color: labelColor },
-      detail: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.detailSize || 12)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.6, color: detailColor },
+      label: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.labelSize || 16)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, color: labelColor },
+      detail: { margin: 0, fontSize: compact ? Math.max(10, Number(props?.detailSize || 16)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.6, color: detailColor },
     };
   }
 
@@ -1384,8 +1444,8 @@ function statsVariantStyles(props, compact) {
       }),
       accentBar: { position: "absolute", left: 14, right: 14, top: 0, height: 4, borderRadius: 999, background: `linear-gradient(90deg, ${accent}, ${colorWithAlpha(accent, 0.32)})` },
       number: { margin: "10px 0 0", fontSize: compact ? Math.max(16, Number(props?.numberSize || 28)) : Math.max(18, Number(props?.numberSize || 34)), lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.04em", color: numberColor },
-      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 12)) : Math.max(10, Number(props?.labelSize || 13)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: labelColor },
-      detail: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 12)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.65, color: detailColor },
+      label: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 16)) : Math.max(10, Number(props?.labelSize || 13)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em", color: labelColor },
+      detail: { margin: "10px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 16)) : Math.max(10, Number(props?.detailSize || 13)), lineHeight: 1.65, color: detailColor },
     };
   }
 
@@ -1404,8 +1464,8 @@ function statsVariantStyles(props, compact) {
       overflow: "hidden",
     }),
     number: { margin: 0, fontSize: compact ? Math.max(18, Number(props?.numberSize || 36)) : Math.max(20, Number(props?.numberSize || 48)), lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.05em", color: numberColor },
-    label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 13)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
-    detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 13)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
+    label: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.labelSize || 16)) : Math.max(10, Number(props?.labelSize || 14)), lineHeight: 1.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.14em", color: labelColor },
+    detail: { margin: "12px 0 0", fontSize: compact ? Math.max(10, Number(props?.detailSize || 16)) : Math.max(10, Number(props?.detailSize || 14)), lineHeight: 1.7, color: detailColor },
     accentBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 5, background: `linear-gradient(180deg, ${accent}, ${colorWithAlpha(accent, 0.3)})` },
   };
 }
@@ -1501,6 +1561,7 @@ function imageGalleryVariantStyles(props, compact) {
 
 function pricingVariantStyles(props) {
   const variant = props.pricingVariant || "premium";
+  if (variant === "billing") return pricingBillingVariant(props);
   if (variant === "clean") {
     return {
       section: {
@@ -1646,6 +1707,75 @@ function pricingVariantStyles(props) {
   };
 }
 
+function pricingBillingVariant(props) {
+  const BILLING_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#7c3aed"];
+  const planColor = (index) => BILLING_COLORS[index % BILLING_COLORS.length];
+  return {
+    section: {
+      background: props.backgroundColor || "#0f172a",
+      borderColor: "transparent",
+    },
+    sectionTitleColor: props.textColor || "#f8fafc",
+    fullWidthGrid: true,
+    featureSplit: true,
+    grid: (compact, count = 4) => ({
+      gap: compact ? 16 : 16,
+      gridTemplateColumns: compact ? "1fr" : `repeat(${Math.max(1, count)}, 1fr)`,
+      justifyContent: "stretch",
+    }),
+    card: (highlighted, compact, index = 0) => {
+      const c = planColor(index);
+      return {
+        borderRadius: compact ? 12 : 14,
+        padding: compact ? 16 : 24,
+        border: `2px solid ${c}`,
+        background: "#111827",
+        boxShadow: "none",
+        transform: "none",
+        position: "relative",
+        overflow: "hidden",
+      };
+    },
+    badgeBackground: (_highlighted, index = 0) => planColor(index),
+    planAccentColor: (index) => planColor(index),
+    featureRow: (_highlighted, index = 0) => ({
+      background: "transparent",
+      border: "none",
+      borderBottom: "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 0,
+      padding: "8px 0",
+      marginBottom: 0,
+    }),
+    featureIcon: (_highlighted, index = 0) => ({
+      background: "transparent",
+      color: planColor(index),
+      fontSize: 16,
+      width: 18,
+      height: 18,
+      minWidth: 18,
+      boxShadow: "none",
+    }),
+    extrasCard: (_highlighted, index = 0) => ({
+      background: "transparent",
+      border: `1px solid ${planColor(index)}`,
+      borderRadius: 10,
+      padding: "14px 16px",
+    }),
+    cta: (_highlighted, index = 0) => ({
+      color: planColor(index),
+      background: "transparent",
+      border: `2px solid ${planColor(index)}`,
+      boxShadow: "none",
+    }),
+    textTone: (index = 0) => ({
+      text: "#f8fafc",
+      subtle: "#9ca3af",
+      accent: planColor(index),
+    }),
+    badge: "Most Popular",
+  };
+}
+
 function iconGlyph(icon) {
   const map = {
     tick: "✓",
@@ -1677,9 +1807,11 @@ function normalizePricingPlan(plan = {}, index = 0) {
     textColor: String(plan.textColor || ""),
     subtleTextColor: String(plan.subtleTextColor || ""),
     ctaTextColor: String(plan.ctaTextColor || ""),
-    badge: "",
+    badge: htmlToPlainText(plan.badge || ""),
     cta: htmlToPlainText(plan.cta || "Get Started"),
     highlighted: !!plan.highlighted,
+    individualPrice: htmlToPlainText(plan.individualPrice || ""),
+    cardAnimation: plan.cardAnimation != null ? String(plan.cardAnimation) : "",
   };
 }
 
@@ -1707,7 +1839,7 @@ function navVariantTheme(props, compact) {
     },
     brand: {
       margin: 0,
-      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(12, Number(props.brandFontSize) - 2 || 14) : Number(props.brandFontSize) || 16),
+      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(12, Number(props.brandFontSize) - 2 || 16) : Number(props.brandFontSize) || 16),
       fontWeight: 600,
       letterSpacing: "-0.02em",
     },
@@ -1733,7 +1865,7 @@ function navVariantTheme(props, compact) {
     link: {
       color: fg,
       textDecoration: "none",
-      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(11, Number(props.linkFontSize) - 2 || 12) : Number(props.linkFontSize) || 14),
+      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(11, Number(props.linkFontSize) - 2 || 16) : Number(props.linkFontSize) || 16),
       fontWeight: 600,
       opacity: 0.9,
       padding: compact ? "6px 8px" : "8px 10px",
@@ -1756,7 +1888,7 @@ function navVariantTheme(props, compact) {
       color: buttonFg,
       borderRadius: buttonRadius,
       padding: compact ? "8px 12px" : "10px 14px",
-      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(11, Number(props.ctaFontSize) - 1 || 12) : Number(props.ctaFontSize) || 13),
+      fontSize: Math.max(MIN_TEXT_SIZE, compact ? Math.max(11, Number(props.ctaFontSize) - 1 || 16) : Number(props.ctaFontSize) || 16),
       fontWeight: 600,
     },
   };
@@ -1774,7 +1906,7 @@ function navVariantTheme(props, compact) {
         ...base.brand,
         width: "100%",
         textAlign: "center",
-        fontSize: Math.max(MIN_TEXT_SIZE, compact ? 15 : 18),
+        fontSize: Math.max(MIN_TEXT_SIZE, compact ? 16 : 18),
       },
       links: {
         ...base.links,
@@ -1914,8 +2046,8 @@ function trustBadgeVariantStyles(props, compact, backgroundImage) {
   const borderColor = props?.borderColor || "#cbd5e1";
   const badgeBackground = props?.badgeBackgroundColor || "linear-gradient(165deg,#ffffff,#f1f5f9)";
   const iconSize = Math.max(10, Number(props?.badgeIconSize) || 18);
-  const fontSize = Math.max(10, Number(props?.badgeFontSize) || 15);
-  const badgePadding = Math.max(6, Number(props?.badgePadding) || 14);
+  const fontSize = Math.max(10, Number(props?.badgeFontSize) || 16);
+  const badgePadding = Math.max(6, Number(props?.badgePadding) || 16);
 
   const rowJustify = variant === "logo-strip" ? "center" : variant === "soft-cards" ? "flex-start" : "center";
   const rowDisplay = variant === "soft-cards" ? "grid" : "flex";
@@ -2154,8 +2286,8 @@ function BrandMark({ brand, logoSrc, size = 44, background = "#0f172a", color = 
         borderRadius,
         display: "grid",
         placeItems: "center",
-        fontSize: Math.max(14, Math.round(size * 0.34)),
-        fontWeight: 800,
+        fontSize: Math.max(16, Math.round(size * 0.34)),
+        fontWeight: 600,
         letterSpacing: "0.08em",
         background,
         color,
@@ -2178,7 +2310,7 @@ const sharedStyles = {
     color: "#e0f2fe",
     borderRadius: 999,
     padding: "6px 10px",
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -2201,15 +2333,19 @@ const sharedStyles = {
   },
   cardSection: (compact, props = {}) => {
     const scale = spacingMultiplier(props);
+    const basePad = scaleBoxPadding(compact ? "20px" : "30px", scale);
     return {
-    borderWidth: 0,
-    borderStyle: "solid",
-    borderColor: "transparent",
-    background: props.backgroundColor || "linear-gradient(165deg,#ffffff 0%,#f8fafc 100%)",
-    color: props.textColor || "#0f172a",
-    borderRadius: compact ? 16 : 22,
-    padding: scaleBoxPadding(compact ? "20px" : "30px", scale),
-    boxShadow: PREMIUM_SHADOW,
+      borderWidth: 0,
+      borderStyle: "solid",
+      borderColor: "transparent",
+      background: props.backgroundColor || "linear-gradient(165deg,#ffffff 0%,#f8fafc 100%)",
+      color: props.textColor || "#0f172a",
+      borderRadius: (props.fullWidthBackground !== false) ? 0 : (compact ? 16 : 22),
+      paddingTop: (props.paddingTop != null) ? `${props.paddingTop}px` : basePad,
+      paddingBottom: (props.paddingBottom != null) ? `${props.paddingBottom}px` : basePad,
+      paddingLeft: basePad,
+      paddingRight: basePad,
+      boxShadow: (props.fullWidthBackground !== false) ? "none" : PREMIUM_SHADOW,
     };
   },
   sectionTitle: (compact) => ({
@@ -2248,7 +2384,7 @@ const sharedStyles = {
   planName: { margin: 0, fontSize: 24, fontWeight: 600, color: "#0f172a", lineHeight: 1.2 },
   planPrice: { margin: "4px 0 0", fontSize: 38, fontWeight: 600, color: "#0f172a", letterSpacing: "-0.03em" },
   planDesc: { margin: "2px 0 0", color: "#64748b", fontSize: MIN_TEXT_SIZE, lineHeight: 1.6 },
-  planSectionLabel: { fontSize: 12, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" },
+  planSectionLabel: { fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" },
   planFeatures: { display: "grid", gap: 10 },
   planFeatureRow: (highlighted) => ({ display: "grid", gridTemplateColumns: "34px minmax(0,1fr)", gap: 10, alignItems: "start", padding: highlighted ? "10px 12px" : "9px 10px", borderRadius: 16, background: highlighted ? "rgba(255,255,255,0.72)" : "rgba(248,250,252,0.9)", border: highlighted ? "1px solid rgba(14,165,233,0.16)" : "1px solid rgba(226,232,240,0.95)" }),
   planFeatureIcon: (iconType, highlighted) => ({ display: "inline-grid", placeItems: "center", width: 30, height: 30, borderRadius: 999, background: highlighted ? "linear-gradient(135deg,#0ea5e9,#2563eb)" : "linear-gradient(135deg,#dbeafe,#eff6ff)", color: highlighted ? "#ffffff" : (iconType === "spark" ? "#0284c7" : "#0f172a"), fontSize: iconType === "diamond" ? 14 : 16, fontWeight: 600, boxShadow: highlighted ? "0 10px 18px rgba(37,99,235,0.28)" : "none" }),

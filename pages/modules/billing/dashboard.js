@@ -1,4 +1,4 @@
-// /pages/modules/billing/dashboard.js
+﻿// /pages/modules/billing/dashboard.js
 // Billing Dashboard — Live account, payment, and subscription data
 // Dark theme + same card layout as the rest of the app
 
@@ -101,7 +101,7 @@ export default function BillingDashboard() {
         <div style={page.banner}>
           <div style={{ fontSize: 42 }}>{ICONS.billing}</div>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700 }}>Billing & Subscriptions</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 600 }}>Billing & Subscriptions</h1>
             <p style={{ opacity: 0.85 }}>Live payment, subscription and account overview</p>
           </div>
         </div>
@@ -110,15 +110,15 @@ export default function BillingDashboard() {
         <div style={page.grid}>
           <div style={page.card}>
             <h2>Total Accounts</h2>
-            <p style={{ fontSize: 32, fontWeight: 700 }}>{accounts.length}</p>
+            <p style={{ fontSize: 32, fontWeight: 600 }}>{accounts.length}</p>
           </div>
           <div style={page.card}>
             <h2>Active Subscriptions</h2>
-            <p style={{ fontSize: 32, fontWeight: 700 }}>{activeSubs}</p>
+            <p style={{ fontSize: 32, fontWeight: 600 }}>{activeSubs}</p>
           </div>
           <div style={page.card}>
             <h2>Total Revenue ($)</h2>
-            <p style={{ fontSize: 32, fontWeight: 700 }}>{totalRevenue.toFixed(2)}</p>
+            <p style={{ fontSize: 32, fontWeight: 600 }}>{totalRevenue.toFixed(2)}</p>
           </div>
         </div>
 

@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/ai/generate-subject-preheader.js
 //
 // Generates subject + preheader (and optional AB subject variants)
@@ -7,7 +8,7 @@
 // This endpoint is intentionally small + safe.
 // It returns JSON fields you can directly apply on the broadcast form.
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Use POST" });
   }
@@ -125,3 +126,5 @@ Rules:
     });
   }
 }
+
+export default withAuth(handler);

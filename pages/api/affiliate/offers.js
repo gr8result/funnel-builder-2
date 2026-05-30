@@ -1,7 +1,8 @@
-﻿// pages/api/affiliate/offers.js
+// pages/api/affiliate/offers.js
 import adapter from "../../../lib/affiliate/adapter";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { q = "", category = "", network = "" } = req.query || {};
     const data = await adapter.listOffers({ q, category, network });
@@ -11,3 +12,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAdmin(handler);

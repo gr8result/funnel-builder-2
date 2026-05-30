@@ -1,5 +1,6 @@
+import withAdmin from "../../../lib/withAdmin";
 // FILE: /pages/api/email/debug-env.js
-export default function handler(req, res) {
+async function handler(req, res) {
   try {
     const sg = process.env.SENDGRID_API_KEY || "";
     res.status(200).json({
@@ -14,3 +15,5 @@ export default function handler(req, res) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 }
+
+export default withAdmin(handler);

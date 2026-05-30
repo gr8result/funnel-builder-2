@@ -1,4 +1,4 @@
-// /components/crm/LeadInfoCard.js
+﻿// /components/crm/LeadInfoCard.js
 // Lead summary card (left panel of Lead Details modal)
 // Editable contact fields, same layout.
 
@@ -169,7 +169,7 @@ export default function LeadInfoCard({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: scaled(16),
               textTransform: "uppercase",
             }}
@@ -180,7 +180,7 @@ export default function LeadInfoCard({
             <span
               style={{
                 fontSize: scaled(16),
-                fontWeight: 700,
+                fontWeight: 600,
               }}
             >
               {form.name || "Unnamed contact"}
@@ -226,7 +226,7 @@ export default function LeadInfoCard({
                   border: "none",
                   background: "#22c55e",
                   color: "#020617",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   fontSize: scaled(16),
                   cursor: "pointer",
                 }}

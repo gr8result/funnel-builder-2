@@ -14,6 +14,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { blocksToHtml } from "../../../lib/email/blockSchema";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -40,10 +41,10 @@ async function downloadText(bucket, path) {
   return await data.text();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const templateId = String(req.query.templateId || req.query.id || "").trim();
-    const userId = String(req.query.userId || "").trim();
+    const userId = req.user.id;
 
     if (!templateId) {
       return ok(res, {
@@ -163,3 +164,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "Load failed", detail: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

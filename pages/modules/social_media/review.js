@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { supabase } from '../../../utils/supabase-client';
 import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 
@@ -816,7 +817,7 @@ export default function ReviewPosts() {
                     style={{ padding: '5px 11px', borderRadius: 20, border: active ? `2px solid ${meta.color}` : `1px solid ${meta.color}44`, background: active ? `${meta.color}33` : 'rgba(255,255,255,0.04)', color: active ? '#fff' : '#9CA3AF', fontWeight: 600, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontSize: 16 }}>{p.icon}</span>
                     <span style={{ color: active ? meta.color : '#9CA3AF' }}>{p.label}</span>
-                    <span style={{ background: active ? meta.color : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 10, fontWeight: 600, borderRadius: 10, padding: '0 5px', marginLeft: 1 }}>{count}</span>
+                    <span style={{ background: active ? meta.color : 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 16, fontWeight: 600, borderRadius: 10, padding: '0 5px', marginLeft: 1 }}>{count}</span>
                   </button>
                 );
               })}
@@ -913,11 +914,11 @@ export default function ReviewPosts() {
               {selected.size > 0 && (
                 <>
                   <button onClick={bulkReschedule} disabled={bulkRescheduling}
-                    style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
+                    style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 600, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
                     {bulkRescheduling ? 'Rescheduling…' : `⟳ Reschedule (${selected.size})`}
                   </button>
                   <button onClick={bulkSchedule} disabled={bulkScheduling}
-                    style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkScheduling ? 'rgba(37,99,235,0.25)' : 'linear-gradient(90deg,#7C3AED,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkScheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(124,58,237,0.3)' }}>
+                    style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkScheduling ? 'rgba(37,99,235,0.25)' : 'linear-gradient(90deg,#7C3AED,#2563EB)', color: '#fff', fontWeight: 600, fontSize: 16, cursor: bulkScheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(124,58,237,0.3)' }}>
                     {bulkScheduling ? 'Scheduling…' : `📅 Schedule to Calendar (${selected.size})`}
                   </button>
                   <button onClick={bulkDelete} disabled={bulkDeleting}
@@ -928,7 +929,7 @@ export default function ReviewPosts() {
               )}
               {selected.size === 0 && filtered.length > 0 && (
                 <button onClick={() => bulkReschedule(filtered)} disabled={bulkRescheduling}
-                  style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 700, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
+                  style={{ padding: '6px 18px', borderRadius: 8, border: 'none', background: bulkRescheduling ? 'rgba(5,150,105,0.25)' : 'linear-gradient(90deg,#059669,#2563EB)', color: '#fff', fontWeight: 600, fontSize: 16, cursor: bulkRescheduling ? 'default' : 'pointer', boxShadow: '0 2px 10px rgba(37,99,235,0.3)' }}>
                   {bulkRescheduling ? 'Rescheduling…' : `⟳ Reschedule Filtered (${filtered.length})`}
                 </button>
               )}
@@ -1005,7 +1006,7 @@ export default function ReviewPosts() {
                   <select
                     value={editingPlatform[post.postId] !== undefined ? editingPlatform[post.postId] : (post.platform || '')}
                     onChange={e => setEditingPlatform(prev => ({ ...prev, [post.postId]: e.target.value }))}
-                    style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${meta.color}55`, borderRadius: 6, color: meta.color, fontWeight: 600, fontSize: 14, padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                    style={{ background: 'rgba(0,0,0,0.4)', border: `1px solid ${meta.color}55`, borderRadius: 6, color: meta.color, fontWeight: 600, fontSize: 16, padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
                     <option value="">— platform —</option>
                     {['facebook','instagram','linkedin','x','pinterest','tiktok','youtube'].map(pl => (
                       <option key={pl} value={pl}>{pl.charAt(0).toUpperCase()+pl.slice(1)}</option>
@@ -1016,7 +1017,7 @@ export default function ReviewPosts() {
                   <span style={{ fontSize: 16, color: '#4B5563', marginLeft: 'auto' }}>{new Date(post.createdAt).toLocaleDateString('en-AU')}</span>
                 </div>
                 {post.status === 'failed' && post.lastError && (
-                  <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#FCA5A5', fontSize: 14, lineHeight: 1.4 }}>
+                  <div style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#FCA5A5', fontSize: 16, lineHeight: 1.4 }}>
                     Failed: {post.lastError}
                     {post.platform === 'tiktok' && isTikTokPostingPermissionError(post.lastError) && (
                       <div style={{ marginTop: 8 }}>
@@ -1024,7 +1025,7 @@ export default function ReviewPosts() {
                           type="button"
                           onClick={reconnectTikTok}
                           disabled={reconnectingTikTok}
-                          style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid rgba(252,165,165,0.45)', background: reconnectingTikTok ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.24)', color: '#FECACA', fontWeight: 700, fontSize: 13, cursor: reconnectingTikTok ? 'default' : 'pointer' }}
+                          style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid rgba(252,165,165,0.45)', background: reconnectingTikTok ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.24)', color: '#FECACA', fontWeight: 600, fontSize: 16, cursor: reconnectingTikTok ? 'default' : 'pointer' }}
                         >
                           {reconnectingTikTok ? 'Opening TikTok...' : 'Reconnect TikTok'}
                         </button>
@@ -1050,7 +1051,7 @@ export default function ReviewPosts() {
                         onChange={e => setPostSchedule(prev => ({ ...prev, [post.postId]: { date: currentDate, time: e.target.value } }))}
                         style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(167,169,250,0.3)', borderRadius: 7, color: '#E9D5FF', padding: '6px 10px', fontSize: 16, outline: 'none', cursor: 'pointer' }}
                       />
-                      <span style={{ fontSize: 13, color: '#7dd3fc', background: 'rgba(14,116,144,0.25)', borderRadius: 6, padding: '4px 8px', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 16, color: '#7dd3fc', background: 'rgba(14,116,144,0.25)', borderRadius: 6, padding: '4px 8px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                         {Intl.DateTimeFormat().resolvedOptions().timeZone}
                       </span>
                       {dirty && (

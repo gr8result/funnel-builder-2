@@ -3,8 +3,9 @@
 
 import Stripe from 'stripe';
 import { MODULES, DISCOUNT_TIERS } from '../../lib/modules-catalog';
+import { withAuth } from "../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   try {
@@ -109,3 +110,5 @@ function pickTier(n) {
   for (const t of DISCOUNT_TIERS) if (n >= t.min_count) return t;
   return DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1];
 }
+
+export default withAuth(handler);

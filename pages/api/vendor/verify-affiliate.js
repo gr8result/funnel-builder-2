@@ -3,8 +3,9 @@
 // Marks the application as verified and inserts them into the vendors table.
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { token } = req.query;
 
   if (!token) {
@@ -56,3 +57,5 @@ export default async function handler(req, res) {
   res.writeHead(302, { Location: '/marketplace' });
   res.end();
 }
+
+export default withAuth(handler);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
@@ -182,9 +182,9 @@ function NavbarLinksEditor({ links, onChange }) {
           </label>
           {safeLinks.length > 1 && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>Nest under →</span>
+              <span style={{ fontSize: 16, color: "#94a3b8", whiteSpace: "nowrap" }}>Nest under →</span>
               <select
-                style={{ ...styles.propertyInput, flex: 1, padding: "4px 8px", fontSize: 12 }}
+                style={{ ...styles.propertyInput, flex: 1, padding: "4px 8px", fontSize: 16 }}
                 value=""
                 onChange={(e) => { if (e.target.value !== "") nestUnder(idx, Number(e.target.value)); }}
               >
@@ -378,6 +378,7 @@ function normalizeStatItem(item, index) {
       number: String(item.number || item.value || `0${index + 1}`),
       label: String(item.label || item.title || `Metric ${index + 1}`),
       detail: String(item.detail || item.description || "Add a short line of context."),
+      cardAnimation: item.cardAnimation != null ? String(item.cardAnimation) : "",
     };
   }
 
@@ -386,6 +387,7 @@ function normalizeStatItem(item, index) {
     number: String(item || `0${index + 1}`),
     label: `Metric ${index + 1}`,
     detail: "Add a short line of context.",
+    cardAnimation: "",
   };
 }
 
@@ -466,6 +468,17 @@ function StatsItemsEditor({ stats, onChange }) {
               style={{ ...styles.propertyInput, minHeight: 88 }}
               placeholder="Add a short line of context."
             />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Card Animation</label>
+            <select
+              value={stat.cardAnimation || ""}
+              onChange={(event) => updateStat(index, { cardAnimation: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="">Default (use global setting)</option>
+              {ANIMATION_PRESETS.map((preset) => (
+                <option key={`stat-anim-${index}-${preset.value}`} value={preset.value}>{preset.label}</option>
+              ))}
+            </select>
           </div>
         );
       })}
@@ -505,7 +518,30 @@ function normalizeTrustBadgeItem(item, index) {
   };
 }
 
+const TRUST_BADGE_ICONS = [
+  // trust / verification
+  "✓", "✔", "✅", "☑", "🛡", "🔒", "🔐", "🏅", "🥇", "🏆",
+  // stars / rating
+  "⭐", "🌟", "💫", "✨",
+  // people / community
+  "👥", "🤝", "👍", "🙌", "💪",
+  // business / quality
+  "💎", "👑", "🎖", "📜", "🏷",
+  // speed / performance
+  "⚡", "🚀", "⏱", "🕐",
+  // love / satisfaction
+  "❤️", "💯", "😊", "🎉",
+  // money / value
+  "💰", "💵", "🤑", "📈",
+  // communication
+  "📞", "💬", "📧", "🌐",
+  // misc helpful
+  "🔖", "📌", "🎯", "🧩",
+];
+
 function TrustBadgesEditor({ badges, onChange }) {
+  const [openPicker, setOpenPicker] = React.useState(null); // index of badge whose picker is open
+
   const safeBadges = (Array.isArray(badges) && badges.length)
     ? badges.map(normalizeTrustBadgeItem)
     : [normalizeTrustBadgeItem({}, 0), normalizeTrustBadgeItem({}, 1), normalizeTrustBadgeItem({}, 2)];
@@ -519,6 +555,7 @@ function TrustBadgesEditor({ badges, onChange }) {
   const removeBadge = (index) => {
     const next = safeBadges.filter((_, currentIndex) => currentIndex !== index);
     onChange(next.length ? next : [normalizeTrustBadgeItem({}, 0)]);
+    if (openPicker === index) setOpenPicker(null);
   };
 
   const addBadge = () => {
@@ -534,15 +571,60 @@ function TrustBadgesEditor({ badges, onChange }) {
             <button type="button" style={styles.linkRowDelete} onClick={() => removeBadge(index)}>Remove</button>
           </div>
           <div style={styles.colorGrid}>
+            {/* Icon field + picker */}
             <div>
               <label style={styles.propertyLabel}>Icon</label>
-              <input
-                type="text"
-                value={badge.icon || ""}
-                onChange={(e) => updateBadge(index, { icon: e.target.value })}
-                style={styles.propertyInput}
-                placeholder="✓"
-              />
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={badge.icon || ""}
+                  onChange={(e) => updateBadge(index, { icon: e.target.value })}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ ...styles.propertyInput, flex: 1, minWidth: 0 }}
+                  placeholder="✓"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setOpenPicker(openPicker === index ? null : index); }}
+                  style={{
+                    flexShrink: 0, width: 34, height: 34, fontSize: 18, lineHeight: 1,
+                    background: openPicker === index ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.07)",
+                    border: `1px solid ${openPicker === index ? "rgba(99,102,241,0.6)" : "rgba(255,255,255,0.15)"}`,
+                    borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: openPicker === index ? "#a5b4fc" : "#94a3b8",
+                  }}
+                  title="Pick icon"
+                >
+                  {badge.icon || "☺"}
+                </button>
+              </div>
+              {openPicker === index && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    marginTop: 8, padding: 8,
+                    background: "#0d1522", border: "1px solid rgba(99,102,241,0.35)",
+                    borderRadius: 8, display: "flex", flexWrap: "wrap", gap: 4,
+                  }}
+                >
+                  {TRUST_BADGE_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); updateBadge(index, { icon }); setOpenPicker(null); }}
+                      style={{
+                        width: 32, height: 32, fontSize: 18, lineHeight: 1,
+                        background: badge.icon === icon ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${badge.icon === icon ? "rgba(99,102,241,0.7)" : "rgba(255,255,255,0.08)"}`,
+                        borderRadius: 5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                      title={icon}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ gridColumn: "span 2" }}>
               <label style={styles.propertyLabel}>Label</label>
@@ -550,6 +632,7 @@ function TrustBadgesEditor({ badges, onChange }) {
                 type="text"
                 value={badge.label || ""}
                 onChange={(e) => updateBadge(index, { label: e.target.value })}
+                onClick={(e) => e.stopPropagation()}
                 style={styles.propertyInput}
                 placeholder="Trusted by 2,000+ customers"
               />
@@ -571,14 +654,14 @@ function CustomHtmlPropertiesPanel({ block, index, onChange }) {
       <div style={styles.propertyGrid}>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Embed Code / HTML</label>
-          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12, lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>
             Paste any HTML, iframe, or third-party widget script here. Scripts will execute on the live published page.
           </p>
           <textarea
             value={props.html || ""}
             onChange={(e) => update({ html: e.target.value })}
             placeholder={"<div>Your embed code here...</div>\n<script>/* scripts run on live page */</script>"}
-            style={{ ...styles.propertyInput, minHeight: 220, fontFamily: "monospace", fontSize: 12, resize: "vertical" }}
+            style={{ ...styles.propertyInput, minHeight: 220, fontFamily: "monospace", fontSize: 16, resize: "vertical" }}
             spellCheck={false}
           />
         </div>
@@ -714,6 +797,18 @@ function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUpl
             ))}
           </div>
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`trust-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -746,7 +841,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
             <span style={styles.linkRowTitle}>Review {index + 1}</span>
             <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
           </div>
-          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12 }}>Click quote, name, and role directly on the canvas to edit.</p>
+          <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 16 }}>Click quote, name, and role directly on the canvas to edit.</p>
           <label style={{ ...styles.propertyLabel, marginBottom: 4 }}>Star Rating</label>
           <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -878,6 +973,27 @@ function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
             <CompactColorField label="Accent / Stars" value={props.accentColor || "#f59e0b"} fallback="#f59e0b" onChange={(value) => update({ accentColor: value })} />
           </div>
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`testimonial-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Items</label>
+              <select value={String(props.itemAnimation || "fade-up")} onChange={(e) => update({ itemAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`testimonial-item-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Stagger" value={Math.round((Number(props.itemStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ itemStagger: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -897,7 +1013,7 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>📧 Edit: Newsletter Signup</h3>
-      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 12 }}>Click heading, subtitle, and button text directly on the page to edit.</p>
+      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 16 }}>Click heading, subtitle, and button text directly on the page to edit.</p>
       <div style={styles.propertyGrid}>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Style</label>
@@ -952,7 +1068,7 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
               }}
               style={{ width: "100%", marginTop: 4 }}
             />
-            <span style={{ color: "#64748b", fontSize: 12 }}>
+            <span style={{ color: "#64748b", fontSize: 16 }}>
               {`${Math.max(0, Math.min(Number(props.buttonRadius) || 40, 40))}px`}
             </span>
           </div>
@@ -962,6 +1078,18 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
           <div style={styles.colorGrid}>
             <CompactColorField label="Background" value={props.backgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ backgroundColor: value })} />
             <CompactColorField label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`newsletter-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
           </div>
         </div>
       </div>
@@ -1170,7 +1298,7 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>📝 Edit: Text Section</h3>
-      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 12 }}>Click text directly on the page to edit.</p>
+      <p style={{ margin: "0 0 12px 16px", color: "#64748b", fontSize: 16 }}>Click text directly on the page to edit.</p>
       <div style={styles.propertyGrid}>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Section Height</label>
@@ -1259,12 +1387,29 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Content Width</label>
-          <NumberField label="Max width (px)" value={Number(props.baseLayoutWidth || 1080)} min={320} max={1800} onChange={(value) => update({ baseLayoutWidth: value })} />
+          <NumberField label="Section max width (px)" value={Number(props.baseLayoutWidth || 1080)} min={320} max={1800} onChange={(value) => update({ baseLayoutWidth: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Text Column Width</label>
+          <NumberField label="Text width (px, 0 = full)" value={Number(props.textContentWidth || 0)} min={0} max={1600} onChange={(value) => update({ textContentWidth: value > 0 ? value : 0 })} />
+          <p style={{ margin: "6px 0 0", fontSize: 16, color: "#64748b" }}>0 = full section width. Drag the blue handle on the right edge of the text to resize.</p>
         </div>
         <BlockPresetPicker
           blockType={block.type}
           onApply={(patch) => update(patch)}
         />
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`text-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1341,7 +1486,7 @@ function StatsPropertiesPanel({ block, index, onChange }) {
             >
               Save Current Style as Option
             </button>
-            <span style={{ fontSize: 12, lineHeight: 1.5, color: "#64748b" }}>
+            <span style={{ fontSize: 16, lineHeight: 1.5, color: "#64748b" }}>
               Saves this stats card's layout variant and colour treatment into a reusable option here.
             </span>
           </div>
@@ -1516,7 +1661,7 @@ function TeamMembersEditor({ members, onChange, brandAssets, onOpenImageEditor, 
               </div>
               <button type="button" style={styles.linkRowDelete} onClick={() => removeMember(index)}>Remove</button>
             </div>
-            <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 12 }}>Click name, role, or bio directly on the page to edit.</p>
+            <p style={{ margin: "0 0 8px", color: "#64748b", fontSize: 16 }}>Click name, role, or bio directly on the page to edit.</p>
             <input
               type="text"
               value={memberImageSrc}
@@ -1616,6 +1761,27 @@ function TeamPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageE
             <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
           </div>
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`team-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Members</label>
+              <select value={String(props.itemAnimation || "fade-up")} onChange={(e) => update({ itemAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`team-item-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Stagger" value={Math.round((Number(props.itemStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ itemStagger: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1668,7 +1834,7 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
             <span style={styles.linkRowTitle}>Item {index + 1}</span>
             <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
           </div>
-          <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
+          <p style={{ margin: 0, color: "#475569", fontSize: 16 }}>
             Edit the item title and copy directly on the page. Use SVG icons or normal images here.
           </p>
           <input
@@ -1730,7 +1896,9 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
 function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const [activeTab, setActiveTab] = useState("content");
   const [cardWidthDraft, setCardWidthDraft] = useState("");
+  const [cardHeightDraft, setCardHeightDraft] = useState("");
   const featureStyleLabels = {
     cards: "Showcase Cards",
     "glass-cards": "Glass Gallery",
@@ -1742,6 +1910,10 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
     setCardWidthDraft(String(Math.max(220, Number(props.featureCardWidth) || 320)));
   }, [props.featureCardWidth]);
 
+  useEffect(() => {
+    setCardHeightDraft(String(Number(props.featureCardHeight) || ""));
+  }, [props.featureCardHeight]);
+
   const commitCardWidthDraft = () => {
     const nextWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || 320));
     const nextValue = String(nextWidth);
@@ -1749,92 +1921,119 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
     update({ featureCardWidth: nextWidth });
   };
 
+  const commitCardHeightDraft = () => {
+    const raw = Number(cardHeightDraft || 0);
+    const next = raw > 0 ? Math.max(100, Math.min(1200, raw)) : 0;
+    setCardHeightDraft(next > 0 ? String(next) : "");
+    update({ featureCardHeight: next > 0 ? next : null });
+  };
+
   const displayCardWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || Number(props.featureCardWidth) || 320));
 
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>☰ Edit: List Block</h3>
+      <div style={styles.tabRow}>
+        {[
+          { id: "content", label: "Content" },
+          { id: "style", label: "Style" },
+          { id: "colours", label: "Colours" },
+          { id: "motion", label: "Motion" },
+        ].map((tab) => (
+          <button
+            key={`feat-tab-${tab.id}`}
+            type="button"
+            style={{ ...styles.tabChip, ...(activeTab === tab.id ? styles.tabChipActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       <div style={styles.propertyGrid}>
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>List Items / Icons</label>
-          <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
-        </div>
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>List Style</label>
-          <select value={String(props.featureVariant || "cards")} onChange={(e) => update({ featureVariant: e.target.value })} style={styles.propertyInput}>
-            {getSelectOptions("featureVariant").map((option) => (
-              <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
-            ))}
-          </select>
-          <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
-            Card Width: {Math.round(displayCardWidth)}px
-          </label>
-          <input
-            type="text"
-            value={cardWidthDraft}
-            onChange={(e) => setCardWidthDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
-            onBlur={commitCardWidthDraft}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                commitCardWidthDraft();
-              }
-            }}
-            inputMode="numeric"
-            placeholder="320"
-            style={{ ...styles.propertyInput, marginTop: 8 }}
-          />
-        </div>
-        <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Colours</label>
-          <div style={styles.colorGrid}>
-            <div style={styles.colorField}>
-              <span style={styles.colorLabel}>Section Background</span>
-              <input type="color" value={normalizeColorInput(props.backgroundColor, "#ffffff")} onChange={(e) => update({ backgroundColor: e.target.value })} style={styles.colorInput} />
-              <div style={styles.colorSwatchRow}>
-                {STANDARD_COLOR_SWATCHES.map((swatch) => (
-                  <button
-                    key={`feature-section-${swatch}`}
-                    type="button"
-                    title={swatch}
-                    onClick={() => update({ backgroundColor: swatch })}
-                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.backgroundColor || "#ffffff").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
-                  />
-                ))}
+        {activeTab === "content" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>List Items / Icons</label>
+            <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
+          </div>
+        ) : null}
+        {activeTab === "style" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>List Style</label>
+            <select value={String(props.featureVariant || "cards")} onChange={(e) => update({ featureVariant: e.target.value })} style={styles.propertyInput}>
+              {getSelectOptions("featureVariant").map((option) => (
+                <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
+              ))}
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
+              Card Width: {Math.round(displayCardWidth)}px
+            </label>
+            <input
+              type="text"
+              value={cardWidthDraft}
+              onChange={(e) => setCardWidthDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
+              onBlur={commitCardWidthDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitCardWidthDraft();
+                }
+              }}
+              inputMode="numeric"
+              placeholder="320"
+              style={{ ...styles.propertyInput, marginTop: 8 }}
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
+              Card Height (min): {cardHeightDraft ? `${cardHeightDraft}px` : "Auto"}
+            </label>
+            <input
+              type="text"
+              value={cardHeightDraft}
+              onChange={(e) => setCardHeightDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
+              onBlur={commitCardHeightDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitCardHeightDraft();
+                }
+              }}
+              inputMode="numeric"
+              placeholder="Auto"
+              style={{ ...styles.propertyInput, marginTop: 8 }}
+            />
+          </div>
+        ) : null}
+        {activeTab === "colours" ? (
+          <>
+            <ColorSelector label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(v) => update({ backgroundColor: v })} />
+            <ColorSelector label="Item Background" value={props.itemBackgroundColor || "#eff6ff"} fallback="#eff6ff" allowTransparent onChange={(v) => update({ itemBackgroundColor: v })} />
+            <ColorSelector label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ textColor: v })} />
+            <ColorSelector label="Accent / Icon" value={props.accentColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ accentColor: v })} />
+          </>
+        ) : null}
+        {activeTab === "motion" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Motion</label>
+            <div style={styles.colorGrid}>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Section</label>
+                <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`list-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Cards</label>
+                <select value={String(props.cardAnimation || "fade-up")} onChange={(e) => update({ cardAnimation: e.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`list-card-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
               </div>
             </div>
-            <div style={styles.colorField}>
-              <span style={styles.colorLabel}>Item Background</span>
-              <input type="color" value={normalizeColorInput(props.itemBackgroundColor, "#eff6ff")} onChange={(e) => update({ itemBackgroundColor: e.target.value })} style={styles.colorInput} />
-              <div style={styles.colorSwatchRow}>
-                {STANDARD_COLOR_SWATCHES.map((swatch) => (
-                  <button
-                    key={`feature-item-${swatch}`}
-                    type="button"
-                    title={swatch}
-                    onClick={() => update({ itemBackgroundColor: swatch })}
-                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.itemBackgroundColor || "#eff6ff").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
-                  />
-                ))}
-              </div>
-            </div>
-            <div style={styles.colorField}>
-              <span style={styles.colorLabel}>Text</span>
-              <input type="color" value={normalizeColorInput(props.textColor, "#0f172a")} onChange={(e) => update({ textColor: e.target.value })} style={styles.colorInput} />
-              <div style={styles.colorSwatchRow}>
-                {STANDARD_COLOR_SWATCHES.map((swatch) => (
-                  <button
-                    key={`feature-text-${swatch}`}
-                    type="button"
-                    title={swatch}
-                    onClick={() => update({ textColor: swatch })}
-                    style={{ ...styles.colorSwatch, background: swatch, borderColor: String(props.textColor || "#0f172a").toLowerCase() === swatch.toLowerCase() ? "#7dd3fc" : "rgba(148,163,184,0.28)" }}
-                  />
-                ))}
-              </div>
+            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+              <NumberField label="Section Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+              <NumberField label="Card Stagger" value={Math.round((Number(props.cardStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ cardStagger: Number((value / 100).toFixed(2)) })} />
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1965,6 +2164,27 @@ function ImageGalleryPropertiesPanel({ block, index, onChange, brandAssets, onOp
             <CompactColorField label="Border" value={props.borderColor || "#e2e8f0"} fallback="#e2e8f0" onChange={(value) => update({ borderColor: value })} />
           </div>
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`gallery-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Items</label>
+              <select value={String(props.itemAnimation || "fade-up")} onChange={(e) => update({ itemAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`gallery-item-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Stagger" value={Math.round((Number(props.itemStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ itemStagger: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1975,6 +2195,7 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
   const plans = normalizePricingPlans(props.plans);
   const replace = (nextProps) => onChange(index, nextProps);
   const update = (patch) => replace({ ...props, ...patch });
+  const [activeTab, setActiveTab] = useState("content");
   const pricingSectionShells = [
     { background: "linear-gradient(180deg,#10243e,#153255)", borderColor: "#2f6fca" },
     { background: "linear-gradient(180deg,#12372d,#184a3c)", borderColor: "#2da66d" },
@@ -2090,149 +2311,219 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
         <h3 style={styles.propertiesTitle}>💳 Edit: Pricing Table</h3>
         <button type="button" style={styles.ghostBtn} onClick={resetPricingTable}>Reset</button>
       </div>
+      <div style={styles.tabRow}>
+        {[
+          { id: "content", label: "Content" },
+          { id: "style", label: "Style" },
+          { id: "colours", label: "Colours" },
+          { id: "motion", label: "Motion" },
+        ].map((tab) => (
+          <button
+            key={`pricing-tab-${tab.id}`}
+            type="button"
+            style={{ ...styles.tabChip, ...(activeTab === tab.id ? styles.tabChipActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       <div style={styles.propertyGrid}>
-        <div style={{ ...styles.sectionCard, ...pricingSectionShells[0] }}>
-          <label style={styles.propertyLabel}>Section Title</label>
-          <input type="text" value={htmlToPlainText(props.title || "")} onChange={(e) => update({ title: htmlToPlainText(e.target.value) })} style={styles.propertyInput} />
-        </div>
-        <div style={{ ...styles.sectionCard, ...pricingSectionShells[1] }}>
-          <label style={styles.propertyLabel}>Pricing Variant</label>
-          <select value={String(props.pricingVariant || "premium")} onChange={(e) => update({ pricingVariant: e.target.value })} style={styles.propertyInput}>
-            {getSelectOptions("pricingVariant").map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-          <div style={{ marginTop: 8 }}>
-            <NumberField label="Card Width" value={Number(props.pricingCardWidth || 260)} min={180} max={520} onChange={(value) => update({ pricingCardWidth: value })} />
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <NumberField label="Card Gap" value={Number(props.pricingCardGap || 24)} min={8} max={64} onChange={(value) => update({ pricingCardGap: value })} />
-          </div>
-        </div>
-        <div style={{ ...styles.sectionCard, ...pricingSectionShells[2] }}>
-          <label style={styles.propertyLabel}>Colour Controls</label>
-          <div style={styles.pricingColorGrid}>
-            <CompactColorField label="Section Background" value={props.backgroundColor || "#f8fbff"} fallback="#f8fbff" onChange={(value) => update({ backgroundColor: value })} />
-            <CompactColorField label="Section Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
-            <CompactColorField label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ accentColor: value })} />
-            <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
-            <CompactColorField label="Highlight Card" value={props.highlightedCardBackgroundColor || "#eff6ff"} fallback="#eff6ff" onChange={(value) => update({ highlightedCardBackgroundColor: value })} />
-            <CompactColorField label="Feature Surface" value={props.featureBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ featureBackgroundColor: value })} />
-            <CompactColorField label="Extras Surface" value={props.extrasBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ extrasBackgroundColor: value })} />
-            <CompactColorField label="CTA Background" value={props.ctaBackgroundColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ ctaBackgroundColor: value })} />
-            <CompactColorField label="CTA Text" value={props.ctaTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ ctaTextColor: value })} />
-            <CompactColorField label="Main Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
-            <CompactColorField label="Muted Text" value={props.subtleTextColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ subtleTextColor: value })} />
-          </div>
-        </div>
-        <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
-          <label style={styles.propertyLabel}>Plans</label>
-          <div style={styles.propertyGrid}>
-            {plans.map((plan, planIndex) => (
-              <div
-                key={`plan-${planIndex}`}
-                style={{
-                  ...styles.linkRowCard,
-                  ...planEditorShells[planIndex % planEditorShells.length],
-                  ...(plan.highlighted ? { boxShadow: "0 0 0 1px rgba(125,211,252,0.3), 0 14px 28px rgba(15,23,42,0.24)" } : {}),
-                }}
-              >
-                <div style={styles.linkRowHeader}>
-                  <span style={styles.linkRowTitle}>{plan.name || `Plan ${planIndex + 1}`}</span>
-                  <div style={styles.linkActions}>
-                    <label style={styles.inlineToggle}>
-                      <input
-                        type="checkbox"
-                        checked={!!plan.highlighted}
-                        onChange={(e) => setHighlightedPlan(planIndex, e.target.checked)}
-                        style={styles.checkboxInput}
-                      />
-                      Highlighted
-                    </label>
-                    <button type="button" style={styles.iconDeleteBtn} aria-label="Delete plan" title="Delete plan" onClick={() => removePlan(planIndex)}>×</button>
-                  </div>
+        {activeTab === "content" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[0] }}>
+              <label style={styles.propertyLabel}>Section Title</label>
+              <input type="text" value={htmlToPlainText(props.title || "")} onChange={(e) => update({ title: htmlToPlainText(e.target.value) })} style={styles.propertyInput} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <div>
+                  <label style={styles.propertyLabel}>Currency Symbol</label>
+                  <input type="text" value={String(props.currency || "$")} onChange={(e) => update({ currency: e.target.value })} style={styles.propertyInput} placeholder="$" />
                 </div>
-                <input type="text" value={String(plan.name || "")} onChange={(e) => updatePlan(planIndex, { name: e.target.value })} style={styles.propertyInput} placeholder="Plan name" />
-                <input type="text" value={String(plan.price || "")} onChange={(e) => updatePlan(planIndex, { price: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="$49" />
-                <input type="text" value={String(plan.description || "")} onChange={(e) => updatePlan(planIndex, { description: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Short description" />
-                <input type="text" value={String(plan.cta || "")} onChange={(e) => updatePlan(planIndex, { cta: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Button text" />
-                <div style={{ marginTop: 8 }}>
-                  <CompactColorField
-                    label="Card Background"
-                    value={plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff"))}
-                    fallback={plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff")}
-                    onChange={(value) => updatePlan(planIndex, { cardBackgroundColor: value })}
-                  />
+                <div>
+                  <label style={styles.propertyLabel}>Default Period</label>
+                  <input type="text" value={String(props.defaultPeriod || "month")} onChange={(e) => update({ defaultPeriod: e.target.value })} style={styles.propertyInput} placeholder="month / night / year…" />
                 </div>
-                <div style={{ marginTop: 8 }}>
-                  <CompactColorField
-                    label="Main Text"
-                    value={plan.textColor || (props.textColor || "#0f172a")}
-                    fallback={props.textColor || "#0f172a"}
-                    onChange={(value) => updatePlan(planIndex, { textColor: value })}
-                  />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <CompactColorField
-                    label="Muted Text"
-                    value={plan.subtleTextColor || (props.subtleTextColor || "#64748b")}
-                    fallback={props.subtleTextColor || "#64748b"}
-                    onChange={(value) => updatePlan(planIndex, { subtleTextColor: value })}
-                  />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <CompactColorField
-                    label="CTA Text"
-                    value={plan.ctaTextColor || (props.ctaTextColor || "#ffffff")}
-                    fallback={props.ctaTextColor || "#ffffff"}
-                    onChange={(value) => updatePlan(planIndex, { ctaTextColor: value })}
-                  />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <label style={styles.propertyLabel}>Feature Icon</label>
-                  <select value={String(plan.featureIcon || "tick")} onChange={(e) => updatePlan(planIndex, { featureIcon: e.target.value })} style={styles.propertyInput}>
-                    {getSelectOptions("featureIcon").map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-                  <label style={styles.propertyLabel}>Included Features</label>
-                  {(Array.isArray(plan.includedFeatures) ? plan.includedFeatures : []).map((feature, featureIndex) => (
-                    <div key={`plan-${planIndex}-feature-${featureIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
-                      <input
-                        type="text"
-                        value={String(feature || "")}
-                        onChange={(e) => updateFeature(planIndex, featureIndex, e.target.value)}
-                        style={styles.propertyInput}
-                        placeholder={`Feature ${featureIndex + 1}`}
-                      />
-                      <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete feature ${featureIndex + 1}`} title="Delete feature" onClick={() => removeFeature(planIndex, featureIndex)}>×</button>
-                    </div>
-                  ))}
-                </div>
-                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addFeature(planIndex)}>+ Add Included Feature</button>
-                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-                  <label style={styles.propertyLabel}>Extras</label>
-                  {(Array.isArray(plan.extras) ? plan.extras : []).map((extra, extraIndex) => (
-                    <div key={`plan-${planIndex}-extra-${extraIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
-                      <input
-                        type="text"
-                        value={String(extra || "")}
-                        onChange={(e) => updateExtra(planIndex, extraIndex, e.target.value)}
-                        style={styles.propertyInput}
-                        placeholder={`Extra ${extraIndex + 1}`}
-                      />
-                      <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete extra ${extraIndex + 1}`} title="Delete extra" onClick={() => removeExtra(planIndex, extraIndex)}>×</button>
-                    </div>
-                  ))}
-                </div>
-                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addExtra(planIndex)}>+ Add Extra</button>
               </div>
-            ))}
+            </div>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Plans</label>
+              <div style={styles.propertyGrid}>
+                {plans.map((plan, planIndex) => (
+                  <div
+                    key={`plan-${planIndex}`}
+                    style={{
+                      ...styles.linkRowCard,
+                      ...planEditorShells[planIndex % planEditorShells.length],
+                      ...(plan.highlighted ? { boxShadow: "0 0 0 1px rgba(125,211,252,0.3), 0 14px 28px rgba(15,23,42,0.24)" } : {}),
+                    }}
+                  >
+                    <div style={styles.linkRowHeader}>
+                      <span style={styles.linkRowTitle}>{plan.name || `Plan ${planIndex + 1}`}</span>
+                      <div style={styles.linkActions}>
+                        <label style={styles.inlineToggle}>
+                          <input
+                            type="checkbox"
+                            checked={!!plan.highlighted}
+                            onChange={(e) => setHighlightedPlan(planIndex, e.target.checked)}
+                            style={styles.checkboxInput}
+                          />
+                          Highlighted
+                        </label>
+                        <button type="button" style={styles.iconDeleteBtn} aria-label="Delete plan" title="Delete plan" onClick={() => removePlan(planIndex)}>×</button>
+                      </div>
+                    </div>
+                    <input type="text" value={String(plan.name || "")} onChange={(e) => updatePlan(planIndex, { name: e.target.value })} style={styles.propertyInput} placeholder="Plan name" />
+                    <input type="text" value={String(plan.price || "")} onChange={(e) => updatePlan(planIndex, { price: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="$49" />
+                    <input type="text" value={String(plan.description || "")} onChange={(e) => updatePlan(planIndex, { description: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Short description" />
+                    <input type="text" value={String(plan.cta || "")} onChange={(e) => updatePlan(planIndex, { cta: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Button text" />
+                    <input type="text" value={String(plan.ctaUrl || "")} onChange={(e) => updatePlan(planIndex, { ctaUrl: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Button URL (e.g. /signup?plan=starter)" />
+                    <input type="text" value={String(plan.period || "")} onChange={(e) => updatePlan(planIndex, { period: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder={`Period override (default: ${props.defaultPeriod || "month"})`} />
+                    <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                      <label style={styles.propertyLabel}>Included Features</label>
+                      {(Array.isArray(plan.includedFeatures) ? plan.includedFeatures : []).map((feature, featureIndex) => (
+                        <div key={`plan-${planIndex}-feature-${featureIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
+                          <input
+                            type="text"
+                            value={String(feature || "")}
+                            onChange={(e) => updateFeature(planIndex, featureIndex, e.target.value)}
+                            style={styles.propertyInput}
+                            placeholder={`Feature ${featureIndex + 1}`}
+                          />
+                          <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete feature ${featureIndex + 1}`} title="Delete feature" onClick={() => removeFeature(planIndex, featureIndex)}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addFeature(planIndex)}>+ Add Included Feature</button>
+                    <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                      <label style={styles.propertyLabel}>Extras</label>
+                      {(Array.isArray(plan.extras) ? plan.extras : []).map((extra, extraIndex) => (
+                        <div key={`plan-${planIndex}-extra-${extraIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", minWidth: 0 }}>
+                          <input
+                            type="text"
+                            value={String(extra || "")}
+                            onChange={(e) => updateExtra(planIndex, extraIndex, e.target.value)}
+                            style={styles.propertyInput}
+                            placeholder={`Extra ${extraIndex + 1}`}
+                          />
+                          <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete extra ${extraIndex + 1}`} title="Delete extra" onClick={() => removeExtra(planIndex, extraIndex)}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={() => addExtra(planIndex)}>+ Add Extra</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={addPlan}>+ Add Plan</button>
+            </div>
+          </>
+        ) : null}
+        {activeTab === "style" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[1] }}>
+              <label style={styles.propertyLabel}>Pricing Variant</label>
+              <select value={String(props.pricingVariant || "premium")} onChange={(e) => update({ pricingVariant: e.target.value })} style={styles.propertyInput}>
+                {getSelectOptions("pricingVariant").map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <div style={{ marginTop: 8 }}>
+                <NumberField label="Card Width" value={Number(props.pricingCardWidth || 260)} min={180} max={520} onChange={(value) => update({ pricingCardWidth: value })} />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <NumberField label="Card Gap" value={Number(props.pricingCardGap || 24)} min={8} max={64} onChange={(value) => update({ pricingCardGap: value })} />
+              </div>
+            </div>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
+              <label style={styles.propertyLabel}>Per-Plan Style</label>
+              <div style={styles.propertyGrid}>
+                {plans.map((plan, planIndex) => (
+                  <div key={`plan-style-${planIndex}`} style={{ ...styles.linkRowCard, ...planEditorShells[planIndex % planEditorShells.length] }}>
+                    <span style={{ ...styles.linkRowTitle, display: "block", marginBottom: 8 }}>{plan.name || `Plan ${planIndex + 1}`}</span>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={styles.propertyLabel}>Feature Icon</label>
+                      <select value={String(plan.featureIcon || "tick")} onChange={(e) => updatePlan(planIndex, { featureIcon: e.target.value })} style={styles.propertyInput}>
+                        {getSelectOptions("featureIcon").map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <CompactColorField label="Card Background" value={plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff"))} fallback={plan.highlighted ? (props.highlightedCardBackgroundColor || "#eff6ff") : (props.cardBackgroundColor || "#ffffff")} onChange={(value) => updatePlan(planIndex, { cardBackgroundColor: value })} />
+                    <div style={{ marginTop: 8 }}>
+                      <CompactColorField label="Main Text" value={plan.textColor || (props.textColor || "#0f172a")} fallback={props.textColor || "#0f172a"} onChange={(value) => updatePlan(planIndex, { textColor: value })} />
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <CompactColorField label="Muted Text" value={plan.subtleTextColor || (props.subtleTextColor || "#64748b")} fallback={props.subtleTextColor || "#64748b"} onChange={(value) => updatePlan(planIndex, { subtleTextColor: value })} />
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <CompactColorField label="CTA Text" value={plan.ctaTextColor || (props.ctaTextColor || "#ffffff")} fallback={props.ctaTextColor || "#ffffff"} onChange={(value) => updatePlan(planIndex, { ctaTextColor: value })} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+        {activeTab === "colours" ? (
+          <div style={{ ...styles.sectionCard, ...pricingSectionShells[2] }}>
+            <label style={styles.propertyLabel}>Colour Controls</label>
+            <div style={styles.pricingColorGrid}>
+              <CompactColorField label="Section Background" value={props.backgroundColor || "#f8fbff"} fallback="#f8fbff" onChange={(value) => update({ backgroundColor: value })} />
+              <CompactColorField label="Section Border" value={props.borderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ borderColor: value })} />
+              <CompactColorField label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ accentColor: value })} />
+              <CompactColorField label="Card Background" value={props.cardBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ cardBackgroundColor: value })} />
+              <CompactColorField label="Highlight Card" value={props.highlightedCardBackgroundColor || "#eff6ff"} fallback="#eff6ff" onChange={(value) => update({ highlightedCardBackgroundColor: value })} />
+              <CompactColorField label="Feature Surface" value={props.featureBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ featureBackgroundColor: value })} />
+              <CompactColorField label="Extras Surface" value={props.extrasBackgroundColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ extrasBackgroundColor: value })} />
+              <CompactColorField label="CTA Background" value={props.ctaBackgroundColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(value) => update({ ctaBackgroundColor: value })} />
+              <CompactColorField label="CTA Text" value={props.ctaTextColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ ctaTextColor: value })} />
+              <CompactColorField label="Main Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ textColor: value })} />
+              <CompactColorField label="Muted Text" value={props.subtleTextColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ subtleTextColor: value })} />
+            </div>
           </div>
-          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={addPlan}>+ Add Plan</button>
-        </div>
+        ) : null}
+        {activeTab === "motion" ? (
+          <div style={{ ...styles.sectionCard, background: "linear-gradient(180deg,#102038,#14304f)", borderColor: "#2a5a8a" }}>
+            <label style={styles.propertyLabel}>Motion</label>
+            <div style={styles.colorGrid}>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Section</label>
+                <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`pricing-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Columns (default)</label>
+                <select value={String(props.cardAnimation || "fade-up")} onChange={(e) => update({ cardAnimation: e.target.value })} style={styles.propertyInput}>
+                  {ANIMATION_PRESETS.map((preset) => <option key={`pricing-card-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+              <NumberField label="Section Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+              <NumberField label="Column Stagger" value={Math.round((Number(props.cardStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ cardStagger: Number((value / 100).toFixed(2)) })} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label style={styles.propertyLabel}>Per-Plan Animation</label>
+              <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                {plans.map((plan, planIndex) => (
+                  <div key={`plan-motion-${planIndex}`} style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>{plan.name || `Plan ${planIndex + 1}`}</label>
+                    <select
+                      value={plan.cardAnimation || ""}
+                      onChange={(e) => updatePlan(planIndex, { cardAnimation: e.target.value })}
+                      style={styles.propertyInput}
+                    >
+                      <option value="">Default (use global)</option>
+                      {ANIMATION_PRESETS.map((preset) => (
+                        <option key={`plan-anim-${planIndex}-${preset.value}`} value={preset.value}>{preset.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -2391,7 +2682,11 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
           <label style={styles.propertyLabel}>Accordion Cards</label>
           <div style={styles.colorGrid}>
             <NumberField label="Block Width" value={Number(props.faqMaxWidth || 980)} min={320} max={1800} onChange={(value) => update({ faqMaxWidth: value })} />
+            <NumberField label="Question Size (px)" value={Number(props.questionFontSize || 18)} min={12} max={48} onChange={(value) => update({ questionFontSize: value })} />
+            <NumberField label="Answer Size (px)" value={Number(props.answerFontSize || 15)} min={10} max={36} onChange={(value) => update({ answerFontSize: value })} />
           </div>
+          <ColorSelector label="Question Color" value={props.questionColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ questionColor: value })} />
+          <ColorSelector label="Answer Color" value={props.answerColor || props.textColor || "#475569"} fallback="#475569" onChange={(value) => update({ answerColor: value })} />
           <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
             <input
               type="checkbox"
@@ -2458,6 +2753,27 @@ function FAQPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage
                 <option key={option} value={option}>{option}</option>
               ))}
             </select>
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`faq-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Items</label>
+              <select value={String(props.itemAnimation || "fade-up")} onChange={(e) => update({ itemAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`faq-item-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Stagger" value={Math.round((Number(props.itemStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ itemStagger: Number((value / 100).toFixed(2)) })} />
           </div>
         </div>
       </div>
@@ -2712,7 +3028,7 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               <div style={{ width: "100%", minHeight: 148, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "#0f172a" }}>
                 <img src={currentBackgroundPreview} alt="Split block background" style={{ width: "100%", height: 148, objectFit: props.backgroundSize === "contain" ? "contain" : "cover", display: "block" }} />
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5 }}>Current image used for the parallax half.</div>
+              <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.5 }}>Current image used for the parallax half.</div>
             </div>
           ) : null}
           <div style={styles.assetPicker}>
@@ -2799,7 +3115,7 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
             <option value="cover">Cover</option>
             <option value="contain">Contain</option>
           </select>
-          <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.5, marginTop: 8 }}>
+          <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.5, marginTop: 8 }}>
             Use Cover to fill the whole half and crop the edges. Use Contain to keep the full image visible.
           </div>
         </div>
@@ -3161,6 +3477,18 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
           <ColorSelector label="Body Color" value={props.overlaySubheadlineColor || props.textColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ overlaySubheadlineColor: value, textColor: value, showOverlayText: true })} />
           <ColorSelector label="Overlay Background" value={props.overlayTextBackground || "transparent"} fallback="#000000" allowTransparent onChange={(value) => update({ overlayTextBackground: value, showOverlayText: true })} />
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`image-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -3521,7 +3849,7 @@ function ColorSelector({ label, value, fallback = "#0f172a", allowTransparent = 
         {allowTransparent ? (
           <button
             type="button"
-            style={{ ...styles.colorSwatch, color: "#e6eef5", fontSize: 11, width: "auto", padding: "0 8px" }}
+            style={{ ...styles.colorSwatch, color: "#e6eef5", fontSize: 16, width: "auto", padding: "0 8px" }}
             onClick={() => onChange("transparent")}
           >
             Transparent
@@ -3594,51 +3922,82 @@ function stripEditorArtifacts(html) {
     .replace(/\sdata-temp-selection="[^"]*"/gi, "");
 }
 
+// Each font entry: value = CSS font-family string, label = display name, google = true if loaded from Google Fonts
 const TEXT_TOOLBAR_FONTS = [
-  { value: "Segoe UI", label: "Segoe UI" },
-  { value: "Aptos", label: "Aptos" },
+  // ── Modern sans-serif ──────────────────────────────────────────────────────
+  { value: "Inter", label: "Inter", google: true },
+  { value: "DM Sans", label: "DM Sans", google: true },
+  { value: "Plus Jakarta Sans", label: "Plus Jakarta Sans", google: true },
+  { value: "Manrope", label: "Manrope", google: true },
+  { value: "Figtree", label: "Figtree", google: true },
+  { value: "Outfit", label: "Outfit", google: true },
+  { value: "Urbanist", label: "Urbanist", google: true },
+  { value: "Space Grotesk", label: "Space Grotesk", google: true },
+  { value: "Syne", label: "Syne", google: true },
+  { value: "Jost", label: "Jost", google: true },
+  { value: "Work Sans", label: "Work Sans", google: true },
+  { value: "Rubik", label: "Rubik", google: true },
+  { value: "Mulish", label: "Mulish", google: true },
+  { value: "Quicksand", label: "Quicksand", google: true },
+  { value: "Barlow", label: "Barlow", google: true },
+  { value: "Exo 2", label: "Exo 2", google: true },
+  { value: "Source Sans 3", label: "Source Sans 3", google: true },
+  // ── Classic web-safe sans ──────────────────────────────────────────────────
+  { value: "Roboto", label: "Roboto", google: true },
+  { value: "Open Sans", label: "Open Sans", google: true },
+  { value: "Lato", label: "Lato", google: true },
+  { value: "Montserrat", label: "Montserrat", google: true },
+  { value: "Poppins", label: "Poppins", google: true },
+  { value: "Nunito", label: "Nunito", google: true },
+  { value: "Raleway", label: "Raleway", google: true },
+  { value: "Oswald", label: "Oswald", google: true },
+  { value: "Josefin Sans", label: "Josefin Sans", google: true },
   { value: "Arial", label: "Arial" },
   { value: "Helvetica", label: "Helvetica" },
-  { value: "Inter", label: "Inter" },
-  { value: "Roboto", label: "Roboto" },
-  { value: "Open Sans", label: "Open Sans" },
-  { value: "Lato", label: "Lato" },
-  { value: "Montserrat", label: "Montserrat" },
-  { value: "Poppins", label: "Poppins" },
-  { value: "Nunito", label: "Nunito" },
-  { value: "Raleway", label: "Raleway" },
-  { value: "Oswald", label: "Oswald" },
-  { value: "Merriweather", label: "Merriweather" },
-  { value: "Playfair Display", label: "Playfair Display" },
-  { value: "DM Serif Display", label: "DM Serif Display" },
-  { value: "Cormorant Garamond", label: "Cormorant Garamond" },
-  { value: "Trebuchet MS", label: "Trebuchet MS" },
+  { value: "Segoe UI", label: "Segoe UI" },
   { value: "Verdana", label: "Verdana" },
+  { value: "Trebuchet MS", label: "Trebuchet MS" },
   { value: "Tahoma", label: "Tahoma" },
-  { value: "Gill Sans", label: "Gill Sans" },
-  { value: "Century Gothic", label: "Century Gothic" },
-  { value: "Lucida Sans Unicode", label: "Lucida Sans Unicode" },
-  { value: "Franklin Gothic Medium", label: "Franklin Gothic" },
-  { value: "Futura", label: "Futura" },
-  { value: "Avenir Next", label: "Avenir Next" },
-  { value: "Bebas Neue", label: "Bebas Neue" },
+  // ── Tech / futuristic ─────────────────────────────────────────────────────
+  { value: "Orbitron", label: "Orbitron", google: true },
+  { value: "Oxanium", label: "Oxanium", google: true },
+  { value: "Exo", label: "Exo", google: true },
+  { value: "Rajdhani", label: "Rajdhani", google: true },
+  { value: "Bebas Neue", label: "Bebas Neue", google: true },
+  { value: "Impact", label: "Impact" },
+  // ── Serif ─────────────────────────────────────────────────────────────────
+  { value: "Playfair Display", label: "Playfair Display", google: true },
+  { value: "DM Serif Display", label: "DM Serif Display", google: true },
+  { value: "Cormorant Garamond", label: "Cormorant Garamond", google: true },
+  { value: "Lora", label: "Lora", google: true },
+  { value: "Merriweather", label: "Merriweather", google: true },
+  { value: "EB Garamond", label: "EB Garamond", google: true },
+  { value: "Libre Baskerville", label: "Libre Baskerville", google: true },
+  { value: "Spectral", label: "Spectral", google: true },
+  { value: "Crimson Text", label: "Crimson Text", google: true },
+  { value: "Source Serif 4", label: "Source Serif 4", google: true },
+  { value: "Cinzel", label: "Cinzel", google: true },
+  { value: "PT Serif", label: "PT Serif", google: true },
   { value: "Georgia", label: "Georgia" },
   { value: "Times New Roman", label: "Times New Roman" },
   { value: "Garamond", label: "Garamond" },
   { value: "Palatino Linotype", label: "Palatino Linotype" },
-  { value: "Book Antiqua", label: "Book Antiqua" },
   { value: "Cambria", label: "Cambria" },
-  { value: "Baskerville", label: "Baskerville" },
+  // ── Handwriting / script ──────────────────────────────────────────────────
+  { value: "Pacifico", label: "Pacifico", google: true },
+  { value: "Dancing Script", label: "Dancing Script", google: true },
+  { value: "Sacramento", label: "Sacramento", google: true },
+  { value: "Great Vibes", label: "Great Vibes", google: true },
+  { value: "Caveat", label: "Caveat", google: true },
+  { value: "Kalam", label: "Kalam", google: true },
+  { value: "Brush Script MT", label: "Brush Script MT" },
+  // ── Monospace ─────────────────────────────────────────────────────────────
   { value: "Courier New", label: "Courier New" },
   { value: "Consolas", label: "Consolas" },
   { value: "Lucida Console", label: "Lucida Console" },
-  { value: "Impact", label: "Impact" },
-  { value: "Brush Script MT", label: "Brush Script MT" },
-  { value: "Copperplate", label: "Copperplate" },
-  { value: "Papyrus", label: "Papyrus" },
 ];
 
-const TEXT_TOOLBAR_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 84, 96];
+const TEXT_TOOLBAR_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 46, 48, 52, 56, 64, 72, 84, 96];
 const TEXT_TOOLBAR_LINE_HEIGHTS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2];
 const ANIMATION_PRESETS = [
   { value: "none", label: "None" },
@@ -3757,9 +4116,121 @@ function normalizeComputedLineHeight(lineHeightValue, fontSizeValue, fallback = 
   return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
 }
 
-function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
-  if (!visible) return null;
+function FontPickerDropdown({ value, onChange, onPreserveSelection }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 280, openDown: true });
 
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e) {
+      if (!triggerRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  const openPicker = (e) => {
+    e.preventDefault();
+    onPreserveSelection?.();
+    if (!open) {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const dropHeight = 380;
+        const spaceBelow = (window.innerHeight || 800) - rect.bottom - 8;
+        const openDown = spaceBelow >= dropHeight || spaceBelow >= rect.top - 8;
+        setDropPos({
+          top: openDown ? rect.bottom + 4 : rect.top,
+          left: Math.max(4, Math.min(rect.left, (window.innerWidth || 1200) - Math.max(rect.width, 290) - 4)),
+          width: Math.max(rect.width, 290),
+          openDown,
+        });
+      }
+    }
+    setOpen((v) => !v);
+  };
+
+  const selectFont = (e, fontValue) => {
+    e.preventDefault();
+    onPreserveSelection?.();
+    onChange?.(fontValue);
+    setOpen(false);
+  };
+
+  const current = TEXT_TOOLBAR_FONTS.find((f) => f.value === value) || { value: value || "Arial", label: value || "Arial" };
+
+  return (
+    <div ref={triggerRef} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        onMouseDown={openPicker}
+        data-text-toolbar="true"
+        title="Font family"
+        style={{
+          ...styles.textToolbarSelect,
+          minWidth: 220,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          userSelect: "none",
+        }}
+      >
+        <span style={{ fontFamily: current.value, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+          {current.label}
+        </span>
+        <span style={{ fontSize: 10, color: "#4d78a5", flexShrink: 0 }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          data-text-toolbar="true"
+          style={{
+            position: "fixed",
+            top: dropPos.top,
+            left: dropPos.left,
+            transform: dropPos.openDown ? "none" : "translateY(-100%) translateY(-8px)",
+            width: dropPos.width,
+            maxHeight: 380,
+            overflowY: "auto",
+            background: "#ffffff",
+            border: "1px solid rgba(37,99,235,0.4)",
+            borderRadius: 10,
+            boxShadow: "0 16px 40px rgba(15,23,42,0.2)",
+            zIndex: 99999,
+            padding: "4px 0",
+          }}
+        >
+          {TEXT_TOOLBAR_FONTS.map((font) => (
+            <div
+              key={font.value}
+              onMouseDown={(e) => selectFont(e, font.value)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "7px 14px",
+                cursor: "pointer",
+                background: font.value === value ? "rgba(37,99,235,0.08)" : "transparent",
+                borderLeft: font.value === value ? "3px solid #2563eb" : "3px solid transparent",
+              }}
+            >
+              <span style={{ fontFamily: font.value, fontSize: 22, color: "#0f2f4d", flexShrink: 0, width: 36, textAlign: "center" }}>Aa</span>
+              <span style={{ fontFamily: font.value, fontSize: 15, color: "#16324f" }}>{font.label}</span>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   const backgroundFileInputRef = useRef(null);
 
   const keepSelection = (event, callback) => {
@@ -3805,6 +4276,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
         left: position?.x ?? 240,
         top: position?.y ?? 120,
         width: position?.width ?? 1120,
+        display: visible ? undefined : "none",
       }}
       data-text-toolbar="true"
       onMouseDownCapture={() => onPreserveSelection?.()}
@@ -3834,16 +4306,11 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               ))}
             </select>
           </label>
-          <select
+          <FontPickerDropdown
             value={fontFamily || "Arial"}
-            style={{ ...styles.textToolbarSelect, minWidth: 220 }}
-            onMouseDownCapture={() => onPreserveSelection?.()}
-            onChange={(event) => onFontFamily?.(event.target.value)}
-          >
-            {TEXT_TOOLBAR_FONTS.map((font) => (
-              <option key={font.value} value={font.value}>{font.label}</option>
-            ))}
-          </select>
+            onChange={onFontFamily}
+            onPreserveSelection={onPreserveSelection}
+          />
           <select
             value={String(fontSize || 18)}
             style={{ ...styles.textToolbarSelect, minWidth: 86 }}
@@ -3910,7 +4377,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               <button
                 type="button"
                 title="Remove highlight"
-                style={{ ...styles.textToolbarActionChip, padding: "2px 6px", fontSize: 11, lineHeight: 1 }}
+                style={{ ...styles.textToolbarActionChip, padding: "2px 6px", fontSize: 16, lineHeight: 1 }}
                 onMouseDown={(event) => keepSelection(event, () => onHighlightColor("transparent"))}
               >None</button>
             </div>
@@ -3968,7 +4435,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
                 <input
                   type="number"
                   min={120}
-                  max={1800}
+                  max={5600}
                   value={Number(boxWidth || 360)}
                   style={{ ...styles.textToolbarSelect, minWidth: 112, marginTop: 6 }}
                   onMouseDownCapture={() => onPreserveSelection?.()}
@@ -4253,7 +4720,7 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
               <option value="contained">Contained</option>
             </select>
             <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <NumberField label="Page Width" value={pageWidth} min={720} max={1800} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
+              <NumberField label="Page Width" value={pageWidth} min={720} max={5600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
               <NumberField label="Button Radius" value={buttonRadius >= 999 ? 32 : buttonRadius} min={0} max={40} onChange={(value) => onApplyGlobal({ buttonRadius: value >= 32 ? 999 : value })} />
             </div>
           </div>
@@ -4417,7 +4884,7 @@ function IconCounterPropertiesPanel({ block, index, onChange }) {
     border: "1px solid rgba(255,255,255,0.15)",
     background: "rgba(30,41,59,0.8)",
     color: "#e2e8f0",
-    fontSize: 13,
+    fontSize: 16,
     marginTop: 4,
   };
 
@@ -4518,14 +4985,451 @@ function IconCounterPropertiesPanel({ block, index, onChange }) {
             <NumberField label="Min height (px)" value={Number(props.minHeight ?? 280)} min={80} max={800} onChange={(v) => update({ minHeight: v })} />
           </div>
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`counter-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Items</label>
+              <select value={String(props.itemAnimation || "fade-up")} onChange={(e) => update({ itemAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`counter-item-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ ...styles.colorGrid, marginTop: 8 }}>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+            <NumberField label="Stagger" value={Math.round((Number(props.itemStagger ?? 0.08) || 0.08) * 100)} min={0} max={200} onChange={(value) => update({ itemStagger: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
 
       </div>
     </div>
   );
 }
 
+function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const rows = Array.isArray(props.rows) ? props.rows : [];
 
-// ─── exports ──────────────────────────────────────────────────────────────────
+  const updateRow = (rowIndex, patch) =>
+    update({ rows: rows.map((r, i) => (i === rowIndex ? { ...r, ...patch } : r)) });
+
+  const deleteRow = (rowIndex) =>
+    update({ rows: rows.filter((_, i) => i !== rowIndex) });
+
+  const addRow = () =>
+    update({
+      rows: [...rows, { category: "NEW FEATURE", logos: [{ domain: "", name: "" }], price: 49 }],
+    });
+
+  const updateLogo = (rowIndex, logoIndex, field, value) => {
+    const logos = Array.isArray(rows[rowIndex]?.logos) ? rows[rowIndex].logos : [];
+    updateRow(rowIndex, { logos: logos.map((l, i) => (i === logoIndex ? { ...l, [field]: value } : l)) });
+  };
+
+  const deleteLogo = (rowIndex, logoIndex) => {
+    const logos = Array.isArray(rows[rowIndex]?.logos) ? rows[rowIndex].logos : [];
+    updateRow(rowIndex, { logos: logos.filter((_, i) => i !== logoIndex) });
+  };
+
+  const addLogo = (rowIndex) => {
+    const logos = Array.isArray(rows[rowIndex]?.logos) ? rows[rowIndex].logos : [];
+    updateRow(rowIndex, { logos: [...logos, { domain: "", name: "" }] });
+  };
+
+  const rowShell = {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(148,163,184,0.18)",
+    borderRadius: 10,
+    padding: 12,
+    display: "grid",
+    gap: 8,
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>💸 Edit: Competitor Comparison</h3>
+      <div style={styles.propertyGrid}>
+
+        {/* ── Headings ── */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Heading Text</label>
+          <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Eyebrow</label>
+          <input type="text" value={props.eyebrow || ""} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="All-in-One Platform" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Title</label>
+          <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="What you'd pay elsewhere" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subtitle</label>
+          <input type="text" value={props.subtitle || ""} onChange={(e) => update({ subtitle: e.target.value })} style={styles.propertyInput} placeholder="We replace every tool below…" />
+        </div>
+
+        {/* ── Your plan ── */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Your Plan</label>
+          <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Plan Name</label>
+          <input type="text" value={props.planName || ""} onChange={(e) => update({ planName: e.target.value })} style={styles.propertyInput} placeholder="Business Plan" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Monthly Price ($)</label>
+          <input type="number" value={Number(props.planPrice || 199)} min={0} onChange={(e) => update({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Plan Tagline</label>
+          <input type="text" value={props.planTagline || ""} onChange={(e) => update({ planTagline: e.target.value })} style={styles.propertyInput} placeholder="Everything above, included" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Label for free/unique rows</label>
+          <input type="text" value={props.uniqueLabel || ""} onChange={(e) => update({ uniqueLabel: e.target.value })} style={styles.propertyInput} placeholder="Unique to us" />
+        </div>
+
+        {/* ── Background ── */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Background Color</label>
+          <CompactColorField label="Background" value={props.backgroundColor || "#070c18"} fallback="#070c18" onChange={(v) => update({ backgroundColor: v })} />
+        </div>
+
+        {/* ── Rows ── */}
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Feature Rows</label>
+          <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>
+            Each row is one feature. Logos use Clearbit (enter the company domain, e.g. <em>hubspot.com</em>). Set price to 0 for "unique to you" rows.
+          </p>
+          <div style={{ display: "grid", gap: 10 }}>
+            {rows.map((row, rowIndex) => (
+              <div key={rowIndex} style={rowShell}>
+                {/* Category name + delete row */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={row.category || ""}
+                    onChange={(e) => updateRow(rowIndex, { category: e.target.value })}
+                    style={{ ...styles.propertyInput, flex: 1, fontSize: 16, textTransform: "uppercase" }}
+                    placeholder="FEATURE NAME"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => deleteRow(rowIndex)}
+                    title="Delete row"
+                    style={{ ...styles.secondaryBtn, padding: "4px 8px", color: "#ef4444", fontWeight: 600 }}
+                  >✕</button>
+                </div>
+                {/* Price */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ fontSize: 16, color: "#94a3b8", minWidth: 50 }}>$/mo</span>
+                  <input
+                    type="number"
+                    value={row.price || 0}
+                    min={0}
+                    onChange={(e) => updateRow(rowIndex, { price: Number(e.target.value) })}
+                    style={{ ...styles.propertyInput, width: 80 }}
+                  />
+                  <span style={{ fontSize: 16, color: "#64748b" }}>(0 = unique)</span>
+                </div>
+                {/* Logos */}
+                <div>
+                  <p style={{ margin: "0 0 6px", fontSize: 16, color: "#94a3b8" }}>Competitor logos (enter domain)</p>
+                  <div style={{ display: "grid", gap: 5 }}>
+                    {(Array.isArray(row.logos) ? row.logos : []).map((logo, logoIndex) => (
+                      <div key={logoIndex} style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                        {logo.domain ? (
+                          <img
+                            src={`https://logo.clearbit.com/${logo.domain}`}
+                            alt={logo.name || logo.domain}
+                            width={22} height={22}
+                            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1px solid rgba(148,163,184,0.3)", flexShrink: 0 }}
+                            onError={(e) => { e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${logo.domain}&sz=64`; }}
+                          />
+                        ) : (
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(148,163,184,0.2)", flexShrink: 0 }} />
+                        )}
+                        <input
+                          type="text"
+                          value={logo.domain || ""}
+                          onChange={(e) => updateLogo(rowIndex, logoIndex, "domain", e.target.value)}
+                          style={{ ...styles.propertyInput, flex: 1.2, fontSize: 16 }}
+                          placeholder="hubspot.com"
+                        />
+                        <input
+                          type="text"
+                          value={logo.name || ""}
+                          onChange={(e) => updateLogo(rowIndex, logoIndex, "name", e.target.value)}
+                          style={{ ...styles.propertyInput, flex: 1, fontSize: 16 }}
+                          placeholder="Tool Name"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteLogo(rowIndex, logoIndex)}
+                          title="Remove logo"
+                          style={{ ...styles.secondaryBtn, padding: "2px 6px", color: "#ef4444", fontWeight: 600, flexShrink: 0 }}
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => addLogo(rowIndex)} style={{ ...styles.secondaryBtn, marginTop: 6, fontSize: 16 }}>
+                    + Add Logo
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={addRow} style={{ ...styles.secondaryBtn, marginTop: 12 }}>
+            + Add Row
+          </button>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`cc-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function FeatureAccordionPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const items = Array.isArray(props.items) ? props.items : [];
+  const updateItem = (itemIndex, patch) =>
+    update({ items: items.map((item, i) => (i === itemIndex ? { ...item, ...patch } : item)) });
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🗂️ Edit: Feature Accordion</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Items</label>
+          <div style={styles.stackSm}>
+            {items.map((item, itemIndex) => (
+              <div key={item.id || `fa-${itemIndex}`} style={styles.linkRowCard}>
+                <div style={styles.linkRowHeader}>
+                  <span style={styles.linkRowTitle}>Item {itemIndex + 1}</span>
+                </div>
+                <input type="text" value={String(item.label || "")} onChange={(e) => updateItem(itemIndex, { label: e.target.value })} style={styles.propertyInput} placeholder="Tab Label" />
+                <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image URL" />
+                <input type="text" value={String(item.imageAlt || "")} onChange={(e) => updateItem(itemIndex, { imageAlt: e.target.value })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image Alt" />
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <ColorSelector
+                    label="Tab Accent Colour"
+                    value={item.accentColor || ""}
+                    fallback={props.accentColor || "#0ea5e9"}
+                    onChange={(v) => updateItem(itemIndex, { accentColor: v || undefined })}
+                  />
+                  <ColorSelector
+                    label="Panel Background"
+                    value={item.panelBg || ""}
+                    fallback={props.backgroundColor || "#0f172a"}
+                    onChange={(v) => updateItem(itemIndex, { panelBg: v || undefined })}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Style</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Position</label>
+              <select value={String(props.imagePosition || "right")} onChange={(e) => update({ imagePosition: e.target.value })} style={styles.propertyInput}>
+                <option value="right">Right</option>
+                <option value="left">Left</option>
+              </select>
+            </div>
+            <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
+            <NumberField label="Card Height (px)" value={Number(props.cardHeight || 420)} min={200} max={900} onChange={(v) => update({ cardHeight: v })} />
+            <NumberField label="Card Gap (px)" value={Number(props.cardGap || 16)} min={0} max={60} onChange={(v) => update({ cardGap: v })} />
+            <NumberField label="Card Inset (px)" value={Number(props.cardInset || 24)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
+            <NumberField label="Heading Size (px)" value={Number(props.headingFontSize ?? 48)} min={16} max={96} onChange={(v) => update({ headingFontSize: v })} />
+            <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
+            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
+            <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <ColorSelector label="Section Background" value={props.backgroundColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ backgroundColor: v })} />
+          <ColorSelector label="Text" value={props.textColor || "#ffffff"} fallback="#ffffff" onChange={(v) => update({ textColor: v })} />
+          <ColorSelector label="Accent" value={props.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => update({ accentColor: v })} />
+          <ColorSelector label="Card Border Colour" value={props.cardBorderColor || "#3b82f6"} fallback="#3b82f6" onChange={(v) => update({ cardBorderColor: v })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Motion</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Section</label>
+              <select value={String(props.sectionAnimation || "fade-up")} onChange={(e) => update({ sectionAnimation: e.target.value })} style={styles.propertyInput}>
+                {ANIMATION_PRESETS.map((preset) => <option key={`fa-section-${preset.value}`} value={preset.value}>{preset.label}</option>)}
+              </select>
+            </div>
+            <NumberField label="Speed" value={Math.round((Number(props.sectionAnimationSpeed ?? 0.8) || 0.8) * 100)} min={25} max={300} onChange={(value) => update({ sectionAnimationSpeed: Number((value / 100).toFixed(2)) })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const panels = Array.isArray(props.panels) ? props.panels : [];
+  const [expandedIdx, setExpandedIdx] = useState(0);
+
+  const updatePanel = (panelIdx, patch) =>
+    update({ panels: panels.map((p, i) => (i === panelIdx ? { ...p, ...patch } : p)) });
+
+  async function handleUpload(panelIdx, file) {
+    if (!file || typeof onUploadImage !== "function") return;
+    const asset = await Promise.resolve(onUploadImage("__ss_panel_image__", file));
+    if (asset?.src) updatePanel(panelIdx, { image: asset.src });
+  }
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🃏 Edit: Scroll Stack</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
+            <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
+            <NumberField label="Card Side Padding (px)" value={Number(props.cardInset ?? 0)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
+            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
+            <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
+          </div>
+          <ColorSelector label="Card Border Colour" value={props.cardBorderColor || "#3b82f6"} fallback="#3b82f6" onChange={(v) => update({ cardBorderColor: v })} />
+        </div>
+        {panels.map((panel, panelIdx) => {
+          const expanded = expandedIdx === panelIdx;
+          return (
+            <div key={panel.id || `ss-${panelIdx}`} style={styles.linkRowCard}>
+              <div style={styles.linkRowHeader}>
+                <button
+                  type="button"
+                  style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0, color: "#e2e8f0", fontSize: 16, fontWeight: 600, flex: 1 }}
+                  onClick={() => setExpandedIdx(expanded ? -1 : panelIdx)}
+                >
+                  {expanded ? "▾" : "▸"} Panel {panelIdx + 1}
+                </button>
+                <div style={styles.linkActions}>
+                  <button type="button" style={styles.linkMoveBtn} onClick={() => {
+                    if (panelIdx === 0) return;
+                    const next = [...panels]; [next[panelIdx - 1], next[panelIdx]] = [next[panelIdx], next[panelIdx - 1]]; update({ panels: next });
+                  }}>↑</button>
+                  <button type="button" style={styles.linkMoveBtn} onClick={() => {
+                    if (panelIdx >= panels.length - 1) return;
+                    const next = [...panels]; [next[panelIdx], next[panelIdx + 1]] = [next[panelIdx + 1], next[panelIdx]]; update({ panels: next });
+                  }}>↓</button>
+                  <button type="button" style={{ ...styles.linkMoveBtn, color: "#f87171" }} onClick={() => update({ panels: panels.filter((_, i) => i !== panelIdx) })}>✕</button>
+                </div>
+              </div>
+              {expanded ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Eyebrow</label>
+                    <input type="text" value={String(panel.eyebrow || "")} onChange={(e) => updatePanel(panelIdx, { eyebrow: e.target.value })} style={styles.propertyInput} placeholder="Category Label" />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Heading</label>
+                    <input type="text" value={String(panel.heading || "")} onChange={(e) => updatePanel(panelIdx, { heading: e.target.value })} style={styles.propertyInput} placeholder="Headline" />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Body</label>
+                    <textarea value={String(panel.body || "")} onChange={(e) => updatePanel(panelIdx, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 80, resize: "vertical" }} placeholder="Body text" />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>CTA Text</label>
+                    <input type="text" value={String(panel.ctaText || "")} onChange={(e) => updatePanel(panelIdx, { ctaText: e.target.value })} style={styles.propertyInput} placeholder="Learn More" />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>CTA URL</label>
+                    <input type="text" value={String(panel.ctaUrl || "")} onChange={(e) => updatePanel(panelIdx, { ctaUrl: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Image URL</label>
+                    <input type="text" value={String(panel.image || "")} onChange={(e) => updatePanel(panelIdx, { image: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                  </div>
+                  {typeof onUploadImage === "function" ? (
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(14,165,233,0.12)", border: "1px dashed rgba(14,165,233,0.4)", color: "#38bdf8", borderRadius: 6, padding: "7px 12px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>
+                      📷 Upload Image
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleUpload(panelIdx, f); }} />
+                    </label>
+                  ) : null}
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Image Position</label>
+                    <select value={String(panel.imagePosition || "right")} onChange={(e) => updatePanel(panelIdx, { imagePosition: e.target.value })} style={styles.propertyInput}>
+                      <option value="right">Image Right</option>
+                      <option value="left">Image Left</option>
+                    </select>
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Image Style</label>
+                    <select value={String(panel.imageStyle || "bleed")} onChange={(e) => updatePanel(panelIdx, { imageStyle: e.target.value })} style={styles.propertyInput}>
+                      <option value="bleed">Full Bleed</option>
+                      <option value="card">Inset Card (monday.com style)</option>
+                    </select>
+                  </div>
+                  {(panel.imageStyle || "bleed") === "card" ? (
+                    <ColorSelector label="Card Background" value={panel.imageCardBg || panel.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => updatePanel(panelIdx, { imageCardBg: v })} />
+                  ) : null}
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>CTA Style</label>
+                    <select value={String(panel.ctaStyle || "filled")} onChange={(e) => updatePanel(panelIdx, { ctaStyle: e.target.value })} style={styles.propertyInput}>
+                      <option value="filled">Filled</option>
+                      <option value="pill">Pill (rounded)</option>
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="checkbox" id={`ss-dot-${panelIdx}`} checked={panel.eyebrowDot !== false} onChange={(e) => updatePanel(panelIdx, { eyebrowDot: e.target.checked })} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                    <label htmlFor={`ss-dot-${panelIdx}`} style={{ ...styles.propertyLabel, margin: 0, cursor: "pointer" }}>Show eyebrow colour dot</label>
+                  </div>
+                  <ColorSelector label="Background" value={panel.backgroundColor || "#0f172a"} fallback="#0f172a" onChange={(v) => updatePanel(panelIdx, { backgroundColor: v })} />
+                  <ColorSelector label="Text" value={panel.textColor || "#ffffff"} fallback="#ffffff" onChange={(v) => updatePanel(panelIdx, { textColor: v })} />
+                  <ColorSelector label="Accent" value={panel.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => updatePanel(panelIdx, { accentColor: v })} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    <NumberField label="Heading Size (px)" value={Number(panel.headingSize || 46)} min={18} max={96} onChange={(v) => updatePanel(panelIdx, { headingSize: v })} />
+                    <NumberField label="Body Size (px)" value={Number(panel.bodySize || 17)} min={12} max={32} onChange={(v) => updatePanel(panelIdx, { bodySize: v })} />
+                  </div>
+                  <div style={styles.propertyField}>
+                    <label style={styles.propertyLabel}>Heading Weight</label>
+                    <select value={String(panel.headingWeight || 800)} onChange={(e) => updatePanel(panelIdx, { headingWeight: Number(e.target.value) })} style={styles.propertyInput}>
+                      <option value="400">Regular (400)</option>
+                      <option value="500">Medium (500)</option>
+                      <option value="600">SemiBold (600)</option>
+                      <option value="700">Bold (700)</option>
+                      <option value="800">ExtraBold (800)</option>
+                      <option value="900">Black (900)</option>
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          style={{ ...styles.primaryBtn, width: "100%", marginTop: 4 }}
+          onClick={() => {
+            const now = Date.now(); const len = panels.length;
+            update({ panels: [...panels, { id: `ss-panel-${now}`, eyebrow: `Section ${len + 1}`, heading: "A bold, compelling headline", body: "Explain your value proposition clearly and concisely.", ctaText: "Learn More", ctaUrl: "#", image: "", imageAlt: "", imagePosition: len % 2 === 0 ? "right" : "left", backgroundColor: "#0f172a", textColor: "#ffffff", accentColor: "#0ea5e9" }] });
+            setExpandedIdx(len);
+          }}
+        >+ Add Panel</button>
+      </div>
+    </div>
+  );
+}
+
+// --- exports ---
 export {
   BlockPresetPicker, NavbarPresetPicker, NavbarLinksEditor,
   normalizeFeatureListItem, normalizeGalleryItem, createDefaultGalleryItem,
@@ -4542,7 +5446,9 @@ export {
   ensureGalleryImagesCount, ListItemsEditor, FeatureListPropertiesPanel,
   GalleryImagesEditor, ImageGalleryPropertiesPanel,
   PricingTablePropertiesPanel,
-  FAQPropertiesPanel, SplitBlockPropertiesPanel,
+  FAQPropertiesPanel, FeatureAccordionPropertiesPanel, SplitBlockPropertiesPanel,
+  ScrollStackPropertiesPanel,
+  CompetitorComparisonPropertiesPanel,
   NumberField, ImagePropertiesPanel,
   NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,

@@ -402,6 +402,10 @@ export default function Layout({ children }) {
             </div>
             {/* ✅ Usage stats */}
             <UsageWarning />
+            {/* ✅ Getting Started checklist */}
+            <GettingStartedMenu />
+            {/* ✅ Help & Tutorials */}
+            <TutorialsMenu />
             {/* ✅ Avatar Circle */}
             <ProfileMenu avatar={avatar} />
           </header>
@@ -409,6 +413,271 @@ export default function Layout({ children }) {
         <main style={main}>{children}</main>
       </section>
     </div>
+  );
+}
+
+// ===================
+// Getting Started Checklist
+// ===================
+const SETUP_STEPS = [
+  { id: "profile",  label: "Set up your profile & business details", href: "/account" },
+  { id: "logo",    label: "Upload your business logo",              href: "/account" },
+  { id: "plan",    label: "Choose your subscription plan",          href: "/billing" },
+  { id: "contact", label: "Add your first contact",                 href: "/leads" },
+  { id: "email",   label: "Send your first email",                  href: "/modules/email" },
+];
+
+function GettingStartedMenu() {
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("gr8:setup:done") || "{}"); }
+    catch { return {}; }
+  });
+
+  const doneCount = SETUP_STEPS.filter(s => done[s.id]).length;
+  const allDone = doneCount === SETUP_STEPS.length;
+
+  function toggle(id) {
+    setDone(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem("gr8:setup:done", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e) {
+      if (!e.target.closest("[data-gs-menu]")) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const pillColor = allDone ? "#22c55e" : doneCount > 0 ? "#f59e0b" : "#6366f1";
+
+  return (
+    <div data-gs-menu style={{ position: "relative", flexShrink: 0 }}>
+      <style>{`
+        @keyframes gs-pulse {
+          0%   { background-position: 0% 50%; box-shadow: 0 0 0 0 rgba(99,102,241,0.7); }
+          50%  { background-position: 100% 50%; box-shadow: 0 0 0 8px rgba(99,102,241,0); }
+          100% { background-position: 0% 50%; box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+        }
+        .gs-btn {
+          display: flex; align-items: center; gap: 10px;
+          background: linear-gradient(270deg, #6366f1, #ec4899, #f59e0b, #6366f1);
+          background-size: 400% 400%;
+          animation: gs-pulse 2.4s ease infinite;
+          border: none; border-radius: 12px;
+          padding: 10px 18px; cursor: pointer; color: #fff;
+          font-size: 24px; font-weight: 600; white-space: nowrap;
+          letter-spacing: 0.02em;
+        }
+        .gs-btn.gs-done {
+          background: #22c55e; background-size: unset; animation: none;
+        }
+        .gs-btn:hover { opacity: 0.9; }
+      `}</style>
+      <button
+        className={`gs-btn${allDone ? " gs-done" : ""}`}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span style={{ fontSize: 24 }}>🚀</span>
+        Getting Started
+        <span style={{
+          background: "rgba(0,0,0,0.35)", color: "#fff",
+          borderRadius: 20, fontSize: 20, fontWeight: 600,
+          padding: "3px 12px", minWidth: 44, textAlign: "center",
+        }}>
+          {doneCount}/{SETUP_STEPS.length}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", right: 0, top: "calc(100% + 8px)",
+          width: 420, background: "#0f1726",
+          border: "1px solid rgba(255,255,255,.12)",
+          borderRadius: 14, boxShadow: "0 14px 32px rgba(0,0,0,.5)",
+          padding: "14px 0", zIndex: 200,
+        }}>
+          <div style={{ padding: "0 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 8 }}>
+            <div style={{ fontSize: 24, fontWeight: 600, color: "#fff" }}>Account Setup</div>
+            <div style={{ fontSize: 18, color: "#9ca3af", marginTop: 4 }}>
+              {allDone ? "All done — you\'re all set! 🎉" : `${SETUP_STEPS.length - doneCount} step${SETUP_STEPS.length - doneCount !== 1 ? "s" : ""} remaining`}
+            </div>
+            <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: "rgba(255,255,255,0.1)" }}>
+              <div style={{ height: "100%", borderRadius: 4, background: pillColor, width: `${(doneCount / SETUP_STEPS.length) * 100}%`, transition: "width 0.3s" }} />
+            </div>
+          </div>
+          {SETUP_STEPS.map(step => (
+            <div key={step.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 16px",
+              borderRadius: 8,
+              margin: "0 6px",
+            }}>
+              <button
+                onClick={() => toggle(step.id)}
+                style={{
+                  width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                  border: done[step.id] ? "none" : "2px solid rgba(255,255,255,0.3)",
+                  background: done[step.id] ? "#22c55e" : "transparent",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16, color: "#000", padding: 0,
+                }}
+              >{done[step.id] ? "✓" : ""}</button>
+              <a
+                href={step.href}
+                style={{
+                  flex: 1, fontSize: 20, color: done[step.id] ? "#6b7280" : "#e5e7eb",
+                  textDecoration: done[step.id] ? "line-through" : "none",
+                  textDecorationColor: "#6b7280",
+                }}
+              >{step.label}</a>
+              <a href={step.href} style={{ fontSize: 18, color: "#6366f1", textDecoration: "none", flexShrink: 0 }}>Go →</a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===================
+// Help & Tutorials
+// ===================
+const TUTORIAL_VIDEOS = [
+  { label: "Platform Overview",     duration: "2 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "Email Marketing",       duration: "3 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "CRM & Contacts",        duration: "3 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "Calendar & Bookings",   duration: "3 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "Funnels & Websites",    duration: "4 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "Social Media",          duration: "3 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+  { label: "Automation",            duration: "4 min",  url: "https://www.youtube.com/watch?v=PLACEHOLDER" },
+];
+
+function TutorialsMenu() {
+  const [open, setOpen] = useState(false);
+  const [playUrl, setPlayUrl] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e) {
+      if (!e.target.closest("[data-tut-menu]")) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Extract YouTube video ID for embed
+  function getEmbedUrl(url) {
+    const m = url.match(/[?&]v=([^&]+)/);
+    return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1` : null;
+  }
+
+  return (
+    <>
+      <div data-tut-menu style={{ position: "relative", flexShrink: 0 }}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 10, padding: "10px 18px", cursor: "pointer", color: "#fff",
+            fontSize: 24, fontWeight: 600, whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 24 }}>🎓</span>
+          Help &amp; Tutorials
+        </button>
+
+        {open && (
+          <div style={{
+            position: "absolute", right: 0, top: "calc(100% + 8px)",
+            width: 400, background: "#0f1726",
+            border: "1px solid rgba(255,255,255,.12)",
+            borderRadius: 14, boxShadow: "0 14px 32px rgba(0,0,0,.5)",
+            padding: "14px 0", zIndex: 200,
+          }}>
+            <div style={{ padding: "0 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 8 }}>
+              <div style={{ fontSize: 24, fontWeight: 600, color: "#fff" }}>Tutorial Videos</div>
+              <div style={{ fontSize: 18, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>
+                Short videos to help you get the most out of the platform.
+              </div>
+            </div>
+            {TUTORIAL_VIDEOS.map(v => (
+              <button
+                key={v.label}
+                onClick={() => { setPlayUrl(v.url); setOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: "9px 16px", background: "none", border: "none",
+                  cursor: "pointer", borderRadius: 8, margin: "0 6px",
+                  textAlign: "left",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                <span style={{
+                  width: 36, height: 36, borderRadius: 8, background: "#6366f1",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 18, flexShrink: 0,
+                }}>▶</span>
+                <span style={{ flex: 1, fontSize: 20, color: "#e5e7eb", fontWeight: 500 }}>{v.label}</span>
+                <span style={{ fontSize: 18, color: "#9ca3af", flexShrink: 0 }}>{v.duration}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Video player modal */}
+      {playUrl && (
+        <div
+          onClick={() => setPlayUrl(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ position: "relative", width: "min(860px, 90vw)", aspectRatio: "16/9" }}
+          >
+            <button
+              onClick={() => setPlayUrl(null)}
+              style={{
+                position: "absolute", top: -36, right: 0,
+                background: "none", border: "none", color: "#fff",
+                fontSize: 24, cursor: "pointer", fontWeight: 600,
+              }}
+            >✕ Close</button>
+            {getEmbedUrl(playUrl) ? (
+              <iframe
+                src={getEmbedUrl(playUrl)}
+                style={{ width: "100%", height: "100%", border: "none", borderRadius: 12 }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+              />
+            ) : (
+              <div style={{
+                width: "100%", height: "100%", background: "#111827",
+                borderRadius: 12, display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                color: "#9ca3af", fontSize: 15, gap: 8,
+              }}>
+                <span style={{ fontSize: 32 }}>🎬</span>
+                <span>This tutorial is being recorded — check back shortly.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -487,6 +756,7 @@ const rightCol = {
   flexDirection: "column",
   minWidth: 0,
   minHeight: "100vh",
+  overflowX: "hidden",
 };
 
 const topbar = {

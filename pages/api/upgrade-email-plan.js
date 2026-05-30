@@ -9,6 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import nodemailer from "nodemailer";
 import PRICING from "../../data/pricing";
+import { withAuth } from "../../lib/withWorkspace";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -30,7 +31,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     // 1️⃣ Load all accounts with active email marketing
     const { data: accounts, error } = await supabase
@@ -145,3 +146,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default withAuth(handler);

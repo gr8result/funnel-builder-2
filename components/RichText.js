@@ -3,8 +3,9 @@
 
 import { useEffect, useRef } from 'react';
 
-export default function RichText({ value = '', onChange, placeholder = 'Type…' }) {
+export default function RichText({ value = '', onChange, placeholder = 'Type...' }) {
   const ref = useRef(null);
+  const savedRange = useRef(null);
 
   useEffect(() => {
     if (ref.current && ref.current.innerHTML !== value) {
@@ -12,37 +13,114 @@ export default function RichText({ value = '', onChange, placeholder = 'Type…'
     }
   }, [value]);
 
+  // ── Selection helpers ─────────────────────────────────────────────────────
+
+  function saveSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRange.current = sel.getRangeAt(0).cloneRange();
+    }
+  }
+
+  // Focus the editor then restore the saved range.
+  // Returns true only when there is actual text selected (not just a cursor).
+  function restoreSelection() {
+    if (!savedRange.current) return false;
+    const sel = window.getSelection();
+    if (!sel) return false;
+    if (ref.current) ref.current.focus();
+    sel.removeAllRanges();
+    sel.addRange(savedRange.current);
+    return !savedRange.current.collapsed;
+  }
+
+  // ── Bold / italic / underline / alignment / block format ─────────────────
+
   function exec(cmd, arg) {
+    restoreSelection();
+    try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
     document.execCommand(cmd, false, arg);
-    ref.current && onChange && onChange(ref.current.innerHTML);
+    if (ref.current) onChange && onChange(ref.current.innerHTML);
+  }
+
+  // ── Font size ─────────────────────────────────────────────────────────────
+  // Strategy: execCommand('fontSize', '7') uses the browser's own range-splitting
+  // logic to handle any selection shape. We then swap each <font size="7"> for
+  // <span style="font-size: Xpx">, preserving any colour already on the element.
+
+  function applyFontSize(px) {
+    if (!px || !restoreSelection()) return;
+    try { document.execCommand('styleWithCSS', false, false); } catch (_) {}
+    document.execCommand('fontSize', false, '7');
+    if (!ref.current) return;
+    ref.current.querySelectorAll('font[size="7"]').forEach((font) => {
+      const span = document.createElement('span');
+      span.style.fontSize = px + 'px';
+      if (font.color) span.style.color = font.color; // carry over any colour
+      while (font.firstChild) span.appendChild(font.firstChild);
+      font.parentNode.replaceChild(span, font);
+    });
+    onChange && onChange(ref.current.innerHTML);
+  }
+
+  // ── Colour ────────────────────────────────────────────────────────────────
+  // styleWithCSS=true makes foreColor emit <span style="color:…"> instead of
+  // <font color="…">, so it nests cleanly with font-size spans.
+
+  function applyColor(color) {
+    if (!restoreSelection()) return;
+    try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
+    document.execCommand('foreColor', false, color);
+    if (ref.current) onChange && onChange(ref.current.innerHTML);
   }
 
   function applyHierarchy(tag) {
     const normalizedTag = String(tag || 'p').toLowerCase();
-    const formatValue = normalizedTag === 'p' ? 'p' : `<${normalizedTag}>`;
-    exec('formatBlock', formatValue);
+    exec('formatBlock', normalizedTag === 'p' ? 'p' : `<${normalizedTag}>`);
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-        <button type="button" onClick={() => applyHierarchy('p')} style={tb}>P</button>
-        <button type="button" onClick={() => applyHierarchy('h1')} style={tb}>H1</button>
-        <button type="button" onClick={() => applyHierarchy('h2')} style={tb}>H2</button>
-        <button type="button" onClick={() => applyHierarchy('h3')} style={tb}>H3</button>
-        <button type="button" onClick={() => exec('bold')} style={tb}>B</button>
-        <button type="button" onClick={() => exec('italic')} style={tb}><i>I</i></button>
-        <button type="button" onClick={() => exec('underline')} style={tb}><u>U</u></button>
-        <button type="button" onClick={() => exec('justifyLeft')} style={tb}>⟸</button>
-        <button type="button" onClick={() => exec('justifyCenter')} style={tb}>⇔</button>
-        <button type="button" onClick={() => exec('justifyRight')} style={tb}>⟹</button>
-        <select onChange={(e) => exec('fontSize', e.target.value)} defaultValue="3" style={sel}>
-          <option value="2">Small</option>
-          <option value="3">Normal</option>
-          <option value="4">Large</option>
-          <option value="5">XL</option>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); applyHierarchy('p'); }} style={tb}>P</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); applyHierarchy('h1'); }} style={tb}>H1</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); applyHierarchy('h2'); }} style={tb}>H2</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); applyHierarchy('h3'); }} style={tb}>H3</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('bold'); }} style={tb}><b>B</b></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('italic'); }} style={tb}><i>I</i></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('underline'); }} style={tb}><u>U</u></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyLeft'); }} style={tb}>⟸</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyCenter'); }} style={tb}>⇔</button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyRight'); }} style={tb}>⟹</button>
+
+        {/* Font size — save selection on mousedown, BEFORE the dropdown steals focus */}
+        <select
+          onMouseDown={saveSelection}
+          onChange={(e) => { if (e.target.value) applyFontSize(Number(e.target.value)); }}
+          defaultValue=""
+          style={sel}
+        >
+          <option value="" disabled>Size</option>
+          <option value="12">12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+          <option value="20">20</option>
+          <option value="24">24</option>
+          <option value="28">28</option>
+          <option value="32">32</option>
+          <option value="40">40</option>
+          <option value="48">48</option>
         </select>
-        <input type="color" onChange={(e) => exec('foreColor', e.target.value)} title="Text colour" />
+
+        {/* Colour — save selection on mousedown, BEFORE the OS picker dialog opens */}
+        <input
+          type="color"
+          onMouseDown={saveSelection}
+          onChange={(e) => applyColor(e.target.value)}
+          title="Text colour"
+          style={{ cursor: 'pointer', borderRadius: 4, height: 30 }}
+        />
       </div>
 
       <div
@@ -50,6 +128,8 @@ export default function RichText({ value = '', onChange, placeholder = 'Type…'
         contentEditable
         suppressContentEditableWarning
         onInput={(e) => onChange && onChange(e.currentTarget.innerHTML)}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
         style={rt}
         data-placeholder={placeholder}
       />

@@ -1,4 +1,4 @@
-// /pages/modules/affiliates/affiliate-marketplace/affiliate_applications.js
+﻿// /pages/modules/affiliates/affiliate-marketplace/affiliate_applications.js
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../utils/supabase-client";
 import ICONS from "../../../../components/iconMap";
@@ -13,7 +13,7 @@ const page = {
   bannerIconWrap: { width: 64, height: 64, background: '#232e47', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 18 },
   bannerTitle: { fontSize: 48, fontWeight: 600, color: '#fff', marginBottom: 6 },
   bannerSubtitle: { fontSize: 18, color: '#ffffff', fontWeight: 500 },
-  backBtn: { background: '#221a1a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 700, cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }
+  backBtn: { background: '#221a1a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 600, cursor: 'pointer', fontSize: 18, boxShadow: '0 2px 8px 0 rgba(0,0,0,0.10)' }
 };
 
 export default function AffiliateApplications() {
@@ -263,9 +263,9 @@ export default function AffiliateApplications() {
                           <td style={{ padding: '10px 10px' }}>{app.products?.commission_value ? `${app.products.commission_value}${app.products.commission_type === 'percentage' ? '%' : ''}` : '-'}</td>
                           <td style={{ padding: '10px 10px' }}>{app.products?.sale_price ? `$${Number(app.products.sale_price).toFixed(2)}` : '-'}</td>
                           <td style={{ padding: '10px 10px' }}>
-                            {app.status === 'approved' && <span style={{ color: '#22c55e', fontWeight: 700 }}>Approved</span>}
-                            {app.status === 'pending' && <span style={{ color: '#facc15', fontWeight: 700 }}>Pending</span>}
-                            {app.status === 'rejected' && <span style={{ color: '#ef4444', fontWeight: 700 }}>Rejected</span>}
+                            {app.status === 'approved' && <span style={{ color: '#22c55e', fontWeight: 600 }}>Approved</span>}
+                            {app.status === 'pending' && <span style={{ color: '#facc15', fontWeight: 600 }}>Pending</span>}
+                            {app.status === 'rejected' && <span style={{ color: '#ef4444', fontWeight: 600 }}>Rejected</span>}
                             {!['approved','pending','rejected'].includes(app.status) && <span>{app.status}</span>}
                           </td>
                           <td style={{ padding: '10px 10px' }}>
@@ -278,9 +278,9 @@ export default function AffiliateApplications() {
                                 border: "none",
                                 borderRadius: 8,
                                 padding: "8px 12px",
-                                fontWeight: 700,
+                                fontWeight: 600,
                                 cursor: hasAssets ? "pointer" : "not-allowed",
-                                fontSize: 14,
+                                fontSize: 16,
                                 opacity: hasAssets ? 1 : 0.7,
                               }}
                               onClick={() => toggleAppAssets(app.id)}
@@ -299,7 +299,7 @@ export default function AffiliateApplications() {
                                   border: "none",
                                   borderRadius: 8,
                                   padding: "8px 14px",
-                                  fontWeight: 700,
+                                  fontWeight: 600,
                                   cursor: "pointer",
                                   fontSize: 16
                                 }}
@@ -357,21 +357,21 @@ export default function AffiliateApplications() {
                                         </div>
                                       )}
 
-                                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>
+                                      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 3 }}>
                                         {asset.title || 'Untitled Asset'}
                                       </div>
-                                      <div style={{ fontSize: 12, color: '#93c5fd', marginBottom: 6 }}>
+                                      <div style={{ fontSize: 16, color: '#93c5fd', marginBottom: 6 }}>
                                         {getAssetType(asset)}
                                       </div>
 
-                                      <div style={{ fontSize: 13, color: '#cbd5e1', whiteSpace: 'pre-wrap' }}>
+                                      <div style={{ fontSize: 16, color: '#cbd5e1', whiteSpace: 'pre-wrap' }}>
                                         {expandedText ? description : truncateText(description, 120) || 'No description'}
                                       </div>
 
                                       {showToggle && (
                                         <button
                                           type="button"
-                                          style={{ marginTop: 8, background: '#334155', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer' }}
+                                          style={{ marginTop: 8, background: '#334155', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 8px', fontSize: 16, cursor: 'pointer' }}
                                           onClick={() => toggleAssetText(asset.id)}
                                         >
                                           {expandedText ? 'Show less' : 'Expand text'}
@@ -381,7 +381,7 @@ export default function AffiliateApplications() {
                                       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                                         <button
                                           type="button"
-                                          style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 12, cursor: 'pointer' }}
+                                          style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 16, cursor: 'pointer' }}
                                           onClick={() => {
                                             navigator.clipboard.writeText(description || '');
                                             alert('Asset text copied.');
@@ -393,7 +393,7 @@ export default function AffiliateApplications() {
                                         {asset.link && (
                                           <button
                                             type="button"
-                                            style={{ background: '#22c55e', color: '#04120a', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 12, cursor: 'pointer' }}
+                                            style={{ background: '#22c55e', color: '#04120a', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 16, cursor: 'pointer' }}
                                             onClick={() => {
                                               navigator.clipboard.writeText(asset.link);
                                               alert('Asset link copied.');

@@ -1,8 +1,9 @@
-﻿// /pages/api/lists/index.js
+// /pages/api/lists/index.js
 // FULL REPLACEMENT
 // Server-side lists API (service role). No browser supabase client import.
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -11,18 +12,15 @@ const SERVICE_KEY =
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ ok: false, error: "GET only" });
     }
 
-    const userId = req.query.user_id || req.query.userId || null;
-    if (!userId) {
-      return res.status(400).json({ ok: false, error: "Missing user_id" });
-    }
+    const userId = req.user.id;
 
-    // Use your real table name; from your earlier work it’s lead_lists.
+    // Use your real table name; from your earlier work it�s lead_lists.
     const { data, error } = await supabaseAdmin
       .from("lead_lists")
       .select("*")
@@ -38,3 +36,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "error" });
   }
 }
+
+export default withAuth(handler);

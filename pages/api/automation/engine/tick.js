@@ -43,7 +43,7 @@ function nextFrom(nodeId, edges) {
   return e?.target || null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false },
   });
@@ -232,3 +232,15 @@ export default async function handler(req, res) {
     });
   }
 }
+
+function withCronSecret(h) {
+  return async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers['x-cron-secret'] !== secret) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return h(req, res);
+  };
+}
+
+export default withCronSecret(handler);

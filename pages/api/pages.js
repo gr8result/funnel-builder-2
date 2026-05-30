@@ -1,41 +1,58 @@
+import { withAuth } from "../../lib/withWorkspace";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
 // /pages/api/pages.js
 
-export default async function handler(req, res) {
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+async function handler(req, res) {
+  const userId = req.user.id;
 
   if (req.method === 'GET') {
     const { funnel_id } = req.query;
+    if (!funnel_id) return res.status(400).json({ error: "Missing funnel_id" });
 
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/pages?funnel_id=eq.${funnel_id}&select=*`,
-      {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-        },
-      }
-    );
+    // Verify the funnel belongs to this user before returning its pages
+    const { data: funnel } = await supabaseAdmin
+      .from("funnels")
+      .select("id")
+      .eq("id", funnel_id)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    const data = await response.json();
-    res.status(200).json(data);
+    if (!funnel) return res.status(403).json({ error: "Forbidden" });
+
+    const { data, error } = await supabaseAdmin
+      .from("pages")
+      .select("*")
+      .eq("funnel_id", funnel_id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
   }
 
   if (req.method === 'POST') {
     const { funnel_id, title, html } = req.body;
+    if (!funnel_id) return res.status(400).json({ error: "Missing funnel_id" });
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/pages`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
-      },
-      body: JSON.stringify({ funnel_id, title, html }),
-    });
+    // Verify ownership before creating a page
+    const { data: funnel } = await supabaseAdmin
+      .from("funnels")
+      .select("id")
+      .eq("id", funnel_id)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    const data = await response.json();
-    res.status(200).json(data[0]);
+    if (!funnel) return res.status(403).json({ error: "Forbidden" });
+
+    const { data, error } = await supabaseAdmin
+      .from("pages")
+      .insert({ funnel_id, title, html })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
   }
+
+  return res.status(405).json({ error: "Method not allowed" });
 }
+
+export default withAuth(handler);

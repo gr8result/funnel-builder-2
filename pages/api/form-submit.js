@@ -7,10 +7,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+import { checkRateLimit, getIp } from '../../lib/rateLimit';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  const rl = checkRateLimit(`form:${getIp(req)}`, 20, 60 * 1000);
+  if (!rl.ok) return res.status(429).json({ error: 'Too many requests.' });
 
   try {
     const { name, email } = req.body

@@ -174,7 +174,7 @@ function supportsSectionHeight(blockType) {
 }
 
 function supportsFullWidthBackground(blockType) {
-  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK].includes(blockType);
+  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK, "video-hero", "avatar-morph"].includes(blockType);
 }
 
 function isFullWidthBackgroundEnabled(block) {
@@ -619,6 +619,7 @@ function createPricingPlan(seed = 0, overrides = {}) {
     badge: "",
     cta: htmlToPlainText(overrides.cta || "Get Started"),
     highlighted: !!overrides.highlighted,
+    cardAnimation: String(overrides.cardAnimation || ""),
   };
 }
 
@@ -685,6 +686,7 @@ const BLOCK_STYLE_PRESETS = {
     { id: "hero-editorial", label: "Editorial Loft", props: { heroVariant: "editorial", spacingScale: "luxury", textAnimation: "fade-up", subheadlineAnimation: "slide-left", backgroundColor: "linear-gradient(180deg,#f7f1e8,#efe5d8)", headlineColor: "#1f2937", textColor: "#4b5563", buttonColor: "#1f2937", buttonTextColor: "#fffaf3", contentBackground: "rgba(255,250,243,0.72)", minHeight: "620px" } },
     { id: "hero-spotlight", label: "Spotlight Glow", props: { heroVariant: "spotlight", spacingScale: "normal", textAnimation: "fade-up", subheadlineAnimation: "fade-in", backgroundColor: "radial-gradient(circle at top,#1d4ed8 0%,#0f172a 58%,#020617 100%)", headlineColor: "#ffffff", textColor: "#dbeafe", buttonColor: "#22d3ee", buttonTextColor: "#082f49", contentBackground: "rgba(15,23,42,0.22)", minHeight: "500px" } },
     { id: "hero-framed", label: "Minimal Frame", props: { heroVariant: "framed", spacingScale: "normal", textAnimation: "fade-up", subheadlineAnimation: "fade-in", backgroundColor: "linear-gradient(180deg,#ffffff,#f8fafc)", headlineColor: "#0f172a", textColor: "#475569", buttonColor: "#0f172a", buttonTextColor: "#ffffff", contentBackground: "rgba(255,255,255,0.92)", borderColor: "rgba(203,213,225,0.88)", minHeight: "520px" } },
+    { id: "hero-orbit", label: "Orbit Avatar", props: { heroVariant: "orbit", spacingScale: "normal", textAnimation: "fade-up", subheadlineAnimation: "fade-in", backgroundColor: "linear-gradient(180deg,#020617,#0f172a 55%,#081728)", headlineColor: "#ffffff", textColor: "#94a3b8", buttonColor: "#22d3ee", buttonTextColor: "#082f49", contentBackground: "transparent", minHeight: "680px" } },
   ],
   [BlockTypes.FEATURE_LIST]: [
     { id: "feature-cards", label: "Showcase Cards", props: { featureVariant: "cards", layout: "columns", spacingScale: "normal", backgroundColor: "linear-gradient(180deg,#ffffff,#f8fbff)", itemBackgroundColor: "linear-gradient(165deg,#eff6ff,#ffffff)", textColor: "#0f172a", borderColor: "#dbeafe" } },
@@ -742,6 +744,11 @@ const BLOCK_STYLE_PRESETS = {
     { id: "price-contrast", label: "Contrast Cards", props: { pricingVariant: "contrast", spacingScale: "luxury", backgroundColor: "linear-gradient(180deg,#ffffff,#f3f4f6)", borderColor: "rgba(148,163,184,0.18)" } },
     { id: "price-spotlight", label: "Spotlight Glow", props: { pricingVariant: "spotlight", spacingScale: "luxury", backgroundColor: "linear-gradient(180deg,#fdfbff,#f4f3ff)", borderColor: "rgba(168,85,247,0.18)" } },
     { id: "price-matrix", label: "Comparison Matrix", props: { pricingVariant: "matrix", spacingScale: "normal", backgroundColor: "linear-gradient(180deg,#f8fbff,#eef7f4)", borderColor: "rgba(110,231,183,0.24)" } },
+  ],
+  [BlockTypes.COMPETITOR_COMPARISON]: [
+    { id: "cc-dark", label: "Dark Navy", props: { backgroundColor: "#070c18" } },
+    { id: "cc-slate", label: "Slate", props: { backgroundColor: "#0f172a" } },
+    { id: "cc-midnight", label: "Midnight", props: { backgroundColor: "#020617" } },
   ],
 };
 

@@ -1,4 +1,4 @@
-// /pages/modules/communities/index.js 
+﻿// /pages/modules/communities/index.js 
 // GR8 RESULT Communities – Global + My Community
 // Uses get_account_brand() so posts show the real business name
 // Allows users to edit/delete their own posts
@@ -53,6 +53,7 @@ export default function Communities() {
   const [globalCommunity, setGlobalCommunity] = useState(null);
   const [myCommunity, setMyCommunity] = useState(null);
   const [activeCommunityId, setActiveCommunityId] = useState(null);
+  const [communityPlanLimit, setCommunityPlanLimit] = useState(null); // null = not yet loaded; 0 = blocked
 
   const [channels, setChannels] = useState([]);
   const [selectedChannelId, setSelectedChannelId] = useState(null);
@@ -120,9 +121,29 @@ export default function Communities() {
           setNeedsAcceptance(true);
         }
 
+        // Check workspace plan for communities limit
+        let communityLimit = 1; // default to 1 if plan cannot be fetched
+        try {
+          const wsRes = await fetch("/api/workspaces", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const wsJson = await wsRes.json();
+          const workspace = (wsJson.workspaces || [])[0];
+          const plan = workspace?.plan || "starter";
+          const planLimits = { starter: 0, growth: 1, scale: 3, professional: null };
+          communityLimit = Object.prototype.hasOwnProperty.call(planLimits, plan)
+            ? planLimits[plan]
+            : null;
+          setCommunityPlanLimit(communityLimit);
+        } catch {
+          setCommunityPlanLimit(1);
+        }
+
         const [globalComm, myComm] = await Promise.all([
           ensureGlobalCommunity(currentUser),
-          ensureMyCommunity(currentUser),
+          communityLimit === null || communityLimit > 0
+            ? ensureMyCommunity(currentUser)
+            : Promise.resolve(null),
         ]);
 
         setGlobalCommunity(globalComm);
@@ -412,7 +433,9 @@ export default function Communities() {
 
     let communityId = null;
     if (targetTab === "global") communityId = globalCommunity?.id || null;
-    if (targetTab === "my") communityId = myCommunity?.id || null;
+    if (targetTab === "my" && (communityPlanLimit === null || communityPlanLimit > 0)) {
+      communityId = myCommunity?.id || null;
+    }
 
     setActiveCommunityId(communityId);
 
@@ -712,7 +735,7 @@ export default function Communities() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center" }}>
-                <CommunitiesIcon />
+                <span style={{ fontSize: 38, lineHeight: 1, marginRight: 18 }}>👥</span>
                 <div>
                   <div
                     style={{
@@ -764,7 +787,7 @@ export default function Communities() {
               display: "flex",
               gap: 14,
               fontSize: 20,
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           >
             <button
@@ -795,7 +818,37 @@ export default function Communities() {
             </button>
           </div>
 
+          {/* My Community plan gate */}
+          {tab === "my" && communityPlanLimit === 0 && (
+            <div style={{
+              maxWidth: 1320, width: "100%", margin: "0 auto 24px",
+              padding: "32px 28px", borderRadius: 16,
+              background: "linear-gradient(135deg, #1a1f2e, #0f172a)",
+              border: "1px solid rgba(239,70,93,0.3)", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+              <h3 style={{ color: "#f1f5f9", fontSize: 22, fontWeight: 600, margin: "0 0 8px" }}>
+                My Community is not available on your current plan
+              </h3>
+              <p style={{ color: "#94a3b8", fontSize: 16, margin: "0 0 20px" }}>
+                Upgrade to Growth or higher to create your own private community with channels and member discussions.
+              </p>
+              <a
+                href="/billing"
+                style={{
+                  display: "inline-block", padding: "12px 28px", borderRadius: 10,
+                  background: "linear-gradient(135deg, #ef465d, #3b82f6)",
+                  color: "#fff", fontWeight: 600, fontSize: 16, textDecoration: "none",
+                  boxShadow: "0 4px 14px rgba(239,70,93,0.4)",
+                }}
+              >
+                Upgrade Your Plan
+              </a>
+            </div>
+          )}
+
           {/* Body */}
+          {(tab !== "my" || communityPlanLimit === null || communityPlanLimit > 0) && (
           <div
             style={{
               maxWidth: 1320,
@@ -824,7 +877,7 @@ export default function Communities() {
               <div
                 style={{
                   fontSize: 20,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   marginBottom: 14,
                   letterSpacing: 0.3,
                 }}
@@ -875,7 +928,7 @@ export default function Communities() {
                       >
                         <div
                           style={{
-                            fontWeight: 700,
+                            fontWeight: 600,
                             fontSize: 18,
                             marginBottom: 2,
                           }}
@@ -905,7 +958,7 @@ export default function Communities() {
               <form onSubmit={handleCreateChannel}>
                 <div
                   style={{
-                    fontSize: 15,
+                    fontSize: 16,
                     textTransform: "uppercase",
                     letterSpacing: 0.15,
                     opacity: 0.8,
@@ -940,7 +993,7 @@ export default function Communities() {
                       borderRadius: 999,
                       border: "none",
                       fontSize: 17,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor:
                         savingChannel || !newChannelName.trim()
                           ? "default"
@@ -984,7 +1037,7 @@ export default function Communities() {
                   <div
                     style={{
                       fontSize: 24,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       marginBottom: 6,
                     }}
                   >
@@ -1033,7 +1086,7 @@ export default function Communities() {
                   <div
                     style={{
                       fontSize: 20,
-                      fontWeight: 800,
+                      fontWeight: 600,
                       marginBottom: 8,
                     }}
                   >
@@ -1098,7 +1151,7 @@ export default function Communities() {
                       borderRadius: 999,
                       border: "none",
                       fontSize: 17,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor:
                         !acceptChecked || accepting ? "default" : "pointer",
                       background:
@@ -1198,7 +1251,7 @@ export default function Communities() {
                                 marginLeft: "auto",
                                 display: "flex",
                                 gap: 12,
-                                fontSize: 14,
+                                fontSize: 16,
                               }}
                             >
                               {!isEditing && (
@@ -1279,7 +1332,7 @@ export default function Communities() {
                                   background: "transparent",
                                   color: "#e5e7eb",
                                   cursor: savingEdit ? "default" : "pointer",
-                                  fontSize: 14,
+                                  fontSize: 16,
                                 }}
                               >
                                 Cancel
@@ -1296,7 +1349,7 @@ export default function Communities() {
                                     ? "#4b5563"
                                     : "#22c55e",
                                   color: "#020617",
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   fontWeight: 600,
                                   cursor:
                                     savingEdit || !editingBody.trim()
@@ -1400,7 +1453,7 @@ export default function Communities() {
                         borderRadius: 999,
                         border: "none",
                         fontSize: 18,
-                        fontWeight: 700,
+                        fontWeight: 600,
                         cursor:
                           posting ||
                           !currentChannel ||
@@ -1424,7 +1477,7 @@ export default function Communities() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      fontSize: 14,
+                      fontSize: 16,
                       gap: 10,
                     }}
                   >
@@ -1440,7 +1493,7 @@ export default function Communities() {
                           background: "transparent",
                           color: "#e5e7eb",
                           cursor: uploadingImage ? "default" : "pointer",
-                          fontSize: 14,
+                          fontSize: 16,
                         }}
                       >
                         {uploadingImage ? "Uploading…" : "Attach image"}
@@ -1470,6 +1523,7 @@ export default function Communities() {
               </form>
             </div>
           </div>
+          )}
         </div>
       </div>
     </>

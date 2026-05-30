@@ -2,6 +2,7 @@
 // Diagnostic endpoint to see exactly what's in your flow
 
 import { createClient } from "@supabase/supabase-js";
+import withAdmin from "../../../../lib/withAdmin";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -11,7 +12,7 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const flow_id = String(req.query?.flow_id || "").trim();
     if (!flow_id) return res.status(400).json({ ok: false, error: "Missing flow_id" });
@@ -110,3 +111,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAdmin(handler);

@@ -1,6 +1,7 @@
-﻿import { readDB, getUserId } from "../../../utils/affdb";
+import { readDB, getUserId } from "../../../utils/affdb";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
   const db = await readDB();
   const userId = getUserId(req);
@@ -14,3 +15,4 @@ export default async function handler(req, res) {
   res.status(200).json({ links });
 }
 
+export default withAdmin(handler);

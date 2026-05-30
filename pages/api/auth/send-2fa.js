@@ -1,9 +1,17 @@
 import { randomInt } from 'crypto';
 import { supabase } from '../../../lib/supabaseAdmin';
 import sendEmail from '../../../lib/sendEmail';
+import { checkRateLimit, getIp } from '../../../lib/rateLimit';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const ip = getIp(req);
+  const rl = checkRateLimit(`2fa:${ip}`, 5, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return res.status(429).json({ error: 'Too many requests. Try again later.' });
+  }
+
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 

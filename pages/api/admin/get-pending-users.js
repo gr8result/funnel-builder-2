@@ -1,14 +1,15 @@
-// /pages/api/admin/get-pending-users.js
-// Admin API — Fetch all pending user approvals (bypass RLS using service role key)
+﻿// /pages/api/admin/get-pending-users.js
+// Admin API â€” Fetch all pending user approvals (bypass RLS using service role key)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAdmin } from "../../../lib/withAdmin";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { data, error } = await supabase
       .from("accounts")
@@ -24,3 +25,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

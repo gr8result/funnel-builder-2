@@ -3,6 +3,16 @@ import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { LineChart } from "lucide-react";
 import ICONS from "./iconMap";
+import { useWorkspace } from "../hooks/useWorkspace";
+
+// Helper — if item has no `roles`, it's visible to everyone.
+// If role is null/unknown (loading or no workspace), show everything —
+// the API endpoints enforce real security; nav hiding is just UX.
+function canSee(item, role) {
+  if (!item.roles) return true;
+  if (!role) return true;  // unknown role → show all, API will block unauthorised actions
+  return item.roles.includes(role);
+}
 
 // Same network / circle style icon for Communities (Option 3)
 const CommunitiesIcon = ({ size = 24, color = "#fff" }) => (
@@ -24,17 +34,17 @@ const CommunitiesIcon = ({ size = 24, color = "#fff" }) => (
   </svg>
 );
 
+// Role constants for readability
+const ALL       = undefined;           // visible to every role
+const OWNERS    = ["owner"];
+const MGMT      = ["owner", "admin"];
+const SALES_UP  = ["owner", "admin", "sales"];
+const MKT_UP    = ["owner", "admin", "marketing"];
+const CRM_ROLES = ["owner", "admin", "sales", "support", "marketing"];
+
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Navigation Dashboard", icon: ICONS.dashboard, color: "u01" },
-
-  // ⭐ Priority To-Do List (same as dashboard card 1)
-  {
-    href: "/store/dashboard",
-    label: "Command Centre",
-    icon: ICONS.dashboard,
-    color: "u01", // same green as dashboard
-  },
-
+  { href: "/dashboard",       label: "Navigation Dashboard",     icon: ICONS.dashboard,  color: "u01", emoji: "🧩" },
+  { href: "/store/dashboard", label: "Command Centre",            icon: ICONS.dashboard,  color: "u01", roles: MGMT, emoji: "📌" },
   {
     href: "/marketplace",
     label: "The Xchange Marketplace",
@@ -42,112 +52,41 @@ const NAV_ITEMS = [
     color: "u23",
     target: "_blank",
     rel: "noopener noreferrer",
+    emoji: "🛍️",
   },
-
-  {
-    href: "/modules/vendor",
-    label: "Vendor's Dashboard",
-    icon: ICONS.marketplace,
-    color: "u01", // Use same green as Dashboard for visibility
-  },
-  {
-    href: "/modules/affiliates",
-    label: "Affiliates Dashboard",
-    icon: ICONS.affiliates,
-    color: "u18",
-  },
-  { href: "/assets", label: "Media Library", icon: ICONS.assets, color: "u03" },
-  { href: "/leads", label: "Leads", icon: ICONS.leads, color: "u04" },
-  { href: "/account", label: "Account", icon: ICONS.account, color: "u05" },
-  { href: "/billing", label: "Billing & Modules", icon: ICONS.billing, color: "u06" },
-  {
-    href: "/modules/communities",
-    label: "Communities",
-    icon: CommunitiesIcon,
-    color: "u17",
-  },
-  {
-    href: "/modules/accounting",
-    label: "Accounting",
-    icon: ICONS.billing,
-    color: "u21",
-  },
+  { href: "/modules/vendor",     label: "Vendor's Dashboard",    icon: ICONS.marketplace, color: "u01", roles: MGMT, emoji: "🏪" },
+  { href: "/modules/affiliates", label: "Affiliates Dashboard",  icon: ICONS.affiliates,  color: "u18", roles: MGMT, emoji: "🤝" },
+  { href: "/assets",             label: "Media Library",         icon: ICONS.assets,      color: "u03", emoji: "🖼️" },
+  { href: "/leads",              label: "Leads",                 icon: ICONS.leads,       color: "u04", roles: CRM_ROLES, emoji: "📥" },
+  { href: "/account",            label: "Account",               icon: ICONS.account,     color: "u05", roles: OWNERS, emoji: "⚙️" },
+  { href: "/modules/email/crm/teams", label: "Team Members",      icon: ICONS.account,     color: "u27", roles: MGMT, emoji: "👥" },
+  { href: "/billing",            label: "Pricing & Billing",     icon: ICONS.billing,     color: "u06", roles: OWNERS, emoji: "🧾" },
+  { href: "/modules/communities",label: "Communities",           icon: CommunitiesIcon,   color: "u17", emoji: "👥" },
+  { href: "/modules/accounting", label: "Accounting",            icon: ICONS.billing,     color: "u21", roles: MGMT, emoji: "📊" },
 ];
 
 // ⭐ MODULE ITEMS — Email first, CRM second, then everything else
 const MODULE_ITEMS = [
-  {
-    href: "/modules/email",
-    label: "Email marketing",
-    icon: ICONS.email,
-    color: "u10",
-  },
-  {
-    href: "/modules/email/crm",
-    label: "CRM",
-    icon: ICONS.account,
-    color: "u22", // new colour band – pink
-  },
-  {
-    label: "SMS Marketing",
-    desc: "SMS",
-    href: "/modules/email/crm/sms-dashboard",
-    icon: ICONS.sms,
-    color: "u33",
-  },
-  {
-    href: "/modules/social_media/dashboard",
-    label: "Social Media",
-    icon: ICONS.social,
-    color: "u25",
-  },
-  {
-    href: "/modules/calendar/dashboard",  
-    label: "Calendar Booking", 
-    icon: ICONS.calendar,
-    color: "u15",
-  },
-  {
-    href: "/modules/website-builder",
-    label: "Website builder",
-    icon: ICONS.websiteBuilder,
-    color: "u07",
-  },
-  {
-    href: "/funnels",
-    label: "Funnels",
-    icon: ICONS.funnels,
-    color: "u08",
-  },
-  {
-    href: "/modules/business-automation",
-    label: "Business automation",
-    icon: ICONS.automation,
-    color: "u09",
-  },
-  {
-    href: "/modules/webinars",
-    label: "Webinars",
-    icon: ICONS.webinars,
-    color: "u14",
-  },
-  {
-    href: "/modules/pipelines",
-    label: "Subscription pipeline",
-    icon: ICONS.subscription,
-    color: "u16",
-  },
-  {
-    href: "/modules/agency",
-    label: "Agency Dashboard",
-    icon: ICONS.agency,
-    color: "u19",
-  },
+  { href: "/modules/email",                    label: "Email Marketing",       icon: ICONS.email,          color: "u10", roles: MKT_UP,   emoji: "📧" },
+  { href: "/modules/email/crm",                label: "CRM",                   icon: ICONS.account,        color: "u22", roles: CRM_ROLES, emoji: "🗂️" },
+  { href: "/modules/construction",               label: "Projects Hub",          icon: ICONS.funnels,        color: "u09", roles: MGMT,     emoji: "🗂️" },
+  { href: "/modules/email/crm/sms-dashboard",  label: "SMS Marketing",         icon: ICONS.sms,            color: "u33", roles: MKT_UP,   emoji: "💬" },
+  { href: "/modules/social_media/dashboard",   label: "Social Media",          icon: ICONS.social,         color: "u25", roles: MKT_UP,   emoji: "📱" },
+  { href: "/modules/calendar/dashboard",       label: "Booking Calendar",      icon: ICONS.calendar,       color: "u15", roles: SALES_UP, emoji: "📅" },
+  { href: "/modules/website-builder",          label: "Website Builder",       icon: ICONS.websiteBuilder, color: "u07", roles: MKT_UP,   emoji: "🌐" },
+  { href: "/funnels",                          label: "Sales Funnels",         icon: ICONS.funnels,        color: "u08", roles: MKT_UP },
+
+  { href: "/modules/business-automation",      label: "Business Automation",   icon: ICONS.automation,     color: "u09", roles: MGMT,    emoji: "⚙️" },
+  { href: "/modules/webinars",                 label: "Evergreen Webinars",    icon: ICONS.webinars,       color: "u14", roles: MKT_UP,  comingSoon: true, emoji: "🎥" },
+  { href: "/modules/pipelines",               label: "Subscription Pipelines",icon: ICONS.subscription,   color: "u16", roles: MGMT,    comingSoon: true, emoji: "🌿" },
+  { href: "/modules/hr",                       label: "Human Resources",       icon: ICONS.hr,             color: "u28", roles: MGMT,    comingSoon: true, emoji: "👨‍💼" },
+  { href: "/modules/agency",                   label: "Agency Dashboard",      icon: ICONS.agency,         color: "u19", roles: MGMT,    comingSoon: true, emoji: "🏢" },
 ];
 
 export default function SideNav() {
   const router = useRouter();
   const [activePath, setActivePath] = useState(router.pathname);
+  const { role, loading: wsLoading } = useWorkspace();
 
   useEffect(() => {
     if (router.isReady) setActivePath(router.pathname);
@@ -157,6 +96,12 @@ export default function SideNav() {
     if (!router.isReady) return false;
     return activePath === href || activePath.startsWith(href + "/");
   };
+
+  // While workspaces are still loading show everything — avoids a flash of
+  // restricted nav before the role is known.
+  const effectiveRole = wsLoading ? null : role;
+  const visibleCore    = NAV_ITEMS.filter((item) => canSee(item, effectiveRole));
+  const visibleModules = MODULE_ITEMS.filter((item) => canSee(item, effectiveRole));
 
   return (
     <aside className="sidenav">
@@ -171,7 +116,7 @@ export default function SideNav() {
       <div className="sections">
         <div className="section">
           <h4>Core</h4>
-          {NAV_ITEMS.map((item) => (
+          {visibleCore.map((item) => (
             <Link key={item.href} href={item.href}>
               <div
                 className={`nav-item ${item.color} ${
@@ -181,7 +126,9 @@ export default function SideNav() {
                 {...(item.rel ? { rel: item.rel } : {})}
               >
                 <span className="icon">
-                  {item.icon && <item.icon color="#fff" size={18} />}
+                  {item.emoji
+                    ? <span style={{ fontSize: 17, lineHeight: 1 }}>{item.emoji}</span>
+                    : item.icon && <item.icon color="#fff" size={18} />}
                 </span>
                 <span className="label">{item.label}</span>
               </div>
@@ -191,15 +138,17 @@ export default function SideNav() {
 
         <div className="section">
           <h4>Modules</h4>
-          {MODULE_ITEMS.map((item) => (
+          {visibleModules.map((item) => (
             <Link key={item.href} href={item.href}>
               <div
                 className={`nav-item ${item.color} ${
                   isActive(item.href) ? "active" : ""
-                }`}
+                }${item.comingSoon ? " coming-soon" : ""}`}
               >
                 <span className="icon">
-                  {item.icon && <item.icon color="#fff" size={18} />}
+                  {item.emoji
+                    ? <span style={{ fontSize: 17, lineHeight: 1 }}>{item.emoji}</span>
+                    : item.icon && <item.icon color="#fff" size={18} />}
                 </span>
                 <span className="label">{item.label}</span>
               </div>
@@ -208,10 +157,7 @@ export default function SideNav() {
         </div>
       </div>
 
-      <div className="bottom-actions">
-        <button className="funnel-btn import">Import Funnel</button>
-        <button className="funnel-btn export">Export Funnel</button>
-      </div>
+
 
       <style jsx>{`
         .sidenav {
@@ -224,7 +170,7 @@ export default function SideNav() {
           color: #fff;
           display: flex;
           flex-direction: column;
-          padding: 18px;
+          padding: 18px 18px 80px;
           box-sizing: border-box;
           overflow-y: auto;
           overflow-x: hidden;
@@ -314,6 +260,7 @@ export default function SideNav() {
         .u08 { border-color: #ef465d; }
         .u09 { border-color: #fb923c; }
         .u10 { border-color: #facc15; }
+        .u11 { border-color: #38bdf8; } /* Gantt Charts — sky blue */
         .u12 { border-color: #ec4899; }
         .u13 { border-color: #0ea5e9; }
         .u14 { border-color: #ef4444; }
@@ -326,13 +273,12 @@ export default function SideNav() {
         .u21 { border-color: #0ea5e9; } /* Accounting blue */
         .u22 { border-color: #ec4899; } /* CRM */
         .u23 { border-color: #0d87f1; } /* Marketplace */
+        .u26 { border-color: #34d399; } /* Pricing */
+        .u27 { border-color: #f97316; } /* Team Members orange */
+        .u28 { border-color: #3b82f6; } /* Human Resources blue */
         .u24 { border-color: #0df118; } /* Vendor's Dashboard */
         .u25 { border-color: #8126e9; }
-        .u33 { border-color: #06b6d4; } /* SMS Marketing 
-    .nav-item.u33 .label { color: #fff; }
-    .nav-item.u33:hover .label, .active.u33 .label { color: #000; }
-  .nav-item.u33 { color: #fff; }
-  .nav-item.u33:hover, .active.u33 { background: #06b6d4; border-color: #06b6d4; color: #000; }
+        .u33 { border-color: #06b6d4; } /* SMS Marketing */
 
         /* Active + hover fill colours (dashboard-style full colour) */
         .nav-item.u01:hover,
@@ -355,6 +301,8 @@ export default function SideNav() {
         .active.u09 { background: #fb923c; border-color: #fb923c; color: #000; }
         .nav-item.u10:hover,
         .active.u10 { background: #facc15; border-color: #facc15; color: #000; }
+        .nav-item.u11:hover,
+        .active.u11 { background: #38bdf8; border-color: #38bdf8; color: #000; }
         .nav-item.u12:hover,
         .active.u12 { background: #ec4899; border-color: #ec4899; color: #000; }
         .nav-item.u13:hover,
@@ -383,7 +331,13 @@ export default function SideNav() {
         .active.u24 { background: #0df118; border-color: #0df118; color: #000; }
         .nav-item.u25:hover,
         .active.u25 { background: #8126e9; border-color: #8126e9; color: #000; }
-        .nav-item.u33:hover 
+        .nav-item.u27:hover,
+        .active.u27 { background: #f97316; border-color: #f97316; color: #000; }
+        .nav-item.u28:hover,
+        .active.u28 { background: #3b82f6; border-color: #3b82f6; color: #000; }
+        .nav-item.coming-soon { opacity: 0.45; }
+        .nav-item.coming-soon:hover { opacity: 0.75; }
+        .nav-item.u33:hover,
         .active.u33 { background: #06b6d4; border-color: #06b6d4; color: #000; }
 
         .bottom-actions {

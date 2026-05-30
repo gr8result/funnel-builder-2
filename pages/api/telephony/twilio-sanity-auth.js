@@ -1,7 +1,8 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/telephony/twilio-sanity-auth.js
 // ✅ Uses ACCOUNT_SID + AUTH_TOKEN to prove Twilio + account are correct (independent of API Keys)
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const accountSid = String(process.env.TWILIO_ACCOUNT_SID || "").trim();
     const authToken = String(process.env.TWILIO_AUTH_TOKEN || "").trim();
@@ -32,3 +33,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

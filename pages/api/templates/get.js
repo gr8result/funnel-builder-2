@@ -4,8 +4,9 @@
 // Returns { ok:true, html:"..." }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ ok: false, error: "GET only" });
@@ -39,3 +40,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

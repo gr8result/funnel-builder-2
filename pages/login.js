@@ -150,7 +150,19 @@ export default function Login() {
         .maybeSingle();
 
       if (!account) {
-        // If account doesn't exist, redirect to onboarding
+        // Check workspace membership via the API (uses service-role key, bypasses RLS).
+        // If this user belongs to any workspace they were invited to, they're a team member
+        // — skip onboarding and go straight to the dashboard.
+        const token = data.session?.access_token;
+        const wsRes = await fetch("/api/workspaces", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const wsJson = await wsRes.json().catch(() => ({}));
+        if (wsJson.workspaces?.length > 0) {
+          return router.push("/dashboard");
+        }
+
+        // No account and no workspace → brand-new owner signup, send to onboarding
         await supabase.from("accounts").insert([
           {
             user_id: user.id,
@@ -325,7 +337,7 @@ const box = {
   boxShadow: "0 0 14px rgba(0,0,0,0.5)",
 };
 
-const title = { fontSize: 22, fontWeight: 700, margin: "12px 0 4px" };
+const title = { fontSize: 22, fontWeight: 600, margin: "12px 0 4px" };
 const subtitle = { opacity: 0.8, fontSize: 18, marginBottom: 20 };
 const label = { fontWeight: 600, fontSize: 16, marginTop: 10, display: "block" };
 const input = {
@@ -346,7 +358,7 @@ const showBtn = {
   border: "none",
   color: "#60a5fa",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
 };
 const btnMain = {
   width: "100%",
@@ -354,7 +366,7 @@ const btnMain = {
   color: "#fff",
   border: "none",
   borderRadius: 10,
-  fontWeight: 900,
+  fontWeight: 600,
   padding: "12px",
   marginTop: 12,
   cursor: "pointer",
@@ -364,7 +376,7 @@ const linkBtn = {
   border: "none",
   color: "#60a5fa",
   cursor: "pointer",
-  fontSize: 14,
+  fontSize: 16,
   marginTop: 6,
 };
 const msgBox = (success) => ({

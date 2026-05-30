@@ -17,10 +17,14 @@ import {
   tagSubscriber,
 } from "../../../lib/emailDB";
 
+import { checkRateLimit, getIp } from "../../../lib/rateLimit";
+
 export const config = { api: { bodyParser: true } };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).send("Method not allowed");
+  const rl = checkRateLimit(`form:${getIp(req)}`, 20, 60 * 1000);
+  if (!rl.ok) return res.status(429).json({ error: "Too many submissions. Please try again shortly." });
   try {
     const body = normalise(req.body);
     const {

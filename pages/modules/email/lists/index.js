@@ -1,4 +1,4 @@
-// /pages/modules/email/lists/index.js
+﻿// /pages/modules/email/lists/index.js
 // GR8 RESULT — BULK DELETE + BIG CHECKBOXES + NAME SORTING + SHARED AVATARS
 // ✅ Restores click-to-open Lead Details modal (row click)
 // ✅ Prevents row-click when using checkbox / edit / delete buttons
@@ -612,7 +612,7 @@ export default function EmailListsDashboard() {
                           borderRadius: "6px",
                           padding: "10px 12px",
                           fontSize: "16px",
-                          fontWeight: "700",
+                          fontWeight: "600",
                           marginRight: "6px",
                         }}
                       >
@@ -660,7 +660,7 @@ export default function EmailListsDashboard() {
                   border: "none",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  fontWeight: "700",
+                  fontWeight: "600",
                   cursor: "pointer",
                 }}
                 onClick={openAddSubscriber}
@@ -678,7 +678,7 @@ export default function EmailListsDashboard() {
                   border: "none",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  fontWeight: "700",
+                  fontWeight: "600",
                   cursor: "pointer",
                 }}
               >
@@ -694,7 +694,7 @@ export default function EmailListsDashboard() {
                   border: "none",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  fontWeight: "700",
+                  fontWeight: "600",
                   cursor: "pointer",
                 }}
                 onClick={openImportCSV}
@@ -711,7 +711,7 @@ export default function EmailListsDashboard() {
                   border: "none",
                   borderRadius: "8px",
                   padding: "10px 14px",
-                  fontWeight: "700",
+                  fontWeight: "600",
                   cursor: "pointer",
                 }}
                 onClick={exportCSV}
@@ -752,7 +752,7 @@ export default function EmailListsDashboard() {
                       background: "#2563eb",
                       border: "none",
                       borderRadius: "6px",
-                      fontWeight: "700",
+                      fontWeight: "600",
                       color: "#fff",
                       padding: "6px 12px",
                       cursor: "pointer",
@@ -767,7 +767,7 @@ export default function EmailListsDashboard() {
                       background: "#4b5563",
                       border: "none",
                       borderRadius: "6px",
-                      fontWeight: "700",
+                      fontWeight: "600",
                       color: "#fff",
                       padding: "6px 12px",
                       cursor: "pointer",
@@ -1072,7 +1072,7 @@ export default function EmailListsDashboard() {
                     background: "#22c55e",
                     border: "none",
                     borderRadius: "8px",
-                    fontWeight: "700",
+                    fontWeight: "600",
                     color: "#fff",
                     padding: "18px 14px",
                     cursor: "pointer",
@@ -1087,7 +1087,7 @@ export default function EmailListsDashboard() {
                     background: "#4b5563",
                     border: "none",
                     borderRadius: "8px",
-                    fontWeight: "700",
+                    fontWeight: "600",
                     color: "#fff",
                     padding: "18px 14px",
                     cursor: "pointer",
@@ -1177,7 +1177,7 @@ export default function EmailListsDashboard() {
                     background: "#22c55e",
                     border: "none",
                     borderRadius: "8px",
-                    fontWeight: "700",
+                    fontWeight: "600",
                     color: "#fff",
                     padding: "12px 16px",
                     cursor: "pointer",
@@ -1192,7 +1192,7 @@ export default function EmailListsDashboard() {
                     background: "#4b5563",
                     border: "none",
                     borderRadius: "8px",
-                    fontWeight: "700",
+                    fontWeight: "600",
                     color: "#fff",
                     padding: "12px 16px",
                     cursor: "pointer",

@@ -1,9 +1,10 @@
-﻿// pages/api/entitlements/start.js
+// pages/api/entitlements/start.js
 import cookie from "cookie";
+import { withAdmin } from "../../../lib/withAdmin";
 
 const COOKIE_NAME = "gr8_entitlements";
 
-export default function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false });
 
   const { module: moduleKey, plan = "trial", trialDays = 14 } = req.query;
@@ -35,3 +36,4 @@ export default function handler(req, res) {
   return res.status(200).json({ ok: true, store });
 }
 
+export default withAdmin(handler);

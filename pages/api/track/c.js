@@ -8,9 +8,11 @@ const ROOT = path.join(process.cwd(),"data","crm","lists");
 export default function handler(req,res){
   try{
     const { l: listId, c: contactId, u } = req.query;
-    if(listId && contactId){
+    // Path traversal guard: listId must be alphanumeric/hyphen/underscore only
+    if(listId && contactId && /^[\w-]+$/.test(listId)){
       const file = path.join(ROOT, `${listId}.json`);
-      if(fs.existsSync(file)){
+      // Double-check resolved path stays within ROOT (defence-in-depth)
+      if(file.startsWith(ROOT) && fs.existsSync(file)){
         const obj = JSON.parse(fs.readFileSync(file,"utf8"));
         const sub = (obj.subscribers||[]).find(s=>s.id===contactId);
         if(sub){
@@ -24,11 +26,12 @@ export default function handler(req,res){
         }
       }
     }
-    const dest = typeof u === "string" ? u : "/";
+    // Only allow http/https URLs to prevent javascript: URI attacks
+    const dest = typeof u === "string" && /^https?:\/\//i.test(u) ? u : "/";
     res.writeHead(302,{ Location: dest });
     res.end();
   }catch(e){
-    res.writeHead(302,{ Location: typeof req.query.u==="string" ? req.query.u : "/" });
+    res.writeHead(302,{ Location: "/" });
     res.end();
   }
 }

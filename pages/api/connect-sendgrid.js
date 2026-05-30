@@ -3,6 +3,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
+import { withAuth } from "../../lib/withWorkspace";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey =
@@ -25,7 +26,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 // ✅ Create Supabase admin client
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     console.log("📡 /api/connect-sendgrid.js triggered");
 
@@ -93,3 +94,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

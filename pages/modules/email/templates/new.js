@@ -1,4 +1,4 @@
-// /pages/modules/email/templates/new.js
+﻿// /pages/modules/email/templates/new.js
 // FULL REPLACEMENT
 // ✅ Removes broken import: @services/supabaseClient
 // ✅ Removes missing dependency: mjml
@@ -71,7 +71,7 @@ export default function NewEmailTemplate() {
           color: "#111",
           padding: "18px 22px",
           borderRadius: "16px",
-          fontWeight: 800,
+          fontWeight: 600,
           fontSize: 30,
           display: "flex",
           alignItems: "center",
@@ -83,7 +83,7 @@ export default function NewEmailTemplate() {
           <span style={{ fontSize: 44 }}>🧩</span>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span>New template</span>
-            <span style={{ fontSize: 14, fontWeight: 500, opacity: 0.9 }}>
+            <span style={{ fontSize: 16, fontWeight: 500, opacity: 0.9 }}>
               Create HTML and save it to your finished-emails library.
             </span>
           </div>
@@ -94,8 +94,8 @@ export default function NewEmailTemplate() {
           style={{
             background: "#111",
             color: "#fff",
-            fontSize: 14,
-            fontWeight: 700,
+            fontSize: 16,
+            fontWeight: 600,
             borderRadius: 8,
             padding: "6px 14px",
             textDecoration: "none",
@@ -118,7 +118,7 @@ export default function NewEmailTemplate() {
         >
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 320px" }}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>
                 Template name
               </div>
               <input
@@ -146,7 +146,7 @@ export default function NewEmailTemplate() {
                   border: "1px solid #15803d",
                   background: "#16a34a",
                   color: "#fff",
-                  fontWeight: 900,
+                  fontWeight: 600,
                   cursor: "pointer",
                   opacity: busy ? 0.7 : 1,
                 }}
@@ -156,7 +156,7 @@ export default function NewEmailTemplate() {
             </div>
 
             <div style={{ flex: "2 1 640px" }}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>HTML</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>HTML</div>
               <textarea
                 value={html}
                 onChange={(e) => setHtml(e.target.value)}
@@ -168,7 +168,7 @@ export default function NewEmailTemplate() {
                   border: "1px solid rgba(255,255,255,0.12)",
                   background: "#0b1220",
                   color: "#fff",
-                  fontSize: 14,
+                  fontSize: 16,
                   fontFamily:
                     "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                 }}

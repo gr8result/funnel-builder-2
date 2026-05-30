@@ -8,13 +8,26 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { persistImageForUser } from "../social/save-image";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-    const { imageUrl, base64: bodyBase64, userId: bodyUserId } = req.body || {};
+    const { imageUrl, base64: bodyBase64 } = req.body || {};
     if (!imageUrl && !bodyBase64) return res.status(400).json({ error: "Missing imageUrl or base64" });
+
+    // SSRF protection: only allow https:// URLs to public hosts
+    if (imageUrl && !bodyBase64) {
+      let parsedUrl;
+      try { parsedUrl = new URL(imageUrl); } catch { return res.status(400).json({ error: "Invalid imageUrl" }); }
+      if (parsedUrl.protocol !== "https:") return res.status(400).json({ error: "imageUrl must use https" });
+      // Block private/internal IP ranges
+      const host = parsedUrl.hostname.toLowerCase();
+      if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/.test(host)) {
+        return res.status(400).json({ error: "imageUrl must be a public URL" });
+      }
+    }
 
     const apiKey = String(process.env.REMOVEBG_API_KEY || "").trim();
     const normalizedApiKey = apiKey.toLowerCase();
@@ -36,16 +49,7 @@ export default async function handler(req, res) {
       auth: { persistSession: false },
     });
 
-    let userId = String(bodyUserId || "").trim() || null;
-    if (!userId) {
-      const authHeader = req.headers.authorization || "";
-      if (authHeader.startsWith("Bearer ")) {
-        const jwt = authHeader.replace("Bearer ", "").trim();
-        const { data } = await supabaseAdmin.auth.getUser(jwt);
-        userId = data?.user?.id || null;
-      }
-    }
-    if (!userId) userId = "anonymous";
+    const userId = req.user.id || "anonymous";
 
     let imgBuf;
     if (bodyBase64) {
@@ -92,3 +96,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

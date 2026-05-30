@@ -14,8 +14,60 @@ const PRICING = {
   "subscription": { name: "Subscription Pipeline", price: 19 },
   "communities": { name: "Communities", price: 19 },
   "social": { name: "Social Media", price: 29 },
-  "subaccounts": { name: "Subaccounts", price: 19 },
+  // "subaccounts" removed — workspace model replaces agency/subaccount architecture
   "digital-products": { name: "Digital Products", price: 19 },
+
+  // ====== WEBSITE BUILDER PLANS ======
+  "website-starter": {
+    name: "Website Builder — Starter",
+    price: 29,
+    limits: { websites: 1, customDomain: false, aiBuilder: false, ecommerce: false, blogPages: 5 },
+    upgradeTo: "website-growth",
+  },
+  "website-growth": {
+    name: "Website Builder — Growth",
+    price: 59,
+    limits: { websites: 3, customDomain: true, aiBuilder: "content", ecommerce: false, blogPages: "unlimited" },
+    upgradeTo: "website-pro",
+  },
+  "website-pro": {
+    name: "Website Builder — Scale",
+    price: 79,
+    limits: { websites: 7, customDomain: true, aiBuilder: "full", ecommerce: true, blogPages: "unlimited" },
+    upgradeTo: "website-agency",
+  },
+  "website-agency": {
+    name: "Website Builder — Professional",
+    price: 149,
+    limits: { websites: "unlimited", customDomain: true, aiBuilder: "full", ecommerce: true, blogPages: "unlimited" },
+    upgradeTo: null,
+  },
+
+  // ====== CALENDAR BOOKING PLANS ======
+  "calendar-starter": {
+    name: "Calendar — Starter",
+    price: 19,
+    limits: { calendars: 1, bookingsPerMonth: 50, bookingPages: 1, teamMembers: 1 },
+    upgradeTo: "calendar-growth",
+  },
+  "calendar-growth": {
+    name: "Calendar — Growth",
+    price: 29,
+    limits: { calendars: "unlimited", bookingsPerMonth: "unlimited", bookingPages: 5, teamMembers: 3 },
+    upgradeTo: "calendar-pro",
+  },
+  "calendar-pro": {
+    name: "Calendar — Scale",
+    price: 79,
+    limits: { calendars: "unlimited", bookingsPerMonth: "unlimited", bookingPages: "unlimited", teamMembers: "unlimited" },
+    upgradeTo: "calendar-agency",
+  },
+  "calendar-agency": {
+    name: "Calendar — Professional",
+    price: 149,
+    limits: { calendars: "unlimited", bookingsPerMonth: "unlimited", bookingPages: "unlimited", teamMembers: "unlimited" },
+    upgradeTo: null,
+  },
 
   // ====== EMAIL MARKETING PLANS ======
   "email-free": {
@@ -25,26 +77,26 @@ const PRICING = {
   },
   "email-starter": {
     name: "Email Marketing — Starter",
-    price: 29,
-    limits: { subscribers: 500, monthlyEmails: 1000 },
+    price: 59,
+    limits: { subscribers: 5000, monthlyEmails: 50000 },
     upgradeTo: "email-growth",
   },
   "email-growth": {
     name: "Email Marketing — Growth",
     price: 99,
-    limits: { subscribers: 2000, monthlyEmails: 10000 },
+    limits: { subscribers: 15000, monthlyEmails: 150000 },
     upgradeTo: "email-pro",
   },
   "email-pro": {
     name: "Email Marketing — Pro",
     price: 199,
-    limits: { subscribers: 10000, monthlyEmails: 50000 },
+    limits: { subscribers: 40000, monthlyEmails: 400000 },
     upgradeTo: "email-advanced",
   },
   "email-advanced": {
     name: "Email Marketing — Advanced",
     price: 499,
-    limits: { subscribers: 50000, monthlyEmails: 250000 },
+    limits: { subscribers: 200000, monthlyEmails: 2000000 },
     upgradeTo: "email-enterprise",
   },
   "email-enterprise": {
@@ -86,7 +138,7 @@ const PRICING = {
   },
   "sms-professional": {
     name: "SMS Marketing — Professional",
-    price: 250,
+    price: 229,
     limits: {
       monthlyMessages: 5000,
       listSize: 5000,
@@ -95,7 +147,7 @@ const PRICING = {
   },
   "sms-business": {
     name: "SMS Marketing — Business",
-    price: 450,
+    price: 429,
     limits: {
       monthlyMessages: 10000,
       listSize: 10000,
@@ -160,6 +212,176 @@ const PRICING = {
       scheduling: true,
     },
     upgradeTo: null,
+  },
+
+  // ─── CRM tiers ─────────────────────────────────────────────────
+  "crm-starter": {
+    name: "CRM — Starter",
+    price: 19,
+    limits: { pipelines: 1, contacts: 500, automationTriggers: false, customFields: 5, apiAccess: false },
+    upgradeTo: "crm-growth",
+  },
+  "crm-growth": {
+    name: "CRM — Growth",
+    price: 29,
+    limits: { pipelines: "unlimited", contacts: 5000, automationTriggers: true, customFields: 25, apiAccess: false },
+    upgradeTo: "crm-pro",
+  },
+  "crm-pro": {
+    name: "CRM — Pro",
+    price: 79,
+    limits: { pipelines: "unlimited", contacts: 25000, automationTriggers: true, customFields: "unlimited", apiAccess: true },
+    upgradeTo: "crm-agency",
+  },
+  "crm-agency": {
+    name: "CRM — Agency",
+    price: 199,
+    limits: { pipelines: "unlimited", contacts: "unlimited", automationTriggers: true, customFields: "unlimited", apiAccess: true },
+    upgradeTo: null,
+  },
+
+  // ─── Funnel add-on packs ──────────────────────────────────────────
+  "funnel-pack-s": {
+    name: "Funnels — Pack S",
+    price: 19,
+    limits: { extraFunnels: 2 },
+    upgradeTo: "funnel-pack-m",
+  },
+  "funnel-pack-m": {
+    name: "Funnels — Pack M",
+    price: 39,
+    limits: { extraFunnels: 5 },
+    upgradeTo: "funnel-pack-l",
+  },
+  "funnel-pack-l": {
+    name: "Funnels — Pack L",
+    price: 79,
+    limits: { extraFunnels: 10 },
+    upgradeTo: "funnel-unlimited",
+  },
+  "funnel-unlimited": {
+    name: "Funnels — Unlimited",
+    price: 99,
+    limits: { extraFunnels: "unlimited" },
+    upgradeTo: null,
+  },
+
+  // ====== JOB BOARD PLANS ======
+  "job-board-starter": {
+    name: "Job Board — Starter",
+    price: 19,
+    limits: { activeJobs: 3, tasksPerJob: 25, boards: 1, users: 1, timeTracking: false, automation: false },
+    upgradeTo: "job-board-growth",
+  },
+  "job-board-growth": {
+    name: "Job Board — Growth",
+    price: 39,
+    limits: { activeJobs: 15, tasksPerJob: "unlimited", boards: 3, users: 5, timeTracking: true, automation: false },
+    upgradeTo: "job-board-pro",
+  },
+  "job-board-pro": {
+    name: "Job Board — Scale",
+    price: 79,
+    limits: { activeJobs: "unlimited", tasksPerJob: "unlimited", boards: "unlimited", users: 15, timeTracking: true, automation: true, budgetTracking: true, clientPortal: true },
+    upgradeTo: "job-board-agency",
+  },
+  "job-board-agency": {
+    name: "Job Board — Professional",
+    price: 149,
+    limits: { activeJobs: "unlimited", tasksPerJob: "unlimited", boards: "unlimited", users: "unlimited", timeTracking: true, automation: true, budgetTracking: true, clientPortal: true, whiteLabel: true, apiAccess: true },
+    upgradeTo: null,
+  },
+
+  // ====== GANTT CHARTS PLANS ======
+  "gantt-starter": {
+    name: "Gantt Charts — Starter",
+    price: 19,
+    limits: { projects: 5, tasksPerProject: 30, users: 2, milestones: true, dependencies: false, resourceAllocation: false, budgetTracking: false, criticalPath: false, clientPortal: false },
+    upgradeTo: "gantt-growth",
+  },
+  "gantt-growth": {
+    name: "Gantt Charts — Growth",
+    price: 39,
+    limits: { projects: 20, tasksPerProject: "unlimited", users: 5, milestones: true, dependencies: true, resourceAllocation: false, budgetTracking: false, criticalPath: false, clientPortal: false },
+    upgradeTo: "gantt-pro",
+  },
+  "gantt-pro": {
+    name: "Gantt Charts — Scale",
+    price: 79,
+    limits: { projects: "unlimited", tasksPerProject: "unlimited", users: 15, milestones: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true },
+    upgradeTo: "gantt-agency",
+  },
+  "gantt-agency": {
+    name: "Gantt Charts — Professional",
+    price: 149,
+    limits: { projects: "unlimited", tasksPerProject: "unlimited", users: "unlimited", milestones: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true, whiteLabel: true, apiAccess: true },
+    upgradeTo: null,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BASE_PLAN_INCLUDES
+// Maps each base platform plan to the module tier that is ALREADY INCLUDED
+// in that plan's price.  Used by module billing pages to show DELTA (upgrade)
+// pricing instead of the full standalone module price.
+//
+// Rule: upgradeExtraCost = newTierPrice - includedTierPrice
+//
+// CRM tier IDs: crm-starter | crm-growth | crm-pro | crm-agency
+// Funnel pack IDs: funnel-pack-s | funnel-pack-m | funnel-pack-l | funnel-unlimited
+// ─────────────────────────────────────────────────────────────────────────────
+// Base platform plans — prices in AUD/month
+export const BASE_PLANS = {
+  starter:      { id: "starter",      name: "GR8 RESULT — Starter Plan",      price: 159 },
+  growth:       { id: "growth",       name: "GR8 RESULT — Growth Plan",       price: 359 },
+  scale:        { id: "scale",        name: "GR8 RESULT — Scale Plan",        price: 499 },
+  professional: { id: "professional", name: "GR8 RESULT — Professional Plan", price: 999 },
+};
+
+export const BASE_PLAN_INCLUDES = {
+  starter: {
+    email:    { tierId: "email-starter",    price: 59  },  // 5,000 contacts, 50,000 sends/mo
+    sms:      { tierId: "sms-starter",      price: 25  },  // 500 SMS/mo
+    social:   { tierId: "social-starter",   price: 29  },  // 50 AI posts
+    calendar: { tierId: "calendar-starter", price: 19  },  // 1 calendar, 50 bookings/mo
+    crm:      { tierId: "crm-starter",      price: 19  },  // 1 pipeline, 500 contacts
+    website:  { tierId: "website-starter",  price: 29  },  // 1 website, templates only
+    jobBoard: { tierId: "job-board-starter", price: 19 },  // 3 active jobs, 1 board
+    gantt:    { tierId: "gantt-starter",    price: 19  },  // 5 projects, 3 phases
+    funnels:  { included: 0 },                              // landing pages only
+  },
+  growth: {
+    email:    { tierId: "email-growth",     price: 99  },  // 5,000 contacts
+    sms:      { tierId: "sms-growth",       price: 120 },  // 2,500 SMS/mo
+    social:   { tierId: "social-growth",    price: 79  },  // 200 AI posts
+    calendar: { tierId: "calendar-growth",  price: 29  },  // unlimited calendars, group booking
+    crm:      { tierId: "crm-growth",       price: 29  },  // unlimited pipelines, 5k contacts
+    website:  { tierId: "website-growth",   price: 59  },  // 3 websites, custom domain, AI content
+    jobBoard: { tierId: "job-board-growth", price: 39  },  // 15 active jobs, 3 boards, time tracking
+    gantt:    { tierId: "gantt-growth",     price: 39  },  // 20 projects, dependencies
+    funnels:  { included: 1 },                              // 1 multi-step funnel
+  },
+  scale: {
+    email:    { tierId: "email-pro",        price: 199 },  // 15,000 contacts
+    sms:      { tierId: "sms-professional", price: 229 },  // 5,000 SMS/mo
+    social:   { tierId: "social-pro",       price: 149 },  // 500 AI posts
+    calendar: { tierId: "calendar-pro",     price: 79  },  // custom branding + automations
+    crm:      { tierId: "crm-pro",          price: 79  },  // unlimited pipelines, 25k contacts
+    website:  { tierId: "website-pro",      price: 79  },  // 7 websites, full AI builder, ecommerce
+    jobBoard: { tierId: "job-board-pro",    price: 79  },  // unlimited jobs, automation, client portal
+    gantt:    { tierId: "gantt-pro",        price: 79  },  // unlimited projects, resource allocation
+    funnels:  { included: 3 },                              // 3 multi-step funnels
+  },
+  professional: {
+    email:    { tierId: "email-advanced",   price: 499 },  // 50,000 contacts
+    sms:      { tierId: "sms-business",     price: 429  },  // 10,000 SMS/mo
+    social:   { tierId: "social-agency",    price: 299  },
+    calendar: { tierId: "calendar-agency",  price: 149 },  // full professional tier
+    crm:      { tierId: "crm-agency",       price: 199 },  // unlimited + API
+    website:  { tierId: "website-agency",   price: 149 },  // unlimited websites, full AI
+    jobBoard: { tierId: "job-board-agency", price: 149 },  // unlimited, white-label, API
+    gantt:    { tierId: "gantt-agency",     price: 149 },  // unlimited, white-label, API
+    funnels:  { included: 10 },                             // 10 multi-step funnels
   },
 };
 

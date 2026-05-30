@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { GRID_ICON_LIBRARY } from "../../components/website-builder/gridIconLibrary";
 import { renderGridLibraryIcon } from "../../components/website-builder/gridIconLibrary";
 
@@ -42,10 +42,10 @@ export default function IconLibraryPage() {
     <div style={{ minHeight: "100vh", background: "#0f0f13", color: "#e5e7eb", fontFamily: "system-ui, sans-serif" }}>
       {/* Header */}
       <div style={{ padding: "24px 32px 0", borderBottom: "1px solid #1f2937" }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#f9fafb" }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#f9fafb" }}>
           Icon Library
         </h1>
-        <p style={{ margin: "4px 0 16px", fontSize: 13, color: "#6b7280" }}>
+        <p style={{ margin: "4px 0 16px", fontSize: 16, color: "#9ca3af" }}>
           {GRID_ICON_LIBRARY.length} icons · Click any icon to copy its key
         </p>
 
@@ -63,7 +63,7 @@ export default function IconLibraryPage() {
             border: "1px solid #374151",
             background: "#1f2937",
             color: "#f9fafb",
-            fontSize: 14,
+            fontSize: 16,
             outline: "none",
             marginBottom: 16,
           }}
@@ -80,7 +80,7 @@ export default function IconLibraryPage() {
                 borderRadius: 20,
                 border: "none",
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: 16,
                 fontWeight: 500,
                 background: activeGroup === g ? "#6366f1" : "#1f2937",
                 color: activeGroup === g ? "#fff" : "#9ca3af",
@@ -94,7 +94,7 @@ export default function IconLibraryPage() {
       </div>
 
       {/* Results count */}
-      <div style={{ padding: "10px 32px", fontSize: 12, color: "#6b7280" }}>
+      <div style={{ padding: "10px 32px", fontSize: 16, color: "#9ca3af" }}>
         {filtered.length} result{filtered.length !== 1 ? "s" : ""}
       </div>
 
@@ -139,7 +139,7 @@ export default function IconLibraryPage() {
             </span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 16,
                 color: "#9ca3af",
                 textAlign: "center",
                 wordBreak: "break-word",
@@ -151,8 +151,8 @@ export default function IconLibraryPage() {
             </span>
             <span
               style={{
-                fontSize: 9,
-                color: "#4b5563",
+                fontSize: 16,
+                color: "#9ca3af",
                 textAlign: "center",
                 wordBreak: "break-all",
                 maxWidth: "100%",
@@ -165,7 +165,7 @@ export default function IconLibraryPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 32px", color: "#6b7280" }}>
+        <div style={{ textAlign: "center", padding: "60px 32px", color: "#9ca3af" }}>
           No icons match &ldquo;{search}&rdquo;
         </div>
       )}

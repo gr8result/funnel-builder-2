@@ -1,4 +1,4 @@
-    // ...existing code...
+﻿    // ...existing code...
 // Style object for the page (copied from previous working version)
 const page = {
   wrap: {
@@ -301,7 +301,7 @@ export default function AffiliateApplicationForm() {
     return (
       <div style={{ color: '#fff', textAlign: 'center', padding: 40 }}>
         You must be logged in to access this form.<br />
-        <div style={{ marginTop: 20, color: '#aaa', fontSize: 14 }}>
+        <div style={{ marginTop: 20, color: '#aaa', fontSize: 16 }}>
           <b>Debug info:</b><br />
           user_code from localStorage: <code>{debugUserCode}</code><br />
           Supabase error: <code>{debugSupabaseError || "(none)"}</code><br />
@@ -459,7 +459,7 @@ export default function AffiliateApplicationForm() {
                 <label style={page.label}>Affiliate Code (auto-generated, used for 90-day cookie offers)</label>
                   {hasMounted ? (
                     <input
-                      style={{ ...page.input, borderColor: highlightFields.affiliate_id ? '#ef4444' : page.input.borderColor, background: highlightFields.affiliate_id ? '#2f0a0a' : page.input.background, letterSpacing: 2, fontWeight: 700 }}
+                      style={{ ...page.input, borderColor: highlightFields.affiliate_id ? '#ef4444' : page.input.borderColor, background: highlightFields.affiliate_id ? '#2f0a0a' : page.input.background, letterSpacing: 2, fontWeight: 600 }}
                       value={form.affiliate_id}
                       readOnly
                       maxLength={8}
@@ -468,7 +468,7 @@ export default function AffiliateApplicationForm() {
                     />
                   ) : (
                     <input
-                      style={{ ...page.input, letterSpacing: 2, fontWeight: 700 }}
+                      style={{ ...page.input, letterSpacing: 2, fontWeight: 600 }}
                       value={""}
                       readOnly
                       maxLength={8}
@@ -634,7 +634,7 @@ export default function AffiliateApplicationForm() {
                   borderRadius: 12,
                   padding: '12px 16px',
                   fontSize: 18,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: (submitting || user === undefined || !user || !canSubmit) ? 'not-allowed' : 'pointer',
                   transition: 'background 0.2s',
                   boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)'
@@ -648,7 +648,7 @@ export default function AffiliateApplicationForm() {
                 <div style={{ color: '#ef4444', fontWeight: 600, marginTop: 8, fontSize: 16 }}>
                   Please complete all required fields and check all required boxes above.
                 </div>
-                <div style={{ color: '#0ff', fontWeight: 600, marginTop: 8, fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                <div style={{ color: '#0ff', fontWeight: 600, marginTop: 8, fontSize: 16, whiteSpace: 'pre-wrap' }}>
                   {(() => {
                     const missing = [];
                     Object.entries(form).forEach(([k, v]) => {

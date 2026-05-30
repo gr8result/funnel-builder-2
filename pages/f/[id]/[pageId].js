@@ -1,4 +1,4 @@
-// pages/f/[id]/[pageId].js
+﻿// pages/f/[id]/[pageId].js
 // Legacy route — redirects to /p/[slug] if funnel has a slug,
 // otherwise shows a simple "not available" message.
 
@@ -46,7 +46,7 @@ export default function FunnelPage() {
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
-      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900 }}>Funnel Page</h1>
+      <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Funnel Page</h1>
       <p style={{ opacity: 0.8, marginTop: 8 }}>
         Funnel: <b>{String(id || "")}</b> / Page: <b>{String(pageId || "")}</b>
       </p>

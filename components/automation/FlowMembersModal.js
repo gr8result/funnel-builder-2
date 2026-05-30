@@ -1,4 +1,4 @@
-// /components/automation/FlowMembersModal.js
+﻿// /components/automation/FlowMembersModal.js
 // FULL REPLACEMENT — adds Delete button per member
 // ✅ Calls your existing API: /api/automation/members/remove-person
 // ✅ Updates UI state after delete
@@ -129,8 +129,8 @@ export default function FlowMembersModal({
           }}
         >
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ fontWeight: 800 }}>Flow Members</div>
-            <div style={{ opacity: 0.85, fontSize: 12 }}>
+            <div style={{ fontWeight: 600 }}>Flow Members</div>
+            <div style={{ opacity: 0.85, fontSize: 16 }}>
               {flowName ? `${flowName} • ` : ""}
               {flowId}
             </div>
@@ -155,7 +155,7 @@ export default function FlowMembersModal({
         </div>
 
         <div style={{ padding: 16 }}>
-          <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>
+          <div style={{ fontSize: 16, opacity: 0.85, marginBottom: 8 }}>
             ADD A LIST TO THIS FLOW
           </div>
 
@@ -190,7 +190,7 @@ export default function FlowMembersModal({
                 borderRadius: 10,
                 background: busyImport ? "#1f7a46" : "#22c55e",
                 border: "1px solid rgba(0,0,0,0.2)",
-                fontWeight: 800,
+                fontWeight: 600,
                 cursor: busyImport ? "not-allowed" : "pointer",
               }}
               title="Import"
@@ -201,7 +201,7 @@ export default function FlowMembersModal({
             <div
               style={{
                 marginLeft: "auto",
-                fontSize: 12,
+                fontSize: 16,
                 padding: "6px 10px",
                 borderRadius: 999,
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -212,7 +212,7 @@ export default function FlowMembersModal({
             </div>
           </div>
 
-          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
+          <div style={{ marginTop: 10, fontSize: 16, opacity: 0.75 }}>
             If import fails OR imports 0, the debug panel below will show why.
           </div>
 
@@ -225,8 +225,8 @@ export default function FlowMembersModal({
                 background: "rgba(239,68,68,0.12)",
                 border: "1px solid rgba(239,68,68,0.35)",
                 color: "#fecaca",
-                fontSize: 13,
-                fontWeight: 700,
+                fontSize: 16,
+                fontWeight: 600,
               }}
             >
               {error}
@@ -242,10 +242,10 @@ export default function FlowMembersModal({
                 marginBottom: 8,
               }}
             >
-              <div style={{ fontSize: 12, opacity: 0.85, fontWeight: 800 }}>
+              <div style={{ fontSize: 16, opacity: 0.85, fontWeight: 600 }}>
                 MEMBERS IN THIS FLOW
               </div>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
+              <div style={{ fontSize: 16, opacity: 0.75 }}>
                 Click a member to open
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function FlowMembersModal({
               }}
             >
               {(localMembers || []).length === 0 ? (
-                <div style={{ padding: 14, opacity: 0.75, fontSize: 13 }}>
+                <div style={{ padding: 14, opacity: 0.75, fontSize: 16 }}>
                   No members in this flow yet.
                 </div>
               ) : (
@@ -290,10 +290,10 @@ export default function FlowMembersModal({
                       title="Open member"
                     >
                       <div style={{ display: "flex", flexDirection: "column" }}>
-                        <div style={{ fontWeight: 800, fontSize: 13 }}>
+                        <div style={{ fontWeight: 600, fontSize: 16 }}>
                           {name}
                         </div>
-                        <div style={{ fontSize: 12, opacity: 0.85 }}>
+                        <div style={{ fontSize: 16, opacity: 0.85 }}>
                           Email: {email} • Phone: {phone} • Status: {status}
                         </div>
                       </div>
@@ -314,7 +314,7 @@ export default function FlowMembersModal({
                               : "rgba(239,68,68,0.18)",
                           border: "1px solid rgba(239,68,68,0.55)",
                           color: "#fecaca",
-                          fontWeight: 900,
+                          fontWeight: 600,
                           cursor:
                             busyDeleteId === String(leadId)
                               ? "not-allowed"

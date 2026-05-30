@@ -1,8 +1,14 @@
 ﻿import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import { supabase } from '../../../../utils/supabase-client';
-import EmailEditor from '../../../../components/email/editor2/EmailEditor';
+
+// Heavy editor — code-split so the bundle only downloads when this page is visited
+const EmailEditor = dynamic(
+  () => import('../../../../components/email/editor2/EmailEditor'),
+  { ssr: false, loading: () => <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading editor…</div> }
+);
 
 function blockId(prefix = 'blk') {
   return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
@@ -1408,7 +1414,7 @@ export default function EmailEditorPage() {
         ) : previewMode ? (
           <div style={{ position: 'absolute', inset: 0, zIndex: 100 }}>
             <button
-              style={{ position: 'absolute', top: 24, left: 24, zIndex: 101, background: '#fff', color: '#0f172a', border: '2px solid #2563eb', borderRadius: 10, padding: '10px 20px', fontSize: 16, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 12px rgba(15,23,42,0.12)' }}
+              style={{ position: 'absolute', top: 24, left: 24, zIndex: 101, background: '#fff', color: '#0f172a', border: '2px solid #2563eb', borderRadius: 10, padding: '10px 20px', fontSize: 16, fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 12px rgba(15,23,42,0.12)' }}
               onClick={() => setPreviewMode(false)}
             >← Back to Editor</button>
             <EmailEditor

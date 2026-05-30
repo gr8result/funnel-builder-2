@@ -1,4 +1,4 @@
-// /pages/modules/social_media/roi.js
+﻿// /pages/modules/social_media/roi.js
 // ROI & Analytics dashboard for Social Media module.
 // Shows post performance, platform breakdowns, activity trends – based on internal DB data.
 // When platform insights APIs are connected (Facebook Insights, etc.), this page can be extended.
@@ -513,7 +513,7 @@ export default function ROIAnalytics() {
                     })}
                   </div>
                   {/* X-axis labels */}
-                  <div style={{ display: 'flex', gap: range > 30 ? 2 : 4, fontSize: 11, color: '#6B7280' }}>
+                  <div style={{ display: 'flex', gap: range > 30 ? 2 : 4, fontSize: 16, color: '#6B7280' }}>
                     {dailyBuckets.map((b, i) => (
                       <div key={b.key} style={{ flex: 1, textAlign: 'center', overflow: 'hidden', minWidth: 0 }}>
                         {i % labelEvery === 0 ? fmtShortDate(b.date) : ''}

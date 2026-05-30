@@ -1,9 +1,10 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/ai/subject-lines.js
 // FULL REPLACEMENT
 // POST JSON: { context, tone, audience, offer, preheader, emailText, wantAB }
 // Returns: { ok: true, subjectA, subjectB }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "POST only" });
   }
@@ -129,3 +130,5 @@ ${
     });
   }
 }
+
+export default withAuth(handler);

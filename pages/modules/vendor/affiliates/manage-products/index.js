@@ -1,4 +1,4 @@
-// /pages/modules/vendor/affiliates/manage-products/index.js  
+﻿// /pages/modules/vendor/affiliates/manage-products/index.js  
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -173,14 +173,14 @@ export default function ManageProducts() {
       color: "#fff",
       padding: "6px 10px",
       borderRadius: 999,
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: 600,
       minWidth: 32,
       textAlign: "center",
     },
 
     badgeText: {
-      fontSize: 12,
+      fontSize: 16,
       opacity: 0.9,
     },
   };

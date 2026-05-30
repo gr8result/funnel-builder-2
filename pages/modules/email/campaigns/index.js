@@ -1,4 +1,4 @@
-// /pages/modules/email/campaigns/index.js
+﻿// /pages/modules/email/campaigns/index.js
 // FULL REPLACEMENT — adds "Process Queue" button (sends queued jobs via /api/email/process-campaign-queue)
 // ✅ Keeps your banner/layout/styles
 // ✅ Open works (id + campaign_id)
@@ -296,7 +296,7 @@ export default function CampaignsPage() {
           {dkimVerified === true && (
             <div style={page.dkimBarOk}>
               ✅ Your domain{" "}
-              <span style={{ fontWeight: 800 }}>
+              <span style={{ fontWeight: 600 }}>
                 {dkimDomain || "your domain"}
               </span>{" "}
               has now been fully verified and campaigns can send authenticated
@@ -308,7 +308,7 @@ export default function CampaignsPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 32 }}>📣</span>
               <div>
-                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
+                <h1 style={{ margin: 0, fontSize: 26, fontWeight: 600 }}>
                   Campaigns
                 </h1>
                 <p style={{ margin: 0, fontSize: 18 }}>
@@ -448,7 +448,7 @@ const page = {
     borderRadius: 8,
     padding: "8px 12px",
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     textAlign: "center",
     border: "1px solid #10b981",
   },
@@ -481,7 +481,7 @@ const page = {
     padding: "8px 18px",
     fontSize: 18,
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#fff",
   },
   processBtn: {
@@ -491,7 +491,7 @@ const page = {
     padding: "8px 18px",
     fontSize: 18,
     cursor: "pointer",
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#e5e7eb",
   },
   card: {
@@ -508,7 +508,7 @@ const page = {
     textAlign: "left",
     padding: "10px 8px",
     borderBottom: "1px solid #1f2937",
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 18,
   },
   td: {

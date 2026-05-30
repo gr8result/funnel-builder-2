@@ -1,4 +1,4 @@
-import { supabase } from "../../lib/supabaseClient";
+﻿import { supabase } from "../../lib/supabaseClient";
 import { useEffect, useState } from "react";
 import Head from "next/head";
 
@@ -443,13 +443,13 @@ const handleLookupExisting = async () => {
               type="button"
               onClick={handleResendVerification}
               disabled={resending}
-              style={{ marginTop: 12, background: resending ? '#555' : '#22c55e', color: '#000', padding: '12px 24px', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 16, cursor: resending ? 'not-allowed' : 'pointer' }}
+              style={{ marginTop: 12, background: resending ? '#555' : '#22c55e', color: '#000', padding: '12px 24px', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 16, cursor: resending ? 'not-allowed' : 'pointer' }}
             >
               {resending ? 'Resending...' : 'Resend Verification Email'}
             </button>
           )}
           {agreementVerified && (
-            <a href="/marketplace" style={{ display: 'inline-block', marginTop: 12, color: '#22c55e', fontWeight: 700, textDecoration: 'underline' }}>
+            <a href="/marketplace" style={{ display: 'inline-block', marginTop: 12, color: '#22c55e', fontWeight: 600, textDecoration: 'underline' }}>
               Continue to Marketplace
             </a>
           )}
@@ -598,7 +598,7 @@ const handleLookupExisting = async () => {
                   disabled={checkingExisting}
                 />
                 <button
-                  style={{ padding: "10px 24px", borderRadius: 8, fontWeight: 700, background: "#22c55e", color: "#000", border: "none", fontSize: 16, cursor: "pointer", marginRight: 12 }}
+                  style={{ padding: "10px 24px", borderRadius: 8, fontWeight: 600, background: "#22c55e", color: "#000", border: "none", fontSize: 16, cursor: "pointer", marginRight: 12 }}
                   onClick={handleLookupExisting}
                   disabled={checkingExisting || !existingEmail.trim()}
                 >
@@ -657,7 +657,7 @@ const handleLookupExisting = async () => {
                   />
                 </div>
 
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 24, fontSize: 15, lineHeight: 1.6 }}>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 24, fontSize: 16, lineHeight: 1.6 }}>
                   <input
                     type="checkbox"
                     checked={agreed}
@@ -675,7 +675,7 @@ const handleLookupExisting = async () => {
                   style={{
                     background: fullName.trim() && email.trim() && phone.trim() && agreed ? "#22c55e" : "#555",
                     color: "#000",
-                    fontWeight: 800,
+                    fontWeight: 600,
                     padding: "14px 32px",
                     border: "none",
                     borderRadius: 8,
@@ -692,7 +692,7 @@ const handleLookupExisting = async () => {
               <div style={{ color: "crimson", marginTop: 15 }}>
                 <p>{error}</p>
                 {error.includes('apply to join') && (
-                  <a href="/login" style={{ color: '#3b82f6', fontWeight: 700, textDecoration: 'underline', marginTop: 8, display: 'inline-block' }}>Go to login/signup page</a>
+                  <a href="/login" style={{ color: '#3b82f6', fontWeight: 600, textDecoration: 'underline', marginTop: 8, display: 'inline-block' }}>Go to login/signup page</a>
                 )}
                 {/* Show resend button if duplicate key error */}
                 {signed && !agreementVerified && lastToken && (
@@ -703,7 +703,7 @@ const handleLookupExisting = async () => {
                       marginTop: 16,
                       background: resending ? '#555' : '#22c55e',
                       color: '#000',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       padding: '12px 28px',
                       border: 'none',
                       borderRadius: 8,

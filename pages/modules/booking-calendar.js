@@ -1,4 +1,4 @@
-// /pages/modules/booking-calendar/index.js
+﻿// /pages/modules/booking-calendar/index.js
 // Booking Calendar — placeholder with correct banner, icon, sizing & back button
 
 import Head from "next/head";
@@ -16,7 +16,7 @@ export default function BookingCalendar() {
         {/* Banner */}
         <div style={styles.banner}>
           <div style={styles.left}>
-            <div style={styles.iconBox}>{ICONS.calendar({ size: 32 })}</div>
+            <div style={styles.iconBox}><span style={{ fontSize: 32, lineHeight: 1 }}>📅</span></div>
             <div>
               <h1 style={styles.title}>Booking Calendar</h1>
               <p style={styles.desc}>Slots, buffers, reminders & reschedule flow.</p>
@@ -68,7 +68,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 26,
   },
 
@@ -84,7 +84,7 @@ const styles = {
   },
 
   title: { fontSize: 24, margin: 0 },
-  desc: { fontSize: 14, margin: 0, opacity: 0.9, fontWeight: 400 },
+  desc: { fontSize: 16, margin: 0, opacity: 0.9, fontWeight: 400 },
 
   backBtn: {
     background: "#0c121a",
@@ -106,5 +106,5 @@ const styles = {
   },
 
   comingSoon: { fontSize: 22, marginBottom: 12 },
-  text: { fontSize: 15, opacity: 0.9, lineHeight: 1.65 },
+  text: { fontSize: 16, opacity: 0.9, lineHeight: 1.65 },
 };

@@ -12,7 +12,7 @@ export default function Pipelines() {
         <div style={styles.banner}>
           <div style={styles.bannerLeft}>
             <div style={styles.bannerIconWrap}>
-              {ICONS.subscription({ size: 48 })}
+              <span style={{ fontSize: 38, lineHeight: 1 }}>🌿</span>
             </div>
             <div>
               <h1 style={styles.bannerTitle}>Subscription Pipeline</h1>

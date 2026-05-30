@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // ============================================
 // /pages/api/ai/write-email-block.js
 // ============================================
@@ -9,7 +10,7 @@
 // If you later want real AI output, we can swap this stub to a fetch() call.
 // ============================================
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -47,3 +48,5 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+export default withAuth(handler);

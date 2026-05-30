@@ -944,7 +944,7 @@ const styles = {
   subtitle: (isMobile) => ({
     margin: "4px 0 0",
     color: "#9fb0c5",
-    fontSize: isMobile ? 15 : 18,
+    fontSize: isMobile ? 16 : 18,
     lineHeight: 1.35,
     fontWeight: 600,
   }),

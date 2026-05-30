@@ -12,6 +12,7 @@
 // - TWILIO_AUTH_TOKEN
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function pickEnv(...keys) {
   for (const k of keys) {
@@ -78,7 +79,7 @@ function normalisePhoneVariants(raw) {
   return Array.from(out).filter(Boolean);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -196,3 +197,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Failed to list calls." });
   }
 }
+
+export default withAuth(handler);

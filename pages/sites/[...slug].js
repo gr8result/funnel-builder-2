@@ -1,4 +1,4 @@
-// /pages/sites/[...slug].js
+﻿// /pages/sites/[...slug].js
 // FULL REPLACEMENT — Render /sites/<slug> from Supabase ONLY (no external builders)
 // ✅ Reads: website_pages.content_json.sections (version 2)
 // ✅ Full-bleed sections with constrained 1440px content
@@ -52,14 +52,14 @@ function Section({ s }) {
       <div style={{ width: "100%", background: "#0b1220" }}>
         <div style={{ maxWidth: CONTENT_WIDTH, margin: "0 auto", padding: "18px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 22, fontWeight: 950, color: "#fff" }}>{d.brand || "Your Brand"}</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: "#fff" }}>{d.brand || "Your Brand"}</div>
             <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
               {links.map((t, i) => (
-                <a key={i} href="#" onClick={(e) => e.preventDefault()} style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none", fontWeight: 850, fontSize: 14 }}>
+                <a key={i} href="#" onClick={(e) => e.preventDefault()} style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
                   {t}
                 </a>
               ))}
-              <a href="#" onClick={(e) => e.preventDefault()} style={{ padding: "10px 14px", borderRadius: 12, background: "#2297c5", color: "#06121d", fontWeight: 950, textDecoration: "none" }}>
+              <a href="#" onClick={(e) => e.preventDefault()} style={{ padding: "10px 14px", borderRadius: 12, background: "#2297c5", color: "#06121d", fontWeight: 600, textDecoration: "none" }}>
                 {d.cta || "Get Started"}
               </a>
             </div>
@@ -73,13 +73,13 @@ function Section({ s }) {
     return (
       <FullBleed bg="linear-gradient(135deg, rgba(34,151,197,0.18), rgba(2,6,23,0.0))">
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
-          <div style={{ fontSize: 56, fontWeight: 980, color: "#0b1220", letterSpacing: -0.6 }}>{d.headline || "Headline"}</div>
+          <div style={{ fontSize: 56, fontWeight: 600, color: "#0b1220", letterSpacing: -0.6 }}>{d.headline || "Headline"}</div>
           <div style={{ fontSize: 18, lineHeight: 1.6, color: "rgba(11,18,32,0.82)", fontWeight: 650 }}>{d.sub || ""}</div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <a href={d.primaryHref || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 980 }}>
+            <a href={d.primaryHref || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 600 }}>
               {d.primaryLabel || "Get Started"}
             </a>
-            <a href={d.secondaryHref || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "rgba(2,6,23,0.06)", border: "1px solid rgba(2,6,23,0.12)", color: "#0b1220", textDecoration: "none", fontWeight: 950 }}>
+            <a href={d.secondaryHref || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "rgba(2,6,23,0.06)", border: "1px solid rgba(2,6,23,0.12)", color: "#0b1220", textDecoration: "none", fontWeight: 600 }}>
               {d.secondaryLabel || "Learn More"}
             </a>
           </div>
@@ -93,11 +93,11 @@ function Section({ s }) {
       <FullBleed bg="#fff">
         <div className="gr8-row">
           <div>
-            <div style={{ fontSize: 54, fontWeight: 990, color: "#0b1220", letterSpacing: -0.6 }}>{d.headline || "Headline"}</div>
+            <div style={{ fontSize: 54, fontWeight: 600, color: "#0b1220", letterSpacing: -0.6 }}>{d.headline || "Headline"}</div>
             <div style={{ height: 12 }} />
             <div style={{ fontSize: 18, lineHeight: 1.6, color: "rgba(11,18,32,0.82)", fontWeight: 650 }}>{d.sub || ""}</div>
             <div style={{ height: 16 }} />
-            <a href={d.primaryHref || "#"} style={{ display: "inline-flex", padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 980 }}>
+            <a href={d.primaryHref || "#"} style={{ display: "inline-flex", padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 600 }}>
               {d.primaryLabel || "Start"}
             </a>
           </div>
@@ -106,7 +106,7 @@ function Section({ s }) {
             {d.imageUrl ? (
               <img src={d.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 950, color: "rgba(11,18,32,0.55)" }}>
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, color: "rgba(11,18,32,0.55)" }}>
                 Image
               </div>
             )}
@@ -120,14 +120,14 @@ function Section({ s }) {
     const items = Array.isArray(d.items) ? d.items : [];
     return (
       <FullBleed bg="#fff">
-        <div style={{ fontSize: 34, fontWeight: 990, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Title"}</div>
+        <div style={{ fontSize: 34, fontWeight: 600, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Title"}</div>
         <div style={{ height: 18 }} />
         <div className="gr8-grid3">
           {items.slice(0, 3).map((it, idx) => (
             <div key={idx} style={{ borderRadius: 18, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(2,6,23,0.02)", padding: 18 }}>
-              <div style={{ fontSize: 18, fontWeight: 980, color: "#0b1220" }}>{it.title || "Feature"}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: "#0b1220" }}>{it.title || "Feature"}</div>
               <div style={{ height: 8 }} />
-              <div style={{ fontSize: 15, lineHeight: 1.6, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{it.text || ""}</div>
+              <div style={{ fontSize: 16, lineHeight: 1.6, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{it.text || ""}</div>
             </div>
           ))}
         </div>
@@ -140,14 +140,14 @@ function Section({ s }) {
       <FullBleed bg="#fff">
         <div className="gr8-row">
           <div style={{ borderRadius: 18, border: "1px solid rgba(148,163,184,0.18)", padding: 18, background: "rgba(2,6,23,0.02)" }}>
-            <div style={{ fontSize: 22, fontWeight: 990, color: "#0b1220" }}>{d.leftTitle || "Left"}</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: "#0b1220" }}>{d.leftTitle || "Left"}</div>
             <div style={{ height: 10 }} />
-            <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{d.leftText || ""}</div>
+            <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{d.leftText || ""}</div>
           </div>
           <div style={{ borderRadius: 18, border: "1px solid rgba(148,163,184,0.18)", padding: 18, background: "rgba(2,6,23,0.02)" }}>
-            <div style={{ fontSize: 22, fontWeight: 990, color: "#0b1220" }}>{d.rightTitle || "Right"}</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: "#0b1220" }}>{d.rightTitle || "Right"}</div>
             <div style={{ height: 10 }} />
-            <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{d.rightText || ""}</div>
+            <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(11,18,32,0.78)", fontWeight: 650 }}>{d.rightText || ""}</div>
           </div>
         </div>
       </FullBleed>
@@ -159,12 +159,12 @@ function Section({ s }) {
       <FullBleed bg="#0b1220">
         <div className="gr8-row">
           <div>
-            <div style={{ fontSize: 38, fontWeight: 990, color: "#fff", letterSpacing: -0.4 }}>{d.headline || "CTA"}</div>
+            <div style={{ fontSize: 38, fontWeight: 600, color: "#fff", letterSpacing: -0.4 }}>{d.headline || "CTA"}</div>
             <div style={{ height: 10 }} />
-            <div style={{ fontSize: 16, lineHeight: 1.6, color: "rgba(255,255,255,0.80)", fontWeight: 750 }}>{d.sub || ""}</div>
+            <div style={{ fontSize: 16, lineHeight: 1.6, color: "rgba(255,255,255,0.80)", fontWeight: 600 }}>{d.sub || ""}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-            <a href={d.href || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 980 }}>
+            <a href={d.href || "#"} style={{ padding: "14px 18px", borderRadius: 14, background: "#2297c5", color: "#06121d", textDecoration: "none", fontWeight: 600 }}>
               {d.button || "Action"}
             </a>
           </div>
@@ -178,14 +178,14 @@ function Section({ s }) {
       <FullBleed bg="#fff">
         <div className="gr8-row">
           <div>
-            <div style={{ fontSize: 32, fontWeight: 990, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Opt-in"}</div>
+            <div style={{ fontSize: 32, fontWeight: 600, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Opt-in"}</div>
             <div style={{ height: 10 }} />
             <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(11,18,32,0.75)", fontWeight: 650 }}>{d.sub || ""}</div>
           </div>
           <div style={{ borderRadius: 18, border: "1px solid rgba(148,163,184,0.18)", padding: 18, background: "rgba(2,6,23,0.02)" }}>
             <input placeholder="you@company.com" style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid rgba(148,163,184,0.30)" }} />
             <div style={{ height: 10 }} />
-            <button type="button" style={{ width: "100%", padding: 12, borderRadius: 12, border: "none", background: "#2297c5", color: "#06121d", fontWeight: 950 }}>
+            <button type="button" style={{ width: "100%", padding: 12, borderRadius: 12, border: "none", background: "#2297c5", color: "#06121d", fontWeight: 600 }}>
               {d.button || "Submit"}
             </button>
           </div>
@@ -197,7 +197,7 @@ function Section({ s }) {
   if (s.type === "contactForm") {
     return (
       <FullBleed bg="#fff">
-        <div style={{ fontSize: 32, fontWeight: 990, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Contact"}</div>
+        <div style={{ fontSize: 32, fontWeight: 600, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Contact"}</div>
         <div style={{ height: 10 }} />
         <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(11,18,32,0.75)", fontWeight: 650 }}>{d.sub || ""}</div>
         <div style={{ height: 16 }} />
@@ -209,7 +209,7 @@ function Section({ s }) {
           <div style={{ height: 12 }} />
           <textarea placeholder="Message" style={{ width: "100%", padding: 12, borderRadius: 12, border: "1px solid rgba(148,163,184,0.30)", minHeight: 110 }} />
           <div style={{ height: 12 }} />
-          <button type="button" style={{ width: "100%", padding: 12, borderRadius: 12, border: "none", background: "#2297c5", color: "#06121d", fontWeight: 950 }}>
+          <button type="button" style={{ width: "100%", padding: 12, borderRadius: 12, border: "none", background: "#2297c5", color: "#06121d", fontWeight: 600 }}>
             {d.button || "Send"}
           </button>
         </div>
@@ -221,14 +221,14 @@ function Section({ s }) {
     const items = Array.isArray(d.items) ? d.items : [];
     return (
       <FullBleed bg="rgba(2,6,23,0.02)">
-        <div style={{ fontSize: 32, fontWeight: 990, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Testimonials"}</div>
+        <div style={{ fontSize: 32, fontWeight: 600, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "Testimonials"}</div>
         <div style={{ height: 18 }} />
         <div className="gr8-grid3">
           {items.slice(0, 3).map((it, idx) => (
             <div key={idx} style={{ borderRadius: 18, background: "#fff", border: "1px solid rgba(148,163,184,0.18)", padding: 18 }}>
-              <div style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(11,18,32,0.80)", fontWeight: 650 }}>{it.quote || ""}</div>
+              <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(11,18,32,0.80)", fontWeight: 650 }}>{it.quote || ""}</div>
               <div style={{ height: 12 }} />
-              <div style={{ fontSize: 13, fontWeight: 980, color: "#0b1220" }}>{it.name || ""}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#0b1220" }}>{it.name || ""}</div>
             </div>
           ))}
         </div>
@@ -240,12 +240,12 @@ function Section({ s }) {
     const items = Array.isArray(d.items) ? d.items : [];
     return (
       <FullBleed bg="#fff">
-        <div style={{ fontSize: 32, fontWeight: 990, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "FAQ"}</div>
+        <div style={{ fontSize: 32, fontWeight: 600, color: "#0b1220", letterSpacing: -0.4 }}>{d.title || "FAQ"}</div>
         <div style={{ height: 14 }} />
         <div style={{ display: "grid", gap: 10 }}>
           {items.map((it, idx) => (
             <details key={idx} style={{ borderRadius: 16, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(2,6,23,0.02)", padding: "10px 12px" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 980, color: "#0b1220" }}>{it.q || "Question"}</summary>
+              <summary style={{ cursor: "pointer", fontWeight: 600, color: "#0b1220" }}>{it.q || "Question"}</summary>
               <div style={{ padding: "10px 2px 4px", color: "rgba(11,18,32,0.78)", fontWeight: 650, lineHeight: 1.7 }}>{it.a || ""}</div>
             </details>
           ))}
@@ -261,14 +261,14 @@ function Section({ s }) {
         <div style={{ maxWidth: CONTENT_WIDTH, margin: "0 auto", padding: "28px 18px" }}>
           <div style={{ display: "flex", gap: 18, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 990, color: "#fff" }}>{d.brand || "Your Brand"}</div>
+              <div style={{ fontSize: 18, fontWeight: 600, color: "#fff" }}>{d.brand || "Your Brand"}</div>
               <div style={{ height: 10 }} />
-              <div style={{ fontSize: 12, fontWeight: 850, color: "rgba(255,255,255,0.70)" }}>{d.note || ""}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.70)" }}>{d.note || ""}</div>
             </div>
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {links.map((t, i) => (
-                <a key={i} href="#" onClick={(e) => e.preventDefault()} style={{ color: "rgba(255,255,255,0.82)", textDecoration: "none", fontWeight: 900, fontSize: 13 }}>
+                <a key={i} href="#" onClick={(e) => e.preventDefault()} style={{ color: "rgba(255,255,255,0.82)", textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
                   {t}
                 </a>
               ))}
@@ -337,8 +337,12 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
   const globalNavBlock = project?.globalNavBlock || null;
   const globalFooterBlock = project?.globalFooterBlock || null;
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
-  const injectFooter = globalFooterBlock && !pageBlocks.some((block) => block.id && block.id === globalFooterBlock.id);
+  const injectFooter = !!globalFooterBlock;
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
+  // Strip any per-page footer blocks when a global footer exists — prevents duplicates and
+  // ensures the home page (which may still have the original footer in its pageBlocks) also
+  // gets the global footer injected consistently with every other page.
+  const blocksToRender = injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav;
   const basePath = isDomainRequest ? "" : buildWebsitePath(publication?.slug || project?.name || "site");
   const navigationContext = {
     basePath,
@@ -367,9 +371,9 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
           </Fragment>
         ) : null}
 
-        {Array.isArray(blocksWithoutNav) && blocksWithoutNav.length ? (
+        {Array.isArray(blocksToRender) && blocksToRender.length ? (
           <>
-            {blocksWithoutNav.map((block, index) => (
+            {blocksToRender.map((block, index) => (
               <Fragment key={block.id || `${block.type}-${index}`}>
                 {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
               </Fragment>
@@ -398,7 +402,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
               const pageSlug = resolvePublishedPageName(page);
               const href = pageSlug ? `${basePath}/${pageSlug}` || `/${pageSlug}` : (basePath || "/");
               return (
-                <Link key={page.name || pageSlug} href={href} style={{ textDecoration: "none", color: "#0f172a", padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(148,163,184,0.35)", fontWeight: 700, background: "#ffffff" }}>
+                <Link key={page.name || pageSlug} href={href} style={{ textDecoration: "none", color: "#0f172a", padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(148,163,184,0.35)", fontWeight: 600, background: "#ffffff" }}>
                   {page.name || page.title || "Page"}
                 </Link>
               );

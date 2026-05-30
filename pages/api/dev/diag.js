@@ -1,9 +1,10 @@
-﻿// pages/api/dev/diag.js
+// pages/api/dev/diag.js
 // Quick diagnostics: shows which candidate tables are reachable.
 
 import { createClient } from "@supabase/supabase-js";
+import { withAdmin } from "../../../lib/withAdmin";
 
-export default async function handler(_req, res) {
+async function handler(_req, res) {
   try {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,3 +25,4 @@ export default async function handler(_req, res) {
   }
 }
 
+export default withAdmin(handler);

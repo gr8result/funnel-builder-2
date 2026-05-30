@@ -1,4 +1,4 @@
-import { Handle, Position } from "reactflow";
+﻿import { Handle, Position } from "reactflow";
 
 export default function DelayNode({ data }) {
   const d = data.delay || {};
@@ -35,8 +35,8 @@ export default function DelayNode({ data }) {
       <div
         style={{
           marginTop: 8,
-          fontSize: 14,
-          fontWeight: 700,
+          fontSize: 16,
+          fontWeight: 600,
           background: "rgba(0,0,0,0.25)",
           padding: "6px 10px",
           borderRadius: 999,

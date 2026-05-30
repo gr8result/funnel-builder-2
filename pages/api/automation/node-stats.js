@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { flowId } = req.query;
     if (!flowId) {
@@ -52,3 +53,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
 }
+
+export default withAuth(handler);

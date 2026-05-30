@@ -1,9 +1,14 @@
 import { supabase } from '../../../lib/supabaseAdmin';
+import { checkRateLimit, getIp } from '../../../lib/rateLimit';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ error: 'Email and code required' });
+
+  // Rate limit by IP + email to prevent brute force of 6-digit codes
+  const rl = checkRateLimit(`verify2fa:${getIp(req)}:${String(email).toLowerCase()}`, 10, 15 * 60 * 1000);
+  if (!rl.ok) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
 
   // Find the latest code for this email
   const { data, error } = await supabase

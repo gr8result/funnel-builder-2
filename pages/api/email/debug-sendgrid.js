@@ -1,7 +1,8 @@
 // FILE: /pages/api/email/debug-sendgrid.js
 import sgMail from "@sendgrid/mail";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const key = process.env.SENDGRID_API_KEY || "";
   if (!key) return res.status(500).json({ ok: false, error: "SENDGRID_API_KEY missing" });
   try {
@@ -25,3 +26,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdmin(handler);

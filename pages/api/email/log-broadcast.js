@@ -4,6 +4,7 @@
 // NOTE: API routes must NOT import CSS.
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -12,7 +13,7 @@ const SERVICE_KEY =
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "POST only" });
   }
@@ -67,3 +68,5 @@ export default async function handler(req, res) {
       .json({ success: false, error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

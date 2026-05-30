@@ -1,4 +1,4 @@
-function SafeErrorShell({
+﻿function SafeErrorShell({
   code,
   title,
   message,
@@ -28,8 +28,8 @@ function SafeErrorShell({
       >
         <div
           style={{
-            fontSize: 14,
-            fontWeight: 700,
+            fontSize: 16,
+            fontWeight: 600,
             letterSpacing: "0.12em",
             color: "#7dd3fc",
             textTransform: "uppercase",
@@ -43,7 +43,7 @@ function SafeErrorShell({
             margin: 0,
             fontSize: 52,
             lineHeight: 1,
-            fontWeight: 800,
+            fontWeight: 600,
           }}
         >
           {code}
@@ -52,7 +52,7 @@ function SafeErrorShell({
           style={{
             margin: "18px 0 10px",
             fontSize: 24,
-            fontWeight: 700,
+            fontWeight: 600,
             color: "#f8fafc",
           }}
         >
@@ -78,7 +78,7 @@ function SafeErrorShell({
             background: "#22c55e",
             color: "#052e16",
             textDecoration: "none",
-            fontWeight: 700,
+            fontWeight: 600,
           }}
         >
           Return Home

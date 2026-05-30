@@ -3,6 +3,7 @@
 // POST with Authorization: Bearer <token> and { sender_id: "..." }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -25,7 +26,7 @@ async function getUserFromBearer(token, supabaseAnon) {
   return data.user;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -99,3 +100,5 @@ export default async function handler(req, res) {
       .json({ ok: false, error: e?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

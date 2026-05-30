@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../../../utils/supabase-client";
 
@@ -682,7 +682,7 @@ const styles = {
     flexWrap: "wrap",
     color: "#111827",
   },
-  bannerTitle: { margin: 0, fontSize: 42, fontWeight: 800 },
+  bannerTitle: { margin: 0, fontSize: 42, fontWeight: 600 },
   bannerSub: { margin: "8px 0 0", fontSize: 16, opacity: 0.9 },
   bannerActions: { display: "flex", gap: 10, flexWrap: "wrap" },
   backBtn: {
@@ -691,7 +691,7 @@ const styles = {
     background: "rgba(255,255,255,0.7)",
     color: "#111827",
     padding: "10px 14px",
-    fontWeight: 700,
+    fontWeight: 600,
     textDecoration: "none",
   },
   secondaryBtn: {
@@ -700,7 +700,7 @@ const styles = {
     background: "rgba(255,255,255,0.7)",
     color: "#111827",
     padding: "10px 14px",
-    fontWeight: 700,
+    fontWeight: 600,
     textDecoration: "none",
   },
   primaryBtn: {
@@ -709,7 +709,7 @@ const styles = {
     background: "#22c55e",
     color: "#04120a",
     padding: "10px 14px",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
   },
   container: {
@@ -730,8 +730,8 @@ const styles = {
     padding: 16,
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     color: "#94a3b8",
@@ -739,7 +739,7 @@ const styles = {
   },
   statValue: {
     fontSize: 28,
-    fontWeight: 800,
+    fontWeight: 600,
   },
   editorCard: {
     background: "#0f172a",
@@ -751,12 +751,12 @@ const styles = {
   sectionTitle: {
     margin: 0,
     fontSize: 24,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#fff",
   },
   sectionSub: {
     margin: "6px 0 0",
-    fontSize: 14,
+    fontSize: 16,
     color: "#94a3b8",
   },
   formGrid: {
@@ -788,7 +788,7 @@ const styles = {
     borderRadius: 10,
     background: "#2563eb",
     color: "#fff",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
   },
   brandLogoWrap: {
@@ -871,15 +871,15 @@ const styles = {
     alignItems: "flex-start",
     marginBottom: 12,
   },
-  templateTitle: { fontSize: 18, fontWeight: 800, color: "#fff" },
-  templateDesc: { fontSize: 13, color: "#94a3b8", marginTop: 4 },
+  templateTitle: { fontSize: 18, fontWeight: 600, color: "#fff" },
+  templateDesc: { fontSize: 16, color: "#94a3b8", marginTop: 4 },
   templateTax: {
     padding: "4px 8px",
     borderRadius: 999,
     background: "rgba(250,204,21,0.18)",
     color: "#fde68a",
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     whiteSpace: "nowrap",
   },
   templateItems: { display: "grid", gap: 8 },
@@ -887,7 +887,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     gap: 10,
-    fontSize: 14,
+    fontSize: 16,
     color: "#e2e8f0",
     padding: "8px 10px",
     borderRadius: 10,
@@ -900,13 +900,13 @@ const styles = {
     alignItems: "center",
     gap: 10,
     color: "#cbd5e1",
-    fontWeight: 700,
+    fontWeight: 600,
     flexWrap: "wrap",
   },
   inlineLink: {
     textDecoration: "none",
     color: "#93c5fd",
-    fontWeight: 800,
+    fontWeight: 600,
   },
   reportCard: {
     background: "#0f172a",
@@ -926,7 +926,7 @@ const styles = {
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
     textAlign: "left",
-    fontSize: 12,
+    fontSize: 16,
     color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
@@ -934,7 +934,7 @@ const styles = {
     borderBottom: "1px solid rgba(148,163,184,0.18)",
   },
   td: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#e2e8f0",
     padding: "10px 8px",
     borderBottom: "1px solid rgba(148,163,184,0.12)",

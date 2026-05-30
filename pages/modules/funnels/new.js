@@ -1,4 +1,4 @@
-// pages/modules/funnels/new.js
+﻿// pages/modules/funnels/new.js
 // Funnel creation wizard:
 // 1. Choose funnel type
 // 2. Answer a few short questions
@@ -448,7 +448,7 @@ function Wizard() {
                   background: step >= n ? '#ef465d' : '#1e2d45',
                   border: step === n ? '3px solid #f87171' : '3px solid transparent',
                   color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 900, fontSize: 18,
+                  fontWeight: 600, fontSize: 18,
                 }}>
                   {step > n ? '✓' : n}
                 </div>
@@ -474,8 +474,8 @@ function Wizard() {
                       border: '1px solid rgba(56,189,248,0.35)',
                       borderRadius: 999,
                       padding: '8px 12px',
-                      fontSize: 14,
-                      fontWeight: 700,
+                      fontSize: 16,
+                      fontWeight: 600,
                     }}>
                       Showing: {customTradeName}
                     </span>
@@ -489,8 +489,8 @@ function Wizard() {
                       border: '1px solid rgba(125,211,252,0.35)',
                       borderRadius: 999,
                       padding: '10px 16px',
-                      fontSize: 14,
-                      fontWeight: 800,
+                      fontSize: 16,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       boxShadow: '0 10px 30px rgba(37,99,235,0.18)',
                     }}
@@ -528,15 +528,15 @@ function Wizard() {
                           <span style={{
                             background: `${group.accent}22`, color: group.accent,
                             border: `1px solid ${group.accent}44`,
-                            borderRadius: 999, padding: '6px 10px', fontSize: 13, fontWeight: 700,
+                            borderRadius: 999, padding: '6px 10px', fontSize: 16, fontWeight: 600,
                             whiteSpace: 'nowrap',
                           }}>{activeVariant.variant || 'Template'}</span>
                         ) : null}
                       </div>
-                      <h3 style={{ color: '#e6eef5', fontSize: 22, fontWeight: 800, margin: '0 0 10px' }}>{group.label}</h3>
+                      <h3 style={{ color: '#e6eef5', fontSize: 22, fontWeight: 600, margin: '0 0 10px' }}>{group.label}</h3>
                       <p style={{ color: '#cbd5e1', fontSize: 16, margin: '0 0 18px', lineHeight: 1.5 }}>{activeVariant.description || group.description}</p>
                       {group.examples.length ? (
-                        <p style={{ color: '#94a3b8', fontSize: 14, margin: '0 0 16px', lineHeight: 1.5 }}>
+                        <p style={{ color: '#94a3b8', fontSize: 16, margin: '0 0 16px', lineHeight: 1.5 }}>
                           Ideal for: {group.examples.join(', ')}
                         </p>
                       ) : null}
@@ -552,8 +552,8 @@ function Wizard() {
                                 border: '1px solid #334155',
                                 borderRadius: 999,
                                 padding: '8px 14px',
-                                fontSize: 14,
-                                fontWeight: 700,
+                                fontSize: 16,
+                                fontWeight: 600,
                                 cursor: 'pointer',
                               }}
                             >
@@ -570,8 +570,8 @@ function Wizard() {
                                 border: '1px solid #334155',
                                 borderRadius: 999,
                                 padding: '8px 14px',
-                                fontSize: 14,
-                                fontWeight: 700,
+                                fontSize: 16,
+                                fontWeight: 600,
                                 cursor: 'pointer',
                               }}
                             >
@@ -579,7 +579,7 @@ function Wizard() {
                             </button>
                           ) : null}
                         </div>
-                        <span style={{ color: '#94a3b8', fontSize: 13, fontWeight: 700 }}>
+                        <span style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600 }}>
                           Preview the full page before choosing
                         </span>
                       </div>
@@ -641,11 +641,11 @@ function Wizard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div style={{ fontSize: 34 }}>{previewGroup.icon}</div>
                           <div>
-                            <p style={{ color: previewGroup.accent, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.3, margin: 0 }}>Template Preview</p>
-                            <h3 style={{ color: '#f8fafc', fontSize: 28, fontWeight: 800, margin: '4px 0 0' }}>{previewGroup.label}</h3>
+                            <p style={{ color: previewGroup.accent, fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.3, margin: 0 }}>Template Preview</p>
+                            <h3 style={{ color: '#f8fafc', fontSize: 28, fontWeight: 600, margin: '4px 0 0' }}>{previewGroup.label}</h3>
                           </div>
                         </div>
-                        <p style={{ color: '#cbd5e1', fontSize: 15, lineHeight: 1.5, margin: 0 }}>{previewGroup.description}</p>
+                        <p style={{ color: '#cbd5e1', fontSize: 16, lineHeight: 1.5, margin: 0 }}>{previewGroup.description}</p>
                       </div>
 
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', pointerEvents: 'auto' }}>
@@ -658,8 +658,8 @@ function Wizard() {
                             border: showPreviewInfo ? `1px solid ${previewGroup.accent}55` : '1px solid #334155',
                             borderRadius: 999,
                             padding: '10px 14px',
-                            fontSize: 13,
-                            fontWeight: 800,
+                            fontSize: 16,
+                            fontWeight: 600,
                             cursor: 'pointer',
                             backdropFilter: 'blur(10px)',
                           }}
@@ -675,8 +675,8 @@ function Wizard() {
                             border: '1px solid #334155',
                             borderRadius: 999,
                             padding: '10px 14px',
-                            fontSize: 14,
-                            fontWeight: 800,
+                            fontSize: 16,
+                            fontWeight: 600,
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                             backdropFilter: 'blur(10px)',
@@ -706,8 +706,8 @@ function Wizard() {
                               border: isActive ? `1px solid ${previewGroup.accent}` : '1px solid #334155',
                               borderRadius: 999,
                               padding: '10px 14px',
-                              fontSize: 14,
-                              fontWeight: 800,
+                              fontSize: 16,
+                              fontWeight: 600,
                               cursor: 'pointer',
                             }}
                           >
@@ -725,8 +725,8 @@ function Wizard() {
                             border: `1px solid ${previewGroup.accent}44`,
                             borderRadius: 999,
                             padding: '8px 12px',
-                            fontSize: 12,
-                            fontWeight: 800,
+                            fontSize: 16,
+                            fontWeight: 600,
                             whiteSpace: 'nowrap',
                           }}>
                             {activePreviewVariant.pages.length} pages
@@ -748,8 +748,8 @@ function Wizard() {
                                 border: isActive ? `1px solid ${previewGroup.accent}` : '1px solid #334155',
                                 borderRadius: 999,
                                 padding: '8px 12px',
-                                fontSize: 13,
-                                fontWeight: 700,
+                                fontSize: 16,
+                                fontWeight: 600,
                                 cursor: 'pointer',
                                 backdropFilter: 'blur(10px)',
                               }}
@@ -775,12 +775,12 @@ function Wizard() {
                       maxWidth: 980,
                     }}>
                       {activePreviewVariant ? (
-                        <p style={{ color: '#cbd5e1', fontSize: 15, lineHeight: 1.6, margin: 0, maxWidth: 820 }}>{activePreviewVariant.description}</p>
+                        <p style={{ color: '#cbd5e1', fontSize: 16, lineHeight: 1.6, margin: 0, maxWidth: 820 }}>{activePreviewVariant.description}</p>
                       ) : null}
 
                       {previewGroup.examples?.length ? (
                         <div style={{ display: 'grid', gap: 10 }}>
-                          <p style={{ color: '#94a3b8', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, margin: 0 }}>Ideal For</p>
+                          <p style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.2, margin: 0 }}>Ideal For</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                             {previewGroup.examples.map((example) => (
                               <span key={`${previewGroup.key}-${example}`} style={{
@@ -789,8 +789,8 @@ function Wizard() {
                                 border: `1px solid ${previewGroup.accent}44`,
                                 borderRadius: 999,
                                 padding: '8px 12px',
-                                fontSize: 14,
-                                fontWeight: 700,
+                                fontSize: 16,
+                                fontWeight: 600,
                               }}>
                                 {example}
                               </span>
@@ -802,7 +802,7 @@ function Wizard() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start' }}>
                         {activePreviewVariant?.pages?.length ? (
                           <div style={{ display: 'grid', gap: 8, flex: '1 1 520px' }}>
-                            <p style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, margin: 0 }}>Page</p>
+                            <p style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600, margin: 0 }}>Page</p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               {activePreviewVariant.pages.map((page, index) => {
                                 const isActive = index === previewPageIndex;
@@ -817,8 +817,8 @@ function Wizard() {
                                       border: isActive ? `1px solid ${previewGroup.accent}` : '1px solid #334155',
                                       borderRadius: 999,
                                       padding: '8px 12px',
-                                      fontSize: 13,
-                                      fontWeight: 700,
+                                      fontSize: 16,
+                                      fontWeight: 600,
                                       cursor: 'pointer',
                                     }}
                                   >
@@ -844,8 +844,8 @@ function Wizard() {
                         border: '1px solid #1e293b',
                         backdropFilter: 'blur(10px)',
                       }}>
-                        <p style={{ color: '#f8fafc', fontSize: 15, fontWeight: 800, margin: 0 }}>{activePreviewPage?.title || 'Preview'}</p>
-                        <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>{previewViewport === 'desktop' ? 'Full page preview' : 'Mobile preview'}</p>
+                        <p style={{ color: '#f8fafc', fontSize: 16, fontWeight: 600, margin: 0 }}>{activePreviewPage?.title || 'Preview'}</p>
+                        <p style={{ color: '#94a3b8', fontSize: 16, margin: 0 }}>{previewViewport === 'desktop' ? 'Full page preview' : 'Mobile preview'}</p>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
@@ -859,8 +859,8 @@ function Wizard() {
                             border: '1px solid #334155',
                             borderRadius: 12,
                             padding: '12px 16px',
-                            fontSize: 14,
-                            fontWeight: 800,
+                            fontSize: 16,
+                            fontWeight: 600,
                             cursor: startingFromScratch ? 'default' : 'pointer',
                             minWidth: 190,
                             backdropFilter: 'blur(10px)',
@@ -881,8 +881,8 @@ function Wizard() {
                             border: `1px solid ${previewGroup.accent}`,
                             borderRadius: 12,
                             padding: '12px 16px',
-                            fontSize: 15,
-                            fontWeight: 800,
+                            fontSize: 16,
+                            fontWeight: 600,
                             cursor: 'pointer',
                             minWidth: 190,
                           }}
@@ -1003,7 +1003,7 @@ function Wizard() {
                 </div>
 
                 <div style={{ background: '#111827', border: '1px solid #1e2d45', borderRadius: 16, padding: '24px 22px', position: 'sticky', top: 16 }}>
-                  <p style={{ color: '#93c5fd', fontSize: 16, fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: 1.2 }}>AI plan</p>
+                  <p style={{ color: '#93c5fd', fontSize: 16, fontWeight: 600, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: 1.2 }}>AI plan</p>
                   <h3 style={{ color: '#e6eef5', fontSize: 22, margin: '0 0 12px' }}>{answers.name || 'Your funnel'}</h3>
                   <p style={{ color: '#dbeafe', fontSize: 16, margin: '0 0 18px', lineHeight: 1.6 }}>
                     {funnelSummary.offerDescription || 'Answer the short questions and the funnel copy will be generated automatically.'}
@@ -1031,7 +1031,7 @@ function Wizard() {
                   style={{
                     padding: '16px 48px', borderRadius: 12, border: 'none',
                     background: creating ? '#1e2d45' : `linear-gradient(135deg,${selectedType.accent},${selectedType.accent}cc)`,
-                    color: '#fff', fontSize: 20, fontWeight: 800, cursor: creating ? 'default' : 'pointer',
+                    color: '#fff', fontSize: 20, fontWeight: 600, cursor: creating ? 'default' : 'pointer',
                     boxShadow: creating ? 'none' : `0 6px 28px ${selectedType.accent}55`,
                   }}
                 >

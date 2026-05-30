@@ -2,6 +2,7 @@
 // Handles image uploads from GrapesJS → Supabase storage → returns public URL
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,7 +15,7 @@ export const config = {
   },
 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -47,3 +48,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAuth(handler);

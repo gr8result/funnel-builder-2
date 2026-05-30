@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/twilio/voice-client.js
 // FULL REPLACEMENT
 //
@@ -51,7 +52,7 @@ function normalizePhone(raw) {
   return v;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const q = req.query || {};
     const b = req.body || {};
@@ -137,3 +138,5 @@ export default async function handler(req, res) {
     );
   }
 }
+
+export default withAuth(handler);

@@ -1,7 +1,8 @@
 // FILE: /pages/api/email/test-send.js
 import sgMail from "@sendgrid/mail";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -36,3 +37,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

@@ -2,6 +2,7 @@
 // Simple SendGrid key test – GET /api/email/sg-test?to=you@yourdomain.com
 
 import sgMail from "@sendgrid/mail";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SENDGRID_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "";
@@ -11,7 +12,7 @@ if (SENDGRID_KEY) {
   sgMail.setApiKey(SENDGRID_KEY);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Use GET" });
   }
@@ -52,3 +53,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

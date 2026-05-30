@@ -1,5 +1,6 @@
-﻿// pages/api/ai/generate.js
-export default async function handler(req, res) {
+import { withAuth } from "../../../lib/withWorkspace";
+// pages/api/ai/generate.js
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const { mode } = req.body || {};
   const presets = {
@@ -12,3 +13,4 @@ export default async function handler(req, res) {
   return res.status(200).json({ text: presets[mode] || presets.help });
 }
 
+export default withAuth(handler);

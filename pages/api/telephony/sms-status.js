@@ -1,6 +1,7 @@
 // /pages/api/telephony/sms-status.js
 import supabaseAdmin from "../../../utils/supabase-admin";
 import { s } from "./_twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const ok = (res, body) => res.status(200).json(body);
 const bad = (res, code, msg) => res.status(code).json({ ok: false, error: msg });
@@ -14,7 +15,7 @@ const bad = (res, code, msg) => res.status(code).json({ ok: false, error: msg })
  * Twilio sends form-encoded fields like:
  *  MessageSid, MessageStatus, ErrorCode, To, From
  */
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return bad(res, 405, "Method not allowed");
 
   // Twilio sends x-www-form-urlencoded by default
@@ -41,3 +42,5 @@ export default async function handler(req, res) {
     return bad(res, 500, e?.message || "Unexpected error");
   }
 }
+
+export default withAuth(handler);

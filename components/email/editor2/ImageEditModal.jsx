@@ -1,4 +1,4 @@
-// components/email/editor2/ImageEditModal.jsx
+﻿// components/email/editor2/ImageEditModal.jsx
 // Crop + Remove Background modal for the email editor
 import { useState, useRef } from "react";
 import ReactCrop from "react-image-crop";
@@ -349,10 +349,10 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 18px", borderBottom: "1px solid #1e293b", flexShrink: 0,
         }}>
-          <span style={{ fontWeight: 800, fontSize: 20, color: "#ffffff", letterSpacing: "0.01em" }}>Edit Image</span>
+          <span style={{ fontWeight: 600, fontSize: 20, color: "#ffffff", letterSpacing: "0.01em" }}>Edit Image</span>
           <button
             onClick={onCancel}
-            style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", fontSize: 26, fontWeight: 700, lineHeight: 1, padding: 0 }}
+            style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer", fontSize: 26, fontWeight: 600, lineHeight: 1, padding: 0 }}
           >
             ×
           </button>
@@ -392,7 +392,7 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
           }}>
             {status && (
               <div style={{
-                padding: "12px 14px", borderRadius: 10, fontSize: 16, fontWeight: 700,
+                padding: "12px 14px", borderRadius: 10, fontSize: 16, fontWeight: 600,
                 background: status.type === "err" ? "#7f1d1d" : "#14532d",
                 color: "#ffffff",
                 lineHeight: 1.4,
@@ -402,11 +402,11 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
             )}
 
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+              <div style={{ fontSize: 18, fontWeight: 600, color: "#ffffff", lineHeight: 1.2 }}>
                 Crop
               </div>
               <div style={{ fontSize: 16, color: "#ffffff", lineHeight: 1.5 }}>
-                A crop area is already selected. Drag the handles if you want, then click <strong style={{ color: "#ffffff", fontWeight: 800 }}>Apply Crop</strong>.
+                A crop area is already selected. Drag the handles if you want, then click <strong style={{ color: "#ffffff", fontWeight: 600 }}>Apply Crop</strong>.
               </div>
             </div>
 
@@ -421,7 +421,7 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
             <div style={{ borderTop: "1px solid #1e293b", margin: "4px 0" }} />
 
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+              <div style={{ fontSize: 18, fontWeight: 600, color: "#ffffff", lineHeight: 1.2 }}>
                 Background Removal
               </div>
               <div style={{ fontSize: 16, color: "#ffffff", lineHeight: 1.5 }}>
@@ -466,7 +466,7 @@ function ABtn({ onClick, children, color = "#334155", disabled = false }) {
         background: disabled ? "#1e293b" : color,
         color: "#ffffff",
         fontSize: 16,
-        fontWeight: 800,
+        fontWeight: 600,
         cursor: disabled ? "not-allowed" : "pointer",
         padding: "12px 14px",
         opacity: disabled ? 0.65 : 1,

@@ -1,6 +1,7 @@
 import { requireUser } from '../../../lib/social/auth';
 import { createHash } from 'crypto';
 import { isBlockedSharedMediaHash } from '../../../lib/sharedMediaModeration';
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SHARED_ASSET_BUCKET = 'assets';
 
@@ -101,7 +102,7 @@ function isConflictError(error) {
   return error?.statusCode === '409' || error?.status === 409 || message.includes('already exists') || message.includes('duplicate');
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -165,3 +166,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true, results });
 }
+
+export default withAuth(handler);

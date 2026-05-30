@@ -2,6 +2,7 @@
 // FULL REPLACEMENT — Graph-correct trigger start + run creation
 
 import { createClient } from "@supabase/supabase-js";
+import { withWorkspace } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim();
@@ -27,7 +28,7 @@ function getBearer(req) {
   return (m?.[1] || "").trim();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST")
     return res.status(405).json({ ok: false, error: "POST only" });
 
@@ -228,3 +229,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg(e) });
   }
 }
+
+export default withWorkspace(handler);

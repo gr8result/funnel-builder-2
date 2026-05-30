@@ -1,8 +1,9 @@
+import { withAuth } from "../../lib/withWorkspace";
 // /pages/api/generate-product-ai.js
 // POST { type: 'tags' | 'description', title: string, description?: string }
 // Requires OPENAI_API_KEY in .env.local
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { type, title, description } = req.body;
   if (!type || !title) return res.status(400).json({ error: 'Missing required fields' });
@@ -41,3 +42,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'AI request failed' });
   }
 }
+
+export default withAuth(handler);

@@ -1,6 +1,7 @@
-﻿// pages/api/templates/read.js
+// pages/api/templates/read.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SRC_BASE = path.join(process.cwd(), "templates", "gallery");
 const PUB_BASE = path.join(process.cwd(), "public", "templates", "gallery");
@@ -27,7 +28,7 @@ function resolveSafe(webPath) {
   return { srcPath: normSrc, pubPath: normPub };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       res.status(405).json({ error: "Method not allowed" });
@@ -50,3 +51,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAuth(handler);

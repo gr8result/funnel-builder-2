@@ -1,17 +1,9 @@
 // pages/api/calendar/save-service-page-settings.js
-// Saves per-service booking page appearance to service_page_settings table.
-
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withWorkspace } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
-
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.replace("Bearer ", "");
-  if (!token) return res.status(401).json({ error: "Unauthorised" });
-
-  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
-  if (authErr || !user) return res.status(401).json({ error: "Unauthorised" });
 
   const { serviceId, pageTitle, pageBio, accentColor, logoUrl } = req.body;
   if (!serviceId) return res.status(400).json({ error: "serviceId required" });
@@ -21,7 +13,7 @@ export default async function handler(req, res) {
     .from("services")
     .select("id")
     .eq("id", serviceId)
-    .eq("user_id", user.id)
+    .eq("user_id", req.user.id)
     .maybeSingle();
   if (!svc) return res.status(403).json({ error: "Not your service" });
 
@@ -29,7 +21,7 @@ export default async function handler(req, res) {
     .from("service_page_settings")
     .upsert({
       service_id:   serviceId,
-      user_id:      user.id,
+      user_id:      req.user.id,
       page_title:   pageTitle   ?? null,
       page_bio:     pageBio     ?? null,
       accent_color: accentColor ?? "#84cc16",
@@ -44,3 +36,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true });
 }
+
+export default withWorkspace(handler);

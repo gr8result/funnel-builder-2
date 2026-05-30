@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const DEFAULTS_FILE_PATH = path.join(process.cwd(), "data", "website-builder-defaults.json");
 
@@ -58,7 +59,7 @@ function badRequest(res, error) {
   return res.status(400).json({ ok: false, error });
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === "GET") {
     const defaults = await readDefaultsFile();
     return res.status(200).json({ ok: true, ...defaults });
@@ -123,3 +124,5 @@ export default async function handler(req, res) {
 
   return badRequest(res, `Unsupported defaults action: ${action}`);
 }
+
+export default withAuth(handler);

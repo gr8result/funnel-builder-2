@@ -1,4 +1,4 @@
-// /components/crm/GlobalDialer.js
+﻿// /components/crm/GlobalDialer.js
 // FULL REPLACEMENT — Next.js safe (no window error) + uses @twilio/voice-sdk properly
 // Fixes: "window is not defined", "TwilioObj is not defined", and reduces 20101 token loops
 
@@ -175,10 +175,10 @@ export default function GlobalDialer() {
           padding: 12,
           width: 280,
           color: "white",
-          fontSize: 14,
+          fontSize: 16,
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>Dialer</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>Dialer</div>
         <div style={{ opacity: 0.8, marginBottom: 8 }}>
           Status: {status}
           {ready ? " ✅" : ""}
@@ -209,7 +209,7 @@ export default function GlobalDialer() {
               borderRadius: 10,
               border: "none",
               background: "#22c55e",
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
             }}
           >
@@ -223,7 +223,7 @@ export default function GlobalDialer() {
               borderRadius: 10,
               border: "none",
               background: "#ef4444",
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
             }}
           >
@@ -237,7 +237,7 @@ export default function GlobalDialer() {
               border: "1px solid rgba(255,255,255,.2)",
               background: "transparent",
               color: "white",
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
             }}
             title="Reconnect device"
@@ -247,7 +247,7 @@ export default function GlobalDialer() {
         </div>
 
         {lastError ? (
-          <div style={{ marginTop: 10, color: "#fca5a5", fontSize: 12, lineHeight: 1.3 }}>
+          <div style={{ marginTop: 10, color: "#fca5a5", fontSize: 16, lineHeight: 1.3 }}>
             {lastError}
           </div>
         ) : null}

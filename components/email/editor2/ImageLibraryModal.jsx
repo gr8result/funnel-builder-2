@@ -1,4 +1,4 @@
-// components/email/editor2/ImageLibraryModal.jsx
+﻿// components/email/editor2/ImageLibraryModal.jsx
 // Image library picker — combines the shared media library with legacy email-only images.
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../../utils/supabase-client";
@@ -166,14 +166,14 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 18px", borderBottom: "1px solid #1e293b", flexShrink: 0,
         }}>
-          <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>🖼️ Image Library</span>
+          <span style={{ fontWeight: 600, fontSize: 16, color: "#f1f5f9" }}>🖼️ Image Library</span>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
               style={{
                 padding: "7px 16px", background: "#2563eb", color: "#fff",
-                border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700,
+                border: "none", borderRadius: 7, fontSize: 16, fontWeight: 600,
                 cursor: "pointer", opacity: uploading ? 0.6 : 1,
               }}
             >
@@ -193,17 +193,17 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
         {/* Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
           {error && (
-            <div style={{ background: "#7f1d1d", color: "#fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13 }}>
+            <div style={{ background: "#7f1d1d", color: "#fca5a5", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 16 }}>
               {error}
             </div>
           )}
 
           {loading && (
-            <div style={{ color: "#64748b", textAlign: "center", padding: 60, fontSize: 15 }}>Loading…</div>
+            <div style={{ color: "#64748b", textAlign: "center", padding: 60, fontSize: 16 }}>Loading…</div>
           )}
 
           {!loading && images.length === 0 && (
-            <div style={{ color: "#475569", textAlign: "center", padding: 60, fontSize: 15 }}>
+            <div style={{ color: "#475569", textAlign: "center", padding: 60, fontSize: 16 }}>
               No saved images yet. Upload one above to use it now.
             </div>
           )}
@@ -241,7 +241,7 @@ function LibrarySection({ title, subtitle, items, onPick, onDelete, canDelete })
     <section style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "grid", gap: 4 }}>
         <strong style={{ fontSize: 18, color: "#f8fafc" }}>{title}</strong>
-        <span style={{ fontSize: 14, lineHeight: 1.5, color: "#94a3b8" }}>{subtitle}</span>
+        <span style={{ fontSize: 16, lineHeight: 1.5, color: "#94a3b8" }}>{subtitle}</span>
       </div>
       <div style={{
         display: "grid",
@@ -291,7 +291,7 @@ function ImgTile({ image, onPick, onDelete, canDelete = false }) {
               position: "absolute", inset: 0,
               background: "rgba(37,99,235,0.45)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 28, color: "#fff", fontWeight: 700,
+              fontSize: 28, color: "#fff", fontWeight: 600,
               pointerEvents: "none",
             }}
           >
@@ -305,7 +305,7 @@ function ImgTile({ image, onPick, onDelete, canDelete = false }) {
                 position: "absolute", top: 6, right: 6,
                 background: "rgba(220,38,38,0.9)",
                 border: "none", borderRadius: 6,
-                color: "#fff", fontSize: 14, fontWeight: 700,
+                color: "#fff", fontSize: 16, fontWeight: 600,
                 width: 28, height: 28, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 lineHeight: 1,

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
 
 export const config = { api: { bodyParser: true } };
 
@@ -6,7 +7,7 @@ function key(d) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { type, id, days = 30 } = req.query;
 
   const filter = {};
@@ -39,3 +40,5 @@ export default async function handler(req, res) {
   const rows = Object.values(daily).sort((a, b) => (a.date < b.date ? -1 : 1));
   return res.json(rows);
 }
+
+export default withAuth(handler);

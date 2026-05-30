@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import sendEmail from "../../../lib/sendEmail";
+import { withAuth } from "../../../lib/withWorkspace";
 
 export const config = {
   api: {
@@ -133,13 +134,14 @@ async function renderPdfBuffer(html) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "POST only" });
   }
 
   try {
-    const { to, subject, html, userId, leadName, quoteNumber, message, signature, companyName: companyNameFromBody, companyEmail: companyEmailFromBody, companyPhone: companyPhoneFromBody, companyWebsite: companyWebsiteFromBody, companyLogoUrl: companyLogoUrlFromBody } = req.body || {};
+    const userId = req.user.id;
+    const { to, subject, html, leadName, quoteNumber, message, signature, companyName: companyNameFromBody, companyEmail: companyEmailFromBody, companyPhone: companyPhoneFromBody, companyWebsite: companyWebsiteFromBody, companyLogoUrl: companyLogoUrlFromBody } = req.body || {};
 
     if (!to || !String(to).includes("@")) {
       return res.status(400).json({ ok: false, error: "A valid recipient email is required." });
@@ -242,3 +244,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

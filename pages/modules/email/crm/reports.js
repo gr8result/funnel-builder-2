@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ResponsiveContainer,
@@ -625,7 +625,7 @@ const styles = {
   },
   bannerTitle: { margin: 0, fontSize: 48, fontWeight: 600 },
   bannerSub: { margin: "6px 0 0", fontSize: 18, opacity: 0.92 },
-  bannerMeta: { marginTop: 8, fontSize: 13, opacity: 0.88 },
+  bannerMeta: { marginTop: 8, fontSize: 16, opacity: 0.88 },
   bannerActions: { display: "flex", gap: 10, flexWrap: "wrap" },
   backBtn: {
     background: "rgba(0,0,0,.18)",
@@ -651,7 +651,7 @@ const styles = {
     borderRadius: 10,
     padding: "10px 14px",
     color: "#04120a",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
   },
   container: {
@@ -668,7 +668,7 @@ const styles = {
     marginBottom: 18,
   },
   sectionTitle: { margin: 0, fontSize: 26, fontWeight: 600 },
-  sectionSub: { margin: "6px 0 0", color: "#94a3b8", fontSize: 14 },
+  sectionSub: { margin: "6px 0 0", color: "#94a3b8", fontSize: 16 },
   filtersGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
@@ -682,7 +682,7 @@ const styles = {
     border: "1px solid #334155",
     background: "#08101b",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
   },
   statsGrid: {
     display: "grid",
@@ -696,8 +696,8 @@ const styles = {
     borderRadius: 14,
     padding: 16,
   },
-  statLabel: { color: "#94a3b8", fontSize: 13, fontWeight: 700, marginBottom: 8 },
-  statValue: { fontSize: 28, fontWeight: 800 },
+  statLabel: { color: "#94a3b8", fontSize: 16, fontWeight: 600, marginBottom: 8 },
+  statValue: { fontSize: 28, fontWeight: 600 },
   chartGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -713,7 +713,7 @@ const styles = {
   },
   chartTitle: {
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
     marginBottom: 12,
     color: "#e2e8f0",
   },
@@ -733,20 +733,20 @@ const styles = {
     border: "1px solid #24354f",
   },
   winRateLabel: {
-    fontSize: 12,
+    fontSize: 16,
     color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
-    fontWeight: 700,
+    fontWeight: 600,
   },
   winRateValue: {
     fontSize: 28,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#22c55e",
   },
   winRateSub: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: 16,
     color: "#cbd5e1",
   },
   tableGrid: {
@@ -761,7 +761,7 @@ const styles = {
     borderRadius: 14,
     padding: 16,
   },
-  reportTitle: { fontSize: 18, fontWeight: 700, marginBottom: 12 },
+  reportTitle: { fontSize: 18, fontWeight: 600, marginBottom: 12 },
   reportRows: { display: "grid", gap: 10 },
   reportRow: {
     display: "flex",
@@ -772,10 +772,10 @@ const styles = {
     borderRadius: 10,
     background: "#08101b",
   },
-  reportLabel: { fontWeight: 700, fontSize: 14 },
-  reportSub: { color: "#94a3b8", fontSize: 12, marginTop: 2 },
-  reportValue: { fontWeight: 800, fontSize: 14 },
-  reportEmpty: { color: "#94a3b8", fontSize: 14 },
+  reportLabel: { fontWeight: 600, fontSize: 16 },
+  reportSub: { color: "#94a3b8", fontSize: 16, marginTop: 2 },
+  reportValue: { fontWeight: 600, fontSize: 16 },
+  reportEmpty: { color: "#94a3b8", fontSize: 16 },
   detailsCard: {
     background: "#0f1622",
     border: "1px solid #24354f",
@@ -791,18 +791,18 @@ const styles = {
     marginBottom: 12,
   },
   detailsTitle: { margin: 0, fontSize: 20 },
-  detailsMeta: { color: "#94a3b8", fontSize: 13 },
+  detailsMeta: { color: "#94a3b8", fontSize: 16 },
   detailTableWrap: { overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
     textAlign: "left",
-    fontSize: 13,
+    fontSize: 16,
     color: "#94a3b8",
     borderBottom: "1px solid #24354f",
     padding: "10px 8px",
   },
   td: {
-    fontSize: 14,
+    fontSize: 16,
     padding: "10px 8px",
     borderBottom: "1px solid rgba(36,53,79,.55)",
     verticalAlign: "top",
@@ -813,6 +813,6 @@ const styles = {
     borderRadius: 14,
     padding: 20,
     color: "#94a3b8",
-    fontSize: 15,
+    fontSize: 16,
   },
 };

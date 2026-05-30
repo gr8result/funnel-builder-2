@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // pages/api/website/import-html.js
 // POST {
 //   url?: string,
@@ -844,6 +845,14 @@ function buildImportedBlocks({ html, sourceUrl, stylePack, projectName, imported
 }
 
 async function fetchHtml(url) {
+  // SSRF protection: only allow https:// to public hosts
+  let parsedUrl;
+  try { parsedUrl = new URL(url); } catch { throw new Error("Invalid URL"); }
+  if (parsedUrl.protocol !== "https:") throw new Error("URL must use https");
+  const host = parsedUrl.hostname.toLowerCase();
+  if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/.test(host)) {
+    throw new Error("URL must be a public address");
+  }
   const fetched = await fetch(url, {
     headers: {
       "user-agent": "Mozilla/5.0 WebsiteBuilderImporter",
@@ -895,7 +904,7 @@ function discoverInternalUrls(html, baseUrl, maxPages) {
   return sorted.slice(0, Math.max(0, maxPages - 1));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
@@ -1017,3 +1026,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error?.message || "Import failed" });
   }
 }
+
+export default withAuth(handler);

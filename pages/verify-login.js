@@ -1,4 +1,4 @@
-// /pages/verify-login.js
+﻿// /pages/verify-login.js
 // Verify login (no SideNav) — logo + name identical to original working layout.
 
 import { useState } from "react";
@@ -138,13 +138,13 @@ const brandText = {
 
 const brandTitle = {
   fontSize: 22,
-  fontWeight: 900,
+  fontWeight: 600,
   color: "#fff",
   margin: 0,
 };
 
 const brandSubtitle = {
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 600,
   color: "#93c5fd",
   margin: 0,
@@ -152,19 +152,19 @@ const brandSubtitle = {
 
 const heading = {
   fontSize: 20,
-  fontWeight: 800,
+  fontWeight: 600,
   marginBottom: 6,
 };
 
 const desc = {
-  fontSize: 14,
+  fontSize: 16,
   opacity: 0.8,
   marginBottom: 20,
 };
 
 const label = {
-  fontWeight: 700,
-  fontSize: 14,
+  fontWeight: 600,
+  fontSize: 16,
   marginTop: 10,
   display: "block",
   textAlign: "left",
@@ -187,7 +187,7 @@ const btn = {
   color: "#fff",
   border: "none",
   borderRadius: 10,
-  fontWeight: 900,
+  fontWeight: 600,
   padding: "12px",
   marginTop: 10,
   cursor: "pointer",

@@ -149,7 +149,7 @@ icon: ICONS.affiliates,
         <div style={page.banner}>
           <div style={page.leftBanner}>
             <div style={page.bannerIconWrap}>
-              {ICONS.affiliates({ size: 48, color: "#fff" })}
+              <span style={{ fontSize: 38, lineHeight: 1 }}>🤝</span>
               
 
 

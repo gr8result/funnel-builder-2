@@ -19,6 +19,8 @@
 // ✅ Never overwrites system templates (is_standard = true)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
+import { getLimit } from "../../../../lib/featureGates";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -42,7 +44,7 @@ function getBearer(req) {
   return m ? m[1] : null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
@@ -93,6 +95,41 @@ export default async function handler(req, res) {
 
     // Never overwrite templates
     const forceInsert = mode === "save_as" || is_template === true;
+
+    // ── QUOTA CHECK (on any new-flow path) ───────────────────────────────────
+    const isNewFlow = forceInsert || !flow_id;
+    if (isNewFlow) {
+      // Get this workspace's plan (workspaces.owner_id = auth user id)
+      const { data: wsRow } = await supabaseAdmin
+        .from("workspaces")
+        .select("plan")
+        .eq("owner_id", auth_user_id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      const plan = wsRow?.plan || "starter";
+      const limit = getLimit(plan, "automations"); // null = unlimited
+
+      if (limit !== null) {
+        const { count: flowCount, error: countErr } = await supabaseAdmin
+          .from("automation_flows")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", account_id)
+          .eq("is_standard", false);
+
+        if (!countErr && flowCount >= limit) {
+          return res.status(429).json({
+            ok: false,
+            code: "AUTOMATION_LIMIT_EXCEEDED",
+            error: `Automation limit reached (${limit} on ${plan} plan). Upgrade to create more.`,
+            limit,
+            used: flowCount,
+          });
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // UPDATE path (only if owned + not standard)
     if (!forceInsert && flow_id) {
@@ -174,3 +211,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || String(err) });
   }
 }
+
+export default withAuth(handler);

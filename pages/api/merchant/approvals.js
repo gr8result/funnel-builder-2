@@ -1,6 +1,7 @@
-﻿import { readDB } from "../../../utils/affdb";
+import { readDB } from "../../../utils/affdb";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
   const db = await readDB();
   const queue = db.applications
@@ -12,4 +13,4 @@ export default async function handler(req, res) {
   res.status(200).json({ approvals: queue });
 }
 
-
+export default withAdmin(handler);

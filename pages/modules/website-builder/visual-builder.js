@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -60,7 +60,7 @@ function StudioLoader({ label }) {
       <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#05070f", padding: 24, fontFamily: "system-ui,sans-serif" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 28 }}>
           {/* Wordmark */}
-          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,.28)", fontWeight: 700 }}>
+          <div style={{ fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,.28)", fontWeight: 600 }}>
             🌐&nbsp; GR8 Website Studio
           </div>
 
@@ -105,7 +105,7 @@ function StudioLoader({ label }) {
           {/* Cycling message */}
           <div style={{ height: 26, overflow: "hidden", position: "relative", minWidth: 220, textAlign: "center" }}>
             <span key={msgIdx} style={{
-              display: "block", fontSize: 15, fontWeight: 600,
+              display: "block", fontSize: 16, fontWeight: 600,
               color: "rgba(255,255,255,.75)",
               animation: "wb-msg 2.2s ease both",
             }}>
@@ -154,6 +154,10 @@ function sanitizeDomainInput(value) {
 
 function isLegacyAiStarterProject(project) {
   if (!project || String(project?.mode || "").toLowerCase() !== "ai") return false;
+  // Already upgraded — the field is set by the upgrade itself on completion
+  if (project?.brief?.aiStarterVersion) return false;
+  // User has manually saved content — never silently replace their work
+  if (project?.status === "saved") return false;
   if (project?.globalNavBlock || project?.globalFooterBlock) return false;
 
   const homePageName = Array.isArray(project?.pages) && project.pages.length
@@ -193,6 +197,9 @@ export default function VisualBuilderPage() {
   const syncQueuedRef = useRef(null); // holds latest project pending sync
   const syncTimerRef = useRef(null);  // timer for queued sync
   const lastSyncAtRef = useRef(0);    // timestamp of last completed sync
+  // Tracks which projectId we've already resolved activePage for.
+  // Prevents session token refreshes from snapping the user back to the URL's ?page= param.
+  const activePageInitializedForRef = useRef(null);
 
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
@@ -286,7 +293,7 @@ export default function VisualBuilderPage() {
         try {
           const remoteProject = await fetchWebsiteProjectFromServer(session, projectId);
           if (remoteProject) {
-            nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: false });
+            nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: !shouldForceReload });
           }
         } catch (error) {
           console.warn("Could not load website draft from the server", error);
@@ -332,11 +339,17 @@ export default function VisualBuilderPage() {
       if (cancelled) return;
       setProject(nextProject);
 
-      const resolvedPage = nextProject?.pages?.find((entry) => slugify(entry.name) === slugify(requestedPage))?.name
-        || nextProject?.pages?.[0]?.name
-        || requestedPage;
-
-      setActivePage(resolvedPage);
+      // Only reset activePage when the project itself changes (first load or different projectId).
+      // Session token refreshes re-run this effect but must NOT snap the user back to the URL's
+      // ?page= param — that's what causes the "jumps to Home" bug.
+      const resolvedProjectId = nextProject?.id || projectId || "";
+      if (activePageInitializedForRef.current !== resolvedProjectId) {
+        activePageInitializedForRef.current = resolvedProjectId;
+        const resolvedPage = nextProject?.pages?.find((entry) => slugify(entry.name) === slugify(requestedPage))?.name
+          || nextProject?.pages?.[0]?.name
+          || requestedPage;
+        setActivePage(resolvedPage);
+      }
     };
 
     loadProject();
@@ -369,6 +382,14 @@ export default function VisualBuilderPage() {
         const payload = await response.json();
         if (!response.ok || !payload?.ok) {
           throw new Error(payload?.error || "Could not refresh AI website content");
+        }
+
+        // If the user saved manual edits while the API call was in-flight, bail out
+        // to avoid overwriting their work.
+        const currentBeforeWrite = getWebsiteProject(project.id);
+        if (cancelled || currentBeforeWrite?.status === "saved") {
+          setIsUpgrading(false);
+          return;
         }
 
         const updated = updateWebsiteProject(project.id, {
@@ -455,6 +476,15 @@ export default function VisualBuilderPage() {
       }
     }
 
+    // When forcing a sync, cancel any pending deferred autosave timer.
+    // Deferred syncs hold an older snapshot of the project and must not
+    // overwrite the force save that is about to start.
+    if (options?.force && syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+      syncQueuedRef.current = null;
+    }
+
     syncInFlightRef.current = true;
 
     try {
@@ -498,8 +528,15 @@ export default function VisualBuilderPage() {
     } finally {
       lastSyncAtRef.current = Date.now();
       syncInFlightRef.current = false;
-      // Fire any queued sync that accumulated while we were in-flight
-      if (syncQueuedRef.current && !syncTimerRef.current) {
+      // After a forced sync the queue may hold an older autosave snapshot.
+      // Sending it would overwrite the server's freshly-committed blocks with
+      // stale data, which then races the preview tab's server fetch and can
+      // cause the preview to show an older version of the page.
+      // Simply discard the queue here — the next real autosave will re-sync.
+      if (options?.force) {
+        syncQueuedRef.current = null;
+      } else if (syncQueuedRef.current && !syncTimerRef.current) {
+        // Fire any queued sync that accumulated while a normal autosave was in-flight
         const queued = syncQueuedRef.current;
         syncQueuedRef.current = null;
         syncTimerRef.current = setTimeout(() => {
@@ -621,13 +658,29 @@ export default function VisualBuilderPage() {
   function saveProjectPatch(patch, successMessage = "Saved changes") {
     if (!project?.id) return null;
 
-    const currentProject = getWebsiteProject(project.id) || project;
+    // If the project isn't in localStorage yet (e.g. freshly loaded from server),
+    // cache it first so updateWebsiteProject can find it by id.
+    let currentProject = getWebsiteProject(project.id);
+    if (!currentProject) {
+      cacheWebsiteProject(project, { onlyIfNewer: false });
+      currentProject = getWebsiteProject(project.id) || project;
+    }
 
     const savedProject = updateWebsiteProject(project.id, {
       ...currentProject,
       ...patch,
       status: "saved",
     });
+
+    // Storage quota exceeded — force immediate cloud sync so nothing is lost
+    if (savedProject?._localSaveFailed) {
+      const projectToSync = { ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined };
+      flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
+      void syncProjectToServer(projectToSync, { silent: false, force: true }).then((synced) => {
+        if (synced) flashNotice("✓ Auto-saved to cloud (local storage full)", "success", 6000);
+      });
+      return projectToSync;
+    }
 
     let latest = null;
     try {
@@ -644,7 +697,7 @@ export default function VisualBuilderPage() {
     }
 
     if (!savedProject) {
-      flashNotice("Could not save changes. Local storage may be full or unavailable.");
+      flashNotice("⚠️ Could not save — storage full. Please click Save to force cloud sync.", "error", 8000);
     } else {
       setProject(savedProject);
       flashNotice(successMessage);
@@ -743,7 +796,12 @@ export default function VisualBuilderPage() {
   function saveChaiPage(data, successMessage = `Saved ${activePage}`) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const safeData = data || buildStarterChaiData(currentProject, activePage);
-    const html = renderChaiHtml(safeData, brandAssets);
+    let html = "";
+    try {
+      html = renderChaiHtml(safeData, brandAssets);
+    } catch (renderErr) {
+      console.error("[saveChaiPage] renderChaiHtml threw — saving without pre-rendered HTML:", renderErr);
+    }
 
     return saveProjectPatch(
       {
@@ -777,43 +835,82 @@ export default function VisualBuilderPage() {
 
   // forceSaveBlockPage: used by the manual Save button / Ctrl+S.
   // Awaits the cloud sync and surfaces errors so the user knows if data didn't reach the server.
+  // IMPORTANT: this function must NEVER return null — handleSave treats null as a hard failure.
+  // All errors are already reported via flashNotice; returning a truthy value lets handleSave show "Saved ✓".
   async function forceSaveBlockPage(blocks) {
-    const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
-    if (!currentProject?.id) return null;
-    const safeBlocks = Array.isArray(blocks) ? blocks : [];
-
-    // Build the chai data payload (same as saveBlockPage)
-    const chaiData = {
-      ...(currentProject?.chaiData?.[activePage] || {}),
-      blocks: safeBlocks,
-      theme: currentProject?.chaiData?.[activePage]?.theme || { preset: currentProject?.stylePack || "premium" },
-      designTokens: currentProject?.chaiData?.[activePage]?.designTokens || {},
-    };
-    const html = renderChaiHtml(chaiData, brandAssets);
-    const patch = {
-      chaiData: { ...(currentProject?.chaiData || {}), [activePage]: chaiData },
-      pageBlocks: { ...(currentProject?.pageBlocks || {}), [activePage]: safeBlocks },
-      pagesContent: { ...(currentProject?.pagesContent || {}), [activePage]: html },
-      status: "saved",
-    };
-
-    // 1. Save to localStorage immediately
-    const savedProject = updateWebsiteProject(currentProject.id, { ...currentProject, ...patch });
-    const latest = savedProject ? getWebsiteProject(currentProject.id) : null;
-    if (!savedProject && !latest) {
-      flashNotice("Could not save. Local storage may be full.", "error");
-      return null;
-    }
-    if (latest) setProject(latest);
-
-    // 2. Await cloud sync — show explicit success or error (force bypasses throttle)
     try {
-      const synced = await syncProjectToServer(latest || savedProject, { silent: false, force: true });
+      const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+      if (!currentProject?.id) {
+        console.error("[forceSaveBlockPage] project has no id — project state:", project);
+        flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
+        return { _saveError: true }; // truthy so handleSave doesn't double-report
+      }
+      const safeBlocks = Array.isArray(blocks) ? blocks : [];
+
+      // Build the chai data payload
+      const chaiData = {
+        ...(currentProject?.chaiData?.[activePage] || {}),
+        blocks: safeBlocks,
+        theme: currentProject?.chaiData?.[activePage]?.theme || { preset: currentProject?.stylePack || "premium" },
+        designTokens: currentProject?.chaiData?.[activePage]?.designTokens || {},
+      };
+
+      // Render HTML — wrapped in try/catch so a broken block component never kills the save.
+      let html = "";
+      try {
+        html = renderChaiHtml(chaiData, brandAssets);
+      } catch (renderErr) {
+        console.error("[forceSaveBlockPage] renderChaiHtml threw — saving without pre-rendered HTML:", renderErr);
+      }
+
+      const patch = {
+        chaiData: { ...(currentProject?.chaiData || {}), [activePage]: chaiData },
+        pageBlocks: { ...(currentProject?.pageBlocks || {}), [activePage]: safeBlocks },
+        pagesContent: { ...(currentProject?.pagesContent || {}), [activePage]: html },
+        status: "saved",
+      };
+
+      const projectWithPatch = { ...currentProject, ...patch, updatedAt: new Date().toISOString() };
+
+      // ── SERVER FIRST ──────────────────────────────────────────────────────────
+      // Always sync to the server BEFORE touching localStorage. This guarantees
+      // your work is safe on the server even if localStorage is full or fails.
+      let serverSynced = null;
+      try {
+        serverSynced = await syncProjectToServer(projectWithPatch, { silent: true, force: true });
+      } catch (serverErr) {
+        console.error("[forceSaveBlockPage] server sync failed:", serverErr);
+        flashNotice("⚠️ Could not save to cloud — check your connection and try again.", "error", 10000);
+        return { _saveError: true };
+      }
+
+      const projectToStore = serverSynced || projectWithPatch;
+
+      // ── THEN localStorage (best-effort cache only) ─────────────────────────
+      if (!getWebsiteProject(currentProject.id)) {
+        cacheWebsiteProject(currentProject, { onlyIfNewer: false });
+      }
+      const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
+      const latest = savedProject && !savedProject._localSaveFailed
+        ? getWebsiteProject(currentProject.id)
+        : null;
+
+      if (savedProject?._localSaveFailed || !savedProject) {
+        // localStorage full — data is already safe on the server, just warn
+        console.warn("[forceSaveBlockPage] localStorage full — data saved to server only");
+        setProject(projectToStore);
+        flashNotice(`✓ Saved to cloud — local storage full. Your work is safe.`, "success", 6000);
+        return projectToStore;
+      }
+
+      if (latest) setProject(latest);
       flashNotice(`Saved ✓ ${activePage}`, "success");
-      return synced || latest || savedProject;
-    } catch {
-      // syncProjectToServer already showed the error toast via flashNotice
-      return latest || savedProject; // still return the local save so handleSave shows success
+      return latest || savedProject;
+    } catch (unexpectedErr) {
+      // Catch-all: never let an unexpected error cause handleSave to show "Could not save page"
+      console.error("[forceSaveBlockPage] unexpected error:", unexpectedErr);
+      flashNotice("Save encountered an error — please try again.", "error");
+      return { _saveError: true }; // truthy fallback
     }
   }
 
@@ -822,7 +919,9 @@ export default function VisualBuilderPage() {
 
     const syncServerDefaults = async () => {
       try {
-        const response = await fetch("/api/website-builder/defaults");
+        const response = await fetch("/api/website-builder/defaults", {
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        });
         const payload = await response.json();
         if (!response.ok || !payload?.ok || cancelled) return;
 
@@ -851,7 +950,7 @@ export default function VisualBuilderPage() {
     return () => {
       cancelled = true;
     };
-  }, [project?.id, project?.templateSlug]);
+  }, [project?.id, project?.templateSlug, session?.access_token]);
 
   async function saveTemplatePageToServer({ pageName, blocks, globalNavBlock, globalFooterBlock }) {
     if (!project?.templateSlug) return false;
@@ -859,7 +958,7 @@ export default function VisualBuilderPage() {
     try {
       const response = await fetch("/api/website-builder/defaults", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
         body: JSON.stringify({
           action: "save-template-page",
           templateSlug: project.templateSlug,
@@ -888,7 +987,7 @@ export default function VisualBuilderPage() {
     try {
       const response = await fetch("/api/website-builder/defaults", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
         body: JSON.stringify({
           action: "save-template-site",
           templateSlug: project.templateSlug,
@@ -917,7 +1016,7 @@ export default function VisualBuilderPage() {
     try {
       const response = await fetch("/api/website-builder/defaults", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
         body: JSON.stringify({
           action: "save-block-default",
           blockType,
@@ -993,6 +1092,28 @@ export default function VisualBuilderPage() {
     if (!file) return;
 
     try {
+      // Video files must go through the server-side API to bypass Supabase
+      // bucket MIME-type restrictions that block client-side video uploads.
+      const videoFieldKeys = ["backgroundVideoUrl", "__video_hero_src__"];
+      const isVideo = file.type?.startsWith("video/") || videoFieldKeys.includes(String(fieldKey || ""));
+      if (isVideo) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token || "";
+        if (!token) throw new Error("You must be signed in to upload videos.");
+        const form = new FormData();
+        form.append("file", file, file.name || "upload.mp4");
+        const res = await fetch("/api/website-builder/upload-video", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json?.src) throw new Error(json?.error || "Video upload failed");
+        const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src };
+        flashNotice(`${file.name} uploaded`);
+        return asset;
+      }
+
       const asset = session?.user?.id
         ? await uploadSharedMediaLibraryAsset(supabase, session.user.id, file, { tag: fieldKey === "logo" ? "logo" : "web" })
         : await createStoredAsset(file, { maxWidth: 960, maxHeight: 960, quality: 0.68 });
@@ -1009,7 +1130,7 @@ export default function VisualBuilderPage() {
       flashNotice(`${file.name} added`);
       return asset;
     } catch (error) {
-      flashNotice(error?.message || "Image upload failed.");
+      flashNotice(error?.message || "Upload failed.");
     }
   }
 
@@ -1071,11 +1192,11 @@ export default function VisualBuilderPage() {
         <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#05070f", padding: 24, fontFamily: "system-ui,sans-serif" }}>
           <div style={{ display: "grid", gap: 14, width: "min(580px, 100%)", borderRadius: 18, padding: 28, background: "#0d1117", border: "1px solid rgba(99,102,241,.25)", boxShadow: "0 0 40px rgba(99,102,241,.1)" }}>
             <div style={{ fontSize: 32 }}>🌐</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9" }}>Project not found</div>
-            <div style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(255,255,255,.5)", maxWidth: 520 }}>
-              Project <code style={{ background: "rgba(255,255,255,.08)", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>{missingProjectId}</code> is not available in this session.
+            <div style={{ fontSize: 18, fontWeight: 600, color: "#f1f5f9" }}>Project not found</div>
+            <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(255,255,255,.5)", maxWidth: 520 }}>
+              Project <code style={{ background: "rgba(255,255,255,.08)", padding: "2px 6px", borderRadius: 4, fontSize: 16 }}>{missingProjectId}</code> is not available in this session.
             </div>
-            <div style={{ fontSize: 13, lineHeight: 1.7, color: "rgba(255,255,255,.35)" }}>
+            <div style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(255,255,255,.35)" }}>
               Reopen the site from the website builder dashboard, or sign in to the account that saved it.
             </div>
           </div>
@@ -1157,6 +1278,70 @@ export default function VisualBuilderPage() {
               </div>
             </div>
           </section>
+
+          {/* ── Persistent pages bar ── */}
+          {project?.pages?.length > 0 && (
+            <div style={styles.pagesBar}>
+              <div style={styles.pagesBarTabs}>
+                {project.pages.map((entry) => (
+                  renamingPage === entry.name ? (
+                    <div key={entry.name} style={styles.pagePillRenameWrap}>
+                      <input
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { handleRenamePage(entry.name, renameValue); setRenamingPage(null); }
+                          if (e.key === "Escape") setRenamingPage(null);
+                        }}
+                        onBlur={() => { handleRenamePage(entry.name, renameValue); setRenamingPage(null); }}
+                        style={styles.pagePillRenameInput}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      key={entry.name}
+                      style={{
+                        ...styles.pagesBarTab,
+                        ...(activePage === entry.name ? styles.pagesBarTabActive : {}),
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setActivePage(entry.name)}
+                        onDoubleClick={() => { setRenamingPage(entry.name); setRenameValue(entry.name); }}
+                        style={styles.pagesBarTabName}
+                        title="Double-click to rename"
+                      >
+                        {entry.name}
+                      </button>
+                      {project.pages.length > 1 && (
+                        <button
+                          type="button"
+                          title={`Delete ${entry.name}`}
+                          onClick={() => handleDeletePage(entry.name)}
+                          style={styles.pagesBarTabDelete}
+                        >×</button>
+                      )}
+                    </div>
+                  )
+                ))}
+              </div>
+              <div style={styles.pagesBarAddRow}>
+                <input
+                  value={newPageName}
+                  onChange={(e) => setNewPageName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddPage(); }}
+                  placeholder="+ New page"
+                  style={styles.pagesBarInput}
+                />
+                {newPageName.trim() ? (
+                  <button type="button" onClick={handleAddPage} style={styles.pagesBarAddBtn}>Add</button>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           {showSetupPanel && (
             <div style={styles.setupDrawer}>
@@ -1361,8 +1546,7 @@ export default function VisualBuilderPage() {
 
 const styles = {
   page: {
-    height: "100dvh",
-    maxHeight: "100dvh",
+    height: "calc(100dvh - 140px)",
     overflow: "hidden",
     background: "linear-gradient(180deg, #0b1016 0%, #0d1420 100%)",
     color: "#e6eef5",
@@ -1370,7 +1554,7 @@ const styles = {
     fontSize: 16,
     fontWeight: 600,
     display: "grid",
-    gridTemplateRows: "auto 1fr",
+    gridTemplateRows: "auto auto 1fr",
     alignContent: "stretch",
     minWidth: 0,
   },
@@ -1547,7 +1731,7 @@ const styles = {
     color: "#fff",
     borderRadius: 8,
     padding: "6px 12px",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
   },
@@ -1890,5 +2074,94 @@ const styles = {
     fontSize: 16,
     fontWeight: 600,
     cursor: "pointer",
+  },
+  pagesBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "5px 16px 5px",
+    background: "rgba(8,15,30,0.82)",
+    borderBottom: "1px solid rgba(255,255,255,.09)",
+    overflowX: "auto",
+    overflowY: "hidden",
+    scrollbarWidth: "thin",
+    flexShrink: 0,
+  },
+  pagesBarTabs: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    flex: "1 1 auto",
+    flexWrap: "nowrap",
+    minWidth: 0,
+    overflowX: "auto",
+    scrollbarWidth: "none",
+  },
+  pagesBarTab: {
+    display: "flex",
+    alignItems: "stretch",
+    borderRadius: 8,
+    border: "1px solid rgba(255,255,255,.12)",
+    background: "rgba(17,24,39,0.70)",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  pagesBarTabActive: {
+    border: "1px solid rgba(56,189,248,0.70)",
+    background: "rgba(14,165,233,.22)",
+  },
+  pagesBarTabName: {
+    padding: "6px 12px",
+    background: "transparent",
+    border: 0,
+    color: "#e2e8f0",
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: "pointer",
+    userSelect: "none",
+    whiteSpace: "nowrap",
+  },
+  pagesBarTabDelete: {
+    padding: "0 8px",
+    background: "transparent",
+    border: 0,
+    borderLeft: "1px solid rgba(255,255,255,.08)",
+    color: "rgba(255,255,255,.40)",
+    fontSize: 16,
+    lineHeight: 1,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+  },
+  pagesBarAddRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+    marginLeft: "auto",
+    paddingLeft: 8,
+    borderLeft: "1px solid rgba(255,255,255,.08)",
+  },
+  pagesBarInput: {
+    width: 140,
+    background: "rgba(2,6,23,0.60)",
+    color: "#e6eef5",
+    border: "1px solid rgba(255,255,255,.13)",
+    borderRadius: 7,
+    padding: "5px 10px",
+    fontSize: 14,
+    fontWeight: 600,
+    outline: "none",
+  },
+  pagesBarAddBtn: {
+    padding: "5px 12px",
+    borderRadius: 7,
+    border: 0,
+    background: "#0ea5e9",
+    color: "#04111d",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   },
 };

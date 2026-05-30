@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const GALLERY_ROOT = path.join(process.cwd(), "public", "templates", "gallery");
 const LEGACY_EMAIL_ROOT = path.join(process.cwd(), "email");
@@ -34,7 +35,7 @@ function makeId(v) {
   return String(v).replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -90,3 +91,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || "Failed to load local gallery" });
   }
 }
+
+export default withAuth(handler);

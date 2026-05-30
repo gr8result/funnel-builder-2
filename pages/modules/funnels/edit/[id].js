@@ -1,4 +1,4 @@
-// pages/modules/funnels/edit/[id].js
+﻿// pages/modules/funnels/edit/[id].js
 //
 // GrapesJS (MIT, white-label) builder with:
 // - Drag & drop blocks
@@ -3146,7 +3146,7 @@ function Editor() {
             </div>
             {(funnel.slug || funnel.name) ? (
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span style={{ color: "#94a3b8", fontSize: 14 }}>
+                <span style={{ color: "#94a3b8", fontSize: 16 }}>
                   Public URL: <span style={{ color: "#60a5fa" }}>{getPublishedFunnelPath() || "Add a slug to publish"}</span>
                 </span>
                 {getPublishedFunnelPath() ? (
@@ -3225,7 +3225,7 @@ function Editor() {
                 display: "grid",
                 gap: 8,
               }}>
-                <div style={{ color: "#93c5fd", fontSize: 13, fontWeight: 700 }}>DALL-E Icon/Image Generator</div>
+                <div style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600 }}>DALL-E Icon/Image Generator</div>
                 <textarea
                   value={aiImagePrompt}
                   onChange={(e) => {
@@ -3274,7 +3274,7 @@ function Editor() {
                     Open Media Library
                   </button>
                 </div>
-                {aiImageStatus ? <div style={{ color: "#bfdbfe", fontSize: 12, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
+                {aiImageStatus ? <div style={{ color: "#bfdbfe", fontSize: 16, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
               </div>
             </div>
           )}
@@ -3295,7 +3295,7 @@ function Editor() {
               border: "1px solid #24354f",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div style={{ color: "#93c5fd", fontSize: 13, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                <div style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>
                   Pages
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -3366,7 +3366,7 @@ function Editor() {
 
             {editorError ? (
               <div style={{ border: "1px solid #4a1020", background: "#2d0d16", borderRadius: 12, padding: 14 }}>
-                <p style={{ margin: 0, color: "#fecaca", fontSize: 15 }}>
+                <p style={{ margin: 0, color: "#fecaca", fontSize: 16 }}>
                   Editor failed to load: {editorError}
                 </p>
                 <button
@@ -3397,12 +3397,12 @@ function Editor() {
                         </div>
 
                         <div style={{ border: "1px solid #24354f", borderRadius: 10, padding: 10, display: "grid", gap: 8, background: "rgba(15,23,42,0.35)" }}>
-                          <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                          <div style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>
                             Arrange & Group
                           </div>
                           {isFreeformArrangeTarget(lastBlockCompRef.current) ? (
                             <>
-                              <div style={{ color: "#cbd5e1", fontSize: 12, lineHeight: 1.5 }}>
+                              <div style={{ color: "#cbd5e1", fontSize: 16, lineHeight: 1.5 }}>
                                 Align the selected floating object, or add a few floating objects to a group and move them together.
                               </div>
                               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -3422,7 +3422,7 @@ function Editor() {
                               <button type="button" style={ctlBtn} onClick={() => alignSelectedBlock("center-both")}>Center Both</button>
                             </>
                           ) : (
-                            <div style={{ color: "#94a3b8", fontSize: 12, lineHeight: 1.5 }}>
+                            <div style={{ color: "#94a3b8", fontSize: 16, lineHeight: 1.5 }}>
                               Freeform arrange is available for shapes and grouped floating objects, not normal layout sections.
                             </div>
                           )}
@@ -3841,7 +3841,7 @@ function Editor() {
                               placeholder="https://example.com or #section"
                               style={ctlInput}
                             />
-                            <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>Enter the URL this link points to.</p>
+                            <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 16 }}>Enter the URL this link points to.</p>
                           </div>
                         ) : null}
                       </div>
@@ -3892,13 +3892,13 @@ function Editor() {
                               ) : null}
 
                               {selectedLayer ? (
-                                <div style={{ fontSize: 12, color: "#93a4bf", lineHeight: 1.5 }}>
+                                <div style={{ fontSize: 16, color: "#93a4bf", lineHeight: 1.5 }}>
                                   {selectedLayer.get?.("tagName") === "img"
                                     ? "Selected image layer. Use the image tools below to upload, replace, resize, and position it."
                                     : "Selected text layer. Edit the text directly on canvas, then use the text controls above for styling."}
                                 </div>
                               ) : (
-                                <div style={{ fontSize: 12, color: "#93a4bf", lineHeight: 1.5 }}>
+                                <div style={{ fontSize: 16, color: "#93a4bf", lineHeight: 1.5 }}>
                                   Select a layer chip to edit that layer directly inside the stack canvas.
                                 </div>
                               )}
@@ -4097,7 +4097,7 @@ function Editor() {
                         {(blockKind === "shape" || isShapeLikeComponent(lastBlockCompRef.current)) ? (
                           <div style={{ borderTop: "1px solid #2d4a7a", paddingTop: 10, marginTop: 10, display: "grid", gap: 10 }}>
                             <label style={ctlLabel}>Shape Controls</label>
-                            <div style={{ color: "#93c5fd", fontSize: 12, lineHeight: 1.5 }}>
+                            <div style={{ color: "#93c5fd", fontSize: 16, lineHeight: 1.5 }}>
                               Drag the selected shape directly on the page to place it anywhere you want.
                             </div>
                             <div>
@@ -4324,7 +4324,7 @@ function Editor() {
                               Media Library
                             </button>
                           </div>
-                          {aiImageStatus ? <div style={{ color: "#93c5fd", fontSize: 12, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
+                          {aiImageStatus ? <div style={{ color: "#93c5fd", fontSize: 16, lineHeight: 1.5 }}>{aiImageStatus}</div> : null}
                         </div>
                         <div style={ctlRow2}>
                           <div>
@@ -4614,7 +4614,7 @@ function blankHTML() {
 /* ---------- Styles ---------- */
 const wrap = { padding: "24px 22px", width: "min(1880px, calc(100vw - 240px))", maxWidth: "none", margin: "0 auto", background: "#0c121a", minHeight: "100vh" };
 const topRow = { display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20, background: "#111827", border: "1px solid #1e2d45", borderRadius: 14, padding: "20px 22px" };
-const nameInput = { padding: "12px 14px", borderRadius: 10, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 20, fontWeight: 700, width: "100%" };
+const nameInput = { padding: "12px 14px", borderRadius: 10, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 20, fontWeight: 600, width: "100%" };
 const slugInput = { flex: 1, padding: "10px 12px", borderRadius: 10, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 16 };
 const miniBtn = { padding: "10px 14px", borderRadius: 10, border: "1px solid #2b3650", background: "#1e2d45", color: "#94a3b8", cursor: "pointer", fontSize: 16 };
 const miniLink = { ...miniBtn, textDecoration: "none", display: "inline-flex", alignItems: "center", color: "#60a5fa" };
@@ -4628,7 +4628,7 @@ const stepsBar = { display: "flex", alignItems: "center", justifyContent: "space
 const stepsWrap = { display: "grid", gridTemplateColumns: "1fr", gap: 10 };
 const builderSection = { marginTop: 20, minHeight: "calc(100vh - 140px)", overflow: "visible" };
 const panel = { background: "#111827", border: "1px solid #1e2d45", borderRadius: 14, padding: 14, minHeight: 120, height: "auto", display: "grid", gridTemplateRows: "auto auto minmax(720px,1fr)", overflow: "visible" };
-const panelTitle = { color: "#e6eef5", fontWeight: 700, fontSize: 18, marginBottom: 10 };
+const panelTitle = { color: "#e6eef5", fontWeight: 600, fontSize: 18, marginBottom: 10 };
 const btn = { padding: "10px 16px", borderRadius: 10, border: "1px solid #2b3650", background: "#1e2d45", color: "#e6eef5", cursor: "pointer", fontSize: 16, fontWeight: 600 };
 const btnPrimary = { ...btn, border: "none", background: "linear-gradient(135deg,#2d6cdf,#1a4fa8)", color: "#fff", boxShadow: "0 2px 10px rgba(45,108,223,0.4)" };
 const btnWarn = { ...btn, border: "1px solid #6a5015", background: "#3b2a0a", color: "#fcd34d" };
@@ -4638,21 +4638,21 @@ const editorShell = { display: "grid", gridTemplateColumns: "320px minmax(0,1fr)
 const blocksPane = { background: "#0a0f17", border: "1px solid #1e2d45", borderRadius: 10, padding: 10, height: "100%", overflow: "auto", minHeight: 0 };
 const editorCanvas = { borderRadius: 10, overflow: "auto", background: "#0b1016", height: "100%", minHeight: 0 };
 const rightPaneWrap = { background: "#0a0f17", border: "1px solid #1e2d45", borderRadius: 10, height: "100%", minHeight: 0, display: "grid", gridTemplateRows: "auto minmax(0,1fr)", overflow: "hidden" };
-const rightPaneHead = { color: "#cbd5e1", fontSize: 13, fontWeight: 700, letterSpacing: 0.4, padding: "10px 12px", borderBottom: "1px solid #1e2d45", background: "#111827" };
+const rightPaneHead = { color: "#cbd5e1", fontSize: 16, fontWeight: 600, letterSpacing: 0.4, padding: "10px 12px", borderBottom: "1px solid #1e2d45", background: "#111827" };
 const rightPane = { minHeight: 0, height: "100%", overflow: "auto", padding: 8 };
-const rightHint = { color: "#94a3b8", fontSize: 14, lineHeight: 1.6, padding: 8 };
-const ctlLabel = { color: "#94a3b8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 };
-const ctlInput = { width: "100%", padding: "9px 10px", borderRadius: 8, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 13 };
-const ctlTextarea = { width: "100%", minHeight: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box" };
+const rightHint = { color: "#94a3b8", fontSize: 16, lineHeight: 1.6, padding: 8 };
+const ctlLabel = { color: "#94a3b8", fontSize: 16, fontWeight: 600, display: "block", marginBottom: 4 };
+const ctlInput = { width: "100%", padding: "9px 10px", borderRadius: 8, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 16 };
+const ctlTextarea = { width: "100%", minHeight: 120, padding: "10px 12px", borderRadius: 8, border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5", fontSize: 16, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box" };
 const ctlColor = { ...ctlInput, padding: 4, height: 40 };
 const ctlRow2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 };
-const swatchGroupTitle = { color: "#7d8da5", fontSize: 11, fontWeight: 700, marginTop: 8, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 };
+const swatchGroupTitle = { color: "#7d8da5", fontSize: 16, fontWeight: 600, marginTop: 8, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 };
 const swatchGrid = { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 };
-const swatchHint = { marginTop: 6, color: "#64748b", fontSize: 12, lineHeight: 1.4 };
+const swatchHint = { marginTop: 6, color: "#64748b", fontSize: 16, lineHeight: 1.4 };
 const formatRow = { display: "flex", gap: 8, alignItems: "center" };
 const ctlBtnRow = { marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" };
-const ctlBtn = { padding: "8px 10px", borderRadius: 8, border: "1px solid #2d4a7a", background: "#152038", color: "#93c5fd", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-const ctlBtnGhost = { padding: "8px 10px", borderRadius: 8, border: "1px solid #2b3650", background: "#111827", color: "#cbd5e1", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const ctlBtn = { padding: "8px 10px", borderRadius: 8, border: "1px solid #2d4a7a", background: "#152038", color: "#93c5fd", fontSize: 16, fontWeight: 600, cursor: "pointer" };
+const ctlBtnGhost = { padding: "8px 10px", borderRadius: 8, border: "1px solid #2b3650", background: "#111827", color: "#cbd5e1", fontSize: 16, fontWeight: 600, cursor: "pointer" };
 
 function formatBtn(active) {
   return {
@@ -4662,7 +4662,7 @@ function formatBtn(active) {
     border: active ? "1px solid #60a5fa" : "1px solid #2b3650",
     background: active ? "#1d4ed8" : "#111827",
     color: "#e6eef5",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   };
 }
@@ -4682,7 +4682,7 @@ function swatchButton(color, active) {
 const pickerBack = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 };
 const picker = { width: "min(980px,92vw)", background: "#111827", border: "1px solid #1e2d45", borderRadius: 16, padding: 24 };
 const tplCard = { border: "1px solid #1e2d45", borderRadius: 12, background: "#1a2535", padding: 8, cursor: "pointer", textAlign: "center" };
-const tplThumb = { height: 120, borderRadius: 10, background: "#0c121a", color: "#e6eef5", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 16 };
+const tplThumb = { height: 120, borderRadius: 10, background: "#0c121a", color: "#e6eef5", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 16 };
 
 function Gate({ children }) {
   return <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#e6eef5", background: "#0c121a", fontSize: 18 }}>{children}</div>;

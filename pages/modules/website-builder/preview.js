@@ -199,7 +199,7 @@ export default function ThemePreviewPage() {
 
               <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
                 {preview.blocks.map((block, index) => (
-                  <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "hidden" }}>
+                  <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "clip", minWidth: 0 }}>
                     {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth })}
                   </div>
                 ))}
@@ -226,6 +226,7 @@ const styles = {
   shell: {
     width: "100%",
     display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr)",
     gap: 0,
     margin: 0,
   },
@@ -276,7 +277,7 @@ const styles = {
     background: "rgba(255,255,255,.08)",
     border: "1px solid rgba(255,255,255,.14)",
     color: "#dbeafe",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
   },
   topActions: {
@@ -315,7 +316,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,.12)",
     background: "rgba(8,15,29,.72)",
     backdropFilter: "blur(14px)",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 600,
   },
   siteLinkActive: (chip) => ({
@@ -330,7 +331,7 @@ const styles = {
     marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     borderRadius: viewport === "desktop" ? 0 : 24,
-    overflow: "hidden",
+    overflow: "clip",
     boxShadow: viewport === "desktop" ? "none" : "0 24px 60px rgba(15,23,42,0.22)",
     background: viewport === "desktop" ? "transparent" : "#ffffff",
     paddingTop: viewport === "desktop" ? 112 : 126,

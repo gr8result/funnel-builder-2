@@ -1,4 +1,4 @@
-// /components/crm/CallNowModal.js
+﻿// /components/crm/CallNowModal.js
 // FULL REPLACEMENT — fixes Twilio Voice SDK v2 registration + uses identity from body
 // ✅ device.register() (this is what stops the “tiny noise then dead”)
 // ✅ token fetched with POST body identity
@@ -242,7 +242,7 @@ const headerRowStyle = {
   marginBottom: 12,
 };
 
-const titleStyle = { fontSize: 20, fontWeight: 700 };
+const titleStyle = { fontSize: 20, fontWeight: 600 };
 const subTitleStyle = { fontSize: 16, opacity: 0.85, marginTop: 2 };
 
 const closeIconBtnStyle = {

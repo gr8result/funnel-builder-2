@@ -13,12 +13,13 @@
 //   TWILIO_TWIML_APP_SID
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function s(v) {
   return String(v ?? "").trim();
 }
 
-export default function handler(req, res) {
+async function handler(req, res) {
   try {
     const TWILIO_ACCOUNT_SID = s(process.env.TWILIO_ACCOUNT_SID);
     const TWILIO_API_KEY_SID = s(process.env.TWILIO_API_KEY_SID);
@@ -74,3 +75,5 @@ export default function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

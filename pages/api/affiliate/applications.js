@@ -1,7 +1,8 @@
-﻿// pages/api/affiliate/applications.js
+// pages/api/affiliate/applications.js
 import adapter from "../../../lib/affiliate/adapter";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const data = await adapter.listApplications();
     res.status(200).json(data);
@@ -10,3 +11,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAdmin(handler);

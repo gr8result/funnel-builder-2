@@ -1,4 +1,5 @@
 import { requireUser } from '../../../lib/social/auth';
+import { withAuth } from "../../../lib/withWorkspace";
 
 // Supabase can return timestamps without a timezone marker (plain 'timestamp' columns
 // or certain Postgres configs). Without 'Z', JavaScript parses the string as local time
@@ -16,7 +17,7 @@ function sanitizeScheduleDate(value) {
   return parsed.toISOString();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const auth = await requireUser(req);
   if (auth.error) {
     return res.status(401).json({ ok: false, error: auth.error });
@@ -158,3 +159,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ ok: false, error: 'Method not allowed' });
 }
+
+export default withAuth(handler);

@@ -913,7 +913,7 @@ export default function CreateEmail() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            fontWeight: 700,
+            fontWeight: 600,
             fontSize: 16,
           }}
         >
@@ -926,7 +926,7 @@ export default function CreateEmail() {
               border: "none",
               padding: "6px 12px",
               borderRadius: "6px",
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: "pointer",
               fontSize: 16,
             }}
@@ -950,7 +950,7 @@ export default function CreateEmail() {
             marginTop: "24px",
             marginBottom: "16px",
             textAlign: "center",
-            fontWeight: 700,
+            fontWeight: 600,
             fontSize: 16,
           }}
         >
@@ -1075,7 +1075,7 @@ export default function CreateEmail() {
                 {errors.fromEmail}
               </div>
             )}
-            <div style={{ fontSize: 13, opacity: 0.72, marginTop: 6 }}>
+            <div style={{ fontSize: 16, opacity: 0.72, marginTop: 6 }}>
               Delivery uses the platform's verified sender address until your domain is authenticated. Recipients will still see your business name and replies go to your reply-to address.
             </div>
           </div>
@@ -1166,9 +1166,9 @@ export default function CreateEmail() {
                   border: "1px solid #000",
                   borderRadius: 8,
                   padding: "6px 12px",
-                  fontWeight: 800,
+                  fontWeight: 600,
                   cursor: "pointer",
-                  fontSize: 14,
+                  fontSize: 16,
                   opacity: aiBusy || busy ? 0.7 : 1,
                 }}
                 title="Generate a subject line using AI"
@@ -1199,7 +1199,7 @@ export default function CreateEmail() {
                 padding: "10px 12px",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
                 🧠 AI settings (optional)
               </div>
               <div style={{ display: "grid", gap: 8 }}>
@@ -1219,7 +1219,7 @@ export default function CreateEmail() {
                   style={{ fontSize: 16 }}
                 />
                 {aiLastError ? (
-                  <div className={styles.error} style={{ fontSize: 14 }}>
+                  <div className={styles.error} style={{ fontSize: 16 }}>
                     {aiLastError}
                   </div>
                 ) : null}
@@ -1236,7 +1236,7 @@ export default function CreateEmail() {
               onChange={onChange("preheader")}
               onBlur={() => onTouch("preheader")()}
             />
-            <div style={{ fontSize: 14, opacity: 0.85, marginTop: 6 }}>
+            <div style={{ fontSize: 16, opacity: 0.85, marginTop: 6 }}>
               The preheader is the small preview text shown in the inbox next to the subject.
               We use <b>one preheader</b> for the email — even when A/B subject testing is enabled.
             </div>
@@ -1259,7 +1259,7 @@ export default function CreateEmail() {
               fontSize: 16,
             }}
           >
-            <label style={{ display: "flex", alignItems: "center", gap: 12, fontWeight: 700 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 12, fontWeight: 600 }}>
               <input
                 type="checkbox"
                 checked={form.abEnabled}
@@ -1277,7 +1277,7 @@ export default function CreateEmail() {
             {form.abEnabled && (
               <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <label style={{ fontSize: 16, fontWeight: 700 }}>Subject Line A</label>
+                  <label style={{ fontSize: 16, fontWeight: 600 }}>Subject Line A</label>
                   <button
                     type="button"
                     onClick={generateSubjectsAB}
@@ -1288,9 +1288,9 @@ export default function CreateEmail() {
                       border: "1px solid #000",
                       borderRadius: 8,
                       padding: "6px 12px",
-                      fontWeight: 800,
+                      fontWeight: 600,
                       cursor: "pointer",
-                      fontSize: 14,
+                      fontSize: 16,
                       opacity: aiBusy || busy ? 0.7 : 1,
                     }}
                     title="Generate Subject Line A and B using AI"
@@ -1314,7 +1314,7 @@ export default function CreateEmail() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 16, fontWeight: 700 }}>Subject Line B</label>
+                  <label style={{ fontSize: 16, fontWeight: 600 }}>Subject Line B</label>
                   <input
                     className={styles.input}
                     value={form.abSubjectB}
@@ -1387,7 +1387,7 @@ export default function CreateEmail() {
                 style={{
                   padding: "6px 10px",
                   fontSize: 18,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   background: "#fbbf24",
                   borderBottom: "1px solid #b45309",
                   color: "#111827",
@@ -1488,7 +1488,7 @@ export default function CreateEmail() {
                     border: "none",
                     borderRadius: 8,
                     padding: "8px 14px",
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: "pointer",
                     opacity: busy ? 0.7 : 1,
                     fontSize: 16,
@@ -1499,7 +1499,7 @@ export default function CreateEmail() {
               </div>
 
               {/* sandbox toggle */}
-              <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600 }}>
                 <input
                   type="checkbox"
                   checked={sandbox}
@@ -1536,7 +1536,7 @@ export default function CreateEmail() {
                   borderRadius: 8,
                   border: "1px solid #000",
                   padding: "8px 14px",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   cursor: "pointer",
                   minWidth: 210,
                   fontSize: 16,

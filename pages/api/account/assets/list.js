@@ -1,10 +1,11 @@
-﻿// pages/api/assets/list.js
+// pages/api/assets/list.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (!fs.existsSync(UPLOAD_DIR)) {
       res.status(200).json({ assets: [] });
@@ -21,3 +22,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAuth(handler);

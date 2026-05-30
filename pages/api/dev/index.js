@@ -4,12 +4,13 @@
 // safe defaults if tables aren't present.
 
 import { useEffect, useState } from "react";
+import withAdmin from "../../../lib/withAdmin";
 
 function Stat({ label, value }) {
   return (
     <div style={{ padding: 16, border: "1px solid #1f2937", borderRadius: 12, background: "#0f1115" }}>
-      <div style={{ fontSize: 12, opacity: 0.7 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 900, marginTop: 6 }}>{value}</div>
+      <div style={{ fontSize: 16, opacity: 0.7 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{value}</div>
     </div>
   );
 }
@@ -37,8 +38,8 @@ export default function DevHome() {
       <div style={{ width: "80%", margin: "0 auto", padding: "18px 0 32px" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
           <div>
-            <div style={{ opacity: 0.7, fontSize: 12 }}>Developer</div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, margin: "4px 0 0" }}>Master Dashboard</h1>
+            <div style={{ opacity: 0.7, fontSize: 16 }}>Developer</div>
+            <h1 style={{ fontSize: 28, fontWeight: 600, margin: "4px 0 0" }}>Master Dashboard</h1>
           </div>
           <a href="/dashboard" style={{ textDecoration: "none", color: "#9aa7b2" }}>â† Back to app</a>
         </header>
@@ -55,18 +56,18 @@ export default function DevHome() {
 
         {/* Revenue chart (simple SVG) */}
         <section style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 10px" }}>Monthly revenue (A$)</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 10px" }}>Monthly revenue (A$)</h2>
           <RevenueChart points={data.revenueSeries || []} />
         </section>
 
         {/* Module breakdown */}
         <section style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 10px" }}>Modules with paying subscribers</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 10px" }}>Modules with paying subscribers</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
             {(data.modules || []).map((m) => (
               <div key={m.name} style={{ padding: 14, border: "1px solid #1f2937", borderRadius: 12, background: "#0f1115" }}>
-                <div style={{ fontWeight: 800 }}>{m.name}</div>
-                <div style={{ opacity: 0.8, fontSize: 13 }}>
+                <div style={{ fontWeight: 600 }}>{m.name}</div>
+                <div style={{ opacity: 0.8, fontSize: 16 }}>
                   Subscribers: <b>{m.count}</b> &nbsp;|&nbsp; MRR: <b>A${m.mrr.toLocaleString("en-AU")}</b>
                 </div>
               </div>
@@ -102,5 +103,4 @@ function RevenueChart({ points }) {
     </svg>
   );
 }
-
 

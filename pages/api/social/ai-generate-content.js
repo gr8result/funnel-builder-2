@@ -726,6 +726,7 @@ function buildPromptForPlatform({
   return `Generate EXACTLY ${count} ${p.toUpperCase()} posts about: "${topic}".
 
 IMPORTANT: Use Australian English spelling throughout. Examples: colour (not color), behaviour (not behavior), organise (not organize), realise (not realize), centre (not center), analyse (not analyse), apologise (not apologize), programme (not program), travelling (not traveling), licence (noun), practice (noun) / practise (verb).
+import { withAuth } from "../../../lib/withWorkspace";
 
 Tone/style: ${style}
 
@@ -898,7 +899,7 @@ async function generateForPlatform({
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
@@ -1018,3 +1019,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export default withAuth(handler);

@@ -1,5 +1,6 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import { BlockDefinitions, BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -985,7 +986,7 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
       images: [
         { id: `${pageKey}-stack-1`, kind: "image", src: visuals.stack[0] || visuals.hero, assetId: "", x: 40, y: 56, width: 420, height: 300, rotation: -8, radius: 28, zIndex: 1 },
         { id: `${pageKey}-stack-2`, kind: "image", src: visuals.stack[1] || visuals.media, assetId: "", x: 300, y: 240, width: 340, height: 250, rotation: 7, radius: 28, zIndex: 2 },
-        { id: `${pageKey}-stack-text`, kind: "text", content: `${pageContent.introTitle}\n${pageContent.ctaText}`, x: 660, y: 120, width: 320, height: 220, rotation: -2, radius: 24, zIndex: 3, fontSize: 38, fontWeight: "700", textAlign: "center", verticalAlign: "center", textColor: "#111827", background: "rgba(255,255,255,0.88)" },
+        { id: `${pageKey}-stack-text`, kind: "text", content: `${pageContent.introTitle}\n${pageContent.ctaText}`, x: 660, y: 120, width: 320, height: 220, rotation: -2, radius: 24, zIndex: 3, fontSize: 38, fontWeight: "600", textAlign: "center", verticalAlign: "center", textColor: "#111827", background: "rgba(255,255,255,0.88)" },
       ],
       ...buildAnimationProps({ sectionAnimation: "slide-right", sectionAnimationDelay: 0.1, textAnimation: "slide-right", subheadlineAnimation: "fade-up" }),
     });
@@ -1207,7 +1208,7 @@ Copy rules:
   return JSON.parse(content);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -1244,3 +1245,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "Failed to generate site content" });
   }
 }
+
+export default withAuth(handler);

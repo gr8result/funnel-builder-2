@@ -5,10 +5,11 @@
 
 import { requireUser } from "../../../lib/social/auth";
 import { savePlatformCredentials, deletePlatformCredentials, getPlatformCredentials } from "../../../lib/social/platformCredentials";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPPORTED_PLATFORMS = ["meta", "tiktok", "linkedin", "pinterest", "youtube"];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const auth = await requireUser(req);
   if (auth.error) return res.status(401).json({ ok: false, error: auth.error });
 
@@ -73,3 +74,5 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
+
+export default withAuth(handler);

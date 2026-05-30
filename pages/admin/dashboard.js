@@ -1,4 +1,4 @@
-// /pages/admin/dashboard.js
+﻿// /pages/admin/dashboard.js
 // Real-time Admin Dashboard — live Supabase subscription + stats + recent applications.
 
 // /pages/admin/dashboard.js
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <button
-                            style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                            style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer' }}
                             onClick={() => {
                               setSelectedVendor(vendor);
                               fetchVendorProducts(vendor);
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
                     </table>
                   )}
                   <div style={{ textAlign: 'right', marginTop: 24 }}>
-                    <button style={{ padding: '8px 22px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: 16 }}
+                    <button style={{ padding: '8px 22px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: 16 }}
                       onClick={() => { setSelectedVendor(null); setVendorProducts([]); }}>
                       Close
                     </button>
@@ -321,26 +321,26 @@ export default function AdminDashboard() {
                           <td>
                             <a
                               href={`/admin/user/${a.id}`}
-                              style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8, textDecoration: 'none', display: 'inline-block' }}
+                              style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8, textDecoration: 'none', display: 'inline-block' }}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
                               Inspect
                             </a>
                             {a.status === 'paused' ? (
-                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8 }}
+                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8 }}
                                 onClick={() => resumeAccount(a)}>
                                 Resume
                               </button>
                             ) : (
-                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#f59e0b', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8 }}
+                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#f59e0b', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8 }}
                                 onClick={() => pauseAccount(a)}>
                                 Pause
                               </button>
                             )}
                             {(!a.approved && a.status !== 'approved' && a.status !== 'paused') && (
                               <>
-                                <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8 }}
+                                <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8 }}
                                   onClick={async () => {
                                     const res = await fetch('/api/admin/approve-user', {
                                       method: 'POST',
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
                                     }
                                     loadStats();
                                   }}>Approve</button>
-                                <button style={{ padding: '6px 14px', borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                                <button style={{ padding: '6px 14px', borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer' }}
                                   onClick={async () => {
                                     await supabase.from('accounts').update({ approved: false, status: 'denied' }).eq('id', a.id);
                                     loadStats();
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                               </>
                             )}
                             {(a.approved || a.status === 'approved') && (
-                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#7c3aed', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginLeft: 4 }}
+                              <button style={{ padding: '6px 14px', borderRadius: 8, background: '#7c3aed', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginLeft: 4 }}
                                 onClick={async () => {
                                   const res = await fetch('/api/admin/approve-user', {
                                     method: 'POST',
@@ -440,11 +440,11 @@ export default function AdminDashboard() {
                               <span className="pill yellow">Pending</span>}
                             </td>
                           <td>
-                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8 }}
+                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8 }}
                               onClick={() => setViewApp(a)}>
                               Inspect
                             </button>
-                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', marginRight: 8 }}
+                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', marginRight: 8 }}
                               onClick={async () => {
                                 const response = await fetch('/api/admin/approve-affiliate', {
                                   method: 'POST',
@@ -460,7 +460,7 @@ export default function AdminDashboard() {
                               }}>
                               Approve
                             </button>
-                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                            <button style={{ padding: '6px 14px', borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer' }}
                               onClick={async () => {
                                 if (confirm('Deny this affiliate application?')) {
                                   const response = await fetch('/api/admin/deny-affiliate', {
@@ -494,14 +494,14 @@ export default function AdminDashboard() {
                     <tbody>
                       {Object.entries(viewApp).map(([key, value]) => (
                         <tr key={key}>
-                          <td style={{ fontWeight: 700, padding: '10px 18px', textAlign: 'right', verticalAlign: 'top', color: '#1de9b6', width: 220, fontSize: 18 }}>{key.replace(/_/g, ' ')}</td>
+                          <td style={{ fontWeight: 600, padding: '10px 18px', textAlign: 'right', verticalAlign: 'top', color: '#1de9b6', width: 220, fontSize: 18 }}>{key.replace(/_/g, ' ')}</td>
                           <td style={{ padding: '10px 18px', wordBreak: 'break-word', fontSize: 18 }}>{String(value)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   <div style={{ textAlign: 'right', marginTop: 32 }}>
-                    <button style={{ padding: '12px 32px', borderRadius: 10, background: '#3b82f6', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: 18 }}
+                    <button style={{ padding: '12px 32px', borderRadius: 10, background: '#3b82f6', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: 18 }}
                       onClick={() => setViewApp(null)}>
                       Close
                     </button>

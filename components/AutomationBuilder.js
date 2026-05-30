@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import FlowCanvas from './FlowCanvas';
 import NodeEditor from './NodeEditor';
 
@@ -65,7 +65,7 @@ const AutomationBuilder = () => {
         <button onClick={() => addNode('delay')}>Delay</button>
         <button onClick={() => addNode('condition')}>Condition</button>
         <button onClick={() => addNode('end')}>End</button>
-        <button style={{ marginTop: 16, background: '#6366f1', color: '#fff', fontWeight: 700 }}
+        <button style={{ marginTop: 16, background: '#6366f1', color: '#fff', fontWeight: 600 }}
           onClick={async () => {
             const flowId = 'WAS_FLOW_6'; // TODO: dynamically set this
             const resp = await fetch('/api/automation/reset-node-stats', {

@@ -1,4 +1,4 @@
-// /components/crm/SendToAutomationPanel.js
+﻿// /components/crm/SendToAutomationPanel.js
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -137,8 +137,8 @@ const styles = {
     gap: 10,
   },
   title: {
-    fontSize: 13,
-    fontWeight: 900,
+    fontSize: 16,
+    fontWeight: 600,
     color: "#cbd5e1",
     letterSpacing: 0.3,
   },
@@ -151,7 +151,7 @@ const styles = {
     background: "rgba(2,6,23,0.65)",
     color: "#e5e7eb",
     outline: "none",
-    fontSize: 14,
+    fontSize: 16,
   },
   refreshBtn: {
     width: 44,
@@ -169,12 +169,12 @@ const styles = {
     border: "none",
     background: "#22c55e",
     color: "#052e12",
-    fontWeight: 900,
+    fontWeight: 600,
     cursor: "pointer",
-    fontSize: 14,
+    fontSize: 16,
   },
   toast: {
-    fontSize: 13,
+    fontSize: 16,
     color: "#e5e7eb",
     background: "rgba(15,23,42,0.75)",
     border: "1px solid rgba(148,163,184,0.18)",

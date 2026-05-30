@@ -1,9 +1,10 @@
-// /pages/api/admin/get-pending-affiliates.js
-// Admin API — Fetch all pending affiliate applications
+﻿// /pages/api/admin/get-pending-affiliates.js
+// Admin API â€” Fetch all pending affiliate applications
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { withAdmin } from '../../../lib/withAdmin';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { data, error } = await supabaseAdmin
       .from('affiliate_applications')
@@ -19,3 +20,6 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAdmin(handler);
+

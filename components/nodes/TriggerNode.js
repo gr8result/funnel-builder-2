@@ -1,4 +1,4 @@
-// /components/nodes/TriggerNode.js
+﻿// /components/nodes/TriggerNode.js
 // FULL REPLACEMENT
 import { Handle, Position } from "reactflow";
 
@@ -31,7 +31,7 @@ export default function TriggerNode({ data }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 24 }}>⚡</span>
-          <div style={{ fontWeight: 700, fontSize: 24, color: "#071018" }}>
+          <div style={{ fontWeight: 600, fontSize: 24, color: "#071018" }}>
             {label}
           </div>
         </div>
@@ -43,7 +43,7 @@ export default function TriggerNode({ data }) {
             color: "#e5e7eb",
             padding: "6px 10px",
             borderRadius: 999,
-            fontWeight: 700,
+            fontWeight: 600,
             fontSize: 16,
             minWidth: 92,
             textAlign: "center",
@@ -59,7 +59,7 @@ export default function TriggerNode({ data }) {
           background: "rgba(2,6,23,0.55)",
           color: "#e5e7eb",
           fontWeight: 600,
-          fontSize: 14,
+          fontSize: 16,
         }}
       >
         Trigger starts the flow for all enrolled members

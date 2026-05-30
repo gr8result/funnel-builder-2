@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import withAdmin from "../../../lib/withAdmin";
 
 function normalizeProductIds(input) {
   if (!Array.isArray(input)) return [];
@@ -11,7 +12,7 @@ function normalizeProductIds(input) {
   );
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -53,3 +54,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdmin(handler);

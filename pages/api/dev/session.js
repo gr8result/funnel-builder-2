@@ -1,5 +1,6 @@
-﻿// pages/api/dev/session.js
-export default function handler(req, res) {
+import withAdmin from "../../../lib/withAdmin";
+// pages/api/dev/session.js
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     const { key } = req.body || {};
@@ -14,3 +15,4 @@ export default function handler(req, res) {
   }
 }
 
+export default withAdmin(handler);

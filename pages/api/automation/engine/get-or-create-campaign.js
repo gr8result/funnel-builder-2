@@ -1,5 +1,6 @@
 // Create or get a campaign for automation flow
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,11 +9,12 @@ const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-export default async function handler(req, res) {
-  const { flow_id, user_id } = req.query;
+async function handler(req, res) {
+  const { flow_id } = req.query;
+  const user_id = req.user.id;
 
-  if (!flow_id || !user_id) {
-    return res.status(400).json({ error: "Missing flow_id or user_id" });
+  if (!flow_id) {
+    return res.status(400).json({ error: "Missing flow_id" });
   }
 
   try {
@@ -49,3 +51,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: String(err) });
   }
 }
+
+export default withAuth(handler);

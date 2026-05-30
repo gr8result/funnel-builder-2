@@ -37,7 +37,7 @@ function daysAgoIso(days) {
   return d.toISOString();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST")
       return res.status(405).json({ ok: false, error: "POST only" });
@@ -108,3 +108,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || String(err) });
   }
 }
+
+function withCronSecret(h) {
+  return async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers['x-cron-secret'] !== secret) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return h(req, res);
+  };
+}
+
+export default withCronSecret(handler);

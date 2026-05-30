@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { renderGridLibraryIcon } from "./gridIconLibrary";
@@ -44,10 +44,353 @@ import {
   IconCounterBlock,
   HoverCardsBlock,
   FramerPortfolioBlock,
+  FeatureAccordionBlock,
+  ScrollStackBlock,
+  AvatarMorphBlock,
+  VideoHeroBlock,
 } from "./website-renderer/wbBlockComponents";
 
 // Re-export animation utilities consumed by PageBuilderCanvas
 export { websiteBlockKeyframes, getAnimationStyle } from "./website-renderer/wbAnimations";
+
+/**
+ * Wraps block text content with a drag-to-resize right-edge handle in editor mode.
+ * The `value` prop (textContentWidth) controls max column width (0 = full width).
+ */
+function TextColumnResizer({ editor, value, align, onResize, children }) {
+  const [draft, setDraft] = React.useState(null);
+  const containerRef = React.useRef(null);
+  const activeWidth = draft !== null ? draft : (value > 0 ? value : null);
+
+  const handlePointerDown = React.useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = containerRef.current?.offsetWidth ?? (value > 0 ? value : 700);
+    function onMove(ev) {
+      setDraft(Math.max(200, Math.min(1600, Math.round(startWidth + (ev.clientX - startX)))));
+    }
+    function onUp(ev) {
+      const w = Math.max(200, Math.min(1600, Math.round(startWidth + (ev.clientX - startX))));
+      setDraft(null);
+      onResize(w);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }, [value, onResize]);
+
+  const wrapperStyle = {
+    position: "relative",
+    width: activeWidth ? `${activeWidth}px` : "100%",
+    maxWidth: "100%",
+    marginLeft: align === "center" || align === "right" ? "auto" : 0,
+    marginRight: align === "center" ? "auto" : 0,
+  };
+
+  return (
+    <div ref={containerRef} style={wrapperStyle}>
+      {children}
+      {editor ? (
+        <>
+          <div
+            title="Drag to resize text width"
+            onPointerDown={handlePointerDown}
+            style={{
+              position: "absolute", right: -6, top: 0, bottom: 0, width: 12,
+              cursor: "col-resize", borderRadius: 6,
+              background: draft !== null ? "rgba(14,165,233,0.75)" : "rgba(14,165,233,0.35)",
+              zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s",
+            }}
+          >
+            <div style={{ width: 2, height: 18, background: "rgba(255,255,255,0.9)", borderRadius: 1 }} />
+          </div>
+          {draft !== null ? (
+            <div style={{
+              position: "absolute", right: 14, top: -24, fontSize: 16, fontWeight: 600,
+              background: "#0ea5e9", color: "#fff", padding: "2px 7px", borderRadius: 5,
+              pointerEvents: "none", zIndex: 30, whiteSpace: "nowrap",
+              boxShadow: "0 2px 8px rgba(14,165,233,0.5)",
+            }}>
+              {draft}px
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Two-column grid shell with a draggable vertical divider for the data-ribbon stats variant.
+ * Drag the handle to change the left-column percentage (clamped 20–80 %).
+ */
+function StatsSplitResizer({ editor, pct, gap, onResize, children }) {
+  const [draft, setDraft] = React.useState(null);
+  const containerRef = React.useRef(null);
+  const activePct = draft !== null ? draft : (pct ?? 40);
+
+  const handlePointerDown = React.useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+    function onMove(ev) {
+      const rect = container.getBoundingClientRect();
+      setDraft(Math.max(20, Math.min(80, Math.round((ev.clientX - rect.left) / rect.width * 100))));
+    }
+    function onUp(ev) {
+      const rect = container.getBoundingClientRect();
+      const newPct = Math.max(20, Math.min(80, Math.round((ev.clientX - rect.left) / rect.width * 100)));
+      setDraft(null);
+      onResize(newPct);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }, [onResize]);
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `minmax(200px, ${activePct}%) minmax(0, ${100 - activePct}%)`, gap, alignItems: "start" }}>
+        {children}
+      </div>
+      {editor && (
+        <div
+          title="Drag to resize text column"
+          onPointerDown={handlePointerDown}
+          style={{ position: "absolute", left: `${activePct}%`, top: 0, bottom: 0, width: 16, transform: "translateX(-50%)", cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: "50%", transform: "translateX(-50%)", width: 2, background: draft !== null ? "rgba(14,165,233,0.55)" : "rgba(14,165,233,0.22)", borderRadius: 1 }} />
+          <div style={{ width: 16, height: 28, background: draft !== null ? "#0ea5e9" : "rgba(255,255,255,0.95)", border: `2px solid ${draft !== null ? "#0284c7" : "rgba(14,165,233,0.65)"}`, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 2, boxShadow: "0 2px 6px rgba(0,0,0,0.15)", zIndex: 1, position: "relative" }}>
+            <div style={{ width: 1, height: 12, background: draft !== null ? "#fff" : "rgba(14,165,233,0.85)", borderRadius: 1 }} />
+            <div style={{ width: 1, height: 12, background: draft !== null ? "#fff" : "rgba(14,165,233,0.85)", borderRadius: 1 }} />
+          </div>
+          {draft !== null && (
+            <div style={{ position: "absolute", top: -26, left: "50%", transform: "translateX(-50%)", fontSize: 12, fontWeight: 600, background: "#0ea5e9", color: "#fff", padding: "2px 8px", borderRadius: 5, whiteSpace: "nowrap", pointerEvents: "none", zIndex: 30, boxShadow: "0 2px 8px rgba(14,165,233,0.5)" }}>
+              {activePct}%
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ORBIT_CARD_DEFAULTS = [
+  { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
+  { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
+  { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
+  { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
+  { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
+  { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
+];
+
+// Slot positions, scroll parallax rates, and fly-in starting offsets.
+// py/px: max travel in px driven by scroll parallax (top cards move most).
+// flyDX/flyDY: where each card starts before it flies into view.
+const ORBIT_CARD_SLOTS = [
+  { pos: { top: "7%",     left:  "1%" }, py: 230, px: -55, flyDX: -180, flyDY: -200 }, // top-left
+  { pos: { top: "7%",     right: "1%" }, py: 210, px:  55, flyDX:  180, flyDY: -200 }, // top-right
+  { pos: { top: "42%",    left:  "0%" }, py: 115, px: -30, flyDX: -220, flyDY:   20 }, // mid-left
+  { pos: { top: "42%",    right: "0%" }, py: 115, px:  30, flyDX:  220, flyDY:   20 }, // mid-right
+  { pos: { bottom: "10%", left:  "1%" }, py:  40, px: -15, flyDX: -140, flyDY:  180 }, // bot-left
+  { pos: { bottom: "10%", right: "1%" }, py:  40, px:  15, flyDX:  140, flyDY:  180 }, // bot-right
+];
+
+// Float durations/delays for the gentle continuous bob on each card
+const ORBIT_FLOAT_DURATIONS = [5.8, 6.4, 5.2, 6.9, 5.5, 6.1];
+const ORBIT_FLOAT_DELAYS    = [0, -2.1, -1.4, -3.2, -0.7, -2.8];
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInCubic(t) { return t * t * t; }
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+/**
+ * Monday.com-style sticky scroll-driven hero layer.
+ *
+ * The section is wrapped in a 360vh tall container and set to position:sticky;
+ * top:0; height:100vh. Scroll progress through that 360vh drives 3 phases:
+ *
+ *   Phase 1 (p 0.00–0.40): Cards fly in from off-screen. Avatar goes from
+ *     grayscale → full colour.
+ *   Phase 2 (p 0.40–0.62): Cards rest at their positions with an idle bob.
+ *   Phase 3 (p 0.62–1.00): Cards converge toward the centre of the section
+ *     (behind the avatar), scaling and fading to nothing.
+ *
+ * Uses [data-orbit-scroll-wrapper] to find the parent scroll container so it
+ * works inside both the page builder canvas and the live published page.
+ */
+function OrbitCardsLayer({ orbitCards }) {
+  const wrapRef      = React.useRef(null);
+  const parallaxRefs = React.useRef([]);
+
+  React.useEffect(() => {
+    ensureWebsiteBlockAnimationStyles();
+
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const section = wrap.closest("section");
+    if (!section) return;
+
+    const scrollWrapper = section.closest("[data-orbit-scroll-wrapper]");
+    if (!scrollWrapper) return;
+
+    function findScrollParent(node) {
+      if (!node || node === document.body || node === document.documentElement) return window;
+      try {
+        const { overflow, overflowY } = window.getComputedStyle(node);
+        if (/auto|scroll/.test(overflow + overflowY) && node.scrollHeight > node.clientHeight + 4) return node;
+      } catch (_) { /* ignore */ }
+      return findScrollParent(node.parentElement);
+    }
+    const scrollParent = findScrollParent(scrollWrapper.parentElement);
+    const isWindow = scrollParent === window;
+
+    const avatarEl = section.querySelector("[data-orbit-avatar]");
+
+    let rafId = null;
+    let convergeTargets = null;
+
+    const getProgress = () => {
+      const rect  = scrollWrapper.getBoundingClientRect();
+      const viewH = isWindow ? window.innerHeight : scrollParent.getBoundingClientRect().height;
+      const total = scrollWrapper.offsetHeight - viewH;
+      if (total <= 0) return 0;
+      return clamp01(-rect.top / total);
+    };
+
+    // Compute how far each card needs to travel to reach the avatar centre.
+    // Called once after the first layout paint so positions are accurate.
+    const computeConvergeTargets = () => {
+      const sR = section.getBoundingClientRect();
+      const cx = sR.width  / 2;
+      const cy = sR.height / 2 - 40; // slightly above centre where avatar sits
+      return parallaxRefs.current.map((el) => {
+        if (!el) return { dx: 0, dy: 0 };
+        const r    = el.getBoundingClientRect();
+        const cardCX = (r.left - sR.left) + 88; // 88 = half of 176px card width
+        const cardCY = (r.top  - sR.top)  + r.height / 2;
+        return { dx: cx - cardCX, dy: cy - cardCY };
+      });
+    };
+
+    const tick = () => {
+      const p = getProgress();
+
+      // ── Colour reveal on avatar ─────────────────────────────────────────
+      if (avatarEl) {
+        const cp    = easeOutCubic(clamp01(p / 0.38));
+        avatarEl.style.filter     = `grayscale(${((1 - cp) * 100).toFixed(0)}%) brightness(${(0.48 + cp * 0.52).toFixed(2)})`;
+        avatarEl.style.willChange = "filter";
+        avatarEl.style.transition = "none";
+      }
+
+      parallaxRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const slot = ORBIT_CARD_SLOTS[i];
+
+        if (p < 0.40) {
+          // Phase 1 — fly in
+          const fp  = easeOutCubic(clamp01(p / 0.40));
+          el.style.transform = `translate(${(slot.flyDX * (1 - fp)).toFixed(1)}px, ${(slot.flyDY * (1 - fp)).toFixed(1)}px) scale(${(0.62 + fp * 0.38).toFixed(3)})`;
+          el.style.opacity   = Math.min(1, fp * 1.4).toFixed(3);
+        } else if (p < 0.62) {
+          // Phase 2 — rest (identity transform)
+          el.style.transform = "translate(0px,0px) scale(1)";
+          el.style.opacity   = "1";
+        } else {
+          // Phase 3 — converge behind avatar
+          const cp  = easeInCubic(clamp01((p - 0.62) / 0.38));
+          const t   = convergeTargets?.[i] || { dx: 0, dy: 0 };
+          el.style.transform = `translate(${(t.dx * cp).toFixed(1)}px, ${(t.dy * cp).toFixed(1)}px) scale(${(1 - cp * 0.9).toFixed(3)})`;
+          el.style.opacity   = (1 - cp).toFixed(3);
+        }
+      });
+      // Compute converge targets the FIRST time all cards are at identity
+      // (phase 2 has just applied transform=identity above), so getBoundingClientRect
+      // reflects true resting positions rather than fly-in offsets.
+      if (!convergeTargets && p >= 0.40 && parallaxRefs.current[0]) {
+        convergeTargets = computeConvergeTargets();
+      }
+    };
+
+    const onScroll = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const scrollTarget = isWindow ? window : scrollParent;
+    scrollTarget.addEventListener("scroll", onScroll, { passive: true });
+    // Run first tick after a frame so DOM is laid out.
+    // convergeTargets will be computed lazily once p >= 0.40 (phase 2)
+    // so it uses resting-position transforms, not fly-in transforms.
+    requestAnimationFrame(() => { tick(); });
+
+    return () => {
+      scrollTarget.removeEventListener("scroll", onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (avatarEl) { avatarEl.style.filter = ""; avatarEl.style.willChange = ""; }
+    };
+  }, []);
+
+  const cards = Array.isArray(orbitCards) && orbitCards.length > 0 ? orbitCards : ORBIT_CARD_DEFAULTS;
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{ position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none" }}
+    >
+      {cards.slice(0, 6).map((card, i) => {
+        const slot   = ORBIT_CARD_SLOTS[i];
+        if (!slot) return null;
+        const accent = card.accent || "#6366f1";
+        return (
+          <div
+            key={card.id || String(i)}
+            ref={(el) => { parallaxRefs.current[i] = el; }}
+            style={{
+              position: "absolute",
+              ...slot.pos,
+              width: 176,
+              willChange: "transform, opacity",
+              opacity: 0,
+              transform: `translate(${slot.flyDX}px, ${slot.flyDY}px) scale(0.62)`,
+            }}
+          >
+            <div
+              style={{
+                animation: `wbOrbitFloat${i} ${ORBIT_FLOAT_DURATIONS[i]}s ${ORBIT_FLOAT_DELAYS[i]}s ease-in-out infinite`,
+                willChange: "transform",
+                background: "rgba(10,18,36,0.88)",
+                backdropFilter: "blur(18px)",
+                WebkitBackdropFilter: "blur(18px)",
+                border: "1px solid rgba(148,163,184,0.13)",
+                borderRadius: 16,
+                boxShadow: "0 12px 36px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08)",
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}66)` }} />
+              <div style={{ padding: "10px 14px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: `${accent}20`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, lineHeight: 1 }}>{card.icon || "✦"}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", letterSpacing: "0.01em", lineHeight: 1.3 }}>{card.title}</span>
+                </div>
+                {(Array.isArray(card.lines) ? card.lines : []).slice(0, 2).map((line, li) => (
+                  <div key={li} style={{ fontSize: 11, color: li === 0 ? "#94a3b8" : "#475569", lineHeight: 1.55, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{line}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
   const rawProps = block?.props || {};
@@ -93,10 +436,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         : heroBackground({ ...props, backgroundImage: heroBackgroundImage });
       const heroStaticStyle = asStyleObject(heroBg);
       const heroParallaxEnabled = ["hero", "parallax"].includes(block?.type) && !!props.enableParallax && !!heroBackgroundImage && !isVideoHero;
-      // For standalone parallax blocks, use CSS background-attachment:fixed — the image sits
-      // as a stationary layer while the section scrolls over it (no JS animation needed).
-      // Hero blocks keep the JS-driven StableParallaxLayer for the animated effect.
-      const isFixedBgParallax = block?.type === "parallax" && heroParallaxEnabled;
+      // Use CSS background-attachment:fixed so the background image stays completely still
+      // while the section content and floating overlays scroll past it.
+      // In editor the canvas uses transform:scale() which breaks CSS fixed, so fall back to
+      // background-attachment:scroll (static, but correctly positioned for editing).
+      const isFixedBgParallax = heroParallaxEnabled;
       const heroParallaxBaseColor = heroParallaxEnabled ? resolveHeroBaseColor(props) : null;
       const sectionBgStyle = heroParallaxEnabled
         ? { backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a" }
@@ -190,21 +534,29 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
       const heroOverlayProps = normalizedOverlayLayout;
       const heroContentProps = normalizedOverlayLayout;
+      // Orbit variant uses a sticky scroll container so the section pins while
+      // scroll progress drives the fly-in → rest → converge animation.
+      const isOrbitScroll = props.heroVariant === "orbit" && !compact;
 
-      return (
+      const heroSection = (
         <ScrollReveal
           as="section"
-          animationName={heroParallaxEnabled ? "" : props.sectionAnimation}
+          animationName={(heroParallaxEnabled || isOrbitScroll) ? "" : props.sectionAnimation}
           delay={props.sectionAnimationDelay || 0}
           speed={props.sectionAnimationSpeed}
-          disabled={editor || heroParallaxEnabled}
+          disabled={editor || heroParallaxEnabled || isOrbitScroll}
           style={{
-            position: "relative",
-            overflow: "hidden",
+            position: isOrbitScroll ? "sticky" : "relative",
+            top: isOrbitScroll ? 0 : undefined,
+            height: isOrbitScroll ? "100vh" : undefined,
+            // In the editor, use overflow:visible so floating images positioned near the
+            // edges of the content bounds can extend beyond the section without being clipped.
+            // In live/preview, keep overflow:hidden to clip background parallax layers.
+            overflow: editor ? "visible" : "hidden",
             borderRadius: compact ? 12 : (useFullBleedHero ? 0 : 20),
             ...heroFullWidth,
             ...heroVariant.shell,
-            minHeight: compact ? 180 : props.minHeight || "400px",
+            minHeight: isOrbitScroll ? undefined : (compact ? 180 : props.minHeight || "400px"),
             ...sectionBgStyle,
             padding: compact ? "40px 24px" : "80px 48px",
           }}
@@ -229,7 +581,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               }}
             />
           ) : !isFixedBgParallax && heroParallaxEnabled ? (
-            <StableParallaxLayer speed={resolveParallaxSpeed(props.parallaxStrength, props.parallaxSpeed)} target="section" backgroundStyle={parallaxLayerBgStyle} />
+            // overflow:hidden + matching border-radius clips the ±300px overrun to the
+            // same rounded shape as the section. Without border-radius, the parallax
+            // background would bleed outside the section's rounded corners in editor mode.
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: "inherit", pointerEvents: "none", zIndex: 0 }}>
+              <StableParallaxLayer speed={resolveParallaxSpeed(props.parallaxStrength, props.parallaxSpeed)} target="section" backgroundStyle={parallaxLayerBgStyle} />
+            </div>
           ) : null}
           {heroParallaxEnabled && parallaxStaticOverlay ? (
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: parallaxStaticOverlay, pointerEvents: "none" }} />
@@ -336,7 +693,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   contentWidth: props.contentWidth ?? heroLayout.contentWidth,
                   contentHeight: props.contentHeight ?? heroLayout.contentHeight,
                 })}
-                style={{ ...sharedStyles.editorChip, ...(props.hideTextOverlay ? { background: "#ef4444", color: "#fff", fontWeight: 700 } : {}) }}
+                style={{ ...sharedStyles.editorChip, ...(props.hideTextOverlay ? { background: "#ef4444", color: "#fff", fontWeight: 600 } : {}) }}
                 title={props.hideTextOverlay ? "Text is hidden in preview — click to restore" : "Restore main headline/CTA text block"}
               >
                 {props.hideTextOverlay ? "⚠ Text Hidden" : "Main Text"}
@@ -465,6 +822,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </div>
               ) : null}
+              {/* ── Orbit feature cards are rendered AFTER the avatar (z=3 > avatar z=2) ── */}
               {rawFloatingImages.length === 0 ? null : rawFloatingImages.map((imgItem, imgIdx) => {
                 const imgSrc = imgItem.src || "";
                 if (!imgSrc) return null;
@@ -477,6 +835,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   floatingY: Number.isFinite(Number(imgItem.y)) ? Number(imgItem.y) : heroOverlayProps.floatingY,
                   floatingWidth: Number.isFinite(Number(imgItem.width)) ? Number(imgItem.width) : heroOverlayProps.floatingWidth,
                   floatingHeight: Number.isFinite(Number(imgItem.height)) ? Number(imgItem.height) : heroOverlayProps.floatingHeight,
+                  floatingRotation: Number.isFinite(Number(imgItem.rotation)) ? Number(imgItem.rotation) : 0,
                 };
                 const handleImgChange = (nextProps) => {
                   const nextImages = rawFloatingImages.map((img, i) => i !== imgIdx ? img : {
@@ -485,6 +844,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     y: nextProps.floatingY,
                     width: nextProps.floatingWidth,
                     height: nextProps.floatingHeight,
+                    ...(nextProps.floatingRotation != null ? { rotation: nextProps.floatingRotation } : {}),
                   });
                   onChangeBlock?.({ ...props, floatingImages: nextImages });
                 };
@@ -499,8 +859,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   [arr[imgIdx], arr[swapIdx]] = [arr[swapIdx], arr[imgIdx]];
                   onChangeBlock?.({ ...props, floatingImages: arr });
                 };
+                // Tag the first image in orbit variant so OrbitCardsLayer can
+                // find and animate its colour-reveal (grayscale → full colour).
+                const orbitAvatarAttr = (props.heroVariant === "orbit" && imgIdx === 0)
+                  ? { "data-orbit-avatar": "true" }
+                  : {};
                 return (
-                  <div key={`fi-${imgIdx}-${imgSrc.slice(-12)}`} style={overlayAnimationLayer(2 + imgIdx, shouldRunAnimations ? getAnimationStyle(imgAnimation, imgDelay, imgSpeed) : {})}>
+                  <div key={`fi-${imgIdx}-${imgSrc.slice(-12)}`} {...orbitAvatarAttr} style={overlayAnimationLayer(2 + imgIdx, shouldRunAnimations ? getAnimationStyle(imgAnimation, imgDelay, imgSpeed) : {})}>
                     <div style={overlayAnimationLayer(1, shouldRunAnimations ? ambientMotionStyle("float", 0.12 + imgIdx * 0.06) : {})}>
                       <DraggableImageOverlay
                         props={imgOverlayProps}
@@ -523,13 +888,17 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 );
               })}
+              {/* ── Orbit feature cards — rendered AFTER avatar so z=3 puts them in front ── */}
+              {props.heroVariant === "orbit" && !compact ? (
+                <OrbitCardsLayer orbitCards={props.orbitCards} />
+              ) : null}
               <div style={overlayAnimationLayer(3, shouldRunAnimations ? getAnimationStyle(heroContentOverlayAnimation, heroContentOverlayDelay, heroContentOverlaySpeed) : {})}>
                 {props.hideTextOverlay && editor ? (
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 4, background: "rgba(239,68,68,0.88)", color: "#fff", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap" }}>
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 4, background: "rgba(239,68,68,0.88)", color: "#fff", borderRadius: 10, padding: "8px 14px", fontSize: 16, fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap" }}>
                     ⚠ Text hidden in preview — click &ldquo;⚠ Text Hidden&rdquo; button to restore
                   </div>
                 ) : null}
-                {props.hideTextOverlay && !editor ? null : (
+                {props.hideTextOverlay ? null : (
                 <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
                   {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
                   {/* eslint-disable-next-line no-unused-vars */}
@@ -554,7 +923,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         margin: 0,
                         fontSize: compact ? 11 : 13,
                         lineHeight: 1.4,
-                        fontWeight: 800,
+                        fontWeight: 600,
                         letterSpacing: "0.22em",
                         textTransform: "uppercase",
                         color: colorWithAlpha(headingColor, 0.72),
@@ -708,7 +1077,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     <div style={{ display: "flex", gap: compact ? 16 : 28, flexWrap: "wrap", marginTop: compact ? 8 : 12, alignItems: "center" }}>
                       {props.heroStatItems.map((stat, sIdx) => (
                         <div key={stat.id || sIdx} style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 60 }}>
-                          <span style={{ fontSize: compact ? 18 : 26, fontWeight: 800, color: headingColor, lineHeight: 1.1 }}>{stat.number || stat.value || ""}</span>
+                          <span style={{ fontSize: compact ? 18 : 26, fontWeight: 600, color: headingColor, lineHeight: 1.1 }}>{stat.number || stat.value || ""}</span>
                           <span style={{ fontSize: compact ? 11 : 13, fontWeight: 500, color: colorWithAlpha(headingColor, 0.7), lineHeight: 1.3, letterSpacing: "0.04em" }}>{stat.label || ""}</span>
                         </div>
                       ))}
@@ -798,6 +1167,17 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           </div>
         </ScrollReveal>
       );
+      if (isOrbitScroll) {
+        return (
+          <div
+            data-orbit-scroll-wrapper="true"
+            style={{ position: "relative", height: "360vh", overflow: "clip" }}
+          >
+            {heroSection}
+          </div>
+        );
+      }
+      return heroSection;
     }
 
     case "split-block":
@@ -885,21 +1265,29 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               );
             })}
             <DraggableContentOverlay props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={props.alignment || "left"} vertical={props.verticalAlign || "center"} overlayEnabled={textOverlayEnabled}>
-              <p
-                data-website-inline-editor="true"
-                data-text-prop="text"
-                contentEditable={editor}
-                suppressContentEditableWarning
-                onMouseDown={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                onBlur={(event) => {
-                  if (shouldSkipToolbarBlur(event)) return;
-                  if (!editor || typeof onChangeBlock !== "function") return;
-                  onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                }}
-                style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: 1.8, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(props.text) }}
-              />
+              <TextColumnResizer
+                editor={editor && !textOverlayEnabled}
+                value={Number(props.textContentWidth || 0)}
+                align={props.alignment || "left"}
+                onResize={(w) => onChangeBlock?.({ ...props, textContentWidth: w })}
+              >
+                <p
+                  className="wb-text-block"
+                  data-website-inline-editor="true"
+                  data-text-prop="text"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onBlur={(event) => {
+                    if (shouldSkipToolbarBlur(event)) return;
+                    if (!editor || typeof onChangeBlock !== "function") return;
+                    onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                  }}
+                  style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: 1.8, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(props.text) }}
+                />
+              </TextColumnResizer>
             </DraggableContentOverlay>
           </div>
         </ScrollReveal>
@@ -1054,7 +1442,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               };
 
               return (
-                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName="fade-up" delay={idx * 0.08} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
+                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
                   <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
                     <img src={itemImage} alt={item.title || `Feature ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
                   </div>
@@ -1176,7 +1564,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               {avatarSrcItem
                 ? <img src={avatarSrcItem} alt={item.author || ""} style={asStyleObject(sharedStyles.avatar)} />
                 : editor
-                  ? <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
+                  ? <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
                   : null}
               <div>
                 <p
@@ -1324,17 +1712,23 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             style={{
               ...sharedStyles.priceGrid(compact, plans.length, props.pricingCardWidth, props.pricingCardGap),
               ...(pricingVariant.grid?.(compact, plans.length) || {}),
-              ...(compact
-                ? {}
-                : {
-                    gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, minmax(0, ${Math.max(180, Number(props.pricingCardWidth) || 260)}px))`,
-                    gap: Math.max(8, Number(props.pricingCardGap) || 24),
-                    justifyContent: "center",
-                  }),
+              ...(pricingVariant.fullWidthGrid
+                ? (compact ? {} : {
+                    gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, 1fr)`,
+                    gap: Math.max(8, Number(props.pricingCardGap) || 16),
+                    justifyContent: "stretch",
+                  })
+                : (compact
+                  ? {}
+                  : {
+                      gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, minmax(0, ${Math.max(180, Number(props.pricingCardWidth) || 260)}px))`,
+                      gap: Math.max(8, Number(props.pricingCardGap) || 24),
+                      justifyContent: "center",
+                    })),
             }}
           >
             {plans.map((plan, idx) => (
-              <ScrollReveal as="article" key={plan.id || `${plan.name}-${idx}`} animationName="fade-up" delay={idx * 0.08} disabled={editor} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted) }}>
+              <ScrollReveal as="article" key={plan.id || `${plan.name}-${idx}`} animationName={(plan.cardAnimation && plan.cardAnimation !== "") ? plan.cardAnimation : (props.cardAnimation || "fade-up")} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted) }}>
                 {(() => {
                   const defaultTone = pricingVariant.textTone?.(idx, !!plan.highlighted) || {};
                   const accentTone = props.accentColor || defaultTone.accent || "#0ea5e9";
@@ -1350,7 +1744,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   };
                   const featureIconStyle = {
                     ...(pricingVariant.featureIcon?.(!!plan.highlighted, idx) || {}),
-                    ...(props.accentColor ? { background: `linear-gradient(135deg,${accentTone},${colorWithAlpha(accentTone, 0.72)})`, color: props.ctaTextColor || "#ffffff" } : {}),
+                    ...(props.accentColor && !pricingVariant.planAccentColor ? { background: `linear-gradient(135deg,${accentTone},${colorWithAlpha(accentTone, 0.72)})`, color: props.ctaTextColor || "#ffffff" } : {}),
                   };
                   const extrasCardStyle = {
                     ...(pricingVariant.extrasCard?.(!!plan.highlighted, idx) || {}),
@@ -1363,6 +1757,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   };
                   return (
                     <>
+                {plan.badge && (
+                  <div style={{ display: "inline-block", alignSelf: "flex-start", padding: "3px 10px", borderRadius: 999, fontSize: 16, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", background: pricingVariant.badgeBackground?.(!!plan.highlighted, idx) || accentTone, color: "#ffffff", marginBottom: 8 }}>
+                    {plan.badge}
+                  </div>
+                )}
                 <div style={sharedStyles.priceHero}>
                   <h3
                     data-website-inline-editor="true"
@@ -1370,7 +1769,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     contentEditable={editor}
                     suppressContentEditableWarning
                     onBlur={(event) => patchPlan(idx, { name: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                    style={{ ...sharedStyles.planName, ...headingTypography(props), color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                    style={{ ...sharedStyles.planName, ...headingTypography(props), color: pricingVariant.planAccentColor ? pricingVariant.planAccentColor(idx) : (pricingTone?.text || undefined), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
                     dangerouslySetInnerHTML={{ __html: asRichHtml(plan.name || (editor ? "Plan" : "")) }}
                   />
                   <p
@@ -1379,7 +1778,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     contentEditable={editor}
                     suppressContentEditableWarning
                     onBlur={(event) => patchPlan(idx, { price: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                    style={{ ...sharedStyles.planPrice, color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                    style={{ ...sharedStyles.planPrice, color: pricingVariant.planAccentColor ? pricingVariant.planAccentColor(idx) : (pricingTone?.text || undefined), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
                     dangerouslySetInnerHTML={{ __html: asRichHtml(plan.price || (editor ? "$49" : "")) }}
                   />
                   <p
@@ -1392,55 +1791,177 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     dangerouslySetInnerHTML={{ __html: asRichHtml(plan.description || (editor ? "Short plan description" : "")) }}
                   />
                 </div>
-                <div style={{ ...sharedStyles.planSectionLabel, color: pricingTone?.subtle || undefined }}>Included</div>
+                <div style={{ ...sharedStyles.planSectionLabel, color: pricingVariant.planAccentColor ? pricingVariant.planAccentColor(idx) : (pricingTone?.subtle || undefined), ...(pricingVariant.planAccentColor ? { borderLeft: `3px solid ${pricingVariant.planAccentColor(idx)}`, paddingLeft: 8 } : {}) }}>Included</div>
                 <div style={sharedStyles.planFeatures}>
-                  {asArray(plan.includedFeatures).map((feature, featureIdx) => (
-                    <div key={`${feature}-${featureIdx}`} style={{ ...sharedStyles.planFeatureRow(!!plan.highlighted), ...featureRowStyle }}>
-                      <span style={{ ...sharedStyles.planFeatureIcon(plan.featureIcon, !!plan.highlighted), ...featureIconStyle }}>{iconGlyph(plan.featureIcon)}</span>
-                      <p
-                        data-website-inline-editor="true"
-                        data-text-prop={`plans.${idx}.includedFeatures.${featureIdx}`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchPlanFeature(idx, featureIdx, cleanInlineEditorHtml(event.currentTarget.innerHTML))}
-                        style={{ ...sharedStyles.planFeature, color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(feature || (editor ? "Feature" : "")) }}
-                      />
-                    </div>
-                  ))}
+                  {asArray(plan.includedFeatures).map((feature, featureIdx) => {
+                    if (pricingVariant.featureSplit) {
+                      const parts = String(feature).split(" — ");
+                      const label = parts[0] || feature;
+                      const value = parts.slice(1).join(" — ");
+                      return (
+                        <div key={`${feature}-${featureIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...featureRowStyle }}>
+                          <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5 }}>{label}</span>
+                          {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: "right", marginLeft: 8, flexShrink: 0 }}>{value}</span>}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={`${feature}-${featureIdx}`} style={{ ...sharedStyles.planFeatureRow(!!plan.highlighted), ...featureRowStyle }}>
+                        <span style={{ ...sharedStyles.planFeatureIcon(plan.featureIcon, !!plan.highlighted), ...featureIconStyle }}>{iconGlyph(plan.featureIcon)}</span>
+                        <p
+                          data-website-inline-editor="true"
+                          data-text-prop={`plans.${idx}.includedFeatures.${featureIdx}`}
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => patchPlanFeature(idx, featureIdx, cleanInlineEditorHtml(event.currentTarget.innerHTML))}
+                          style={{ ...sharedStyles.planFeature, color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
+                          dangerouslySetInnerHTML={{ __html: asRichHtml(feature || (editor ? "Feature" : "")) }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
                 <div style={{ ...sharedStyles.planExtrasCard(!!plan.highlighted), ...extrasCardStyle }}>
-                  <div style={{ ...sharedStyles.planSectionLabel, color: pricingTone?.subtle || undefined }}>Extras</div>
+                  <div style={{ ...sharedStyles.planSectionLabel, color: pricingVariant.planAccentColor ? pricingVariant.planAccentColor(idx) : (pricingTone?.subtle || undefined), ...(pricingVariant.planAccentColor ? { borderLeft: `3px solid ${pricingVariant.planAccentColor(idx)}`, paddingLeft: 8 } : {}) }}>{pricingVariant.featureSplit ? "Base Quotas Included" : "Extras"}</div>
                   <div style={sharedStyles.planExtrasList}>
-                    {asArray(plan.extras).length ? asArray(plan.extras).map((extra, extraIdx) => (
-                      <p
-                        key={`${extra}-${extraIdx}`}
-                        data-website-inline-editor="true"
-                        data-text-prop={`plans.${idx}.extras.${extraIdx}`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchPlanExtra(idx, extraIdx, cleanInlineEditorHtml(event.currentTarget.innerHTML))}
-                        style={{ ...sharedStyles.planExtra, color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(extra || (editor ? "Extra" : "")) }}
-                      />
-                    )) : <p style={{ ...sharedStyles.planExtraHint, color: pricingTone?.subtle || undefined }}>No extras listed yet.</p>}
+                    {asArray(plan.extras).length ? asArray(plan.extras).map((extra, extraIdx) => {
+                      if (pricingVariant.featureSplit) {
+                        const parts = String(extra).split(" — ");
+                        const label = parts[0] || extra;
+                        const value = parts.slice(1).join(" — ");
+                        return (
+                          <div key={`${extra}-${extraIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                            <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16 }}>{label}</span>
+                            {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: "right", marginLeft: 8, flexShrink: 0 }}>{value}</span>}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p
+                          key={`${extra}-${extraIdx}`}
+                          data-website-inline-editor="true"
+                          data-text-prop={`plans.${idx}.extras.${extraIdx}`}
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => patchPlanExtra(idx, extraIdx, cleanInlineEditorHtml(event.currentTarget.innerHTML))}
+                          style={{ ...sharedStyles.planExtra, color: pricingTone?.text || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "3px 5px" : 0 }}
+                          dangerouslySetInnerHTML={{ __html: asRichHtml(extra || (editor ? "Extra" : "")) }}
+                        />
+                      );
+                    }) : <p style={{ ...sharedStyles.planExtraHint, color: pricingTone?.subtle || undefined }}>No extras listed yet.</p>}
                   </div>
                 </div>
-                <div
-                  data-website-inline-editor="true"
-                  data-text-prop={`plans.${idx}.cta`}
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onBlur={(event) => patchPlan(idx, { cta: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                  style={{ ...sharedStyles.planCta(!!plan.highlighted), ...ctaStyle, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(plan.cta || (editor ? "Get Started" : "")) }}
-                />
+                {!editor && plan.ctaUrl ? (
+                  <a
+                    href={plan.ctaUrl}
+                    style={{ ...sharedStyles.planCta(!!plan.highlighted), ...ctaStyle, display: "block", textDecoration: "none", textAlign: "center" }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(plan.cta || "Get Started") }}
+                  />
+                ) : (
+                  <div
+                    data-website-inline-editor="true"
+                    data-text-prop={`plans.${idx}.cta`}
+                    contentEditable={editor}
+                    suppressContentEditableWarning
+                    onBlur={(event) => patchPlan(idx, { cta: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                    style={{ ...sharedStyles.planCta(!!plan.highlighted), ...ctaStyle, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(plan.cta || (editor ? "Get Started" : "")) }}
+                  />
+                )}
                     </>
                   );
                 })()}
               </ScrollReveal>
             ))}
           </div>
+          {(() => {
+            if (!pricingVariant.planAccentColor) return null;
+            const parsePx = (str) => parseFloat(String(str || "").replace(/[^0-9.]/g, "")) || 0;
+            const fmtUSD = (v) => {
+              if (!Number.isFinite(v) || v <= 0) return "—";
+              const fixed = v.toFixed(2);
+              const [whole, dec] = fixed.split(".");
+              return `$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
+            };
+            const hasDisclosure = plans.some((p) => parsePx(p.individualPrice) > 0);
+            if (!hasDisclosure) return null;
+            const BILLING_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#7c3aed"];
+            const planCol = (i) => BILLING_COLORS[i % BILLING_COLORS.length];
+            const disclosureRows = [
+              {
+                label: "Standard Individual Costs",
+                labelBg: "rgba(255,255,255,0.06)",
+                labelColor: "#9ca3af",
+                getValue: (plan) => fmtUSD(parsePx(plan.individualPrice)),
+                cellBg: (i) => `${planCol(i)}22`,
+                textColor: (i) => planCol(i),
+                fontWeight: 500,
+              },
+              {
+                label: "Billing Page Cost",
+                labelBg: "rgba(234,179,8,0.18)",
+                labelColor: "#fde047",
+                getValue: (plan) => fmtUSD(parsePx(plan.price)),
+                cellBg: (i) => `${planCol(i)}22`,
+                textColor: (i) => planCol(i),
+                fontWeight: 600,
+              },
+              {
+                label: "Monthly Savings",
+                labelBg: "rgba(255,255,255,0.04)",
+                labelColor: "#d1d5db",
+                getValue: (plan) => fmtUSD(parsePx(plan.individualPrice) - parsePx(plan.price)),
+                cellBg: (i) => `${planCol(i)}33`,
+                textColor: (i) => planCol(i),
+                fontWeight: 600,
+              },
+              {
+                label: "Annual Savings",
+                labelBg: "rgba(255,255,255,0.08)",
+                labelColor: "#f8fafc",
+                getValue: (plan) => fmtUSD((parsePx(plan.individualPrice) - parsePx(plan.price)) * 12),
+                cellBg: (i) => `${planCol(i)}44`,
+                textColor: (i) => planCol(i),
+                fontWeight: 600,
+              },
+            ];
+            const headerCells = [
+              <div key="lbl-hdr" style={{ padding: compact ? "8px 12px" : "10px 16px", background: "rgba(255,255,255,0.03)", borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center" }}>
+                <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9ca3af" }}>Plan</span>
+              </div>,
+              ...plans.map((plan, i) => (
+                <div key={`hdr-${i}`} style={{ padding: compact ? "8px 10px" : "10px 14px", background: `${planCol(i)}18`, borderRight: i < plans.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: planCol(i) }}>{plan.name}</span>
+                </div>
+              )),
+            ];
+            return (
+              <div style={{ marginTop: compact ? 24 : 40, overflowX: compact ? "auto" : "visible" }}>
+                <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9ca3af" }}>Savings Disclosure</span>
+                  <span style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.08)" }} />
+                  <span style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}>Standard prices if features purchased individually</span>
+                </div>
+                <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)", minWidth: compact ? 480 : "auto" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: `clamp(140px,22%,200px) repeat(${plans.length}, 1fr)`, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                    {headerCells}
+                  </div>
+                  {disclosureRows.map((row, rowIdx) => (
+                    <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: `clamp(140px,22%,200px) repeat(${plans.length}, 1fr)`, borderBottom: rowIdx < disclosureRows.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
+                      <div style={{ padding: compact ? "9px 12px" : "11px 16px", background: row.labelBg, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center" }}>
+                        <span style={{ fontSize: compact ? 11 : 12, fontWeight: 600, color: row.labelColor, lineHeight: 1.3 }}>{row.label}</span>
+                      </div>
+                      {plans.map((plan, i) => (
+                        <div key={i} style={{ padding: compact ? "9px 10px" : "11px 14px", background: row.cellBg(i), borderRight: i < plans.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                          <span style={{ fontSize: compact ? 12 : 14, fontWeight: row.fontWeight, color: row.textColor(i), letterSpacing: "-0.01em", fontVariantNumeric: "tabular-nums" }}>{row.getValue(plan)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           </div>
         </ScrollReveal>
       );
@@ -1690,6 +2211,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               newsletterImageWidth={props.leftColumnNewsletterImageWidth}
               onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, leftColumnNewsletterImageWidth: w })}
               newsletterFields={props.leftColumnNewsletterFields}
+              extraImages={Array.isArray(props.leftColumnExtraImages) ? props.leftColumnExtraImages : []}
+              onExtraImagesChange={(next) => onChangeBlock?.({ ...props, leftColumnExtraImages: next })}
+              subBlock={props.leftColumnBlock || null}
+              onRenderSubBlock={(sb) => sb ? renderWebsiteBlock(sb, { compact, assets, editor, onChangeBlock: null }) : null}
             />
             <ColumnEditorCard
               title={props.rightTitle}
@@ -1724,6 +2249,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               newsletterImageWidth={props.rightColumnNewsletterImageWidth}
               onNewsletterImageWidthChange={(w) => onChangeBlock?.({ ...props, rightColumnNewsletterImageWidth: w })}
               newsletterFields={props.rightColumnNewsletterFields}
+              extraImages={Array.isArray(props.rightColumnExtraImages) ? props.rightColumnExtraImages : []}
+              onExtraImagesChange={(next) => onChangeBlock?.({ ...props, rightColumnExtraImages: next })}
+              subBlock={props.rightColumnBlock || null}
+              onRenderSubBlock={(sb) => sb ? renderWebsiteBlock(sb, { compact, assets, editor, onChangeBlock: null }) : null}
             />
           </div>
           </div>
@@ -1936,7 +2465,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 padding: fullBleedServicesLayout ? 0 : undefined,
               }}
             >
-              {items.map((item, itemIndex) => {
+              {items.map((rawItem, itemIndex) => {
+                const resolvedItemImage = rawItem.image || getAssetFromLibrary(assets, rawItem.imageAssetId)?.src || "";
+                const item = resolvedItemImage !== rawItem.image ? { ...rawItem, image: resolvedItemImage } : rawItem;
                 const baseDelay = itemIndex * cardStagger;
                 const resolvedSurfaceSpeed = surfaceSpeed || (servicesVariant ? 0.95 : null);
                 const resolvedIconAnimation = props.iconAnimation || (servicesVariant ? "rubber-band" : "none");
@@ -1961,7 +2492,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 const titleNode = (
                   <>
                     {item.eyebrow ? (
-                      <div style={{ margin: 0, color: props.eyebrowColor || cardStyle.bodyTextColor, fontSize: serviceEyebrowFontSize, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+                      <div style={{ margin: 0, color: props.eyebrowColor || cardStyle.bodyTextColor, fontSize: serviceEyebrowFontSize, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase" }}>
                         {item.eyebrow}
                       </div>
                     ) : null}
@@ -1970,7 +2501,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       contentEditable={editor}
                       suppressContentEditableWarning
                       onBlur={(event) => updateGridItem(itemIndex, { title: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                      style={{ margin: 0, color: cardStyle.titleTextColor, fontSize: serviceCardTitleFontSize, lineHeight: 1.16, fontWeight: 700, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, ...titleStyle }}
+                      style={{ margin: 0, color: cardStyle.titleTextColor, fontSize: serviceCardTitleFontSize, lineHeight: 1.16, fontWeight: 600, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, ...titleStyle }}
                       dangerouslySetInnerHTML={{ __html: asRichHtml(item.title || "Card title") }}
                     />
                   </>
@@ -2076,6 +2607,17 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "faq":
       return <FAQAccordionBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} sectionAnimationStyle={sectionAnimationStyle} assets={assets} />;
 
+    case "feature-accordion":
+      return <FeatureAccordionBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+    case "scroll-stack":
+      return <ScrollStackBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+
+    case "avatar-morph":
+      return <AvatarMorphBlock block={block} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+
+    case "video-hero":
+      return <VideoHeroBlock block={block} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+
     case "stats":
       const statsItems = asArray(props.stats).map((item, index) => normalizeStatItem(item, index));
       const statsVariant = statsVariantStyles(props, compact);
@@ -2094,132 +2636,134 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         });
       };
 
-      return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...statsVariant.section }}>
-          <div style={sectionContentStyle(props, compact, statsContentWidth)}>
-          <div style={asStyleObject(statsVariant.shell)}>
-            <div style={asStyleObject(statsVariant.header)}>
-              <h2
+      const statsIsDataRibbon = String(props.statsVariant || "editorial-band") === "data-ribbon";
+      const statsLeftColPct = Math.min(80, Math.max(20, Number(props.statsLeftColPct ?? 40)));
+      // Default header width comes from the variant's maxWidth; user can override via drag.
+      const statsHeaderDefaultWidth = Number(statsVariant.header?.maxWidth || 720);
+      const statsHeaderWidth = props.statsHeaderWidth > 0 ? props.statsHeaderWidth : statsHeaderDefaultWidth;
+
+      // Inner header content (title + subtitle) — shared between resizer wrappers.
+      const _statsHeaderInner = (
+        <div style={{ ...asStyleObject(statsVariant.header), maxWidth: "100%", width: "100%" }}>
+          <h2
+            data-website-inline-editor="true"
+            data-text-prop="title"
+            contentEditable={editor}
+            suppressContentEditableWarning
+            onBlur={(event) => {
+              if (!editor || typeof onChangeBlock !== "function") return;
+              onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+            }}
+            style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: statsVariant.sectionTitleColor || props.textColor || undefined, fontSize: compact ? Math.max(16, Number(props.sectionTitleSize || 28)) : Math.max(18, Number(props.sectionTitleSize || 28)), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Stats") }}
+          />
+          {props.subtitle || editor ? (
+            <div
+              data-website-inline-editor="true"
+              data-text-prop="subtitle"
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onBlur={(event) => {
+                if (!editor || typeof onChangeBlock !== "function") return;
+                onChangeBlock({ ...props, subtitle: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+              }}
+              style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: statsVariant.sectionSubtitleColor || props.textColor || undefined, fontSize: compact ? Math.max(12, Number(props.sectionSubtitleSize || 16)) : Math.max(12, Number(props.sectionSubtitleSize || 16)), opacity: props.subtitle ? 0.88 : 0.72, marginTop: 12, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "Add a short supporting line for the stats section.") }}
+            />
+          ) : null}
+        </div>
+      );
+
+      // For non-data-ribbon variants, wrap header in TextColumnResizer so the user can
+      // drag-resize the text column width. Data-ribbon uses StatsSplitResizer instead.
+      const _statsHeaderJsx = statsIsDataRibbon ? (
+        _statsHeaderInner
+      ) : (
+        <TextColumnResizer
+          editor={editor}
+          value={statsHeaderWidth}
+          align="center"
+          onResize={(v) => typeof onChangeBlock === "function" && onChangeBlock({ ...props, statsHeaderWidth: v })}
+        >
+          {_statsHeaderInner}
+        </TextColumnResizer>
+      );
+
+      const _renderStatItem = (stat, idx) => {
+        const baseDelay = idx * statsCardStagger;
+        const thisCardAnimation = (stat.cardAnimation && stat.cardAnimation !== "") ? stat.cardAnimation : statsCardAnimation;
+        const numberAnimationStyle = editor ? {} : getAnimationStyle(statsNumberAnimation, baseDelay + 0.04, statsSurfaceSpeed);
+        const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
+        const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
+        return (
+          <ScrollReveal key={`${stat.id}-${idx}`} animationName={thisCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
+            <div style={statsVariant.card(idx)}>
+              {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
+              <p
                 data-website-inline-editor="true"
-                data-text-prop="title"
+                data-text-prop={`stats.${idx}.number`}
                 contentEditable={editor}
                 suppressContentEditableWarning
-                onBlur={(event) => {
-                  if (!editor || typeof onChangeBlock !== "function") return;
-                  onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                }}
-                style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: statsVariant.sectionTitleColor || props.textColor || undefined, fontSize: compact ? Math.max(16, Number(props.sectionTitleSize || 28)) : Math.max(18, Number(props.sectionTitleSize || 28)), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Stats") }}
+                onBlur={(event) => patchStat(idx, { number: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={asStyleObject({ ...(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number), ...numberAnimationStyle })}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(stat.number || "0") }}
               />
-              {props.subtitle || editor ? (
-                <div
+              <p
+                data-website-inline-editor="true"
+                data-text-prop={`stats.${idx}.label`}
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => patchStat(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                style={asStyleObject({ ...statsVariant.label, ...labelAnimationStyle })}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(stat.label || "Metric") }}
+              />
+              {(stat.detail || editor) ? (
+                <p
                   data-website-inline-editor="true"
-                  data-text-prop="subtitle"
+                  data-text-prop={`stats.${idx}.detail`}
                   contentEditable={editor}
                   suppressContentEditableWarning
-                  onBlur={(event) => {
-                    if (!editor || typeof onChangeBlock !== "function") return;
-                    onChangeBlock({ ...props, subtitle: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                  }}
-                  style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: statsVariant.sectionSubtitleColor || props.textColor || undefined, fontSize: compact ? Math.max(12, Number(props.sectionSubtitleSize || 16)) : Math.max(12, Number(props.sectionSubtitleSize || 16)), opacity: props.subtitle ? 0.88 : 0.72, marginTop: 12, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "Add a short supporting line for the stats section.") }}
+                  onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                  style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
                 />
               ) : null}
             </div>
-            {statsVariant.cardsShell ? (
-              <div style={asStyleObject(statsVariant.cardsShell)}>
-                <div style={asStyleObject(statsVariant.grid)}>
-                  {statsItems.map((stat, idx) => {
-                    const baseDelay = idx * statsCardStagger;
-                    const numberAnimationStyle = editor ? {} : getAnimationStyle(statsNumberAnimation, baseDelay + 0.04, statsSurfaceSpeed);
-                    const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
-                    const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
-                    return (
-                  <ScrollReveal key={`${stat.id}-${idx}`} animationName={statsCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
-                    <div style={statsVariant.card(idx)}>
-                      {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
-                      <p
-                        data-website-inline-editor="true"
-                        data-text-prop={`stats.${idx}.number`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchStat(idx, { number: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject({ ...(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number), ...numberAnimationStyle })}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.number || "0") }}
-                      />
-                      <p
-                        data-website-inline-editor="true"
-                        data-text-prop={`stats.${idx}.label`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchStat(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject({ ...statsVariant.label, ...labelAnimationStyle })}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.label || "Metric") }}
-                      />
-                      {(stat.detail || editor) ? (
-                        <p
-                          data-website-inline-editor="true"
-                          data-text-prop={`stats.${idx}.detail`}
-                          contentEditable={editor}
-                          suppressContentEditableWarning
-                          onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                          style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
-                          dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
-                        />
-                      ) : null}
-                    </div>
-                  </ScrollReveal>
-                    );
-                  })}
-                </div>
-              </div>
+          </ScrollReveal>
+        );
+      };
+
+      const _statsCardsJsx = statsVariant.cardsShell ? (
+        <div style={asStyleObject(statsVariant.cardsShell)}>
+          <div style={asStyleObject(statsVariant.grid)}>
+            {statsItems.map(_renderStatItem)}
+          </div>
+        </div>
+      ) : (
+        <div style={asStyleObject(statsVariant.grid)}>
+          {statsItems.map(_renderStatItem)}
+        </div>
+      );
+
+      return (
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...statsVariant.section }}>
+          <div style={sectionContentStyle(props, compact, statsContentWidth)}>
+            {statsIsDataRibbon ? (
+              <StatsSplitResizer
+                editor={editor}
+                pct={statsLeftColPct}
+                gap={compact ? 18 : 28}
+                onResize={(v) => typeof onChangeBlock === "function" && onChangeBlock({ ...props, statsLeftColPct: v })}
+              >
+                {_statsHeaderJsx}
+                {_statsCardsJsx}
+              </StatsSplitResizer>
             ) : (
-              <div style={asStyleObject(statsVariant.grid)}>
-                {statsItems.map((stat, idx) => {
-                  const baseDelay = idx * statsCardStagger;
-                  const numberAnimationStyle = editor ? {} : getAnimationStyle(statsNumberAnimation, baseDelay + 0.04, statsSurfaceSpeed);
-                  const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
-                  const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
-                  return (
-                  <ScrollReveal key={`${stat.id}-${idx}`} animationName={statsCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
-                    <div style={statsVariant.card(idx)}>
-                      {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
-                      <p
-                        data-website-inline-editor="true"
-                        data-text-prop={`stats.${idx}.number`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchStat(idx, { number: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject({ ...(typeof statsVariant.number === "function" ? statsVariant.number(idx) : statsVariant.number), ...numberAnimationStyle })}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.number || "0") }}
-                      />
-                      <p
-                        data-website-inline-editor="true"
-                        data-text-prop={`stats.${idx}.label`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchStat(idx, { label: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={asStyleObject({ ...statsVariant.label, ...labelAnimationStyle })}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(stat.label || "Metric") }}
-                      />
-                      {(stat.detail || editor) ? (
-                        <p
-                          data-website-inline-editor="true"
-                          data-text-prop={`stats.${idx}.detail`}
-                          contentEditable={editor}
-                          suppressContentEditableWarning
-                          onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                          style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
-                          dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
-                        />
-                      ) : null}
-                    </div>
-                  </ScrollReveal>
-                  );
-                })}
+              <div style={asStyleObject(statsVariant.shell)}>
+                {_statsHeaderJsx}
+                {_statsCardsJsx}
               </div>
             )}
-          </div>
           </div>
         </ScrollReveal>
       );
@@ -2539,7 +3083,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               <p
                 contentEditable={editor} suppressContentEditableWarning
                 onBlur={(e) => patchNl({ privacyText: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
-                style={inlineStyle({ margin: "10px 0 0", fontSize: 12, color: nlTextColor, opacity: 0.55 })}
+                style={inlineStyle({ margin: "10px 0 0", fontSize: 16, color: nlTextColor, opacity: 0.55 })}
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.privacyText || (editor ? "No spam. Unsubscribe anytime." : "")) }}
               />
             ) : null}
@@ -2736,8 +3280,27 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "divider":
       return <div style={sharedStyles.divider(props.color)} />;
 
-    case "space":
-      return <div style={{ height: props.height || 40, background: "transparent", width: "100%" }} />;
+    case "space": {
+      const spBg =
+        props.backgroundStyle === "color"    ? (props.backgroundColor  || "transparent") :
+        props.backgroundStyle === "gradient" ? (props.backgroundGradient || "transparent") :
+        props.backgroundStyle === "image" && props.backgroundImage
+          ? undefined
+          : "transparent";
+      const spBgImage = props.backgroundStyle === "image" && props.backgroundImage
+        ? `url(${JSON.stringify(props.backgroundImage)})`
+        : undefined;
+      return (
+        <div
+          style={{
+            height: props.height || 40,
+            width: "100%",
+            ...(spBg !== undefined ? { background: spBg } : {}),
+            ...(spBgImage ? { backgroundImage: spBgImage, backgroundSize: props.backgroundSize || "cover", backgroundPosition: props.backgroundPosition || "center center", backgroundRepeat: "no-repeat" } : {}),
+          }}
+        />
+      );
+    }
 
     case "video-embed":
       return (
@@ -2829,16 +3392,16 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               {(props.brand || props.tagline || props.spotlightHeading || props.spotlightText) ? (
                 <div style={{ display: "flex", flexDirection: compact ? "column" : "row", gap: compact ? 10 : 18, alignItems: compact ? "flex-start" : "end", justifyContent: "space-between" }}>
                   <div style={{ display: "grid", gap: 8, maxWidth: 720 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.9) }}>{props.footerEyebrow || "Closing note"}</span>
+                    <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.9) }}>{props.footerEyebrow || "Closing note"}</span>
                     <div style={{ display: "grid", gap: 6 }}>
-                      <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ brand: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 22 : 30, fontWeight: 700, color: ftText, lineHeight: 1.05 })}>{props.brand || (editor ? "Your Brand" : "")}</span>
+                      <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ brand: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 22 : 30, fontWeight: 600, color: ftText, lineHeight: 1.05 })}>{props.brand || (editor ? "Your Brand" : "")}</span>
                       {(props.tagline || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ tagline: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 15 : 17, color: ftLink, lineHeight: 1.55, maxWidth: 640 })}>{props.tagline || (editor ? "Your tagline here." : "")}</span> : null}
                     </div>
                   </div>
                   {spotlightItems.length ? (
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: compact ? "flex-start" : "flex-end" }}>
                       {spotlightItems.map((item, index) => (
-                        <span key={`footer-pill-${index}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 38, padding: "0 14px", borderRadius: 999, border: footerPanelBorder, background: footerVariant === "editorial" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", color: ftText, fontSize: 14, fontWeight: 600 }}>{String(item)}</span>
+                        <span key={`footer-pill-${index}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 38, padding: "0 14px", borderRadius: 999, border: footerPanelBorder, background: footerVariant === "editorial" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", color: ftText, fontSize: 16, fontWeight: 600 }}>{String(item)}</span>
                       ))}
                     </div>
                   ) : null}
@@ -2848,19 +3411,19 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               <div style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
                 <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
                   <BrandMark brand={props.brand} logoSrc={footerLogoSrc} size={footerMarkSize} background={ftBtnBg} color={ftBtnText} borderColor={ftBorder} borderRadius={10} />
-                  {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}
+                  {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}
                   {contactItems.length > 0 ? (
                     <div style={{ display: "grid", gap: 8 }}>
-                      {(props.contactEmail || editor) ? <a href={editor ? undefined : (footerEmailHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactEmail: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 15, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactEmail || (editor ? "hello@yourbrand.com" : "")}</a> : null}
-                      {(props.contactPhone || editor) ? <a href={editor ? undefined : (footerPhoneHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactPhone: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 15, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactPhone || (editor ? "(555) 010-2026" : "")}</a> : null}
-                      {(props.contactAddress || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactAddress: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.6 })}>{props.contactAddress || (editor ? "Your city, state" : "")}</span> : null}
+                      {(props.contactEmail || editor) ? <a href={editor ? undefined : (footerEmailHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactEmail: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 16, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactEmail || (editor ? "hello@yourbrand.com" : "")}</a> : null}
+                      {(props.contactPhone || editor) ? <a href={editor ? undefined : (footerPhoneHref || undefined)} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactPhone: e.currentTarget.textContent })} style={{ ...inlineStyle({ fontSize: 16, color: ftText, lineHeight: 1.6, paddingBottom: 8, borderBottom: `1px solid ${ftBorder}` }), textDecoration: "none" }}>{props.contactPhone || (editor ? "(555) 010-2026" : "")}</a> : null}
+                      {(props.contactAddress || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactAddress: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.6 })}>{props.contactAddress || (editor ? "Your city, state" : "")}</span> : null}
                     </div>
                   ) : null}
                 </div>
 
                 {linkGroups.map((group, groupIndex) => (
                   <div key={`footer-group-${groupIndex}`} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
+                    <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
                     <div style={{ display: "grid", gap: 8 }}>
                       {group.links.map((link, i) => (
                         <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
@@ -2868,8 +3431,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     </div>
                     {groupIndex === 0 && (props.spotlightHeading || props.spotlightText || editor) ? (
                       <div style={{ display: "grid", gap: 6, marginTop: 8, paddingTop: 12, borderTop: footerPanelBorder }}>
-                        {(props.spotlightHeading || editor) ? <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.88) }}>{props.spotlightHeading || "Highlights"}</span> : null}
-                        {(props.spotlightText || editor) ? <span style={{ fontSize: 14, lineHeight: 1.55, color: ftLink }}>{props.spotlightText || "Add a stronger closing note here."}</span> : null}
+                        {(props.spotlightHeading || editor) ? <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.88) }}>{props.spotlightHeading || "Highlights"}</span> : null}
+                        {(props.spotlightText || editor) ? <span style={{ fontSize: 16, lineHeight: 1.55, color: ftLink }}>{props.spotlightText || "Add a stronger closing note here."}</span> : null}
                       </div>
                     ) : null}
                   </div>
@@ -2877,23 +3440,23 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
                 {props.showNewsletter !== false ? (
                   <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
-                    <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 700, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
-                    {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
+                    <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 600, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
+                    {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
                     <form style={{ display: "grid", gap: 10, marginTop: 4 }} onSubmit={handleFooterNewsletterSubmit} action={editor || !newsletterUsesExternalForm ? undefined : newsletterActionHref} method={editor || !newsletterUsesExternalForm ? undefined : newsletterFormMethod}>
                       {editor ? <div style={{ flex: 1, minWidth: 140, borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 16 }}>Email address</div> : <input type="email" name="footer-newsletter-email" placeholder="Email address" required style={{ width: "100%", borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 16, font: "inherit", boxSizing: "border-box" }} />}
-                      <button type={editor ? "button" : "submit"} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 12, padding: "0 16px", minHeight: 46, fontWeight: 700, fontSize: 16, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap", opacity: editor || newsletterUsesExternalForm || newsletterFallbackHref ? 1 : 0.65 }} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}>{props.newsletterButtonText || "Subscribe"}</button>
+                      <button type={editor ? "button" : "submit"} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 12, padding: "0 16px", minHeight: 46, fontWeight: 600, fontSize: 16, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap", opacity: editor || newsletterUsesExternalForm || newsletterFallbackHref ? 1 : 0.65 }} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}>{props.newsletterButtonText || "Subscribe"}</button>
                     </form>
                   </div>
                 ) : null}
               </div>
 
               <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: compact ? "flex-start" : "space-between", gap: 14, flexWrap: "wrap" }}>
-                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 12, color: ftLink })}>{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
+                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink })}>{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   {Array.isArray(extraLinks) && extraLinks.length ? extraLinks.map((link, index) => (
-                    <a key={`footer-legal-${index}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftLink, fontSize: 12, textDecoration: "none", letterSpacing: "0.04em", textTransform: "uppercase" }}>{link.label || "Link"}</a>
+                    <a key={`footer-legal-${index}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftLink, fontSize: 16, textDecoration: "none", letterSpacing: "0.04em", textTransform: "uppercase" }}>{link.label || "Link"}</a>
                   )) : null}
-                  {spotlightItems.length ? <span style={{ fontSize: 12, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" • ")}</span> : null}
+                  {spotlightItems.length ? <span style={{ fontSize: 16, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" • ")}</span> : null}
                 </div>
               </div>
             </div>
@@ -2915,10 +3478,198 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
 
     case "hover-cards":
-      return <HoverCardsBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} />;
+      return <HoverCardsBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} navigationContext={navigationContext} />;
 
     case "framer-animated-portfolio":
       return <FramerPortfolioBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} />;
+
+    case "chart": {
+      const chartPlans = Array.isArray(props.plans) && props.plans.length > 0
+        ? props.plans
+        : [
+            { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 200, billingPrice: 129 },
+            { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 415, billingPrice: 299 },
+            { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 814, billingPrice: 449 },
+            { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1724, billingPrice: 899 },
+          ];
+      const chartBg = props.backgroundColor || "#0f172a";
+      const chartTextColor = props.textColor || "#f8fafc";
+      const chartHeading = props.heading || "Stop Paying Full Price";
+      const chartSubheading = props.subheading || "Every plan saves you real money — compared to buying each module separately";
+      const chartAreaHeight = compact ? 150 : 300;
+      const barW = compact ? 26 : 52;
+      const barGapPx = compact ? 6 : 14;
+      const maxPlanVal = Math.max(...chartPlans.map((p) => p.individualPrice || 0), 1);
+      const dimText = colorWithAlpha(chartTextColor, 0.55);
+
+      return (
+        <section style={{ background: chartBg, padding: compact ? "36px 20px 32px" : "88px 40px 72px", overflow: "hidden" }}>
+          <ScrollReveal>
+            <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+
+              {/* Eyebrow + Heading */}
+              <div style={{ textAlign: "center", marginBottom: compact ? 28 : 56 }}>
+                <div style={{
+                  display: "inline-block",
+                  background: "rgba(99,102,241,0.15)",
+                  border: "1px solid rgba(99,102,241,0.4)",
+                  color: "#a5b4fc",
+                  fontSize: compact ? 11 : 13,
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  padding: "6px 18px",
+                  borderRadius: 999,
+                  textTransform: "uppercase",
+                  marginBottom: compact ? 14 : 24,
+                }}>
+                  The Numbers Speak For Themselves
+                </div>
+                <h2 style={{
+                  color: chartTextColor,
+                  fontSize: compact ? 26 : 52,
+                  fontWeight: 600,
+                  margin: "0 0 16px",
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.02em",
+                }}>
+                  {chartHeading}
+                </h2>
+                <p style={{ color: dimText, fontSize: compact ? 15 : 19, margin: "0 auto", maxWidth: 620, lineHeight: 1.65 }}>
+                  {chartSubheading}
+                </p>
+              </div>
+
+              {/* Annual savings — moved to top so it hits first */}
+              {props.showAnnualSavings !== false && (
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(99,102,241,0.14) 0%, rgba(124,58,237,0.09) 100%)",
+                  border: "1px solid rgba(99,102,241,0.28)",
+                  borderRadius: compact ? 14 : 24,
+                  padding: compact ? "24px 20px" : "44px 48px",
+                  textAlign: "center",
+                  marginBottom: compact ? 28 : 48,
+                }}>
+                  <div style={{ color: "#a5b4fc", fontSize: compact ? 12 : 15, fontWeight: 600, marginBottom: compact ? 16 : 28, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    Annual Savings By Plan
+                  </div>
+                  <div style={{ display: "flex", gap: compact ? 10 : 32, justifyContent: "center", flexWrap: "wrap", marginBottom: compact ? 20 : 32 }}>
+                    {chartPlans.map((plan, idx) => {
+                      const savings = (plan.individualPrice || 0) - (plan.billingPrice || 0);
+                      const annual = savings * 12;
+                      return (
+                        <div key={plan.id || idx} style={{ textAlign: "center" }}>
+                          <div style={{ color: plan.color, fontSize: compact ? 26 : 44, fontWeight: 600, lineHeight: 1, textShadow: `0 0 28px ${plan.color}65` }}>
+                            ${annual.toLocaleString()}
+                          </div>
+                          <div style={{ color: dimText, fontSize: compact ? 12 : 16, marginTop: compact ? 4 : 8, fontWeight: 600 }}>{plan.name}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ color: colorWithAlpha(chartTextColor, 0.75), fontSize: compact ? 15 : 22, fontWeight: 600, lineHeight: 1.4 }}>
+                    That&apos;s real money back where it belongs — your business.
+                  </div>
+                </div>
+              )}
+
+              {/* Big savings cards — the hero of this section */}
+              <div style={{ display: "flex", gap: compact ? 10 : 18, marginBottom: compact ? 36 : 60, flexWrap: "wrap" }}>
+                {chartPlans.map((plan, idx) => {
+                  const savings = (plan.individualPrice || 0) - (plan.billingPrice || 0);
+                  const pct = Math.round((savings / (plan.individualPrice || 1)) * 100);
+                  return (
+                    <div key={plan.id || idx} style={{
+                      flex: "1 1 160px",
+                      background: `linear-gradient(145deg, ${plan.color}20 0%, ${plan.color}09 100%)`,
+                      border: `1px solid ${plan.color}50`,
+                      borderRadius: compact ? 12 : 20,
+                      padding: compact ? "18px 14px" : "32px 28px",
+                      textAlign: "center",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}>
+                      <div style={{
+                        position: "absolute", top: -24, right: -24,
+                        width: 90, height: 90, borderRadius: "50%",
+                        background: plan.color, opacity: 0.15,
+                        filter: "blur(28px)", pointerEvents: "none",
+                      }} />
+                      <div style={{ color: plan.color, fontSize: compact ? 11 : 14, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: compact ? 6 : 12 }}>
+                        {plan.name}
+                      </div>
+                      <div style={{ color: plan.color, fontSize: compact ? 32 : 56, fontWeight: 600, lineHeight: 1, marginBottom: compact ? 4 : 8, textShadow: `0 0 32px ${plan.color}70` }}>
+                        ${savings}
+                      </div>
+                      <div style={{ color: dimText, fontSize: compact ? 13 : 17, fontWeight: 500, marginBottom: compact ? 10 : 16 }}>
+                        saved every month
+                      </div>
+                      <div style={{
+                        display: "inline-block",
+                        background: `${plan.color}28`,
+                        color: plan.color,
+                        fontSize: compact ? 12 : 15,
+                        fontWeight: 600,
+                        padding: compact ? "4px 12px" : "5px 14px",
+                        borderRadius: 999,
+                        border: `1px solid ${plan.color}40`,
+                      }}>
+                        {pct}% off
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bar chart — annual savings per plan */}
+              <div style={{
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: compact ? 14 : 24,
+                padding: compact ? "20px 16px 0" : "36px 40px 0",
+                border: "1px solid rgba(255,255,255,0.07)",
+                marginBottom: compact ? 20 : 36,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: compact ? 16 : 28 }}>
+                  <div style={{ color: colorWithAlpha(chartTextColor, 0.7), fontSize: compact ? 13 : 17, fontWeight: 600 }}>
+                    Annual Savings by Plan
+                  </div>
+                  <div style={{ display: "flex", gap: compact ? 12 : 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <div style={{ width: 14, height: 14, borderRadius: 3, background: "linear-gradient(135deg,#6366f1,#22c55e)" }} />
+                      <span style={{ color: dimText, fontSize: compact ? 12 : 15 }}>Annual savings</span>
+                    </div>
+                  </div>
+                </div>
+                {(() => {
+                  const maxAnnual = Math.max(...chartPlans.map((p) => ((p.individualPrice || 0) - (p.billingPrice || 0)) * 12), 1);
+                  return (
+                    <div style={{ display: "flex", gap: compact ? 10 : 28, alignItems: "flex-end" }}>
+                      {chartPlans.map((plan, idx) => {
+                        const savings = (plan.individualPrice || 0) - (plan.billingPrice || 0);
+                        const annual = savings * 12;
+                        const barH = Math.max(Math.round((annual / maxAnnual) * chartAreaHeight), 6);
+                        return (
+                          <div key={plan.id || idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: compact ? 4 : 8, justifyContent: "flex-end" }}>
+                              <span style={{ color: plan.color, fontSize: compact ? 11 : 15, fontWeight: 600, textShadow: `0 0 12px ${plan.color}55` }}>${annual.toLocaleString()}</span>
+                              <div style={{ width: barW * 2 + barGapPx, height: barH, background: `linear-gradient(180deg, ${plan.color}cc 0%, ${plan.color} 100%)`, borderRadius: "6px 6px 0 0", boxShadow: `0 -6px 24px ${plan.color}55` }} />
+                            </div>
+                            <div style={{ textAlign: "center", marginTop: compact ? 10 : 18, paddingBottom: compact ? 14 : 24 }}>
+                              <div style={{ color: colorWithAlpha(chartTextColor, 0.7), fontSize: compact ? 11 : 16, fontWeight: 600 }}>{plan.name}</div>
+                              <div style={{ color: dimText, fontSize: compact ? 10 : 13, fontWeight: 500, marginTop: 2 }}>${plan.billingPrice}/mo</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+            </div>
+          </ScrollReveal>
+        </section>
+      );
+    }
 
     case "custom-html": {
       const htmlPadTop = Number(props.paddingTop ?? 0);
@@ -2938,6 +3689,150 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <p style={sharedStyles.bodyCopy}>This block preview will be expanded further.</p>
         </article>
       );
-  }
-}
 
+    case "competitor-comparison": {
+      const ccRows = asArray(props.rows);
+      const ccTotal = ccRows.reduce((s, r) => s + (r.price || 0), 0);
+      const ccPlanPrice = Number(props.planPrice) || 199;
+      const ccSavings = ccTotal - ccPlanPrice;
+      const bg = props.backgroundColor || "#070c18";
+      const grid3 = { display: "grid", gridTemplateColumns: "1fr 220px 160px", alignItems: "center" };
+
+      function CCLogo({ domain, name }) {
+        return (
+          <img
+            src={`https://logo.clearbit.com/${domain}`}
+            alt={name}
+            title={name}
+            width={36}
+            height={36}
+            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0 }}
+            onError={e => {
+              if (!e.currentTarget.src.includes("google.com")) {
+                e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+              } else {
+                e.currentTarget.style.display = "none";
+              }
+            }}
+          />
+        );
+      }
+
+      return (
+        <div style={{ background: bg, color: "#fff", padding: "80px 32px", ...sectionAnimationStyle }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            {(editor || !!props.eyebrow) && (
+              <p
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, eyebrow: e.currentTarget.innerText.trim() }); }}
+                onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                style={{ color: "#60a5fa", fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", textAlign: "center", marginBottom: 12, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+                dangerouslySetInnerHTML={{ __html: props.eyebrow || (editor ? "EYEBROW LABEL" : "") }}
+              />
+            )}
+            <h2
+              contentEditable={editor}
+              suppressContentEditableWarning
+              onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+              onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+              onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, title: e.currentTarget.innerText.trim() }); }}
+              onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+              style={{ fontSize: 52, fontWeight: 600, textAlign: "center", marginBottom: 16, letterSpacing: "-0.02em", lineHeight: 1.15, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+              dangerouslySetInnerHTML={{ __html: props.title || "What you&#39;d pay elsewhere" }}
+            />
+            {(editor || !!props.subtitle) && (
+              <p
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, subtitle: e.currentTarget.innerText.trim() }); }}
+                onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                style={{ color: "#9ca3af", fontSize: 18, textAlign: "center", marginBottom: 48, lineHeight: 1.6, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+                dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle here…" : "") }}
+              />
+            )}
+
+            <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 64px rgba(0,0,0,0.4)" }}>
+              <div style={{ ...grid3, background: "rgba(13,21,38,0.95)", borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "16px 36px", fontSize: 16, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                <span>Feature</span>
+                <span style={{ padding: "0 32px", textAlign: "center" }}>Tools you&apos;d need</span>
+                <span style={{ textAlign: "right" }}>Cost / mo</span>
+              </div>
+
+              {ccRows.map((row, i) => (
+                <div key={i} style={{ ...grid3, padding: "20px 36px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: i % 2 === 0 ? "rgba(255,255,255,0.015)" : "transparent" }}>
+                  <span
+                    contentEditable={editor}
+                    suppressContentEditableWarning
+                    onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                    onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                    onBlur={(e) => {
+                      if (editor && typeof onChangeBlock === "function") {
+                        const updated = ccRows.map((r, j) => j === i ? { ...r, category: e.currentTarget.innerText.trim() } : r);
+                        onChangeBlock({ ...props, rows: updated });
+                      }
+                    }}
+                    onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                    style={{ fontWeight: 600, fontSize: 16, letterSpacing: "0.03em", color: "#e5e7eb", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+                  >{row.category}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 32px", justifyContent: "center" }}>
+                    {asArray(row.logos).map(l => <CCLogo key={l.domain} domain={l.domain} name={l.name} />)}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
+                    <span style={{ fontSize: 16, fontWeight: 600, whiteSpace: "nowrap", color: row.price ? "#f1f5f9" : "#60a5fa" }}>
+                      {row.price ? `$${row.price}/mo` : (props.uniqueLabel || `Unique to ${props.planName || "us"}`)}
+                    </span>
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="13" fill="#2563eb"/><path d="M7 13.5l4 4 8-9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ ...grid3, padding: "24px 36px", background: "rgba(13,21,38,0.95)", borderTop: "2px solid rgba(255,255,255,0.12)" }}>
+                <span style={{ fontWeight: 600, fontSize: 16, color: "#9ca3af", letterSpacing: "0.04em" }}>Total if purchased separately</span>
+                <div style={{ padding: "0 32px" }} />
+                <span style={{ color: "#f87171", fontWeight: 600, fontSize: 26, textAlign: "right" }}>${ccTotal.toLocaleString()}/mo</span>
+              </div>
+
+              <div style={{ ...grid3, padding: "24px 36px", background: "rgba(10,30,15,0.95)", borderTop: "1px solid rgba(74,222,128,0.15)" }}>
+                <div>
+                  <span
+                    contentEditable={editor}
+                    suppressContentEditableWarning
+                    onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                    onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                    onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, planName: e.currentTarget.innerText.trim() }); }}
+                    onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                    style={{ fontWeight: 600, fontSize: 17, color: "#86efac", letterSpacing: "0.02em", display: "block", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+                  >{props.planName || "Business Plan"}</span>
+                  {(editor || !!props.planTagline) && (
+                    <span
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                      onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                      onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, planTagline: e.currentTarget.innerText.trim() }); }}
+                      onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                      style={{ color: "#4ade80", fontSize: 16, marginTop: 4, opacity: 0.8, display: "block", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
+                    >{props.planTagline || (editor ? "Add plan tagline…" : "")}</span>
+                  )}
+                </div>
+                <div style={{ padding: "0 32px" }} />
+                <span style={{ color: "#4ade80", fontWeight: 600, fontSize: 26, textAlign: "right" }}>${ccPlanPrice}/mo</span>
+              </div>
+
+              <div style={{ ...grid3, padding: "28px 36px", background: "rgba(20,83,45,0.6)", borderTop: "2px solid rgba(74,222,128,0.25)" }}>
+                <span style={{ fontWeight: 600, fontSize: 22, color: "#86efac", letterSpacing: "0.01em" }}>🎉 You save</span>
+                <div style={{ padding: "0 32px" }} />
+                <span style={{ color: "#86efac", fontWeight: 600, fontSize: 36, textAlign: "right", letterSpacing: "-0.02em" }}>${ccSavings.toLocaleString()}/mo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  } // end switch
+}

@@ -1,4 +1,4 @@
-// pages/u/[username].js
+﻿// pages/u/[username].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
@@ -329,38 +329,38 @@ export default function PublicBooking() {
     headerWrap:  { padding: "24px 20px 0", background: "#0c121a" },
     header:       { maxWidth: 1320, width: "100%", margin: "0 auto", background: accent, minHeight: 120, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 32px", borderRadius: 16, borderBottom: "2px solid rgba(0,0,0,.2)", boxSizing: "border-box" },
     headerLeft:   { display: "flex", alignItems: "center", gap: 18 },
-    avatar:       { width: 60, height: 60, borderRadius: 8, background: "rgba(0,0,0,0.25)", border: "2px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, color: "#fff", flexShrink: 0, overflow: "hidden" },
+    avatar:       { width: 60, height: 60, borderRadius: 8, background: "rgba(0,0,0,0.25)", border: "2px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 600, color: "#fff", flexShrink: 0, overflow: "hidden" },
     headerTitle:  { fontSize: 28, fontWeight: 600, letterSpacing: ".2px", color: "#fff", margin: 0 },
-    headerSub:    { fontSize: 15, color: "rgba(255,255,255,0.85)", marginTop: 4, marginBottom: 0 },
+    headerSub:    { fontSize: 16, color: "rgba(255,255,255,0.85)", marginTop: 4, marginBottom: 0 },
     headerBack:   { background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", padding: "8px 16px", display: "flex", alignItems: "center", gap: 6, flexShrink: 0, whiteSpace: "nowrap" },
     body:         { maxWidth: 640, margin: "0 auto", padding: "28px 20px 80px" },
     progress:     { display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 36, padding: "0 20px" },
-    stepDot:      (active, done) => ({ width: 32, height: 32, borderRadius: "50%", background: done ? "#84cc16" : active ? "#fff" : "#1e293b", border: done ? "2px solid #84cc16" : active ? "2px solid #84cc16" : "2px solid #374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, color: done ? "#fff" : active ? "#0c121a" : "#4b5563", flexShrink: 0 }),
+    stepDot:      (active, done) => ({ width: 32, height: 32, borderRadius: "50%", background: done ? "#84cc16" : active ? "#fff" : "#1e293b", border: done ? "2px solid #84cc16" : active ? "2px solid #84cc16" : "2px solid #374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 600, color: done ? "#fff" : active ? "#0c121a" : "#4b5563", flexShrink: 0 }),
     stepLine:     (done) => ({ flex: 1, height: 2, background: done ? "#84cc16" : "#1e293b", margin: "0 4px" }),
     sectionTitle: { fontSize: 20, fontWeight: 600, marginBottom: 20, color: "#fff" },
     card:         { background: "#161e2b", border: "1px solid #243047", borderRadius: 14, padding: "20px 22px", cursor: "pointer", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" },
     cardTitle:    { fontSize: 18, fontWeight: 600, color: "#fff" },
-    cardSub:      { fontSize: 15, color: "#9CA3AF", marginTop: 4 },
-    priceTag:     { fontSize: 20, fontWeight: 700, color: "#84cc16" },
+    cardSub:      { fontSize: 16, color: "#9CA3AF", marginTop: 4 },
+    priceTag:     { fontSize: 20, fontWeight: 600, color: "#84cc16" },
     panel:        { background: "#161e2b", border: "1px solid #243047", borderRadius: 14, padding: 24 },
     input:        { width: "100%", padding: "13px 16px", background: "rgba(0,0,0,0.5)", border: "1px solid #374151", borderRadius: 10, color: "#fff", fontSize: 16, boxSizing: "border-box", outline: "none" },
-    label:        { display: "block", fontSize: 14, fontWeight: 600, color: "#e0c720", marginBottom: 6, marginTop: 18 },
+    label:        { display: "block", fontSize: 16, fontWeight: 600, color: "#e0c720", marginBottom: 6, marginTop: 18 },
     dateInput:    { width: "100%", padding: "13px 16px", background: "rgba(0,0,0,0.5)", border: "1px solid #374151", borderRadius: 10, color: "#fff", fontSize: 16, boxSizing: "border-box", colorScheme: "dark" },
     slotGrid:     { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 10, marginTop: 16 },
-    slotBtn:      (sel) => ({ padding: "12px 8px", borderRadius: 10, border: sel ? `2px solid ${accent}` : "1px solid #374151", background: sel ? `${accent}20` : "rgba(0,0,0,0.3)", color: sel ? accent : "#e5e7eb", cursor: "pointer", fontSize: 15, fontWeight: sel ? 600 : 400 }),
+    slotBtn:      (sel) => ({ padding: "12px 8px", borderRadius: 10, border: sel ? `2px solid ${accent}` : "1px solid #374151", background: sel ? `${accent}20` : "rgba(0,0,0,0.3)", color: sel ? accent : "#e5e7eb", cursor: "pointer", fontSize: 16, fontWeight: sel ? 600 : 400 }),
     primaryBtn:   { width: "100%", padding: "16px", background: accent, border: "none", borderRadius: 12, color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", marginTop: 22 },
     disabledBtn:  { width: "100%", padding: "16px", background: "#d2b019", border: "none", borderRadius: 12, color: "#6B7280", fontSize: 18, fontWeight: 600, cursor: "not-allowed", marginTop: 22 },
     backBtn:      { background: "none", border: "none", color: "#ffffff", fontSize: 16, cursor: "pointer", padding: "0 0 20px", display: "flex", alignItems: "center", gap: 6 },
     summaryCard:  { background: "#0c121a", border: "1px solid #243047", borderRadius: 12, padding: "16px 20px", marginBottom: 20 },
-    summaryRow:   { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #1e293b", fontSize: 15 },
-    summaryLast:  { display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 15 },
+    summaryRow:   { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #1e293b", fontSize: 16 },
+    summaryLast:  { display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 16 },
     summaryLabel: { color: "#d2b019" },
     summaryVal:   { fontWeight: 600, color: "#fff" },
     verifyRow:    { display: "flex", gap: 10, marginTop: 6 },
     codeInput:    { flex: 1, padding: "13px 16px", background: "rgba(0,0,0,0.5)", border: "1px solid #374151", borderRadius: 10, color: "#fff", fontSize: 20, textAlign: "center", letterSpacing: 6, boxSizing: "border-box" },
     verifyBtn:    { padding: "13px 20px", background: "#22c55e", border: "none", borderRadius: 10, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
-    sendCodeBtn:  (sent) => ({ padding: "13px 16px", background: sent ? "#374151" : "#84cc16", border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }),
-    error:        { background: "#450a0a", border: "1px solid #dc2626", borderRadius: 10, padding: "12px 16px", fontSize: 15, marginBottom: 16, color: "#fca5a5" },
+    sendCodeBtn:  (sent) => ({ padding: "13px 16px", background: sent ? "#374151" : "#84cc16", border: "none", borderRadius: 10, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }),
+    error:        { background: "#450a0a", border: "1px solid #dc2626", borderRadius: 10, padding: "12px 16px", fontSize: 16, marginBottom: 16, color: "#fca5a5" },
     noSlots:      { textAlign: "center", padding: "32px 0", fontSize: 16, color: "#6B7280" },
     successPage:  { minHeight: "100vh", background: "#0c121a", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 },
     successCard:  { background: "#161e2b", border: "1px solid #243047", borderRadius: 20, padding: "48px 36px", maxWidth: 500, width: "100%", textAlign: "center" },
@@ -390,7 +390,7 @@ export default function PublicBooking() {
       <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 18, color: "#f87171", marginBottom: 12 }}>{loadError}</div>
-          <button onClick={() => { setLoadError(""); loadUser(); }} style={{ padding: "10px 24px", background: "#374151", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 15 }}>Try again</button>
+          <button onClick={() => { setLoadError(""); loadUser(); }} style={{ padding: "10px 24px", background: "#374151", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 16 }}>Try again</button>
         </div>
       </div>
     );
@@ -412,7 +412,7 @@ export default function PublicBooking() {
           <div style={S.checkRing}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#84cc16" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: "#2abae2", margin: "0 0 12px" }}>Booking Confirmed!</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 600, color: "#2abae2", margin: "0 0 12px" }}>Booking Confirmed!</h1>
           {confirmationEmailIssue ? (
             <p style={{ fontSize: 16, color: "#fca5a5", margin: "0 0 28px" }}>
               Your booking was saved, but the confirmation email with calendar invite did not send to <strong style={{ color: "#fff" }}>{email}</strong>.<br />
@@ -475,7 +475,7 @@ export default function PublicBooking() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
                   ) : i + 1}
                 </div>
-                <span style={{ fontSize: 11, color: i === stepIdx ? "#fff" : i < stepIdx ? "#84cc16" : "#4b5563", fontWeight: i === stepIdx ? 600 : 400 }}>{label}</span>
+                <span style={{ fontSize: 16, color: i === stepIdx ? "#fff" : i < stepIdx ? "#84cc16" : "#4b5563", fontWeight: i === stepIdx ? 600 : 400 }}>{label}</span>
               </div>
               {i < 3 && <div style={S.stepLine(i < stepIdx)} />}
             </div>
@@ -518,8 +518,8 @@ export default function PublicBooking() {
               {/* Service summary */}
               <div style={{ marginBottom: 20, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 17, fontWeight: 600, color: "#fff" }}>{selectedService?.name}</span>
-                <span style={{ fontSize: 14, color: "#9CA3AF" }}>{selectedService?.duration_minutes} min</span>
-                {selectedService?.price > 0 && <span style={{ fontSize: 14, color: accent }}>${selectedService?.price?.toFixed(2)}</span>}
+                <span style={{ fontSize: 16, color: "#9CA3AF" }}>{selectedService?.duration_minutes} min</span>
+                {selectedService?.price > 0 && <span style={{ fontSize: 16, color: accent }}>${selectedService?.price?.toFixed(2)}</span>}
               </div>
 
               {/* Month navigation */}
@@ -538,7 +538,7 @@ export default function PublicBooking() {
               {/* Day-of-week headers */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
                 {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
-                  <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 600, color: "#4B5563", padding: "4px 0" }}>{d}</div>
+                  <div key={d} style={{ textAlign: "center", fontSize: 16, fontWeight: 600, color: "#4B5563", padding: "4px 0" }}>{d}</div>
                 ))}
               </div>
 
@@ -561,7 +561,7 @@ export default function PublicBooking() {
                         textAlign: "center",
                         padding: "11px 4px",
                         borderRadius: 8,
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: isSel ? 700 : 400,
                         cursor: active ? "pointer" : "default",
                         background: isSel ? accent : active ? `${accent}14` : "transparent",
@@ -579,7 +579,7 @@ export default function PublicBooking() {
               </div>
 
               {calAvailDows.size === 0 && (
-                <div style={{ textAlign: "center", padding: "24px 0", color: "#6B7280", fontSize: 15 }}>No availability set up yet.</div>
+                <div style={{ textAlign: "center", padding: "24px 0", color: "#6B7280", fontSize: 16 }}>No availability set up yet.</div>
               )}
             </div>
           </>
@@ -661,7 +661,7 @@ export default function PublicBooking() {
                   </button>
                 )}
               </div>
-              {smsSendError && <div style={{ color: "#f87171", fontSize: 14, marginTop: 6 }}>{smsSendError}</div>}
+              {smsSendError && <div style={{ color: "#f87171", fontSize: 16, marginTop: 6 }}>{smsSendError}</div>}
 
               {codeSent && !phoneVerified && (
                 <div style={{ marginTop: 16 }}>
@@ -676,12 +676,12 @@ export default function PublicBooking() {
                     />
                     <button type="submit" style={S.verifyBtn}>Verify</button>
                   </form>
-                  {phoneVerifyError && <div style={{ color: "#f87171", fontSize: 14, marginTop: 6 }}>{phoneVerifyError}</div>}
+                  {phoneVerifyError && <div style={{ color: "#f87171", fontSize: 16, marginTop: 6 }}>{phoneVerifyError}</div>}
                 </div>
               )}
 
               {phoneVerified && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 15, color: "#22c55e" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 16, color: "#22c55e" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
                   Phone verified
                 </div>

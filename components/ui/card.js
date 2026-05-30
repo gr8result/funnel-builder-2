@@ -1,4 +1,4 @@
-// /components/ui/card.js
+﻿// /components/ui/card.js
 export function Card({ color = "#1e293b", icon = "📦", title, children }) {
   return (
     <div
@@ -25,7 +25,7 @@ export function Card({ color = "#1e293b", icon = "📦", title, children }) {
         <span>{icon}</span>
         {title}
       </h3>
-      <div style={{ color: "#e2e8f0", fontSize: "15px" }}>{children}</div>
+      <div style={{ color: "#e2e8f0", fontSize: "16px" }}>{children}</div>
     </div>
   );
 }

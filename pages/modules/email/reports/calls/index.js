@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../../../utils/supabase-client";
@@ -327,8 +327,8 @@ const styles = {
 
   metricsGrid: { marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 },
   metricBox: { padding: 12, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" },
-  metricTitle: { fontSize: 16, opacity: 0.85, fontWeight: 700 },
-  metricValue: { fontSize: 24, fontWeight: 700, marginTop: 6, color: "#a78bfa" },
+  metricTitle: { fontSize: 16, opacity: 0.85, fontWeight: 600 },
+  metricValue: { fontSize: 24, fontWeight: 600, marginTop: 6, color: "#a78bfa" },
 
   tableWrap: { marginTop: 14, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.10)" },
   tableHeadRow: {
@@ -337,7 +337,7 @@ const styles = {
     padding: "10px 12px",
     background: "rgba(255,255,255,0.06)",
   },
-  th: { fontSize: 16, fontWeight: 700, opacity: 0.9 },
+  th: { fontSize: 16, fontWeight: 600, opacity: 0.9 },
   tr: {
     display: "grid",
     gridTemplateColumns: "1.4fr 1fr 1fr 1fr 2fr",

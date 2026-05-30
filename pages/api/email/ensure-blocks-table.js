@@ -1,7 +1,8 @@
 // Auto-creates the email_blocks table if it doesn't exist
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   try {
@@ -41,3 +42,5 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, note: "rpc not available" });
   }
 }
+
+export default withAdmin(handler);

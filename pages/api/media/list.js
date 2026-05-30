@@ -1,6 +1,7 @@
-﻿// pages/api/media/list.js
+// pages/api/media/list.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function safeList(dir) {
   try { return fs.readdirSync(dir).filter(n => /\.(png|jpe?g|gif|webp|svg)$/i.test(n)); }
@@ -11,7 +12,7 @@ function toHref(abs) {
   return rel.startsWith("/") ? rel : `/${rel}`;
 }
 
-export default function handler(req, res) {
+async function handler(req, res) {
   try {
     const root = path.join(process.cwd(), "public", "media");
     const stock = path.join(root, "stock");
@@ -28,4 +29,4 @@ export default function handler(req, res) {
   }
 }
 
-
+export default withAuth(handler);

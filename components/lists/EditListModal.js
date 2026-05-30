@@ -1,4 +1,4 @@
-// /components/lists/EditListModal.js
+﻿// /components/lists/EditListModal.js
 // GR8 RESULT — EMAIL LIST BUILDER (SAFE SAVE VERSION)
 
 import { useEffect, useState } from "react";
@@ -453,7 +453,7 @@ const s = {
   },
   badge: {
     display: "inline-block",
-    fontSize: 11,
+    fontSize: 16,
     letterSpacing: "0.08em",
     textTransform: "uppercase",
     padding: "3px 8px",
@@ -463,7 +463,7 @@ const s = {
   title: {
     margin: 0,
     fontSize: 18,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   close: {
     background: "rgba(15,23,42,0.75)",
@@ -474,7 +474,7 @@ const s = {
     borderRadius: 999,
     cursor: "pointer",
     fontSize: 20,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   innerCard: {
     padding: 18,
@@ -485,7 +485,7 @@ const s = {
     marginTop: 10,
     marginBottom: 4,
     fontWeight: 600,
-    fontSize: 14,
+    fontSize: 16,
   },
   input: {
     width: "100%",
@@ -496,7 +496,7 @@ const s = {
     padding: "10px 12px",
     color: "#fff",
     marginBottom: 4,
-    fontSize: 14,
+    fontSize: 16,
   },
   textarea: {
     width: "100%",
@@ -507,14 +507,14 @@ const s = {
     padding: "10px 12px",
     color: "#fff",
     marginBottom: 4,
-    fontSize: 14,
+    fontSize: 16,
   },
   checkboxRow: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "4px 0",
-    fontSize: 14,
+    fontSize: 16,
     cursor: "pointer",
     gap: 12,
   },
@@ -536,7 +536,7 @@ const s = {
     alignItems: "center",
     fontWeight: 600,
     marginBottom: 6,
-    fontSize: 14,
+    fontSize: 16,
   },
   footer: {
     padding: "12px 18px 14px",
@@ -552,7 +552,7 @@ const s = {
     border: "none",
     padding: "8px 18px",
     borderRadius: 999,
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   cancel: {

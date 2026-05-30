@@ -1,4 +1,4 @@
-// components/automation/NodeColorModal.js
+﻿// components/automation/NodeColorModal.js
 // OLD-STYLE EDIT NODE COLOURS MODAL – FIXED SWATCHES PER ROW
 
 import { useState, useEffect } from "react";
@@ -51,7 +51,7 @@ export default function NodeColorModal({ initialColors, onClose, onSave }) {
       <div style={modal}>
         {/* HEADER */}
         <div style={headerRow}>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>Edit Node Colours</div>
+          <div style={{ fontSize: 20, fontWeight: 600 }}>Edit Node Colours</div>
           <button onClick={onClose} style={closeBtn}>
             ✕
           </button>
@@ -181,7 +181,7 @@ const row = {
 
 const rowLabel = {
   width: 80,
-  fontSize: 13,
+  fontSize: 16,
   fontWeight: 600,
 };
 
@@ -211,7 +211,7 @@ const saveBtn = {
   padding: "6px 14px",
   color: "#0f172a",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
   fontWeight: 600,
 };
 
@@ -222,6 +222,6 @@ const cancelBtn = {
   padding: "6px 14px",
   color: "#ffffff",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
   fontWeight: 600,
 };

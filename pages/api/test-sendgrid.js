@@ -1,6 +1,7 @@
 import sendEmail from '../../lib/sendEmail';
+import withAdmin from "../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const to = req.query.to || process.env.ADMIN_NOTIFICATION_EMAIL || 'support@gr8result.com';
   const from = process.env.SENDGRID_FROM_EMAIL || process.env.DEFAULT_FROM_EMAIL || 'no-reply@gr8result.com';
   const subject = 'Test SendGrid Email';
@@ -21,3 +22,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err?.message || String(err) });
   }
 }
+
+export default withAdmin(handler);

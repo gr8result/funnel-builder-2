@@ -1,8 +1,9 @@
 // /pages/api/affiliates/merchant/commissions.js
 import fs from "fs";
 import path from "path";
+import withAdmin from "../../../lib/withAdmin";
 
-export default function handler(req, res) {
+async function handler(req, res) {
   const DATA_DIR = path.join(process.cwd(), "data", "affiliate");
   const DB_FILE = path.join(DATA_DIR, "db.json");
 
@@ -14,3 +15,5 @@ export default function handler(req, res) {
     res.status(500).json({ error: "Failed to load commissions" });
   }
 }
+
+export default withAdmin(handler);

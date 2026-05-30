@@ -3,6 +3,7 @@
 // Expects JSON body: { id, design, html, name? }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,7 +13,7 @@ if (supabaseUrl && serviceKey) {
   supabaseAdmin = createClient(supabaseUrl, serviceKey);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Use POST for this endpoint." });
   }
@@ -25,7 +26,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { id, design, html, name, css, userId } = req.body || {};
+    const { id, design, html, name, css } = req.body || {};
+    const userId = req.user.id;
 
     if (!id || !design || !html) {
       return res.status(400).json({
@@ -126,3 +128,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

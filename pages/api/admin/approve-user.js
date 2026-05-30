@@ -1,12 +1,13 @@
-// /pages/api/admin/approve-user.js
+﻿// /pages/api/admin/approve-user.js
 import { supabase } from "../../../utils/supabase-client";
 import { sendEmail } from "../../../lib/sendEmail";
+import { withAdmin } from "../../../lib/withAdmin";
 
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@gr8result.com";
 const APP_BASE_URL = process.env.EMAIL_APP_BASE_URL || "https://www.gr8result.com";
 const BILLING_LOGIN_URL = `${APP_BASE_URL.replace(/\/$/, "")}/login?redirect=/billing`;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -151,3 +152,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Internal server error: " + err.message });
   }
 }
+export default withAdmin(handler);
+

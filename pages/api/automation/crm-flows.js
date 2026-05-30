@@ -23,7 +23,7 @@ function safeJsonParse(v) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") return bad(res, 405, "Method not allowed");
 
   try {
@@ -86,3 +86,5 @@ export default async function handler(req, res) {
     return bad(res, 500, err.message || "Internal error");
   }
 }
+
+export default withWorkspace(handler);

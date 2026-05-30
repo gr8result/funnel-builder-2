@@ -4,10 +4,11 @@
 
 import { requireUser } from '../../../lib/social/auth';
 import { getPlatformCredentials } from '../../../lib/social/platformCredentials';
+import withAdmin from "../../../lib/withAdmin";
 
 const PLATFORMS = ['meta', 'tiktok', 'linkedin', 'pinterest', 'youtube'];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -26,3 +27,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true, status });
 }
+
+export default withAdmin(handler);

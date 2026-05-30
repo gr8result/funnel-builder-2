@@ -1,7 +1,8 @@
-﻿// pages/api/affiliate/programs.js
+// pages/api/affiliate/programs.js
 import { readDB } from "../../../utils/affdb";
+import withAdmin from "../../../lib/withAdmin";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");
@@ -16,3 +17,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAdmin(handler);

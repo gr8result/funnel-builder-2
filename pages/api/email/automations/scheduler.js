@@ -1,5 +1,5 @@
 // ✅ /pages/api/email/automations/scheduler.js
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/email/automations/worker`
@@ -28,3 +28,15 @@ export default async function handler(req, res) {
     });
   }
 }
+
+function withCronSecret(h) {
+  return async (req, res) => {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers['x-cron-secret'] !== secret) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return h(req, res);
+  };
+}
+
+export default withCronSecret(handler);

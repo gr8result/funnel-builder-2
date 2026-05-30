@@ -1,11 +1,11 @@
-// (Removed duplicate export default and function definition at the top)
+﻿// (Removed duplicate export default and function definition at the top)
 // /pages/modules/courses/vendor/index.js
 // FULL REPLACEMENT
 //
-// ✅ Banner matches platform: icon 48px, title 48px weight 600, subtitle 18px
-// ✅ Adds course cover preview images (uses courses.cover_url)
-// ✅ Changes list from rows → grid cards for easy visual ID
-// ✅ Removes debug marker
+// âœ… Banner matches platform: icon 48px, title 48px weight 600, subtitle 18px
+// âœ… Adds course cover preview images (uses courses.cover_url)
+// âœ… Changes list from rows â†’ grid cards for easy visual ID
+// âœ… Removes debug marker
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -14,7 +14,7 @@ import ICONS from "../../../../components/iconMap";
 import { supabase } from "../../../../utils/supabase-client";
 import VendorUserBanner from "../../../../components/vendor/VendorUserBanner";
 
-export default function VendorCoursesHome() {
+export default function VendorCoursesPage() {
     async function deleteCourse(courseId) {
       if (!window.confirm("Are you sure you want to delete this course? This cannot be undone.")) return;
       setDeletingId(courseId);
@@ -273,7 +273,7 @@ export default function VendorCoursesHome() {
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
 
             <Link href="/modules/vendor">
-              <button style={page.backBtn}>← Back</button>
+              <button style={page.backBtn}>â† Back</button>
             </Link>
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function VendorCoursesHome() {
           {!userId ? (
             <div style={page.empty}>Please log in to access vendor tools.</div>
           ) : loading ? (
-            <div style={page.empty}>Loading…</div>
+            <div style={page.empty}>Loadingâ€¦</div>
           ) : !vendor?.id ? (
             <div style={page.empty}>
               No course vendor profile found for your account yet.
@@ -302,7 +302,7 @@ export default function VendorCoursesHome() {
                     cursor: busy ? "not-allowed" : "pointer",
                   }}
                 >
-                  {busy ? "Creating…" : "＋ Create First Course"}
+                  {busy ? "Creatingâ€¦" : "ï¼‹ Create First Course"}
                 </button>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function VendorCoursesHome() {
                     cursor: busy ? "not-allowed" : "pointer",
                   }}
                 >
-                  {busy ? "Creating…" : "＋ Create Course"}
+                  {busy ? "Creatingâ€¦" : "ï¼‹ Create Course"}
                 </button>
               </div>
 
@@ -328,7 +328,7 @@ export default function VendorCoursesHome() {
                 <div style={page.empty}>
                   Existing courses are hidden on this page.
                   <div style={{ marginTop: 8, opacity: 0.8 }}>
-                    Click “Create Course” to build a new online course.
+                    Click â€œCreate Courseâ€ to build a new online course.
                   </div>
                 </div>
               </div>
@@ -350,7 +350,7 @@ const page = {
   },
   inner: { width: "100%", maxWidth: 1320, margin: "0 auto" },
 
-  // ✅ Banner updated to match platform
+  // âœ… Banner updated to match platform
   banner: {
     display: "flex",
     justifyContent: "space-between",
@@ -420,7 +420,7 @@ const page = {
     whiteSpace: "nowrap",
   },
 
-  // ✅ Grid layout with image previews
+  // âœ… Grid layout with image previews
   cardsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -501,7 +501,7 @@ function ModuleManager({ courseId }) {
 
   return (
     <div style={{ background: '#222', borderRadius: 8, padding: 10, marginTop: 8 }}>
-      {loading ? 'Loading modules…' : (
+      {loading ? 'Loading modulesâ€¦' : (
         <>
           <div style={{ marginBottom: 8 }}>
             <strong>Modules:</strong>
@@ -524,13 +524,13 @@ function ModuleManager({ courseId }) {
                         style={{ marginRight: 6, padding: 6, borderRadius: 6, border: '1px solid #334155', color: '#000', background: '#fff' }}
                         onChange={e => setEditDraft(d => ({ ...d, description: e.target.value }))}
                       />
-                      <button style={{ ...page.secondaryBtn, fontSize: 14 }} onClick={() => saveEditModule(m.id)}>Save</button>
-                      <button style={{ ...page.secondaryBtn, fontSize: 14, marginLeft: 6 }} onClick={() => setEditModuleId(null)}>Cancel</button>
+                      <button style={{ ...page.secondaryBtn, fontSize: 16 }} onClick={() => saveEditModule(m.id)}>Save</button>
+                      <button style={{ ...page.secondaryBtn, fontSize: 16, marginLeft: 6 }} onClick={() => setEditModuleId(null)}>Cancel</button>
                     </div>
                   ) : (
                     <div>
                       <span style={{ fontWeight: 600 }}>{m.title}</span>: {m.description || ''}
-                      <button style={{ ...page.secondaryBtn, fontSize: 14, marginLeft: 6 }} onClick={() => {
+                      <button style={{ ...page.secondaryBtn, fontSize: 16, marginLeft: 6 }} onClick={() => {
                         setEditModuleId(m.id);
                         setEditDraft({ title: m.title, description: m.description });
                       }}>Edit</button>
@@ -555,7 +555,7 @@ function ModuleManager({ courseId }) {
               style={{ marginRight: 6, padding: 6, borderRadius: 6, border: '1px solid #334155', color: '#000', background: '#fff' }}
               onChange={e => setNewModule(n => ({ ...n, description: e.target.value }))}
             />
-            <button style={{ ...page.secondaryBtn, fontSize: 14 }} onClick={addModule}>Add Module</button>
+            <button style={{ ...page.secondaryBtn, fontSize: 16 }} onClick={addModule}>Add Module</button>
           </div>
         </>
       )}

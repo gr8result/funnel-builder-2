@@ -1,4 +1,4 @@
-// /modules/vendor/index.js
+﻿// /modules/vendor/index.js
 
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -108,7 +108,7 @@ export default function VendorDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {/* Vendor Icon hard left */}
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,26,44,0.10)', borderRadius: 12, padding: 8, marginRight: 18 }}>
-            <Briefcase size={48} color="#ffffff" />
+            <span style={{ fontSize: 38, lineHeight: 1 }}>🏪</span>
           </span>
           <div>
             <div style={{ fontSize: 48, fontWeight: 600, color: '#0840d8', lineHeight: 1 }}>
@@ -164,7 +164,7 @@ export default function VendorDashboard() {
       {/* Section Title: Manage Your Products */}
       <div style={{
         fontSize: 22,
-        fontWeight: 700,
+        fontWeight: 600,
         color: '#fff',
         marginLeft: 'auto',
         marginRight: 'auto',
@@ -215,7 +215,7 @@ export default function VendorDashboard() {
       {/* Section Title: Add New Products */}
       <div style={{
         fontSize: 22,
-        fontWeight: 700,
+        fontWeight: 600,
         color: '#fff',
         marginLeft: 'auto',
         marginRight: 'auto',

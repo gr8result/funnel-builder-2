@@ -1,4 +1,4 @@
-// /pages/modules/affiliates/affiliate-marketplace/submit.js 
+﻿// /pages/modules/affiliates/affiliate-marketplace/submit.js 
 // Updated: Added Sale Price, auto Revenue Per Sale, Affiliate Link (optional), and 4 extra image uploads.
 // Banner updated to match other module banners.
 
@@ -658,7 +658,7 @@ const styles = {
     padding: "8px 10px",
     fontWeight: 600,
     cursor: "pointer",
-    fontSize: 13,
+    fontSize: 16,
   },
 
   input: {

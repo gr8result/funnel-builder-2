@@ -1,20 +1,18 @@
 // /pages/api/stripe/create-connect-link.js
 import { NextApiRequest, NextApiResponse } from "next";
 import Stripe from "stripe";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { userId } = req.body;
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId" });
-  }
+  const userId = req.user.id;
 
   try {
     // Find or create a Stripe account for the user
@@ -38,3 +36,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export default withAuth(handler);

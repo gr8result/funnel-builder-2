@@ -1,4 +1,4 @@
-// pages/modules/calendar/booking-page.js
+﻿// pages/modules/calendar/booking-page.js
 // Edit your public booking page appearance + copy per-service links
 
 import { useEffect, useState } from "react";
@@ -26,16 +26,16 @@ const S = {
   field:       { marginBottom: 18 },
   saveBtn:     { padding: "11px 28px", background: "#84cc16", border: "none", borderRadius: 9, color: "#fff", fontWeight: 600, fontSize: 18, cursor: "pointer" },
   saved:       { fontSize: 16, color: "#6EE7B7", marginLeft: 14 },
-  hint:        { fontSize: 14, color: "#6B7280", marginTop: 4 },
+  hint:        { fontSize: 16, color: "#6B7280", marginTop: 4 },
   urlBox:      { background: "#0c121a", border: "1px solid #243047", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 },
-  urlText:     { fontSize: 15, color: "#e5e7eb", fontFamily: "monospace", wordBreak: "break-all", flex: 1 },
-  copyBtn:     { padding: "8px 16px", background: "#22c55e", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
-  copiedBtn:   { padding: "8px 16px", background: "#374151", border: "none", borderRadius: 8, color: "#9CA3AF", fontSize: 15, fontWeight: 600, cursor: "default", whiteSpace: "nowrap", flexShrink: 0 },
+  urlText:     { fontSize: 16, color: "#e5e7eb", fontFamily: "monospace", wordBreak: "break-all", flex: 1 },
+  copyBtn:     { padding: "8px 16px", background: "#22c55e", border: "none", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 },
+  copiedBtn:   { padding: "8px 16px", background: "#374151", border: "none", borderRadius: 8, color: "#9CA3AF", fontSize: 16, fontWeight: 600, cursor: "default", whiteSpace: "nowrap", flexShrink: 0 },
   serviceRow:  { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid #1e293b", gap: 12 },
   serviceInfo: { flex: 1 },
   serviceName: { fontSize: 16, fontWeight: 600, color: "#fff" },
-  serviceSub:  { fontSize: 14, color: "#9CA3AF", marginTop: 2 },
-  previewBtn:  { padding: "8px 18px", background: "#84cc16", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", textDecoration: "none" },
+  serviceSub:  { fontSize: 16, color: "#9CA3AF", marginTop: 2 },
+  previewBtn:  { padding: "8px 18px", background: "#84cc16", border: "none", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", textDecoration: "none" },
   swatch:      (col, sel) => ({ width: 32, height: 32, borderRadius: "50%", background: col, cursor: "pointer", border: sel ? "3px solid #fff" : "3px solid transparent", boxSizing: "border-box" }),
 };
 
@@ -330,7 +330,7 @@ export default function BookingPageEditor() {
                     <div style={{ width: 56, height: 56, borderRadius: 10, background: "#1e293b", border: "1px dashed #374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#4B5563" }}>🖼️</div>
                   )}
                   <div>
-                    <label style={{ ...S.saveBtn, padding: "8px 18px", fontSize: 15, cursor: "pointer", display: "inline-block" }}>
+                    <label style={{ ...S.saveBtn, padding: "8px 18px", fontSize: 16, cursor: "pointer", display: "inline-block" }}>
                       {logoUploading ? "Uploading…" : logoUrl ? "Change Logo" : "Upload Logo"}
                       <input
                         type="file"
@@ -359,7 +359,7 @@ export default function BookingPageEditor() {
                       />
                     </label>
                     {logoUrl && (
-                      <button onClick={() => setLogoUrl("")} style={{ marginLeft: 10, background: "none", border: "none", color: "#f87171", fontSize: 14, cursor: "pointer" }}>Remove</button>
+                      <button onClick={() => setLogoUrl("")} style={{ marginLeft: 10, background: "none", border: "none", color: "#f87171", fontSize: 16, cursor: "pointer" }}>Remove</button>
                     )}
                     <div style={S.hint}>Shown at the top of your public booking page. Square images work best.</div>
                   </div>
@@ -406,11 +406,11 @@ export default function BookingPageEditor() {
                     onChange={(e) => setGlobalAccent(e.target.value)}
                     style={{ width: 40, height: 32, borderRadius: 6, border: "1px solid #374151", background: "none", cursor: "pointer" }}
                   />
-                  <span style={{ fontSize: 14, color: "#9CA3AF" }}>Custom colour</span>
+                  <span style={{ fontSize: 16, color: "#9CA3AF" }}>Custom colour</span>
                 </div>
                 {savedColors.length > 0 && (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 12, color: "#6B7280", fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                    <div style={{ fontSize: 16, color: "#6B7280", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.4 }}>
                       Saved Colours
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -430,7 +430,7 @@ export default function BookingPageEditor() {
               <div style={{ display: "flex", alignItems: "center" }}>
                 <button style={S.saveBtn} onClick={save}>Save Changes</button>
                 {saved && <span style={S.saved}>✓ Saved</span>}
-                {saveError && <span style={{ fontSize: 14, color: "#f87171", marginLeft: 14 }}>{saveError}</span>}
+                {saveError && <span style={{ fontSize: 16, color: "#f87171", marginLeft: 14 }}>{saveError}</span>}
               </div>
             </div>
           </div>
@@ -462,7 +462,7 @@ export default function BookingPageEditor() {
                       {usernameSaved ? "Saved ✓" : "Save"}
                     </button>
                   </div>
-                  {usernameError && <div style={{ color: "#f87171", fontSize: 14, marginTop: 6 }}>{usernameError}</div>}
+                  {usernameError && <div style={{ color: "#f87171", fontSize: 16, marginTop: 6 }}>{usernameError}</div>}
                   {!usernameError && <div style={S.hint}>Lowercase letters, numbers, hyphens and underscores only. Min 3 characters.</div>}
                 </div>
 
@@ -481,18 +481,18 @@ export default function BookingPageEditor() {
                     </a>
                   </>
                 ) : (
-                  <div style={{ fontSize: 15, color: "#6B7280", marginTop: 4 }}>Set a username above to generate your booking link.</div>
+                  <div style={{ fontSize: 16, color: "#6B7280", marginTop: 4 }}>Set a username above to generate your booking link.</div>
                 )}
               </div>
 
             {/* Per-service Pages */}
             <div style={S.card}>
               <p style={S.cardTitle}>🎯 Per-Service Pages</p>
-              <p style={{ fontSize: 15, color: "#9CA3AF", marginTop: 0, marginBottom: 20 }}>
+              <p style={{ fontSize: 16, color: "#9CA3AF", marginTop: 0, marginBottom: 20 }}>
                 Each service can have its own title, bio, colours and logo. Expand a service to customise it — or just share its link as-is.
               </p>
               {services.length === 0 ? (
-                <div style={{ fontSize: 15, color: "#6B7280" }}>
+                <div style={{ fontSize: 16, color: "#6B7280" }}>
                   No active services yet.{" "}
                   <Link href="/modules/calendar/services" style={{ color: "#84cc16" }}>Create one →</Link>
                 </div>
@@ -512,7 +512,7 @@ export default function BookingPageEditor() {
                         <a href={url} target="_blank" rel="noopener noreferrer"><button style={{ ...S.copyBtn, background: "#374151" }}>↗</button></a>
                         <button
                           onClick={() => setSvcSettings(p => ({ ...p, [svc.id]: { ...p[svc.id], open: !ss.open } }))}
-                          style={{ background: ss.open ? "#84cc16" : "#1e293b", border: "1px solid #374151", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, padding: "7px 14px", cursor: "pointer" }}
+                          style={{ background: ss.open ? "#84cc16" : "#1e293b", border: "1px solid #374151", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 600, padding: "7px 14px", cursor: "pointer" }}
                         >{ss.open ? "▲ Close" : "✏️ Edit Page"}</button>
                       </div>
 
@@ -540,12 +540,12 @@ export default function BookingPageEditor() {
                             </div>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <button onClick={() => saveServicePage(svc.id)} disabled={ss.saving} style={{ ...S.saveBtn, fontSize: 15, padding: "9px 22px" }}>{ss.saving ? "Saving…" : "Save Service Page"}</button>
+                            <button onClick={() => saveServicePage(svc.id)} disabled={ss.saving} style={{ ...S.saveBtn, fontSize: 16, padding: "9px 22px" }}>{ss.saving ? "Saving…" : "Save Service Page"}</button>
                             {ss.saved && <span style={S.saved}>✓ Saved</span>}
-                            {ss.error && <span style={{ fontSize: 13, color: "#f87171" }}>{ss.error}</span>}
+                            {ss.error && <span style={{ fontSize: 16, color: "#f87171" }}>{ss.error}</span>}
                           </div>
                           <div style={{ marginTop: 14, borderTop: "1px solid #1e293b", paddingTop: 12 }}>
-                            <div style={{ ...S.urlText, fontSize: 13, color: "#4B5563" }}>{url}</div>
+                            <div style={{ ...S.urlText, fontSize: 16, color: "#4B5563" }}>{url}</div>
                           </div>
                         </div>
                       )}

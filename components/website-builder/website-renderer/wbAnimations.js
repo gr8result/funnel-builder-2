@@ -193,6 +193,43 @@ const WEBSITE_BLOCK_ANIMATION_CSS = `
   to { transform: translate3d(-50%, 0, 0); }
 }
 
+@keyframes wbOrbitFloat0 {
+  0%   { transform: translate3d(0,    0px, 0) rotate(0deg);   }
+  30%  { transform: translate3d(-3px,-14px, 0) rotate(-0.6deg); }
+  60%  { transform: translate3d(2px,  -8px, 0) rotate(0.4deg);  }
+  100% { transform: translate3d(0,    0px, 0) rotate(0deg);   }
+}
+@keyframes wbOrbitFloat1 {
+  0%   { transform: translate3d(0,    0px, 0) rotate(0deg);   }
+  35%  { transform: translate3d(4px, -16px, 0) rotate(0.7deg);  }
+  65%  { transform: translate3d(-2px, -9px, 0) rotate(-0.3deg); }
+  100% { transform: translate3d(0,    0px, 0) rotate(0deg);   }
+}
+@keyframes wbOrbitFloat2 {
+  0%   { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+  40%  { transform: translate3d(-4px,-11px, 0) rotate(-0.5deg); }
+  70%  { transform: translate3d(3px,  -6px, 0) rotate(0.3deg);  }
+  100% { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+}
+@keyframes wbOrbitFloat3 {
+  0%   { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+  45%  { transform: translate3d(3px,-13px, 0) rotate(0.6deg);  }
+  75%  { transform: translate3d(-2px, -7px, 0) rotate(-0.4deg); }
+  100% { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+}
+@keyframes wbOrbitFloat4 {
+  0%   { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+  38%  { transform: translate3d(-3px,-10px, 0) rotate(-0.4deg); }
+  68%  { transform: translate3d(2px,  -5px, 0) rotate(0.2deg);  }
+  100% { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+}
+@keyframes wbOrbitFloat5 {
+  0%   { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+  42%  { transform: translate3d(4px,-15px, 0) rotate(0.5deg);  }
+  72%  { transform: translate3d(-3px, -8px, 0) rotate(-0.3deg); }
+  100% { transform: translate3d(0,   0px, 0) rotate(0deg);   }
+}
+
 `;
 
 function websiteBlockKeyframes() {
@@ -327,11 +364,17 @@ function ScrollReveal({ as: Tag = "div", animationName, delay = 0, speed = null,
   const nodeRef = React.useRef(null);
   // In editor (disabled=true), always show content — never hide it for animation
   const [visible, setVisible] = React.useState(!animationName || disabled);
+  // Once the CSS animation has played to completion, lock the element fully visible.
+  // This prevents re-renders from re-applying opacity:0 and restarting the animation.
+  const [animDone, setAnimDone] = React.useState(!animationName || disabled);
 
   React.useEffect(() => {
+    // Reset done flag when the animation type changes so the new animation can play
+    setAnimDone(false);
     // If disabled (editor mode) or no animation, immediately show — no observer needed
     if (!animationName || disabled) {
       setVisible(true);
+      setAnimDone(true);
       return undefined;
     }
 
@@ -352,6 +395,9 @@ function ScrollReveal({ as: Tag = "div", animationName, delay = 0, speed = null,
       return undefined;
     }
 
+    // Re-hide so the new animation plays from the start (handles animationName changes)
+    setVisible(false);
+
     const observer = new window.IntersectionObserver(
       (entries) => {
         const hit = entries.some((entry) => entry.isIntersecting || entry.intersectionRatio >= 0.18);
@@ -369,12 +415,18 @@ function ScrollReveal({ as: Tag = "div", animationName, delay = 0, speed = null,
     return () => observer.disconnect();
   }, [animationName, disabled]);
 
-  // In editor (disabled=true), don't apply any animation transforms — show everything plainly
-  const hiddenStyle = (!visible && !disabled) ? animationState(animationName).hidden : null;
-  const revealStyle = (visible && !disabled) ? getAnimationStyle(animationName, delay, speed) : null;
+  // In editor (disabled=true), don't apply any animation transforms — show everything plainly.
+  // Once animDone=true the element is locked fully visible — no inline animation styles so
+  // parent re-renders cannot restart the animation and cause a flash.
+  const hiddenStyle = (!visible && !disabled && !animDone) ? animationState(animationName).hidden : null;
+  const revealStyle = (visible && !disabled && !animDone) ? getAnimationStyle(animationName, delay, speed) : null;
 
   return (
-    <Tag ref={nodeRef} style={{ ...style, ...(hiddenStyle || {}), ...(revealStyle || {}) }}>
+    <Tag
+      ref={nodeRef}
+      style={{ ...style, ...(hiddenStyle || {}), ...(revealStyle || {}) }}
+      onAnimationEnd={(visible && !animDone && !disabled) ? () => setAnimDone(true) : undefined}
+    >
       {children}
     </Tag>
   );
@@ -398,13 +450,13 @@ function HtmlEmbedBlock({ html, editor }) {
   if (editor) {
     return (
       <div style={{ padding: "14px 16px", background: "#0f172a", border: "2px dashed rgba(125,211,252,0.4)", borderRadius: 12, minHeight: 56, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ color: "#7dd3fc", fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}>{"</>"}</span>
+        <span style={{ color: "#7dd3fc", fontSize: 18, fontWeight: 600, fontFamily: "monospace" }}>{"</>"}</span>
         <div>
-          <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>Custom HTML / Embed</div>
+          <div style={{ color: "#e2e8f0", fontSize: 16, fontWeight: 600 }}>Custom HTML / Embed</div>
           {html?.trim() ? (
-            <div style={{ color: "#4ade80", fontSize: 12, marginTop: 2 }}>✓ Embed code added — edit in right panel →</div>
+            <div style={{ color: "#4ade80", fontSize: 16, marginTop: 2 }}>✓ Embed code added — edit in right panel →</div>
           ) : (
-            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>Paste your embed code in the right panel →</div>
+            <div style={{ color: "#94a3b8", fontSize: 16, marginTop: 2 }}>Paste your embed code in the right panel →</div>
           )}
         </div>
       </div>
@@ -598,20 +650,11 @@ function IconCounterNumber({ projectId, targetNumber, startNumber, suffix, color
       return;
     }
     const base = startFrom > 0 ? startFrom : 0;
-    const sessionKey = `wbv_${id}`;
-    let alreadyRecorded = false;
-    try { alreadyRecorded = !!sessionStorage.getItem(sessionKey); } catch (_) {}
-    const method = alreadyRecorded ? "GET" : "POST";
     const url = `/api/website/track-visit?projectId=${encodeURIComponent(id)}&base=${base}`;
-    fetch(url, { method })
+    fetch(url, { method: "POST" })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data?.count != null) {
-          setTarget(Number(data.count));
-          if (!alreadyRecorded) {
-            try { sessionStorage.setItem(sessionKey, "1"); } catch (_) {}
-          }
-        }
+        if (data?.count != null) setTarget(Number(data.count));
       })
       .catch(() => {});
   }, [projectId, targetNumber, startFrom, editor]);
@@ -645,7 +688,7 @@ function IconCounterNumber({ projectId, targetNumber, startNumber, suffix, color
   const numSize = fontSize || (compact ? 60 : 78);
   const outlineStyle = {
     fontSize: numSize,
-    fontWeight: 800,
+    fontWeight: 600,
     lineHeight: 1,
     letterSpacing: "-0.02em",
     fontVariantNumeric: "tabular-nums",
@@ -738,45 +781,44 @@ function ParallaxSyncShell({ speed, bgStyle }) {
   );
 }
 
-function ParallaxImageLayer({ backgroundStyle, speed = 0.3 }) {
+function ParallaxImageLayer({ backgroundStyle, speed = 0.34 }) {
   const layerRef = React.useRef(null);
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
     const layer = layerRef.current;
-    if (!layer || typeof window === "undefined") return undefined;
+    const container = layer?.parentElement;
+    if (!layer || !container) return undefined;
 
-    // The container is the media panel (position:relative, overflow:hidden parent)
-    const container = layer.parentElement;
-    if (!container) return undefined;
+    const usesContainFit = /contain/i.test(String(backgroundStyle?.backgroundSize || ""));
 
-    // Cap speed so travel never exceeds the overrun room (±(PARALLAX_OVERRUN-20)px)
-    const s = Math.min(0.4, resolveParallaxSpeed(speed));
-    const MAX = PARALLAX_OVERRUN - 20;
+    let frame = 0;
+    let mounted = true;
 
-    let rafId = null;
-    let lastVal = null;
-
-    function tick() {
+    const updateOffset = () => {
+      if (!mounted) return;
       const rect = container.getBoundingClientRect();
-      const vh = window.innerHeight || 800;
-      const visible = rect.bottom >= -PARALLAX_OVERRUN && rect.top <= vh + PARALLAX_OVERRUN;
-      rafId = requestAnimationFrame(tick);
-      if (!visible) return;
-      // Section centre relative to viewport centre — negative = bg moves opposite to scroll
-      const raw = (rect.top + rect.height * 0.5 - vh * 0.5) * -s;
-      const clamped = Math.max(-MAX, Math.min(MAX, raw));
-      const val = clamped.toFixed(1);
-      if (val !== lastVal) {
-        layer.style.transform = `translateY(${val}px)`;
-        lastVal = val;
-      }
-    }
+      const viewportHeight = window.innerHeight || 900;
+      const viewportCenter = viewportHeight / 2;
+      const numericSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 0.34;
+      const effectiveSpeed = Math.max(0, Math.min(1.4, numericSpeed));
+      const maxTravel = usesContainFit
+        ? Math.max(28, Math.min(80, Math.round(viewportHeight * 0.09)))
+        : Math.max(160, Math.min(420, Math.round(viewportHeight * 0.54)));
+      const offset = Math.max(
+        -maxTravel,
+        Math.min(maxTravel, (viewportCenter - rect.top - viewportHeight * 0.35) * effectiveSpeed * 0.28),
+      );
+      layer.style.transform = `translateY(${offset.toFixed(1)}px)`;
+      frame = window.requestAnimationFrame(updateOffset);
+    };
 
-    rafId = requestAnimationFrame(tick);
+    frame = window.requestAnimationFrame(updateOffset);
 
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      layer.style.transform = "";
+      mounted = false;
+      if (frame) window.cancelAnimationFrame(frame);
     };
   }, [speed, backgroundStyle?.backgroundImage, backgroundStyle?.backgroundPosition, backgroundStyle?.backgroundSize, backgroundStyle?.backgroundRepeat]);
 
@@ -787,8 +829,8 @@ function ParallaxImageLayer({ backgroundStyle, speed = 0.3 }) {
         position: "absolute",
         left: 0,
         right: 0,
-        top: -PARALLAX_OVERRUN,
-        bottom: -PARALLAX_OVERRUN,
+        top: -240,
+        bottom: -240,
         zIndex: 0,
         pointerEvents: "none",
         willChange: "transform",
@@ -825,11 +867,13 @@ function StableParallaxLayer({ backgroundStyle, speed = 0.34, target = "section"
     const usesContainFit = /contain/i.test(String(backgroundStyle?.backgroundSize || ""));
     const numericSpeed = Number.isFinite(Number(speed)) ? Number(speed) : 0.78;
     const effectiveSpeed = Math.max(0.05, Math.min(1.4, numericSpeed));
-    // OVERRUN must exceed MAX to keep the image gap-free at peak scroll positions.
+    // OVERRUN must exceed MAX to keep the layer within bounds at peak positions.
     const OVERRUN = 300;
-    const MAX = usesContainFit
-      ? Math.max(24, Math.min(70, 70))
-      : OVERRUN - 20; // 280px
+    // For 'contain', allow up to 150px shift so the effect is clearly visible across
+    // the section scroll range (the natural unclamped range is ~±148px for typical
+    // sections, so 150 lets the transition play out without freezing at the cap).
+    // For 'cover', use the full OVERRUN buffer minus a safety margin.
+    const MAX = usesContainFit ? 150 : OVERRUN - 20; // 150px contain / 280px cover
 
     let mounted = true;
     let rafId = null;

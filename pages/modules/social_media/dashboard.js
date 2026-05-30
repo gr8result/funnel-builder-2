@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../utils/supabase-client';
 import PRICING from '../../../data/pricing';
 
@@ -157,7 +157,7 @@ export default function SocialDashboard() {
         {/* ── BANNER ── */}
         <div style={S.banner}>
           <div style={S.bannerLeft}>
-            <div style={S.bannerIcon}>📣</div>
+            <div style={S.bannerIcon}>�</div>
             <div>
               <div style={S.bannerTitle}>Omni-Channel Social Media Engine</div>
               <div style={S.bannerSub}>Create and Schedule Social Media Content with Automated Publishing</div>
@@ -200,7 +200,7 @@ export default function SocialDashboard() {
             </div>
             <button
               onClick={() => { window.location.href = '/modules/billing/social-plans'; }}
-              style={{ padding: '11px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(90deg,#7C3AED,#EC4899)', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 16px rgba(236,72,153,0.35)', letterSpacing: 0.3 }}
+              style={{ padding: '11px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(90deg,#7C3AED,#EC4899)', color: '#fff', fontWeight: 600, fontSize: 16, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 3px 16px rgba(236,72,153,0.35)', letterSpacing: 0.3 }}
             >
               {socialPlanName ? '⬆ Upgrade Plan' : '→ Select Plan'}
             </button>
@@ -361,9 +361,9 @@ function ScheduleRow({ item }) {
         {meta.svg(meta.color)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: meta.color, marginBottom: 2 }}>{meta.label}</div>
-        <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#E9D5FF' }}>{preview || '(no content)'}</div>
-        <div style={{ fontSize: 13, opacity: 0.5, marginTop: 2 }}>{fmt(item.scheduled_for)}</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: meta.color, marginBottom: 2 }}>{meta.label}</div>
+        <div style={{ fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#E9D5FF' }}>{preview || '(no content)'}</div>
+        <div style={{ fontSize: 16, opacity: 0.5, marginTop: 2 }}>{fmt(item.scheduled_for)}</div>
       </div>
       <div style={{ ...S.statusPill, background: `${statusColor}22`, color: statusColor, marginLeft: 10 }}>{item.status}</div>
     </div>
@@ -383,7 +383,7 @@ const S = {
   bannerIcon: { background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 14, fontSize: 22 },
   bannerTitle: { fontSize: 48, fontWeight: 600 },
   bannerSub: { fontSize: 18, opacity: 0.85, marginTop: 4 },
-  bannerBtn: { background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: 10, cursor: 'pointer', fontSize: 15 },
+  bannerBtn: { background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '12px 20px', borderRadius: 10, cursor: 'pointer', fontSize: 16 },
   alertBanner: {
     background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
     borderRadius: 12, padding: '14px 20px', marginBottom: 20, fontSize: 16,

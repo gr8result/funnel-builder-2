@@ -1,5 +1,6 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/telephony/env-check.js
-export default function handler(req, res) {
+async function handler(req, res) {
   const mask = (v) => {
     const s = String(v || "");
     if (!s) return "";
@@ -16,3 +17,5 @@ export default function handler(req, res) {
     TWILIO_CALLER_ID: process.env.TWILIO_CALLER_ID || "",
   });
 }
+
+export default withAuth(handler);

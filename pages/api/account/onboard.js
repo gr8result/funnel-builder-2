@@ -1,4 +1,4 @@
-﻿// pages/api/account/onboard.js
+// pages/api/account/onboard.js
 // Saves onboarding details + generates a unique affiliate code.
 // Stores licence images under /uploads/kyc (repo-local) so this works immediately.
 // In production you'd replace this with Supabase Storage and DB upserts.
@@ -6,6 +6,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 function writeBase64(dataUrl, destPath) {
@@ -15,7 +16,7 @@ function writeBase64(dataUrl, destPath) {
   fs.writeFileSync(destPath, Buffer.from(b64, "base64"));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -52,3 +53,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAuth(handler);

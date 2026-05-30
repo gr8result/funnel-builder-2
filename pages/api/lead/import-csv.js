@@ -1,15 +1,17 @@
 // /pages/api/lead/import-csv.js
-// ✅ Debug Version — logs full Supabase responses so we can fix the import
 import { createClient } from "@supabase/supabase-js";
+import { withWorkspace } from "../../../lib/withWorkspace";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const sb = createClient(supabaseUrl, serviceKey);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  const { workspaceId } = req;
 
   try {
     const { list_id, leads } = req.body || {};
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
         source: l.source || "CSV Import",
         tags: l.tags || "",
         list_id,
+        workspace_id: workspaceId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }))
@@ -71,3 +74,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withWorkspace(handler);

@@ -5,6 +5,7 @@
 // Call this once from the booking-page editor on mount.
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import withAdmin from "../../../lib/withAdmin";
 
 const SQL_STATEMENTS = [
   // Booking page settings as a standalone table (avoids altering profiles)
@@ -102,7 +103,7 @@ const SQL_STATEMENTS = [
   END $$`,
 ];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const errors = [];
@@ -159,3 +160,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true });
 }
+
+export default withAdmin(handler);

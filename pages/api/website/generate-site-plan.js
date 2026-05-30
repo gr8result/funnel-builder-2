@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -31,7 +32,7 @@ function safeTrim(value) {
   return String(value || "").trim();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: "OPENAI_API_KEY not configured" });
 
@@ -97,3 +98,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Failed to generate site plan" });
   }
 }
+
+export default withAuth(handler);

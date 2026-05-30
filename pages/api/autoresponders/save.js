@@ -1,5 +1,5 @@
 ﻿// /pages/api/email/autoresponders/save.js
-// FULL REPLACEMENT — Save autoresponder into email_automations (server-side, RLS-safe)
+// FULL REPLACEMENT � Save autoresponder into email_automations (server-side, RLS-safe)
 //
 // POST body:
 //  - autoresponder_id? (if editing)
@@ -7,11 +7,12 @@
 //  - from_name, from_email, reply_to
 //  - subject, list_id, template_path
 //
-// ✅ Uses service role to write
-// ✅ Still verifies user via Bearer token and forces user_id
-// ✅ Returns { ok:true, data:{id} }
+// ? Uses service role to write
+// ? Still verifies user via Bearer token and forces user_id
+// ? Returns { ok:true, data:{id} }
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -36,7 +37,7 @@ function s(v) {
   return String(v ?? "").trim();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
@@ -121,3 +122,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);
+

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 export default function ConditionNodeDrawer({ node, onSave, onClose }) {
   const initial = node?.data?.condition || {};
@@ -264,7 +264,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   cancelBtn: {
@@ -272,7 +272,7 @@ const s = {
     padding: "10px 14px",
     borderRadius: 8,
     border: "none",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
 };

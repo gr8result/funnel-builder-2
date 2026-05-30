@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
@@ -112,8 +112,8 @@ const styles = {
   },
   eyebrow: {
     color: "#7dd3fc",
-    fontSize: 12,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     letterSpacing: "0.24em",
     textTransform: "uppercase",
     marginBottom: 12,
@@ -140,8 +140,8 @@ const styles = {
     padding: "14px 18px",
     background: "linear-gradient(135deg, #ef4444, #f97316)",
     color: "#fff",
-    fontSize: 15,
-    fontWeight: 700,
+    fontSize: 16,
+    fontWeight: 600,
     boxShadow: "0 16px 36px rgba(239,68,68,0.24)",
   },
   success: {
@@ -165,7 +165,7 @@ const styles = {
   note: {
     margin: "18px 0 0",
     color: "#94a3b8",
-    fontSize: 13,
+    fontSize: 16,
     lineHeight: 1.6,
   },
 };

@@ -1,4 +1,4 @@
-// /pages/modules/funnels/index.js
+﻿// /pages/modules/funnels/index.js
 // Funnels list with full GR8 banner + Coming Soon placeholder if needed
 
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +21,7 @@ function FunnelsInner() {
   const [rows, setRows] = useState([]);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [funnelUsage, setFunnelUsage] = useState(null);
   const [assetFiles, setAssetFiles] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -47,6 +48,7 @@ function FunnelsInner() {
     if (!session?.user?.id) return;
     refresh();
     refreshAssets(session.user.id);
+    fetchFunnelUsage(session.access_token);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
@@ -201,9 +203,27 @@ function FunnelsInner() {
     setLoading(false);
   }
 
+  async function fetchFunnelUsage(token) {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/funnels/usage", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => null);
+      if (j?.ok) setFunnelUsage(j);
+    } catch {}
+  }
+
   async function createFunnel() {
     if (!newName.trim()) return alert("Please enter a funnel name.");
     if (!session?.user?.id) return alert("No session.");
+
+    // Frontend quota guard
+    if (funnelUsage?.atLimit) {
+      alert(`You've reached your funnel limit (${funnelUsage.limit} on the ${funnelUsage.planName} plan). Please upgrade to create more funnels.`);
+      return;
+    }
+
     setCreating(true);
 
     const funnelName = newName.trim();
@@ -383,7 +403,7 @@ function FunnelsInner() {
             </div>
             {latestAiUrl ? (
               <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ color: "#cbd5e1", fontSize: 15 }}>Latest AI image generated successfully.</span>
+                <span style={{ color: "#cbd5e1", fontSize: 16 }}>Latest AI image generated successfully.</span>
                 <a href="/assets" style={mediaLink}>View in Media Library</a>
                 <a href={latestAiUrl} target="_blank" rel="noreferrer" style={mediaLink}>Open Generated Image</a>
               </div>
@@ -417,8 +437,42 @@ function FunnelsInner() {
         <div style={{
           background: "linear-gradient(135deg, #1a2236 0%, #141b27 100%)",
           border: "1px solid #2b3650", borderRadius: 14, padding: "24px 24px",
-          marginBottom: 28, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
+          marginBottom: 28,
         }}>
+          {/* Usage bar */}
+          {funnelUsage && funnelUsage.limit !== null && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#94a3b8", fontSize: 16, fontWeight: 600 }}>Funnels used</span>
+                <span style={{
+                  fontSize: 16, fontWeight: 600,
+                  color: funnelUsage.atLimit ? "#ef4444" : funnelUsage.used / funnelUsage.limit >= 0.8 ? "#f59e0b" : "#10b981",
+                }}>
+                  {funnelUsage.used} / {funnelUsage.limit}
+                </span>
+              </div>
+              <div style={{ height: 6, borderRadius: 4, background: "#1e2c40", overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 4,
+                  width: `${Math.min(100, (funnelUsage.used / funnelUsage.limit) * 100)}%`,
+                  background: funnelUsage.atLimit ? "#ef4444" : funnelUsage.used / funnelUsage.limit >= 0.8 ? "#f59e0b" : "#10b981",
+                  transition: "width 0.3s",
+                }} />
+              </div>
+              {funnelUsage.atLimit && (
+                <p style={{ margin: "8px 0 0", fontSize: 16, color: "#f87171" }}>
+                  You&apos;ve reached your funnel limit on the <strong>{funnelUsage.planName}</strong> plan.{" "}
+                  <a href="/billing" style={{ color: "#60a5fa", textDecoration: "underline" }}>Upgrade to create more.</a>
+                </p>
+              )}
+              {!funnelUsage.atLimit && funnelUsage.used / funnelUsage.limit >= 0.8 && (
+                <p style={{ margin: "8px 0 0", fontSize: 16, color: "#fbbf24" }}>
+                  You&apos;re approaching your funnel limit. <a href="/billing" style={{ color: "#60a5fa", textDecoration: "underline" }}>Consider upgrading.</a>
+                </p>
+              )}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: "block", color: "#94a3b8", fontSize: 16, marginBottom: 8, fontWeight: 600 }}>
               New funnel name
@@ -427,11 +481,13 @@ function FunnelsInner() {
               placeholder="e.g. Summer Lead Magnet"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && createFunnel()}
+              onKeyDown={(e) => e.key === "Enter" && !funnelUsage?.atLimit && createFunnel()}
+              disabled={!!funnelUsage?.atLimit}
               style={{
                 width: "100%", padding: "12px 16px", borderRadius: 10,
                 border: "1px solid #2b3650", background: "#0c121a", color: "#e6eef5",
                 fontSize: 16, outline: "none",
+                opacity: funnelUsage?.atLimit ? 0.5 : 1,
               }}
             />
           </div>
@@ -455,18 +511,20 @@ function FunnelsInner() {
           </Link>
             <button
               onClick={createFunnel}
-              disabled={creating}
+              disabled={creating || !!funnelUsage?.atLimit}
               style={{
                 padding: "14px 32px", borderRadius: 10, border: "none",
-                background: creating ? "#555" : "linear-gradient(135deg, #ef465d, #3b82f6)",
-                color: "#fff", cursor: creating ? "default" : "pointer",
+                background: (creating || funnelUsage?.atLimit) ? "#555" : "linear-gradient(135deg, #ef465d, #3b82f6)",
+                color: "#fff", cursor: (creating || funnelUsage?.atLimit) ? "default" : "pointer",
                 fontWeight: 600, fontSize: 18, whiteSpace: "nowrap", marginTop: 28,
-                boxShadow: "0 4px 14px rgba(239,70,93,0.4)",
-                transition: "background 0.2s, box-shadow 0.2s"
+                boxShadow: (creating || funnelUsage?.atLimit) ? "none" : "0 4px 14px rgba(239,70,93,0.4)",
+                transition: "background 0.2s, box-shadow 0.2s",
+                opacity: funnelUsage?.atLimit ? 0.5 : 1,
               }}
             >
-            {creating ? "Creating…" : "+ Create Funnel"}
+            {creating ? "Creating…" : funnelUsage?.atLimit ? "Limit Reached" : "+ Create Funnel"}
           </button>
+          </div>
         </div>
 
         {/* Funnel list */}

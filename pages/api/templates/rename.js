@@ -1,6 +1,7 @@
-﻿// pages/api/templates/rename.js
+// pages/api/templates/rename.js
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const GALLERY_ROOT = path.join(process.cwd(), "public", "templates", "gallery");
 const META_PATH = path.join(process.cwd(), "public", "templates", "meta.json");
@@ -14,7 +15,7 @@ function toSlug(str) {
     .toLowerCase();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).send("Method not allowed");
 
   try {
@@ -57,3 +58,4 @@ export default async function handler(req, res) {
   }
 }
 
+export default withAuth(handler);

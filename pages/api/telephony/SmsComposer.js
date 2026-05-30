@@ -1,4 +1,4 @@
-// /components/telephony/SmsComposer.js
+﻿// /components/telephony/SmsComposer.js
 // SMS templates (saved) + dropdown + Voice-to-Text + send via /api/telephony/send-sms
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
@@ -289,7 +289,7 @@ export default function SmsComposer({
       paddingTop: compact ? 0 : 10,
     },
     row: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" },
-    label: { fontSize: 12, opacity: 0.85, marginBottom: 4 },
+    label: { fontSize: 16, opacity: 0.85, marginBottom: 4 },
     input: {
       width: "100%",
       borderRadius: 10,
@@ -297,7 +297,7 @@ export default function SmsComposer({
       padding: "8px 10px",
       background: "#020617",
       color: "#fff",
-      fontSize: 13,
+      fontSize: 16,
     },
     textarea: {
       width: "100%",
@@ -306,7 +306,7 @@ export default function SmsComposer({
       padding: "10px 10px",
       background: "#020617",
       color: "#fff",
-      fontSize: 13,
+      fontSize: 16,
       minHeight: 90,
       resize: "vertical",
       lineHeight: 1.4,
@@ -317,9 +317,9 @@ export default function SmsComposer({
       borderRadius: 999,
       padding: "7px 12px",
       color: "#fff",
-      fontWeight: 700,
+      fontWeight: 600,
       cursor: "pointer",
-      fontSize: 12,
+      fontSize: 16,
       opacity: busy ? 0.65 : 1,
     }),
     smallBtn: (bg) => ({
@@ -328,9 +328,9 @@ export default function SmsComposer({
       borderRadius: 10,
       padding: "6px 10px",
       color: "#fff",
-      fontWeight: 700,
+      fontWeight: 600,
       cursor: "pointer",
-      fontSize: 12,
+      fontSize: 16,
       opacity: busy ? 0.65 : 1,
     }),
     select: {
@@ -339,17 +339,17 @@ export default function SmsComposer({
       padding: "6px 10px",
       background: "#020617",
       color: "#fff",
-      fontSize: 12,
+      fontSize: 16,
       minWidth: 220,
     },
-    hint: { fontSize: 12, opacity: 0.8, marginTop: 6 },
-    err: { fontSize: 12, color: "#fecaca", marginTop: 6 },
-    ok: { fontSize: 12, color: "#bbf7d0", marginTop: 6 },
+    hint: { fontSize: 16, opacity: 0.8, marginTop: 6 },
+    err: { fontSize: 16, color: "#fecaca", marginTop: 6 },
+    ok: { fontSize: 16, color: "#bbf7d0", marginTop: 6 },
   };
 
   return (
     <div style={styles.wrap}>
-      {!compact && <div style={{ ...styles.label, fontWeight: 700 }}>📩 SMS</div>}
+      {!compact && <div style={{ ...styles.label, fontWeight: 600 }}>📩 SMS</div>}
 
       <div style={{ marginBottom: 8 }}>
         <div style={styles.label}>To</div>
@@ -363,7 +363,7 @@ export default function SmsComposer({
 
       <div style={{ marginBottom: 8 }}>
         <div style={styles.row}>
-          <div style={{ ...styles.label, marginBottom: 0, fontWeight: 700 }}>Saved messages</div>
+          <div style={{ ...styles.label, marginBottom: 0, fontWeight: 600 }}>Saved messages</div>
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}

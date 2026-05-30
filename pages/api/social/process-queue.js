@@ -8,6 +8,7 @@ import { postToPinterest } from "../../../lib/social/pinterest";
 import { postToX } from "../../../lib/social/x";
 import { postToTikTok, refreshTikTokAccountAccess } from "../../../lib/social/tiktok";
 import { postToYouTube } from "../../../lib/social/youtube";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -198,7 +199,7 @@ async function processQueue() {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     await processQueue();
     return res.status(200).json({ ok: true });
@@ -206,3 +207,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e.message });
   }
 }
+
+export default withAuth(handler);

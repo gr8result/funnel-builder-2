@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { requireUser } from '../../../lib/social/auth';
 import { isBlockedSharedMediaHash, isPlaceholderSvgBuffer } from '../../../lib/sharedMediaModeration';
+import { withAuth } from "../../../lib/withWorkspace";
 
 function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
@@ -47,7 +48,7 @@ function isLegacyGenericLibraryObject(name = '') {
   return /^library-(funnel-template|website-template)-/i.test(String(name || ''));
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -196,3 +197,5 @@ export default async function handler(req, res) {
     keptUniqueImages: keepByHash.size,
   });
 }
+
+export default withAuth(handler);

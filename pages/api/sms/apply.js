@@ -2,19 +2,21 @@
 // Sends SMS application to support@gr8result.com
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
   try {
-    const { userId, mobile, email } = req.body;
+    const { mobile, email } = req.body;
+    const userId = req.user.id;
 
-    if (!userId || !mobile || !email) {
+    if (!mobile || !email) {
       return res.status(400).json({ ok: false, error: "Missing required fields" });
     }
 
@@ -141,3 +143,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

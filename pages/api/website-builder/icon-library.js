@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const PUBLIC_ROOT = path.join(process.cwd(), "public");
 const SOCIAL_ROOT = path.join(PUBLIC_ROOT, "email-assets", "social");
@@ -110,7 +111,7 @@ function listCustomFontIcons() {
   });
 }
 
-export default function handler(req, res) {
+async function handler(req, res) {
   try {
     const entries = [...listCustomFontIcons(), ...listSocialIcons()];
     const seen = new Set();
@@ -129,3 +130,5 @@ export default function handler(req, res) {
     res.status(200).json({ entries: [] });
   }
 }
+
+export default withAuth(handler);

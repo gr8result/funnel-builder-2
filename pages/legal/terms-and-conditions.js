@@ -1,4 +1,4 @@
-// /pages/legal/terms-of-use.js
+﻿// /pages/legal/terms-of-use.js
 // Terms of Use page — styled for dark theme (#0c121a), 1320px max width, readable layout.
 
 import Head from "next/head";
@@ -20,7 +20,7 @@ export default function TermsOfUse() {
 
   const heading = {
     fontSize: "2.4rem",
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: "1rem",
     color: "#00bcd4",
   };

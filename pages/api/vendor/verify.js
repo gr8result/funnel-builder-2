@@ -2,8 +2,9 @@
 // Handles vendor email verification and redirects to /modules/vendor
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { ensureVendorProfileFromAgreement } from '../../../lib/vendorProfile';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const { token } = req.query;
   if (!token) {
     res.status(400).send('Missing verification token.');
@@ -82,3 +83,5 @@ export default async function handler(req, res) {
   res.writeHead(302, { Location: '/marketplace' });
   res.end();
 }
+
+export default withAuth(handler);

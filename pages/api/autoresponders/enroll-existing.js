@@ -12,6 +12,7 @@
 // NOTE: This only enqueues. Your existing sender/worker should send queued rows.
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -57,7 +58,7 @@ function computeScheduleIso(autoresponder) {
   return d.toISOString();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
 
@@ -172,3 +173,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err?.message || "Server error" });
   }
 }
+
+export default withAuth(handler);

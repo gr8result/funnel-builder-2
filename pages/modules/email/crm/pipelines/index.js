@@ -1,4 +1,4 @@
-// /pages/modules/email/crm/pipelines/index.js
+﻿// /pages/modules/email/crm/pipelines/index.js
 // CRM PIPELINE – drag/drop, card style chooser, pipeline selector,
 // default template for new pipelines, and reusable LeadDetailsModal.
 
@@ -1066,7 +1066,7 @@ export default function Pipelines() {
                   style={{
                     margin: 0,
                     fontSize: 48,
-                    fontWeight: 700,
+                    fontWeight: 600,
                   }}
                 >
                   CRM Pipeline
@@ -1352,13 +1352,13 @@ export default function Pipelines() {
                 boxShadow: "0 10px 22px rgba(0,0,0,0.35)",
               }}
             >
-              <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+              <div style={{ color: "#94a3b8", fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
                 {card.label}
               </div>
-              <div style={{ color: "#fff", fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>
+              <div style={{ color: "#fff", fontSize: 26, fontWeight: 600, lineHeight: 1.1 }}>
                 {card.value}
               </div>
-              <div style={{ color: card.tone, fontSize: 12, marginTop: 6, fontWeight: 600 }}>
+              <div style={{ color: card.tone, fontSize: 16, marginTop: 6, fontWeight: 600 }}>
                 {card.sub}
               </div>
 
@@ -1377,8 +1377,8 @@ export default function Pipelines() {
                         background: "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.08)",
                         color: "#e5e7eb",
-                        fontSize: 11,
-                        fontWeight: 700,
+                        fontSize: 16,
+                        fontWeight: 600,
                       }}
                     >
                       <span
@@ -1390,8 +1390,8 @@ export default function Pipelines() {
                           placeItems: "center",
                           background: `${card.tone}22`,
                           color: card.tone,
-                          fontSize: 10,
-                          fontWeight: 800,
+                          fontSize: 16,
+                          fontWeight: 600,
                         }}
                       >
                         👤
@@ -1741,7 +1741,7 @@ function LeadCard({ lead, color, isCompactMode, onOpen, cardStyle }) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 5,
-                    fontSize: 10,
+                    fontSize: 16,
                     padding: "2px 6px",
                     borderRadius: 999,
                     background: "rgba(148,163,184,0.18)",
@@ -1759,8 +1759,8 @@ function LeadCard({ lead, color, isCompactMode, onOpen, cardStyle }) {
                       placeItems: "center",
                       background: "rgba(59,130,246,0.25)",
                       color: "#bfdbfe",
-                      fontSize: 9,
-                      fontWeight: 800,
+                      fontSize: 16,
+                      fontWeight: 600,
                       flexShrink: 0,
                     }}
                   >
@@ -1770,27 +1770,27 @@ function LeadCard({ lead, color, isCompactMode, onOpen, cardStyle }) {
                 </span>
               ))}
               {parseList(lead.crmMeta?.owner).length > 2 ? (
-                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(148,163,184,0.14)", color: "#cbd5e1" }}>
+                <span style={{ fontSize: 16, padding: "2px 6px", borderRadius: 999, background: "rgba(148,163,184,0.14)", color: "#cbd5e1" }}>
                   +{parseList(lead.crmMeta?.owner).length - 2} more
                 </span>
               ) : null}
               {lead.crmMeta?.dealValue ? (
-                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(34,197,94,0.18)", color: "#bbf7d0" }}>
+                <span style={{ fontSize: 16, padding: "2px 6px", borderRadius: 999, background: "rgba(34,197,94,0.18)", color: "#bbf7d0" }}>
                   Revenue {formatMoney(lead.crmMeta.dealValue)}
                 </span>
               ) : null}
               {lead.crmMeta?.priority ? (
-                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: lead.crmMeta.priority === "High" ? "rgba(239,68,68,0.18)" : "rgba(59,130,246,0.18)", color: lead.crmMeta.priority === "High" ? "#fecaca" : "#bfdbfe" }}>
+                <span style={{ fontSize: 16, padding: "2px 6px", borderRadius: 999, background: lead.crmMeta.priority === "High" ? "rgba(239,68,68,0.18)" : "rgba(59,130,246,0.18)", color: lead.crmMeta.priority === "High" ? "#fecaca" : "#bfdbfe" }}>
                   {lead.crmMeta.priority}
                 </span>
               ) : null}
               {lead.crmMeta?.product ? (
-                <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(168,85,247,0.18)", color: "#e9d5ff" }}>
+                <span style={{ fontSize: 16, padding: "2px 6px", borderRadius: 999, background: "rgba(168,85,247,0.18)", color: "#e9d5ff" }}>
                   📦 {lead.crmMeta.product}
                 </span>
               ) : null}
               {parseList(lead.crmMeta?.tags).slice(0, 2).map((tag) => (
-                <span key={`${lead.id}-${tag}`} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "rgba(249,115,22,0.16)", color: "#fdba74" }}>
+                <span key={`${lead.id}-${tag}`} style={{ fontSize: 16, padding: "2px 6px", borderRadius: 999, background: "rgba(249,115,22,0.16)", color: "#fdba74" }}>
                   #{tag}
                 </span>
               ))}
@@ -2115,7 +2115,7 @@ const styles = {
     cursor: "pointer",
     background: "#0ea5e9",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   pipelineSelector: {
@@ -2161,7 +2161,7 @@ const styles = {
     borderRadius: "10px",
     padding: "9px 18px",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 600,
     border: "1px solid rgba(255,255,255,0.35)",
     cursor: "pointer",
     fontSize: 18,
@@ -2256,7 +2256,7 @@ const styles = {
     top: "50%",
     transform: "translate(-50%, -50%) rotate(-90deg)",
     transformOrigin: "center",
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 16,
     textAlign: "center",
     width: "160px",
@@ -2352,7 +2352,7 @@ const styles = {
     marginTop: 0,
     marginBottom: 10,
     fontSize: 24,
-    fontWeight: 700,
+    fontWeight: 600,
   },
 
   modalText: {
@@ -2417,7 +2417,7 @@ const styles = {
     borderRadius: "8px",
     padding: "10px 14px",
     color: "#fff",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     marginTop: "10px",
     fontSize: 16,

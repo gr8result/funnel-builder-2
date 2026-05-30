@@ -1,5 +1,6 @@
 import { requireUser } from '../../../lib/social/auth';
 import { listMergedSharedMediaLibrary } from '../../../lib/sharedMediaLibrary';
+import { withAuth } from "../../../lib/withWorkspace";
 
 // Short-lived per-user response cache.  Avoids re-running all the expensive
 // storage list + materialization logic on every page navigation.
@@ -17,7 +18,7 @@ export function clearListLibraryCache(userId) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -51,3 +52,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || 'Could not load shared media library' });
   }
 }
+
+export default withAuth(handler);

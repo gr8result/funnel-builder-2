@@ -6,11 +6,15 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 if (url && key) supabase = createClient(url, key);
 
+import { checkRateLimit, getIp } from '../../lib/rateLimit';
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
       return res.status(405).json({ ok: false, error: 'Method not allowed' });
     }
+    const rl = checkRateLimit(`lead:${getIp(req)}`, 20, 60 * 1000);
+    if (!rl.ok) return res.status(429).json({ ok: false, error: 'Too many requests.' });
 
     const { email, slug, page_id } = req.body || {};
     if (!email || typeof email !== 'string') {

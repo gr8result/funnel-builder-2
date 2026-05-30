@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabase-client";
 
@@ -104,7 +104,7 @@ export default function ResetPassword() {
               <div style={{ marginBottom: 16 }}>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', fontSize: 14, marginBottom: 4 }}
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', fontSize: 16, marginBottom: 4 }}
                   onClick={() => setTokenMode((v) => !v)}
                 >
                   {tokenMode ? 'Use token from email link' : 'Paste token manually'}
@@ -115,7 +115,7 @@ export default function ResetPassword() {
                     placeholder="Paste access token here"
                     value={manualToken}
                     onChange={e => setManualToken(e.target.value)}
-                    style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #33415c', marginTop: 4, marginBottom: 8, fontSize: 13 }}
+                    style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #33415c', marginTop: 4, marginBottom: 8, fontSize: 16 }}
                   />
                 )}
               </div>
@@ -133,7 +133,7 @@ export default function ResetPassword() {
                 <button
                   type="button"
                   onClick={() => setShowPass(v => !v)}
-                  style={{ position: "absolute", right: 10, top: 10, background: "none", border: "none", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: 15 }}
+                  style={{ position: "absolute", right: 10, top: 10, background: "none", border: "none", color: "#3b82f6", fontWeight: 600, cursor: "pointer", fontSize: 16 }}
                   tabIndex={-1}
                 >
                   {showPass ? "Hide" : "Show"}
@@ -152,7 +152,7 @@ export default function ResetPassword() {
                 <button
                   type="button"
                   onClick={() => setShowConfirm(v => !v)}
-                  style={{ position: "absolute", right: 10, top: 10, background: "none", border: "none", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: 15 }}
+                  style={{ position: "absolute", right: 10, top: 10, background: "none", border: "none", color: "#3b82f6", fontWeight: 600, cursor: "pointer", fontSize: 16 }}
                   tabIndex={-1}
                 >
                   {showConfirm ? "Hide" : "Show"}
@@ -161,7 +161,7 @@ export default function ResetPassword() {
               <div style={{ marginBottom: 12, color: success ? "#22c55e" : "#f87171", fontWeight: 600, minHeight: 22 }}>
                 {msg}
               </div>
-              <button type="submit" disabled={busy} style={{ width: "100%", padding: 12, borderRadius: 8, background: "#3b82f6", color: "#fff", fontWeight: 700, fontSize: 18, border: "none", cursor: "pointer" }}>
+              <button type="submit" disabled={busy} style={{ width: "100%", padding: 12, borderRadius: 8, background: "#3b82f6", color: "#fff", fontWeight: 600, fontSize: 18, border: "none", cursor: "pointer" }}>
                 {busy ? "Updating..." : "Reset Password"}
               </button>
             </form>

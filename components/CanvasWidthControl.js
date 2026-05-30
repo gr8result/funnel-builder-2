@@ -1,9 +1,9 @@
-export default function CanvasWidthControl({ width, setWidth }) {
+﻿export default function CanvasWidthControl({ width, setWidth }) {
   const presets = [680, 800, 920, 1040, 1200];
 
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <span style={{ fontWeight: 700 }}>Canvas Width:</span>
+      <span style={{ fontWeight: 600 }}>Canvas Width:</span>
 
       <select
         value={width}

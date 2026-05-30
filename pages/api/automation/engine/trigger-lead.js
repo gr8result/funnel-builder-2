@@ -7,6 +7,7 @@
 // ✅ Ownership: accounts.id OR auth.users.id (Bearer token)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -123,7 +124,7 @@ async function tryInsertQueue(rows) {
   return { ok: false, error: error?.message || "Queue insert failed" };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "POST only" });
@@ -298,3 +299,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

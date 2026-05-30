@@ -32,7 +32,10 @@ import {
   LineChart,
   HelpCircle,
   MessageSquare,
-  Store, // ✅ Added Marketplace icon from lucide
+  Store,
+  Briefcase,
+  Filter,
+  Search,
 } from "lucide-react";
 
 import {
@@ -41,12 +44,10 @@ import {
   FaLinkedin,
   FaYoutube,
   FaPinterest,
-  FaSearch,
 } from "react-icons/fa";
 
 import { SiTiktok, SiX } from "react-icons/si";
 import { FcGoogle } from "react-icons/fc";
-import { MdEmail } from "react-icons/md";
 
 const defaultColor = "#fff";
 
@@ -61,7 +62,7 @@ const ICONS = {
 
   // ---------- Modules ----------
   websiteBuilder: (props) => <Globe color={defaultColor} {...props} />,
-  funnels: (props) => <Compass color={defaultColor} {...props} />,
+  funnels: (props) => <Filter color={defaultColor} {...props} />,
   automation: (props) => <Bot color={defaultColor} {...props} />,
   email: (props) => <Mail color={defaultColor} {...props} />,
   sms: (props) => <MessageSquare color={defaultColor} {...props} />,
@@ -78,12 +79,13 @@ const ICONS = {
   subaccounts: (props) => <Layers color={defaultColor} {...props} />,
   digitalProducts: (props) => <HardDrive color={defaultColor} {...props} />,
   marketplace: (props) => <Store color={defaultColor} {...props} />, // ✅ Properly added here
+  hr: (props) => <Briefcase color={defaultColor} {...props} />,
 
   // ---------- Extras ----------
   reports: (props) => <BarChart color={defaultColor} {...props} />,
   settings: (props) => <Settings color={defaultColor} {...props} />,
   documents: (props) => <FileText color={defaultColor} {...props} />,
-  search: (props) => <FaSearch color={defaultColor} {...props} />,
+  search: (props) => <Search color={defaultColor} {...props} />,
 
   approvals: (props) => <CheckCircle color={defaultColor} {...props} />,
   edit: (props) => <Edit color={defaultColor} {...props} />,
@@ -99,7 +101,7 @@ const ICONS = {
   pinterest: (props) => <FaPinterest {...props} />,
   twitter: (props) => <SiX {...props} />,
   google: (props) => <FcGoogle {...props} />,
-  emailIcon: (props) => <MdEmail {...props} />,
+  emailIcon: (props) => <Mail {...props} />,
   referral: (props) => <Handshake {...props} />,
   other: (props) => <HelpCircle {...props} />,
 };

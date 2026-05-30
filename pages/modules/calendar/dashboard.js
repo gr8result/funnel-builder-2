@@ -1,4 +1,4 @@
-// /pages/modules/calendar/dashboard.js
+﻿// /pages/modules/calendar/dashboard.js
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -231,7 +231,7 @@ export default function CalendarDashboard() {
 
         <div style={styles.banner}>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            {ICONS.calendar({ size: 40, color: "#fff" })}
+            <span style={{ fontSize: 32, lineHeight: 1 }}>📅</span>
             <div>
               <div style={styles.title}>Calendar Dashboard</div>
               <div style={{ fontSize: 18 }}>Manage bookings, availability and revenue.</div>
@@ -259,7 +259,7 @@ export default function CalendarDashboard() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <span>Subscription Inactive — Upgrade Required</span>
               <Link href="/modules/billing/calendar-plans">
-                <button style={{ background: "#ef4444", border: "none", color: "#fff", padding: "10px 22px", borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: "pointer" }}>
+                <button style={{ background: "#ef4444", border: "none", color: "#fff", padding: "10px 22px", borderRadius: 8, fontWeight: 600, fontSize: 16, cursor: "pointer" }}>
                   Upgrade Now →
                 </button>
               </Link>

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { withWorkspace } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,7 +17,7 @@ async function getUserIdFromAuthHeader(req) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
@@ -95,3 +96,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message || String(err) });
   }
 }
+
+export default withWorkspace(handler);

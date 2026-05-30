@@ -127,7 +127,7 @@ const page = {
     marginBottom: 24,
   },
   bannerIcon: { fontSize: 28 },
-  bannerTitle: { fontSize: 20, fontWeight: 800, margin: 0 },
+  bannerTitle: { fontSize: 20, fontWeight: 600, margin: 0 },
   bannerDesc: { margin: 0, opacity: 0.8 },
   backButton: {
     padding: "6px 12px",
@@ -155,6 +155,6 @@ const page = {
     width: "100%",
     borderCollapse: "collapse",
     marginTop: 16,
-    fontSize: 14,
+    fontSize: 16,
   },
 };

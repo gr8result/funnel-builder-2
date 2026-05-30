@@ -1,7 +1,8 @@
 // /pages/api/telephony/twilio-sanity.js
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -48,3 +49,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

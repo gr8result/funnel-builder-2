@@ -108,7 +108,7 @@ export default function DevSpreadsheet() {
             style={{
               background: "#0c121a",
               color: "#fff",
-              fontWeight: 700,
+              fontWeight: 600,
               borderRadius: 10,
               padding: "12px 28px",
               border: "1.5px solid #fff",
@@ -282,8 +282,8 @@ export default function DevSpreadsheet() {
               <div key={u.id} style={{ borderTop: "1px solid #1f2937" }}>
                 <Row>
                   <Cell w="40%">
-                    <div style={{ fontWeight: 800 }}>{u.name}</div>
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>{u.email}</div>
+                    <div style={{ fontWeight: 600 }}>{u.name}</div>
+                    <div style={{ fontSize: 16, opacity: 0.8 }}>{u.email}</div>
                   </Cell>
                   <Cell w="20%" right>
                     {fmtMoney(u.mrr)}
@@ -349,8 +349,8 @@ export default function DevSpreadsheet() {
 function Stat({ label, value }) {
   return (
     <div style={card}>
-      <div style={{ fontSize: 12, opacity: 0.7 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 900, marginTop: 6 }}>{value}</div>
+      <div style={{ fontSize: 16, opacity: 0.7 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 600, marginTop: 6 }}>{value}</div>
     </div>
   );
 }
@@ -358,7 +358,7 @@ function Stat({ label, value }) {
 function ChartCard({ title, children }) {
   return (
     <div style={card}>
-      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>{title}</div>
       {children}
     </div>
   );
@@ -417,11 +417,11 @@ function ActivePill({ active }) {
         display: "inline-block",
         padding: "4px 10px",
         borderRadius: 999,
-        fontSize: 12,
+        fontSize: 16,
         background: active ? "rgba(34,197,94,0.15)" : "rgba(148,163,184,0.15)",
         border: `1px solid ${active ? "#16a34a" : "#475569"}`,
         color: active ? "#86efac" : "#cbd5e1",
-        fontWeight: 700,
+        fontWeight: 600,
       }}
     >
       {active ? "Active" : "Inactive"}
@@ -437,12 +437,12 @@ const card = {
   background: "#0f1115",
 };
 const cardSec = { ...card, marginTop: 16 };
-const secH2 = { fontSize: 16, fontWeight: 800, margin: "0 0 8px" };
+const secH2 = { fontSize: 16, fontWeight: 600, margin: "0 0 8px" };
 const tbl = { width: "100%", borderCollapse: "collapse" };
 const th = {
   textAlign: "left",
   padding: "8px 10px",
-  fontSize: 12,
+  fontSize: 16,
   opacity: 0.8,
   borderBottom: "1px solid #1f2937",
 };
@@ -456,7 +456,7 @@ const tblMini = { width: "100%", borderCollapse: "collapse" };
 const thMini = {
   textAlign: "left",
   padding: "6px 8px",
-  fontSize: 12,
+  fontSize: 16,
   opacity: 0.8,
   borderBottom: "1px solid #1f2937",
 };
@@ -468,7 +468,7 @@ const row = {
   gridTemplateColumns: "40% 20% 20% 20%",
   alignItems: "center",
 };
-const rowHeader = { ...row, background: "#0f1115", fontWeight: 800 };
+const rowHeader = { ...row, background: "#0f1115", fontWeight: 600 };
 const cell = { padding: "10px 12px", borderBottom: "none" };
 const cellRight = { ...cell, textAlign: "right" };
 const btn = {
@@ -477,7 +477,7 @@ const btn = {
   border: "1px solid #334155",
   background: "#111827",
   color: "#e5e7eb",
-  fontWeight: 700,
+  fontWeight: 600,
   cursor: "pointer",
 };
 
@@ -498,7 +498,7 @@ const quickAccessHeader = {
 };
 
 const quickAccessSubtext = {
-  fontSize: 14,
+  fontSize: 16,
   color: "#93c5fd",
   marginTop: 4,
 };
@@ -529,20 +529,20 @@ const quickAccessTitleRow = {
 
 const quickAccessTitle = {
   fontSize: 17,
-  fontWeight: 800,
+  fontWeight: 600,
   color: "#ffffff",
 };
 
 const quickAccessArrow = {
-  fontSize: 12,
-  fontWeight: 800,
+  fontSize: 16,
+  fontWeight: 600,
   color: "#93c5fd",
   textTransform: "uppercase",
   letterSpacing: 0.6,
 };
 
 const quickAccessDescription = {
-  fontSize: 13,
+  fontSize: 16,
   lineHeight: 1.5,
   color: "#cbd5e1",
   marginTop: 10,
@@ -550,7 +550,7 @@ const quickAccessDescription = {
 };
 
 const quickAccessUrl = {
-  fontSize: 12,
+  fontSize: 16,
   color: "#60a5fa",
   wordBreak: "break-word",
   marginTop: 10,

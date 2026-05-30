@@ -1,4 +1,5 @@
 import { getOpenSrsConfig, getDomainPrice, lookupDomainAvailability } from "../../../lib/opensrs/client";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function normalizeDomain(value) {
   return String(value || "")
@@ -14,7 +15,7 @@ function isValidDomain(domain) {
   return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(domain);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -78,3 +79,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

@@ -1,4 +1,4 @@
-// /pages/modules/email/broadcast/import.js
+﻿// /pages/modules/email/broadcast/import.js
 import { useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -78,10 +78,10 @@ export default function BroadcastImport() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 26 }}>📂</span>
               <div>
-                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
+                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
                   Import Broadcast
                 </h1>
-                <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>
+                <p style={{ margin: 0, fontSize: 16, opacity: 0.9 }}>
                   Upload an HTML email file from your computer.
                 </p>
               </div>
@@ -101,9 +101,9 @@ export default function BroadcastImport() {
                 type="file"
                 accept=".html,.htm,.txt,.eml"
                 onChange={handleFileChange}
-                style={{ color: "#e5e7eb", fontSize: 13 }}
+                style={{ color: "#e5e7eb", fontSize: 16 }}
               />
-              <p style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+              <p style={{ fontSize: 16, opacity: 0.7, marginTop: 6 }}>
                 We&apos;ll read the file as text and save it as a broadcast.
               </p>
             </div>
@@ -175,7 +175,7 @@ const styles = {
     border: "1px solid #374151",
     borderRadius: 8,
     padding: "6px 14px",
-    fontSize: 13,
+    fontSize: 16,
     cursor: "pointer",
   },
   card: {
@@ -184,7 +184,7 @@ const styles = {
     border: "1px solid #1f2937",
     padding: 18,
   },
-  label: { display: "block", marginBottom: 5, fontSize: 13, opacity: 0.9 },
+  label: { display: "block", marginBottom: 5, fontSize: 16, opacity: 0.9 },
   input: {
     width: "100%",
     borderRadius: 8,
@@ -192,7 +192,7 @@ const styles = {
     padding: "8px 10px",
     background: "#020617",
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
   },
   saveBtn: {
     background: "#22c55e",
@@ -200,7 +200,7 @@ const styles = {
     borderRadius: 8,
     border: "none",
     padding: "8px 16px",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
   secondaryBtn: {

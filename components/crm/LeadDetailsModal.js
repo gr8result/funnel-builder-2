@@ -1,4 +1,4 @@
-// /components/crm/LeadDetailsModal.js
+﻿// /components/crm/LeadDetailsModal.js
 // FULL REPLACEMENT
 //
 // ✅ Keeps LEFT dialer (BrowserDialer) intact
@@ -1010,7 +1010,11 @@ export default function LeadDetailsModal({
     try {
       const r = await fetch(`/api/twilio/list-call-recordings?phone=${encodeURIComponent(phoneToQuery)}&limit=50`);
       const j = await r.json();
-      if (!j?.ok) throw new Error(j?.error || "Failed to load recordings from Twilio");
+      // Twilio not configured or token missing — silently return empty rather than crashing
+      if (!j?.ok) {
+        console.warn("Twilio recordings unavailable:", j?.error || "unknown error");
+        return [];
+      }
 
       const recs = Array.isArray(j?.recordings) ? j.recordings : [];
 
@@ -2323,7 +2327,7 @@ export default function LeadDetailsModal({
                     {accountBranding.logoUrl ? (
                       <img src={accountBranding.logoUrl} alt="Company logo" style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 10, background: "#fff", padding: 4 }} />
                     ) : (
-                      <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(255,255,255,0.22)", display: "grid", placeItems: "center", fontWeight: 900 }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(255,255,255,0.22)", display: "grid", placeItems: "center", fontWeight: 600 }}>
                         {getInitials(accountBranding.companyName || "YC")}
                       </div>
                     )}
@@ -2813,7 +2817,7 @@ export default function LeadDetailsModal({
         {showAutomation && (
           <div id="gr8-automation-popover" style={styles.automationPopover}>
             <div style={styles.automationPopoverHeader}>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "#e5e7eb" }}>Send to Automation</div>
+              <div style={{ fontWeight: 600, fontSize: 16, color: "#e5e7eb" }}>Send to Automation</div>
               <button type="button" onClick={() => setShowAutomation(false)} style={styles.automationPopoverX} title="Close">
                 ×
               </button>
@@ -3107,7 +3111,7 @@ const styles = {
     borderRadius: 10,
     background: "#2563eb",
     color: "#fff",
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
@@ -3168,7 +3172,7 @@ const styles = {
     borderRadius: 999,
     padding: "6px 14px",
     color: "#fff",
-    fontWeight: 700,
+    fontWeight: 600,
     cursor: "pointer",
   },
 
@@ -3204,7 +3208,7 @@ const styles = {
 
   notesRecEmpty: {
     fontsize : 16,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#94a3b8",
     opacity: 0.95,
     padding: "6px 2px",
@@ -3234,7 +3238,7 @@ const styles = {
 
   notesRecMeta: {
     fontsize : 16,
-    fontWeight: 800,
+    fontWeight: 600,
     color: "#e5e7eb",
     opacity: 0.88,
     minHeight: 16,
@@ -3353,7 +3357,7 @@ const styles = {
     padding: "6px 10px",
     background: "#22c55e",
     color: "#fff",
-    fontWeight: 900,
+    fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
@@ -3434,7 +3438,7 @@ const styles = {
     background: "#22c55e",
     borderColor: "#22c55e",
     color: "#fff",
-    fontWeight: 900,
+    fontWeight: 600,
   },
 
   calendarDayToday: {
@@ -3583,7 +3587,7 @@ const styles = {
     placeItems: "center",
     background: "rgba(59,130,246,0.25)",
     color: "#bfdbfe",
-    fontSize: 10,
+    fontSize: 16,
     flexShrink: 0,
   },
 
@@ -3597,7 +3601,7 @@ const styles = {
 
   ownerQuickLabel: {
     color: "#cbd5e1",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 600,
     marginRight: 4,
   },
@@ -3613,7 +3617,7 @@ const styles = {
     padding: "6px 10px",
     cursor: "pointer",
     fontWeight: 600,
-    fontSize: 13,
+    fontSize: 16,
     maxWidth: "100%",
   },
 

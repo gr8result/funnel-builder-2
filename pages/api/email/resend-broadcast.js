@@ -21,6 +21,7 @@ export const config = {
 import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
+import { withAuth } from "../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -52,7 +53,7 @@ async function getAccountBranding(userId) {
   return data;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false });
   }
@@ -238,3 +239,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

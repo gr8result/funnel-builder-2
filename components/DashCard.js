@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 export default function DashCard({ href, title, subtitle, emoji = "✉️" }) {
   return (
@@ -20,7 +20,7 @@ export default function DashCard({ href, title, subtitle, emoji = "✉️" }) {
           {title}
         </div>
         {subtitle && (
-          <div style={{ opacity: 0.85, marginTop: 6, fontSize: 13 }}>{subtitle}</div>
+          <div style={{ opacity: 0.85, marginTop: 6, fontSize: 16 }}>{subtitle}</div>
         )}
       </div>
     </Link>

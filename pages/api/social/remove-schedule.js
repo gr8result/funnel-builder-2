@@ -1,7 +1,8 @@
 // /pages/api/social/remove-schedule.js
 import { requireUser } from '../../../lib/social/auth';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
@@ -55,3 +56,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
+
+export default withAuth(handler);

@@ -1,4 +1,4 @@
-// /pages/admin/social-developer-config.js
+﻿// /pages/admin/social-developer-config.js
 // One-time setup page for the platform owner.
 // Enter the App ID + Secret for each social platform once — every user then
 // connects their own accounts through your app via OAuth.
@@ -252,8 +252,8 @@ export default function SocialDeveloperConfig() {
                 onClick={() => setExpanded(key)}
               >
                 <span style={{ fontSize: 22 }}>{meta.icon}</span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{meta.label}</span>
-                <span style={{ fontSize: 13, color: cfg ? '#10B981' : '#6B7280', fontWeight: 600 }}>
+                <span style={{ fontSize: 16, fontWeight: 600 }}>{meta.label}</span>
+                <span style={{ fontSize: 16, color: cfg ? '#10B981' : '#6B7280', fontWeight: 600 }}>
                   {loading ? '…' : cfg ? '✅ Set' : '○ Not set'}
                 </span>
               </button>
@@ -312,7 +312,7 @@ export default function SocialDeveloperConfig() {
                     <span style={{ fontSize: 36 }}>{meta.icon}</span>
                     <div>
                       <div style={S.platformName}>{meta.label}</div>
-                      <div style={{ fontSize: 15, opacity: 0.45, marginTop: 3 }}>
+                      <div style={{ fontSize: 16, opacity: 0.45, marginTop: 3 }}>
                         Env vars: <code style={S.envName}>{meta.envAppId}</code> / <code style={S.envName}>{meta.envSecret}</code>{meta.envConfigId ? <> / <code style={S.envName}>{meta.envConfigId}</code></> : null}
                       </div>
                     </div>
@@ -321,7 +321,7 @@ export default function SocialDeveloperConfig() {
                     <div style={{ fontSize: 16, fontWeight: 600, color: isCfg ? '#10B981' : '#6B7280' }}>
                       {loading ? '…' : isCfg ? '✅ Credentials set' : '○ Not configured'}
                     </div>
-                    <div style={{ fontSize: 13, opacity: 0.4 }}>{isOpen ? '▲' : '▼'}</div>
+                    <div style={{ fontSize: 16, opacity: 0.4 }}>{isOpen ? '▲' : '▼'}</div>
                   </div>
                 </div>
 
@@ -425,7 +425,7 @@ export default function SocialDeveloperConfig() {
                             </div>
                           )}
                           <div style={S.fieldGroup}>
-                            <label style={S.label}>{meta.secretLabel} <span style={{ fontSize: 13, opacity: 0.5 }}>(saved encrypted)</span></label>
+                            <label style={S.label}>{meta.secretLabel} <span style={{ fontSize: 16, opacity: 0.5 }}>(saved encrypted)</span></label>
                             <input
                               style={S.input}
                               type="password"
@@ -517,7 +517,7 @@ const S = {
     border: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 20, alignItems: 'flex-start',
   },
   explainerIcon: { fontSize: 36, flexShrink: 0 },
-  explainerTitle: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
+  explainerTitle: { fontSize: 20, fontWeight: 600, marginBottom: 8 },
   explainerText: { fontSize: 17, opacity: 0.7, lineHeight: 1.7 },
 
   statusRow: { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 },
@@ -538,16 +538,16 @@ const S = {
   },
   cardLeft: { display: 'flex', alignItems: 'center', gap: 18 },
   cardRight: { display: 'flex', alignItems: 'center', gap: 16 },
-  platformName: { fontSize: 20, fontWeight: 700 },
-  envName: { fontFamily: 'monospace', fontSize: 13, background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 },
+  platformName: { fontSize: 20, fontWeight: 600 },
+  envName: { fontFamily: 'monospace', fontSize: 16, background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 },
   cardBody: { padding: '0 28px 28px', borderTop: '1px solid rgba(255,255,255,0.06)' },
 
   stepsSection: { paddingTop: 24, marginBottom: 24 },
-  stepsTitle: { fontSize: 17, fontWeight: 700, opacity: 0.6, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 },
+  stepsTitle: { fontSize: 17, fontWeight: 600, opacity: 0.6, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 },
   stepRow: { display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start' },
   stepBullet: {
     width: 28, height: 28, borderRadius: '50%', background: 'rgba(29,78,216,0.3)', color: '#93C5FD',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 16, flexShrink: 0,
   },
   stepText: { fontSize: 17, opacity: 0.75, lineHeight: 1.65 },
   devLink: { color: '#818cf8', fontSize: 17, display: 'inline-block', marginTop: 8 },
@@ -557,7 +557,7 @@ const S = {
     border: '1px solid rgba(99,102,241,0.25)', marginBottom: 24,
   },
   callbackLabel: { fontSize: 16, opacity: 0.6, marginBottom: 8 },
-  callbackUrl: { fontFamily: 'monospace', fontSize: 14, color: '#a3e635', wordBreak: 'break-all', userSelect: 'all', lineHeight: 1.6 },
+  callbackUrl: { fontFamily: 'monospace', fontSize: 16, color: '#a3e635', wordBreak: 'break-all', userSelect: 'all', lineHeight: 1.6 },
 
   credSection: { background: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: '20px 24px', border: '1px solid rgba(255,255,255,0.05)' },
   credForm: { display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' },
@@ -569,7 +569,7 @@ const S = {
     color: '#fff', fontSize: 16, boxSizing: 'border-box',
   },
   savedRow: { display: 'flex', alignItems: 'center', gap: 16, padding: '8px 0', flexWrap: 'wrap' },
-  savedHelpText: { fontSize: 14, opacity: 0.58, lineHeight: 1.55, marginTop: 6 },
+  savedHelpText: { fontSize: 16, opacity: 0.58, lineHeight: 1.55, marginTop: 6 },
   errorMsg: { width: '100%', color: '#f87171', fontSize: 16, padding: '6px 0' },
   warningMsg: {
     width: '100%',
@@ -579,16 +579,16 @@ const S = {
     border: '1px solid rgba(251,191,36,0.35)',
     background: 'rgba(251,191,36,0.08)',
     color: '#FCD34D',
-    fontSize: 14,
+    fontSize: 16,
     lineHeight: 1.5,
   },
   saveBtn: {
     padding: '12px 28px', background: '#1d4ed8', border: 'none',
-    borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 17, cursor: 'pointer',
+    borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 17, cursor: 'pointer',
   },
   secondaryBtn: {
     background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.35)',
-    color: '#93C5FD', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 15,
+    color: '#93C5FD', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 16,
   },
   removeBtn: {
     background: 'none', border: '1px solid rgba(248,113,113,0.4)',
@@ -600,7 +600,7 @@ const S = {
     border: '1px solid rgba(255,255,255,0.06)',
   },
   envBlock: {
-    fontFamily: 'monospace', fontSize: 14, color: '#a3e635',
+    fontFamily: 'monospace', fontSize: 16, color: '#a3e635',
     background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '20px 24px',
     lineHeight: 1.8, overflowX: 'auto', margin: 0,
     border: '1px solid rgba(255,255,255,0.06)',

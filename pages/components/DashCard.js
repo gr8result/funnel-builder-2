@@ -1,4 +1,4 @@
-// components/DashCard.js
+﻿// components/DashCard.js
 import Link from "next/link";
 
 const cardStyle = {
@@ -11,8 +11,8 @@ const cardStyle = {
   textDecoration: "none",
   transition: "background 120ms ease-in-out, transform 120ms ease-in-out",
 };
-const titleStyle = { fontWeight: 700, marginBottom: 4 };
-const subStyle = { fontSize: 12, opacity: 0.8 };
+const titleStyle = { fontWeight: 600, marginBottom: 4 };
+const subStyle = { fontSize: 16, opacity: 0.8 };
 
 export default function DashCard({ href = "#", title, subtitle, icon }) {
   return (

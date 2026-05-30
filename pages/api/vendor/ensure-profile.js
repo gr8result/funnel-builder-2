@@ -1,7 +1,8 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { ensureVendorProfileFromAgreement } from '../../../lib/vendorProfile';
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -54,3 +55,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to ensure vendor profile' });
   }
 }
+
+export default withAuth(handler);

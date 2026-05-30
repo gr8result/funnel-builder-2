@@ -1,4 +1,4 @@
-// /pages/modules/subaccounts.js   (or /pages/modules/subaccounts/index.js)
+﻿// /pages/modules/subaccounts.js   (or /pages/modules/subaccounts/index.js)
 // Subaccounts – standard module banner + guard
 
 import Head from "next/head";
@@ -37,7 +37,7 @@ export default function Subaccounts() {
               padding: "16px 20px",
               borderRadius: 14,
               marginBottom: 26,
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>

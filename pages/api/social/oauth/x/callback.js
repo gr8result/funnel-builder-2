@@ -111,7 +111,13 @@ function getXRedirectUri(req) {
 
 function doneRedirectUrl(req, path, status, message) {
   const site = getRequestOrigin(req);
-  const u = new URL(path || "/modules/social_media/setup", site);
+  // Force same-origin: strip any absolute URL to its pathname only
+  let safePath = path || "/modules/social_media/setup";
+  if (/^https?:\/\//i.test(safePath)) {
+    try { safePath = new URL(safePath).pathname; } catch { safePath = "/modules/social_media/setup"; }
+  }
+  if (!safePath.startsWith('/')) safePath = `/${safePath}`;
+  const u = new URL(safePath, site);
   u.searchParams.set("connect", status);
   if (message) u.searchParams.set("message", message);
   return u.toString();

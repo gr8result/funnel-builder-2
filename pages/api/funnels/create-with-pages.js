@@ -4,6 +4,8 @@
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { FUNNEL_TYPES, assemblePage } from '../../../lib/funnelSections';
+import { withAuth } from "../../../lib/withWorkspace";
+import { getLimit } from "../../../lib/featureGates";
 
 function slugify(str) {
   return str
@@ -356,7 +358,7 @@ async function rewriteHtmlWithAI(html, { brand = {}, funnelTypeLabel = '', pageT
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { funnelTypeId, brand = {}, userId: bodyUserId, useAI = true } = req.body || {};
@@ -374,6 +376,39 @@ export default async function handler(req, res) {
     }
   }
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  // ── QUOTA CHECK ────────────────────────────────────────────────────────────
+  // Use the authenticated user's id (req.user.id) for the plan lookup to prevent
+  // body-supplied userId from bypassing the quota.
+  const auth_user_id = req.user?.id || userId;
+  const { data: wsRow } = await supabaseAdmin
+    .from("workspaces")
+    .select("plan")
+    .eq("owner_id", auth_user_id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const plan = wsRow?.plan || "starter";
+  const funnelLimit = getLimit(plan, "funnels");
+
+  if (funnelLimit !== null) {
+    const { count: funnelCount, error: countErr } = await supabaseAdmin
+      .from("funnels")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_user_id", auth_user_id);
+
+    if (!countErr && funnelCount >= funnelLimit) {
+      return res.status(429).json({
+        ok: false,
+        code: "FUNNEL_LIMIT_EXCEEDED",
+        error: `Funnel limit reached (${funnelLimit} on ${plan} plan). Upgrade to create more.`,
+        limit: funnelLimit,
+        used: funnelCount,
+      });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const funnelType = FUNNEL_TYPES.find(t => t.id === funnelTypeId);
   if (!funnelType) return res.status(400).json({ error: 'Unknown funnelTypeId' });
@@ -434,3 +469,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ ok: true, funnelId: funnel.id });
 }
+
+export default withAuth(handler);

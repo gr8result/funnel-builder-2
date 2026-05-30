@@ -1,4 +1,4 @@
-// components/vendor/VendorUserBanner.js
+﻿// components/vendor/VendorUserBanner.js
 import { useEffect, useState } from "react";
 import { supabase } from "../../utils/supabase-client";
 
@@ -70,7 +70,7 @@ export default function VendorUserBanner() {
       }}
     >
       Logged in as:{" "}
-      <span style={{ color: "#38bdf8", fontWeight: 700 }}>{displayName}</span>
+      <span style={{ color: "#38bdf8", fontWeight: 600 }}>{displayName}</span>
     </div>
   );
 }

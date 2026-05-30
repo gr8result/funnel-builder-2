@@ -1,4 +1,4 @@
-import Head from 'next/head';
+﻿import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../../../utils/supabase-client';
@@ -382,7 +382,7 @@ export default function CalendarDay() {
                   <div>
                     <label style={{ display: 'block', fontSize: 16, fontWeight: 600, color: '#a78bfa', marginBottom: 6 }}>
                       Scheduled Time
-                      <span style={{ marginLeft: 10, fontSize: 13, fontWeight: 400, color: '#7dd3fc', background: 'rgba(14,116,144,0.25)', borderRadius: 6, padding: '3px 8px' }}>
+                      <span style={{ marginLeft: 10, fontSize: 16, fontWeight: 400, color: '#7dd3fc', background: 'rgba(14,116,144,0.25)', borderRadius: 6, padding: '3px 8px' }}>
                         {Intl.DateTimeFormat().resolvedOptions().timeZone}
                       </span>
                     </label>
@@ -403,7 +403,7 @@ export default function CalendarDay() {
                     ))}
                   </select>
                   {modal.post.status === 'failed' && (
-                    <div style={{ marginTop: 6, fontSize: 13, color: '#fca5a5' }}>
+                    <div style={{ marginTop: 6, fontSize: 16, color: '#fca5a5' }}>
                       ⚠ Saving will reset this post to <strong>scheduled</strong> so it retries.
                     </div>
                   )}

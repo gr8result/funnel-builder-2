@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 
 export default function AIWriterAssist({
   value,
@@ -130,7 +130,7 @@ export default function AIWriterAssist({
 
   return (
     <div style={wrapStyle}>
-      <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700 }}>AI Writing Assistant</div>
+      <div style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600 }}>AI Writing Assistant</div>
       <input
         value={brief}
         onChange={(e) => setBrief(e.target.value)}
@@ -142,7 +142,7 @@ export default function AIWriterAssist({
           border: "1px solid #2b3650",
           background: "#0c121a",
           color: "#e6eef5",
-          fontSize: 12,
+          fontSize: 16,
           boxSizing: "border-box",
         }}
       />
@@ -161,7 +161,7 @@ export default function AIWriterAssist({
         </button>
       </div>
 
-      <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginTop: 4 }}>Chat With AI</div>
+      <div style={{ color: "#93c5fd", fontSize: 16, fontWeight: 600, marginTop: 4 }}>Chat With AI</div>
       <div
         style={{
           border: "1px solid #2b3650",
@@ -175,7 +175,7 @@ export default function AIWriterAssist({
         }}
       >
         {messages.length === 0 ? (
-          <div style={{ color: "#94a3b8", fontSize: 12 }}>
+          <div style={{ color: "#94a3b8", fontSize: 16 }}>
             Tell AI what you want, then apply its latest response into this field.
           </div>
         ) : (
@@ -183,7 +183,7 @@ export default function AIWriterAssist({
             <div
               key={`${m.role}-${i}`}
               style={{
-                fontSize: 12,
+                fontSize: 16,
                 lineHeight: 1.45,
                 color: m.role === "user" ? "#bfdbfe" : "#e2e8f0",
                 background: m.role === "user" ? "#13243e" : "#1b1f2a",
@@ -192,7 +192,7 @@ export default function AIWriterAssist({
                 padding: "6px 8px",
               }}
             >
-              <strong style={{ fontWeight: 700 }}>{m.role === "user" ? "You" : "AI"}:</strong> {m.text}
+              <strong style={{ fontWeight: 600 }}>{m.role === "user" ? "You" : "AI"}:</strong> {m.text}
             </div>
           ))
         )}
@@ -210,7 +210,7 @@ export default function AIWriterAssist({
           border: "1px solid #2b3650",
           background: "#0c121a",
           color: "#e6eef5",
-          fontSize: 12,
+          fontSize: 16,
           resize: "vertical",
           boxSizing: "border-box",
         }}
@@ -227,8 +227,8 @@ export default function AIWriterAssist({
         </button>
       </div>
 
-      {loading ? <div style={{ color: "#93c5fd", fontSize: 12 }}>Generating...</div> : null}
-      {error ? <div style={{ color: "#fca5a5", fontSize: 12 }}>{error}</div> : null}
+      {loading ? <div style={{ color: "#93c5fd", fontSize: 16 }}>Generating...</div> : null}
+      {error ? <div style={{ color: "#fca5a5", fontSize: 16 }}>{error}</div> : null}
     </div>
   );
 }

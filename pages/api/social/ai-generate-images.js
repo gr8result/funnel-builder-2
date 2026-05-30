@@ -3,6 +3,7 @@
 
 import { requireUser } from '../../../lib/social/auth';
 import { persistImageForUser } from './save-image';
+import { withAuth } from "../../../lib/withWorkspace";
 
 let promoBrowserPromise = null;
 
@@ -584,7 +585,7 @@ async function ensureUniqueImageCount(req, images, descriptions, targetCount, hi
 
 export const config = { maxDuration: 60 };
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -707,3 +708,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 }
+
+export default withAuth(handler);

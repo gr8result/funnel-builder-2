@@ -1,43 +1,47 @@
-// /pages/api/lists/[id]/subscribers.js
+﻿// /pages/api/lists/[id]/subscribers.js
 // GET: subscribers for a list with ?q= & ?from=YYYY-MM-DD & ?to=YYYY-MM-DD & ?limit=
 
-let supabase = null;
-try {
-  const { createClient } = require("@supabase/supabase-js");
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
-    );
-  }
-} catch {}
+import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { withAuth } from "../../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
+const MAX_LIMIT = 1000;
+
+async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const { id } = req.query;
   const { q = "", from = "", to = "", limit = "200" } = req.query;
 
   if (!id) return res.status(400).json({ error: "Missing list id" });
-  if (!supabase) return res.status(200).json({ ok: true, rows: [] }); // no FS model for subs here
 
   try {
-    let qy = supabase
+    // Verify the authenticated user owns this list (prevents IDOR)
+    const { data: list, error: listError } = await supabaseAdmin
+      .from("lists")
+      .select("id")
+      .eq("id", id)
+      .eq("user_id", req.user.id)
+      .maybeSingle();
+
+    if (listError || !list) return res.status(403).json({ error: "Not found" });
+
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 200), MAX_LIMIT);
+
+    let qy = supabaseAdmin
       .from("subscribers")
       .select("id,first_name,last_name,email,phone,company,position,address,postcode,source,created_at")
       .eq("list_id", id)
       .order("created_at", { ascending: false })
-      .limit(Number(limit));
+      .limit(safeLimit);
 
     if (q) {
       qy = qy.or(
         [
-          `first_name.ilike.%${q}%`,
-          `last_name.ilike.%${q}%`,
-          `email.ilike.%${q}%`,
-          `phone.ilike.%${q}%`,
-          `company.ilike.%${q}%`,
+          "first_name.ilike.%" + q + "%",
+          "last_name.ilike.%" + q + "%",
+          "email.ilike.%" + q + "%",
+          "phone.ilike.%" + q + "%",
+          "company.ilike.%" + q + "%",
         ].join(",")
       );
     }
@@ -52,3 +56,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: "failed" });
   }
 }
+
+export default withAuth(handler);

@@ -1,4 +1,4 @@
-// pages/submissions.js
+﻿// pages/submissions.js
 // FULL REPLACEMENT
 // Fixes bad import path to lib/modules-catalog (was too many ../)
 // Keeps page build-safe. If you later want catalog usage, it's now correct.
@@ -38,7 +38,7 @@ export default function SubmissionsPage() {
                   padding: 12,
                 }}
               >
-                <div style={{ fontWeight: 700 }}>
+                <div style={{ fontWeight: 600 }}>
                   {m.icon} {m.name}
                 </div>
                 <div style={{ opacity: 0.75 }}>{AUD(m.price_cents)}</div>

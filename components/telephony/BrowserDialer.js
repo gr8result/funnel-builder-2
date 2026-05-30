@@ -1,4 +1,4 @@
-// /components/telephony/BrowserDialer.js
+﻿// /components/telephony/BrowserDialer.js
 // FULL REPLACEMENT — guaranteed correct Twilio Voice SDK v2 usage
 
 import { useEffect, useRef, useState } from "react";
@@ -91,12 +91,12 @@ export default function BrowserDialer({ phone }) {
 
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 12, marginBottom: 6 }}>
+      <div style={{ fontSize: 16, marginBottom: 6 }}>
         Status: <b>{status}</b>
       </div>
 
       {error && (
-        <div style={{ color: "#f87171", fontSize: 12 }}>{error}</div>
+        <div style={{ color: "#f87171", fontSize: 16 }}>{error}</div>
       )}
 
       <div style={{ display: "flex", gap: 8 }}>

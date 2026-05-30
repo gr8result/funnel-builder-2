@@ -5,6 +5,7 @@
 //   OR: { pageId, pageToken, pageName } — a specific Page token directly
 
 import { requireUser } from '../../../lib/social/auth';
+import { withAuth } from "../../../lib/withWorkspace";
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
@@ -40,7 +41,7 @@ async function saveSocialAccount(admin, payload) {
   if (insertError) throw new Error(insertError.message);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -115,3 +116,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: err.message });
   }
 }
+
+export default withAuth(handler);

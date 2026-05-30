@@ -1,4 +1,4 @@
-// pages/assets.js
+﻿// pages/assets.js
 // File uploader + file list under /assets bucket at /<userId>/.
 // Content-only: Layout (with SideNav + TopNav) is applied globally in _app.js.
 
@@ -93,6 +93,7 @@ export default function Assets() {
     || userEmail.endsWith('@gr8result.com.au');
   const [selectedImageIds, setSelectedImageIds] = useState([]);
   const [movingSelected, setMovingSelected] = useState(false);
+  const [copyingSelected, setCopyingSelected] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [uploadingIcons, setUploadingIcons] = useState(false);
 
@@ -284,6 +285,7 @@ export default function Assets() {
     setStatusMessage("");
     let deletedCount = 0;
     let failedCount = 0;
+    const deletedKeys = [];
     for (const file of selectedFiles) {
       try {
         const deleteParams = new URLSearchParams({ id: file?.id || '' });
@@ -296,15 +298,20 @@ export default function Assets() {
         });
         const payload = await response.json();
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'Delete failed');
+        deletedKeys.push(getFileSelectionKey(file));
         deletedCount++;
-      } catch {
+      } catch (err) {
+        console.error('Delete failed for', file?.id, err?.message);
         failedCount++;
       }
+    }
+    if (deletedKeys.length) {
+      setFiles((prev) => prev.filter((f) => !deletedKeys.includes(getFileSelectionKey(f))));
     }
     clearSelectedImages();
     await listFiles({ showLoader: false });
     setStatusMessage(failedCount
-      ? `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}. ${failedCount} failed.`
+      ? `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}. ${failedCount} failed — check console for details.`
       : `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}.`);
     setBulkDeleting(false);
   }
@@ -452,6 +459,64 @@ export default function Assets() {
       setStatusMessage(error.message || "Could not move selected images to generic images.");
     } finally {
       setMovingSelected(false);
+    }
+  }
+
+  const COPY_TO_PRIVATE_BATCH_SIZE = 25;
+
+  async function copySelectedToPrivate() {
+    if (!session?.access_token) return;
+    const selectedFiles = genericFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file)) && file?.url);
+    if (!selectedFiles.length) {
+      setStatusMessage("No generic images are selected.");
+      return;
+    }
+
+    const ok = confirm(`Copy ${selectedFiles.length} selected image${selectedFiles.length === 1 ? "" : "s"} to your private images?`);
+    if (!ok) return;
+
+    setCopyingSelected(true);
+    setStatusMessage("");
+    try {
+      let copiedCount = 0;
+      let failedCount = 0;
+
+      for (let index = 0; index < selectedFiles.length; index += COPY_TO_PRIVATE_BATCH_SIZE) {
+        const chunk = selectedFiles.slice(index, index + COPY_TO_PRIVATE_BATCH_SIZE);
+        const response = await fetch("/api/assets/copy-to-private", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            assets: chunk.map((file) => ({
+              imageUrl: file.url,
+              name: file.name || file.description || "Image",
+            })),
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload?.ok) {
+          throw new Error(payload?.error || "Could not copy images to private library.");
+        }
+        const results = Array.isArray(payload.results) ? payload.results : [];
+        copiedCount += results.filter((r) => r.ok).length;
+        failedCount += results.filter((r) => !r.ok).length;
+      }
+
+      clearSelectedImages();
+      await listFiles({ showLoader: false });
+      setStatusMessage(
+        failedCount === 0
+          ? `Copied ${copiedCount} image${copiedCount === 1 ? "" : "s"} to your private images.`
+          : `Copied ${copiedCount} image${copiedCount === 1 ? "" : "s"}. ${failedCount} failed.`
+      );
+      setLibraryView("user");
+    } catch (error) {
+      setStatusMessage(error.message || "Could not copy selected images to private library.");
+    } finally {
+      setCopyingSelected(false);
     }
   }
 
@@ -635,7 +700,7 @@ export default function Assets() {
                     gap: 8,
                     marginBottom: 10,
                     color: isSelected ? "#ccfbf1" : "#94a3b8",
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 600,
                     padding: "8px 10px",
                     borderRadius: 8,
@@ -661,8 +726,8 @@ export default function Assets() {
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 14,
-                      fontWeight: 900,
+                      fontSize: 16,
+                      fontWeight: 600,
                       lineHeight: 1,
                       border: "2px solid #14b8a6",
                       background: isSelected ? "#14b8a6" : "transparent",
@@ -866,7 +931,7 @@ export default function Assets() {
 
       <div style={{ maxWidth: 1302, margin: "0 auto" }}>
         {pickerMode ? (
-          <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: "rgba(37,99,235,0.16)", border: "1px solid rgba(59,130,246,0.35)", color: "#dbeafe", fontSize: 15, fontWeight: 600 }}>
+          <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: "rgba(37,99,235,0.16)", border: "1px solid rgba(59,130,246,0.35)", color: "#dbeafe", fontSize: 16, fontWeight: 600 }}>
             Double-click any image to insert it back into the editor.
           </div>
         ) : null}
@@ -875,7 +940,7 @@ export default function Assets() {
         </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-          {syncing ? <span style={{ color: "#cbd5e1", fontSize: 13 }}>Loading email-template images in the background...</span> : null}
+          {syncing ? <span style={{ color: "#cbd5e1", fontSize: 16 }}>Loading email-template images in the background...</span> : null}
           <button onClick={() => listFiles()} style={miniBtn}>Refresh</button>
           {isDev ? (
             <button
@@ -927,7 +992,7 @@ export default function Assets() {
           <section>
             <div style={{ display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap", marginBottom: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ color: "#e2e8f0", fontSize: 14, fontWeight: 600 }}>Library View</span>
+                <span style={{ color: "#e2e8f0", fontSize: 16, fontWeight: 600 }}>Library View</span>
                 <select
                   value={libraryView}
                   onChange={(event) => setLibraryView(event.target.value)}
@@ -950,7 +1015,7 @@ export default function Assets() {
             </div>
             {(!pickerMode || isDev) && selectedInCurrentSectionCount > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(20,184,166,0.08)", border: "1px solid rgba(45,212,191,0.28)" }}>
-                <span style={{ color: "#99f6e4", fontSize: 14, fontWeight: 600 }}>{selectedInCurrentSectionCount} image{selectedInCurrentSectionCount !== 1 ? "s" : ""} selected</span>
+                <span style={{ color: "#99f6e4", fontSize: 16, fontWeight: 600 }}>{selectedInCurrentSectionCount} image{selectedInCurrentSectionCount !== 1 ? "s" : ""} selected</span>
                 <button
                   type="button"
                   style={{ ...miniBtn, background: "#3a0f12", border: "1px solid #5b1a1f", color: "#ffd7db" }}
@@ -990,9 +1055,31 @@ export default function Assets() {
                 >
                   {movingSelected ? "Moving..." : `Move Selected to Generic Images${selectedPromotableImageCount ? ` (${selectedPromotableImageCount})` : ""}`}
                 </button>
-                <span style={{ color: "#99f6e4", fontSize: 14 }}>Developer-only bulk move. Non-movable items stay disabled.</span>
+                <span style={{ color: "#99f6e4", fontSize: 16 }}>Developer-only bulk move. Non-movable items stay disabled.</span>
               </div>
             ) : null}
+            {libraryView === "generic" ? (() => {
+              const selectedGenericCount = genericFiles.filter((f) => selectedImageIds.includes(getFileSelectionKey(f)) && f?.url).length;
+              return (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+                  <button type="button" style={miniBtn} onClick={() => setSelectedImageIds(genericFiles.filter((f) => f?.url).map(getFileSelectionKey))} disabled={copyingSelected || !genericFiles.some((f) => f?.url)}>
+                    Select All
+                  </button>
+                  <button type="button" style={miniBtn} onClick={clearSelectedImages} disabled={copyingSelected || !selectedImageIds.length}>
+                    Clear Selection
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...miniBtn, background: "#1e40af", border: "1px solid #3b82f6", color: "#eff6ff" }}
+                    onClick={copySelectedToPrivate}
+                    disabled={copyingSelected || !selectedGenericCount}
+                  >
+                    {copyingSelected ? "Copying..." : `Copy to My Images${selectedGenericCount ? ` (${selectedGenericCount})` : ""}`}
+                  </button>
+                  <span style={{ color: "#93c5fd", fontSize: 16 }}>Copies selected generic images into your private library.</span>
+                </div>
+              );
+            })() : null}
             {libraryView === "icons" ? (
               <div style={{ marginBottom: 28 }}>
                 {/* Group icons by their group property */}
@@ -1006,7 +1093,7 @@ export default function Assets() {
                     const entries = GRID_ICON_LIBRARY.filter((e) => e.group === group);
                     return (
                       <div key={group} style={{ marginBottom: 22 }}>
-                        <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>{group}</h3>
+                        <h3 style={{ color: "#64748b", fontSize: 16, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>{group}</h3>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 8 }}>
                           {entries.map((entry) => {
                             const IconComp = entry.Icon || null;
@@ -1052,7 +1139,7 @@ export default function Assets() {
                                   : IconComp ? <IconComp size={32} color="#e2e8f0" />
                                   : null
                                 }
-                                <span style={{ color: "#64748b", fontSize: 10, textAlign: "center", lineHeight: 1.2, maxWidth: 74, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
+                                <span style={{ color: "#64748b", fontSize: 16, textAlign: "center", lineHeight: 1.2, maxWidth: 74, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
                               </button>
                             );
                           })}
@@ -1063,7 +1150,7 @@ export default function Assets() {
                 })()}
                 {iconFiles.length > 0 ? (
                   <>
-                    <h3 style={{ color: "#64748b", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "24px 0 10px" }}>Your Uploaded Icons</h3>
+                    <h3 style={{ color: "#64748b", fontSize: 16, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", margin: "24px 0 10px" }}>Your Uploaded Icons</h3>
                   </>
                 ) : null}
               </div>

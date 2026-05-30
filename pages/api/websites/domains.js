@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, getCustomDomainTargetHost, normalizeDomain } from "../../../lib/website-builder/publishConfig";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || req.headers.Authorization || "").trim();
@@ -45,7 +46,7 @@ function serialize(record) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const token = getBearerToken(req);
   if (!token) return res.status(401).json({ ok: false, error: "Missing Bearer token" });
 
@@ -114,3 +115,5 @@ export default async function handler(req, res) {
   res.setHeader("Allow", "GET, PATCH");
   return res.status(405).json({ ok: false, error: "Method not allowed" });
 }
+
+export default withAuth(handler);

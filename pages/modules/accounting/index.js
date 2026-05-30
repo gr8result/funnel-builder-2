@@ -48,8 +48,27 @@ export default function Accounting() {
     }
   }
 
-  const handleImport = () => alert("CSV import coming soon");
-  const handleExport = () => alert("CSV export coming soon");
+  const handleImport = null; // CSV import — coming in next update
+
+  const handleExport = () => {
+    if (!invoices.length) return;
+    const cols = ["invoice_number", "client_name", "status", "amount", "currency", "due_date", "source"];
+    const header = cols.join(",");
+    const csvRows = invoices.map((inv) =>
+      cols.map((c) => {
+        const val = inv[c] ?? "";
+        const str = String(val).replace(/"/g, '""');
+        return str.includes(",") || str.includes("\"") || str.includes("\n") ? `"${str}"` : str;
+      }).join(",")
+    );
+    const blob = new Blob([header + "\n" + csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // REAL connect: go to API route which redirects to Xero
   const handleConnectXero = () => {
@@ -61,7 +80,7 @@ export default function Accounting() {
       {/* Banner – same style family as main dashboard, just blue for Accounting */}
       <div className="banner">
         <div className="banner-left">
-          <span className="banner-icon">{ICONS.billing({ size: 48 })}</span>
+          <span className="banner-icon">📊</span>
           <div>
             <h1 className="banner-title">Accounting</h1>
             <p className="banner-desc">
@@ -77,10 +96,21 @@ export default function Accounting() {
       <div className="content">
         {/* ACTION BAR */}
         <div className="actions-bar">
-          <button className="action-btn primary" onClick={handleImport}>
+          <button
+            className="action-btn primary"
+            disabled
+            title="CSV import — coming in next update"
+            style={{ opacity: 0.45, cursor: "not-allowed" }}
+          >
             Import CSV
           </button>
-          <button className="action-btn" onClick={handleExport}>
+          <button
+            className="action-btn"
+            onClick={handleExport}
+            disabled={!invoices.length}
+            style={!invoices.length ? { opacity: 0.45, cursor: "not-allowed" } : {}}
+            title={invoices.length ? "Download invoices as CSV" : "No invoices to export"}
+          >
             Export CSV
           </button>
           <button className="action-btn outline" onClick={handleConnectXero}>

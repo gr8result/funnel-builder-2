@@ -5,6 +5,7 @@
 // ✅ Uses service role (server-side only)
 
 import { createClient } from "@supabase/supabase-js";
+import { withAuth } from "../../../../lib/withWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -18,7 +19,7 @@ function pick(obj, keys) {
   return out;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "POST only" });
@@ -36,12 +37,8 @@ export default async function handler(req, res) {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    const userId = req.user.id;
     const body = req.body || {};
-    const userId = body.userId || body.user_id;
-
-    if (!userId) {
-      return res.status(400).json({ ok: false, error: "userId is required" });
-    }
 
     const campaign =
       body.campaign && typeof body.campaign === "object" ? body.campaign : body;
@@ -101,3 +98,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAuth(handler);

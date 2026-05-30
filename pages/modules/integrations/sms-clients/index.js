@@ -1,4 +1,4 @@
-// pages/modules/integrations/sms-clients/index.js
+﻿// pages/modules/integrations/sms-clients/index.js
 // Admin dashboard to approve/manage SMS clients
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -92,7 +92,7 @@ export default function SMSClientsAdmin() {
       display: "inline-block",
       padding: "4px 8px",
       borderRadius: 6,
-      fontSize: 12,
+      fontSize: 16,
       fontWeight: 600,
       background:
         st === "approved"
@@ -114,7 +114,7 @@ export default function SMSClientsAdmin() {
       color: "#fff",
       padding: "8px 14px",
       borderRadius: 8,
-      fontSize: 13,
+      fontSize: 16,
       cursor: "pointer",
       fontWeight: 600,
       whiteSpace: "nowrap",
@@ -129,7 +129,7 @@ export default function SMSClientsAdmin() {
     detailsRow: {
       background: "rgba(255,255,255,0.02)",
       padding: "12px 14px",
-      fontSize: 13,
+      fontSize: 16,
       opacity: 0.9,
     },
   }), []);
@@ -291,7 +291,7 @@ export default function SMSClientsAdmin() {
                   </td>
                   <td style={page.td}>
                     {client.status === "approved" ? (
-                      <span style={{ opacity: 0.6, fontSize: 13 }}>✓ Approved</span>
+                      <span style={{ opacity: 0.6, fontSize: 16 }}>✓ Approved</span>
                     ) : (
                       <button
                         style={{

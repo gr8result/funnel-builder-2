@@ -6,7 +6,7 @@ export function middleware(req) {
   const { pathname } = req.nextUrl;
   const host = normalizeDomain(req.headers.get("host") || "");
 
-  if (!pathname.startsWith("/dev")) {
+  if (!pathname.startsWith("/dev") && !pathname.startsWith("/api/dev")) {
     const isInternalAsset = pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname === "/favicon.ico";
     if (!isInternalAsset && !isReservedHost(host)) {
       const rewriteUrl = req.nextUrl.clone();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EmailEditor v2 — zero GrapesJS, pure React
  * Left panel: block catalog  |  Center: 600px canvas  |  Right: inspector
  */
@@ -595,9 +595,9 @@ const SOCIAL_ICON_ALIASES = {
 
 const SOCIAL_BADGES = {
   facebook: { label: "f", bg: "#1877f2", color: "#ffffff", fontSize: 18 },
-  instagram: { label: "IG", bg: "#e1306c", color: "#ffffff", fontSize: 11 },
-  linkedin: { label: "in", bg: "#0a66c2", color: "#ffffff", fontSize: 14 },
-  x: { label: "X", bg: "#111111", color: "#ffffff", fontSize: 14 },
+  instagram: { label: "IG", bg: "#e1306c", color: "#ffffff", fontSize: 16 },
+  linkedin: { label: "in", bg: "#0a66c2", color: "#ffffff", fontSize: 16 },
+  x: { label: "X", bg: "#111111", color: "#ffffff", fontSize: 16 },
   youtube: { label: ">", bg: "#ff0033", color: "#ffffff", fontSize: 16 },
   pinterest: { label: "P", bg: "#e60023", color: "#ffffff", fontSize: 16 },
 };
@@ -709,7 +709,7 @@ function normalizeSocialPlatformName(name = "") {
 }
 
 function getSocialBadge(name = "") {
-  return SOCIAL_BADGES[normalizeSocialPlatformName(name)] || { label: String(name || "?").slice(0, 2).toUpperCase(), bg: "#475569", color: "#ffffff", fontSize: 12 };
+  return SOCIAL_BADGES[normalizeSocialPlatformName(name)] || { label: String(name || "?").slice(0, 2).toUpperCase(), bg: "#475569", color: "#ffffff", fontSize: 16 };
 }
 
 function pixelWidthFromPercent(totalWidth, percent = 100, horizontalPadding = 0) {
@@ -796,29 +796,63 @@ const BACKGROUND_REPEAT_OPTIONS = [
   { value: "repeat-y", label: "Repeat Y" },
 ];
 
+// Each entry with google: 'FamilyName:wght@...' will be loaded from Google Fonts
 const FONT_FAMILY_OPTIONS = [
-  { value: 'Arial, Helvetica, sans-serif', label: 'Arial' },
-  { value: 'Helvetica, Arial, sans-serif', label: 'Helvetica' },
-  { value: 'Verdana, Geneva, sans-serif', label: 'Verdana' },
-  { value: 'Tahoma, Geneva, sans-serif', label: 'Tahoma' },
-  { value: 'Trebuchet MS, Helvetica, sans-serif', label: 'Trebuchet MS' },
-  { value: 'Georgia, serif', label: 'Georgia' },
-  { value: 'Times New Roman, Times, serif', label: 'Times New Roman' },
-  { value: 'Garamond, serif', label: 'Garamond' },
-  { value: 'Palatino, URW Palladio L, serif', label: 'Palatino' },
-  { value: 'Courier New, Courier, monospace', label: 'Courier New' },
-  { value: 'Lucida Sans Unicode, Lucida Grande, sans-serif', label: 'Lucida Sans' },
-  { value: 'Segoe UI, Tahoma, sans-serif', label: 'Segoe UI' },
-  { value: 'Impact, Haettenschweiler, sans-serif', label: 'Impact' },
-  { value: 'Comic Sans MS, Comic Sans, cursive', label: 'Comic Sans MS' },
-  { value: 'Inter, Arial, sans-serif', label: 'Inter' },
-  { value: 'Roboto, Arial, sans-serif', label: 'Roboto' },
-  { value: 'Open Sans, Arial, sans-serif', label: 'Open Sans' },
-  { value: 'Lato, Arial, sans-serif', label: 'Lato' },
-  { value: 'Montserrat, Arial, sans-serif', label: 'Montserrat' },
-  { value: 'Poppins, Arial, sans-serif', label: 'Poppins' },
-  { value: 'Merriweather, Georgia, serif', label: 'Merriweather' },
-  { value: 'Playfair Display, Georgia, serif', label: 'Playfair Display' },
+  // ── System Sans-serif ──────────────────────────────────────────
+  { value: 'Arial, Helvetica, sans-serif',                       label: 'Arial',               cat: 'System' },
+  { value: 'Helvetica, Arial, sans-serif',                       label: 'Helvetica',           cat: 'System' },
+  { value: 'Verdana, Geneva, sans-serif',                        label: 'Verdana',             cat: 'System' },
+  { value: 'Tahoma, Geneva, sans-serif',                         label: 'Tahoma',              cat: 'System' },
+  { value: 'Trebuchet MS, Helvetica, sans-serif',                label: 'Trebuchet MS',        cat: 'System' },
+  { value: 'Segoe UI, Tahoma, sans-serif',                       label: 'Segoe UI',            cat: 'System' },
+  { value: 'Impact, Haettenschweiler, sans-serif',               label: 'Impact',              cat: 'System' },
+  { value: 'Lucida Sans Unicode, Lucida Grande, sans-serif',     label: 'Lucida Sans',         cat: 'System' },
+  // ── System Serif ───────────────────────────────────────────────
+  { value: 'Georgia, serif',                                     label: 'Georgia',             cat: 'System Serif' },
+  { value: 'Times New Roman, Times, serif',                      label: 'Times New Roman',     cat: 'System Serif' },
+  { value: 'Garamond, serif',                                    label: 'Garamond',            cat: 'System Serif' },
+  { value: 'Palatino, URW Palladio L, serif',                    label: 'Palatino',            cat: 'System Serif' },
+  // ── Monospace ──────────────────────────────────────────────────
+  { value: 'Courier New, Courier, monospace',                    label: 'Courier New',         cat: 'Monospace' },
+  { value: 'Roboto Mono, Courier New, monospace',                label: 'Roboto Mono',         cat: 'Monospace', google: 'Roboto+Mono:wght@400;500' },
+  { value: 'Source Code Pro, Courier New, monospace',            label: 'Source Code Pro',     cat: 'Monospace', google: 'Source+Code+Pro:wght@400;500' },
+  { value: 'JetBrains Mono, Courier New, monospace',             label: 'JetBrains Mono',      cat: 'Monospace', google: 'JetBrains+Mono:wght@400;500' },
+  // ── Popular Sans-serif ─────────────────────────────────────────
+  { value: 'Inter, Arial, sans-serif',                           label: 'Inter',               cat: 'Sans-serif', google: 'Inter:wght@400;600' },
+  { value: 'Roboto, Arial, sans-serif',                          label: 'Roboto',              cat: 'Sans-serif', google: 'Roboto:wght@400;700' },
+  { value: 'Open Sans, Arial, sans-serif',                       label: 'Open Sans',           cat: 'Sans-serif', google: 'Open+Sans:wght@400;600' },
+  { value: 'Lato, Arial, sans-serif',                            label: 'Lato',                cat: 'Sans-serif', google: 'Lato:wght@400;700' },
+  { value: 'Montserrat, Arial, sans-serif',                      label: 'Montserrat',          cat: 'Sans-serif', google: 'Montserrat:wght@400;600' },
+  { value: 'Poppins, Arial, sans-serif',                         label: 'Poppins',             cat: 'Sans-serif', google: 'Poppins:wght@400;600' },
+  { value: 'Nunito, Arial, sans-serif',                          label: 'Nunito',              cat: 'Sans-serif', google: 'Nunito:wght@400;600' },
+  { value: 'Raleway, Arial, sans-serif',                         label: 'Raleway',             cat: 'Sans-serif', google: 'Raleway:wght@400;600' },
+  { value: 'Ubuntu, Arial, sans-serif',                          label: 'Ubuntu',              cat: 'Sans-serif', google: 'Ubuntu:wght@400;500' },
+  { value: 'Source Sans 3, Arial, sans-serif',                   label: 'Source Sans 3',       cat: 'Sans-serif', google: 'Source+Sans+3:wght@400;600' },
+  { value: 'DM Sans, Arial, sans-serif',                         label: 'DM Sans',             cat: 'Sans-serif', google: 'DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500' },
+  { value: 'Work Sans, Arial, sans-serif',                       label: 'Work Sans',           cat: 'Sans-serif', google: 'Work+Sans:wght@400;600' },
+  { value: 'Outfit, Arial, sans-serif',                          label: 'Outfit',              cat: 'Sans-serif', google: 'Outfit:wght@400;500' },
+  { value: 'Plus Jakarta Sans, Arial, sans-serif',               label: 'Plus Jakarta Sans',   cat: 'Sans-serif', google: 'Plus+Jakarta+Sans:wght@400;600' },
+  { value: 'Figtree, Arial, sans-serif',                         label: 'Figtree',             cat: 'Sans-serif', google: 'Figtree:wght@400;500' },
+  { value: 'Manrope, Arial, sans-serif',                         label: 'Manrope',             cat: 'Sans-serif', google: 'Manrope:wght@400;500' },
+  // ── Serif ──────────────────────────────────────────────────────
+  { value: 'Merriweather, Georgia, serif',                       label: 'Merriweather',        cat: 'Serif', google: 'Merriweather:wght@400;700' },
+  { value: 'Playfair Display, Georgia, serif',                   label: 'Playfair Display',    cat: 'Serif', google: 'Playfair+Display:wght@400;700' },
+  { value: 'Lora, Georgia, serif',                               label: 'Lora',                cat: 'Serif', google: 'Lora:wght@400;600' },
+  { value: 'Libre Baskerville, Georgia, serif',                  label: 'Libre Baskerville',   cat: 'Serif', google: 'Libre+Baskerville:wght@400;700' },
+  { value: 'EB Garamond, Georgia, serif',                        label: 'EB Garamond',         cat: 'Serif', google: 'EB+Garamond:wght@400;600' },
+  { value: 'Crimson Text, Georgia, serif',                       label: 'Crimson Text',        cat: 'Serif', google: 'Crimson+Text:wght@400;600' },
+  { value: 'Cormorant Garamond, Georgia, serif',                 label: 'Cormorant Garamond',  cat: 'Serif', google: 'Cormorant+Garamond:wght@400;600' },
+  // ── Display ────────────────────────────────────────────────────
+  { value: 'Oswald, Arial, sans-serif',                          label: 'Oswald',              cat: 'Display', google: 'Oswald:wght@400;500' },
+  { value: 'Bebas Neue, Arial, sans-serif',                      label: 'Bebas Neue',          cat: 'Display', google: 'Bebas+Neue' },
+  { value: 'Barlow, Arial, sans-serif',                          label: 'Barlow',              cat: 'Display', google: 'Barlow:wght@400;600' },
+  { value: 'Exo 2, Arial, sans-serif',                           label: 'Exo 2',               cat: 'Display', google: 'Exo+2:wght@400;600' },
+  // ── Handwriting ────────────────────────────────────────────────
+  { value: 'Dancing Script, cursive',                            label: 'Dancing Script',      cat: 'Handwriting', google: 'Dancing+Script:wght@400;600' },
+  { value: 'Pacifico, cursive',                                  label: 'Pacifico',            cat: 'Handwriting', google: 'Pacifico' },
+  { value: 'Caveat, cursive',                                    label: 'Caveat',              cat: 'Handwriting', google: 'Caveat:wght@400;600' },
+  { value: 'Satisfy, cursive',                                   label: 'Satisfy',             cat: 'Handwriting', google: 'Satisfy' },
+  { value: 'Comic Sans MS, Comic Sans, cursive',                 label: 'Comic Sans MS',       cat: 'Handwriting' },
 ];
 
 let activeRichTextApi = null;
@@ -1900,7 +1934,7 @@ function canvasControlChipStyle({ emphasis = false, compact = false } = {}) {
     color: "#0f172a",
     fontSize: compact ? 11 : 12,
     lineHeight: 1.2,
-    fontWeight: 800,
+    fontWeight: 600,
     boxShadow: "0 6px 16px rgba(15,23,42,0.16)",
     maxWidth: "100%",
     textAlign: "center",
@@ -2120,13 +2154,13 @@ function textVariantStyle(variant = "body", fontSize = 18) {
   const size = Number(fontSize) || 18;
   switch (variant) {
     case "headline":
-      return { fontSize: size, fontWeight: 800, lineHeight: 1.15 };
+      return { fontSize: size, fontWeight: 600, lineHeight: 1.15 };
     case "h1":
-      return { fontSize: size, fontWeight: 800, lineHeight: 1.2 };
+      return { fontSize: size, fontWeight: 600, lineHeight: 1.2 };
     case "h2":
-      return { fontSize: size, fontWeight: 700, lineHeight: 1.25 };
+      return { fontSize: size, fontWeight: 600, lineHeight: 1.25 };
     case "h3":
-      return { fontSize: size, fontWeight: 700, lineHeight: 1.3 };
+      return { fontSize: size, fontWeight: 600, lineHeight: 1.3 };
     case "small":
       return { fontSize: size, fontWeight: 500, lineHeight: 1.6 };
     case "body":
@@ -2617,7 +2651,7 @@ const CANVAS = {
                   <button
                     type="button"
                     onClick={(event) => { event.stopPropagation(); onImg("logoSrc"); }}
-                    style={{ position: "absolute", top: 8, left: 8, border: "none", borderRadius: 999, background: "rgba(15,23,42,0.82)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "6px 10px", cursor: "pointer", zIndex: 3 }}
+                    style={{ position: "absolute", top: 8, left: 8, border: "none", borderRadius: 999, background: "rgba(15,23,42,0.82)", color: "#fff", fontSize: 16, fontWeight: 600, padding: "6px 10px", cursor: "pointer", zIndex: 3 }}
                   >
                     Replace Logo
                   </button>
@@ -2631,7 +2665,7 @@ const CANVAS = {
           as="h1"
           value={props.title || "Email Title"}
           onChange={(v) => onPatch?.({ title: v })}
-          style={{ margin: "12px 0 6px", color: titleColor, fontSize: props.titleSize || 28, fontWeight: 700, lineHeight: 1.15, textShadow: "0 2px 8px rgba(15,23,42,0.22)" }}
+          style={{ margin: "12px 0 6px", color: titleColor, fontSize: props.titleSize || 28, fontWeight: 600, lineHeight: 1.15, textShadow: "0 2px 8px rgba(15,23,42,0.22)" }}
         />
         <InlineEditableText
           as="p"
@@ -2791,7 +2825,7 @@ const CANVAS = {
                 </CanvasControlBadge>
               )}
               <div style={{ padding: "10px 12px", borderRadius: 14, background: isSelected ? "rgba(15,23,42,0.28)" : "rgba(15,23,42,0.16)", outline: isSelected ? "1px dashed rgba(255,255,255,0.45)" : "none", boxShadow: "0 10px 24px rgba(15,23,42,0.18)" }}>
-                <InlineEditableText as="div" value={overlayTitle} onChange={(v) => onPatch?.({ overlayEnabled: true, overlayTitle: v })} style={{ fontSize: props.overlayTitleSize || 24, fontWeight: 800, lineHeight: 1.15, marginBottom: overlayText ? 8 : 0, color: overlayTitleColor, textShadow: "0 2px 8px rgba(15,23,42,0.4)" }} />
+                <InlineEditableText as="div" value={overlayTitle} onChange={(v) => onPatch?.({ overlayEnabled: true, overlayTitle: v })} style={{ fontSize: props.overlayTitleSize || 24, fontWeight: 600, lineHeight: 1.15, marginBottom: overlayText ? 8 : 0, color: overlayTitleColor, textShadow: "0 2px 8px rgba(15,23,42,0.4)" }} />
                 <InlineEditableText as="div" value={overlayText} onChange={(v) => onPatch?.({ overlayEnabled: true, overlayText: v })} style={{ fontSize: props.overlayTextSize || 14, fontWeight: 600, lineHeight: 1.5, color: overlayTextColor, textShadow: "0 2px 8px rgba(15,23,42,0.35)" }} />
               </div>
             </div>
@@ -2863,8 +2897,8 @@ const CANVAS = {
             alignItems: "center",
             justifyContent: "center",
             color: "#64748b",
-            fontSize: 13,
-            fontWeight: 700,
+            fontSize: 16,
+            fontWeight: 600,
             letterSpacing: "0.04em",
             textTransform: "uppercase",
           }}
@@ -2933,7 +2967,7 @@ const CANVAS = {
           as="h2"
           value={props.headline || "Your Big Headline"}
           onChange={(v) => onPatch?.({ headline: v })}
-          style={{ margin: "16px 0 10px", color: headlineColor, fontSize: props.headlineSize || 30, fontWeight: 700, lineHeight: 1.15, textShadow: "0 2px 8px rgba(15,23,42,0.28)" }}
+          style={{ margin: "16px 0 10px", color: headlineColor, fontSize: props.headlineSize || 30, fontWeight: 600, lineHeight: 1.15, textShadow: "0 2px 8px rgba(15,23,42,0.28)" }}
         />
         <InlineEditableText
           as="p"
@@ -3130,7 +3164,7 @@ const CANVAS = {
                 onChange={(v) => onPatch?.({ headline: v })}
                 style={{
                   fontSize: props.headlineSize || 30,
-                  fontWeight: 800,
+                  fontWeight: 600,
                   lineHeight: 1.15,
                   color: headlineColor,
                   textShadow: "0 2px 8px rgba(15,23,42,0.35)",
@@ -3183,7 +3217,7 @@ const CANVAS = {
             children: (
               <div style={{ display: "flex", alignItems: "center", justifyContent: props.align === "left" ? "flex-start" : props.align === "right" ? "flex-end" : "center", width: "100%", height: "100%" }}>
                 <CanvasLinkShell href={props.href}>
-                  <InlineEditableText as="span" value={props.buttonText || "Learn More"} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "10px 22px", background: props.buttonBgColor || "#2563eb", color: buttonTextColor, borderRadius: 999, fontSize: 15, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
+                  <InlineEditableText as="span" value={props.buttonText || "Learn More"} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "10px 22px", background: props.buttonBgColor || "#2563eb", color: buttonTextColor, borderRadius: 999, fontSize: 16, fontWeight: 600, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
                 </CanvasLinkShell>
               </div>
             ),
@@ -3200,8 +3234,8 @@ const CANVAS = {
           <ImgBtn src={props.avatarSrc} onClick={() => onImg("avatarSrc")} label="Avatar" style={{ borderRadius: 999 }} />
         </div>
         <InlineEditableText as="div" value={props.quote} onChange={(v) => onPatch?.({ quote: v })} style={{ fontSize: 20, fontWeight: 600, fontStyle: "italic", lineHeight: 1.6, color: quoteTextColor, marginBottom: 10 }} />
-        <InlineEditableText as="div" value={props.author} onChange={(v) => onPatch?.({ author: v })} style={{ fontSize: 16, fontWeight: 800, color: quoteTextColor }} />
-        <InlineEditableText as="div" value={props.role} onChange={(v) => onPatch?.({ role: v })} style={{ fontSize: 14, fontWeight: 600, color: quoteTextColor, opacity: 0.75 }} />
+        <InlineEditableText as="div" value={props.author} onChange={(v) => onPatch?.({ author: v })} style={{ fontSize: 16, fontWeight: 600, color: quoteTextColor }} />
+        <InlineEditableText as="div" value={props.role} onChange={(v) => onPatch?.({ role: v })} style={{ fontSize: 16, fontWeight: 600, color: quoteTextColor, opacity: 0.75 }} />
       </div>
     );
   },
@@ -3210,13 +3244,13 @@ const CANVAS = {
     const promoAccentTextColor = ensureReadableColor("#111827", props.accentColor || "#f59e0b", "#ffffff", "#111827");
     return (
       <div style={{ background: props.bgColor || "#111827", color: promoTextColor, borderRadius: 14, padding: 24, textAlign: "center" }}>
-        <div style={{ display: "inline-block", background: props.accentColor || "#f59e0b", color: promoAccentTextColor, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800, marginBottom: 12 }}>{props.badge}</div>
-        <InlineEditableText as="div" value={props.headline} onChange={(v) => onPatch?.({ headline: v })} style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.2, marginBottom: 8, color: promoTextColor }} />
-        <InlineEditableText as="div" value={props.details} onChange={(v) => onPatch?.({ details: v })} style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, opacity: 0.9, marginBottom: 14, color: promoTextColor }} />
-        <InlineEditableText as="div" value={props.code} onChange={(v) => onPatch?.({ code: v })} style={{ display: "inline-block", border: `2px dashed ${props.accentColor || "#f59e0b"}`, borderRadius: 10, padding: "8px 14px", fontSize: 22, fontWeight: 800, letterSpacing: "0.08em", marginBottom: 14, color: promoTextColor }} />
+        <div style={{ display: "inline-block", background: props.accentColor || "#f59e0b", color: promoAccentTextColor, padding: "6px 10px", borderRadius: 999, fontSize: 16, fontWeight: 600, marginBottom: 12 }}>{props.badge}</div>
+        <InlineEditableText as="div" value={props.headline} onChange={(v) => onPatch?.({ headline: v })} style={{ fontSize: 28, fontWeight: 600, lineHeight: 1.2, marginBottom: 8, color: promoTextColor }} />
+        <InlineEditableText as="div" value={props.details} onChange={(v) => onPatch?.({ details: v })} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.6, opacity: 0.9, marginBottom: 14, color: promoTextColor }} />
+        <InlineEditableText as="div" value={props.code} onChange={(v) => onPatch?.({ code: v })} style={{ display: "inline-block", border: `2px dashed ${props.accentColor || "#f59e0b"}`, borderRadius: 10, padding: "8px 14px", fontSize: 22, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 14, color: promoTextColor }} />
         <div>
           <CanvasLinkShell href={props.href}>
-            <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "11px 24px", background: props.accentColor || "#f59e0b", color: promoAccentTextColor, borderRadius: 999, fontSize: 15, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
+            <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "11px 24px", background: props.accentColor || "#f59e0b", color: promoAccentTextColor, borderRadius: 999, fontSize: 16, fontWeight: 600, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
           </CanvasLinkShell>
         </div>
       </div>
@@ -3227,10 +3261,10 @@ const CANVAS = {
     return (
       <div style={{ background: props.bgColor || "#0f172a", color: videoTextColor, borderRadius: 12, padding: 18, textAlign: "center" }}>
         <ImgBtn src={props.thumbnailSrc} onClick={() => onImg("thumbnailSrc")} label="Add video thumbnail" style={{ marginBottom: 14, borderRadius: 12 }} />
-        <InlineEditableText as="div" value={props.title} onChange={(v) => onPatch?.({ title: v })} style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: videoTextColor }} />
-        <InlineEditableText as="div" value={props.caption} onChange={(v) => onPatch?.({ caption: v })} style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, opacity: 0.9, marginBottom: 12, color: videoTextColor }} />
+        <InlineEditableText as="div" value={props.title} onChange={(v) => onPatch?.({ title: v })} style={{ fontSize: 24, fontWeight: 600, marginBottom: 8, color: videoTextColor }} />
+        <InlineEditableText as="div" value={props.caption} onChange={(v) => onPatch?.({ caption: v })} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.6, opacity: 0.9, marginBottom: 12, color: videoTextColor }} />
         <CanvasLinkShell href={props.href}>
-          <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "10px 22px", background: "#ef4444", color: "#fff", borderRadius: 999, fontSize: 15, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
+          <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "42px", padding: "10px 22px", background: "#ef4444", color: "#fff", borderRadius: 999, fontSize: 16, fontWeight: 600, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
         </CanvasLinkShell>
       </div>
     );
@@ -3239,14 +3273,14 @@ const CANVAS = {
     const contactTextColor = ensureReadableColor(props.textColor || "#0f172a", props.bgColor || "#f8fafc", "#ffffff", "#0f172a");
     return (
       <div style={{ background: props.bgColor || "#f8fafc", color: contactTextColor, borderRadius: 12, padding: 20 }}>
-        <InlineEditableText as="div" value={props.heading} onChange={(v) => onPatch?.({ heading: v })} style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: contactTextColor }} />
-        <InlineEditableText as="div" value={props.name} onChange={(v) => onPatch?.({ name: v })} style={{ fontSize: 17, fontWeight: 800, color: contactTextColor }} />
-        <InlineEditableText as="div" value={props.role} onChange={(v) => onPatch?.({ role: v })} style={{ fontSize: 14, fontWeight: 600, opacity: 0.75, marginBottom: 10, color: contactTextColor }} />
-        <InlineEditableText as="div" value={props.email} onChange={(v) => onPatch?.({ email: v })} style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: contactTextColor }} />
-        <InlineEditableText as="div" value={props.phone} onChange={(v) => onPatch?.({ phone: v })} style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: contactTextColor }} />
-        <InlineEditableText as="div" value={props.address} onChange={(v) => onPatch?.({ address: v })} style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.6, marginBottom: 12, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.heading} onChange={(v) => onPatch?.({ heading: v })} style={{ fontSize: 24, fontWeight: 600, marginBottom: 8, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.name} onChange={(v) => onPatch?.({ name: v })} style={{ fontSize: 17, fontWeight: 600, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.role} onChange={(v) => onPatch?.({ role: v })} style={{ fontSize: 16, fontWeight: 600, opacity: 0.75, marginBottom: 10, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.email} onChange={(v) => onPatch?.({ email: v })} style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.phone} onChange={(v) => onPatch?.({ phone: v })} style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, color: contactTextColor }} />
+        <InlineEditableText as="div" value={props.address} onChange={(v) => onPatch?.({ address: v })} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.6, marginBottom: 12, color: contactTextColor }} />
         <CanvasLinkShell href={props.href}>
-          <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "40px", padding: "10px 20px", background: "#2563eb", color: "#fff", borderRadius: 999, fontSize: 15, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
+          <InlineEditableText as="span" value={props.buttonText} onChange={(v) => onPatch?.({ buttonText: v })} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minHeight: "40px", padding: "10px 20px", background: "#2563eb", color: "#fff", borderRadius: 999, fontSize: 16, fontWeight: 600, lineHeight: 1.2, textAlign: "center", boxSizing: "border-box" }} />
         </CanvasLinkShell>
       </div>
     );
@@ -3270,7 +3304,7 @@ const CANVAS = {
                       const next = (props.columns || []).map((entry, idx) => idx === absoluteIndex ? { ...entry, title: v } : entry);
                       onPatch?.({ columns: next });
                     }}
-                    style={{ fontWeight: 700, fontSize: 16, color: "#1e293b", marginBottom: 4 }}
+                    style={{ fontWeight: 600, fontSize: 16, color: "#1e293b", marginBottom: 4 }}
                   />
                   <InlineEditableText
                     as="div"
@@ -3279,7 +3313,7 @@ const CANVAS = {
                       const next = (props.columns || []).map((entry, idx) => idx === absoluteIndex ? { ...entry, text: v } : entry);
                       onPatch?.({ columns: next });
                     }}
-                    style={{ fontSize: 15, fontWeight: 600, color: "#475569", lineHeight: 1.5 }}
+                    style={{ fontSize: 16, fontWeight: 600, color: "#475569", lineHeight: 1.5 }}
                   />
                 </div>
               );
@@ -3311,7 +3345,7 @@ const CANVAS = {
                         const next = (props.items || []).map((entry, idx) => idx === absoluteIndex ? { ...entry, title: v } : entry);
                         onPatch?.({ items: next });
                       }}
-                      style={{ fontWeight: 700, fontSize: 16, color: "#1e293b", marginBottom: 5 }}
+                      style={{ fontWeight: 600, fontSize: 16, color: "#1e293b", marginBottom: 5 }}
                     />
                     <InlineEditableText
                       as="div"
@@ -3320,7 +3354,7 @@ const CANVAS = {
                         const next = (props.items || []).map((entry, idx) => idx === absoluteIndex ? { ...entry, text: v } : entry);
                         onPatch?.({ items: next });
                       }}
-                      style={{ fontSize: 15, fontWeight: 600, color: "#475569", lineHeight: 1.5 }}
+                      style={{ fontSize: 16, fontWeight: 600, color: "#475569", lineHeight: 1.5 }}
                     />
                   </div>
                 </div>
@@ -3346,14 +3380,14 @@ const CANVAS = {
           value={props.title}
           onChange={(v) => onPatch?.({ title: v, overlayEnabled: false })}
           placeholder="Card headline"
-          style={{ fontWeight: 700, fontSize: 16, color: bodyTitleColor, marginBottom: 4 }}
+          style={{ fontWeight: 600, fontSize: 16, color: bodyTitleColor, marginBottom: 4 }}
         />
         <InlineEditableText
           as="div"
           value={props.text}
           onChange={(v) => onPatch?.({ text: v, overlayEnabled: false })}
           placeholder="Card description"
-          style={{ fontSize: 15, fontWeight: 600, color: bodyTextColor, lineHeight: 1.5 }}
+          style={{ fontSize: 16, fontWeight: 600, color: bodyTextColor, lineHeight: 1.5 }}
         />
       </div>
     );
@@ -3375,14 +3409,14 @@ const CANVAS = {
             value={props.title}
             onChange={(v) => onPatch?.({ title: v, overlayEnabled: false })}
             placeholder="List headline"
-            style={{ fontWeight: 700, fontSize: 16, color: bodyTitleColor, marginBottom: 5 }}
+            style={{ fontWeight: 600, fontSize: 16, color: bodyTitleColor, marginBottom: 5 }}
           />
           <InlineEditableText
             as="div"
             value={props.text}
             onChange={(v) => onPatch?.({ text: v, overlayEnabled: false })}
             placeholder="List description"
-            style={{ fontSize: 15, fontWeight: 600, color: bodyTextColor, lineHeight: 1.5 }}
+            style={{ fontSize: 16, fontWeight: 600, color: bodyTextColor, lineHeight: 1.5 }}
           />
         </div>
       </div>
@@ -3456,7 +3490,7 @@ function Field({ label, children }) {
 
 function InlineEditHint({ children }) {
   return (
-    <div style={{ margin: "-2px 0 12px", fontSize: 13, fontWeight: 700, color: "#64748b", lineHeight: 1.5 }}>
+    <div style={{ margin: "-2px 0 12px", fontSize: 16, fontWeight: 600, color: "#64748b", lineHeight: 1.5 }}>
       {children}
     </div>
   );
@@ -3469,7 +3503,7 @@ const INSPECTOR_INPUT_STYLE = {
   borderRadius: 8,
   padding: "0 12px",
   fontSize: 16,
-  fontWeight: 700,
+  fontWeight: 600,
   color: "#0f172a",
   background: "#ffffff",
   boxSizing: "border-box",
@@ -3576,7 +3610,7 @@ function ColIn({ value, onChange, allowTransparent = false }) {
         <button
           type="button"
           onClick={matchColour}
-          style={{ height: 32, padding: "0 10px", border: "1px solid #2563eb", borderRadius: 8, background: "#eff6ff", color: "#1d4ed8", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+          style={{ height: 32, padding: "0 10px", border: "1px solid #2563eb", borderRadius: 8, background: "#eff6ff", color: "#1d4ed8", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
         >
           🎯 Match Colour
         </button>
@@ -3584,7 +3618,7 @@ function ColIn({ value, onChange, allowTransparent = false }) {
           <button
             type="button"
             onClick={() => applyColor("transparent")}
-            style={{ height: 32, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+            style={{ height: 32, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
           >
             Transparent
           </button>
@@ -3592,7 +3626,7 @@ function ColIn({ value, onChange, allowTransparent = false }) {
         <button
           type="button"
           onClick={() => rememberColor(current)}
-          style={{ height: 32, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#334155", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+          style={{ height: 32, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
         >
           ★ Save Colour
         </button>
@@ -3622,7 +3656,7 @@ function ColIn({ value, onChange, allowTransparent = false }) {
       </div>
       {matchedColors.length > 0 && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Matched Colours</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Matched Colours</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {matchedColors.map((color) => (
               <button
@@ -3656,7 +3690,7 @@ function OverlayColorField({ value, onChange }) {
     <div style={{ display: "grid", gap: 10 }}>
       <ColIn value={hex} onChange={(next) => onChange(composeOverlayColor(next, opacity))} allowTransparent />
       <div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Opacity</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Opacity</div>
         <SlideIn value={Math.round(opacity * 100)} onChange={(next) => onChange(composeOverlayColor(hex, next / 100))} min={0} max={100} unit="%" />
       </div>
     </div>
@@ -3703,7 +3737,7 @@ function NumIn({ value, onChange, min = 0, max = 9999, unit = "px", step = 1 }) 
         }}
         style={{ ...INSPECTOR_INPUT_STYLE, flex: 1 }}
       />
-      <span style={{ minWidth: 34, fontSize: 14, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>{unit}</span>
+      <span style={{ minWidth: 34, fontSize: 16, fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>{unit}</span>
     </div>
   );
 }
@@ -3747,7 +3781,7 @@ function ToolbarSelect({ label, value, onChange, options, width = 180, beforeAct
 
   return (
     <label data-direct-action="true" style={{ display: "flex", flexDirection: "column", gap: 4, width, minWidth: width, flexShrink: 0 }}>
-      <span style={{ fontSize: 10, fontWeight: 900, color: "#854d0e", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
+      <span style={{ fontSize: 16, fontWeight: 600, color: "#854d0e", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
       <div style={{ position: "relative", width: "100%", height: 34 }}>
         <button
           type="button"
@@ -3765,8 +3799,8 @@ function ToolbarSelect({ label, value, onChange, options, width = 180, beforeAct
             borderRadius: 10,
             background: "#fffef7",
             color: "#0f172a",
-            fontSize: 14,
-            fontWeight: 800,
+            fontSize: 16,
+            fontWeight: 600,
             boxSizing: "border-box",
             cursor: "pointer",
             overflow: "hidden",
@@ -3777,7 +3811,7 @@ function ToolbarSelect({ label, value, onChange, options, width = 180, beforeAct
           }}
         >
           {selectedLabel}
-          <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#854d0e" }}>▼</span>
+          <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "#854d0e" }}>▼</span>
         </button>
         <select
           ref={selectRef}
@@ -3805,8 +3839,8 @@ function ToolbarSelect({ label, value, onChange, options, width = 180, beforeAct
             margin: 0,
             background: "transparent",
             color: "transparent",
-            fontSize: 14,
-            fontWeight: 800,
+            fontSize: 16,
+            fontWeight: 600,
             boxSizing: "border-box",
             cursor: "default",
             WebkitTextFillColor: "transparent",
@@ -3846,7 +3880,7 @@ function ToolbarColorDropdown({ label, value, onChange, matchedColors = [], stan
 
   return (
     <div data-direct-action="true" style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 168, flexShrink: 0 }}>
-      <span style={{ fontSize: 10, fontWeight: 900, color: "#854d0e", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
+      <span style={{ fontSize: 16, fontWeight: 600, color: "#854d0e", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 34 }}>
         <span style={{ width: 18, height: 18, borderRadius: 999, border: "1px solid rgba(15,23,42,0.18)", background: current === "transparent" ? "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)" : current, flexShrink: 0 }} />
         <input
@@ -3864,7 +3898,7 @@ function ToolbarColorDropdown({ label, value, onChange, matchedColors = [], stan
               e.stopPropagation();
               applyColor("transparent");
             }}
-            style={{ height: 34, padding: "0 10px", border: "1px solid #d6b54c", borderRadius: 8, background: "#fff", color: "#0f172a", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            style={{ height: 34, padding: "0 10px", border: "1px solid #d6b54c", borderRadius: 8, background: "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
           >
             No fill
           </button>
@@ -4041,8 +4075,8 @@ function TextInspector({ blockId, props, patch, upload, edit, library, aiImage }
     border: "1px solid #cbd5e1",
     background: "#ffffff",
     color: "#0f172a",
-    fontSize: 14,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
   };
   const press = (action) => (e) => {
@@ -4072,7 +4106,7 @@ function TextInspector({ blockId, props, patch, upload, edit, library, aiImage }
 
   return <>
     {props.rawHtml ? (
-      <div style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 14, fontWeight: 700, lineHeight: 1.5 }}>
+      <div style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
         This imported HTML layout has limited editing. Use the editable template themes for full colour and image controls.
       </div>
     ) : (
@@ -4094,23 +4128,23 @@ function TextInspector({ blockId, props, patch, upload, edit, library, aiImage }
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.15fr 84px", gap: 8, alignItems: "end" }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Style</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Style</div>
           <SelIn value={props.variant || "body"} onChange={v => patch({ variant: v })} options={TEXT_VARIANT_OPTIONS} />
         </div>
 
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Font</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Font</div>
           <SelIn value={props.fontFamily || "Arial, Helvetica, sans-serif"} onChange={applyFontFamily} options={FONT_FAMILY_OPTIONS} />
         </div>
 
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Size</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Size</div>
           <SelIn value={String(props.fontSize || 18)} onChange={applyTextSize} options={TEXT_SIZE_OPTIONS} />
         </div>
       </div>
 
       <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Alignment</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Alignment</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {alignBtn("Left", "left")}
           {alignBtn("Center", "center")}
@@ -4140,11 +4174,11 @@ function ImageInspector({ props, patch, upload, edit, library, aiImage }) {
     <Field label="Layer Options">
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={enableTextLayer} style={{ flex: 1, height: 36, border: props.overlayEnabled ? "2px solid #2563eb" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayEnabled ? "#eff6ff" : "#fff", color: "#0f172a", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Text Layer On</button>
-          <button type="button" onClick={() => patch({ overlayEnabled: false })} style={{ flex: 1, height: 36, border: !props.overlayEnabled ? "2px solid #2563eb" : "1px solid #cbd5e1", borderRadius: 8, background: !props.overlayEnabled ? "#eff6ff" : "#fff", color: "#0f172a", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Text Layer Off</button>
+          <button type="button" onClick={enableTextLayer} style={{ flex: 1, height: 36, border: props.overlayEnabled ? "2px solid #2563eb" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayEnabled ? "#eff6ff" : "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Text Layer On</button>
+          <button type="button" onClick={() => patch({ overlayEnabled: false })} style={{ flex: 1, height: 36, border: !props.overlayEnabled ? "2px solid #2563eb" : "1px solid #cbd5e1", borderRadius: 8, background: !props.overlayEnabled ? "#eff6ff" : "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Text Layer Off</button>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => { if (props.overlayImageSrc) patch({ overlayImageSrc: "" }); else library("overlayImageSrc", null); }} style={{ flex: 1, height: 36, border: props.overlayImageSrc ? "2px solid #7c3aed" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayImageSrc ? "#f5f3ff" : "#fff", color: "#0f172a", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{props.overlayImageSrc ? "Remove Top Layer" : "Add Top Layer"}</button>
+          <button type="button" onClick={() => { if (props.overlayImageSrc) patch({ overlayImageSrc: "" }); else library("overlayImageSrc", null); }} style={{ flex: 1, height: 36, border: props.overlayImageSrc ? "2px solid #7c3aed" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayImageSrc ? "#f5f3ff" : "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>{props.overlayImageSrc ? "Remove Top Layer" : "Add Top Layer"}</button>
         </div>
       </div>
     </Field>
@@ -4181,14 +4215,14 @@ function ButtonInspector({ props, patch }) {
       <button
         type="button"
         onClick={() => patch({ bgColor: "transparent" })}
-        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
       >
         Transparent Button
       </button>
       <button
         type="button"
         onClick={() => patch({ blockBgColor: "transparent" })}
-        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
       >
         Transparent Block
       </button>
@@ -4253,8 +4287,8 @@ function ImageTextInspector({ props, patch, upload, edit, library, aiImage }) {
     <Field label="Layer Options">
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => library("overlayImageSrc", null)} style={{ flex: 1, height: 36, border: props.overlayImageSrc ? "2px solid #7c3aed" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayImageSrc ? "#f5f3ff" : "#fff", color: "#0f172a", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{props.overlayImageSrc ? "Change Top Layer" : "Add Top Layer"}</button>
-          {props.overlayImageSrc && <button type="button" onClick={() => patch({ overlayImageSrc: "" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Remove Top Layer</button>}
+          <button type="button" onClick={() => library("overlayImageSrc", null)} style={{ flex: 1, height: 36, border: props.overlayImageSrc ? "2px solid #7c3aed" : "1px solid #cbd5e1", borderRadius: 8, background: props.overlayImageSrc ? "#f5f3ff" : "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>{props.overlayImageSrc ? "Change Top Layer" : "Add Top Layer"}</button>
+          {props.overlayImageSrc && <button type="button" onClick={() => patch({ overlayImageSrc: "" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Remove Top Layer</button>}
         </div>
       </div>
     </Field>
@@ -4330,8 +4364,8 @@ function GridInspector({ props, patch, upload, edit, library, aiImage }) {
     </InlineEditHint>
     <Field label="Section Background"><ColIn value={props.bgColor || "#ffffff"} onChange={v => patch({ bgColor: v })} allowTransparent /></Field>
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Section</button>
-          <button onClick={makeAllCardsTransparent} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>All Cards Transparent</button>
+          <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Section</button>
+          <button onClick={makeAllCardsTransparent} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>All Cards Transparent</button>
         </div>
     <Field label="Cards Per Row">
       <SelIn value={String(props.columnsPerRow || 2)} onChange={v => patch({ columnsPerRow: Number(v) })} options={[{ value: "1", label: "1 wide" }, { value: "2", label: "2 across" }, { value: "3", label: "3 across" }, { value: "4", label: "4 across" }]} />
@@ -4339,10 +4373,10 @@ function GridInspector({ props, patch, upload, edit, library, aiImage }) {
     {cols.map((col, i) => (
       <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, marginBottom: 16, position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#334155" }}>CARD {i + 1}</div>
+          <div style={{ fontWeight: 600, fontSize: 16, color: "#334155" }}>CARD {i + 1}</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button onClick={() => duplicateCol(i)} style={{ border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Copy</button>
-            {cols.length > 1 && <button onClick={() => removeCol(i)} style={{ border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Remove</button>}
+            <button onClick={() => duplicateCol(i)} style={{ border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 16, fontWeight: 600 }}>Copy</button>
+            {cols.length > 1 && <button onClick={() => removeCol(i)} style={{ border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 16, fontWeight: 600 }}>Remove</button>}
           </div>
         </div>
         <ImgField label="Image" value={col.imageSrc} onUpload={f => upload(f, "imageSrc_col", i)} onClear={() => setCol(i, "imageSrc", "")} onEdit={col.imageSrc ? () => edit("imageSrc_col", i, col.imageSrc) : null} onLibrary={() => library("imageSrc_col", i)} onAiImage={() => aiImage("imageSrc_col", i)} />
@@ -4350,7 +4384,7 @@ function GridInspector({ props, patch, upload, edit, library, aiImage }) {
         <Field label="Link"><TxtIn value={col.linkHref} onChange={v => setCol(i, "linkHref", v)} placeholder="https://…" /></Field>
       </div>
     ))}
-    <button onClick={addCol} style={{ width: "100%", height: 40, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>+ Add Card</button>
+    <button onClick={addCol} style={{ width: "100%", height: 40, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>+ Add Card</button>
   </>;
 }
 function ListInspector({ props, patch, upload, edit, library, aiImage }) {
@@ -4369,8 +4403,8 @@ function ListInspector({ props, patch, upload, edit, library, aiImage }) {
     </InlineEditHint>
     <Field label="Section Background"><ColIn value={props.bgColor || "#ffffff"} onChange={v => patch({ bgColor: v })} allowTransparent /></Field>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Section</button>
-      <button onClick={makeAllCardsTransparent} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>All Cards Transparent</button>
+      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Section</button>
+      <button onClick={makeAllCardsTransparent} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>All Cards Transparent</button>
     </div>
     <Field label="Items Per Row">
       <SelIn value={String(props.itemsPerRow || 1)} onChange={v => patch({ itemsPerRow: Number(v) })} options={[{ value: "1", label: "1 deep" }, { value: "2", label: "2 across" }, { value: "3", label: "3 across" }, { value: "4", label: "4 across" }]} />
@@ -4378,10 +4412,10 @@ function ListInspector({ props, patch, upload, edit, library, aiImage }) {
     {items.map((item, i) => (
       <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, marginBottom: 16, position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#334155" }}>ITEM {i + 1}</div>
+          <div style={{ fontWeight: 600, fontSize: 16, color: "#334155" }}>ITEM {i + 1}</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button onClick={() => duplicateItem(i)} style={{ border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Copy</button>
-            {items.length > 1 && <button onClick={() => removeItem(i)} style={{ border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Remove</button>}
+            <button onClick={() => duplicateItem(i)} style={{ border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 16, fontWeight: 600 }}>Copy</button>
+            {items.length > 1 && <button onClick={() => removeItem(i)} style={{ border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 16, fontWeight: 600 }}>Remove</button>}
           </div>
         </div>
         <ImgField label="Image" value={item.imageSrc} onUpload={f => upload(f, "imageSrc_item", i)} onClear={() => setItem(i, "imageSrc", "")} onEdit={item.imageSrc ? () => edit("imageSrc_item", i, item.imageSrc) : null} onLibrary={() => library("imageSrc_item", i)} onAiImage={() => aiImage("imageSrc_item", i)} />
@@ -4389,23 +4423,23 @@ function ListInspector({ props, patch, upload, edit, library, aiImage }) {
         <Field label="Link"><TxtIn value={item.linkHref} onChange={v => setItem(i, "linkHref", v)} placeholder="https://…" /></Field>
       </div>
     ))}
-    <button onClick={addItem} style={{ width: "100%", height: 40, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>+ Add Item</button>
+    <button onClick={addItem} style={{ width: "100%", height: 40, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>+ Add Item</button>
   </>;
 }
 function GridCardInspector({ props, patch, upload, edit, library, aiImage, patchCommon, addSibling, duplicateCurrent, removeCurrent }) {
   return <>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Add Card</button>
-      <button onClick={duplicateCurrent} style={{ height: 36, border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", color: "#334155", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Copy</button>
-      <button onClick={removeCurrent} style={{ height: 36, border: "1px solid #fecaca", borderRadius: 6, background: "#fff1f2", color: "#b91c1c", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Delete</button>
+      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>+ Add Card</button>
+      <button onClick={duplicateCurrent} style={{ height: 36, border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer", padding: "0 10px" }}>Copy</button>
+      <button onClick={removeCurrent} style={{ height: 36, border: "1px solid #fecaca", borderRadius: 6, background: "#fff1f2", color: "#b91c1c", fontSize: 16, fontWeight: 600, cursor: "pointer", padding: "0 10px" }}>Delete</button>
     </div>
     <InlineEditHint>
       Edit the card title and description directly on the canvas. Use this panel for image, link, layout, and background controls.
     </InlineEditHint>
     <Field label="Section Background"><ColIn value={props.sectionBgColor || "#ffffff"} onChange={v => patchCommon?.({ sectionBgColor: v })} allowTransparent /></Field>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Section</button>
-      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Card</button>
+      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Section</button>
+      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Card</button>
     </div>
     <Field label="Cards Per Row"><SelIn value={String(props.perRow || 2)} onChange={v => patchCommon?.({ perRow: Number(v) })} options={[{ value: "1", label: "1 wide" }, { value: "2", label: "2 across" }, { value: "3", label: "3 across" }, { value: "4", label: "4 across" }]} /></Field>
     <ImgField label="Image" value={props.imageSrc} onUpload={f => upload(f, "imageSrc")} onClear={() => patch({ imageSrc: "" })} onEdit={props.imageSrc ? () => edit("imageSrc", null, props.imageSrc) : null} onLibrary={() => library("imageSrc", null)} onAiImage={() => aiImage("imageSrc", null)} />
@@ -4418,17 +4452,17 @@ function GridCardInspector({ props, patch, upload, edit, library, aiImage, patch
 function ListCardInspector({ props, patch, upload, edit, library, aiImage, patchCommon, addSibling, duplicateCurrent, removeCurrent }) {
   return <>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>+ Add Item</button>
-      <button onClick={duplicateCurrent} style={{ height: 36, border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", color: "#334155", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Copy</button>
-      <button onClick={removeCurrent} style={{ height: 36, border: "1px solid #fecaca", borderRadius: 6, background: "#fff1f2", color: "#b91c1c", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "0 10px" }}>Delete</button>
+      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>+ Add Item</button>
+      <button onClick={duplicateCurrent} style={{ height: 36, border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer", padding: "0 10px" }}>Copy</button>
+      <button onClick={removeCurrent} style={{ height: 36, border: "1px solid #fecaca", borderRadius: 6, background: "#fff1f2", color: "#b91c1c", fontSize: 16, fontWeight: 600, cursor: "pointer", padding: "0 10px" }}>Delete</button>
     </div>
     <InlineEditHint>
       Edit the item title and description directly on the canvas. Use this panel for image, link, layout, and background controls.
     </InlineEditHint>
     <Field label="Section Background"><ColIn value={props.sectionBgColor || "#ffffff"} onChange={v => patchCommon?.({ sectionBgColor: v })} allowTransparent /></Field>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Section</button>
-      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Card</button>
+      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Section</button>
+      <button onClick={() => patch({ bgColor: "transparent" })} style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Card</button>
     </div>
     <Field label="Items Per Row"><SelIn value={String(props.perRow || 1)} onChange={v => patchCommon?.({ perRow: Number(v) })} options={[{ value: "1", label: "1 deep" }, { value: "2", label: "2 across" }, { value: "3", label: "3 across" }, { value: "4", label: "4 across" }]} /></Field>
     <ImgField label="Image" value={props.imageSrc} onUpload={f => upload(f, "imageSrc")} onClear={() => patch({ imageSrc: "" })} onEdit={props.imageSrc ? () => edit("imageSrc", null, props.imageSrc) : null} onLibrary={() => library("imageSrc", null)} onAiImage={() => aiImage("imageSrc", null)} />
@@ -4441,15 +4475,15 @@ function ListCardInspector({ props, patch, upload, edit, library, aiImage, patch
 function GroupedSectionInspector({ type, props, patchCommon, addSibling }) {
   const isGrid = type === "gridCard";
   return <>
-    <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 700, color: "#64748b", lineHeight: 1.5 }}>
+    <div style={{ marginBottom: 12, fontSize: 16, fontWeight: 600, color: "#64748b", lineHeight: 1.5 }}>
       You are editing the whole {isGrid ? "grid" : "list"} section. Click the headline on the canvas to edit its wording directly.
     </div>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{isGrid ? "+ Add Card" : "+ Add Item"}</button>
+      <button onClick={addSibling} style={{ flex: 1, height: 36, border: "1px dashed #94a3b8", borderRadius: 6, background: "#f8fafc", color: "#475569", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>{isGrid ? "+ Add Card" : "+ Add Item"}</button>
     </div>
     <Field label="Section Background"><ColIn value={props.sectionBgColor || "#ffffff"} onChange={v => patchCommon?.({ sectionBgColor: v })} allowTransparent /></Field>
     <div style={{ marginBottom: 14 }}>
-      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ width: "100%", height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>Transparent Section</button>
+      <button onClick={() => patchCommon?.({ sectionBgColor: "transparent" })} style={{ width: "100%", height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Transparent Section</button>
     </div>
     <Field label={isGrid ? "Cards Per Row" : "Items Per Row"}>
       <SelIn value={String(props.perRow || (isGrid ? 2 : 1))} onChange={v => patchCommon?.({ perRow: Number(v) })} options={[{ value: "1", label: isGrid ? "1 wide" : "1 deep" }, { value: "2", label: "2 across" }, { value: "3", label: "3 across" }, { value: "4", label: "4 across" }]} />
@@ -4483,7 +4517,7 @@ function SocialInspector({ props, patch }) {
 }
 function FooterInspector({ props, patch }) {
   return <>
-    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 14, fontWeight: 700, lineHeight: 1.5 }}>
+    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
       Edit the company name, address, and footer legal line directly on the canvas, then use the text toolbar to add separate links for items like Privacy Policy and Terms of Use.
     </div>
     <Field label="Background"><ColIn value={props.bgColor} onChange={v => patch({ bgColor: v })} allowTransparent /></Field>
@@ -4521,7 +4555,7 @@ function TextOnlyInspector({ block, patch }) {
           : null;
 
   return <>
-    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 14, fontWeight: 700, lineHeight: 1.5 }}>
+    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
       Use the horizontal toolbar above the canvas for full Word-style text editing.
     </div>
     {linkField && (
@@ -4588,8 +4622,8 @@ function TextRibbon({ block, patch, patchCommon, compact = false }) {
     border: "1px solid #d6b54c",
     background: "#fffef7",
     color: "#0f172a",
-    fontSize: 13,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     cursor: "pointer",
     padding: "0 10px",
     flexShrink: 0,
@@ -4602,14 +4636,14 @@ function TextRibbon({ block, patch, patchCommon, compact = false }) {
     border: "1px solid #d6b54c",
     background: "#fffef7",
     color: "#0f172a",
-    fontSize: 14,
-    fontWeight: 800,
+    fontSize: 16,
+    fontWeight: 600,
     padding: "0 10px",
     flexShrink: 0,
   };
   const labelStyle = {
-    fontSize: 11,
-    fontWeight: 900,
+    fontSize: 16,
+    fontWeight: 600,
     color: "#854d0e",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
@@ -4769,8 +4803,8 @@ function FloatingTextToolbar({ visible, position, onDragStart, onClose, children
             border: "1px solid #cbd5e1",
             background: "#ffffff",
             color: "#334155",
-            fontSize: 13,
-            fontWeight: 800,
+            fontSize: 16,
+            fontWeight: 600,
             cursor: "move",
             padding: "0 12px",
             whiteSpace: "nowrap",
@@ -4779,7 +4813,7 @@ function FloatingTextToolbar({ visible, position, onDragStart, onClose, children
         >
           ⋮⋮ Move
         </button>
-        <div style={{ fontSize: 12, fontWeight: 900, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase" }}>
           Text Toolbar
         </div>
         <div style={{ marginLeft: "auto" }}>
@@ -4797,8 +4831,8 @@ function FloatingTextToolbar({ visible, position, onDragStart, onClose, children
               border: "1px solid #cbd5e1",
               background: "#ffffff",
               color: "#334155",
-              fontSize: 13,
-              fontWeight: 800,
+              fontSize: 16,
+              fontWeight: 600,
               cursor: "pointer",
               padding: "0 12px",
               whiteSpace: "nowrap",
@@ -4817,21 +4851,21 @@ function FloatingTextToolbar({ visible, position, onDragStart, onClose, children
 
 function EmailCanvasInspector({ props, patch, upload, edit, library, aiImage }) {
   return <>
-    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 14, fontWeight: 700, lineHeight: 1.5 }}>
+    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
       These tools style the whole email canvas and outer page background.
     </div>
     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
       <button
         type="button"
         onClick={() => patch({ outerBgColor: "transparent" })}
-        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
       >
         Transparent Page
       </button>
       <button
         type="button"
         onClick={() => patch({ canvasBgColor: "transparent" })}
-        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+        style={{ flex: 1, height: 36, border: "1px solid #cbd5e1", borderRadius: 8, background: "linear-gradient(135deg, #ffffff 0%, #ffffff 45%, #ef4444 46%, #ef4444 54%, #ffffff 55%, #ffffff 100%)", color: "#334155", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
       >
         Transparent Canvas
       </button>
@@ -6075,14 +6109,14 @@ export default function EmailEditor({
       {saveDialog && (
         <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "min(100%, 420px)", background: "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(15,23,42,0.24)", overflow: "hidden" }}>
-            <div style={{ padding: "14px 16px", background: saveDialog.type === "err" ? "#fff1f2" : "#ecfdf5", color: saveDialog.type === "err" ? "#b91c1c" : "#166534", fontSize: 16, fontWeight: 800 }}>
+            <div style={{ padding: "14px 16px", background: saveDialog.type === "err" ? "#fff1f2" : "#ecfdf5", color: saveDialog.type === "err" ? "#b91c1c" : "#166534", fontSize: 16, fontWeight: 600 }}>
               {saveDialog.type === "err" ? "Save Problem" : "Save Complete"}
             </div>
-            <div style={{ padding: 16, color: "#0f172a", fontSize: 15, fontWeight: 600, lineHeight: 1.6 }}>
+            <div style={{ padding: 16, color: "#0f172a", fontSize: 16, fontWeight: 600, lineHeight: 1.6 }}>
               {saveDialog.msg}
             </div>
             <div style={{ padding: "0 16px 16px", display: "flex", justifyContent: "flex-end" }}>
-              <button type="button" onClick={() => setSaveDialog(null)} style={{ height: 38, padding: "0 16px", border: "none", borderRadius: 8, background: "#2563eb", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>OK</button>
+              <button type="button" onClick={() => setSaveDialog(null)} style={{ height: 38, padding: "0 16px", border: "none", borderRadius: 8, background: "#2563eb", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>OK</button>
             </div>
           </div>
         </div>
@@ -6103,16 +6137,16 @@ export default function EmailEditor({
             <TopBtn onClick={() => setFileMenuOpen(v => !v)} color="#0f172a">📁 File ▾</TopBtn>
             {fileMenuOpen && (
               <div style={{ position: "absolute", top: 44, right: 0, width: 290, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 12, boxShadow: "0 18px 36px rgba(15,23,42,0.18)", overflow: "hidden", zIndex: 60 }}>
-                <div style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>File</div>
+                <div style={{ padding: "10px 12px", fontSize: 16, fontWeight: 600, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>File</div>
                 <FileMenuItem onClick={() => { setFileMenuOpen(false); setShowAiGenerate(true); }}>✨ AI Generate</FileMenuItem>
                 <FileMenuItem onClick={() => { setFileMenuOpen(false); saveDoc(); }} disabled={isSaving}>{isSaving ? "Saving…" : "💾 Save"}</FileMenuItem>
                 <FileMenuItem onClick={() => { setFileMenuOpen(false); saveAs(); }} disabled={isSaving}>📄 Save As</FileMenuItem>
                 <FileMenuItem onClick={() => { setFileMenuOpen(false); doExport(); }}>⬇ Export HTML</FileMenuItem>
                 <FileMenuItem onClick={() => { setFileMenuOpen(false); copyHtml(); }}>📋 Copy HTML</FileMenuItem>
 
-                <div style={{ padding: "10px 12px", fontSize: 12, fontWeight: 800, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", background: "#f8fafc", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>Recent Files</div>
+                <div style={{ padding: "10px 12px", fontSize: 16, fontWeight: 600, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", background: "#f8fafc", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>Recent Files</div>
                 {loadingRecentDocs ? (
-                  <div style={{ padding: "12px", fontSize: 14, color: "#64748b" }}>Loading recent files…</div>
+                  <div style={{ padding: "12px", fontSize: 16, color: "#64748b" }}>Loading recent files…</div>
                 ) : recentDocs.length ? (
                   recentDocs.map((doc) => (
                     <button
@@ -6122,19 +6156,19 @@ export default function EmailEditor({
                       style={{ width: "100%", border: "none", background: "#fff", padding: "10px 12px", textAlign: "left", cursor: "pointer", borderBottom: "1px solid #f1f5f9" }}
                       title={doc.name || "Untitled Email"}
                     >
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.name || "Untitled Email"}</div>
-                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : "Saved file"}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.name || "Untitled Email"}</div>
+                      <div style={{ fontSize: 16, color: "#64748b", marginTop: 2 }}>{doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : "Saved file"}</div>
                     </button>
                   ))
                 ) : (
-                  <div style={{ padding: "12px", fontSize: 14, color: "#64748b" }}>No recent saved files yet.</div>
+                  <div style={{ padding: "12px", fontSize: 16, color: "#64748b" }}>No recent saved files yet.</div>
                 )}
               </div>
             )}
           </div>
           <button
             onClick={() => router.push('/modules/email/templates/select')}
-            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "10px 20px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "2px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "10px 20px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}
           >← Back</button>
         </div>
       </div>
@@ -6325,8 +6359,8 @@ export default function EmailEditor({
                         borderRadius: 999,
                         background: groupSelected ? "#dbeafe" : "rgba(255,255,255,0.96)",
                         color: "#1d4ed8",
-                        fontSize: 12,
-                        fontWeight: 800,
+                        fontSize: 16,
+                        fontWeight: 600,
                         padding: "6px 10px",
                         cursor: "pointer",
                         zIndex: 2,
@@ -6349,14 +6383,14 @@ export default function EmailEditor({
                           value={entry.blocks[0]?.props?.sectionHeadline}
                           onChange={(v) => patchCommonCardProps(entry.blocks[0]?.props?.groupId, entry.blocks[0]?.type, { sectionHeadline: v })}
                           placeholder="Click to add section headline"
-                          style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, color: ensureReadableColor("", entry.blocks[0]?.props?.sectionBgColor || "#ffffff", "#ffffff", "#0f172a"), marginBottom: entry.blocks[0]?.props?.sectionSubtext ? 6 : 0 }}
+                          style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.2, color: ensureReadableColor("", entry.blocks[0]?.props?.sectionBgColor || "#ffffff", "#ffffff", "#0f172a"), marginBottom: entry.blocks[0]?.props?.sectionSubtext ? 6 : 0 }}
                         />
                         {(groupSelected || entry.blocks[0]?.props?.sectionSubtext) && (
                           <InlineEditableText
                             value={entry.blocks[0]?.props?.sectionSubtext}
                             onChange={(v) => patchCommonCardProps(entry.blocks[0]?.props?.groupId, entry.blocks[0]?.type, { sectionSubtext: v })}
                             placeholder="Optional intro text"
-                            style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.5, color: ensureReadableColor("", entry.blocks[0]?.props?.sectionBgColor || "#ffffff", "#e5e7eb", "#475569") }}
+                            style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, color: ensureReadableColor("", entry.blocks[0]?.props?.sectionBgColor || "#ffffff", "#e5e7eb", "#475569") }}
                           />
                         )}
                       </div>
@@ -6432,7 +6466,7 @@ export default function EmailEditor({
             <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <span style={{ fontSize: 18 }}>✍️</span>
               <span style={{ fontWeight: 600, fontSize: 16, color: "#0f172a" }}>Text Editor</span>
-              <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "#64748b" }}>Focused text only</span>
+              <span style={{ marginLeft: "auto", fontSize: 16, fontWeight: 600, color: "#64748b" }}>Focused text only</span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 80px" }}>
               <TextOnlyInspector
@@ -6484,7 +6518,7 @@ export default function EmailEditor({
               <span style={{ fontWeight: 600, fontSize: 16, color: "#0f172a" }}>Email Canvas</span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 80px" }}>
-              <div style={{ color: "#64748b", fontSize: 14, fontWeight: 700, marginBottom: 12, lineHeight: 1.5 }}>
+              <div style={{ color: "#64748b", fontSize: 16, fontWeight: 600, marginBottom: 12, lineHeight: 1.5 }}>
                 Click empty space or use Email Style to edit the whole email background and canvas look.
               </div>
               <EmailCanvasInspector
@@ -6570,7 +6604,7 @@ function SavedBtn({ label, onInsert, onDelete, onDragStart, onDragEnd }) {
         onClick={onDelete}
         title="Remove saved block"
         style={{
-          background: "none", border: "none", color: "#6b7280", cursor: "pointer",
+          background: "none", border: "none", color: "#9ca3af", cursor: "pointer",
           fontSize: 16, fontWeight: 600, padding: "0 10px 0 0", flexShrink: 0,
         }}
       >
@@ -6597,8 +6631,8 @@ function FileMenuItem({ onClick, disabled = false, children }) {
         padding: "10px 12px",
         textAlign: "left",
         cursor: disabled ? "default" : "pointer",
-        fontSize: 14,
-        fontWeight: 700,
+        fontSize: 16,
+        fontWeight: 600,
         color: "#0f172a",
         opacity: disabled ? 0.55 : 1,
       }}

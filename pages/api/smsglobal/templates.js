@@ -1,7 +1,8 @@
-import { supabase } from "../../../utils/supabase-client";
+import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default async function handler(req, res) {
-  const { user_id } = req.query;
+async function handler(req, res) {
+  const user_id = req.user.id;
 
   const { data } = await supabase
     .from("sms_templates")
@@ -11,3 +12,5 @@ export default async function handler(req, res) {
 
   res.json(data || []);
 }
+
+export default withAuth(handler);

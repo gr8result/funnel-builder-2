@@ -1,4 +1,4 @@
-// /pages/modules/email/crm/calls.js
+﻿// /pages/modules/email/crm/calls.js
 // FULL REPLACEMENT
 //
 // ✅ CALLING WORKS — do not break it
@@ -141,7 +141,12 @@ export default function CallsPage() {
       const token = auth?.session?.access_token || "";
 
       const r = await fetch("/api/crm/leads?limit=2000", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(typeof window !== "undefined" && localStorage.getItem("active_workspace_id")
+            ? { "x-workspace-id": localStorage.getItem("active_workspace_id") }
+            : {}),
+        },
         cache: "no-store",
       });
       const j = await r.json();
@@ -763,7 +768,7 @@ export default function CallsPage() {
           <div style={{ marginTop: 18 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>Recent outbound calls</div>
-              <div style={{ color: "#cfd7ff", fontWeight: 800, fontSize: 12, opacity: 0.85 }}>
+              <div style={{ color: "#cfd7ff", fontWeight: 600, fontSize: 16, opacity: 0.85 }}>
                 {loadingCalls ? "Loading..." : `${recentCalls.length} shown`}
               </div>
             </div>

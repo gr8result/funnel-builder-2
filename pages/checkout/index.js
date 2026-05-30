@@ -1,29 +1,32 @@
-// /pages/checkout/index.js
+﻿// /pages/checkout/index.js
 // Confirm Your Subscription — Stripe + PayPal fully working
 
 import { useRouter } from "next/router";
 import { useState } from "react";
 import ICONS from "../../components/iconMap";
-import PRICING from "../../data/pricing";
+import PRICING, { BASE_PLANS } from "../../data/pricing";
 
 export default function Checkout() {
   const router = useRouter();
-  const { selected = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "" } = router.query;
+  const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "" } = router.query;
   const [loading, setLoading] = useState(false);
 
   const selectedModules = selected.split(",").filter(Boolean);
-  const totalAmount = selectedModules.reduce(
+  const basePlan = BASE_PLANS[plan] || null;
+
+  const modulesTotal = selectedModules.reduce(
     (sum, id) => sum + (PRICING[id]?.price || 0),
     0
   );
+  const totalAmount = modulesTotal + (basePlan?.price || 0);
 
   // ✅ STRIPE CHECKOUT (fixed payload)
   const handleStripeCheckout = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      if (selectedModules.length === 0) {
-        alert("No modules selected");
+      if (!basePlan && selectedModules.length === 0) {
+        alert("No plan or modules selected");
         return;
       }
 
@@ -36,11 +39,19 @@ export default function Checkout() {
       const calendarPlanParam = params.get("calendarPlan") || calendarPlan || "";
       const socialPlanParam = params.get("socialPlan") || socialPlan || "";
       const selectedParam = params.get("selected") || selected || "";
+      const planParam = params.get("plan") || plan || "";
 
-      const lineItems = selectedModules.map((id) => ({
-        name: PRICING[id]?.name || id,
-        amount: PRICING[id]?.price || 0,
-      }));
+      // Base plan first, then add-on modules
+      const lineItems = [];
+      if (basePlan) {
+        lineItems.push({ name: basePlan.name, amount: basePlan.price });
+      }
+      selectedModules.forEach((id) => {
+        lineItems.push({
+          name: PRICING[id]?.name || id,
+          amount: PRICING[id]?.price || 0,
+        });
+      });
 
       const res = await fetch("/api/billing/create-session", {
         method: "POST",
@@ -49,6 +60,7 @@ export default function Checkout() {
           lineItems,
           metadata: {
             selected: selectedParam,
+            plan: planParam,
             emailPlan: emailPlanParam,
             smsPlan: smsPlanParam,
             calendarPlan: calendarPlanParam,
@@ -141,7 +153,7 @@ export default function Checkout() {
           }}
         >
           <span>{ICONS.billing({ size: 24 })}</span>
-          <h1 style={{ color: "#000", fontWeight: 800 }}>Confirm Your Subscription</h1>
+          <h1 style={{ color: "#000", fontWeight: 600 }}>Confirm Your Subscription</h1>
         </div>
 
         <div
@@ -153,7 +165,13 @@ export default function Checkout() {
             border: "1px solid #333",
           }}
         >
-          <h2>Selected Modules:</h2>
+          <h2>Order Summary:</h2>
+          {basePlan && (
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #1e293b", fontWeight: 600 }}>
+              <span>📦 {basePlan.name}</span>
+              <span style={{ color: "#22c55e" }}>A${basePlan.price.toFixed(2)}/mo</span>
+            </div>
+          )}
           <ul style={{ listStyle: "none", padding: 0 }}>
             {selectedModules.map((id) => (
               <li
@@ -166,12 +184,12 @@ export default function Checkout() {
                 }}
               >
                 <span>{PRICING[id]?.name || id}</span>
-                <span>A${PRICING[id]?.price?.toFixed(2) || "0.00"}/Mo</span>
+                <span>A${PRICING[id]?.price?.toFixed(2) || "0.00"}/mo</span>
               </li>
             ))}
           </ul>
 
-          <p style={{ textAlign: "right", fontWeight: 800, fontSize: 18, marginTop: 12 }}>
+          <p style={{ textAlign: "right", fontWeight: 600, fontSize: 18, marginTop: 12 }}>
             Total: A${totalAmount.toFixed(2)}/Mo
           </p>
 
@@ -185,7 +203,7 @@ export default function Checkout() {
                 color: "#000",
                 padding: "14px",
                 borderRadius: 10,
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: 16,
                 cursor: loading ? "not-allowed" : "pointer",
                 opacity: loading ? 0.6 : 1,
@@ -203,7 +221,7 @@ export default function Checkout() {
                 color: "#000",
                 padding: "14px",
                 borderRadius: 10,
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: 16,
                 cursor: loading ? "not-allowed" : "pointer",
                 marginTop: 10,

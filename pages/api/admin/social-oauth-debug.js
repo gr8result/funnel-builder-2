@@ -1,5 +1,6 @@
 import { requireUser } from "../../../lib/social/auth";
 import { getPlatformCredentials } from "../../../lib/social/platformCredentials";
+import withAdmin from "../../../lib/withAdmin";
 
 function getRequestOrigin(req) {
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -35,7 +36,7 @@ function getTikTokRedirectUri(req) {
 
 const TIKTOK_REQUESTED_SCOPES = "user.info.basic,video.publish,video.upload";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
@@ -79,3 +80,5 @@ export default async function handler(req, res) {
     },
   });
 }
+
+export default withAdmin(handler);

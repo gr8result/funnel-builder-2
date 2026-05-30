@@ -1,4 +1,4 @@
-// pages/modules/email/crm/sms-dashboard.js 
+﻿// pages/modules/email/crm/sms-dashboard.js 
 
 import React, { useEffect, useMemo, useState } from "react";
 import ICONS from "../../../../components/iconMap";
@@ -117,13 +117,13 @@ export default function SMSDashboard() {
           <div style={{ flex: 1, border: '2px solid #ec4899', color: '#fff', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>{ICONS.calendar({ size: 36 })}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: '#ec4899' }}>Telephone</div>
-            <div style={{ fontSize: 15, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Review inbound calls, listen to voicemails, and tidy your call log.</div>
+            <div style={{ fontSize: 16, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Review inbound calls, listen to voicemails, and tidy your call log.</div>
             <button style={{ background: '#ec4899', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={() => router.push('/modules/email/crm/calls')}>Go to Calls</button>
           </div>
           <div style={{ flex: 1, border: '2px solid #14b8a6', color: '#fff', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>{ICONS.sms({ size: 36 })}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: '#14b8a6' }}>SMS Marketing</div>
-            <div style={{ fontSize: 15, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Send SMS broadcasts, use templates, and track delivery.</div>
+            <div style={{ fontSize: 16, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Send SMS broadcasts, use templates, and track delivery.</div>
             <button style={{ background: '#14b8a6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={() => router.push('/modules/email/crm/sms-marketing')}>Go to SMS</button>
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function SMSDashboard() {
       padding: 14,
     },
 
-    statLabel: { fontSize: 13, opacity: 0.7 },
+    statLabel: { fontSize: 16, opacity: 0.7 },
     statValue: { fontSize: 20 },
 
     usageBar: {
@@ -245,13 +245,13 @@ export default function SMSDashboard() {
       padding: "10px",
       borderBottom: "1px solid #1f2937",
       cursor: "pointer",
-      fontSize: 13,
+      fontSize: 16,
     },
 
     td: {
       padding: "10px",
       borderBottom: "1px solid #1f2937",
-      fontSize: 13,
+      fontSize: 16,
     },
   };
 
@@ -262,7 +262,7 @@ export default function SMSDashboard() {
         {/* Banner */}
         <div style={{ ...styles.banner, background: '#14b8a6' }}>
           <div style={styles.bannerLeft}>
-            <div style={styles.iconWrap}>{ICONS.sms({ size: 40 })}</div>
+            <div style={styles.iconWrap}><span style={{ fontSize: 32, lineHeight: 1 }}>💬</span></div>
             <div>
               <div style={styles.bannerTitle}>SMS & Telephony Dashboard</div>
               <div style={{ fontSize: 18, marginTop: 6 }}>Track your SMS and call activity, limits, and performance.</div>
@@ -276,13 +276,13 @@ export default function SMSDashboard() {
           <div style={{ flex: 1, border: '2px solid #ec4899', color: '#ec4899', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>{ICONS.calendar({ size: 36 })}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: '#ec4899' }}>Desktop Telephone</div>
-            <div style={{ fontSize: 15, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Review inbound calls, listen to voicemails, and tidy your call log.</div>
+            <div style={{ fontSize: 16, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Review inbound calls, listen to voicemails, and tidy your call log.</div>
             <button style={{ background: 'transparent', color: '#ec4899', border: '2px solid #ec4899', borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={() => router.push('/modules/email/crm/calls')}>Go to Calls</button>
           </div>
           <div style={{ flex: 1, border: '2px solid #14b8a6', color: '#14b8a6', borderRadius: 14, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>{ICONS.sms({ size: 36 })}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: '#14b8a6' }}>SMS Marketing</div>
-            <div style={{ fontSize: 15, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Send SMS broadcasts, use templates, and track delivery.</div>
+            <div style={{ fontSize: 16, margin: '10px 0 18px 0', opacity: 0.85, color: '#fff' }}>Send SMS broadcasts, use templates, and track delivery.</div>
             <button style={{ background: 'transparent', color: '#14b8a6', border: '2px solid #14b8a6', borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 16, cursor: 'pointer' }} onClick={() => router.push('/modules/email/crm/sms-marketing')}>Go to SMS</button>
           </div>
         </div>

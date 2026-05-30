@@ -14,6 +14,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import withAdmin from "../../../lib/withAdmin";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -60,7 +61,7 @@ function normalizeProductIds(body) {
   return list;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return safeJson(res, 405, { ok: false, error: "Method not allowed" });
   }
@@ -255,3 +256,5 @@ export default async function handler(req, res) {
     });
   }
 }
+
+export default withAdmin(handler);

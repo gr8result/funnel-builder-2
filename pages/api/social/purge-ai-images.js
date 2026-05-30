@@ -5,6 +5,7 @@
 
 import { requireUser } from '../../../lib/social/auth';
 import { createClient } from '@supabase/supabase-js';
+import { withAuth } from "../../../lib/withWorkspace";
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,7 +18,7 @@ function resolveStoragePath(row) {
   return null;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const auth = await requireUser(req);
@@ -64,3 +65,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: err.message || 'Failed to purge images' });
   }
 }
+
+export default withAuth(handler);

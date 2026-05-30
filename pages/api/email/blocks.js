@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /components/email/editor/blocks.js
 // FULL REPLACEMENT — deterministic insertion
 
@@ -32,3 +33,5 @@ export function findInsertionPoint(canvas, mouseY) {
   const last = blocks[blocks.length - 1];
   return { ref:last, before:false, lineY:last.getBoundingClientRect().bottom };
 }
+
+export default withAuth(handler);

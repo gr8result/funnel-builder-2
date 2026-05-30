@@ -1,10 +1,12 @@
-// /pages/api/smsglobal/SMSGlobalSMSSend.js
+﻿// /pages/api/smsglobal/SMSGlobalSMSSend.js
 // FULL REPLACEMENT
-// ✅ Alias route to keep older frontend calls working.
-// ✅ Forwards to /api/smsglobal/SMSSend
+// âœ… Alias route to keep older frontend calls working.
+// âœ… Forwards to /api/smsglobal/SMSSend
 
 import handler from "./SMSSend";
+import { withAuth } from "../../../lib/withWorkspace";
 
 export default function SMSGlobalSMSSendAlias(req, res) {
   return handler(req, res);
 }
+

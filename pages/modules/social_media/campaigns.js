@@ -1,4 +1,4 @@
-// File Path: pages/modules/social_media/campaigns.js
+﻿// File Path: pages/modules/social_media/campaigns.js
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -101,7 +101,7 @@ export default function SocialCampaigns() {
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <div style={styles.bannerIcon}>{ICONS.social({ size: 42 })}</div>
               <div>
-                <h1 style={{ fontSize: 32, margin: 0, fontWeight: 700 }}>Social Campaigns</h1>
+                <h1 style={{ fontSize: 32, margin: 0, fontWeight: 600 }}>Social Campaigns</h1>
                 <p style={{ margin: 0, opacity: 0.8 }}>Group posts into named campaigns for tracking and batch scheduling.</p>
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function SocialCampaigns() {
           </div>
 
           {notice && (
-            <div style={{ background: notice.startsWith("❌") || notice.toLowerCase().includes("fail") || notice.toLowerCase().includes("error") ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)", border: `1px solid ${notice.startsWith("❌") || notice.toLowerCase().includes("fail") ? "rgba(239,68,68,0.4)" : "rgba(34,197,94,0.4)"}`, color: "#fff", padding: "10px 16px", borderRadius: 10, marginBottom: 20, fontSize: 14 }}>
+            <div style={{ background: notice.startsWith("❌") || notice.toLowerCase().includes("fail") || notice.toLowerCase().includes("error") ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)", border: `1px solid ${notice.startsWith("❌") || notice.toLowerCase().includes("fail") ? "rgba(239,68,68,0.4)" : "rgba(34,197,94,0.4)"}`, color: "#fff", padding: "10px 16px", borderRadius: 10, marginBottom: 20, fontSize: 16 }}>
               {notice}
             </div>
           )}
@@ -165,9 +165,9 @@ export default function SocialCampaigns() {
                       <div key={c.id} style={styles.glassCard}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: 17 }}>{c.name}</div>
-                            {c.description && <div style={{ fontSize: 13, opacity: 0.6, marginTop: 3 }}>{c.description}</div>}
-                            <div style={{ fontSize: 12, opacity: 0.4, marginTop: 6 }}>
+                            <div style={{ fontWeight: 600, fontSize: 17 }}>{c.name}</div>
+                            {c.description && <div style={{ fontSize: 16, opacity: 0.6, marginTop: 3 }}>{c.description}</div>}
+                            <div style={{ fontSize: 16, opacity: 0.4, marginTop: 6 }}>
                               {postCount} post{postCount !== 1 ? "s" : ""} &nbsp;·&nbsp; Created {new Date(c.created_at).toLocaleDateString()}
                             </div>
                           </div>
@@ -197,8 +197,8 @@ export default function SocialCampaigns() {
                               if (!post) return null;
                               return (
                                 <div key={cp.post_id} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: 10 }}>
-                                  <div style={{ fontSize: 12, opacity: 0.5 }}>{post.platform} · {post.status}</div>
-                                  <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85, whiteSpace: "pre-wrap" }}>{post.content?.slice(0, 200)}{post.content?.length > 200 ? "…" : ""}</div>
+                                  <div style={{ fontSize: 16, opacity: 0.5 }}>{post.platform} · {post.status}</div>
+                                  <div style={{ fontSize: 16, marginTop: 4, opacity: 0.85, whiteSpace: "pre-wrap" }}>{post.content?.slice(0, 200)}{post.content?.length > 200 ? "…" : ""}</div>
                                 </div>
                               );
                             })}
@@ -224,10 +224,10 @@ const styles = {
   mainGrid: { display: "flex", gap: 24 },
   sideColumn: { flex: 1, display: "flex", flexDirection: "column", gap: 20 },
   glassCard: { background: "#111827", padding: 22, borderRadius: 18, border: "1px solid rgba(255,255,255,0.08)" },
-  colLabel: { fontSize: 12, textTransform: "uppercase", opacity: 0.4, marginBottom: 18, margin: "0 0 14px" },
-  input: { width: "100%", background: "#0c121a", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", padding: "10px 12px", borderRadius: 8, fontSize: 14, boxSizing: "border-box" },
-  primaryBtn: { width: "100%", background: "rgba(129,38,233,0.2)", border: "1px solid rgba(129,38,233,0.4)", color: "#a78bfa", padding: "12px", borderRadius: 10, cursor: "pointer", fontWeight: 700 },
-  slimBtn: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13 },
+  colLabel: { fontSize: 16, textTransform: "uppercase", opacity: 0.4, marginBottom: 18, margin: "0 0 14px" },
+  input: { width: "100%", background: "#0c121a", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", padding: "10px 12px", borderRadius: 8, fontSize: 16, boxSizing: "border-box" },
+  primaryBtn: { width: "100%", background: "rgba(129,38,233,0.2)", border: "1px solid rgba(129,38,233,0.4)", color: "#a78bfa", padding: "12px", borderRadius: 10, cursor: "pointer", fontWeight: 600 },
+  slimBtn: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 16 },
   emptyBox: { textAlign: "center", padding: 80, background: "#111827", borderRadius: 20, border: "2px dashed rgba(255,255,255,0.1)" },
   statRow: { display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" },
 };

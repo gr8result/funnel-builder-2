@@ -1,3 +1,4 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // /pages/api/twilio/transcribe-recording.js
 // NEW FILE
 //
@@ -20,7 +21,7 @@ function s(v) {
   return String(v ?? "").trim();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const sid = s(req.query?.sid);
     if (!sid) {
@@ -89,3 +90,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 }
+
+export default withAuth(handler);

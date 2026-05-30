@@ -1,9 +1,10 @@
+import { withAuth } from "../../../lib/withWorkspace";
 // pages/api/funnels/ai-generate.js
 // POST { productName, headline, description, funnelType }
 // Calls OpenAI to generate compelling copy for a sales funnel.
 // Returns: { ok, offerName, headline, subheadline, ctaText, offerDescription, bullets[], testimonials[], faqItems[] }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   if (!process.env.OPENAI_API_KEY) {
@@ -97,3 +98,5 @@ Return a JSON object with these exact keys:
     return res.status(500).json({ error: e.message || 'Request failed' });
   }
 }
+
+export default withAuth(handler);

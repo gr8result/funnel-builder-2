@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getAppHost, getCustomDomainTargetHost, normalizeDomain } from "../../../lib/website-builder/publishConfig";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || req.headers.Authorization || "").trim();
@@ -14,7 +15,7 @@ async function resolveDns(name, type) {
   return Array.isArray(json?.Answer) ? json.Answer.map((entry) => String(entry?.data || "").replace(/\.$/, "")) : [];
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -84,3 +85,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: verifyError?.message || "Could not verify DNS" });
   }
 }
+
+export default withAuth(handler);

@@ -1,8 +1,9 @@
 // API route for listing and loading external website builder templates (server-only)
 import fs from "fs";
 import path from "path";
+import { withAuth } from "../../../lib/withWorkspace";
 
-export default function handler(req, res) {
+async function handler(req, res) {
   const base = path.join(process.cwd(), "lib", "website-builder", "external-templates");
   if (req.method === "GET") {
     // List all templates
@@ -44,3 +45,5 @@ export default function handler(req, res) {
   res.setHeader("Allow", ["GET", "POST"]);
   res.status(405).end(`Method ${req.method} Not Allowed`);
 }
+
+export default withAuth(handler);

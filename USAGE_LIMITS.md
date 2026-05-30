@@ -1,187 +1,144 @@
-// USAGE LIMITS & QUOTAS DOCUMENTATION
-// For Funnel Builder's Email & SMS Marketing Modules
+# USAGE LIMITS & QUOTAS DOCUMENTATION
+# For Funnel Builder — All Plan Modules
 
 ## Overview
 
-All email and SMS sends are tracked and quota-enforced at runtime. Users cannot exceed their plan's limits.
+All usage (contacts, emails, SMS, funnels, automations, etc.) is tracked and quota-enforced at
+runtime via `lib/featureGates.js` (client-side) and `lib/entitlements.js` (server-side).
+`null` means unlimited. Plan enforcement cascades — a higher plan always includes everything
+below it.
 
 ---
 
-## EMAIL MARKETING LIMITS (by tier)
+## PLAN SUMMARY
 
-### Starter ($29/month)
-- **Max Subscribers Overall**: 500
-- **Max Emails/Month**: 1,000
-- **Max Subscribers Per List**: 500 (hard limit)
-
-### Growth ($75/month)
-- **Max Subscribers Overall**: 2,000
-- **Max Emails/Month**: 10,000
-- **Max Subscribers Per List**: 500 (hard limit)
-
-### Expansion ($250/month)
-- **Max Subscribers Overall**: 15,000
-- **Max Emails/Month**: 30,000
-- **Max Subscribers Per List**: 500 (hard limit)
-
-### Enterprise ($350/month)
-- **Max Subscribers Overall**: 25,000
-- **Max Emails/Month**: 100,000
-- **Max Subscribers Per List**: 500 (hard limit)
-
-### Agency (Custom)
-- **Max Subscribers Overall**: Unlimited
-- **Max Emails/Month**: Unlimited
-- **Max Subscribers Per List**: Unlimited
+| Resource              | Starter ($129) | Growth ($299)  | Scale ($449)   | Professional ($899) |
+|-----------------------|----------------|----------------|----------------|---------------------|
+| Contacts              | 5,000          | 15,000         | 40,000         | Unlimited           |
+| Emails / month        | 50,000         | 150,000        | 400,000        | Unlimited           |
+| SMS / month           | 500            | 2,500          | 5,000          | 10,000              |
+| Websites              | 1              | 3              | 7              | Unlimited           |
+| Full Funnels          | 0 (pages only) | 1              | 3              | Unlimited           |
+| Automations           | 5              | 15             | Unlimited      | Unlimited           |
+| Team Members          | 2              | 5              | 10             | 25                  |
+| Pipelines             | 1              | Unlimited      | Unlimited      | Unlimited           |
+| Communities           | 1              | 3              | Unlimited      | Unlimited           |
+| Social Profiles       | 5              | 10             | 50             | Unlimited           |
+| AI Credits / month    | 50             | 250            | 750            | Unlimited           |
+| Storage               | 5 GB           | 25 GB          | 100 GB         | 1 TB                |
 
 ---
 
-## SMS MARKETING LIMITS (by tier)
+## EMAIL LIMITS
 
-### Starter ($25/month)
+### Starter ($129/month base plan)
+- **Max Contacts**: 5,000
+- **Max Emails/Month**: 50,000
+
+### Growth ($299/month)
+- **Max Contacts**: 15,000
+- **Max Emails/Month**: 150,000
+
+### Scale ($449/month)
+- **Max Contacts**: 40,000
+- **Max Emails/Month**: 400,000
+
+### Professional ($899/month)
+- **Max Contacts**: Unlimited
+- **Max Emails/Month**: Unlimited (separate high-volume email plan may apply)
+
+---
+
+## SMS LIMITS
+
+### Starter
 - **Max SMS/Month**: 500
 
-### Growth ($120/month)
+### Growth
 - **Max SMS/Month**: 2,500
 
-### Professional ($250/month)
+### Scale
 - **Max SMS/Month**: 5,000
 
-### Business ($450/month)
+### Professional
 - **Max SMS/Month**: 10,000
-
-### Enterprise (Custom)
-- **Max SMS/Month**: Custom
 
 ---
 
 ## ENFORCEMENT POINTS
 
+### Feature Gating
+- **`lib/featureGates.js`** — single source of truth for all plan limits and feature access
+  - `canUseFeature(plan, feature)` — returns bool
+  - `getLimit(plan, resource)` — returns number or null (unlimited)
+  - `PLAN_LIMITS` — all quota values keyed by plan id
+  - `FEATURE_PLANS` — feature keys mapped to minimum required plan
+
+- **`lib/entitlements.js`** — server-side async wrappers
+  - `workspaceCanUse(workspaceId, feature)` — looks up plan from DB, calls canUseFeature
+  - `getWorkspaceLimit(workspaceId, resource)` — looks up plan from DB, calls getLimit
+  - Falls back to `"starter"` if no plan is set on the workspace
+
+- **`hooks/useWorkspace.js`** — client-side access
+  - `workspace.can("feature")` — feature gate check
+  - `workspace.limit("resource")` — quota limit
+
 ### Email Enforcement
-1. **List Subscription** (`/pages/api/email/subscribe.js`)
-   - Checks total subscriber limit before adding
-   - Checks 500 per-list limit in `addToList()` function
-
-2. **Autoresponder Launch** (`/pages/api/email/autoresponders/save.js`)
-   - Checks monthly email limit before enqueueing recipients
-   - Prevents exceeding tier's monthly quota
-
-3. **Usage Tracking** (`/lib/emailDB.js`, `/lib/usageTracking.js`)
-   - Counts emails from `email_sends` table this month
-   - Counts subscribers from `subscribers` table
+1. **List Subscription** (`/pages/api/email/subscribe.js`) — checks contact limit before adding
+2. **Autoresponder Launch** (`/pages/api/email/autoresponders/save.js`) — checks monthly email limit before enqueueing
+3. **Usage Tracking** (`/lib/emailDB.js`) — counts from `email_sends` and `subscribers` tables
 
 ### SMS Enforcement
-1. **Campaign Launch** (`/pages/api/smsglobal/launch-sequence.js`)
-   - Checks monthly SMS limit before enqueueing messages
-   - Prevents exceeding tier's monthly quota
-
-2. **Usage Tracking** (`/lib/usageTracking.js`)
-   - Counts SMS from `sms_queue` table (status: "sent" or "delivered") this month
+1. **Campaign Launch** (`/pages/api/smsglobal/launch-sequence.js`) — checks monthly SMS limit before enqueueing
+2. **Bulk Send** (`/pages/api/smsglobal/send-bulk.js`) — enforces per-send quota check
+3. **Usage Tracking** — counts from `sms_queue` table (status: "sent" or "delivered") this month
 
 ---
 
 ## TABLES INVOLVED
 
-### Accounts Table
-- `email_plan_tier` - Current email plan (email-starter, email-growth, etc.)
-- `email_subscribers_count` - Cached subscriber count (updated after changes)
-- `email_emails_sent_month` - Cached email count (updated after changes)
-- `sms_plan` - Current SMS plan (sms-starter, sms-growth, etc.)
-- `sms_monthly_limit` - Cached SMS limit (updated after changes)
-- `sms_sent_month` - Cached SMS count (updated after changes)
+### Workspaces Table
+- `plan` — Active plan id: `"starter"` | `"growth"` | `"scale"` | `"professional"`
 
 ### Email Tables
-- `subscribers` - All subscribers (user_id, email, name)
-- `list_subscribers` - Join table (list_id, subscriber_id)
-- `email_sends` - Individual sends (user_id, status, created_at)
-- `email_lists` - Lists (id, user_id, name)
+- `subscribers` — All subscribers (user_id, email, name)
+- `list_subscribers` — Join table (list_id, subscriber_id)
+- `email_sends` — Individual sends (user_id, status, created_at)
+- `email_lists` — Lists (id, user_id, name)
 
 ### SMS Tables
-- `sms_queue` - Queued SMS messages (user_id, status, created_at)
-
----
-
-## API ENDPOINTS
-
-### Check Limits
-**GET** `/api/usage/check-limits`
-- Returns current usage and remaining quota
-- Requires Bearer token authentication
-
-Query Parameters:
-- `check` - Optional filter: "email", "sms", or "list"
-- `listId` - Required if check includes "list"
-
-Response:
-```json
-{
-  "ok": true,
-  "stats": {
-    "email": {
-      "sent": 150,
-      "limit": 1000,
-      "percentage": 15
-    },
-    "sms": {
-      "sent": 45,
-      "limit": 500,
-      "percentage": 9
-    },
-    "subscribers": {
-      "used": 250,
-      "limit": 500,
-      "percentage": 50
-    }
-  },
-  "checks": {
-    "email": { "ok": true, "remaining": 850 },
-    "sms": { "ok": true, "remaining": 455 }
-  }
-}
-```
+- `sms_queue` — Queued SMS messages (user_id, status, created_at)
 
 ---
 
 ## ERROR RESPONSES
 
+### Feature Blocked (upgrade required)
+```json
+{
+  "ok": false,
+  "error": "Upgrade required",
+  "code": "FEATURE_GATED"
+}
+```
+
 ### Email Limit Exceeded
 ```json
 {
   "ok": false,
-  "error": "Email limit reached (1000/month)",
+  "error": "Monthly email limit reached",
   "code": "EMAIL_LIMIT_EXCEEDED",
-  "details": {
-    "limit": 1000,
-    "used": 1000,
-    "remaining": 0
-  }
+  "details": { "limit": 50000, "used": 50000, "remaining": 0 }
 }
 ```
 
-### Subscriber Limit Exceeded
+### Contact/Subscriber Limit Exceeded
 ```json
 {
   "ok": false,
-  "error": "Subscriber limit reached (500 total)",
-  "code": "SUBSCRIBER_LIMIT_EXCEEDED",
-  "details": {
-    "limit": 500,
-    "used": 500,
-    "remaining": 0
-  }
-}
-```
-
-### List Full
-```json
-{
-  "ok": false,
-  "error": "List is full (500 subscriber limit reached)",
-  "code": "LIST_LIMIT_EXCEEDED",
-  "details": {
-    "limit": 500,
-    "current": 500
-  }
+  "error": "Contact limit reached",
+  "code": "CONTACT_LIMIT_EXCEEDED",
+  "details": { "limit": 5000, "used": 5000, "remaining": 0 }
 }
 ```
 
@@ -189,13 +146,9 @@ Response:
 ```json
 {
   "ok": false,
-  "error": "SMS limit reached (500/month)",
+  "error": "Monthly SMS limit reached",
   "code": "SMS_LIMIT_EXCEEDED",
-  "details": {
-    "limit": 500,
-    "used": 500,
-    "remaining": 0
-  }
+  "details": { "limit": 500, "used": 500, "remaining": 0 }
 }
 ```
 
@@ -206,28 +159,12 @@ Response:
 ### UsageWarning Component
 Located at `/components/UsageWarning.js`
 
-Displays visual progress bars for:
-- Monthly emails used
-- Monthly SMS used
-- Total subscribers
+Displays visual progress bars for monthly emails, SMS, and total contacts.
 
 Shows warning colors when:
 - 50%+ used: Yellow
 - 80%+ used: Orange
 - 100% reached: Red
-
-Usage:
-```jsx
-import UsageWarning from "../components/UsageWarning";
-
-export default function Dashboard() {
-  return (
-    <>
-      <UsageWarning />
-      {/* Rest of dashboard */}
-    </>
-  );
-}
 ```
 
 ---

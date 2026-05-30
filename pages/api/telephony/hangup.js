@@ -10,6 +10,7 @@
 // - TWILIO_AUTH_TOKEN
 
 import twilio from "twilio";
+import { withAuth } from "../../../lib/withWorkspace";
 
 function pickEnv(...keys) {
   for (const k of keys) {
@@ -19,7 +20,7 @@ function pickEnv(...keys) {
   return "";
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -45,3 +46,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: e?.message || "Failed to hang up call." });
   }
 }
+
+export default withAuth(handler);
