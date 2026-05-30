@@ -266,55 +266,29 @@ const PRICING = {
     upgradeTo: null,
   },
 
-  // ====== JOB BOARD PLANS ======
-  "job-board-starter": {
-    name: "Job Board — Starter",
-    price: 19,
-    limits: { activeJobs: 3, tasksPerJob: 25, boards: 1, users: 1, timeTracking: false, automation: false },
-    upgradeTo: "job-board-growth",
+  // ====== PROJECTS HUB PLANS (Job Board + Gantt Charts combined) ======
+  "projects-hub-starter": {
+    name: "Projects Hub — Starter",
+    price: 35,
+    limits: { activeJobs: 3, boards: 1, projects: 5, tasks: 50, users: 2, timeTracking: false, gantt: true, jobBoard: true },
+    upgradeTo: "projects-hub-growth",
   },
-  "job-board-growth": {
-    name: "Job Board — Growth",
-    price: 39,
-    limits: { activeJobs: 15, tasksPerJob: "unlimited", boards: 3, users: 5, timeTracking: true, automation: false },
-    upgradeTo: "job-board-pro",
+  "projects-hub-growth": {
+    name: "Projects Hub — Growth",
+    price: 59,
+    limits: { activeJobs: 15, boards: 3, projects: 20, tasks: "unlimited", users: 5, timeTracking: true, gantt: true, jobBoard: true, dependencies: true },
+    upgradeTo: "projects-hub-pro",
   },
-  "job-board-pro": {
-    name: "Job Board — Scale",
-    price: 79,
-    limits: { activeJobs: "unlimited", tasksPerJob: "unlimited", boards: "unlimited", users: 15, timeTracking: true, automation: true, budgetTracking: true, clientPortal: true },
-    upgradeTo: "job-board-agency",
+  "projects-hub-pro": {
+    name: "Projects Hub — Scale",
+    price: 99,
+    limits: { activeJobs: "unlimited", boards: "unlimited", projects: "unlimited", tasks: "unlimited", users: 15, timeTracking: true, gantt: true, jobBoard: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true, automation: true },
+    upgradeTo: "projects-hub-agency",
   },
-  "job-board-agency": {
-    name: "Job Board — Professional",
-    price: 149,
-    limits: { activeJobs: "unlimited", tasksPerJob: "unlimited", boards: "unlimited", users: "unlimited", timeTracking: true, automation: true, budgetTracking: true, clientPortal: true, whiteLabel: true, apiAccess: true },
-    upgradeTo: null,
-  },
-
-  // ====== GANTT CHARTS PLANS ======
-  "gantt-starter": {
-    name: "Gantt Charts — Starter",
-    price: 19,
-    limits: { projects: 5, tasksPerProject: 30, users: 2, milestones: true, dependencies: false, resourceAllocation: false, budgetTracking: false, criticalPath: false, clientPortal: false },
-    upgradeTo: "gantt-growth",
-  },
-  "gantt-growth": {
-    name: "Gantt Charts — Growth",
-    price: 39,
-    limits: { projects: 20, tasksPerProject: "unlimited", users: 5, milestones: true, dependencies: true, resourceAllocation: false, budgetTracking: false, criticalPath: false, clientPortal: false },
-    upgradeTo: "gantt-pro",
-  },
-  "gantt-pro": {
-    name: "Gantt Charts — Scale",
-    price: 79,
-    limits: { projects: "unlimited", tasksPerProject: "unlimited", users: 15, milestones: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true },
-    upgradeTo: "gantt-agency",
-  },
-  "gantt-agency": {
-    name: "Gantt Charts — Professional",
-    price: 149,
-    limits: { projects: "unlimited", tasksPerProject: "unlimited", users: "unlimited", milestones: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true, whiteLabel: true, apiAccess: true },
+  "projects-hub-agency": {
+    name: "Projects Hub — Professional",
+    price: 159,
+    limits: { activeJobs: "unlimited", boards: "unlimited", projects: "unlimited", tasks: "unlimited", users: "unlimited", timeTracking: true, gantt: true, jobBoard: true, dependencies: true, resourceAllocation: true, budgetTracking: true, criticalPath: true, clientPortal: true, automation: true, whiteLabel: true, apiAccess: true },
     upgradeTo: null,
   },
 };
@@ -346,8 +320,7 @@ export const BASE_PLAN_INCLUDES = {
     calendar: { tierId: "calendar-starter", price: 19  },  // 1 calendar, 50 bookings/mo
     crm:      { tierId: "crm-starter",      price: 19  },  // 1 pipeline, 500 contacts
     website:  { tierId: "website-starter",  price: 29  },  // 1 website, templates only
-    jobBoard: { tierId: "job-board-starter", price: 19 },  // 3 active jobs, 1 board
-    gantt:    { tierId: "gantt-starter",    price: 19  },  // 5 projects, 3 phases
+    projectsHub: { tierId: "projects-hub-starter", price: 35 },  // 3 jobs, 5 projects, 2 users
     funnels:  { included: 0 },                              // landing pages only
   },
   growth: {
@@ -357,8 +330,7 @@ export const BASE_PLAN_INCLUDES = {
     calendar: { tierId: "calendar-growth",  price: 29  },  // unlimited calendars, group booking
     crm:      { tierId: "crm-growth",       price: 29  },  // unlimited pipelines, 5k contacts
     website:  { tierId: "website-growth",   price: 59  },  // 3 websites, custom domain, AI content
-    jobBoard: { tierId: "job-board-growth", price: 39  },  // 15 active jobs, 3 boards, time tracking
-    gantt:    { tierId: "gantt-growth",     price: 39  },  // 20 projects, dependencies
+    projectsHub: { tierId: "projects-hub-growth", price: 59 },  // 15 jobs, 20 projects, dependencies
     funnels:  { included: 1 },                              // 1 multi-step funnel
   },
   scale: {
@@ -368,8 +340,7 @@ export const BASE_PLAN_INCLUDES = {
     calendar: { tierId: "calendar-pro",     price: 79  },  // custom branding + automations
     crm:      { tierId: "crm-pro",          price: 79  },  // unlimited pipelines, 25k contacts
     website:  { tierId: "website-pro",      price: 79  },  // 7 websites, full AI builder, ecommerce
-    jobBoard: { tierId: "job-board-pro",    price: 79  },  // unlimited jobs, automation, client portal
-    gantt:    { tierId: "gantt-pro",        price: 79  },  // unlimited projects, resource allocation
+    projectsHub: { tierId: "projects-hub-pro", price: 99 },  // unlimited jobs & projects, resource allocation
     funnels:  { included: 3 },                              // 3 multi-step funnels
   },
   professional: {
@@ -379,8 +350,7 @@ export const BASE_PLAN_INCLUDES = {
     calendar: { tierId: "calendar-agency",  price: 149 },  // full professional tier
     crm:      { tierId: "crm-agency",       price: 199 },  // unlimited + API
     website:  { tierId: "website-agency",   price: 149 },  // unlimited websites, full AI
-    jobBoard: { tierId: "job-board-agency", price: 149 },  // unlimited, white-label, API
-    gantt:    { tierId: "gantt-agency",     price: 149 },  // unlimited, white-label, API
+    projectsHub: { tierId: "projects-hub-agency", price: 159 },  // unlimited, white-label, API
     funnels:  { included: 10 },                             // 10 multi-step funnels
   },
 };

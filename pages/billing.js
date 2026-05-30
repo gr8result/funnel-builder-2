@@ -18,8 +18,7 @@ const ACTIVE_MODULE_ALIASES = {
   evergreen_webinars: "webinars",
   pipelines: "subscription",
   affiliate_management: "affiliates",
-  job_board: "job-board",
-  gantt_charts: "gantt",
+  projects_hub: "projects-hub",
 };
 
 const formatTierLabel = (tier) => {
@@ -47,8 +46,7 @@ function normalizeActiveModuleId(moduleId) {
 const MODULES = [
   { id: "email",          name: "Email Marketing",         price: 59, color: "#facc15", icon: ICONS.email,          emoji: "📧" },
   { id: "crm",            name: "CRM",                     price: 19, color: "#ec4899", icon: ICONS.account,         emoji: "🗂️" },
-  { id: "job-board",      name: "Job Board",               price: 19, color: "#fb923c",                             emoji: "📋" },
-  { id: "gantt",          name: "Gantt Charts",            price: 19, color: "#10b981",                             emoji: "📊" },
+  { id: "projects-hub",  name: "Projects Hub",            price: 35, color: "#f97316",                             emoji: "🏗️" },
   { id: "sms",            name: "SMS Marketing",           price: 25, color: "#38bdf8", icon: ICONS.sms,            emoji: "💬" },
   { id: "social",         name: "Social Media",            price: 29, color: "#8126e9", icon: ICONS.social,         emoji: "📱" },
   { id: "calendar",       name: "Booking Calendar",         price: 19, color: "#84cc16", icon: ICONS.calendar,       emoji: "📅" },
@@ -91,8 +89,7 @@ const PLANS = [
       { label: "SMS credits/mo",        value: "500" },
       { label: "Websites",              value: "1" },
       { label: "Funnels",               value: "Landing pages only" },
-      { label: "Job Board",             value: "3 active jobs · 1 board" },
-      { label: "Gantt Charts",          value: "5 projects · 30 tasks · 2 users" },
+      { label: "Projects Hub",           value: "3 jobs · 5 projects · 2 users" },
       { label: "AI credits/mo",         value: "50" },
       { label: "Storage",               value: "5 GB" },
     ],
@@ -121,8 +118,7 @@ const PLANS = [
       { label: "SMS credits/mo",        value: "2,500" },
       { label: "Websites",              value: "2" },
       { label: "Funnels",               value: "1 (+ extras at cost)" },
-      { label: "Job Board",             value: "15 active jobs · 3 boards · time tracking" },
-      { label: "Gantt Charts",          value: "20 projects · unlimited tasks · dependencies" },
+      { label: "Projects Hub",           value: "15 jobs · 20 projects · dependencies" },
       { label: "AI credits/mo",         value: "250" },
       { label: "Storage",               value: "25 GB" },
     ],
@@ -150,8 +146,7 @@ const PLANS = [
       { label: "SMS credits/mo",        value: "5,000" },
       { label: "Websites",              value: "3" },
       { label: "Funnels",               value: "3 (+ extras at cost)" },
-      { label: "Job Board",             value: "Unlimited jobs · automation · client portal" },
-      { label: "Gantt Charts",          value: "Unlimited projects · resource allocation · critical path" },
+      { label: "Projects Hub",           value: "Unlimited jobs & projects · resource allocation · critical path" },
       { label: "AI credits/mo",         value: "750" },
       { label: "Storage",               value: "100 GB" },
     ],
@@ -179,8 +174,7 @@ const PLANS = [
       { label: "SMS credits/mo",  value: "10,000" },
       { label: "Websites",        value: "5" },
       { label: "Funnels",               value: "10 (+ extras at cost)" },
-      { label: "Job Board",             value: "Unlimited · white-label · API" },
-      { label: "Gantt Charts",          value: "Unlimited · white-label · API" },
+      { label: "Projects Hub",           value: "Unlimited · white-label · API" },
       { label: "AI credits/mo",         value: "5,000" },
       { label: "Storage",               value: "500 GB" },
     ],
@@ -216,8 +210,7 @@ export default function Billing() {
     const [crmPlanTier, setCrmPlanTier] = useState(null);
     const [funnelPackTier, setFunnelPackTier] = useState(null);
     const [websitePlanTier, setWebsitePlanTier] = useState(null);
-    const [jobBoardPlanTier, setJobBoardPlanTier] = useState(null);
-    const [ganttPlanTier, setGanttPlanTier] = useState(null);  const [privateNumbers, setPrivateNumbers] = useState(0);  const [extraContactBlocks, setExtraContactBlocks] = useState(0);  const [extraSendBlocks, setExtraSendBlocks] = useState(0);  const [extraSeats, setExtraSeats] = useState(0);    const [queryTiersLoaded, setQueryTiersLoaded] = useState(false);
+    const [projectsHubPlanTier, setProjectsHubPlanTier] = useState(null);  const [privateNumbers, setPrivateNumbers] = useState(0);  const [extraContactBlocks, setExtraContactBlocks] = useState(0);  const [extraSendBlocks, setExtraSendBlocks] = useState(0);  const [extraSeats, setExtraSeats] = useState(0);    const [queryTiersLoaded, setQueryTiersLoaded] = useState(false);
     // tiersFromUrl = tiers actively selected via URL params right now
     const [tiersFromUrl, setTiersFromUrl] = useState({});
     // dbPlanTiers = tiers already in DB (already paid)
@@ -232,8 +225,7 @@ export default function Billing() {
         const crmTier       = params.get("crmPlan");
         const funnelTier    = params.get("funnelPlan");
         const websiteTier   = params.get("websitePlan");
-        const jobBoardTier  = params.get("jobBoardPlan");
-        const ganttTier     = params.get("ganttPlan");
+        const projectsHubTier = params.get("projectsHubPlan");
 
         const urlTierMap = {};
         if (emailTier) {
@@ -271,15 +263,10 @@ export default function Billing() {
           setWebsitePlanTier(websiteTier);
           setSelected((prev) => (prev.includes("website-builder") ? prev : [...prev, "website-builder"]));
         }
-        if (jobBoardTier) {
-          urlTierMap.jobBoard = jobBoardTier;
-          setJobBoardPlanTier(jobBoardTier);
-          setSelected((prev) => (prev.includes("job-board") ? prev : [...prev, "job-board"]));
-        }
-        if (ganttTier) {
-          urlTierMap.gantt = ganttTier;
-          setGanttPlanTier(ganttTier);
-          setSelected((prev) => (prev.includes("gantt") ? prev : [...prev, "gantt"]));
+        if (projectsHubTier) {
+          urlTierMap.projectsHub = projectsHubTier;
+          setProjectsHubPlanTier(projectsHubTier);
+          setSelected((prev) => (prev.includes("projects-hub") ? prev : [...prev, "projects-hub"]));
         }
         // Accept both "plan" (direct link) and "basePlan" (returned from plan pages)
         const planFromUrl = params.get("plan") || params.get("basePlan");
@@ -313,8 +300,7 @@ export default function Billing() {
     if (tiersFromUrl.crm      || crmPlanTier)      params.set("crmPlan",      tiersFromUrl.crm      || crmPlanTier);
     if (tiersFromUrl.funnels  || funnelPackTier)   params.set("funnelPlan",   tiersFromUrl.funnels  || funnelPackTier);
     if (tiersFromUrl.website  || websitePlanTier)  params.set("websitePlan",  tiersFromUrl.website  || websitePlanTier);
-    if (tiersFromUrl.jobBoard || jobBoardPlanTier) params.set("jobBoardPlan", tiersFromUrl.jobBoard || jobBoardPlanTier);
-    if (tiersFromUrl.gantt    || ganttPlanTier)    params.set("ganttPlan",    tiersFromUrl.gantt    || ganttPlanTier);
+    if (tiersFromUrl.projectsHub || projectsHubPlanTier) params.set("projectsHubPlan", tiersFromUrl.projectsHub || projectsHubPlanTier);
     // The specific plan being changed overrides whatever was carried above
     if (planParamKey && tierValue) params.set(planParamKey, tierValue);
     const query = params.toString();
@@ -420,8 +406,7 @@ export default function Billing() {
     if (!tiersFromUrl.crm) setCrmPlanTier(null);
     if (!tiersFromUrl.website) setWebsitePlanTier(null);
     if (!tiersFromUrl.funnels) setFunnelPackTier(null);
-    if (!tiersFromUrl.jobBoard) setJobBoardPlanTier(null);
-    if (!tiersFromUrl.gantt) setGanttPlanTier(null);
+    if (!tiersFromUrl.projectsHub) setProjectsHubPlanTier(null);
   }, [selectedPlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSelect = (id) => {
@@ -438,8 +423,7 @@ export default function Billing() {
     setCrmPlanTier(null);
     setWebsitePlanTier(null);
     setFunnelPackTier(null);
-    setJobBoardPlanTier(null);
-    setGanttPlanTier(null);
+    setProjectsHubPlanTier(null);
     setTiersFromUrl({});
     setSelected([]);
   };
@@ -484,8 +468,7 @@ export default function Billing() {
     if (m.id === "social" && socialPlanTier) return false;
     if (m.id === "crm" && crmPlanTier) return false;
     if (m.id === "funnels" && funnelPackTier) return false;
-    if (m.id === "job-board" && jobBoardPlanTier) return false;
-    if (m.id === "gantt" && ganttPlanTier) return false;
+    if (m.id === "projects-hub" && projectsHubPlanTier) return false;
     return true;
   }).reduce((sum, m) => sum + m.price, 0);
   // Only charge for plan tiers that are:
@@ -497,15 +480,14 @@ export default function Billing() {
   const socialPlanPrice   = (tiersFromUrl.social   && tiersFromUrl.social   !== dbPlanTiers.social)   ? getPlanPrice(tiersFromUrl.social)   : 0;
   const crmPlanPrice      = (tiersFromUrl.crm      && tiersFromUrl.crm      !== dbPlanTiers.crm)      ? getPlanPrice(tiersFromUrl.crm)      : 0;
   const funnelPackPrice   = (tiersFromUrl.funnels  && tiersFromUrl.funnels  !== dbPlanTiers.funnels)  ? getPlanPrice(tiersFromUrl.funnels)  : 0;
-  const jobBoardPlanPrice = (tiersFromUrl.jobBoard && tiersFromUrl.jobBoard !== dbPlanTiers.jobBoard) ? getPlanPrice(tiersFromUrl.jobBoard) : 0;
-  const ganttPlanPrice    = (tiersFromUrl.gantt    && tiersFromUrl.gantt    !== dbPlanTiers.gantt)    ? getPlanPrice(tiersFromUrl.gantt)    : 0;
+  const projectsHubPlanPrice = (tiersFromUrl.projectsHub && tiersFromUrl.projectsHub !== dbPlanTiers.projectsHub) ? getPlanPrice(tiersFromUrl.projectsHub) : 0;
   const basePlanPrice = selectedPlan ? (BASE_PLANS.find((p) => p.id === selectedPlan)?.price || 0) : 0;
   const privateNumbersCost = privateNumbers * 35;
   const extraContactsCost = extraContactBlocks * 10;
   const extraSendsCost = extraSendBlocks * 20;
   const extraSeatsCost = extraSeats * 15;
   const annualMultiplier = isAnnual ? 0.80 : 1;
-  const total = (basePlanPrice + subtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + jobBoardPlanPrice + ganttPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost) * annualMultiplier * (1 - discountPercent / 100);
+  const total = (basePlanPrice + subtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost) * annualMultiplier * (1 - discountPercent / 100);
 
   const handleProceed = async () => {
     if (!user) return alert("Please log in first.");
@@ -520,8 +502,7 @@ export default function Billing() {
       if (socialPlanTier) manualParams.set("socialPlan", socialPlanTier);
       if (crmPlanTier) manualParams.set("crmPlan", crmPlanTier);
       if (funnelPackTier) manualParams.set("funnelPlan", funnelPackTier);
-      if (jobBoardPlanTier) manualParams.set("jobBoardPlan", jobBoardPlanTier);
-      if (ganttPlanTier) manualParams.set("ganttPlan", ganttPlanTier);
+      if (projectsHubPlanTier) manualParams.set("projectsHubPlan", projectsHubPlanTier);
       if (selected.length) manualParams.set("selected", selected.join(","));
       router.push(`/checkout/success?${manualParams.toString()}`);
       return;
@@ -535,8 +516,7 @@ export default function Billing() {
     if (socialPlanTier) params.set("socialPlan", socialPlanTier);
     if (crmPlanTier) params.set("crmPlan", crmPlanTier);
     if (funnelPackTier) params.set("funnelPlan", funnelPackTier);
-    if (jobBoardPlanTier) params.set("jobBoardPlan", jobBoardPlanTier);
-    if (ganttPlanTier) params.set("ganttPlan", ganttPlanTier);
+    if (projectsHubPlanTier) params.set("projectsHubPlan", projectsHubPlanTier);
     if (isAnnual) params.set("annual", "1");
     router.push(`/checkout?${params.toString()}`);
   };
@@ -746,33 +726,74 @@ export default function Billing() {
       </div>
 
       <div className={`grid${selectedPlan ? " plan-active" : ""}`}>
-        {MODULES.map((m) => (
+        {MODULES.map((m) => {
+          // Per-module tier config
+          const TIER_CFG = {
+            "email":           { tier: emailPlanTier,    path: "/modules/billing/email-plans",     key: "emailPlan",    strip: "Email Marketing — ",  btnBg: null },
+            "sms":             { tier: smsPlanTier,       path: "/modules/billing/sms-plans",       key: "smsPlan",      strip: "SMS Marketing — ",    btnBg: "#38bdf8" },
+            "calendar":        { tier: calendarPlanTier,  path: "/modules/billing/calendar-plans",  key: "calendarPlan", strip: "Calendar — ",          btnBg: null },
+            "social":          { tier: socialPlanTier,    path: "/modules/billing/social-plans",    key: "socialPlan",   strip: "Social Media — ",      btnBg: null },
+            "crm":             { tier: crmPlanTier,       path: "/modules/billing/crm-plans",       key: "crmPlan",      strip: "CRM — ",               btnBg: "#ec4899" },
+            "funnels":         { tier: funnelPackTier,    path: "/modules/billing/funnel-plans",    key: "funnelPlan",   strip: "Funnels — ",           btnBg: "#ef465d" },
+            "website-builder": { tier: websitePlanTier,  path: "/modules/billing/website-plans",   key: "websitePlan",  strip: "Website Builder — ",   btnBg: "#3b82f6" },
+            "job-board":       { tier: jobBoardPlanTier,  path: "/modules/billing/job-board-plans", key: "jobBoardPlan", strip: "Job Board — ",          btnBg: "#fb923c" },
+            "gantt":           { tier: ganttPlanTier,     path: "/modules/billing/gantt-plans",     key: "ganttPlan",    strip: "Gantt Charts — ",       btnBg: "#10b981" },
+          };
+          const tierCfg  = TIER_CFG[m.id];
+          const tier      = tierCfg?.tier || null;
+          const isSelected = selected.includes(m.id);
+          const isActive   = activeModules.has(m.id);
+          const planName   = selectedPlan ? BASE_PLANS.find(p => p.id === selectedPlan)?.name : null;
+          const deltaKey   = m.id === "website-builder" ? "website" : m.id === "job-board" ? "jobBoard" : m.id;
+
+          // Top-right corner badge
+          let cornerBadge = null;
+          if (tier) {
+            // Module has a selected tier — show tier name + cost delta
+            cornerBadge = (
+              <span style={{ fontSize: 13, color: "#fff", background: "rgba(0,0,0,0.55)", borderRadius: 6, padding: "3px 10px", fontWeight: 600 }}>
+                {PRICING[tier]?.name?.replace(tierCfg.strip, "") || tier} &middot; {getModuleDeltaLabel(deltaKey, tier, selectedPlan)}
+              </span>
+            );
+          } else if (planName) {
+            // Base plan selected — show the plan name so user knows which plan this goes on
+            cornerBadge = (
+              <span style={{ fontSize: 13, fontWeight: 600, borderRadius: 6, padding: "3px 10px",
+                color:      isSelected ? "#fff" : m.color,
+                background: isSelected ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.55)",
+                border:     isSelected ? "none" : `1px solid ${m.color}66`,
+              }}>
+                {planName} Plan
+              </span>
+            );
+          }
+
+          return (
           <div
             key={m.id}
-            className={`card ${selected.includes(m.id) ? "selected" : ""} ${activeModules.has(m.id) ? "active-module" : ""}`}
+            className={`card ${isSelected ? "selected" : ""} ${isActive ? "active-module" : ""}`}
             style={{
               borderColor: m.color,
               "--hover-color": m.color,
               "--fill-color": m.color,
-              cursor: activeModules.has(m.id) ? "default" : "pointer",
+              cursor: isActive ? "default" : "pointer",
             }}
             onClick={() => {
-              if ((m.id === "email" && emailPlanTier) ||
-                  (m.id === "crm" && crmPlanTier) ||
-                  (m.id === "job-board" && jobBoardPlanTier) ||
-                  (m.id === "gantt" && ganttPlanTier) ||
-                  (m.id === "funnels" && funnelPackTier)) return;
+              if (isActive) return;
+              if (tier) return; // tiered module: must go to plan page to select
               toggleSelect(m.id);
             }}
           >
-            {activeModules.has(m.id) && (
-              <span style={{
-                position: "absolute", bottom: 8, right: 8,
-                background: "rgba(34,197,94,0.85)", color: "#000",
-                fontSize: 16, fontWeight: 600, borderRadius: 5,
-                padding: "2px 7px", letterSpacing: 0.4,
-              }}>✓ ACTIVE</span>
+            {/* Active badge (bottom-right) */}
+            {isActive && (
+              <span style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(34,197,94,0.85)", color: "#000", fontSize: 13, fontWeight: 600, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.4 }}>✓ ACTIVE</span>
             )}
+
+            {/* Top-right corner badge */}
+            {!isActive && cornerBadge && (
+              <div style={{ position: "absolute", top: 8, right: 8 }}>{cornerBadge}</div>
+            )}
+
             <span className="icon">{m.emoji ? <span style={{ fontSize: 24, lineHeight: 1 }}>{m.emoji}</span> : m.icon({ size: 28 })}</span>
             <div className="card-info">
               <h3>{m.name}</h3>
@@ -1113,11 +1134,11 @@ export default function Billing() {
         .select-all { background: #22c55e; color: #000; }
         .clear { background: #ef4444; color: #fff; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin-bottom: 30px; }
-        .card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 2px solid; border-radius: 12px; transition: all 0.25s ease; background: #0c121a; cursor: pointer; opacity: 0.5; }
-        .plan-active .card { opacity: 1; }
-        .plan-active .card:not(.active-module):hover { background: var(--hover-color); color: #000; }
-        .plan-active .card.selected { background: var(--fill-color); color: #000; }
-        .card.active-module { background: var(--fill-color); color: #000; border-width: 3px; opacity: 1; }
+        .card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 2px solid; border-radius: 12px; transition: all 0.25s ease; background: #0c121a; cursor: pointer; }
+        .card:not(.active-module):hover { border-width: 3px; opacity: 0.9; }
+        .plan-active .card:not(.active-module):hover { background: color-mix(in srgb, var(--hover-color) 18%, #0c121a); }
+        .plan-active .card.selected { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card.active-module { background: var(--fill-color); color: #fff; border-width: 3px; }
         .card-info { flex: 1; }
         .card-info h3 { margin: 0; font-size: 30px; font-weight: 600;}
         .plan-display { font-size: 20px; margin-top: 6px; }
