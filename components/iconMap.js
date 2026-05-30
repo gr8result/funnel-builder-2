@@ -63,6 +63,7 @@ const ICONS = {
   // ---------- Modules ----------
   websiteBuilder: (props) => <Globe color={defaultColor} {...props} />,
   funnels: (props) => <Filter color={defaultColor} {...props} />,
+  projectsHub: (props) => <Compass color={defaultColor} {...props} />,
   automation: (props) => <Bot color={defaultColor} {...props} />,
   email: (props) => <Mail color={defaultColor} {...props} />,
   sms: (props) => <MessageSquare color={defaultColor} {...props} />,

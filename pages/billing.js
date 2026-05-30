@@ -745,40 +745,35 @@ export default function Billing() {
           const planName   = selectedPlan ? BASE_PLANS.find(p => p.id === selectedPlan)?.name : null;
           const deltaKey   = m.id === "website-builder" ? "website" : m.id === "projects-hub" ? "projectsHub" : m.id;
 
+          // Dead modules — not yet built, no plan badge
+          const DEAD_MODULES = new Set(["automation", "webinars", "subscription", "subaccounts"]);
+
           // Top-right corner badge
           let cornerBadge = null;
           if (tier) {
-            // Module has a selected tier — show tier name + cost delta
+            // Module has a selected tier — show tier name prominently
             cornerBadge = (
-              <span style={{ fontSize: 13, color: "#fff", background: "rgba(0,0,0,0.55)", borderRadius: 6, padding: "3px 10px", fontWeight: 600 }}>
-                {PRICING[tier]?.name?.replace(tierCfg.strip, "") || tier} &middot; {getModuleDeltaLabel(deltaKey, tier, selectedPlan)}
-              </span>
-            );
-          } else if (planName) {
-            // Base plan selected — show the plan name so user knows which plan this goes on
-            cornerBadge = (
-              <span style={{ fontSize: 13, fontWeight: 600, borderRadius: 6, padding: "3px 10px",
-                color:      isSelected ? "#fff" : m.color,
-                background: isSelected ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.55)",
-                border:     isSelected ? "none" : `1px solid ${m.color}66`,
-              }}>
-                {planName} Plan
+              <span style={{ fontSize: 14, color: "#fff", background: m.color, borderRadius: 8, padding: "5px 12px", fontWeight: 700, boxShadow: "0 2px 8px rgba(0,0,0,0.4)", letterSpacing: "0.02em" }}>
+                {PRICING[tier]?.name?.replace(tierCfg.strip, "") || tier}
               </span>
             );
           }
 
+          const isDead = DEAD_MODULES.has(m.id);
+          const hasTier = !!tier;
+
           return (
           <div
             key={m.id}
-            className={`card ${isSelected ? "selected" : ""} ${isActive ? "active-module" : ""}`}
-            style={{
+            className={`card ${isSelected ? "selected" : ""} ${isActive ? "active-module" : ""} ${isDead ? "dead-module" : ""} ${hasTier ? "tier-selected" : ""}`}
+            style={isDead ? { cursor: "default" } : {
               borderColor: m.color,
               "--hover-color": m.color,
               "--fill-color": m.color,
               cursor: isActive ? "default" : "pointer",
             }}
             onClick={() => {
-              if (isActive) return;
+              if (isActive || isDead) return;
               if (tier) return; // tiered module: must go to plan page to select
               toggleSelect(m.id);
             }}
@@ -932,10 +927,11 @@ export default function Billing() {
         .clear { background: #ef4444; color: #fff; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin-bottom: 30px; }
         .card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 2px solid; border-radius: 12px; transition: all 0.25s ease; background: #0c121a; cursor: pointer; }
-        .card:not(.active-module):hover { border-width: 3px; opacity: 0.9; }
-        .plan-active .card:not(.active-module):hover { background: color-mix(in srgb, var(--hover-color) 18%, #0c121a); }
-        .plan-active .card.selected { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card:not(.active-module):not(.dead-module):hover { border-width: 3px; }
+        .card.tier-selected:not(.active-module):not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card.tier-selected:not(.active-module):not(.dead-module):hover { opacity: 0.85; }
         .card.active-module { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .card.dead-module { border-color: #2a3347; color: #4b5563; cursor: default; opacity: 0.5; }
         .card-info { flex: 1; }
         .card-info h3 { margin: 0; font-size: 30px; font-weight: 600;}
         .plan-display { font-size: 20px; margin-top: 6px; }

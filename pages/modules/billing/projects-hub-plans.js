@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { supabase } from "../../../utils/supabase-client";
+import ICONS from "../../../components/iconMap";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { BASE_PLAN_INCLUDES } from "../../../data/pricing";
@@ -73,7 +74,7 @@ export default function ProjectsHubPlans() {
     "projects-hub-starter": "Starter (3 jobs · 5 projects · 2 users)",
     "projects-hub-growth":  "Growth (15 jobs · 20 projects · dependencies)",
     "projects-hub-pro":     "Scale (unlimited · resource allocation · critical path)",
-    "projects-hub-agency":  "Professional (unlimited · white-label · API)",
+    "projects-hub-agency":  "Professional (unlimited · 25 users · budget tracking)",
   }[includedId] || null;
   // ──────────────────────────────────────────────────────────────────────
 
@@ -96,8 +97,6 @@ export default function ProjectsHubPlans() {
         { label: "Dependencies",          value: "—" },
         { label: "Resource allocation",   value: "—" },
         { label: "Budget tracking",       value: "—" },
-        { label: "Client portal",         value: "—" },
-        { label: "White-label / API",     value: "—" },
       ],
     },
     {
@@ -118,8 +117,6 @@ export default function ProjectsHubPlans() {
         { label: "Dependencies",          value: "✓" },
         { label: "Resource allocation",   value: "—" },
         { label: "Budget tracking",       value: "—" },
-        { label: "Client portal",         value: "—" },
-        { label: "White-label / API",     value: "—" },
       ],
     },
     {
@@ -141,8 +138,6 @@ export default function ProjectsHubPlans() {
         { label: "Dependencies",          value: "✓" },
         { label: "Resource allocation",   value: "✓" },
         { label: "Budget tracking",       value: "✓" },
-        { label: "Client portal",         value: "✓" },
-        { label: "White-label / API",     value: "—" },
       ],
     },
     {
@@ -150,12 +145,12 @@ export default function ProjectsHubPlans() {
       name: "Professional",
       price: 159,
       color: "#7c3aed",
-      tagline: "Enterprise project management with white-label & API",
+      tagline: "Full-scale project ops for large teams and agencies",
       features: [
         { label: "Active jobs",           value: "Unlimited" },
         { label: "Projects (Gantt)",      value: "Unlimited" },
         { label: "Tasks",                 value: "Unlimited" },
-        { label: "Team members",          value: "Unlimited" },
+        { label: "Team members",          value: "25" },
         { label: "Kanban board",          value: "✓" },
         { label: "Gantt chart view",      value: "✓" },
         { label: "Milestones",            value: "✓" },
@@ -163,8 +158,6 @@ export default function ProjectsHubPlans() {
         { label: "Dependencies",          value: "✓" },
         { label: "Resource allocation",   value: "✓" },
         { label: "Budget tracking",       value: "✓" },
-        { label: "Client portal",         value: "✓" },
-        { label: "White-label / API",     value: "✓" },
       ],
     },
   ];
@@ -174,93 +167,187 @@ export default function ProjectsHubPlans() {
       {/* Banner */}
       <div className="banner">
         <div className="banner-left">
-          <span style={{ fontSize: 36 }}>🏗️</span>
+          <span className="banner-icon">{ICONS.projectsHub({ size: 48 })}</span>
           <div>
-            <h1 className="banner-title">Projects Hub Plans</h1>
+            <h1 className="banner-title">Projects Hub</h1>
             <p className="banner-subtitle">Job tracking + Gantt charts — all in one module.</p>
           </div>
         </div>
         <Link href={buildBillingUrl({})} className="back-btn">← Back to Billing</Link>
       </div>
 
-      {basePlanLabel && (
-        <div className="info-bar" style={{ background: "rgba(99,102,241,.12)", border: "1px solid rgba(99,102,241,.3)", borderRadius: 10, padding: "12px 20px", marginBottom: 24, color: "#c7d2fe", fontSize: 14 }}>
-          <strong>Your {basePlanLabel} plan</strong> includes{" "}
-          {includedFriendlyTier ? <strong>{includedFriendlyTier}</strong> : "no Projects Hub tier"}.
-          {includedFriendlyTier && " Upgrade pricing below shows the additional cost above that."}
+      {/* What's included */}
+      <div className="included-box">
+        <div className="included-inner">
+          <div className="included-section">
+            <span className="included-icon">📋</span>
+            <div>
+              <p className="included-label">Job Tracking</p>
+              <p className="included-value">Kanban boards, status tracking, file attachments</p>
+            </div>
+          </div>
+          <div className="included-divider" />
+          <div className="included-section">
+            <span className="included-icon">📊</span>
+            <div>
+              <p className="included-label">Gantt Charts</p>
+              <p className="included-value">
+                {includedFriendlyTier
+                  ? `${includedFriendlyTier} — included in your ${basePlanLabel} plan`
+                  : "Milestones, dependencies, critical path — tier depends on your platform plan"}
+              </p>
+            </div>
+          </div>
+          <div className="included-divider" />
+          <div className="included-section">
+            <span className="included-icon">⬆️</span>
+            <div>
+              <p className="included-label">Upgrade</p>
+              <p className="included-value">Select a higher tier below — billed monthly, cancel anytime</p>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 20, marginBottom: 40 }}>
+      {/* Section header */}
+      <div className="section-header">
+        <h2 className="section-title">Projects Hub Plans</h2>
+        <p className="section-sub">Pick the tier that fits your team. Includes both job tracking and Gantt chart views.</p>
+      </div>
+
+      {/* Plan cards */}
+      <div className="packs-grid">
         {plans.map((plan) => {
           const isCurrent = plan.id === currentTierId;
           return (
-            <div key={plan.id} style={{
-              background: "rgba(255,255,255,0.04)",
-              border: `2px solid ${isCurrent ? plan.color : "rgba(255,255,255,0.1)"}`,
-              borderRadius: 14,
-              padding: 24,
-              position: "relative",
-              display: "flex",
-              flexDirection: "column",
-            }}>
-              {plan.recommended && (
-                <span style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: plan.color, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 20, whiteSpace: "nowrap" }}>
-                  Best Value
-                </span>
-              )}
-              {isCurrent && (
-                <span style={{ position: "absolute", top: 12, right: 12, background: plan.color, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
-                  ✓ Current Plan
-                </span>
-              )}
-              <h3 style={{ color: plan.color, margin: "0 0 4px", fontSize: 20, fontWeight: 700 }}>{plan.name}</h3>
-              <p style={{ color: "#9ca3af", fontSize: 13, margin: "0 0 12px" }}>{plan.tagline}</p>
-              <div style={{ marginBottom: 16 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: "#f1f5f9" }}>A${plan.price}</span>
-                <span style={{ color: "#64748b", fontSize: 14 }}>/mo</span>
+            <div
+              key={plan.id}
+              className={`pack-card${plan.recommended ? " recommended" : ""}${isCurrent ? " active" : ""}`}
+              style={{ "--pack-color": plan.color, borderColor: plan.color + "55" }}
+            >
+              {plan.recommended && <span className="badge" style={{ background: plan.color }}>Best Value</span>}
+              {isCurrent         && <span className="badge active-badge">✓ Current Plan</span>}
+
+              <h2 className="pack-name" style={{ color: plan.color }}>{plan.name}</h2>
+
+              <div className="price-row">
+                <span className="price-amt" style={{ color: plan.color }}>${plan.price}</span>
+                <span className="price-period">/mo</span>
               </div>
-              <div style={{ fontSize: 12, color: plan.color, fontWeight: 600, marginBottom: 16 }}>
+
+              <div className="extra-tag" style={{ background: plan.color + "22", color: plan.color, border: `1px solid ${plan.color}44` }}>
                 {getDeltaLabel(plan)}
               </div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px", flex: 1 }}>
+
+              <p className="pack-tagline">{plan.tagline}</p>
+
+              <div className="divider" style={{ background: plan.color }} />
+
+              <ul className="features">
                 {plan.features.map((f) => (
-                  <li key={f.label} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", fontSize: 13, color: f.value === "—" ? "#4b5563" : "#e2e8f0" }}>
-                    <span>{f.label}</span>
-                    <span style={{ fontWeight: 600 }}>{f.value}</span>
+                  <li key={f.label} className="feature-row">
+                    <span className="f-check" style={{ color: f.value === "—" ? "#4b5563" : plan.color }}>
+                      {f.value === "—" ? "—" : "✓"}
+                    </span>
+                    <span className="f-text" style={{ color: f.value === "—" ? "#6b7280" : "#d1d5db" }}>
+                      {f.label}{f.value !== "✓" && f.value !== "—" ? `: ${f.value}` : ""}
+                    </span>
                   </li>
                 ))}
               </ul>
+
               <button
-                onClick={() => handleSelectPlan(plan)}
-                disabled={isCurrent}
+                className="select-btn"
                 style={{
-                  background: isCurrent ? "rgba(255,255,255,0.05)" : plan.color,
-                  color: isCurrent ? "#6b7280" : "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 0",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: isCurrent ? "default" : "pointer",
-                  width: "100%",
+                  background: isCurrent ? "transparent" : plan.color,
+                  color: isCurrent ? plan.color : "#000",
+                  border: isCurrent ? `2px solid ${plan.color}` : "none",
                 }}
+                disabled={isCurrent}
+                onClick={() => !isCurrent && handleSelectPlan(plan)}
               >
-                {getButtonLabel(plan)}
+                {isCurrent ? "Current Plan" : getButtonLabel(plan)}
               </button>
             </div>
           );
         })}
       </div>
 
+      <p className="footnote">
+        All tiers include both job tracking and Gantt chart views. Upgrade or downgrade at any time — changes apply from your next billing cycle.
+      </p>
+
       <style jsx>{`
-        .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
-        .banner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
-        .banner-left { display: flex; align-items: center; gap: 14px; }
-        .banner-title { font-size: 26px; font-weight: 800; color: #f1f5f9; margin: 0; }
-        .banner-subtitle { color: #94a3b8; margin: 4px 0 0; font-size: 14px; }
-        .back-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; }
-        .back-btn:hover { background: rgba(255,255,255,0.14); }
+        .wrap { min-height: 100vh; background: #0c121a; color: #fff; padding: 28px; display: flex; flex-direction: column; align-items: center; }
+
+        /* Banner */
+        .banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #f97316; padding: 24px; border-radius: 12px; margin-bottom: 28px; width: 100%; max-width: 1320px; }
+        .banner-left { display: flex; align-items: center; gap: 16px; flex: 1; }
+        .banner-icon { background: rgba(255,255,255,0.2); border-radius: 50%; padding: 10px; display: flex; align-items: center; flex-shrink: 0; }
+        .banner-title { font-size: 48px; font-weight: 600; margin: 0; }
+        .banner-subtitle { font-size: 18px; margin: 4px 0 0; opacity: 0.9; }
+        .back-btn { background: #0c121a; border: 2px solid #fff; color: #fff; font-size: 18px; font-weight: 600; cursor: pointer; padding: 8px 18px; border-radius: 20px; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
+        .back-btn:hover { background: #fff; color: #0c121a; }
+
+        /* Included box */
+        .included-box { width: 100%; max-width: 1100px; background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 20px 24px; margin-bottom: 32px; }
+        .included-inner { display: flex; align-items: stretch; gap: 0; }
+        .included-section { display: flex; align-items: center; gap: 14px; flex: 1; padding: 0 16px; }
+        .included-section:first-child { padding-left: 0; }
+        .included-section:last-child { padding-right: 0; }
+        .included-icon { font-size: 26px; flex-shrink: 0; }
+        .included-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; margin: 0 0 3px; }
+        .included-value { font-size: 14px; font-weight: 600; color: #e5e7eb; margin: 0; }
+        .included-divider { width: 1px; background: #1f2937; flex-shrink: 0; margin: 0 4px; }
+
+        /* Section header */
+        .section-header { width: 100%; max-width: 1100px; margin-bottom: 18px; }
+        .section-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+        .section-sub { font-size: 14px; color: #9ca3af; margin: 0; }
+
+        /* Plans grid */
+        .packs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; width: 100%; max-width: 1100px; align-items: start; }
+
+        /* Plan card */
+        .pack-card { position: relative; border: 2px solid; border-radius: 16px; padding: 28px 20px 22px; display: flex; flex-direction: column; background: #111827; transition: transform 0.2s, box-shadow 0.2s; }
+        .pack-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+        .pack-card.recommended { box-shadow: 0 0 0 3px var(--pack-color); }
+        .pack-card.active { box-shadow: 0 0 0 3px #22c55e; }
+
+        .badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; padding: 4px 14px; border-radius: 20px; white-space: nowrap; color: #000; }
+        .active-badge { background: #22c55e !important; }
+
+        .pack-name { font-size: 22px; font-weight: 700; margin: 10px 0 6px; }
+        .price-row { display: flex; align-items: baseline; gap: 3px; margin-bottom: 10px; }
+        .price-amt { font-size: 38px; font-weight: 800; line-height: 1; }
+        .price-period { font-size: 15px; color: #9ca3af; }
+
+        .extra-tag { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; }
+
+        .pack-tagline { font-size: 13px; color: #9ca3af; margin: 0 0 14px; line-height: 1.5; }
+
+        .divider { height: 2px; opacity: 0.3; border-radius: 2px; margin-bottom: 14px; }
+
+        .features { list-style: none; padding: 0; margin: 0 0 20px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+        .feature-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
+        .f-check { font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+        .f-text { color: #d1d5db; }
+
+        .select-btn { width: 100%; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 700; margin-top: auto; transition: opacity 0.2s; cursor: pointer; }
+        .select-btn:hover:not(:disabled) { opacity: 0.85; }
+        .select-btn:disabled { cursor: default; }
+
+        .footnote { font-size: 13px; color: #6b7280; margin-top: 24px; text-align: center; max-width: 600px; line-height: 1.6; }
+
+        @media (max-width: 900px) {
+          .packs-grid { grid-template-columns: repeat(2, 1fr); }
+          .included-inner { flex-direction: column; gap: 14px; }
+          .included-divider { display: none; }
+        }
+        @media (max-width: 540px) {
+          .packs-grid { grid-template-columns: 1fr; }
+          .banner { flex-direction: column; }
+        }
       `}</style>
     </div>
   );
