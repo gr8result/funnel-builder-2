@@ -362,9 +362,9 @@ export default function Billing() {
 
       // Seed tier badges from DB so module cards show the user's current
       // subscription — URL params (from plan pages) take priority over DB.
-      if (acc?.email_plan_tier    && !emailTierFromUrl)    setEmailPlanTier(acc.email_plan_tier);
-      if (acc?.sms_plan_tier      && !smsTierFromUrl)      setSmsPlanTier(acc.sms_plan_tier);
-      if (acc?.calendar_plan_tier && !calendarTierFromUrl) setCalendarPlanTier(acc.calendar_plan_tier);
+      // NOTE: we do NOT seed the display tier states here — those are only set
+      // by URL params when a user actively selects a plan. DB tiers feed into
+      // dbPlanTiers for billing delta calculation only.
 
       const { data: moduleRows } = await supabase
         .from("user_modules")
@@ -783,8 +783,8 @@ export default function Billing() {
               <span style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(34,197,94,0.85)", color: "#000", fontSize: 13, fontWeight: 600, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.4 }}>✓ ACTIVE</span>
             )}
 
-            {/* Top-right corner badge */}
-            {cornerBadge && (
+            {/* Top-right corner badge — only show if not already an active/paid module */}
+            {!isActive && cornerBadge && (
               <div style={{ position: "absolute", top: 8, right: 8 }}>{cornerBadge}</div>
             )}
 
