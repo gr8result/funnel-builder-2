@@ -783,8 +783,8 @@ export default function Billing() {
               <span style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(34,197,94,0.85)", color: "#000", fontSize: 13, fontWeight: 600, borderRadius: 5, padding: "2px 7px", letterSpacing: 0.4 }}>✓ ACTIVE</span>
             )}
 
-            {/* Top-right corner badge — only show if not already an active/paid module */}
-            {!isActive && cornerBadge && (
+            {/* Top-right corner badge — show whenever a tier has been chosen */}
+            {cornerBadge && (
               <div style={{ position: "absolute", top: 8, right: 8 }}>{cornerBadge}</div>
             )}
 
@@ -934,6 +934,8 @@ export default function Billing() {
         /* Fill when module tier explicitly chosen from sub-page */
         .card.tier-selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
         .card.tier-selected:not(.dead-module):hover { opacity: 0.85; }
+        /* Always fill active/purchased modules */
+        .card.active-module { background: var(--fill-color); color: #fff; border-width: 3px; }
         .card.dead-module { border-color: #2a3347; color: #4b5563; cursor: default; opacity: 0.5; }
         .card-info { flex: 1; }
         .card-info h3 { margin: 0; font-size: 30px; font-weight: 600;}
