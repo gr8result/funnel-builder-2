@@ -31,10 +31,10 @@ const CHART_BLOCK_PROPS = {
   fullWidthBackground: true,
   baseLayoutWidth: 1500,
   plans: [
-    { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 200, billingPrice: 129 },
-    { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 415, billingPrice: 299 },
-    { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 814, billingPrice: 449 },
-    { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1724, billingPrice: 899 },
+    { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 215, billingPrice: 159 },
+    { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 474, billingPrice: 359 },
+    { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 913, billingPrice: 499 },
+    { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1883, billingPrice: 999 },
   ],
 };
 

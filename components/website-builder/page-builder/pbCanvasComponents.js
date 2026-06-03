@@ -32,6 +32,7 @@ import {
   normalizeStatItem, StatsItemsEditor,
   normalizeTestimonialItemForEditor, normalizeTrustBadgeItem, TrustBadgesEditor,
   CustomHtmlPropertiesPanel, TrustBadgesPropertiesPanel,
+  DividerPropertiesPanel,
   TestimonialItemsEditor, TestimonialPropertiesPanel,
   NewsletterPropertiesPanel, FooterPropertiesPanel,
   TextPropertiesPanel, StatsPropertiesPanel,
@@ -121,6 +122,8 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
     };
   };
 
+  const isEditingVideoHero = selected && block?.type === BlockTypes.VIDEO_HERO;
+
   return (
     <div
       style={{
@@ -142,8 +145,13 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
       }}
       data-canvas-block-index={index}
-      draggable
+      draggable={!isEditingVideoHero}
       onDragStart={(e) => {
+        if (e.target?.closest?.("button,input,select,textarea,label,[data-no-canvas-drag='true']")) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         e.stopPropagation();
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("existingBlockIndex", String(index));
@@ -303,9 +311,9 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                   e.stopPropagation();
                   onSaveBlockDefault(block);
                 }}
-                title="Save this block's current presentation as the default for this block type"
+                title="Save this block as the permanent template for this widget"
               >
-                Save Default
+                Save as Template
               </button>
             ) : null}
           </div>
@@ -1067,10 +1075,8 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Shared Column Design</label>
           <div style={styles.colorGrid}>
-            <ColorSelector label="Background" value={props.columnBackgroundColor || props.cardBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ columnBackgroundColor: value })} />
+            <ColorSelector label="Default Background" value={props.columnBackgroundColor || props.cardBackgroundColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ columnBackgroundColor: value })} />
             <ColorSelector label="Border" value={props.columnBorderColor || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ columnBorderColor: value })} />
-            <ColorSelector label="Title Color" value={props.columnTitleColor || props.textColor || "#0f172a"} fallback="#0f172a" onChange={(value) => update({ columnTitleColor: value })} />
-            <ColorSelector label="Body Color" value={props.columnBodyColor || "#334155"} fallback="#334155" onChange={(value) => update({ columnBodyColor: value })} />
           </div>
           <div style={styles.colorGrid}>
             <NumberField label="Padding" value={Number(props.columnPadding ?? 18)} min={0} max={96} onChange={(value) => update({ columnPadding: value })} />
@@ -1114,9 +1120,15 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
           const isNewsletter = colContentType === "newsletter";
           const isBlock = colContentType === "block";
           const embeddedBlock = props?.[`${column.prefix}Block`] || null;
+          const colBg = props[`${column.prefix}BackgroundColor`] || props.columnBackgroundColor || props.cardBackgroundColor || "#f8fafc";
           return (
-            <div key={column.id} style={styles.sectionCard}>
+            <div key={column.id} style={{ ...styles.sectionCard, borderLeft: `4px solid ${colBg}`, background: "rgba(0,0,0,0.15)" }}>
               <label style={styles.propertyLabel}>{column.label}</label>
+
+              {/* Per-column background */}
+              <div style={styles.colorGrid}>
+                <ColorSelector label="Card Background" value={colBg} fallback="#f8fafc" onChange={(value) => update({ [`${column.prefix}BackgroundColor`]: value })} />
+              </div>
 
               {/* Card width */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -1142,11 +1154,172 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                       </p>
                       <button
                         type="button"
-                        style={{ ...styles.secondaryBtn, borderColor: "rgba(239,68,68,0.4)", color: "#fca5a5" }}
+                        style={{ ...styles.secondaryBtn, borderColor: "rgba(239,68,68,0.4)", color: "#fca5a5", marginBottom: 12 }}
                         onClick={() => update({ [`${column.prefix}Block`]: null, [`${column.prefix}ContentType`]: "text" })}
                       >
                         Remove Embedded Block
                       </button>
+
+                      {/* ── Inline editor for embedded competitor-comparison ── */}
+                      {embeddedBlock.type === BlockTypes.COMPETITOR_COMPARISON ? (() => {
+                        const ebProps = embeddedBlock.props || {};
+                        const updateEB = (patch) => update({ [`${column.prefix}Block`]: { ...embeddedBlock, props: { ...ebProps, ...patch } } });
+                        const ebRows = Array.isArray(ebProps.rows) ? ebProps.rows : [];
+                        return (
+                          <div style={{ borderTop: "1px solid rgba(148,163,184,0.18)", paddingTop: 12, display: "grid", gap: 10 }}>
+                            <label style={styles.propertyLabel}>💸 Pricing Comparison — Header</label>
+                            <input type="text" value={String(ebProps.eyebrow || "")} onChange={(e) => updateEB({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="our All-in-One Platform" />
+                            <input type="text" value={String(ebProps.title || "")} onChange={(e) => updateEB({ title: e.target.value })} style={styles.propertyInput} placeholder="Optional heading" />
+                            <input type="text" value={String(ebProps.subtitle || "")} onChange={(e) => updateEB({ subtitle: e.target.value })} style={styles.propertyInput} placeholder="Subtitle (optional)" />
+
+                            <label style={{ ...styles.propertyLabel, marginTop: 4 }}>Your Plan (bottom row)</label>
+                            <input type="text" value={String(ebProps.planName || "")} onChange={(e) => updateEB({ planName: e.target.value })} style={styles.propertyInput} placeholder="COMPETITOR ANALYSIS" />
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ color: "#94a3b8", fontSize: 13, minWidth: 60 }}>$/mo</span>
+                              <input type="number" value={Number(ebProps.planPrice ?? 299)} min={0} onChange={(e) => updateEB({ planPrice: Number(e.target.value) })} style={{ ...styles.propertyInput, width: 90 }} />
+                            </div>
+                            <input type="text" value={String(ebProps.planTagline || "")} onChange={(e) => updateEB({ planTagline: e.target.value })} style={styles.propertyInput} placeholder="Everything above, included" />
+                            <input type="text" value={String(ebProps.uniqueLabel || "")} onChange={(e) => updateEB({ uniqueLabel: e.target.value })} style={styles.propertyInput} placeholder="Unique to us" />
+
+                            <label style={{ ...styles.propertyLabel, marginTop: 4 }}>Feature Rows</label>
+                            {ebRows.map((row, rowIdx) => {
+                              const rowLogos = Array.isArray(row.logos) ? row.logos : [];
+                              return (
+                                <div key={rowIdx} style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 10, background: "rgba(255,255,255,0.03)", display: "grid", gap: 6 }}>
+                                  {/* Row header: name + price + delete */}
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <input
+                                      type="text"
+                                      value={String(row.category || "")}
+                                      onChange={(e) => {
+                                        const next = ebRows.map((r, i) => i === rowIdx ? { ...r, category: e.target.value } : r);
+                                        updateEB({ rows: next });
+                                      }}
+                                      style={{ ...styles.propertyInput, flex: 1, margin: 0, fontSize: 12 }}
+                                      placeholder="Feature name"
+                                    />
+                                    <span style={{ color: "#94a3b8", fontSize: 12, flexShrink: 0 }}>$</span>
+                                    <input
+                                      type="number"
+                                      value={Number(row.price ?? 0)}
+                                      min={0}
+                                      onChange={(e) => {
+                                        const next = ebRows.map((r, i) => i === rowIdx ? { ...r, price: Number(e.target.value) } : r);
+                                        updateEB({ rows: next });
+                                      }}
+                                      style={{ ...styles.propertyInput, width: 72, margin: 0 }}
+                                    />
+                                    <button
+                                      type="button"
+                                      style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "#334155", color: "#f87171", cursor: "pointer", flexShrink: 0 }}
+                                      onClick={() => updateEB({ rows: ebRows.filter((_, i) => i !== rowIdx) })}
+                                    >✕</button>
+                                  </div>
+                                  {/* Logos */}
+                                  <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>Competitor logos — upload an image or enter a domain</p>
+                                  {rowLogos.map((logo, logoIdx) => (
+                                    <div key={logoIdx} style={{ display: "grid", gap: 4 }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                        {/* Preview */}
+                                        {(logo.src || logo.domain) ? (
+                                          <img
+                                            src={logo.src || `https://logo.clearbit.com/${logo.domain}`}
+                                            alt={logo.name || logo.domain || "logo"}
+                                            width={22} height={22}
+                                            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1px solid rgba(148,163,184,0.3)", flexShrink: 0 }}
+                                            onError={(e) => { if (!logo.src) e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${logo.domain}&sz=64`; }}
+                                          />
+                                        ) : (
+                                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(148,163,184,0.2)", flexShrink: 0 }} />
+                                        )}
+                                        {/* Tool name */}
+                                        <input
+                                          type="text"
+                                          value={String(logo.name || "")}
+                                          onChange={(e) => {
+                                            const nextLogos = rowLogos.map((l, li) => li === logoIdx ? { ...l, name: e.target.value } : l);
+                                            const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                            updateEB({ rows: next });
+                                          }}
+                                          style={{ ...styles.propertyInput, flex: 1, margin: 0, fontSize: 12 }}
+                                          placeholder="Tool name"
+                                        />
+                                        <button
+                                          type="button"
+                                          style={{ padding: "2px 6px", borderRadius: 5, border: "none", background: "#334155", color: "#f87171", cursor: "pointer", flexShrink: 0 }}
+                                          onClick={() => {
+                                            const nextLogos = rowLogos.filter((_, li) => li !== logoIdx);
+                                            const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                            updateEB({ rows: next });
+                                          }}
+                                        >✕</button>
+                                      </div>
+                                      {/* Upload or domain */}
+                                      <div style={{ display: "flex", alignItems: "center", gap: 5, paddingLeft: 27 }}>
+                                        <label style={{ ...styles.assetUploadCta, fontSize: 11, padding: "2px 8px", margin: 0, cursor: "pointer" }}>
+                                          Upload
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            style={styles.hiddenInput}
+                                            onChange={async (e) => {
+                                              const file = e.target.files?.[0];
+                                              e.target.value = "";
+                                              if (!file) return;
+                                              const asset = await Promise.resolve(onUploadImage?.(index, `cc_logo_${rowIdx}_${logoIdx}`, file));
+                                              if (!asset?.src) return;
+                                              const nextLogos = rowLogos.map((l, li) => li === logoIdx ? { ...l, src: asset.src, domain: "" } : l);
+                                              const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                              updateEB({ rows: next });
+                                            }}
+                                          />
+                                        </label>
+                                        <span style={{ color: "#475569", fontSize: 11 }}>or domain:</span>
+                                        <input
+                                          type="text"
+                                          value={String(logo.domain || "")}
+                                          onChange={(e) => {
+                                            const nextLogos = rowLogos.map((l, li) => li === logoIdx ? { ...l, domain: e.target.value, src: "" } : l);
+                                            const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                            updateEB({ rows: next });
+                                          }}
+                                          style={{ ...styles.propertyInput, flex: 1, margin: 0, fontSize: 11 }}
+                                          placeholder="monday.com"
+                                        />
+                                        {logo.src ? (
+                                          <button
+                                            type="button"
+                                            style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, border: "none", background: "#334155", color: "#94a3b8", cursor: "pointer", flexShrink: 0 }}
+                                            onClick={() => {
+                                              const nextLogos = rowLogos.map((l, li) => li === logoIdx ? { ...l, src: "" } : l);
+                                              const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                              updateEB({ rows: next });
+                                            }}
+                                          >✕ img</button>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    style={{ ...styles.secondaryBtn, fontSize: 12, padding: "3px 10px" }}
+                                    onClick={() => {
+                                      const nextLogos = [...rowLogos, { domain: "", name: "", src: "" }];
+                                      const next = ebRows.map((r, i) => i === rowIdx ? { ...r, logos: nextLogos } : r);
+                                      updateEB({ rows: next });
+                                    }}
+                                  >+ Add Logo</button>
+                                </div>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              style={{ ...styles.secondaryBtn, width: "100%", marginTop: 2 }}
+                              onClick={() => updateEB({ rows: [...ebRows, { category: "NEW FEATURE", logos: [], price: 0 }] })}
+                            >+ Add Row</button>
+                          </div>
+                        );
+                      })() : null}
                     </>
                   ) : (
                     <p style={{ margin: 0, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
@@ -2390,6 +2563,15 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
     update({ fields: fields.filter((_, currentIndex) => currentIndex !== fieldIndex) });
   };
 
+  const moveField = (fieldIndex, direction) => {
+    const targetIndex = fieldIndex + direction;
+    if (targetIndex < 0 || targetIndex >= fields.length) return;
+    const nextFields = [...fields];
+    const [movedField] = nextFields.splice(fieldIndex, 1);
+    nextFields.splice(targetIndex, 0, movedField);
+    update({ fields: nextFields });
+  };
+
   const addField = () => {
     update({
       fields: [...fields, createContactField(fields.length, { label: `Field ${fields.length + 1}`, type: "text", required: false, placeholder: "" })],
@@ -2543,7 +2725,25 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
               <div key={`${field.name}-${fieldIndex}`} style={styles.linkRowCard}>
                 <div style={styles.linkRowHeader}>
                   <span style={styles.linkRowTitle}>{field.label || `Field ${fieldIndex + 1}`}</span>
-                  <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete field ${fieldIndex + 1}`} title="Delete field" onClick={() => removeField(fieldIndex)}>×</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      style={styles.secondaryBtn}
+                      disabled={fieldIndex === 0}
+                      aria-label={`Move field ${fieldIndex + 1} up`}
+                      title="Move field up"
+                      onClick={() => moveField(fieldIndex, -1)}
+                    >Up</button>
+                    <button
+                      type="button"
+                      style={styles.secondaryBtn}
+                      disabled={fieldIndex === fields.length - 1}
+                      aria-label={`Move field ${fieldIndex + 1} down`}
+                      title="Move field down"
+                      onClick={() => moveField(fieldIndex, 1)}
+                    >Down</button>
+                    <button type="button" style={styles.iconDeleteBtn} aria-label={`Delete field ${fieldIndex + 1}`} title="Delete field" onClick={() => removeField(fieldIndex)}>×</button>
+                  </div>
                 </div>
                 <input type="text" value={String(field.label || "")} onChange={(e) => updateField(fieldIndex, { label: e.target.value })} style={styles.propertyInput} placeholder="Field label" />
                 <input type="text" value={String(field.name || "")} onChange={(e) => updateField(fieldIndex, { name: e.target.value.replace(/[^a-zA-Z0-9-_]/g, "-") })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="field-name" />
@@ -2577,6 +2777,8 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const [sectionHeightDraft, setSectionHeightDraft] = useState("");
   const [assetBrowser, setAssetBrowser] = useState({ visible: false, fieldKey: "", title: "" });
   const [heroEditorSection, setHeroEditorSection] = useState("layout");
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadError, setVideoUploadError] = useState("");
 
   useEffect(() => {
     setRegenBusy(false);
@@ -2982,6 +3184,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         block={block}
         index={index}
         onChange={onChange}
+        brandAssets={brandAssets}
       />
     );
   }
@@ -3005,6 +3208,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     return <CompetitorComparisonPropertiesPanel block={block} index={index} onChange={onChange} />;
   }
 
+  if (block.type === BlockTypes.DIVIDER) {
+    return <DividerPropertiesPanel block={block} index={index} onChange={onChange} />;
+  }
+
   if (block.type === BlockTypes.SPACE) {
     const spacerPx   = parsePixelValue(block.props?.height, 40);
     const p          = block.props || {};
@@ -3018,6 +3225,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           {/* ── Size ── */}
           <div style={styles.sectionCard}>
             <NumberField label="Height (px)" value={spacerPx} min={4} max={600} onChange={(value) => updateSpacer({ height: `${value}px` })} />
+            <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+              <input
+                type="checkbox"
+                checked={p.fullWidthBackground === true}
+                onChange={(e) => updateSpacer({ fullWidthBackground: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Full width
+            </label>
           </div>
 
           {/* ── Background type selector ── */}
@@ -3184,6 +3400,11 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   if (block.type === BlockTypes.VIDEO_HERO) {
     const vp = block.props || {};
     const updateVH = (patch) => onChange(index, { ...vp, ...patch });
+    const applyVHOption = (patch) => (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      updateVH(patch);
+    };
     const vhHeight = String(vp.heightMode || "full");
     const vhFixed  = Number(vp.minHeight) || 620;
     const vhOverlayOpacity = Number(vp.overlayOpacity ?? 0.42);
@@ -3194,15 +3415,19 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
     const handleVideoUpload = async (file) => {
       if (!file) return;
-      // Set a local blob URL immediately so the block shows the video right away.
-      const blobUrl = URL.createObjectURL(file);
-      updateVH({ videoSrc: blobUrl });
-      // Upload to server in the background and replace with the CDN URL.
+      setVideoUploading(true);
+      setVideoUploadError("");
       try {
         const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_src__", file));
-        if (asset?.src) updateVH({ videoSrc: asset.src });
-      } catch {
-        // blob URL stays as a local preview if server upload fails
+        if (asset?.src) {
+          updateVH({ videoSrc: asset.src });
+        } else {
+          setVideoUploadError("Upload failed — server returned no URL. Check file format and size.");
+        }
+      } catch (err) {
+        setVideoUploadError(err?.message || "Upload failed. Please try again.");
+      } finally {
+        setVideoUploading(false);
       }
     };
     const handlePosterUpload = async (file) => {
@@ -3219,17 +3444,25 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           {/* ── Media ── */}
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Video File</label>
-            {vp.videoSrc ? (
+            {videoUploadError ? (
+              <div style={{ color: "#f87171", fontSize: 12, padding: "6px 0", wordBreak: "break-word" }}>⚠ {videoUploadError}</div>
+            ) : null}
+            {videoUploading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0", color: "#7dd3fc", fontSize: 13 }}>
+                <span style={{ display: "inline-block", width: 16, height: 16, border: "2px solid #7dd3fc", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                Uploading video to CDN…
+              </div>
+            ) : vp.videoSrc ? (
               <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop playsInline
                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              <label style={{ ...styles.assetUploadCta, cursor: "pointer" }}>
-                📹 {vp.videoSrc ? "Replace Video" : "Upload Video"}
-                <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={styles.hiddenInput}
+              <label style={{ ...styles.assetUploadCta, cursor: videoUploading ? "not-allowed" : "pointer", opacity: videoUploading ? 0.5 : 1 }}>
+                📹 {videoUploading ? "Uploading…" : vp.videoSrc ? "Replace Video" : "Upload Video"}
+                <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={styles.hiddenInput} disabled={videoUploading}
                   onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
               </label>
-              {vp.videoSrc ? (
+              {vp.videoSrc && !videoUploading ? (
                 <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
                   onClick={() => updateVH({ videoSrc: "" })}>Remove</button>
               ) : null}
@@ -3306,13 +3539,17 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           {/* ── Height & sizing ── */}
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Height</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[["full", "Full screen"], ["fixed", "Fixed px"]].map(([m, label]) => (
                 <button key={m} type="button"
                   style={{ ...styles.secondaryBtn, ...(vhHeight === m ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
-                  onClick={() => updateVH({ heightMode: m })}>{label}</button>
+                  onMouseDown={applyVHOption({ heightMode: m })}>{label}</button>
               ))}
             </div>
+            <select value={vhHeight} onChange={(event) => updateVH({ heightMode: event.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }}>
+              <option value="full">Full screen</option>
+              <option value="fixed">Fixed px</option>
+            </select>
             {vhHeight === "fixed" ? (
               <div style={{ marginTop: 8 }}>
                 <NumberField label="Height (px)" value={vhFixed} min={200} max={1200} onChange={(v) => updateVH({ minHeight: v })} />
@@ -3320,31 +3557,44 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             ) : null}
 
             <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Object Fit</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {["cover", "contain"].map((fit) => (
                 <button key={fit} type="button"
                   style={{ ...styles.secondaryBtn, ...(vhObjectFit === fit ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
-                  onClick={() => updateVH({ objectFit: fit })}>{fit}</button>
+                  onMouseDown={applyVHOption({ objectFit: fit })}>{fit}</button>
               ))}
             </div>
+            <select value={vhObjectFit} onChange={(event) => updateVH({ objectFit: event.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }}>
+              <option value="cover">cover</option>
+              <option value="contain">contain</option>
+            </select>
 
             <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Video Position</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[["top center", "Top"], ["center center", "Mid"], ["bottom center", "Bottom"]].map(([val, label]) => (
                 <button key={val} type="button"
                   style={{ ...styles.secondaryBtn, ...(vhObjectPos === val ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.5)", color: "#818cf8" } : {}) }}
-                  onClick={() => updateVH({ objectPosition: val })}>{label}</button>
+                  onMouseDown={applyVHOption({ objectPosition: val })}>{label}</button>
               ))}
             </div>
+            <select value={vhObjectPos} onChange={(event) => updateVH({ objectPosition: event.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }}>
+              <option value="top center">Top</option>
+              <option value="center center">Middle</option>
+              <option value="bottom center">Bottom</option>
+            </select>
           </div>
 
-          {/* ── Padding ── */}
+          {/* ── Spacing ── */}
           <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Padding</label>
+            <label style={styles.propertyLabel}>Spacing</label>
             <div style={styles.colorGrid}>
-              <NumberField label="Top (px)" value={vhPadTop} min={0} max={400} onChange={(v) => updateVH({ paddingTop: v })} />
-              <NumberField label="Bottom (px)" value={vhPadBottom} min={0} max={400} onChange={(v) => updateVH({ paddingBottom: v })} />
+              <NumberField label="Margin Top (px)" value={Number(vp.marginTop ?? 0)} min={0} max={400} onChange={(v) => updateVH({ marginTop: v })} />
+              <NumberField label="Padding Top (px)" value={vhPadTop} min={0} max={400} onChange={(v) => updateVH({ paddingTop: v })} />
+              <NumberField label="Padding Bottom (px)" value={vhPadBottom} min={0} max={400} onChange={(v) => updateVH({ paddingBottom: v })} />
             </div>
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "#64748b" }}>
+              Use <strong style={{ color: "#94a3b8" }}>Margin Top</strong> to push the block below a fixed nav bar. Use <strong style={{ color: "#94a3b8" }}>Padding Top</strong> to shift text content down within the video.
+            </p>
           </div>
 
           {/* ── Options ── */}
@@ -3534,9 +3784,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Header Text</label>
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Eyebrow</label>
-            <input type="text" value={String(ccProps.eyebrow || "")} onChange={(e) => updateCC({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="e.g. All-in-One Platform" />
+            <input type="text" value={String(ccProps.eyebrow || "")} onChange={(e) => updateCC({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="our All-in-One Platform" />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Title</label>
-            <input type="text" value={String(ccProps.title || "")} onChange={(e) => updateCC({ title: e.target.value })} style={styles.propertyInput} placeholder="e.g. What you'd pay elsewhere" />
+            <input type="text" value={String(ccProps.title || "")} onChange={(e) => updateCC({ title: e.target.value })} style={styles.propertyInput} placeholder="Optional heading" />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Subtitle</label>
             <input type="text" value={String(ccProps.subtitle || "")} onChange={(e) => updateCC({ subtitle: e.target.value })} style={styles.propertyInput} placeholder="e.g. We replace every tool below..." />
           </div>
@@ -3545,7 +3795,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Name</label>
             <input type="text" value={String(ccProps.planName || "")} onChange={(e) => updateCC({ planName: e.target.value })} style={styles.propertyInput} />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Price ($/mo)</label>
-            <input type="number" value={Number(ccProps.planPrice ?? 199)} min={0} onChange={(e) => updateCC({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
+            <input type="number" value={Number(ccProps.planPrice ?? 299)} min={0} onChange={(e) => updateCC({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Plan Tagline</label>
             <input type="text" value={String(ccProps.planTagline || "")} onChange={(e) => updateCC({ planTagline: e.target.value })} style={styles.propertyInput} placeholder="e.g. Everything above, included" />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Unique Feature Label</label>
@@ -3651,8 +3901,8 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           </div>
           <ColorSelector
             label="Background Color"
-            value={String(ccProps.backgroundColor || "#070c18")}
-            fallback="#070c18"
+            value={String(ccProps.backgroundColor || "#121c26")}
+            fallback="#121c26"
             onChange={(v) => updateCC({ backgroundColor: v })}
           />
         </div>
@@ -4018,6 +4268,36 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     onClick={() => onChange(index, { ...block.props, backgroundVideoUrl: "" })}
                   >Remove Video</button>
                 ) : null}
+                <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Video Overlay (darken/tint)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="color"
+                    value={(() => { const c = block.props?.videoOverlayColor || "rgba(0,0,0,0)"; const m = c.match(/rgba?\((\d+),(\d+),(\d+)/); if (!m) return "#000000"; return "#" + [m[1],m[2],m[3]].map((n) => parseInt(n).toString(16).padStart(2,"0")).join(""); })()}
+                    onChange={(e) => {
+                      const hex = e.target.value;
+                      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+                      const existing = block.props?.videoOverlayColor || "rgba(0,0,0,0.45)";
+                      const alphaMatch = existing.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/);
+                      const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 0.45;
+                      onChange(index, { ...block.props, videoOverlayColor: `rgba(${r},${g},${b},${alpha})` });
+                    }}
+                    style={{ ...styles.colorSwatch, width: 36, height: 32 }}
+                  />
+                  <input
+                    type="range"
+                    min={0} max={0.95} step={0.05}
+                    value={(() => { const m = (block.props?.videoOverlayColor || "").match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/); return m ? parseFloat(m[1]) : 0; })()}
+                    onChange={(e) => {
+                      const alpha = parseFloat(e.target.value);
+                      const existing = block.props?.videoOverlayColor || "rgba(0,0,0,0)";
+                      const m = existing.match(/rgba?\((\d+),(\d+),(\d+)/);
+                      const [r,g,b] = m ? [m[1],m[2],m[3]] : ["0","0","0"];
+                      onChange(index, { ...block.props, videoOverlayColor: `rgba(${r},${g},${b},${alpha})` });
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 13, color: "#64748b", minWidth: 36 }}>{Math.round(((() => { const m = (block.props?.videoOverlayColor || "").match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/); return m ? parseFloat(m[1]) : 0; })()) * 100)}%</span>
+                </div>
               </>
             ) : null}
           </div>
@@ -4606,7 +4886,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         ) : null}
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections
           if (Array.isArray(value) || (typeof value === "object" && value !== null)) return null;

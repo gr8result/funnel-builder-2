@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
-import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
+import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
 import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "../gridIconLibrary";
@@ -174,12 +174,15 @@ function supportsSectionHeight(blockType) {
 }
 
 function supportsFullWidthBackground(blockType) {
-  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK, "video-hero", "avatar-morph"].includes(blockType);
+  return [BlockTypes.NAV_BAR, BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.IMAGE, BlockTypes.IMAGE_STACK, BlockTypes.CTA_BUTTON, BlockTypes.DIVIDER, BlockTypes.SPACE, "video-hero", "avatar-morph"].includes(blockType);
 }
 
 function isFullWidthBackgroundEnabled(block) {
   if (!supportsFullWidthBackground(block?.type)) {
     return !!block?.props?.fullWidthBackground;
+  }
+  if (block?.type === BlockTypes.CTA_BUTTON || block?.type === BlockTypes.SPACE) {
+    return block?.props?.fullWidthBackground === true;
   }
   return block?.props?.fullWidthBackground !== false;
 }
@@ -700,6 +703,13 @@ const BLOCK_STYLE_PRESETS = {
     { id: "cta-editorial", label: "Editorial Outline", props: { style: "editorial-outline", alignment: "left", size: "medium", eyebrow: "For Service Brands", title: "Present your next step with more polish", description: "An editorial card with softer tones, restrained border treatment, and a quieter premium feel.", text: "See Packages", note: "Built for offers that need a little context", backgroundColor: "linear-gradient(180deg,#fffaf2,#f6ead8)", textColor: "#2f241b", buttonColor: "rgba(255,250,243,0.72)", buttonTextColor: "#2f241b", borderColor: "rgba(120,98,67,0.18)" } },
     { id: "cta-stacked", label: "Stacked Card", props: { style: "stacked-card", alignment: "center", size: "large", eyebrow: "Make It Easy", title: "Put the button inside a full conversion card", description: "Best for stronger CTA sections where the whole block feels like a high-priority conversion point.", text: "Start Free Trial", note: "No card required", backgroundColor: "linear-gradient(135deg,#111827,#1d4ed8 62%,#22d3ee)", textColor: "#ffffff", buttonColor: "linear-gradient(135deg,#facc15,#f59e0b)", buttonTextColor: "#1f2937", borderColor: "rgba(255,255,255,0.18)" } },
   ],
+  [BlockTypes.DIVIDER]: [
+    { id: "divider-hairline", label: "Hairline", props: { dividerType: "line", lineStyle: "solid", thickness: 1, width: 100, color: "#cbd5e1", backgroundColor: "transparent" } },
+    { id: "divider-dashed", label: "Dashed", props: { dividerType: "line", lineStyle: "dashed", thickness: 2, width: 86, color: "#94a3b8", backgroundColor: "transparent" } },
+    { id: "divider-dotted", label: "Dotted", props: { dividerType: "line", lineStyle: "dotted", thickness: 3, width: 72, color: "#38bdf8", backgroundColor: "transparent" } },
+    { id: "divider-gradient", label: "Gradient", props: { dividerType: "gradient", thickness: 4, width: 100, color: "#0ea5e9", secondaryColor: "#f59e0b", backgroundColor: "transparent" } },
+    { id: "divider-label", label: "Labelled", props: { dividerType: "line", lineStyle: "solid", thickness: 1, width: 82, color: "#cbd5e1", showLabel: true, label: "Section", labelColor: "#64748b", backgroundColor: "transparent" } },
+  ],
   [BlockTypes.IMAGE_GALLERY]: [
     { id: "gallery-balanced", label: "Balanced Grid", props: { galleryVariant: "balanced-grid", columns: 3, backgroundColor: "linear-gradient(180deg,#ffffff,#f8fafc)", textColor: "#0f172a", borderColor: "rgba(226,232,240,0.9)" } },
     { id: "gallery-editorial", label: "Editorial Mosaic", props: { galleryVariant: "editorial-mosaic", columns: 3, backgroundColor: "linear-gradient(180deg,#fffaf2,#f6ead8)", textColor: "#2f241b", borderColor: "rgba(120,98,67,0.16)" } },
@@ -746,7 +756,7 @@ const BLOCK_STYLE_PRESETS = {
     { id: "price-matrix", label: "Comparison Matrix", props: { pricingVariant: "matrix", spacingScale: "normal", backgroundColor: "linear-gradient(180deg,#f8fbff,#eef7f4)", borderColor: "rgba(110,231,183,0.24)" } },
   ],
   [BlockTypes.COMPETITOR_COMPARISON]: [
-    { id: "cc-dark", label: "Dark Navy", props: { backgroundColor: "#070c18" } },
+    { id: "cc-dark", label: "Homepage Analysis", props: COMPETITOR_COMPARISON_TEMPLATE_PROPS },
     { id: "cc-slate", label: "Slate", props: { backgroundColor: "#0f172a" } },
     { id: "cc-midnight", label: "Midnight", props: { backgroundColor: "#020617" } },
   ],

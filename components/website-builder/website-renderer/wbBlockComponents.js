@@ -4,9 +4,7 @@ import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-bui
 import { renderGridLibraryIcon } from "../gridIconLibrary";
 import {
   MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
-  PARALLAX_OVERRUN, asArray, slugifyText, resolveCurrentPageKey,
-  compensateParallaxBgPosition, resolveParallaxSpeed, STABLE_PARALLAX_OVERRUN,
-  ParallaxImageLayer, StableParallaxLayer,
+  asArray, slugifyText, resolveCurrentPageKey,
   ScrollReveal, getAnimationStyle, ambientMotionStyle, ensureWebsiteBlockAnimationStyles,
   isCurrentNavLink, shouldHighlightNavLink, isSystemAsset, resolvePublishedNavHref,
   IconCounterNumber,
@@ -372,9 +370,20 @@ function shouldSkipToolbarBlur(event) {
 }
 
 function cleanInlineEditorHtml(value) {
-  return String(value || "")
+  let result = String(value || "")
     .replace(/\u200b/g, "")
     .replace(/<span\b([^>]*)>\s*<\/span>/gi, "");
+  // NOTE: Do NOT unwrap outer <span style="..."> wrappers here — those are intentionally
+  // created by the text toolbar (font-size, color, font-family) when the user selects all
+  // text. Stripping them would discard the user's formatting change.
+  // Strip data-start / data-end / data-* attributes inserted by AI-generated content.
+  // These cause no-op diffs but pollute the stored HTML and can break rendering
+  // when a <p> with data-* is nested inside another <p> (invalid HTML).
+  result = result.replace(/ data-[a-z][a-z0-9-]*="[^"]*"/gi, "");
+  result = result.replace(/ data-[a-z][a-z0-9-]*='[^']*'/gi, "");
+  return result
+    .replace(/<h([1-6])\b([^>]*)>\s*(?:<br\s*\/?\s*>|&nbsp;|\s)*<\/h\1>/gi, "")
+    .replace(/<p\b([^>]*)>\s*(?:<span\b[^>]*>\s*)?(?:<br\s*\/?\s*>|&nbsp;|\s)*(?:<\/span>\s*)?<\/p>/gi, "");
 }
 
 function htmlToPlainText(value) {
@@ -1364,6 +1373,9 @@ function ColumnEditorCard({
   cardStyle,
   contentAlign,
   overlay,
+  onSwap,
+  sectionOrder,
+  onReorderSection,
   onTitleChange,
   onContentChange,
   contentType,
@@ -1402,6 +1414,11 @@ function ColumnEditorCard({
   const [isImageHoveredNL, setIsImageHoveredNL] = React.useState(false);
   const [activeDragNL, setActiveDragNL] = React.useState(null);
   const nlImgContainerRef = React.useRef(null);
+  const normalizedExtraImages = Array.isArray(extraImages)
+    ? extraImages
+        .map((item) => (typeof item === "string" ? { src: item } : (item || {})))
+        .filter((item) => editor || item.src)
+    : [];
 
   const startResizeNL = React.useCallback((e, dir) => {
     e.preventDefault();
@@ -1494,8 +1511,17 @@ function ColumnEditorCard({
   });
 
   return (
-    <article style={{ borderRadius: 18, border: PREMIUM_BORDER, background: cardBackgroundColor || "#f8fafc", padding: isBlock ? 0 : compact ? 14 : 18, boxShadow: "0 10px 24px rgba(15,23,42,0.08)", textAlign: resolvedAlign, overflow: isBlock ? "hidden" : undefined, ...cardStyle }}>
+    <article style={{ borderRadius: 18, border: PREMIUM_BORDER, background: cardBackgroundColor || "#f8fafc", padding: isBlock ? 0 : compact ? 14 : 18, boxShadow: "0 10px 24px rgba(15,23,42,0.08)", textAlign: resolvedAlign, overflow: isBlock ? "hidden" : undefined, position: "relative", ...cardStyle }}>
       {overlay}
+      {editor && onSwap ? (
+        <button
+          type="button"
+          title="Swap columns"
+          aria-label="Swap columns"
+          onClick={(e) => { e.stopPropagation(); onSwap(); }}
+          style={{ position: "absolute", top: 8, right: 8, zIndex: 20, background: "rgba(14,165,233,0.92)", border: "none", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", padding: "4px 10px", boxShadow: "0 2px 8px rgba(14,165,233,0.4)", lineHeight: 1 }}
+        >⇆</button>
+      ) : null}
       <div style={{ position: "relative", zIndex: 1 }}>
       {isBlock ? (
         subBlock && onRenderSubBlock ? (
@@ -1612,73 +1638,98 @@ function ColumnEditorCard({
         </>
       ) : (
         <>
-          {image ? (
-            <div
-              ref={imgContainerRef}
-              onMouseEnter={() => editor && setIsImageHovered(true)}
-              onMouseLeave={() => { if (!activeDrag) setIsImageHovered(false); }}
-              style={{ position: "relative", marginBottom: (normalizedTitle || normalizedContent || (Array.isArray(extraImages) && extraImages.length > 0)) ? 12 : 0, display: "inline-block", width: imageWidth != null ? `${imageWidth}%` : "100%" }}
-            >
-              <img
-                src={image}
-                alt={title || "Column image"}
-                draggable={false}
-                style={{ width: "100%", height: imageHeight ? `${imageHeight}px` : undefined, aspectRatio: imageHeight ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
-              />
-              {editor && (isImageHovered || activeDrag) && (
-                <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 14, pointerEvents: "none" }} />
-              )}
-              {editor && (isImageHovered || activeDrag) && handles.map(({ dir, style }) => (
+          {(function renderSections() {
+            const order = Array.isArray(sectionOrder) ? sectionOrder : ["image", "title", "content"];
+            const moveSection = (idx, dir) => {
+              if (!onReorderSection) return;
+              const next = [...order];
+              const target = idx + dir;
+              if (target < 0 || target >= next.length) return;
+              [next[idx], next[target]] = [next[target], next[idx]];
+              onReorderSection(next);
+            };
+            const sectionNodes = {
+              image: ((image || normalizedExtraImages.length) ? (
+                <div style={{ display: "grid", gap: 0, justifyItems: resolvedAlign === "center" ? "center" : resolvedAlign === "right" ? "end" : "start" }}>
+                  {image ? (
+                    <div
+                      ref={imgContainerRef}
+                      onMouseEnter={() => editor && setIsImageHovered(true)}
+                      onMouseLeave={() => { if (!activeDrag) setIsImageHovered(false); }}
+                      style={{ position: "relative", display: "inline-block", width: imageWidth != null ? `${imageWidth}%` : "100%" }}
+                    >
+                      <img
+                        src={image}
+                        alt={title || "Column image"}
+                        draggable={false}
+                        style={{ width: "100%", height: imageHeight ? `${imageHeight}px` : undefined, aspectRatio: imageHeight ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+                      />
+                      {editor && (isImageHovered || activeDrag) && (
+                        <div style={{ position: "absolute", inset: 0, border: "2px solid #0ea5e9", borderRadius: 14, pointerEvents: "none" }} />
+                      )}
+                      {editor && (isImageHovered || activeDrag) && handles.map(({ dir, style }) => (
+                        <div key={dir} onMouseDown={(e) => startResize(e, dir)} style={{ ...HANDLE_BASE, ...style }} />
+                      ))}
+                    </div>
+                  ) : null}
+                  {normalizedExtraImages.map((extraImage, extraImageIndex) => {
+                    const gap = Number.isFinite(Number(extraImage.gap)) ? Number(extraImage.gap) : 8;
+                    const height = Number(extraImage.height) || undefined;
+                    return extraImage.src ? (
+                      <img
+                        key={`${extraImage.src}-${extraImageIndex}`}
+                        src={extraImage.src}
+                        alt={extraImage.alt || title || "Column image"}
+                        draggable={false}
+                        style={{ width: "100%", height: height ? `${height}px` : undefined, aspectRatio: height ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", marginTop: gap, userSelect: "none", pointerEvents: editor ? "none" : undefined }}
+                      />
+                    ) : editor ? (
+                      <div key={`empty-extra-image-${extraImageIndex}`} style={{ ...sharedStyles.galleryPlaceholder, width: "100%", minHeight: height || 120, borderRadius: 14, marginTop: gap, fontSize: 14 }}>
+                        Select image #{extraImageIndex + 2}
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              ) : null),
+              title: ((normalizedTitle || editor) ? (
+                <h3
+                  data-website-inline-editor="true"
+                  data-text-prop={titleProp}
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => onTitleChange?.(cleanInlineEditorHtml(event.currentTarget.innerHTML))}
+                  style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 600, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, minHeight: editor && !normalizedTitle ? 32 : undefined }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(title) }}
+                />
+              ) : null),
+              content: ((normalizedContent || editor) ? (
                 <div
-                  key={dir}
-                  onMouseDown={(e) => startResize(e, dir)}
-                  style={{ ...HANDLE_BASE, ...style }}
+                  data-website-inline-editor="true"
+                  data-text-prop={contentProp}
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
+                  style={{ color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0, minHeight: editor && !normalizedContent ? 40 : undefined }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(content) }}
                 />
-              ))}
-            </div>
-          ) : null}
-          {Array.isArray(extraImages) && extraImages.length > 0 ? extraImages.map((ei, eiIdx) => {
-            const eiSrc = ei?.src || "";
-            const eiHeight = ei?.height;
-            const eiGap = Number(ei?.gap ?? 8);
-            if (!eiSrc) return null;
-            return (
-              <div
-                key={`extra-img-${eiIdx}`}
-                style={{ position: "relative", marginBottom: (eiIdx < extraImages.length - 1 || normalizedTitle || normalizedContent) ? 8 : 0, marginTop: eiGap, display: "block", width: "100%" }}
-              >
-                <img
-                  src={eiSrc}
-                  alt={`Column image ${eiIdx + 2}`}
-                  draggable={false}
-                  style={{ width: "100%", height: eiHeight ? `${eiHeight}px` : undefined, aspectRatio: eiHeight ? undefined : "16 / 10", objectFit: "cover", borderRadius: 14, display: "block", userSelect: "none", pointerEvents: editor ? "none" : undefined }}
-                />
-              </div>
-            );
-          }) : null}
-          {(normalizedTitle || editor) ? (
-            <h3
-              data-website-inline-editor="true"
-              data-text-prop={titleProp}
-              contentEditable={editor}
-              suppressContentEditableWarning
-              onBlur={(event) => onTitleChange?.(event.currentTarget.innerText)}
-              style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 600, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, minHeight: editor && !normalizedTitle ? 32 : undefined }}
-            >
-              {title}
-            </h3>
-          ) : null}
-          {(normalizedContent || editor) ? (
-            <div
-              data-website-inline-editor="true"
-              data-text-prop={contentProp}
-              contentEditable={editor}
-              suppressContentEditableWarning
-              onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
-              style={{ marginTop: (normalizedTitle || editor) ? 8 : 0, color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0, minHeight: editor && !normalizedContent ? 40 : undefined }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(content) }}
-            />
-          ) : null}
+              ) : null),
+            };
+            return order.map((key, idx) => {
+              const node = sectionNodes[key];
+              if (!node) return null;
+              return (
+                <div key={key} style={{ position: "relative", marginBottom: 12 }}>
+                  {editor && onReorderSection ? (
+                    <div style={{ position: "absolute", top: 4, right: 4, zIndex: 20, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} style={{ background: idx === 0 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === 0 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>▲</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === order.length - 1} style={{ background: idx === order.length - 1 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === order.length - 1 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>▼</button>
+                    </div>
+                  ) : null}
+                  {node}
+                </div>
+              );
+            });
+          })()}
         </>
       )}
       </div>
@@ -2066,10 +2117,15 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   }
 
   const splitRatioMap = {
+    "33-67": "1fr 2fr",
+    "40-60": "2fr 3fr",
     "43-57": "434fr 563fr",
     "50-50": "1fr 1fr",
     "45-55": "0.9fr 1.1fr",
     "55-45": "1.1fr 0.9fr",
+    "57-43": "1.325fr 1fr",
+    "60-40": "3fr 2fr",
+    "67-33": "2fr 1fr",
   };
   const splitIsFullWidth = props.fullWidthBackground !== false;
   const sectionSurface = {
@@ -2084,14 +2140,11 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     boxShadow: "none",
     border: "none",
     padding: 0,
-    // CSS transforms on ancestors affect position:sticky and also interfere with ParallaxImageLayer — skip when parallax is active
+    // CSS transforms on ancestors interfere with section-aware parallax measurement — skip when parallax is active.
     ...(splitParallaxActive ? {} : sectionAnimationStyle),
   };
   const hasLeftPanelAnim = !editor && !!props.leftPanelAnimation && props.leftPanelAnimation !== "none";
   const hasRightPanelAnim = !editor && !!props.rightPanelAnimation && props.rightPanelAnimation !== "none";
-  // Left panel width as viewport percentage — used to size fixed-attachment background correctly
-  const splitLayoutLeftPercents = { "50-50": 50, "40-60": 40, "60-40": 60, "33-67": 33.333, "67-33": 66.667 };
-  const leftPanelVw = splitLayoutLeftPercents[props.splitLayout] || 50;
   const panelShell = {
     display: "grid",
     gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
@@ -2109,16 +2162,12 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
         position: "relative",
         overflow: "hidden",
         zIndex: textPanelOverlap > 0 ? 1 : undefined,
-        // When JS parallax is active, hand the image to ParallaxImageLayer; use only solid bg here
-        ...(splitParallaxActive
-          ? { backgroundColor: props.backgroundColor || "#0f172a" }
-          : {
-              backgroundImage: `url(${splitBackgroundImage})`,
-              backgroundPosition: props.backgroundPosition || "center center",
-              backgroundSize: props.backgroundSize || "cover",
-              backgroundRepeat: props.backgroundRepeat || "no-repeat",
-              backgroundColor: props.backgroundColor || "#0f172a",
-            }),
+        backgroundImage: `url(${splitBackgroundImage})`,
+        backgroundPosition: props.backgroundPosition || "center center",
+        backgroundSize: props.backgroundSize || "cover",
+        backgroundRepeat: props.backgroundRepeat || "no-repeat",
+        backgroundAttachment: splitParallaxActive ? "fixed" : "scroll",
+        backgroundColor: props.backgroundColor || "#0f172a",
       }
     : {
         position: "relative",
@@ -2168,18 +2217,6 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
             disabled={editor || splitParallaxActive}
             style={mediaPanelStyle}
           >
-            {splitParallaxActive && splitBackgroundImage ? (
-              <ParallaxImageLayer
-                speed={Number(props.parallaxStrength ?? 0.78)}
-                backgroundStyle={{
-                  backgroundImage: `url(${splitBackgroundImage})`,
-                  backgroundSize: props.backgroundSize || "cover",
-                  backgroundPosition: props.backgroundPosition || "center center",
-                  backgroundRepeat: props.backgroundRepeat || "no-repeat",
-                  backgroundColor: props.backgroundColor || "#0f172a",
-                }}
-              />
-            ) : null}
             {!splitBackgroundImage && editor ? (
               <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, color: "rgba(255,255,255,0.9)", textAlign: "center", fontWeight: 600, letterSpacing: "0.02em" }}>
                 Upload a background image
@@ -2187,6 +2224,37 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
             ) : null}
             {splitBackgroundImage && Number(props.imageOverlayOpacity || 0) > 0 ? (
               <div style={{ position: "absolute", inset: 0, background: props.imageOverlayColor || "#000000", opacity: Number(props.imageOverlayOpacity) / 100, pointerEvents: "none", zIndex: 2 }} />
+            ) : null}
+            {!!props.headlineOverImage ? (
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: props.headlineOverImageAlign || "flex-end", justifyContent: "flex-start", padding: compact ? "24px 20px" : "48px 56px", zIndex: 3, pointerEvents: editor ? "auto" : "none" }}>
+                <h2
+                  data-website-inline-editor="true"
+                  data-text-prop="headlineBlock.content"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => {
+                    if (!editor || typeof onChangeBlock !== "function") return;
+                    const content = cleanInlineEditorHtml(event.currentTarget.innerHTML);
+                    onChangeBlock({ ...props, headline: content, headlineBlock: { ...(props.headlineBlock || {}), content } });
+                  }}
+                  style={{
+                    margin: 0,
+                    fontSize: compact ? Math.max(28, Math.min(40, Number(headlineBlockProps.fontSize || 48))) : Math.max(32, Number(headlineBlockProps.fontSize || 48)),
+                    lineHeight: Number(headlineBlockProps.lineHeight || 1.2),
+                    fontWeight: headlineBlockProps.fontWeight || "700",
+                    fontFamily: headlineBlockProps.fontFamily || "Poppins, sans-serif",
+                    color: headlineBlockProps.color || "#ffffff",
+                    textAlign: headlineBlockProps.alignment || "left",
+                    letterSpacing: compact ? "-0.3px" : "-0.6px",
+                    textShadow: "0 2px 16px rgba(0,0,0,0.55)",
+                    outline: editor ? "1px dashed rgba(14,165,233,0.55)" : "none",
+                    borderRadius: 8,
+                    padding: editor ? "4px 6px" : 0,
+                    maxWidth: "90%",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(headlineBlockProps.content || (editor ? "Headline" : "")) }}
+                />
+              </div>
             ) : null}
           </ScrollReveal>
           <ScrollReveal
@@ -2256,7 +2324,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
               delay={headlineBlockProps.animationDelay || 0}
               speed={headlineBlockProps.animationSpeed}
               disabled={editor}
-              style={{ width: "100%" }}
+              style={{ width: "100%", display: props.headlineOverImage ? "none" : undefined }}
             >
               <h2
                 data-website-inline-editor="true"
@@ -4572,14 +4640,15 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
     setCurrentIndex((prev) => Math.min(prev, maxIndex));
   }, [maxIndex]);
 
-  // Auto-advance loop — pauses on hover, wraps around continuously
+  // Auto-advance loop — pauses while someone is reading a hovered/flipped card.
   React.useEffect(() => {
-    if (maxIndex <= 0) return;
+    if (hovering || flippedIndex !== null) return undefined;
+    if (maxIndex <= 0) return undefined;
     const id = setInterval(() => {
       setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
     }, autoPlayInterval);
     return () => clearInterval(id);
-  }, [maxIndex, hovering, autoPlayInterval]);
+  }, [maxIndex, hovering, flippedIndex, autoPlayInterval]);
 
   const { cardPxWidth } = measured;
   const goTo = (idx) => setCurrentIndex(Math.max(0, Math.min(maxIndex, idx)));
@@ -4657,8 +4726,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
         <div
           ref={viewportRef}
           style={{ overflow: "clip", position: "relative" }}
-          onMouseEnter={() => setHovering(true)}
-          onMouseLeave={() => setHovering(false)}
+          onMouseLeave={() => { setHovering(false); setFlippedIndex(null); }}
         >
           {showArrows ? arrowBtn("left", canPrev, "Previous", () => goTo(currentIndex - 1)) : null}
           {showArrows ? arrowBtn("right", canNext, "Next", () => goTo(currentIndex + 1)) : null}
@@ -4679,9 +4747,16 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
               return (
                 <div
                   key={card.id || idx}
+                  tabIndex={0}
                   style={{ flex: `0 0 ${basis}`, minWidth: basis, height: cardHeight, perspective: "1000px", flexShrink: 0 }}
-                  onMouseEnter={() => setFlippedIndex(idx)}
-                  onMouseLeave={() => setFlippedIndex(null)}
+                  onMouseEnter={() => { setHovering(true); setFlippedIndex(idx); }}
+                  onMouseLeave={() => { setHovering(false); setFlippedIndex(null); }}
+                  onFocus={() => { setHovering(true); setFlippedIndex(idx); }}
+                  onBlur={(event) => {
+                    if (event.currentTarget.contains(event.relatedTarget)) return;
+                    setHovering(false);
+                    setFlippedIndex(null);
+                  }}
                 >
                   {/* Flip container */}
                   <div style={{
@@ -4795,9 +4870,9 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
 function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, onUploadImage }) {
   const items = asArray(props.items).map((item, idx) => ({
     id: item?.id || `fa-item-${idx}`,
-    label: item?.label || `Section ${idx + 1}`,
+    label: htmlToPlainText(item?.label || `Section ${idx + 1}`),
     image: item?.image || "",
-    imageAlt: item?.imageAlt || "",
+    imageAlt: htmlToPlainText(item?.imageAlt || ""),
     accentColor: item?.accentColor || null,   // null → falls back to global accent
     panelBg: item?.panelBg || null,           // null → falls back to global bg/accent gradient
     contentBlocks: asArray(item?.contentBlocks).map((cb, cbIdx) => ({
@@ -4816,6 +4891,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const textColor = props.textColor       || "#ffffff";
   const accent    = props.accentColor     || "#0ea5e9";
   const imageRight = (props.imagePosition || "right") !== "left";
+  const contentVerticalAlign = props.contentVerticalAlign === "top" ? "flex-start" : "center";
   const leadOffset = Number(props.stickyTopOffset ?? 0);
   const [navH, setNavH] = React.useState(0);
 
@@ -5193,8 +5269,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
       <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box" }}>
         {(props.eyebrow || props.title) ? (
           <div style={{ padding: "64px 80px 40px" }}>
-            {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>{props.eyebrow}</div> : null}
-            {props.title ? <h2 style={{ fontSize: 44, fontWeight: 600, lineHeight: 1.1, color: textColor, margin: 0 }}>{props.title}</h2> : null}
+            {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>{htmlToPlainText(props.eyebrow)}</div> : null}
+            {props.title ? <h2 style={{ fontSize: 44, fontWeight: 600, lineHeight: 1.1, color: textColor, margin: 0 }}>{htmlToPlainText(props.title)}</h2> : null}
           </div>
         ) : null}
         {items.map((item, idx) => {
@@ -5210,16 +5286,16 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   suppressContentEditableWarning
                   onMouseDown={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onBlur={(e) => { if (shouldSkipToolbarBlur(e)) return; patchItemField(idx, "label", cleanInlineEditorHtml(e.currentTarget.innerHTML)); }}
+                  onBlur={(e) => { if (shouldSkipToolbarBlur(e)) return; patchItemField(idx, "label", htmlToPlainText(cleanInlineEditorHtml(e.currentTarget.innerHTML))); }}
                   style={{ flex: 1, fontSize: 24, fontWeight: 600, lineHeight: 1.2, color: textColor, outline: "1px dashed rgba(14,165,233,0.4)", borderRadius: 6, padding: "3px 8px" }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(item.label) }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(htmlToPlainText(item.label)) }}
                 />
                 <span style={{ color: "rgba(255,255,255,0.20)", fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{String(idx + 1).padStart(2, "0")}&nbsp;/&nbsp;{String(items.length).padStart(2, "0")}</span>
                 <button type="button" onClick={(e) => { e.stopPropagation(); removeItem(idx); }} style={{ background: "rgba(239,68,68,0.15)", border: "none", color: "#f87171", borderRadius: 6, padding: "4px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove</button>
               </div>
               {/* 2-col body */}
               <div style={{ display: "flex", flexDirection: imageRight ? "row" : "row-reverse", minHeight: 380 }}>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, padding: "44px 56px" }}>
+                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", flexDirection: "column", justifyContent: contentVerticalAlign, gap: 20, padding: "44px 56px" }}>
                   {item.contentBlocks.map((block, cbIdx) => renderCb(item, idx, block, cbIdx, item.accentColor || accent))}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingTop: 12, borderTop: "1px dashed rgba(14,165,233,0.2)" }}>
                     {["eyebrow", "heading", "text", "stat", "tags", "cta"].map((type) => (
@@ -5247,8 +5323,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
       <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box" }}>
         {(props.eyebrow || props.title) ? (
           <div style={{ padding: "40px 24px 24px" }}>
-            {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>{props.eyebrow}</div> : null}
-            {props.title ? <h2 style={{ fontSize: 26, fontWeight: 600, lineHeight: 1.1, color: textColor, margin: 0 }}>{props.title}</h2> : null}
+            {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>{htmlToPlainText(props.eyebrow)}</div> : null}
+            {props.title ? <h2 style={{ fontSize: 26, fontWeight: 600, lineHeight: 1.1, color: textColor, margin: 0 }}>{htmlToPlainText(props.title)}</h2> : null}
           </div>
         ) : null}
         {items.map((item, idx) => {
@@ -5396,7 +5472,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   maxWidth: "50%",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "center",
+                  justifyContent: contentVerticalAlign,
                   gap: 18,
                   padding: "40px 52px",
                   overflowY: "auto",
@@ -6232,7 +6308,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
 // cost until the visitor actually reaches this section.
 // Autoplay / muted / loop / playsInline — required for all browsers/mobile.
 
-function VideoHeroBlock({ block, editor = false, compact = false, onChangeBlock, onUploadImage }) {
+function VideoHeroBlock({ block, editor = false, compact = false, isSelected = false, onChangeBlock, onUploadImage }) {
   const props = block?.props || {};
 
   const videoSrc     = String(props.videoSrc     || "");
@@ -6254,6 +6330,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, onChangeBlock,
 
   const paddingTop    = Number(props.paddingTop    ?? 0);
   const paddingBottom = Number(props.paddingBottom ?? 0);
+  const marginTop     = Number(props.marginTop     ?? 0);
 
   const videoRef     = React.useRef(null);
   const sectionRef   = React.useRef(null);
@@ -6294,8 +6371,15 @@ function VideoHeroBlock({ block, editor = false, compact = false, onChangeBlock,
   // ── Upload helpers ────────────────────────────────────────────────────────
   async function handleVideoUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
-    const asset = await Promise.resolve(onUploadImage("__video_hero_src__", file));
-    if (asset?.src) onChangeBlock?.({ ...props, videoSrc: asset.src });
+    // Show local blob URL immediately so the preview updates before the upload finishes.
+    const blobUrl = URL.createObjectURL(file);
+    onChangeBlock?.({ ...props, videoSrc: blobUrl });
+    try {
+      const asset = await Promise.resolve(onUploadImage("__video_hero_src__", file));
+      if (asset?.src) onChangeBlock?.({ ...props, videoSrc: asset.src });
+    } catch {
+      // blob URL stays as a local preview if upload fails
+    }
   }
 
   async function handlePosterUpload(file) {
@@ -6324,9 +6408,31 @@ function VideoHeroBlock({ block, editor = false, compact = false, onChangeBlock,
     alignItems: "center",
     justifyContent: "center",
     background: "#000",
+    // Padding is applied inside the section so the #000 background covers the full
+    // padded area — no transparent strip around the edge.
+    paddingTop: paddingTop || undefined,
+    paddingBottom: paddingBottom || undefined,
   };
 
-  // ── EDITOR mode — controls moved to PropertiesPanel right sidebar ─────────
+  const applyVideoHeroPatch = (patch, event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onChangeBlock?.({ ...props, ...patch });
+  };
+
+  const editorOptionButtonStyle = (active) => ({
+    padding: "6px 10px",
+    borderRadius: 7,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+    background: active ? "rgba(99,102,241,0.32)" : "rgba(255,255,255,0.08)",
+    border: `1px solid ${active ? "rgba(165,180,252,0.76)" : "rgba(255,255,255,0.18)"}`,
+    color: active ? "#c7d2fe" : "rgba(255,255,255,0.78)",
+    whiteSpace: "nowrap",
+  });
+
+  // ── EDITOR mode — controls are in the PropertiesPanel right sidebar ─────────
   if (false && editor) {
     return (
       <div style={{ background: "#0d1117", display: "flex", flexDirection: "column", gap: 20, padding: "24px 24px 28px", alignItems: "stretch" }}>
@@ -6472,8 +6578,57 @@ function VideoHeroBlock({ block, editor = false, compact = false, onChangeBlock,
 
   // ── LIVE / PREVIEW mode ───────────────────────────────────────────────────
   return (
-    <div style={{ paddingTop: paddingTop || undefined, paddingBottom: paddingBottom || undefined }}>
+    <div style={marginTop ? { marginTop } : undefined}>
     <section ref={sectionRef} style={sectionStyle}>
+      {editor && isSelected ? (
+        <div
+          data-no-canvas-drag="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+          onDragStart={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            right: 16,
+            zIndex: 20,
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "rgba(2,6,23,0.72)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.22)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          <span style={{ color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", marginRight: 2 }}>Video Hero</span>
+          {["full", "fixed"].map((mode) => (
+            <button key={mode} type="button" draggable={false} onMouseDown={(event) => applyVideoHeroPatch({ heightMode: mode }, event)} style={editorOptionButtonStyle(heightMode === mode)}>
+              {mode === "full" ? "Full screen" : "Fixed px"}
+            </button>
+          ))}
+          <span style={{ width: 1, height: 22, background: "rgba(255,255,255,0.16)" }} />
+          {["cover", "contain"].map((fit) => (
+            <button key={fit} type="button" draggable={false} onMouseDown={(event) => applyVideoHeroPatch({ objectFit: fit }, event)} style={editorOptionButtonStyle(objectFit === fit)}>
+              {fit}
+            </button>
+          ))}
+          <span style={{ width: 1, height: 22, background: "rgba(255,255,255,0.16)" }} />
+          {[["top center", "Top"], ["center center", "Middle"], ["bottom center", "Bottom"]].map(([value, label]) => (
+            <button key={value} type="button" draggable={false} onMouseDown={(event) => applyVideoHeroPatch({ objectPosition: value }, event)} style={editorOptionButtonStyle(objectPosition === value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {/* Video element — src set immediately in editor, lazy-loaded via IntersectionObserver in live */}
       <video
         ref={videoRef}

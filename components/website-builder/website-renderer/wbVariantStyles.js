@@ -65,7 +65,21 @@ function asStyleObject(style) {
 function asRichHtml(value) {
   const raw = String(value ?? "");
   if (!raw) return "";
-  return raw
+  // Decode HTML-encoded angle brackets in a loop until the string is stable.
+  // Some content was saved with multiple levels of encoding (e.g. &amp;lt; or &amp;amp;lt;).
+  // We iterate up to 5 passes so all layers are unwrapped before rendering.
+  let processed = raw;
+  for (let i = 0; i < 5; i++) {
+    if (!processed.includes("&lt;") && !processed.includes("&amp;") && !processed.includes("&gt;")) break;
+    const next = processed
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"');
+    if (next === processed) break;
+    processed = next;
+  }
+  return processed
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/\n{2,}/g, "<br/><br/>")
@@ -155,6 +169,7 @@ function headingTypography(props) {
     fontWeight: props?.headlineFontWeight || "600",
     textAlign: props?.headlineAlignment || "center",
     color: props?.headlineColor || "inherit",
+    ...(props?.headlineFontSize || props?.headingFontSize ? { fontSize: Number(props?.headlineFontSize || props?.headingFontSize) } : {}),
     ...(props?.headlineLineHeight ? { lineHeight: props.headlineLineHeight } : {}),
   };
 }
@@ -163,6 +178,7 @@ function bodyTypography(props) {
   return {
     fontFamily: props?.fontFamily || props?.bodyFontFamily || "inherit",
     fontWeight: props?.fontWeight || "400",
+    ...(props?.textFontSize || props?.bodyFontSize || props?.subheadlineFontSize ? { fontSize: Number(props?.textFontSize || props?.bodyFontSize || props?.subheadlineFontSize) } : {}),
     ...(props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight ? { lineHeight: props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight } : {}),
   };
 }
@@ -401,7 +417,7 @@ function heroVariantStyles(props, compact) {
       contentShell: {
         background: resolvedContentBg("linear-gradient(180deg, rgba(255,250,243,0.92), rgba(247,241,232,0.84))"),
         border: "1px solid rgba(120,98,67,0.14)",
-        borderRadius: compact ? 22 : 30,
+        borderRadius: 0,
         boxShadow: "0 24px 54px rgba(120,98,67,0.16)",
         backdropFilter: "blur(8px)",
         ...contentShellBorderless,
@@ -741,10 +757,22 @@ function testimonialVariantStyles(variant, compact, props) {
   const border = props.borderColor;
   const textCol = props.textColor;
   const cardWidth = Math.max(180, Number(props.cardWidth) || 320);
+  const gridColumns = Math.max(3, Math.min(6, Number(props.testimonialColumns || props.columns) || 3));
 
   const fullWidth = props.fullWidthBackground !== false;
   const shellRadius = fullWidth ? 0 : (compact ? 16 : 28);
   const matchHeight = !compact && !!props.equalCardHeight;
+  const boundedGrid = {
+    display: "grid",
+    gridTemplateColumns: compact ? "1fr" : `repeat(${gridColumns}, minmax(0, 1fr))`,
+    gap: 20,
+    marginTop: 24,
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    alignItems: matchHeight ? "stretch" : "start",
+  };
 
   if (variant === "spotlight") {
     return {
@@ -804,11 +832,8 @@ function testimonialVariantStyles(variant, compact, props) {
     return {
       shell: { background: bg || "#ffffff", borderRadius: shellRadius },
       grid: {
-        display: "grid",
-        gridTemplateColumns: compact ? "1fr" : "repeat(3, minmax(0, 1fr))",
+        ...boundedGrid,
         gap: 14,
-        marginTop: 24,
-        alignItems: "start",
       },
       card: (idx) => {
         const fills = [accent || "#0ea5e9", "#0f172a", cardBg || "#ffffff"];
@@ -821,6 +846,8 @@ function testimonialVariantStyles(variant, compact, props) {
           padding: compact ? "16px" : "22px 24px",
           display: "grid",
           gap: 8,
+          minWidth: 0,
+          overflowWrap: "anywhere",
           border: `1px solid ${border || "rgba(148,163,184,0.18)"}`,
         };
       },
@@ -835,15 +862,9 @@ function testimonialVariantStyles(variant, compact, props) {
   return {
     shell: { background: bg || "linear-gradient(165deg,#f8fafc,#ffffff)", borderRadius: shellRadius },
     grid: {
-      display: "flex",
-      flexWrap: compact ? "nowrap" : "wrap",
-      flexDirection: compact ? "column" : "row",
-      justifyContent: "center",
-      gap: 20,
-      marginTop: 24,
-      alignItems: matchHeight ? "stretch" : "start",
+      ...boundedGrid,
     },
-    cardWrap: compact ? undefined : { width: cardWidth, maxWidth: "100%", flexShrink: 0, flexGrow: 0, boxSizing: "border-box", ...(matchHeight ? { display: "flex" } : {}) },
+    cardWrap: compact ? undefined : { width: "100%", maxWidth: "100%", minWidth: 0, boxSizing: "border-box", ...(matchHeight ? { display: "flex" } : {}) },
     card: () => ({
       background: cardBg || "#ffffff",
       border: `1px solid ${border || "rgba(148,163,184,0.28)"}`,
@@ -852,6 +873,8 @@ function testimonialVariantStyles(variant, compact, props) {
       boxShadow: PREMIUM_SHADOW,
       display: "grid",
       gap: 12,
+      minWidth: 0,
+      overflowWrap: "anywhere",
       ...(matchHeight ? { height: "100%", boxSizing: "border-box" } : {}),
     }),
     quote: { color: textCol || "#0f172a", fontStyle: "italic" },
@@ -877,11 +900,11 @@ function ctaButtonVariantStyles(props, compact) {
         gridTemplateColumns: compact ? "1fr" : "minmax(0, 1.3fr) auto",
         gap: compact ? 18 : 26,
         alignItems: "center",
-        borderRadius: compact ? 22 : 30,
+        borderRadius: 0,
         padding: compact ? "22px 20px" : "28px 32px",
         background: props.backgroundColor || "linear-gradient(135deg,#081120,#17304d)",
-        border: `1px solid ${props.borderColor || "rgba(148,163,184,0.22)"}`,
-        boxShadow: "0 24px 54px rgba(2,6,23,0.24)",
+        border: "none",
+        boxShadow: "none",
       },
       content: { display: "grid", gap: 8, textAlign: compact ? "center" : "left", maxWidth: contentMW || undefined },
       eyebrow: { fontSize: 16, letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#f8fafc", 0.7) },
@@ -911,11 +934,11 @@ function ctaButtonVariantStyles(props, compact) {
       section: {
         display: "grid",
         gap: 16,
-        borderRadius: compact ? 22 : 30,
+        borderRadius: 0,
         padding: compact ? "22px 20px" : "30px 34px",
         background: props.backgroundColor || "linear-gradient(180deg,#fffaf2,#f6ead8)",
-        border: `1px solid ${props.borderColor || "rgba(120,98,67,0.18)"}`,
-        boxShadow: "0 22px 48px rgba(120,98,67,0.12)",
+        border: "none",
+        boxShadow: "none",
       },
       content: { display: "grid", gap: 10, textAlign: props.alignment || "left", maxWidth: contentMW || undefined },
       eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#2f241b", 0.62) },
@@ -947,11 +970,11 @@ function ctaButtonVariantStyles(props, compact) {
         gap: 16,
         justifyItems: "center",
         textAlign: "center",
-        borderRadius: compact ? 24 : 32,
+        borderRadius: 0,
         padding: compact ? "24px 20px" : "34px 36px",
         background: props.backgroundColor || "linear-gradient(135deg,#111827,#1d4ed8 62%,#22d3ee)",
-        border: `1px solid ${props.borderColor || "rgba(255,255,255,0.18)"}`,
-        boxShadow: "0 28px 60px rgba(15,23,42,0.26)",
+        border: "none",
+        boxShadow: "none",
       },
       content: { display: "grid", gap: 10, justifyItems: "center", textAlign: "center", maxWidth: contentMW || 780, marginLeft: "auto", marginRight: "auto" },
       eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#ffffff", 0.72), textAlign: "center" },
@@ -982,11 +1005,11 @@ function ctaButtonVariantStyles(props, compact) {
       gap: 14,
       justifyItems: props.alignment === "left" ? "start" : props.alignment === "right" ? "end" : "center",
       textAlign: props.alignment || "center",
-      borderRadius: compact ? 22 : 28,
+      borderRadius: 0,
       padding: compact ? "22px 20px" : "28px 32px",
       background: props.backgroundColor || "linear-gradient(135deg,#eff6ff,#ffffff)",
-      border: `1px solid ${props.borderColor || "rgba(191,219,254,0.9)"}`,
-      boxShadow: "0 18px 42px rgba(37,99,235,0.12)",
+      border: "none",
+      boxShadow: "none",
     },
     content: { display: "grid", gap: 8, justifyItems: props.alignment === "left" ? "start" : props.alignment === "right" ? "end" : "center", maxWidth: contentMW || 720 },
     eyebrow: { fontSize: 16, letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 600, color: colorWithAlpha(props.textColor || "#0f172a", 0.6) },

@@ -682,6 +682,111 @@ function CustomHtmlPropertiesPanel({ block, index, onChange }) {
   );
 }
 
+function DividerPropertiesPanel({ block, index, onChange }) {
+  const props = block.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const legacyStyle = String(props.style || "").toLowerCase();
+  const dividerType = String(props.dividerType || (legacyStyle === "dots" ? "decorative" : "line")).toLowerCase();
+  const lineStyle = String(props.lineStyle || (legacyStyle === "dashes" ? "dashed" : legacyStyle === "dots" ? "dotted" : "solid")).toLowerCase();
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>─ Edit: Divider</h3>
+      <div style={styles.propertyGrid}>
+        <BlockPresetPicker blockType={BlockTypes.DIVIDER} onApply={(presetProps) => update(presetProps)} />
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Divider Type</label>
+          <select value={dividerType} onChange={(e) => update({ dividerType: e.target.value })} style={styles.propertyInput}>
+            <option value="line">Line</option>
+            <option value="gradient">Gradient Line</option>
+            <option value="decorative">Dot Pattern</option>
+          </select>
+        </div>
+
+        {dividerType === "line" ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Line Style</label>
+            <select value={lineStyle} onChange={(e) => update({ lineStyle: e.target.value })} style={styles.propertyInput}>
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="double">Double</option>
+            </select>
+          </div>
+        ) : null}
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout</label>
+          <select value={String(props.alignment || "center")} onChange={(e) => update({ alignment: e.target.value })} style={styles.propertyInput}>
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.fullWidthBackground === true}
+              onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Page full width
+          </label>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Sizing</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Thickness" value={Number(props.thickness || 1)} min={1} max={24} onChange={(value) => update({ thickness: value })} />
+            <NumberField label="Width %" value={Number(props.width || 100)} min={5} max={100} onChange={(value) => update({ width: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Spacing</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Top" value={Number(props.paddingTop ?? 24)} min={0} max={240} onChange={(value) => update({ paddingTop: value })} />
+            <NumberField label="Bottom" value={Number(props.paddingBottom ?? 24)} min={0} max={240} onChange={(value) => update({ paddingBottom: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <ColorSelector label="Line" value={props.color || "#cbd5e1"} fallback="#cbd5e1" onChange={(value) => update({ color: value })} />
+          {dividerType === "gradient" ? (
+            <ColorSelector label="Gradient End" value={props.secondaryColor || "#38bdf8"} fallback="#38bdf8" onChange={(value) => update({ secondaryColor: value })} />
+          ) : null}
+          <ColorSelector label="Background" value={props.backgroundColor || "transparent"} fallback="transparent" allowTransparent onChange={(value) => update({ backgroundColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.inlineToggle}>
+            <input
+              type="checkbox"
+              checked={!!props.showLabel}
+              onChange={(e) => update({ showLabel: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Add centre label
+          </label>
+          {props.showLabel ? (
+            <>
+              <input
+                type="text"
+                value={String(props.label || "")}
+                onChange={(e) => update({ label: e.target.value })}
+                style={{ ...styles.propertyInput, marginTop: 10 }}
+                placeholder="Optional label"
+              />
+              <ColorSelector label="Label Colour" value={props.labelColor || "#64748b"} fallback="#64748b" onChange={(value) => update({ labelColor: value })} />
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
   const props = block?.props || {};
   const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
@@ -955,13 +1060,25 @@ function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Layout</label>
-          <NumberField
-            label="Card Width (px)"
-            value={Number(props.cardWidth) || 320}
-            min={180}
-            max={900}
-            onChange={(value) => update({ cardWidth: value })}
-          />
+          <div style={styles.propertyField}>
+            <label style={styles.propertyLabel}>Grid Width</label>
+            <select
+              value={String(Math.max(3, Math.min(6, Number(props.testimonialColumns || props.columns) || 3)))}
+              onChange={(e) => update({ testimonialColumns: Number(e.target.value) })}
+              style={styles.propertyInput}
+            >
+              {[3, 4, 5, 6].map((count) => <option key={`testimonial-grid-${count}`} value={count}>{count} wide</option>)}
+            </select>
+          </div>
+          {["spotlight", "bubble"].includes(String(props.testimonialVariant || "cards")) ? (
+            <NumberField
+              label="Card Width (px)"
+              value={Number(props.cardWidth) || 320}
+              min={180}
+              max={900}
+              onChange={(value) => update({ cardWidth: value })}
+            />
+          ) : null}
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Colours</label>
@@ -1288,11 +1405,20 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
 function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateLineHeight = (value) => {
+    const nextLineHeight = normalizeLineHeightValue(value, Number(props.textLineHeight || props.lineHeight || 1.35));
+    update({
+      textLineHeight: nextLineHeight,
+      bodyLineHeight: nextLineHeight,
+      lineHeight: nextLineHeight,
+      text: stripInlineCssPropertyFromHtml(props.text, "line-height"),
+    });
+  };
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
-  const [heightDraft, setHeightDraft] = useState(String(parsePixelValue(props.minHeight, 220)));
+  const [heightDraft, setHeightDraft] = useState(String(parsePixelValue(props.minHeight, 160)));
 
   useEffect(() => {
-    setHeightDraft(String(parsePixelValue(props.minHeight, 220)));
+    setHeightDraft(String(parsePixelValue(props.minHeight, 160)));
   }, [block?.id, props.minHeight]);
 
   return (
@@ -1308,11 +1434,11 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
             value={heightDraft}
             onChange={(e) => setHeightDraft(e.target.value.replace(/[^\d]/g, ""))}
             onBlur={() => {
-              const px = Math.max(120, Number(heightDraft) || 220);
+              const px = Math.max(80, Number(heightDraft) || 160);
               setHeightDraft(String(px));
               update({ minHeight: `${px}px` });
             }}
-            placeholder="220"
+            placeholder="160"
             style={styles.propertyInput}
           />
           <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
@@ -1382,8 +1508,30 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
           </div>
         </div>
         <div style={styles.sectionCard}>
-          <label style={styles.propertyLabel}>Font Size</label>
-          <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
+          <label style={styles.propertyLabel}>Typography</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
+            <NumberField label="Line spacing" value={Number(props.textLineHeight || props.lineHeight || 1.35)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+            {[1.1, 1.25, 1.35, 1.5, 1.7, 2].map((value) => (
+              <button
+                key={`text-line-preset-${value}`}
+                type="button"
+                style={{ ...styles.secondaryBtn, padding: "6px 9px", minHeight: 0 }}
+                onClick={() => updateLineHeight(value)}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Spacing</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Top padding" value={Number(props.paddingTop ?? 20)} min={0} max={200} onChange={(value) => update({ paddingTop: value })} />
+            <NumberField label="Bottom padding" value={Number(props.paddingBottom ?? 20)} min={0} max={200} onChange={(value) => update({ paddingBottom: value })} />
+          </div>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Content Width</label>
@@ -3098,6 +3246,25 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
             />
             Enable parallax image half
           </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.headlineOverImage}
+              onChange={(e) => update({ headlineOverImage: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Headline over image
+          </label>
+          {!!props.headlineOverImage && (
+            <div style={styles.colorGrid}>
+              <label style={styles.propertyLabel}>Headline vertical position</label>
+              <select value={props.headlineOverImageAlign || "flex-end"} onChange={(e) => update({ headlineOverImageAlign: e.target.value })} style={styles.propertyInput}>
+                <option value="flex-start">Top</option>
+                <option value="center">Middle</option>
+                <option value="flex-end">Bottom</option>
+              </select>
+            </div>
+          )}
           <div style={styles.colorGrid}>
             <ColorSelector label="Image Overlay Colour" value={props.imageOverlayColor || "#000000"} fallback="#000000" onChange={(value) => update({ imageOverlayColor: value })} />
             <NumberField label="Image Overlay %" value={Number(props.imageOverlayOpacity || 0)} min={0} max={100} onChange={(value) => update({ imageOverlayOpacity: Number(value) })} />
@@ -3331,7 +3498,7 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
   );
 }
 
-function NumberField({ label, value, min = 0, max = 200, onChange }) {
+function NumberField({ label, value, min = 0, max = 200, step = 1, onChange }) {
   return (
     <div style={styles.numberField}>
       <span style={styles.colorLabel}>{label}</span>
@@ -3339,6 +3506,7 @@ function NumberField({ label, value, min = 0, max = 200, onChange }) {
         type="number"
         min={min}
         max={max}
+        step={step}
         value={Number(value || 0)}
         onChange={(e) => onChange(Number(e.target.value || 0))}
         style={styles.propertyInput}
@@ -3998,7 +4166,7 @@ const TEXT_TOOLBAR_FONTS = [
 ];
 
 const TEXT_TOOLBAR_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 46, 48, 52, 56, 64, 72, 84, 96];
-const TEXT_TOOLBAR_LINE_HEIGHTS = [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2];
+const TEXT_TOOLBAR_LINE_HEIGHTS = [0.9, 1, 1.1, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5, 1.6, 1.7, 1.8, 2, 2.2, 2.5, 3];
 const ANIMATION_PRESETS = [
   { value: "none", label: "None" },
   { value: "fade-in", label: "Fade In" },
@@ -4114,6 +4282,29 @@ function normalizeComputedLineHeight(lineHeightValue, fontSizeValue, fallback = 
     return Math.max(0.8, Math.min(3, Number((parsed / parsedFontSize).toFixed(2))));
   }
   return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function normalizeLineHeightValue(value, fallback = 1.5) {
+  const parsed = Number(value);
+  const fallbackValue = Number.isFinite(Number(fallback)) ? Number(fallback) : 1.5;
+  if (!Number.isFinite(parsed) || parsed <= 0) return Math.max(0.8, Math.min(3, Number(fallbackValue.toFixed(2))));
+  return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function stripInlineCssPropertyFromHtml(value, propertyName) {
+  const html = String(value || "");
+  const property = String(propertyName || "").trim().toLowerCase();
+  if (!html || !property) return html;
+
+  return html.replace(/\sstyle=(['"])(.*?)\1/gi, (_match, quote, styleValue) => {
+    const nextStyles = String(styleValue || "")
+      .split(";")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .filter((entry) => String(entry.split(":")[0] || "").trim().toLowerCase() !== property);
+
+    return nextStyles.length ? ` style=${quote}${nextStyles.join("; ")}${quote}` : "";
+  });
 }
 
 function FontPickerDropdown({ value, onChange, onPreserveSelection }) {
@@ -4232,6 +4423,14 @@ function FontPickerDropdown({ value, onChange, onPreserveSelection }) {
 
 function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   const backgroundFileInputRef = useRef(null);
+  const currentLineHeight = normalizeLineHeightValue(lineHeight || 1.5);
+  const currentFontSize = Math.max(8, Math.min(240, Math.round(Number(fontSize || 18) || 18)));
+  const fontSizeOptions = TEXT_TOOLBAR_SIZES.includes(currentFontSize)
+    ? TEXT_TOOLBAR_SIZES
+    : [...TEXT_TOOLBAR_SIZES, currentFontSize].sort((a, b) => a - b);
+  const lineHeightOptions = TEXT_TOOLBAR_LINE_HEIGHTS.includes(currentLineHeight)
+    ? TEXT_TOOLBAR_LINE_HEIGHTS
+    : [...TEXT_TOOLBAR_LINE_HEIGHTS, currentLineHeight].sort((a, b) => a - b);
 
   const keepSelection = (event, callback) => {
     event.preventDefault();
@@ -4260,6 +4459,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
     { label: "Left", title: "Align left", action: () => onCommand("justifyLeft") },
     { label: "Center", title: "Align center", action: () => onCommand("justifyCenter") },
     { label: "Right", title: "Align right", action: () => onCommand("justifyRight") },
+    { label: "Justify", title: "Justify", action: () => onCommand("justifyFull") },
   ];
 
   const utilityButtons = [
@@ -4311,26 +4511,105 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
             onChange={onFontFamily}
             onPreserveSelection={onPreserveSelection}
           />
-          <select
-            value={String(fontSize || 18)}
-            style={{ ...styles.textToolbarSelect, minWidth: 86 }}
-            onMouseDownCapture={() => onPreserveSelection?.()}
-            onChange={(event) => onFontSize?.(Number(event.target.value))}
-          >
-            {TEXT_TOOLBAR_SIZES.map((size) => (
-              <option key={size} value={size}>{size}px</option>
+          <label style={styles.textToolbarLabel}>
+            Size
+            <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6 }}>
+              <select
+                value={String(currentFontSize)}
+                style={{ ...styles.textToolbarSelect, minWidth: 82, marginTop: 0 }}
+                onMouseDownCapture={() => onPreserveSelection?.()}
+                onChange={(event) => onFontSize?.(Number(event.target.value))}
+              >
+                {fontSizeOptions.map((value) => (
+                  <option key={`font-size-${value}`} value={value}>{value}px</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={8}
+                max={240}
+                value={currentFontSize}
+                aria-label="Font size in pixels"
+                style={{ ...styles.textToolbarSelect, width: 64, minWidth: 64, marginTop: 0, padding: "4px 6px" }}
+                onMouseDownCapture={() => onPreserveSelection?.()}
+                onChange={(event) => {
+                  const nextSize = Math.max(8, Math.min(240, Number(event.target.value) || currentFontSize));
+                  onFontSize?.(nextSize);
+                }}
+              />
+            </div>
+          </label>
+          <label style={styles.textToolbarLabel}>
+            Line
+            <select
+              value={String(currentLineHeight)}
+              style={{ ...styles.textToolbarSelect, minWidth: 88, marginTop: 6 }}
+              onMouseDownCapture={() => onPreserveSelection?.()}
+              onChange={(event) => onLineHeight?.(Number(event.target.value))}
+            >
+              {lineHeightOptions.map((value) => (
+                <option key={`line-height-${value}`} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            <button
+              type="button"
+              title="Decrease line spacing"
+              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+              onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(currentLineHeight - 0.05)))}
+            >−</button>
+            <button
+              type="button"
+              title="Increase line spacing"
+              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+              onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(currentLineHeight + 0.05)))}
+            >+</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            <button
+              type="button"
+              title="Decrease font size"
+              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+              onMouseDown={(event) => keepSelection(event, () => {
+                const sizes = TEXT_TOOLBAR_SIZES;
+                const cur = Number(fontSize || 18);
+                const idx = sizes.findIndex((s) => s >= cur);
+                const next = idx > 0 ? sizes[idx - 1] : sizes[0];
+                onFontSize?.(next);
+              })}
+            >−</button>
+            {[14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map((size) => (
+              <button
+                key={size}
+                type="button"
+                title={`${size}px`}
+                style={{
+                  ...styles.textToolbarIconBtn,
+                  minWidth: 30,
+                  padding: "0 5px",
+                  fontSize: 12,
+                  fontWeight: Number(fontSize) === size ? 800 : 400,
+                  background: Number(fontSize) === size ? "rgba(14,165,233,0.85)" : undefined,
+                  color: Number(fontSize) === size ? "#fff" : undefined,
+                  outline: Number(fontSize) === size ? "none" : undefined,
+                }}
+                onMouseDown={(event) => keepSelection(event, () => onFontSize?.(size))}
+              >{size}</button>
             ))}
-          </select>
-          <select
-            value={String(lineHeight || 1.5)}
-            style={{ ...styles.textToolbarSelect, minWidth: 94 }}
-            onMouseDownCapture={() => onPreserveSelection?.()}
-            onChange={(event) => onLineHeight?.(Number(event.target.value))}
-          >
-            {TEXT_TOOLBAR_LINE_HEIGHTS.map((value) => (
-              <option key={value} value={value}>{value} lh</option>
-            ))}
-          </select>
+            <button
+              type="button"
+              title="Increase font size"
+              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+              onMouseDown={(event) => keepSelection(event, () => {
+                const sizes = TEXT_TOOLBAR_SIZES;
+                const cur = Number(fontSize || 18);
+                const idx = sizes.findIndex((s) => s > cur);
+                const next = idx >= 0 ? sizes[idx] : sizes[sizes.length - 1];
+                onFontSize?.(next);
+              })}
+            >+</button>
+          </div>
         </div>
         <div style={styles.textToolbarInlineDivider} />
         <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarFormattingGroup }}>
@@ -5061,9 +5340,9 @@ function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Heading Text</label>
           <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Eyebrow</label>
-          <input type="text" value={props.eyebrow || ""} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="All-in-One Platform" />
+          <input type="text" value={props.eyebrow || ""} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="our All-in-One Platform" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Title</label>
-          <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="What you'd pay elsewhere" />
+          <input type="text" value={props.title || ""} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="Optional heading" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subtitle</label>
           <input type="text" value={props.subtitle || ""} onChange={(e) => update({ subtitle: e.target.value })} style={styles.propertyInput} placeholder="We replace every tool below…" />
         </div>
@@ -5072,9 +5351,9 @@ function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Your Plan</label>
           <label style={{ ...styles.propertyLabel, marginTop: 0 }}>Plan Name</label>
-          <input type="text" value={props.planName || ""} onChange={(e) => update({ planName: e.target.value })} style={styles.propertyInput} placeholder="Business Plan" />
+          <input type="text" value={props.planName || ""} onChange={(e) => update({ planName: e.target.value })} style={styles.propertyInput} placeholder="COMPETITOR ANALYSIS" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Monthly Price ($)</label>
-          <input type="number" value={Number(props.planPrice || 199)} min={0} onChange={(e) => update({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
+          <input type="number" value={Number(props.planPrice || 299)} min={0} onChange={(e) => update({ planPrice: Number(e.target.value) })} style={styles.propertyInput} />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Plan Tagline</label>
           <input type="text" value={props.planTagline || ""} onChange={(e) => update({ planTagline: e.target.value })} style={styles.propertyInput} placeholder="Everything above, included" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Label for free/unique rows</label>
@@ -5084,7 +5363,7 @@ function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
         {/* ── Background ── */}
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Background Color</label>
-          <CompactColorField label="Background" value={props.backgroundColor || "#070c18"} fallback="#070c18" onChange={(v) => update({ backgroundColor: v })} />
+          <CompactColorField label="Background" value={props.backgroundColor || "#121c26"} fallback="#121c26" onChange={(v) => update({ backgroundColor: v })} />
         </div>
 
         {/* ── Rows ── */}
@@ -5194,17 +5473,34 @@ function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
   );
 }
 
-function FeatureAccordionPropertiesPanel({ block, index, onChange }) {
+function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
   const items = Array.isArray(props.items) ? props.items : [];
   const updateItem = (itemIndex, patch) =>
     update({ items: items.map((item, i) => (i === itemIndex ? { ...item, ...patch } : item)) });
+  const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
+  const chooseLibraryImage = (itemIndex) => {
+    openSharedLibraryAssetPicker((asset) => {
+      updateItem(itemIndex, {
+        image: asset.src || "",
+        imageAssetId: asset.id || "",
+        imageAlt: htmlToPlainText(asset.name || items[itemIndex]?.imageAlt || ""),
+      });
+    });
+  };
 
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🗂️ Edit: Feature Accordion</h3>
       <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Text</label>
+          <div style={styles.stackSm}>
+            <input type="text" value={htmlToPlainText(props.eyebrow || "")} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} placeholder="Eyebrow" />
+            <input type="text" value={htmlToPlainText(props.title || "")} onChange={(e) => update({ title: e.target.value })} style={styles.propertyInput} placeholder="Section title" />
+          </div>
+        </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Items</label>
           <div style={styles.stackSm}>
@@ -5213,9 +5509,34 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange }) {
                 <div style={styles.linkRowHeader}>
                   <span style={styles.linkRowTitle}>Item {itemIndex + 1}</span>
                 </div>
-                <input type="text" value={String(item.label || "")} onChange={(e) => updateItem(itemIndex, { label: e.target.value })} style={styles.propertyInput} placeholder="Tab Label" />
-                <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image URL" />
-                <input type="text" value={String(item.imageAlt || "")} onChange={(e) => updateItem(itemIndex, { imageAlt: e.target.value })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image Alt" />
+                <input type="text" value={htmlToPlainText(item.label || "")} onChange={(e) => updateItem(itemIndex, { label: e.target.value })} style={styles.propertyInput} placeholder="Card tagline / tab label" />
+                <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value, imageAssetId: "" })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image URL" />
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  <button type="button" style={styles.assetLibraryBtn} onClick={() => chooseLibraryImage(itemIndex)}>
+                    🖼️ Replace from Library
+                  </button>
+                  {item.image ? (
+                    <button type="button" style={styles.assetChip} onClick={() => updateItem(itemIndex, { image: "", imageAssetId: "" })}>
+                      Clear Image
+                    </button>
+                  ) : null}
+                </div>
+                {savedImages.length ? (
+                  <div style={styles.assetThumbGrid}>
+                    {savedImages.map((image, imageIndex) => (
+                      <button
+                        key={image.id || image.src || `fa-img-${itemIndex}-${imageIndex}`}
+                        type="button"
+                        style={styles.assetThumbBtn}
+                        title={image.name || "Use library image"}
+                        onClick={() => updateItem(itemIndex, { image: image.src || "", imageAssetId: image.id || "", imageAlt: htmlToPlainText(image.name || item.imageAlt || "") })}
+                      >
+                        <img src={image.src} alt={image.name || "Library image"} style={styles.assetThumbPreview} />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <input type="text" value={htmlToPlainText(item.imageAlt || "")} onChange={(e) => updateItem(itemIndex, { imageAlt: e.target.value })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image Alt" />
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                   <ColorSelector
                     label="Tab Accent Colour"
@@ -5242,6 +5563,13 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange }) {
               <select value={String(props.imagePosition || "right")} onChange={(e) => update({ imagePosition: e.target.value })} style={styles.propertyInput}>
                 <option value="right">Right</option>
                 <option value="left">Left</option>
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Text Vertical Position</label>
+              <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
+                <option value="center">Centre of card</option>
+                <option value="top">Top of card</option>
               </select>
             </div>
             <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
@@ -5438,6 +5766,7 @@ export {
   normalizeStatItem, StatsItemsEditor,
   normalizeTestimonialItemForEditor, normalizeTrustBadgeItem, TrustBadgesEditor,
   CustomHtmlPropertiesPanel, TrustBadgesPropertiesPanel, IconCounterPropertiesPanel,
+  DividerPropertiesPanel,
   TestimonialItemsEditor, TestimonialPropertiesPanel,
   NewsletterPropertiesPanel, FooterPropertiesPanel,
   TextPropertiesPanel, StatsPropertiesPanel,
@@ -5457,7 +5786,7 @@ export {
   TEXT_TOOLBAR_FONTS, TEXT_TOOLBAR_SIZES, TEXT_TOOLBAR_LINE_HEIGHTS,
   ANIMATION_PRESETS, ANIMATION_DELAY_OPTIONS, ANIMATION_SPEED_OPTIONS, BLOCK_TYPE_STYLE_PRESETS,
   getTextAnimationBinding, getSelectionStyleSource, getEditableBackgroundTarget,
-  parseBackgroundImageUrl, normalizeToolbarBackgroundColor, normalizeComputedLineHeight,
+  parseBackgroundImageUrl, normalizeToolbarBackgroundColor, normalizeComputedLineHeight, normalizeLineHeightValue, stripInlineCssPropertyFromHtml,
   TextEditingToolbar, BlockAnimationPopover,
   formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
   BlockLibraryPanel, PageSectionsPanel,

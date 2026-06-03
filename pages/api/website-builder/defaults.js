@@ -3,6 +3,7 @@ import path from "path";
 import { withAuth } from "../../../lib/withWorkspace";
 
 const DEFAULTS_FILE_PATH = path.join(process.cwd(), "data", "website-builder-defaults.json");
+const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 
 function sanitizeJson(value, fallback) {
   try {
@@ -59,7 +60,15 @@ function badRequest(res, error) {
   return res.status(400).json({ ok: false, error });
 }
 
+function isDeveloperUser(user) {
+  return DEVELOPER_USER_IDS.has(String(user?.id || ""));
+}
+
 async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
   if (req.method === "GET") {
     const defaults = await readDefaultsFile();
     return res.status(200).json({ ok: true, ...defaults });
@@ -67,6 +76,10 @@ async function handler(req, res) {
 
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
+  }
+
+  if (!isDeveloperUser(req.user)) {
+    return res.status(403).json({ ok: false, error: "Developer template access required" });
   }
 
   const action = String(req.body?.action || "").trim().toLowerCase();

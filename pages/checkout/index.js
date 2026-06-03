@@ -1,24 +1,44 @@
 ﻿// /pages/checkout/index.js
-// Confirm Your Subscription — Stripe + PayPal fully working
+// Confirm Your Subscription — Stripe subscription checkout
 
 import { useRouter } from "next/router";
 import { useState } from "react";
 import ICONS from "../../components/iconMap";
-import PRICING, { BASE_PLANS } from "../../data/pricing";
+import PRICING, { BASE_PLAN_INCLUDES, BASE_PLANS } from "../../data/pricing";
+
+const getBasePlanModuleKey = (moduleId) => {
+  if (moduleId === "website-builder") return "website";
+  if (moduleId === "projects-hub") return "projectsHub";
+  return moduleId;
+};
 
 export default function Checkout() {
   const router = useRouter();
-  const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "" } = router.query;
+  const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "", annual = "" } = router.query;
   const [loading, setLoading] = useState(false);
 
   const selectedModules = selected.split(",").filter(Boolean);
   const basePlan = BASE_PLANS[plan] || null;
+  const isAnnual = annual === "1";
+  const billableModules = selectedModules.filter((id) => !basePlan || !BASE_PLAN_INCLUDES[basePlan.id]?.[getBasePlanModuleKey(id)]);
 
-  const modulesTotal = selectedModules.reduce(
+  const monthlyModulesTotal = billableModules.reduce(
     (sum, id) => sum + (PRICING[id]?.price || 0),
     0
   );
-  const totalAmount = modulesTotal + (basePlan?.price || 0);
+  const moduleBillingTotal = isAnnual ? monthlyModulesTotal * 12 * 0.80 : monthlyModulesTotal;
+  const basePlanBillingAmount = basePlan
+    ? (isAnnual ? basePlan.price * 12 * 0.80 : basePlan.price)
+    : 0;
+  const totalAmount = moduleBillingTotal + basePlanBillingAmount;
+  const introDiscountPercent = !isAnnual ? (basePlan?.introDiscountPercent || 0) : 0;
+  const introMonths = basePlan?.introMonths || 0;
+  const trialDays = basePlan?.trialDays || 14;
+  const introBasePlanAmount = introDiscountPercent > 0 && basePlan
+    ? basePlan.price * (1 - introDiscountPercent / 100)
+    : (basePlan?.price || 0);
+  const introTotalAmount = monthlyModulesTotal + introBasePlanAmount;
+  const introPrepaidTotalAmount = introMonths > 0 ? introTotalAmount * introMonths : introTotalAmount;
 
   // ✅ STRIPE CHECKOUT (fixed payload)
   const handleStripeCheckout = async () => {
@@ -40,16 +60,17 @@ export default function Checkout() {
       const socialPlanParam = params.get("socialPlan") || socialPlan || "";
       const selectedParam = params.get("selected") || selected || "";
       const planParam = params.get("plan") || plan || "";
+      const annualParam = params.get("annual") || annual || "";
 
       // Base plan first, then add-on modules
       const lineItems = [];
       if (basePlan) {
-        lineItems.push({ name: basePlan.name, amount: basePlan.price });
+        lineItems.push({ name: basePlan.name, amount: basePlanBillingAmount });
       }
-      selectedModules.forEach((id) => {
+      billableModules.forEach((id) => {
         lineItems.push({
           name: PRICING[id]?.name || id,
-          amount: PRICING[id]?.price || 0,
+          amount: isAnnual ? (PRICING[id]?.price || 0) * 12 * 0.80 : (PRICING[id]?.price || 0),
         });
       });
 
@@ -65,6 +86,7 @@ export default function Checkout() {
             smsPlan: smsPlanParam,
             calendarPlan: calendarPlanParam,
             socialPlan: socialPlanParam,
+            annual: annualParam,
           },
         }),
       });
@@ -79,61 +101,6 @@ export default function Checkout() {
     } catch (err) {
       console.error("Stripe checkout error:", err);
       alert("Something went wrong with Stripe checkout");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ PAYPAL CHECKOUT (working fine)
-  const handlePayPalCheckout = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const params = typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search)
-        : new URLSearchParams();
-      const emailPlanParam = params.get("emailPlan") || emailPlan || "";
-      const smsPlanParam = params.get("smsPlan") || smsPlan || "";
-      const calendarPlanParam = params.get("calendarPlan") || calendarPlan || "";
-      const socialPlanParam = params.get("socialPlan") || socialPlan || "";
-      const selectedParam = params.get("selected") || selected || "";
-
-      const items = selectedModules.map((id) => ({
-        name: PRICING[id]?.name || id,
-        price: PRICING[id]?.price || 0,
-      }));
-
-      const res = await fetch("/api/paypal/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items,
-          total: totalAmount,
-          metadata: {
-            selected: selectedParam,
-            emailPlan: emailPlanParam,
-            smsPlan: smsPlanParam,
-            calendarPlan: calendarPlanParam,
-            socialPlan: socialPlanParam,
-          },
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data?.links) {
-        const approveLink = data.links.find((l) => l.rel === "approve");
-        if (approveLink?.href) {
-          window.location.href = approveLink.href;
-          return;
-        }
-      }
-
-      if (data.error) alert(data.error);
-      else alert("PayPal checkout failed — no approval URL returned");
-    } catch (err) {
-      console.error("PayPal checkout error:", err);
-      alert("Something went wrong with PayPal checkout");
     } finally {
       setLoading(false);
     }
@@ -169,11 +136,16 @@ export default function Checkout() {
           {basePlan && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #1e293b", fontWeight: 600 }}>
               <span>📦 {basePlan.name}</span>
-              <span style={{ color: "#22c55e" }}>A${basePlan.price.toFixed(2)}/mo</span>
+              <span style={{ color: "#22c55e" }}>A${basePlanBillingAmount.toFixed(2)}/{isAnnual ? "yr" : "mo"}</span>
+            </div>
+          )}
+          {basePlan && introDiscountPercent > 0 && (
+            <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.45)", borderRadius: 8, padding: 12, margin: "12px 0", color: "#d1fae5" }}>
+              <strong style={{ color: "#22c55e" }}>Onboarding offer:</strong> To take advantage of the {trialDays}-day free trial and {introDiscountPercent}% off your first {introMonths} months, your first {introMonths} paid months are billed upfront as one onboarding payment. No payment is processed today. If you do not cancel before the trial ends, <strong>A${introPrepaidTotalAmount.toFixed(2)}</strong> will be charged after the trial, then your account continues at <strong>A${totalAmount.toFixed(2)}/mo</strong> after the prepaid onboarding period.
             </div>
           )}
           <ul style={{ listStyle: "none", padding: 0 }}>
-            {selectedModules.map((id) => (
+            {billableModules.map((id) => (
               <li
                 key={id}
                 style={{
@@ -184,14 +156,21 @@ export default function Checkout() {
                 }}
               >
                 <span>{PRICING[id]?.name || id}</span>
-                <span>A${PRICING[id]?.price?.toFixed(2) || "0.00"}/mo</span>
+                <span>A${(isAnnual ? (PRICING[id]?.price || 0) * 12 * 0.80 : (PRICING[id]?.price || 0)).toFixed(2)}/{isAnnual ? "yr" : "mo"}</span>
               </li>
             ))}
           </ul>
 
           <p style={{ textAlign: "right", fontWeight: 600, fontSize: 18, marginTop: 12 }}>
-            Total: A${totalAmount.toFixed(2)}/Mo
+            {introDiscountPercent > 0
+              ? <>First Payment After Trial: A${introPrepaidTotalAmount.toFixed(2)}</>
+              : <>Total: A${totalAmount.toFixed(2)}/{isAnnual ? "Yr" : "Mo"}</>}
           </p>
+          {introDiscountPercent > 0 && (
+            <p style={{ textAlign: "right", color: "#9ca3af", marginTop: -6 }}>
+              Covers your first {introMonths} paid months. Ongoing after that: A${totalAmount.toFixed(2)}/Mo
+            </p>
+          )}
 
           <div style={{ marginTop: 26 }}>
             <button
@@ -212,24 +191,9 @@ export default function Checkout() {
               {loading ? "Processing..." : "Proceed with Stripe"}
             </button>
 
-            <button
-              onClick={handlePayPalCheckout}
-              disabled={loading}
-              style={{
-                width: "100%",
-                background: "#facc15",
-                color: "#000",
-                padding: "14px",
-                borderRadius: 10,
-                fontWeight: 600,
-                fontSize: 16,
-                cursor: loading ? "not-allowed" : "pointer",
-                marginTop: 10,
-                opacity: loading ? 0.6 : 1,
-              }}
-            >
-              {loading ? "Processing..." : "Pay with PayPal"}
-            </button>
+            <div style={{ marginTop: 12, color: "#9ca3af", textAlign: "center", lineHeight: 1.6 }}>
+              Secure subscription billing is currently processed by Stripe.
+            </div>
           </div>
         </div>
       </div>

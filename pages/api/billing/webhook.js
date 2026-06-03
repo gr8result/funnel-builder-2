@@ -55,6 +55,46 @@ export default async function handler(req, res) {
 
       console.log("💳 Checkout complete for:", email);
 
+      if (subscriptionId && session.metadata?.rampEligible === "1" && session.metadata?.normalPriceIds) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+            expand: ["items.data.price"],
+          });
+          const normalPriceIds = String(session.metadata.normalPriceIds)
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
+          const introItems = (subscription.items?.data || []).map((item) => ({
+            price: item.price.id,
+            quantity: item.quantity || 1,
+          }));
+          const normalItems = normalPriceIds.map((price) => ({ price, quantity: 1 }));
+
+          if (introItems.length && normalItems.length) {
+            const schedule = await stripe.subscriptionSchedules.create({
+              from_subscription: subscriptionId,
+            });
+
+            await stripe.subscriptionSchedules.update(schedule.id, {
+              phases: [
+                {
+                  start_date: subscription.start_date,
+                  items: introItems,
+                  iterations: 1,
+                  trial_end: subscription.trial_end || undefined,
+                },
+                {
+                  items: normalItems,
+                },
+              ],
+            });
+            console.log(`✅ Ramp schedule created for subscription ${subscriptionId}`);
+          }
+        } catch (scheduleErr) {
+          console.error("❌ Failed to create ramp subscription schedule:", scheduleErr.message);
+        }
+      }
+
       // Lookup user_id from profiles or accounts
       let userId = null;
       if (email) {

@@ -29,6 +29,11 @@ const formatTierLabel = (tier) => {
   return "A$0 / month";
 };
 const getPlanPrice = (tier) => PRICING[tier]?.price || 0;
+const getBasePlanModuleKey = (moduleId) => {
+  if (moduleId === "website-builder") return "website";
+  if (moduleId === "projects-hub") return "projectsHub";
+  return moduleId;
+};
 const getModuleDeltaLabel = (moduleKey, tierKey, basePlan) => {
   if (!tierKey) return null;
   const includedPrice = BASE_PLAN_INCLUDES[basePlan]?.[moduleKey]?.price ?? 0;
@@ -59,10 +64,10 @@ const MODULES = [
 ];
 
 const BASE_PLANS = [
-  { id: "starter",      name: "Starter",      price: 159, color: "#6366f1", badge: null,           users: "2 users",        tagline: "Core tools for solo operators & small teams" },
-  { id: "growth",       name: "Growth",       price: 359, color: "#22c55e", badge: "Most Popular",  users: "5 users",        tagline: "Scale sales, marketing & automation" },
-  { id: "scale",        name: "Scale",        price: 499, color: "#f59e0b", badge: "Best Value",    users: "10 users",       tagline: "Advanced AI, analytics & full automation suite" },
-  { id: "professional", name: "Professional", price: 999, color: "#7c3aed", badge: "Enterprise",    users: "Up to 25 users", tagline: "Full agency OS with dedicated account manager" },
+  { id: "starter",      name: "Starter",      price: 159, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#6366f1", badge: null,           users: "2 users",        tagline: "Core tools for solo operators & small teams" },
+  { id: "growth",       name: "Growth",       price: 359, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#22c55e", badge: "Most Popular",  users: "5 users",        tagline: "Scale sales, marketing & automation" },
+  { id: "scale",        name: "Scale",        price: 499, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#f59e0b", badge: "Best Value",    users: "10 users",       tagline: "Advanced AI, analytics & full automation suite" },
+  { id: "professional", name: "Professional", price: 999, introDiscountPercent: null, introMonths: 0, trialDays: 14, color: "#7c3aed", badge: "Enterprise",    users: "Up to 25 users", tagline: "For large businesses with bigger teams, higher turnover, and advanced support needs" },
 ];
 
 // Full plan details (features + quotas) — used for the rich plan cards at the top of the page
@@ -154,7 +159,7 @@ const PLANS = [
   {
     name: "Professional", color: "#7c3aed", badge: "Enterprise",
     price: "$999", period: "/mo",
-    tagline: "Complete business OS for large teams and agencies.",
+    tagline: "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
     features: [
       { label: "Team Seats",              value: "Up to 25 users" },
       { label: "CRM Pipelines",           value: "Unlimited" },
@@ -204,6 +209,7 @@ export default function Billing() {
     // Track selected pricing tiers for all three modules
     const [emailPlanTier, setEmailPlanTier] = useState(null);
     const _planResetMounted = useRef(false);
+    const _autoSelectOnPlan = useRef(false);
     const [smsPlanTier, setSmsPlanTier] = useState(null);
     const [calendarPlanTier, setCalendarPlanTier] = useState(null);
     const [socialPlanTier, setSocialPlanTier] = useState(null);
@@ -285,6 +291,7 @@ export default function Billing() {
   const [user, setUser] = useState(null);
   const [emailPlan, setEmailPlan] = useState("Loading...");
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [currentPlan, setCurrentPlan] = useState(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const router = useRouter();
 
@@ -366,6 +373,31 @@ export default function Billing() {
       // by URL params when a user actively selects a plan. DB tiers feed into
       // dbPlanTiers for billing delta calculation only.
 
+      // Load active base plan via admin-backed API route (bypasses RLS on subscriptions table)
+      const { data: sessionData2 } = await supabase.auth.getSession();
+      const accessToken = sessionData2?.session?.access_token;
+      let activePlanId = null;
+      if (accessToken) {
+        try {
+          const subRes = await fetch("/api/billing/get-subscription", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            activePlanId = subData?.plan || null;
+          }
+        } catch (e) {
+          console.warn("get-subscription fetch failed:", e);
+        }
+      }
+      if (activePlanId) {
+        setCurrentPlan(activePlanId);
+        // Pre-select the paid plan unless the URL is already specifying one
+        // (e.g. returning from an upgrade flow on a module sub-page).
+        const planFromUrl = params?.get("plan") || params?.get("basePlan");
+        if (!planFromUrl) setSelectedPlan(activePlanId);
+      }
+
       const { data: moduleRows } = await supabase
         .from("user_modules")
         .select("module_id")
@@ -407,6 +439,18 @@ export default function Billing() {
     if (!tiersFromUrl.website) setWebsitePlanTier(null);
     if (!tiersFromUrl.funnels) setFunnelPackTier(null);
     if (!tiersFromUrl.projectsHub) setProjectsHubPlanTier(null);
+  }, [selectedPlan]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When the user actively picks a plan, auto-select all available modules so
+  // the cards light up immediately. Skips the initial mount so URL-loaded state
+  // (e.g. returning from a module plan page) is never overridden.
+  const DEAD_MODULE_IDS = new Set(["automation", "webinars", "subscription", "subaccounts"]);
+  useEffect(() => {
+    if (!_autoSelectOnPlan.current) { _autoSelectOnPlan.current = true; return; }
+    if (selectedPlan) {
+      const availableIds = MODULES.filter(m => !DEAD_MODULE_IDS.has(m.id)).map(m => m.id);
+      setSelected(prev => Array.from(new Set([...prev, ...availableIds])));
+    }
   }, [selectedPlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSelect = (id) => {
@@ -459,9 +503,10 @@ export default function Billing() {
     }
   };
 
-  const subtotal = MODULES.filter((m) => {
+  const moduleSubtotal = MODULES.filter((m) => {
     if (!selected.includes(m.id)) return false;
     if (activeModules.has(m.id)) return false; // already purchased, don't charge again
+    if (selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.[getBasePlanModuleKey(m.id)]) return false;
     if (m.id === "email" && emailPlanTier) return false;
     if (m.id === "sms" && smsPlanTier) return false;
     if (m.id === "calendar" && calendarPlanTier) return false;
@@ -487,7 +532,14 @@ export default function Billing() {
   const extraSendsCost = extraSendBlocks * 20;
   const extraSeatsCost = extraSeats * 15;
   const annualMultiplier = isAnnual ? 0.80 : 1;
-  const total = (basePlanPrice + subtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost) * annualMultiplier * (1 - discountPercent / 100);
+  const billingSubtotal = basePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const selectedBasePlan = selectedPlan ? BASE_PLANS.find((p) => p.id === selectedPlan) : null;
+  const introDiscountPercent = !isAnnual ? (selectedBasePlan?.introDiscountPercent || 0) : 0;
+  const introBasePlanPrice = introDiscountPercent > 0 ? basePlanPrice * (1 - introDiscountPercent / 100) : basePlanPrice;
+  const introBillingSubtotal = introBasePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const total = billingSubtotal * annualMultiplier * (1 - discountPercent / 100);
+  const introTotal = introBillingSubtotal * (1 - discountPercent / 100);
+  const introPrepaidTotal = selectedBasePlan?.introMonths ? introTotal * selectedBasePlan.introMonths : introTotal;
 
   const handleProceed = async () => {
     if (!user) return alert("Please log in first.");
@@ -534,6 +586,23 @@ export default function Billing() {
         <button className="back-btn" onClick={() => router.push("/dashboard")}>← Back</button>
       </div>
 
+      <section className="gift-panel" aria-labelledby="gift-title">
+        <div className="gift-kicker">Limited onboarding offer</div>
+        <h2 id="gift-title">Our Special Gift To You!</h2>
+        <p>
+          We believe you should experience the power of Gr8 Result Digital Solutions before paying a cent. That's why we're giving every new customer a <strong>full 14-day free trial</strong>, allowing you to onboard, configure, and customise your platform without any upfront costs.
+        </p>
+        <p>
+          But that's not all. To help small and growing businesses get established, we're also offering an incredible <strong>50% off your first 3 months subscription</strong> on our Starter, Growth and Scale Plans, payable after your 14-day free trial ends. This gives you plenty of time to become familiar with the platform, implement your systems, and start seeing real results while keeping your costs low.
+        </p>
+        <p>
+          <strong>Your credit card will not be charged during your 14-day trial period.</strong> Once your trial expires, unless yo have cancelled, you'll pay for your first three months at the discounted 50% rate in advance. After that, your chosen subscription plan will automatically renew at the standard monthly rate.
+        </p>
+        <p>
+          There's never been a better time to transform the way you run and grow your business. Start your free trial today and discover how easy business growth can be when everything you need is finally all in one place.
+        </p>
+      </section>
+
       {/* ── Step 1: Platform Plan (rich cards) ── */}
       <div className="section-header">
         <h2 className="section-title">Step 1 — Choose Your Platform Plan</h2>
@@ -550,6 +619,13 @@ export default function Billing() {
         {PLANS.map((plan) => {
           const planId = plan.name.toLowerCase();
           const isSelected = selectedPlan === planId;
+          const isCurrentPlan = currentPlan === planId;
+          const basePlan = BASE_PLANS.find((p) => p.id === planId);
+          const planPrice = basePlan?.price || parseInt(plan.price.replace("$", ""), 10);
+          const introDiscountPercent = basePlan?.introDiscountPercent || 0;
+          const introMonths = basePlan?.introMonths || 0;
+          const trialDays = basePlan?.trialDays || 14;
+          const introPrice = introDiscountPercent > 0 ? planPrice * (1 - introDiscountPercent / 100) : null;
           return (
             <div
               key={plan.name}
@@ -557,11 +633,16 @@ export default function Billing() {
               style={{
                 "--plan-color": plan.color,
                 borderColor: plan.color,
-                background: isSelected ? `${plan.color}15` : "#111827",
-                boxShadow: isSelected ? `0 0 0 3px ${plan.color}` : "none",
+                background: isSelected ? `${plan.color}15` : isCurrentPlan ? `${plan.color}10` : "#111827",
+                boxShadow: isSelected ? `0 0 0 3px ${plan.color}` : isCurrentPlan ? `0 0 0 2px ${plan.color}88` : "none",
               }}
             >
-              {plan.badge && (
+              {isCurrentPlan && (
+                <div className="current-plan-badge" style={{ background: plan.color, color: plan.color === "#f59e0b" ? "#000" : "#fff" }}>
+                  ✓ YOUR CURRENT PLAN
+                </div>
+              )}
+              {plan.badge && !isCurrentPlan && (
                 <div className="plan-badge" style={{ background: plan.color, color: plan.color === "#f59e0b" ? "#000" : "#fff" }}>
                   {plan.badge}
                 </div>
@@ -570,7 +651,7 @@ export default function Billing() {
               <div className="plan-price">
                 {isAnnual ? (
                   <>
-                    <span className="plan-amount" style={{ color: plan.color }}>${Math.round(parseInt(plan.price.replace("$",""), 10) * 12 * 0.95).toLocaleString()}</span>
+                    <span className="plan-amount" style={{ color: plan.color }}>${Math.round(planPrice * 12 * 0.80).toLocaleString()}</span>
                     <span className="plan-period">/yr</span>
                   </>
                 ) : (
@@ -581,7 +662,12 @@ export default function Billing() {
                 )}
               </div>
               {isAnnual && (
-                <div className="annual-note" style={{ color: plan.color }}>equiv. ${Math.round(parseInt(plan.price.replace("$",""), 10) * 0.80)}/mo billed annually</div>
+                <div className="annual-note" style={{ color: plan.color }}>equiv. ${Math.round(planPrice * 0.80)}/mo billed annually</div>
+              )}
+              {!isAnnual && introPrice && (
+                <div className="intro-note" style={{ borderColor: plan.color }}>
+                  <strong style={{ color: plan.color }}>{trialDays} days free</strong>, then {introDiscountPercent}% off your first {introMonths} months.
+                </div>
               )}
               <p className="plan-tagline">{plan.tagline}</p>
 
@@ -717,7 +803,7 @@ export default function Billing() {
 
       {/* ── Step 2: Feature Modules ── */}
       <div className="section-header" style={{ marginTop: 8 }}>
-        <h2 className="section-title">Step 2 — Add Feature Modules</h2>
+        <h2 className="section-title">Step 2 — Add or Upgrade Features in Specific Modules</h2>
         <p className="section-sub" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span>Optional modules available on all plans</span>
           <button onClick={selectAll} className="btn select-all">Select All</button>
@@ -747,20 +833,20 @@ export default function Billing() {
 
           // Dead modules — not yet built, no plan badge
           const DEAD_MODULES = new Set(["automation", "webinars", "subscription", "subaccounts"]);
+          const isDead = DEAD_MODULES.has(m.id);
+          const hasTier = !!tier;
 
-          // Top-right corner badge
+          // Top-right corner badge — shows the selected base plan name on any coloured card
           let cornerBadge = null;
-          if (tier) {
-            // Module has a selected tier — show tier name prominently
+          if (planName && (isSelected || hasTier || isActive)) {
+            const _planObj = BASE_PLANS.find(p => p.id === selectedPlan);
+            const _badgeTextColor = _planObj?.color === '#f59e0b' ? '#000' : '#fff';
             cornerBadge = (
-              <span style={{ fontSize: 14, color: "#fff", background: m.color, borderRadius: 8, padding: "5px 12px", fontWeight: 700, boxShadow: "0 2px 8px rgba(0,0,0,0.4)", letterSpacing: "0.02em" }}>
-                {PRICING[tier]?.name?.replace(tierCfg.strip, "") || tier}
+              <span style={{ fontSize: 11, color: _badgeTextColor, background: _planObj?.color || m.color, borderRadius: 6, padding: "3px 9px", fontWeight: 700, boxShadow: "0 2px 8px rgba(0,0,0,0.35)", letterSpacing: "0.05em", whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                {planName}
               </span>
             );
           }
-
-          const isDead = DEAD_MODULES.has(m.id);
-          const hasTier = !!tier;
 
           return (
           <div
@@ -850,19 +936,28 @@ export default function Billing() {
         {extraSendBlocks > 0 && (
           <p>Extra Email Sends: <span>{extraSendBlocks} × 10,000 = {(extraSendBlocks * 10000).toLocaleString()} sends (+${extraSendBlocks * 20}/mo)</span></p>
         )}
-        <p>Subtotal: <span>A${subtotal.toFixed(2)}</span></p>
+        <p>Subtotal: <span>A${billingSubtotal.toFixed(2)}</span></p>
+        {!isAnnual && selectedBasePlan?.introDiscountPercent > 0 && (
+          <div className="offer-note">
+            <strong>Onboarding offer:</strong> To take advantage of the {selectedBasePlan.trialDays}-day free trial and {selectedBasePlan.introDiscountPercent}% off your first {selectedBasePlan.introMonths} months, your first {selectedBasePlan.introMonths} paid months are billed upfront as one onboarding payment. No payment is processed today. If you do not cancel before the trial ends, A${introPrepaidTotal.toFixed(2)} will be charged after the trial, then your account continues at A${total.toFixed(2)}/mo after the prepaid onboarding period.
+          </div>
+        )}
         {isAnnual && <p style={{ color: "#22c55e" }}>Annual billing discount: <span>−20% (2 months free)</span></p>}
         {discountPercent > 0 && <p>Promo discount: <span>{discountPercent}%</span></p>}
         <p className="grand-total">
           {isAnnual
             ? <><strong>A${total.toFixed(2)}/mo</strong> <span style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>(A${(total * 12).toFixed(2)} billed annually)</span></>
-            : <strong>A${total.toFixed(2)}/mo</strong>}
+            : selectedBasePlan?.introDiscountPercent > 0
+              ? <><strong>A${introPrepaidTotal.toFixed(2)}</strong> <span style={{ fontSize: 16, color: "#9ca3af", fontWeight: 400 }}>(due after trial for first {selectedBasePlan.introMonths} months, then A${total.toFixed(2)}/mo)</span></>
+              : <strong>A${total.toFixed(2)}/mo</strong>}
         </p>
         <p className="terms">
           Your 14 Day Free Trial — no charge will be made until the trial period ends.
           {isAnnual
             ? " By proceeding, you authorise us to charge your payment method the annual amount shown above at the end of the trial. Annual base plan subscriptions are non-refundable. Module add-ons may be cancelled at any time and a credit for the unused portion will be applied to your account."
-            : " By proceeding, you authorise us to charge your payment method the amount shown above at the end of each monthly billing period, starting after your trial ends, unless you cancel beforehand. Charges already processed are non-refundable."}
+            : selectedBasePlan?.introDiscountPercent > 0
+              ? ` By proceeding, you authorise us to charge your payment method the prepaid onboarding amount shown above after the trial, covering your first ${selectedBasePlan.introMonths} paid months in advance. After that prepaid period, your subscription continues at the ongoing monthly amount shown above, charged in advance at the start of each monthly billing period, unless you cancel beforehand. Charges already processed are non-refundable.`
+              : " By proceeding, you authorise us to charge your payment method the amount shown above in advance at the start of each monthly billing period, starting after your trial ends, unless you cancel beforehand. Charges already processed are non-refundable."}
         </p>
         <button onClick={handleProceed} className="pay-btn">
           Proceed to Payment
@@ -880,8 +975,13 @@ export default function Billing() {
         .banner-subtitle { font-size: 20px; margin: 6px 0 0; opacity: 0.8; color: #000; }
         .back-btn { background: rgba(0,0,0,0.15); border: 2px solid #000; color: #000; font-size: 20px; font-weight: 600; cursor: pointer; padding: 8px 20px; flex-shrink: 0; border-radius: 20px; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
         .back-btn:hover { background: #000; color: #f59e0b; }
+        .gift-panel { width: 100%; max-width: 1320px; background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(59,130,246,0.10)); border: 1px solid rgba(34,197,94,0.42); border-radius: 12px; padding: 24px 28px; margin: -12px 0 32px; box-shadow: 0 18px 45px rgba(0,0,0,0.18); }
+        .gift-kicker { display: inline-flex; align-items: center; background: rgba(34,197,94,0.16); color: #86efac; border: 1px solid rgba(34,197,94,0.36); border-radius: 999px; padding: 5px 12px; font-size: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+        .gift-panel h2 { margin: 0 0 12px; font-size: 32px; line-height: 1.15; color: #fff; }
+        .gift-panel p { margin: 10px 0 0; color: #d1d5db; font-size: 18px; line-height: 1.7; max-width: 1180px; }
+        .gift-panel strong { color: #86efac; font-weight: 800; }
         /* ── Billing toggle ── */
-        .billing-toggle { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+        .billing-toggle { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 1320px; margin: 0 auto 24px; }
         .toggle-label { font-size: 18px; font-weight: 600; color: #6b7280; }
         .toggle-label.active { color: #fff; }
         .toggle-switch { width: 52px; height: 28px; border-radius: 14px; background: #374151; border: none; cursor: pointer; position: relative; transition: background 0.2s; padding: 0; }
@@ -890,15 +990,17 @@ export default function Billing() {
         .toggle-switch.on .toggle-knob { transform: translateX(24px); }
         .save-badge { background: #22c55e; color: #000; font-size: 13px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
         .annual-note { font-size: 15px; margin: -4px 0 8px; opacity: 0.85; }
+        .intro-note { font-size: 16px; line-height: 1.45; color: #d1d5db; background: rgba(255,255,255,0.04); border: 1px solid; border-radius: 8px; padding: 10px 12px; margin: -2px 0 12px; }
         /* ── Section headers ── */
-        .section-header { width: 100%; max-width: 1320px; margin-bottom: 18px; }
+        .section-header { width: 100%; max-width: 1320px; margin: 0 auto 18px; text-align: center; }
         .section-title { font-size: 28px; font-weight: 700; margin: 0 0 4px; }
         .section-sub { font-size: 20px; color: #9ca3af; margin: 0; }
         /* ── Core Plan Cards ── */
-        .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin-bottom: 48px; align-items: start; }
+        .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin: 0 auto 48px; align-items: start; }
         .plan-card { position: relative; border: 2px solid; border-radius: 16px; padding: 28px 20px 24px; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .plan-card:hover { transform: translateY(-4px); }
         .plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 16px; border-radius: 20px; white-space: nowrap; }
+        .current-plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; white-space: nowrap; }
         .plan-name { font-size: 26px; font-weight: 600; margin: 10px 0 5px; }
         .plan-price { display: flex; align-items: baseline; gap: 3px; margin-bottom: 8px; }
         .plan-amount { font-size: 48px; font-weight: 600; line-height: 1; }
@@ -931,9 +1033,9 @@ export default function Billing() {
         /* Fill when base plan chosen AND card is in selected (drives Select All / Clear) */
         .plan-active .card.selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
         .plan-active .card.selected:not(.dead-module):hover { opacity: 0.85; }
-        /* Fill when module tier explicitly chosen from sub-page */
-        .card.tier-selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
-        .card.tier-selected:not(.dead-module):hover { opacity: 0.85; }
+        /* Fill when module tier explicitly chosen from sub-page — only when a base plan is active */
+        .plan-active .card.tier-selected:not(.dead-module) { background: var(--fill-color); color: #fff; border-width: 3px; }
+        .plan-active .card.tier-selected:not(.dead-module):hover { opacity: 0.85; }
         /* Always fill active/purchased modules */
         .card.active-module { background: var(--fill-color); color: #fff; border-width: 3px; }
         .card.dead-module { border-color: #2a3347; color: #4b5563; cursor: default; opacity: 0.5; }
@@ -950,6 +1052,8 @@ export default function Billing() {
         .discount-applied { margin-top: 8px; color: #a3e635; font-size: 18px; }
         .total-box { margin-top: 30px; width: 100%; max-width: 600px; background: #111827; border: 1px solid #333; border-radius: 12px; padding: 24px; font-size: 20px; }
         .total-box p { display: flex; justify-content: space-between; margin: 10px 0; }
+        .offer-note { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.42); border-radius: 8px; color: #d1fae5; font-size: 16px; line-height: 1.65; margin: 12px 0; padding: 12px 14px; }
+        .offer-note strong { color: #22c55e; }
         .grand-total { font-size: 24px; font-weight: 600; margin-top: 12px; }
         .terms { margin-top: 16px; font-size: 18px; line-height: 1.8; opacity: 0.9; text-align: center; }
         .pay-btn { width: 100%; background: #3b82f6; color: #fff; margin-top: 20px; padding: 20px; border-radius: 10px; font-weight: 600; font-size: 24px; cursor: pointer; border: none; }

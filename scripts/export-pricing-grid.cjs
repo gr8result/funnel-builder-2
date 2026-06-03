@@ -88,7 +88,7 @@ function buildPlatformSheet() {
   const rows = [];
 
   // Header
-  rows.push(["", "Starter ($129/mo)", "Growth ($299/mo)", "Scale ($449/mo)", "Professional ($699/mo)"]);
+  rows.push(["", "Starter ($159/mo)", "Growth ($359/mo)", "Scale ($499/mo)", "Professional ($999/mo)"]);
 
   for (const [mod, tiers] of Object.entries(MODULES)) {
     const row = [mod];

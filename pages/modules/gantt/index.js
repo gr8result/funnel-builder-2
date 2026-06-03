@@ -344,21 +344,26 @@ export default function GanttDashboard() {
       <Head><title>Gantt Charts</title></Head>
       <div style={S.page}>
 
-        {/* ── Top bar ── */}
-        <div style={S.topBar}>
-          <div style={S.topBarLeft}>
-            <Link href="/modules/construction" style={S.backLink}>← Construction</Link>
+        {/* ── Banner ── */}
+        <div style={S.banner}>
+          <div style={S.bannerLeft}>
+            <span style={S.bannerIcon}>📊</span>
             <div>
-              <h1 style={S.pageTitle}>Gantt Charts</h1>
-              <p style={S.pageSub}>Plan. Track. Deliver.</p>
+              <h1 style={S.bannerTitle}>Gantt Charts</h1>
+              <p style={S.bannerDesc}>
+                {stats.total} project{stats.total !== 1 ? "s" : ""}&nbsp;·&nbsp;
+                {stats.completePct}% tasks done&nbsp;·&nbsp;
+                <span style={{ color: "#86efac" }}>{stats.onTrack} on track</span>&nbsp;·&nbsp;
+                <span style={{ color: "#fca5a5" }}>{stats.overdue} overdue</span>
+              </p>
             </div>
           </div>
-          <div style={S.topBarRight}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {focusId ? (
               <button style={S.outlineBtn} onClick={() => setFocusId(null)}>← All Projects</button>
             ) : (
               <input
-                style={S.searchInput}
+                style={{ ...S.searchInput, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff" }}
                 placeholder="Filter projects…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -366,6 +371,7 @@ export default function GanttDashboard() {
             )}
             <button style={S.todayBtn} onClick={scrollToToday}>Today</button>
             <button style={S.primaryBtn} onClick={() => setShowNew(true)}>+ New Project</button>
+            <Link href="/modules/construction"><button style={S.backBtnBanner}>← Back</button></Link>
           </div>
         </div>
 
@@ -639,7 +645,7 @@ export default function GanttDashboard() {
                 </select>
               </label>
               <label style={{ ...S.fieldLabel, flex: 1 }}>
-                Project Start Date
+                Commencement Date
                 <input style={S.input} type="date" value={form.start_date}
                   onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} />
               </label>
@@ -668,8 +674,15 @@ const S = {
     background: "#f1f5f9",
     fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
     color: "#0f172a",
-    fontSize: 16,
+    fontSize: 14,
   },
+  // Banner
+  banner:      { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)", padding: "20px 28px", flexWrap: "wrap" },
+  bannerLeft:  { display: "flex", alignItems: "center", gap: 18 },
+  bannerIcon:  { fontSize: 44, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.16)", borderRadius: 999, width: 68, height: 68, flexShrink: 0 },
+  bannerTitle: { margin: 0, fontSize: 26, fontWeight: 700, color: "#fff", lineHeight: 1.2 },
+  bannerDesc:  { margin: "3px 0 0", fontSize: 13, opacity: 0.9, color: "#fff" },
+  backBtnBanner: { background: "rgba(15,23,42,0.7)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
   topBar: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "14px 28px", background: "white",
@@ -687,16 +700,16 @@ const S = {
     padding: "9px 14px", fontSize: 16, color: "#0f172a", outline: "none", width: 200,
   },
   outlineBtn: {
-    background: "white", border: "1px solid #cbd5e1", borderRadius: 8,
-    padding: "9px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", color: "#334155",
+    background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8,
+    padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#fff",
   },
   todayBtn: {
-    background: "white", border: "1px solid #cbd5e1", borderRadius: 8,
-    padding: "9px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", color: "#0f172a",
+    background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8,
+    padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#fff",
   },
   primaryBtn: {
-    background: "#7c3aed", color: "white", border: "none", borderRadius: 8,
-    padding: "10px 22px", fontSize: 16, fontWeight: 700, cursor: "pointer",
+    background: "#fff", color: "#7c3aed", border: "none", borderRadius: 8,
+    padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
   },
   // Stats
   statsRow: {

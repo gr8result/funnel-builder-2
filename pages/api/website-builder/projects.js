@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
 import { getLimit } from "../../../lib/featureGates";
+import { COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
 
 const TABLE_NAME = "published_websites";
 
@@ -37,6 +38,143 @@ function buildDraftSlug(projectId) {
 
 function buildDraftPrimaryDomain(projectId) {
   return `${buildDraftSlug(projectId)}.draft.local`;
+}
+
+const CURRENT_PLATFORM_PRICING = {
+  starter: {
+    price: "$159",
+    individualPrice: "$215",
+    description: "For solo operators and small teams just getting started.",
+    features: ["Team Seats — 2 users", "CRM Pipelines — 1", "Communities — 1", "Social Profiles — 3", "Automation Workflows — 5", "Calendar & Bookings", "Shared Phone Number", "Marketplace Access", "Reporting — Email & CRM stats", "Support — Email"],
+    extras: ["14 days free, then 50% off first 3 months", "Email contacts — 5,000", "Email sends/mo — 50,000", "SMS credits/mo — 500", "Websites — 1", "Funnels — Landing pages only", "Projects Hub — 3 jobs · 5 projects · 2 users", "AI credits/mo — 50", "Storage — 5 GB"],
+    billingPrice: 159,
+    chartIndividualPrice: 215,
+  },
+  growth: {
+    price: "$359",
+    individualPrice: "$474",
+    description: "For growing teams scaling sales and marketing operations.",
+    features: ["Team Seats — 5 users", "CRM Pipelines — 3", "Communities — 3", "Social Profiles — 7", "Automation Workflows — 8", "SMS Scheduled Campaigns — 3", "Call Recording & AI Transcription", "Calendar & Bookings", "Shared Phone Number", "Affiliate Management", "Reporting — Email, SMS & Call Analytics", "Support — Priority Email"],
+    extras: ["14 days free, then 50% off first 3 months", "Email contacts — 15,000", "Email sends/mo — 150,000", "SMS credits/mo — 2,500", "Websites — 2", "Funnels — 1 (+ extras at cost)", "Projects Hub — 15 jobs · 20 projects · dependencies", "AI credits/mo — 250", "Storage — 25 GB"],
+    billingPrice: 359,
+    chartIndividualPrice: 474,
+  },
+  scale: {
+    price: "$499",
+    individualPrice: "$913",
+    description: "For established businesses scaling teams and operations.",
+    features: ["Team Seats — 10 users", "CRM Pipelines — 10", "Communities — Unlimited", "Social Profiles — 15", "Automation Workflows — 10", "SMS Scheduled Campaigns — 10", "AI Transcription + Sentiment", "AI Website Builder", "Shared Phone Number", "Reporting — Full Analytics + CSV export", "Support — Dedicated Onboarding"],
+    extras: ["14 days free, then 50% off first 3 months", "Email contacts — 40,000", "Email sends/mo — 400,000", "SMS credits/mo — 5,000", "Websites — 3", "Funnels — 3 (+ extras at cost)", "Projects Hub — Unlimited jobs & projects · resource allocation · critical path", "AI credits/mo — 750", "Storage — 100 GB"],
+    billingPrice: 499,
+    chartIndividualPrice: 913,
+  },
+  professional: {
+    price: "$999",
+    individualPrice: "$1883",
+    description: "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
+    features: ["Team Seats — Up to 25 users", "CRM Pipelines — Unlimited", "Communities — Unlimited", "Social Profiles — Unlimited", "Automation Workflows — Unlimited", "AI Call Transcription & Sentiment", "AI Content & Post Generation", "Shared Phone Number", "Reporting — Full Analytics + Scheduled Reports", "Support — Account Manager + SLA"],
+    extras: ["14 days free trial", "Email contacts — 200,000", "Email sends/mo — 2,000,000", "SMS credits/mo — 10,000", "Websites — 5", "Funnels — 10 (+ extras at cost)", "Projects Hub — Unlimited · API", "AI credits/mo — 5,000", "Storage — 500 GB"],
+    billingPrice: 999,
+    chartIndividualPrice: 1883,
+  },
+};
+
+const CURRENT_PLATFORM_SAVINGS_HEADLINE = '<span style="color: rgb(255, 192, 0);"><span style="font-size: 64px;">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>';
+const CURRENT_PLATFORM_PRICING_TITLE = 'Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style="color: rgb(255, 192, 0);">That\'s $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>';
+
+function platformPlanKey(name) {
+  return String(name || "").toLowerCase().replace(/ plan$/, "").trim();
+}
+
+function syncPlatformPricingBlocks(blocks) {
+  if (!Array.isArray(blocks)) return blocks;
+
+  return blocks.map((block) => {
+    if (!block || typeof block !== "object") return block;
+    const props = { ...(block.props || {}) };
+
+    if (block.type === "competitor-comparison") {
+      const rowCount = Array.isArray(props.rows) ? props.rows.length : 0;
+      const isLegacyCompetitorBlock = rowCount < 12
+        || Number(props.planPrice || 0) === 199
+        || /business plan/i.test(String(props.planName || ""))
+        || /what you(?:'|\u2019)d pay elsewhere/i.test(String(props.title || ""));
+
+      if (isLegacyCompetitorBlock) {
+        Object.assign(props, COMPETITOR_COMPARISON_TEMPLATE_PROPS, block.props || {}, {
+          rows: COMPETITOR_COMPARISON_TEMPLATE_PROPS.rows,
+          title: props.title && !/what you(?:'|\u2019)d pay elsewhere/i.test(String(props.title || "")) ? props.title : COMPETITOR_COMPARISON_TEMPLATE_PROPS.title,
+          planName: /business plan/i.test(String(props.planName || "")) ? COMPETITOR_COMPARISON_TEMPLATE_PROPS.planName : (props.planName || COMPETITOR_COMPARISON_TEMPLATE_PROPS.planName),
+          planPrice: Number(props.planPrice || 0) === 199 ? COMPETITOR_COMPARISON_TEMPLATE_PROPS.planPrice : (Number(props.planPrice) || COMPETITOR_COMPARISON_TEMPLATE_PROPS.planPrice),
+          backgroundColor: props.backgroundColor === "#070c18" || !props.backgroundColor ? COMPETITOR_COMPARISON_TEMPLATE_PROPS.backgroundColor : props.backgroundColor,
+        });
+      }
+    }
+
+    if (block.type === "hero") {
+      const headline = String(props.headline || props.headlineBlock?.content || "");
+      if (/Save Up To \$?(9,900|10,600)/i.test(headline)) {
+        props.headline = CURRENT_PLATFORM_SAVINGS_HEADLINE;
+        props.headlineBlock = { ...(props.headlineBlock || {}), content: CURRENT_PLATFORM_SAVINGS_HEADLINE };
+      }
+    }
+
+    if (block.type === "pricing-table") {
+      const plans = Array.isArray(props.plans) ? props.plans : [];
+      const isPlatformPricingTable = plans.some((plan) => CURRENT_PLATFORM_PRICING[platformPlanKey(plan?.name)]);
+      if (isPlatformPricingTable) {
+        props.title = CURRENT_PLATFORM_PRICING_TITLE;
+        props.plans = plans.map((plan) => {
+          const current = CURRENT_PLATFORM_PRICING[platformPlanKey(plan?.name)];
+          if (!current) return plan;
+          return {
+            ...plan,
+            price: current.price,
+            individualPrice: current.individualPrice,
+            description: current.description,
+            features: current.features,
+            includedFeatures: current.features,
+            extras: current.extras,
+          };
+        });
+      }
+    }
+
+    if (block.type === "chart") {
+      const plans = Array.isArray(props.plans) ? props.plans : [];
+      const isPlatformChart = plans.some((plan) => CURRENT_PLATFORM_PRICING[platformPlanKey(plan?.name)]);
+      if (isPlatformChart) {
+        props.headline = CURRENT_PLATFORM_SAVINGS_HEADLINE;
+        props.headlineBlock = { ...(props.headlineBlock || {}), content: CURRENT_PLATFORM_SAVINGS_HEADLINE };
+        props.plans = plans.map((plan) => {
+          const current = CURRENT_PLATFORM_PRICING[platformPlanKey(plan?.name)];
+          if (!current) return plan;
+          return {
+            ...plan,
+            billingPrice: current.billingPrice,
+            individualPrice: current.chartIndividualPrice,
+          };
+        });
+      }
+    }
+
+    return { ...block, props };
+  });
+}
+
+function syncPlatformPricingPage(project) {
+  if (!project?.pageBlocks || typeof project.pageBlocks !== "object") return project;
+  const pageBlocks = Object.fromEntries(
+    Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
+      pageName,
+      Array.isArray(blocks) ? syncPlatformPricingBlocks(blocks) : blocks,
+    ])
+  );
+  if (!Array.isArray(project.pageBlocks.Pricing)) return { ...project, pageBlocks };
+  return {
+    ...project,
+    pageBlocks,
+  };
 }
 
 function mapProjectRow(row) {
@@ -170,12 +308,12 @@ async function handler(req, res) {
     const draftProjectId = toDraftProjectId(projectId);
 
     const now = new Date().toISOString();
-    const nextProject = {
+    const nextProject = syncPlatformPricingPage({
       ...project,
       id: projectId,
       createdAt: project?.createdAt || now,
       updatedAt: now,
-    };
+    });
 
     const existing = await supabaseAdmin
       .from(TABLE_NAME)

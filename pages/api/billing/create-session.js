@@ -3,6 +3,7 @@
 // Supports base plan + modules as recurring line items.
 
 import Stripe from "stripe";
+import { BASE_PLANS } from "../../../data/pricing";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -13,6 +14,11 @@ export default async function handler(req, res) {
 
   try {
     const { lineItems, metadata = {} } = req.body;
+    const basePlan = metadata.plan ? BASE_PLANS[String(metadata.plan)] : null;
+    const isAnnual = metadata.annual === "1";
+    const introDiscountPercent = !isAnnual ? (basePlan?.introDiscountPercent || 0) : 0;
+    const introMonths = basePlan?.introMonths || 0;
+    const trialDays = basePlan?.trialDays || 0;
 
     // 🛡 Validate payload
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
@@ -20,18 +26,42 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No modules provided" });
     }
 
-    // 🧮 Convert data for Stripe — recurring monthly
-    const formattedItems = lineItems
-      .filter((item) => item && item.name && !isNaN(item.amount))
-      .map((item) => ({
-        price_data: {
+    const rampEligible = !isAnnual && introDiscountPercent > 0 && introMonths > 0;
+    const validLineItems = lineItems.filter((item) => item && item.name && !isNaN(item.amount));
+
+    const normalPrices = [];
+    if (rampEligible) {
+      for (const item of validLineItems) {
+        const normalPrice = await stripe.prices.create({
           currency: "aud",
           product_data: { name: item.name },
-          unit_amount: Math.round(Number(item.amount) * 100), // cents
+          unit_amount: Math.round(Number(item.amount) * 100),
           recurring: { interval: "month" },
+        });
+        normalPrices.push(normalPrice.id);
+      }
+    }
+
+    // 🧮 Convert data for Stripe. Monthly ramp plans use one 3-month prepaid
+    // intro billing period, then the webhook schedules normal monthly prices.
+    const formattedItems = validLineItems.map((item, index) => {
+      const normalAmount = Number(item.amount);
+      const introUnitAmount = rampEligible
+        ? normalAmount * introMonths * (index === 0 ? (1 - introDiscountPercent / 100) : 1)
+        : normalAmount;
+
+      return {
+        price_data: {
+          currency: "aud",
+          product_data: { name: rampEligible ? `${item.name} - ${introMonths} month onboarding block` : item.name },
+          unit_amount: Math.round(introUnitAmount * 100),
+          recurring: rampEligible
+            ? { interval: "month", interval_count: introMonths }
+            : { interval: isAnnual ? "year" : "month" },
         },
         quantity: 1,
-      }));
+      };
+    });
 
     if (formattedItems.length === 0) {
       console.error("❌ Invalid or empty formattedItems:", lineItems);
@@ -46,6 +76,7 @@ export default async function handler(req, res) {
     if (metadata.calendarPlan) successParts.push(`calendarPlan=${encodeURIComponent(String(metadata.calendarPlan))}`);
     if (metadata.socialPlan)   successParts.push(`socialPlan=${encodeURIComponent(String(metadata.socialPlan))}`);
     if (metadata.selected)     successParts.push(`selected=${encodeURIComponent(String(metadata.selected))}`);
+    if (metadata.annual)       successParts.push(`annual=${encodeURIComponent(String(metadata.annual))}`);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -58,11 +89,19 @@ export default async function handler(req, res) {
         calendarPlan: metadata.calendarPlan ? String(metadata.calendarPlan) : "",
         socialPlan:   metadata.socialPlan   ? String(metadata.socialPlan)   : "",
         selected:     metadata.selected     ? String(metadata.selected)     : "",
+        annual:       metadata.annual       ? String(metadata.annual)       : "",
+        rampEligible: rampEligible ? "1" : "",
+        normalPriceIds: normalPrices.join(","),
       },
       subscription_data: {
+        trial_period_days: trialDays > 0 ? trialDays : undefined,
         metadata: {
           plan:     metadata.plan     ? String(metadata.plan)     : "",
           selected: metadata.selected ? String(metadata.selected) : "",
+          introDiscountPercent: introDiscountPercent ? String(introDiscountPercent) : "",
+          introMonths: introMonths ? String(introMonths) : "",
+          rampEligible: rampEligible ? "1" : "",
+          normalPriceIds: normalPrices.join(","),
         },
       },
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?${successParts.join("&")}`,

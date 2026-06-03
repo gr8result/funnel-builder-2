@@ -11,11 +11,11 @@
  *                  logos: [{ domain: string, name: string }],
  *                  price: number | null }   — null = "unique" row (no price shown)
  *
- * planName     {string}  Label for your plan row.  Default: "Business Plan"
- * planPrice    {number}  Your plan's monthly price. Default: 199
+ * planName     {string}  Label for your plan row.  Default: "COMPETITOR ANALYSIS"
+ * planPrice    {number}  Your plan's monthly price. Default: 299
  * planTagline  {string}  Sub-label under planName.  Default: "Everything above, included"
- * title        {string}  Heading.   Default: "What you'd pay elsewhere"
- * eyebrow      {string}  Small uppercase label above title. Default: "All-in-One Platform"
+ * title        {string}  Heading. Default: ""
+ * eyebrow      {string}  Small uppercase label above title. Default: "our All-in-One Platform"
  * subtitle     {string}  Body text below title.
  * uniqueLabel  {string}  Text shown for null-price rows. Default: `Unique to ${planName}`
  * disclaimer   {string}  Fine-print below table.
@@ -47,10 +47,12 @@ function CheckBadge() {
   );
 }
 
-function Logo({ domain, name }) {
+function Logo({ domain, name, src }) {
+  const imgSrc = src || (domain ? `https://logo.clearbit.com/${domain}` : null);
+  if (!imgSrc) return null;
   return (
     <img
-      src={`https://logo.clearbit.com/${domain}`}
+      src={imgSrc}
       alt={name}
       title={name}
       width={36}
@@ -61,10 +63,14 @@ function Logo({ domain, name }) {
         objectFit: "contain",
         border: "1.5px solid rgba(255,255,255,0.15)",
         flexShrink: 0,
+        width: 36,
+        height: 36,
+        minWidth: 36,
+        minHeight: 36,
       }}
       onError={e => {
         const el = e.currentTarget;
-        if (!el.src.includes("google.com")) {
+        if (!src && domain && !el.src.includes("google.com")) {
           el.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
         } else {
           el.style.display = "none";
@@ -79,12 +85,12 @@ const px = { padding: "0 32px" };
 
 export default function WhatYoudPayElsewhere({
   rows = [],
-  planName = "Business Plan",
-  planPrice = 199,
+  planName = "COMPETITOR ANALYSIS",
+  planPrice = 299,
   planTagline = "Everything above, included",
-  title = "What you\u2019d pay elsewhere",
-  eyebrow = "All-in-One Platform",
-  subtitle,
+  title = "",
+  eyebrow = "our All-in-One Platform",
+  subtitle = "We replace every tool below — one platform, one price.",
   uniqueLabel,
   disclaimer = "* Pricing based on publicly listed entry-tier plans. Actual costs vary by usage and plan tier.",
   ctaLabel,
@@ -134,8 +140,8 @@ export default function WhatYoudPayElsewhere({
               </span>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8, ...px, justifyContent: "center" }}>
-                {(row.logos || []).map(l => (
-                  <Logo key={l.domain} domain={l.domain} name={l.name} />
+                {(row.logos || []).map((l, li) => (
+                  <Logo key={l.src || l.domain || li} domain={l.domain} name={l.name} src={l.src} />
                 ))}
               </div>
 

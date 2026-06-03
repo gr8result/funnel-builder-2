@@ -4,14 +4,13 @@ import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builde
 import { renderGridLibraryIcon } from "./gridIconLibrary";
 import {
   MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
-  PARALLAX_OVERRUN, STABLE_PARALLAX_OVERRUN,
   websiteBlockKeyframes, getAnimationStyle, ensureWebsiteBlockAnimationStyles, animationState,
   ScrollReveal, HtmlEmbedBlock, ambientMotionStyle,
   asArray, slugifyText, resolveCurrentPageKey, isCurrentNavLink, shouldHighlightNavLink,
   isSystemAsset, pickDefaultAvatarSrc, resolvePublishedNavHref,
   isGradientValue, extractSolidColor, resolveHeroBaseColor, resolveHeroGradient,
-  compensateParallaxBgPosition, resolveParallaxSpeed, heroBackground,
-  IconCounterNumber, ParallaxSyncShell, ParallaxImageLayer, StableParallaxLayer,
+  heroBackground,
+  IconCounterNumber,
 } from "./website-renderer/wbAnimations";
 import {
   colorWithAlpha, asStyleObject, asRichHtml, CANVAS_PLACEHOLDER_STRINGS, stripPlaceholder,
@@ -122,6 +121,42 @@ function TextColumnResizer({ editor, value, align, onResize, children }) {
     </div>
   );
 }
+
+function cleanTextSectionHtml(value) {
+  let html = asRichHtml(value);
+
+  if (typeof document !== "undefined" && html) {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    const blockSelector = "p,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,div";
+    template.content.querySelectorAll("span").forEach((span) => {
+      const blockChildren = Array.from(span.children).filter((child) => child.matches?.(blockSelector));
+      if (!blockChildren.length) return;
+
+      const spanStyle = span.getAttribute("style") || "";
+      blockChildren.forEach((child) => {
+        if (spanStyle) {
+          const childStyle = child.getAttribute("style") || "";
+          child.setAttribute("style", [spanStyle, childStyle].filter(Boolean).join("; "));
+        }
+      });
+      span.replaceWith(...Array.from(span.childNodes));
+    });
+    html = template.innerHTML;
+  }
+
+  return html
+    .replace(/<h([1-6])\b([^>]*)>\s*(?:<br\s*\/?\s*>|&nbsp;|\s)*<\/h\1>/gi, "")
+    .replace(/<p\b([^>]*)>\s*(?:<span\b[^>]*>\s*)?(?:<br\s*\/?\s*>|&nbsp;|\s)*(?:<\/span>\s*)?<\/p>/gi, "");
+}
+
+const textSectionRichTextStyles = `
+.wb-text-block :where(h1,h2,h3,h4,h5,h6,p,ul,ol,blockquote){margin-top:0;}
+.wb-text-block :where(h1,h2,h3,h4,h5,h6){margin-bottom:0.28em;line-height:var(--wb-text-line-height, 1.35);}
+.wb-text-block :where(p,li,blockquote){line-height:var(--wb-text-line-height, 1.35);}
+.wb-text-block :where(p){margin-bottom:0.25em;}
+.wb-text-block :where(p:last-child,h1:last-child,h2:last-child,h3:last-child,h4:last-child,h5:last-child,h6:last-child,ul:last-child,ol:last-child,blockquote:last-child){margin-bottom:0;}
+`;
 
 /**
  * Two-column grid shell with a draggable vertical divider for the data-ribbon stats variant.
@@ -438,24 +473,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroParallaxEnabled = ["hero", "parallax"].includes(block?.type) && !!props.enableParallax && !!heroBackgroundImage && !isVideoHero;
       // Use CSS background-attachment:fixed so the background image stays completely still
       // while the section content and floating overlays scroll past it.
-      // In editor the canvas uses transform:scale() which breaks CSS fixed, so fall back to
-      // background-attachment:scroll (static, but correctly positioned for editing).
       const isFixedBgParallax = heroParallaxEnabled;
       const heroParallaxBaseColor = heroParallaxEnabled ? resolveHeroBaseColor(props) : null;
       const sectionBgStyle = heroParallaxEnabled
         ? { backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a" }
         : heroStaticStyle;
-      // Parallax layer carries ONLY the raw image — no gradient overlay — so the photo is
-      // fully visible and the scroll motion is clearly perceptible.  A separate static overlay
-      // div (z:2) sits on top of the moving image layer to darken it for text legibility.
-      const parallaxLayerBgStyle = heroParallaxEnabled && !isFixedBgParallax
-        ? {
-            backgroundImage: `url(${heroBackgroundImage})`,
-            backgroundSize: props.backgroundSize || heroStaticStyle.backgroundSize || "cover",
-            backgroundPosition: compensateParallaxBgPosition(props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center", STABLE_PARALLAX_OVERRUN),
-            backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
-          }
-        : null;
       const parallaxStaticOverlay = heroParallaxEnabled && heroParallaxBaseColor
         ? `linear-gradient(135deg, ${colorWithAlpha(heroParallaxBaseColor, 0.28)}, ${colorWithAlpha(heroParallaxBaseColor, 0.52)})`
         : null;
@@ -562,10 +584,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           }}
         >
           {isFixedBgParallax ? (
-            // Absolutely-positioned background layer for parallax blocks.
-            // In the editor, background-attachment:scroll keeps the image visible and correctly
-            // positioned within the section. In live/preview, background-attachment:fixed gives
-            // the classic CSS parallax (background stays fixed to viewport while section scrolls).
             <div
               aria-hidden="true"
               style={{
@@ -576,17 +594,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 backgroundSize: props.backgroundSize || heroStaticStyle.backgroundSize || "cover",
                 backgroundPosition: props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center",
                 backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
-                backgroundAttachment: editor ? "scroll" : "fixed",
+                backgroundAttachment: "fixed",
                 pointerEvents: "none",
               }}
             />
-          ) : !isFixedBgParallax && heroParallaxEnabled ? (
-            // overflow:hidden + matching border-radius clips the ±300px overrun to the
-            // same rounded shape as the section. Without border-radius, the parallax
-            // background would bleed outside the section's rounded corners in editor mode.
-            <div aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: "inherit", pointerEvents: "none", zIndex: 0 }}>
-              <StableParallaxLayer speed={resolveParallaxSpeed(props.parallaxStrength, props.parallaxSpeed)} target="section" backgroundStyle={parallaxLayerBgStyle} />
-            </div>
           ) : null}
           {heroParallaxEnabled && parallaxStaticOverlay ? (
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: parallaxStaticOverlay, pointerEvents: "none" }} />
@@ -598,26 +609,88 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           ) : null}
 
           {isVideoHero ? (
-            <video
-              src={props.backgroundVideoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
-            />
+            <>
+              <video
+                src={props.backgroundVideoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+              />
+              {props.videoOverlayColor && props.videoOverlayColor !== "transparent" ? (
+                <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 1, background: props.videoOverlayColor, pointerEvents: "none" }} />
+              ) : null}
+            </>
           ) : null}
           {showHeroMediaControls ? (
-            <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 6, display: "grid", gap: 8, maxWidth: compact ? "calc(100% - 24px)" : 420 }}>
-              {!heroBackgroundImage ? (
+            <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 6, display: "grid", gap: 8, maxWidth: compact ? "calc(100% - 24px)" : 460 }}>
+              {isVideoHero ? (
+                /* ── Video mode: show video controls ── */
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: compact ? "10px 12px" : "12px 14px", borderRadius: 16, background: "rgba(15,23,42,0.72)", border: "1px solid rgba(168,85,247,0.5)", boxShadow: "0 16px 34px rgba(15,23,42,0.18)" }}>
+                  <span style={{ color: "#e2e8f0", fontSize: compact ? 12 : 13, fontWeight: 600 }}>🎬 Video background</span>
+                  <label style={{ ...sharedStyles.editorChip, background: "#a855f7", color: "#fff", cursor: "pointer" }}>
+                    Replace Video
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        const localUrl = URL.createObjectURL(file);
+                        onChangeBlock?.({ ...props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
+                        onUploadImage?.("backgroundVideoUrl", file);
+                      }}
+                    />
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }} title="Overlay colour — darken/tint the video">
+                    <span style={{ color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>Overlay</span>
+                    <input
+                      type="color"
+                      value={(() => { const c = props.videoOverlayColor || "rgba(0,0,0,0)"; const m = c.match(/rgba?\((\d+),(\d+),(\d+)/); if (!m) return "#000000"; return "#" + [m[1],m[2],m[3]].map((n) => parseInt(n).toString(16).padStart(2,"0")).join(""); })()}
+                      onChange={(e) => {
+                        const hex = e.target.value;
+                        const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+                        const existing = props.videoOverlayColor || "rgba(0,0,0,0.45)";
+                        const alphaMatch = existing.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/);
+                        const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 0.45;
+                        onChangeBlock?.({ ...props, videoOverlayColor: `rgba(${r},${g},${b},${alpha})` });
+                      }}
+                      style={{ width: 28, height: 24, padding: 1, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 5, cursor: "pointer", background: "transparent" }}
+                    />
+                    <input
+                      type="range"
+                      min={0} max={0.95} step={0.05}
+                      value={(() => { const m = (props.videoOverlayColor || "").match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/); return m ? parseFloat(m[1]) : 0; })()}
+                      onChange={(e) => {
+                        const alpha = parseFloat(e.target.value);
+                        const existing = props.videoOverlayColor || "rgba(0,0,0,0)";
+                        const m = existing.match(/rgba?\((\d+),(\d+),(\d+)/);
+                        const [r,g,b] = m ? [m[1],m[2],m[3]] : ["0","0","0"];
+                        onChangeBlock?.({ ...props, videoOverlayColor: `rgba(${r},${g},${b},${alpha})` });
+                      }}
+                      style={{ width: 80 }}
+                    />
+                    <span style={{ color: "#94a3b8", fontSize: 11, minWidth: 28 }}>{Math.round(((() => { const m = (props.videoOverlayColor || "").match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)/); return m ? parseFloat(m[1]) : 0; })()) * 100)}%</span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ ...sharedStyles.editorChip, background: "rgba(148,163,184,0.25)", color: "#e2e8f0" }}
+                    onClick={() => onChangeBlock?.({ ...props, backgroundStyle: "image", backgroundVideoUrl: "" })}
+                  >Switch to Image</button>
+                </div>
+              ) : !heroBackgroundImage ? (
+                /* ── Empty state: offer image OR video upload ── */
                 <div style={{ borderRadius: 18, border: "2px dashed rgba(125,211,252,0.7)", background: "rgba(15,23,42,0.42)", padding: compact ? 14 : 18, display: "grid", gap: 10, color: "#e2e8f0", boxShadow: "0 16px 34px rgba(15,23,42,0.2)" }}>
                   <div style={{ display: "grid", gap: 4 }}>
-                    <strong style={{ fontSize: compact ? 14 : 16 }}>{block?.type === "parallax" ? "Section background image" : "Hero background image"}</strong>
-                    <span style={{ fontSize: compact ? 12 : 13, opacity: 0.82 }}>Click here to upload a new image or pick one from the library.</span>
+                    <strong style={{ fontSize: compact ? 14 : 16 }}>{block?.type === "parallax" ? "Section background" : "Hero background"}</strong>
+                    <span style={{ fontSize: compact ? 12 : 13, opacity: 0.82 }}>Upload an image or video, or pick from the library.</span>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <label style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49", cursor: "pointer" }}>
-                      Upload Background
+                      📷 Upload Image
                       <input
                         type="file"
                         accept="image/*"
@@ -628,6 +701,22 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           if (!file) return;
                           onChangeBlock?.({ ...props, backgroundStyle: "image" });
                           onUploadImage?.("backgroundImage", file);
+                        }}
+                      />
+                    </label>
+                    <label style={{ ...sharedStyles.editorChip, background: "#a855f7", color: "#fff", cursor: "pointer" }}>
+                      🎬 Upload Video
+                      <input
+                        type="file"
+                        accept="video/mp4,video/webm,video/*"
+                        style={{ display: "none" }}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (!file) return;
+                          const localUrl = URL.createObjectURL(file);
+                          onChangeBlock?.({ ...props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
+                          onUploadImage?.("backgroundVideoUrl", file);
                         }}
                       />
                     </label>
@@ -645,10 +734,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </div>
               ) : (
+                /* ── Has image: Replace image + option to switch to video ── */
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: compact ? "10px 12px" : "12px 14px", borderRadius: 16, background: "rgba(15,23,42,0.52)", border: "1px solid rgba(125,211,252,0.22)", boxShadow: "0 16px 34px rgba(15,23,42,0.18)" }}>
                   <span style={{ color: "#e2e8f0", fontSize: compact ? 12 : 13, fontWeight: 600 }}>{block?.type === "parallax" ? "Section background" : "Hero background"}</span>
                   <label style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49", cursor: "pointer" }}>
-                    Replace
+                    Replace Image
                     <input
                       type="file"
                       accept="image/*"
@@ -659,6 +749,22 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         if (!file) return;
                         onChangeBlock?.({ ...props, backgroundStyle: "image" });
                         onUploadImage?.("backgroundImage", file);
+                      }}
+                    />
+                  </label>
+                  <label style={{ ...sharedStyles.editorChip, background: "#a855f7", color: "#fff", cursor: "pointer" }} title="Use a video as background instead">
+                    Use Video Instead
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        const localUrl = URL.createObjectURL(file);
+                        onChangeBlock?.({ ...props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
+                        onUploadImage?.("backgroundVideoUrl", file);
                       }}
                     />
                   </label>
@@ -1185,18 +1291,20 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "text":
       const textFullWidth = fullWidthStyle(props, compact, editor);
-      const textPadTop = props.paddingTop ?? 48;
-      const textPadBottom = props.paddingBottom ?? 48;
+      const textPadTop = props.paddingTop ?? 20;
+      const textPadBottom = props.paddingBottom ?? 20;
+      const textLineHeight = Math.max(0.8, Math.min(3, Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35) || 1.35));
       const textBackground = props.backgroundColor || "#111827";
       const hasBorder = !props.hideBorder && textBackground && textBackground !== "transparent";
       const hasBoxShadow = hasBorder;
       const textOverlayEnabled = !!props.enableParallax && !!heroBackgroundImage;
-      const textParallaxBgStyle = textOverlayEnabled
+      const textFixedBgStyle = textOverlayEnabled
         ? {
             backgroundImage: `url(${heroBackgroundImage})`,
-            backgroundPosition: compensateParallaxBgPosition(props.backgroundPosition || "center center", STABLE_PARALLAX_OVERRUN),
+            backgroundPosition: props.backgroundPosition || "center center",
             backgroundSize: props.backgroundSize || "cover",
             backgroundRepeat: props.backgroundRepeat || "no-repeat",
+            backgroundAttachment: "fixed",
             backgroundColor: textBackground !== "transparent" ? textBackground : "#111827",
           }
         : null;
@@ -1210,9 +1318,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           disabled={editor}
           style={{
             position: "relative",
-            borderRadius: compact ? 16 : 22,
+            borderRadius: 0,
             ...textFullWidth,
-            minHeight: props.minHeight || "220px",
+            minHeight: props.minHeight || "160px",
             paddingTop: `${textPadTop}px`,
             paddingBottom: `${textPadBottom}px`,
             paddingLeft: sectionPad.replace(/\s.*/, ""),
@@ -1227,7 +1335,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               : {
                   background: textBackground !== "transparent" ? textBackground : "transparent",
                 }),
-            backgroundAttachment: "scroll", // JS parallax or none — CSS fixed causes bg/text to diverge
+            backgroundAttachment: "scroll",
             color: props.textColor || "#e6eef5",
             border: hasBorder ? PREMIUM_BORDER : "none",
             boxShadow: hasBoxShadow ? PREMIUM_SHADOW : "none",
@@ -1236,10 +1344,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         >
           {textOverlayEnabled ? (
             <>
-              <StableParallaxLayer speed={resolveParallaxSpeed(props.parallaxStrength, props.parallaxSpeed)} target="section" backgroundStyle={textParallaxBgStyle} />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, ...textFixedBgStyle, pointerEvents: "none" }} />
               <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: "linear-gradient(rgba(7,17,29,0.35), rgba(7,17,29,0.35))", pointerEvents: "none" }} />
             </>
           ) : null}
+          <style>{textSectionRichTextStyles}</style>
           <div style={{ ...sectionContentStyle(props, compact), position: "relative", zIndex: textOverlayEnabled ? 3 : undefined }}>
             {editor ? (
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
@@ -1264,14 +1373,14 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 </div>
               );
             })}
-            <DraggableContentOverlay props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={props.alignment || "left"} vertical={props.verticalAlign || "center"} overlayEnabled={textOverlayEnabled}>
+            <div style={{ position: "relative", zIndex: 3, width: "100%" }}>
               <TextColumnResizer
                 editor={editor && !textOverlayEnabled}
                 value={Number(props.textContentWidth || 0)}
                 align={props.alignment || "left"}
                 onResize={(w) => onChangeBlock?.({ ...props, textContentWidth: w })}
               >
-                <p
+                <div
                   className="wb-text-block"
                   data-website-inline-editor="true"
                   data-text-prop="text"
@@ -1284,11 +1393,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     if (!editor || typeof onChangeBlock !== "function") return;
                     onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                   }}
-                  style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: 1.8, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(props.text) }}
+                  style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
+                  dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
                 />
               </TextColumnResizer>
-            </DraggableContentOverlay>
+            </div>
           </div>
         </ScrollReveal>
       );
@@ -1298,8 +1407,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "cta-button": {
       const ctaVariant = ctaButtonVariantStyles(props, compact);
+      const ctaWidthProps = { ...props, fullWidthBackground: props.fullWidthBackground === true };
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(props, compact, editor) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={ctaVariant.content}>
             {(editor || !!stripPlaceholder(props.eyebrow)) ? (
@@ -1451,9 +1561,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       <span style={{ ...sharedStyles.featureCheck, ...(featureVariant.marker || {}) }}>{getListMarker(props.bulletStyle, idx)}</span>
                       <h3
                         data-website-inline-editor="true"
+                        data-text-prop={`items.${idx}.title`}
                         contentEditable={editor}
                         suppressContentEditableWarning
-                        onBlur={(event) => patchFeatureItem({ title: event.currentTarget.innerText })}
+                        onBlur={(event) => patchFeatureItem({ title: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
                         style={{
                           margin: 0,
                           outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
@@ -1467,15 +1578,15 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           color: featureVariant.title?.color || props.textColor || "#0f172a",
                           ...featureVariant.title,
                         }}
-                      >
-                        {item.title}
-                      </h3>
+                        dangerouslySetInnerHTML={{ __html: asRichHtml(item.title) }}
+                      />
                     </div>
                     <p
                       data-website-inline-editor="true"
+                      data-text-prop={`items.${idx}.body`}
                       contentEditable={editor}
                       suppressContentEditableWarning
-                      onBlur={(event) => patchFeatureItem({ body: event.currentTarget.innerText })}
+                      onBlur={(event) => patchFeatureItem({ body: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
                       style={{
                         margin: 0,
                         outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
@@ -1488,9 +1599,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         color: featureVariant.copy?.color || colorWithAlpha(props.textColor || "#0f172a", 0.78),
                         ...featureVariant.copy,
                       }}
-                    >
-                      {item.body || (editor ? "Add a short supporting sentence" : "")}
-                    </p>
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(item.body || (editor ? "Add a short supporting sentence" : "")) }}
+                    />
                   </div>
                 </ScrollReveal>
               );
@@ -1543,6 +1653,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <ScrollReveal key={item.id || `testimonial-${idx}`} animationName="fade-up" delay={idx * 0.07} disabled={editor} style={{ ...cardSty, ...(variantSty.cardWrap ? { width: "100%", boxSizing: "border-box" } : {}) }}>
             {renderStarRow(item.rating, idx)}
             <p
+              data-website-inline-editor="true"
+              data-text-prop={`items.${idx}.text`}
               contentEditable={editor}
               suppressContentEditableWarning
               onBlur={(event) => {
@@ -1568,11 +1680,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   : null}
               <div>
                 <p
+                  data-website-inline-editor="true"
+                  data-text-prop={`items.${idx}.author`}
                   contentEditable={editor}
                   suppressContentEditableWarning
                   onBlur={(event) => {
                     if (!editor) return;
-                    patchTestimonial(idx, { author: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+                    patchTestimonial(idx, { author: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                   }}
                   style={{
                     ...sharedStyles.authorName,
@@ -1586,11 +1700,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   dangerouslySetInnerHTML={{ __html: asRichHtml(item.author || (editor ? "Author Name" : "")) }}
                 />
                 <p
+                  data-website-inline-editor="true"
+                  data-text-prop={`items.${idx}.role`}
                   contentEditable={editor}
                   suppressContentEditableWarning
                   onBlur={(event) => {
                     if (!editor) return;
-                    patchTestimonial(idx, { role: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+                    patchTestimonial(idx, { role: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                   }}
                   style={{
                     ...sharedStyles.authorMeta,
@@ -1610,8 +1726,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       };
 
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...variantSty.shell }}>
-          <div style={sectionContentStyle(props, compact)}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), ...variantSty.shell, overflowX: "hidden", boxSizing: "border-box" }}>
+          <div style={{ ...sectionContentStyle(props, compact), minWidth: 0, boxSizing: "border-box" }}>
           {(props.title || editor) ? (
             <h2
               contentEditable={editor}
@@ -1632,7 +1748,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "What Our Customers Say" : "")) }}
             />
           ) : null}
-          <div style={asStyleObject(variantSty.grid)}>
+          <div style={{ ...asStyleObject(variantSty.grid), minWidth: 0 }}>
             {testimonialItems.map((item, idx) => (
               variantSty.cardWrap
                 ? <div key={item.id || `tw-${idx}`} style={asStyleObject(variantSty.cardWrap)}>{renderTestimonialCard(item, idx)}</div>
@@ -1881,7 +1997,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               if (!Number.isFinite(v) || v <= 0) return "—";
               const fixed = v.toFixed(2);
               const [whole, dec] = fixed.split(".");
-              return `$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
+              return `A$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
             };
             const hasDisclosure = plans.some((p) => parsePx(p.individualPrice) > 0);
             if (!hasDisclosure) return null;
@@ -1889,7 +2005,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             const planCol = (i) => BILLING_COLORS[i % BILLING_COLORS.length];
             const disclosureRows = [
               {
-                label: "Standard Individual Costs",
+                label: "Separate Module Cost",
                 labelBg: "rgba(255,255,255,0.06)",
                 labelColor: "#9ca3af",
                 getValue: (plan) => fmtUSD(parsePx(plan.individualPrice)),
@@ -1898,7 +2014,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 fontWeight: 500,
               },
               {
-                label: "Billing Page Cost",
+                label: "Platform Plan Price",
                 labelBg: "rgba(234,179,8,0.18)",
                 labelColor: "#fde047",
                 getValue: (plan) => fmtUSD(parsePx(plan.price)),
@@ -1940,7 +2056,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "#9ca3af" }}>Savings Disclosure</span>
                   <span style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.08)" }} />
-                  <span style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}>Standard prices if features purchased individually</span>
+                  <span style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}>Monthly comparison against equivalent standalone module prices</span>
                 </div>
                 <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)", minWidth: compact ? 480 : "auto" }}>
                   <div style={{ display: "grid", gridTemplateColumns: `clamp(140px,22%,200px) repeat(${plans.length}, 1fr)`, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
@@ -2173,6 +2289,26 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const col2LeftW = Number(props.leftColumnWidth) || 0;
       const col2RightW = Number(props.rightColumnWidth) || 0;
       const col2GridCols = (col2LeftW || col2RightW) ? `${col2LeftW || 1}fr ${col2RightW || 1}fr` : (ratioMap[props.ratio] || "1fr 1fr");
+      const swapColumns2 = editor && onChangeBlock ? () => onChangeBlock({
+        ...props,
+        ratio: props.ratio === "60-40" ? "40-60" : props.ratio === "40-60" ? "60-40" : props.ratio,
+        leftTitle: props.rightTitle, leftContent: props.rightContent, leftImage: props.rightImage, leftImageAssetId: props.rightImageAssetId,
+        leftImageHeight: props.rightImageHeight, leftImageWidth: props.rightImageWidth, leftColumnContentType: props.rightColumnContentType,
+        leftColumnNewsletterHeading: props.rightColumnNewsletterHeading, leftColumnNewsletterSubtitle: props.rightColumnNewsletterSubtitle,
+        leftColumnNewsletterFields: props.rightColumnNewsletterFields, leftColumnNewsletterButtonText: props.rightColumnNewsletterButtonText,
+        leftColumnNewsletterButtonColor: props.rightColumnNewsletterButtonColor, leftColumnNewsletterButtonTextColor: props.rightColumnNewsletterButtonTextColor,
+        leftColumnNewsletterImage: props.rightColumnNewsletterImage, leftColumnNewsletterImageAssetId: props.rightColumnNewsletterImageAssetId,
+        leftColumnNewsletterImageHeight: props.rightColumnNewsletterImageHeight, leftColumnNewsletterImageWidth: props.rightColumnNewsletterImageWidth,
+        leftColumnWidth: props.rightColumnWidth, leftColumnExtraImages: props.rightColumnExtraImages, leftColumnBlock: props.rightColumnBlock,
+        rightTitle: props.leftTitle, rightContent: props.leftContent, rightImage: props.leftImage, rightImageAssetId: props.leftImageAssetId,
+        rightImageHeight: props.leftImageHeight, rightImageWidth: props.leftImageWidth, rightColumnContentType: props.leftColumnContentType,
+        rightColumnNewsletterHeading: props.leftColumnNewsletterHeading, rightColumnNewsletterSubtitle: props.leftColumnNewsletterSubtitle,
+        rightColumnNewsletterFields: props.leftColumnNewsletterFields, rightColumnNewsletterButtonText: props.leftColumnNewsletterButtonText,
+        rightColumnNewsletterButtonColor: props.leftColumnNewsletterButtonColor, rightColumnNewsletterButtonTextColor: props.leftColumnNewsletterButtonTextColor,
+        rightColumnNewsletterImage: props.leftColumnNewsletterImage, rightColumnNewsletterImageAssetId: props.leftColumnNewsletterImageAssetId,
+        rightColumnNewsletterImageHeight: props.leftColumnNewsletterImageHeight, rightColumnNewsletterImageWidth: props.leftColumnNewsletterImageWidth,
+        rightColumnWidth: props.leftColumnWidth, rightColumnExtraImages: props.leftColumnExtraImages, rightColumnBlock: props.leftColumnBlock,
+      }) : null;
       return (
         <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
           <div style={{ ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact), padding: compact ? "20px" : "30px 32px" }}>
@@ -2192,6 +2328,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={leftCard.style}
               contentAlign={leftCard.align}
               overlay={leftCard.overlay}
+              onSwap={swapColumns2}
+              sectionOrder={props.leftColumnOrder || ["image", "title", "content"]}
+              onReorderSection={editor && onChangeBlock ? (order) => onChangeBlock?.({ ...props, leftColumnOrder: order }) : null}
               contentType={props.leftColumnContentType || "text"}
               newsletterHeading={props.leftColumnNewsletterHeading}
               newsletterSubtitle={props.leftColumnNewsletterSubtitle}
@@ -2230,6 +2369,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               cardStyle={rightCard.style}
               contentAlign={rightCard.align}
               overlay={rightCard.overlay}
+              onSwap={swapColumns2}
+              sectionOrder={props.rightColumnOrder || ["image", "title", "content"]}
+              onReorderSection={editor && onChangeBlock ? (order) => onChangeBlock?.({ ...props, rightColumnOrder: order }) : null}
               contentType={props.rightColumnContentType || "text"}
               newsletterHeading={props.rightColumnNewsletterHeading}
               newsletterSubtitle={props.rightColumnNewsletterSubtitle}
@@ -2616,7 +2758,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       return <AvatarMorphBlock block={block} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
 
     case "video-hero":
-      return <VideoHeroBlock block={block} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+      return <VideoHeroBlock block={block} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
 
     case "stats":
       const statsItems = asArray(props.stats).map((item, index) => normalizeStatItem(item, index));
@@ -3277,8 +3419,72 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
     }
 
-    case "divider":
-      return <div style={sharedStyles.divider(props.color)} />;
+    case "divider": {
+      const legacyStyle = String(props.style || "").toLowerCase();
+      const dividerType = String(props.dividerType || (legacyStyle === "dots" ? "decorative" : "line")).toLowerCase();
+      const lineStyle = String(props.lineStyle || (legacyStyle === "dashes" ? "dashed" : legacyStyle === "dots" ? "dotted" : "solid")).toLowerCase();
+      const thickness = Math.max(1, Math.min(24, Number(props.thickness || 1)));
+      const widthPct = Math.max(5, Math.min(100, Number(props.width || 100)));
+      const alignment = ["left", "center", "right"].includes(String(props.alignment)) ? String(props.alignment) : "center";
+      const lineColor = props.color || "#cbd5e1";
+      const secondaryColor = props.secondaryColor || lineColor;
+      const paddingTop = Math.max(0, Math.min(240, Number(props.paddingTop ?? 24)));
+      const paddingBottom = Math.max(0, Math.min(240, Number(props.paddingBottom ?? 24)));
+      const justifyContent = alignment === "left" ? "flex-start" : alignment === "right" ? "flex-end" : "center";
+      const label = String(props.label || "").trim();
+      const showLabel = !!props.showLabel && label;
+      const lineBase = {
+        display: "block",
+        width: `${widthPct}%`,
+        maxWidth: "100%",
+        minWidth: 24,
+        boxSizing: "border-box",
+      };
+      const lineVisual = dividerType === "gradient"
+        ? {
+            ...lineBase,
+            height: thickness,
+            borderRadius: 999,
+            background: `linear-gradient(90deg, transparent, ${lineColor}, ${secondaryColor}, transparent)`,
+          }
+        : dividerType === "decorative"
+          ? {
+              ...lineBase,
+              height: thickness,
+              borderRadius: 999,
+              backgroundImage: `radial-gradient(circle, ${lineColor} ${Math.max(1, Math.ceil(thickness / 2))}px, transparent ${Math.max(2, Math.ceil(thickness / 2) + 1)}px)`,
+              backgroundSize: `${Math.max(10, thickness * 5)}px ${Math.max(4, thickness)}px`,
+              backgroundRepeat: "repeat-x",
+              backgroundPosition: "center",
+            }
+          : {
+              ...lineBase,
+              borderTop: `${thickness}px ${lineStyle === "double" ? "double" : lineStyle === "dotted" ? "dotted" : lineStyle === "dashed" ? "dashed" : "solid"} ${lineColor}`,
+            };
+
+      return (
+        <section
+          style={{
+            background: props.backgroundColor || "transparent",
+            padding: `${paddingTop}px ${compact ? 0 : 32}px ${paddingBottom}px`,
+            boxSizing: "border-box",
+            ...fullWidthStyle(props, compact, editor),
+          }}
+        >
+          <div style={{ ...sectionContentStyle(props, compact), display: "flex", justifyContent }}>
+            {showLabel ? (
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(24px, 1fr) auto minmax(24px, 1fr)", alignItems: "center", gap: 12, width: `${widthPct}%`, maxWidth: "100%" }}>
+                <span style={{ ...lineVisual, width: "100%" }} />
+                <span style={{ color: props.labelColor || "#64748b", fontSize: compact ? 12 : 14, fontWeight: 700, letterSpacing: 0, whiteSpace: "nowrap" }}>{label}</span>
+                <span style={{ ...lineVisual, width: "100%" }} />
+              </div>
+            ) : (
+              <span style={lineVisual} />
+            )}
+          </div>
+        </section>
+      );
+    }
 
     case "space": {
       const spBg =
@@ -3295,6 +3501,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           style={{
             height: props.height || 40,
             width: "100%",
+            ...fullWidthStyle(props, compact, editor),
             ...(spBg !== undefined ? { background: spBg } : {}),
             ...(spBgImage ? { backgroundImage: spBgImage, backgroundSize: props.backgroundSize || "cover", backgroundPosition: props.backgroundPosition || "center center", backgroundRepeat: "no-repeat" } : {}),
           }}
@@ -3487,10 +3694,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const chartPlans = Array.isArray(props.plans) && props.plans.length > 0
         ? props.plans
         : [
-            { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 200, billingPrice: 129 },
-            { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 415, billingPrice: 299 },
-            { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 814, billingPrice: 449 },
-            { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1724, billingPrice: 899 },
+            { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 215, billingPrice: 159 },
+            { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 474, billingPrice: 359 },
+            { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 913, billingPrice: 499 },
+            { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1883, billingPrice: 999 },
           ];
       const chartBg = props.backgroundColor || "#0f172a";
       const chartTextColor = props.textColor || "#f8fafc";
@@ -3693,22 +3900,24 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "competitor-comparison": {
       const ccRows = asArray(props.rows);
       const ccTotal = ccRows.reduce((s, r) => s + (r.price || 0), 0);
-      const ccPlanPrice = Number(props.planPrice) || 199;
+      const ccPlanPrice = Number(props.planPrice) || 299;
       const ccSavings = ccTotal - ccPlanPrice;
-      const bg = props.backgroundColor || "#070c18";
+      const bg = props.backgroundColor || "#121c26";
       const grid3 = { display: "grid", gridTemplateColumns: "1fr 220px 160px", alignItems: "center" };
 
-      function CCLogo({ domain, name }) {
+      function CCLogo({ domain, name, src }) {
+        const imgSrc = src || (domain ? `https://logo.clearbit.com/${domain}` : null);
+        if (!imgSrc) return null;
         return (
           <img
-            src={`https://logo.clearbit.com/${domain}`}
+            src={imgSrc}
             alt={name}
             title={name}
             width={36}
             height={36}
-            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0 }}
+            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0, width: 36, height: 36, minWidth: 36, minHeight: 36 }}
             onError={e => {
-              if (!e.currentTarget.src.includes("google.com")) {
+              if (!src && domain && !e.currentTarget.src.includes("google.com")) {
                 e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
               } else {
                 e.currentTarget.style.display = "none";
@@ -3741,7 +3950,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, title: e.currentTarget.innerText.trim() }); }}
               onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
               style={{ fontSize: 52, fontWeight: 600, textAlign: "center", marginBottom: 16, letterSpacing: "-0.02em", lineHeight: 1.15, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-              dangerouslySetInnerHTML={{ __html: props.title || "What you&#39;d pay elsewhere" }}
+              dangerouslySetInnerHTML={{ __html: props.title || "" }}
             />
             {(editor || !!props.subtitle) && (
               <p
@@ -3780,7 +3989,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     style={{ fontWeight: 600, fontSize: 16, letterSpacing: "0.03em", color: "#e5e7eb", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
                   >{row.category}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 32px", justifyContent: "center" }}>
-                    {asArray(row.logos).map(l => <CCLogo key={l.domain} domain={l.domain} name={l.name} />)}
+                    {asArray(row.logos).map((l, li) => <CCLogo key={l.src || l.domain || li} domain={l.domain} name={l.name} src={l.src} />)}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "flex-end" }}>
                     <span style={{ fontSize: 16, fontWeight: 600, whiteSpace: "nowrap", color: row.price ? "#f1f5f9" : "#60a5fa" }}>
@@ -3807,7 +4016,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, planName: e.currentTarget.innerText.trim() }); }}
                     onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
                     style={{ fontWeight: 600, fontSize: 17, color: "#86efac", letterSpacing: "0.02em", display: "block", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-                  >{props.planName || "Business Plan"}</span>
+                  >{props.planName || "COMPETITOR ANALYSIS"}</span>
                   {(editor || !!props.planTagline) && (
                     <span
                       contentEditable={editor}

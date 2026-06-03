@@ -1,10 +1,8 @@
 // /pages/api/website-builder/upload-video.js
 // Server-side file upload for the website builder using the service-role key.
-// This bypasses any Supabase bucket RLS / MIME-type restrictions that would
-// prevent the anon client from uploading video files directly.
+// Accepts a raw binary body (no multipart) — avoids all formidable/busboy
+// stream-parsing issues with Next.js. Client sends file directly as body.
 
-import path from "path";
-import formidable from "formidable";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const config = {
@@ -18,12 +16,21 @@ function safeName(fileName = "upload") {
     .toLowerCase() || "upload";
 }
 
+async function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  // Authenticate via Bearer token
+  // Auth via Bearer token
   const auth = String(req.headers.authorization || "").trim();
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   if (!token) {
@@ -38,30 +45,17 @@ export default async function handler(req, res) {
   const userId = authData.user.id;
 
   try {
-    const uploadDir = path.join(process.cwd(), "tmp");
-    const form = formidable({ multiples: false, uploadDir, keepExtensions: true, maxFileSize: 200 * 1024 * 1024 });
+    // File metadata from headers (set by client)
+    const mimeType = String(req.headers["x-file-type"] || "video/mp4");
+    const rawName = req.headers["x-file-name"]
+      ? decodeURIComponent(String(req.headers["x-file-name"]))
+      : "upload.mp4";
 
-    const { file } = await new Promise((resolve, reject) => {
-      form.parse(req, (err, _fields, files) => {
-        if (err) return reject(err);
-        const f = files.file;
-        if (!f) return reject(new Error("No file field found in upload"));
-        resolve({ file: Array.isArray(f) ? f[0] : f });
-      });
-    });
+    const buffer = await readRawBody(req);
+    if (!buffer.length) throw new Error("Empty file received");
 
-    const originalName = file.originalFilename || file.newFilename || "upload";
-    const mimeType = file.mimetype || "application/octet-stream";
-    const storagePath = `${userId}/web-${Date.now()}-${safeName(originalName)}`;
+    const storagePath = `${userId}/web-${Date.now()}-${safeName(rawName)}`;
 
-    // Read the temp file as a buffer
-    const fs = await import("fs/promises");
-    const buffer = await fs.readFile(file.filepath);
-
-    // Clean up temp file
-    fs.unlink(file.filepath).catch(() => {});
-
-    // Upload via admin client — bypasses bucket RLS and MIME-type restrictions
     const { error: uploadError } = await supabaseAdmin.storage
       .from("assets")
       .upload(storagePath, buffer, { contentType: mimeType, upsert: true });
@@ -74,7 +68,7 @@ export default async function handler(req, res) {
       ok: true,
       src: urlData?.publicUrl || "",
       id: `asset-${Date.now()}`,
-      name: originalName,
+      name: rawName,
       type: mimeType,
     });
   } catch (err) {

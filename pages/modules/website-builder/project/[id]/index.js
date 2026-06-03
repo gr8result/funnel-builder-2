@@ -8,10 +8,10 @@ export default function WebsiteProjectEditorPage() {
     if (!router.isReady || !router.query?.id) return;
 
     const params = new URLSearchParams();
+    params.set("projectId", String(router.query.id));
     if (router.query?.page) params.set("page", String(router.query.page));
-    params.set("editor", String(router.query?.editor || "grapesjs"));
 
-    router.replace(`/modules/website-builder/project/${router.query.id}/canvas?${params.toString()}`);
+    router.replace(`/modules/website-builder/visual-builder?${params.toString()}`);
   }, [router.isReady, router.query?.id, router.query?.page, router.query?.editor]);
 
   return null;

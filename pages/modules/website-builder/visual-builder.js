@@ -1,8 +1,8 @@
 ﻿import Head from "next/head";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import PageBuilderCanvas from "../../../components/website-builder/PageBuilderCanvas";
 import {
   applyAssetToProps,
   createStoredAsset,
@@ -25,6 +25,8 @@ import {
   updateWebsiteProject,
 } from "../../../lib/website-builder/projectStore";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
+
+const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 
 // ─── Studio Loader ────────────────────────────────────────────────────────────
 const STUDIO_MESSAGES = [
@@ -130,6 +132,11 @@ function StudioLoader({ label }) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+const PageBuilderCanvas = dynamic(() => import("../../../components/website-builder/PageBuilderCanvas"), {
+  ssr: false,
+  loading: () => <StudioLoader label="Preparing canvas..." />,
+});
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -192,6 +199,7 @@ export default function VisualBuilderPage() {
   const [siteSlug, setSiteSlug] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [blockDefaults, setBlockDefaults] = useState({});
+  const canSaveTemplates = DEVELOPER_USER_IDS.has(String(session?.user?.id || ""));
   const previewActionsRef = useRef(null);
   const syncInFlightRef = useRef(false);
   const syncQueuedRef = useRef(null); // holds latest project pending sync
@@ -298,6 +306,42 @@ export default function VisualBuilderPage() {
         } catch (error) {
           console.warn("Could not load website draft from the server", error);
         }
+      } else if (nextProject && projectId && session?.access_token) {
+        // Local cache exists — still fetch server in background to pick up newer
+        // server-side edits and any new pages added externally. Don't block the
+        // initial render.
+        fetchWebsiteProjectFromServer(session, projectId).then((remoteProject) => {
+          if (!remoteProject || cancelled) return;
+          const localProject = getWebsiteProject(projectId);
+          const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
+          const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
+
+          if (remoteUpdatedAt > localUpdatedAt) {
+            const refreshedProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: false });
+            if (refreshedProject && !cancelled) setProject(refreshedProject);
+            return;
+          }
+
+          const localPages = Array.isArray(localProject?.pages) ? localProject.pages : [];
+          const remotePages = Array.isArray(remoteProject.pages) ? remoteProject.pages : [];
+          const localNames = new Set(localPages.map((p) => p.name));
+          const newPages = remotePages.filter((p) => !localNames.has(p.name));
+          if (newPages.length === 0) return;
+          // Merge new pages + their blocks into the local project
+          const remotePageBlocks = remoteProject.pageBlocks || {};
+          const mergedBlocks = { ...(localProject?.pageBlocks || {}) };
+          for (const np of newPages) {
+            if (remotePageBlocks[np.name]) mergedBlocks[np.name] = remotePageBlocks[np.name];
+          }
+          updateWebsiteProject(projectId, {
+            pages: [...localPages, ...newPages],
+            pageBlocks: mergedBlocks,
+          });
+          // Only update React state with the new pages — no existing blocks change,
+          // so this won't disrupt any active editing.
+          const refreshed = getWebsiteProject(projectId);
+          if (refreshed && !cancelled) setProject(refreshed);
+        }).catch(() => {});
       }
 
       // Remove the forceReload param from the URL after loading so refreshes don't re-trigger
@@ -488,7 +532,26 @@ export default function VisualBuilderPage() {
     syncInFlightRef.current = true;
 
     try {
-      const syncedProject = await saveWebsiteProjectToServer(session, nextProject);
+      let syncedProject;
+      try {
+        syncedProject = await saveWebsiteProjectToServer(session, nextProject);
+      } catch (firstError) {
+        // If the token is stale (401), refresh and retry once
+        if (String(firstError?.message || "").includes("401")) {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session?.access_token) {
+              syncedProject = await saveWebsiteProjectToServer(refreshed.session, nextProject);
+            } else {
+              throw firstError;
+            }
+          } catch {
+            throw firstError;
+          }
+        } else {
+          throw firstError;
+        }
+      }
       if (!syncedProject) return nextProject;
 
       // After the async server round-trip the user may have made more edits.
@@ -498,20 +561,41 @@ export default function VisualBuilderPage() {
       // NOTE: use !== undefined (not ??) so that an explicit null (e.g. a deleted
       // global block) is kept rather than being replaced by the stale server value.
       const currentLocal = getWebsiteProject(nextProject.id);
-      const localHas = (key) => currentLocal !== null && key in Object(currentLocal);
+      const outboundUpdatedAt = Date.parse(nextProject?.updatedAt || nextProject?.createdAt || 0) || 0;
+      const localUpdatedAt = Date.parse(currentLocal?.updatedAt || currentLocal?.createdAt || 0) || 0;
+      const mergeBase = localUpdatedAt > outboundUpdatedAt ? currentLocal : nextProject;
+      const baseHas = (key) => mergeBase !== null && key in Object(mergeBase);
 
       // When the local cache has pageBlocks, always trust local as source of truth.
       // Merging server extras caused deleted blocks to be resurrected on every sync.
-      const mergePageBlocks = (serverPB, localPB) => localPB || serverPB;
+      // EXCEPTION: if the server has pages that local doesn't know about, keep those too.
+      const mergePageBlocks = (serverPB, localPB) => {
+        if (!localPB) return serverPB;
+        if (!serverPB) return localPB;
+        // Add any page blocks from server that local doesn't have (e.g. added via script)
+        const merged = { ...localPB };
+        for (const key of Object.keys(serverPB)) {
+          if (!(key in merged)) merged[key] = serverPB[key];
+        }
+        return merged;
+      };
+      const mergePages = (serverPages, localPages) => {
+        if (!localPages || localPages.length === 0) return serverPages;
+        if (!serverPages || serverPages.length === 0) return localPages;
+        // Keep all local pages; append any server pages not already present locally
+        const localNames = new Set(localPages.map((p) => p.name));
+        const extras = serverPages.filter((p) => !localNames.has(p.name));
+        return extras.length ? [...localPages, ...extras] : localPages;
+      };
 
       const mergedProject = {
         ...syncedProject,
-        pages: localHas("pages") ? currentLocal.pages : syncedProject.pages,
-        pageBlocks: localHas("pageBlocks") ? mergePageBlocks(syncedProject.pageBlocks, currentLocal.pageBlocks) : syncedProject.pageBlocks,
-        chaiData: localHas("chaiData") ? currentLocal.chaiData : syncedProject.chaiData,
-        pagesContent: localHas("pagesContent") ? currentLocal.pagesContent : syncedProject.pagesContent,
-        globalNavBlock: localHas("globalNavBlock") ? currentLocal.globalNavBlock : syncedProject.globalNavBlock,
-        globalFooterBlock: localHas("globalFooterBlock") ? currentLocal.globalFooterBlock : syncedProject.globalFooterBlock,
+        pages: mergePages(syncedProject.pages, baseHas("pages") ? mergeBase.pages : null),
+        pageBlocks: baseHas("pageBlocks") ? mergePageBlocks(syncedProject.pageBlocks, mergeBase.pageBlocks) : syncedProject.pageBlocks,
+        chaiData: baseHas("chaiData") ? mergeBase.chaiData : syncedProject.chaiData,
+        pagesContent: baseHas("pagesContent") ? mergeBase.pagesContent : syncedProject.pagesContent,
+        globalNavBlock: baseHas("globalNavBlock") ? mergeBase.globalNavBlock : syncedProject.globalNavBlock,
+        globalFooterBlock: baseHas("globalFooterBlock") ? mergeBase.globalFooterBlock : syncedProject.globalFooterBlock,
       };
 
       const cachedProject = cacheWebsiteProject(mergedProject, { onlyIfNewer: false });
@@ -708,6 +792,25 @@ export default function VisualBuilderPage() {
     return null;
   }
 
+  function navigateToPage(pageName) {
+    const nextPage = String(pageName || "").trim();
+    if (!nextPage) return;
+    setActivePage(nextPage);
+
+    if (!router.isReady) return;
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          page: nextPage,
+        },
+      },
+      undefined,
+      { shallow: true }
+    );
+  }
+
   function handleAddPage(nameOverride) {
     const pageName = String(nameOverride || newPageName || "").trim();
     if (!pageName || !project?.id) return;
@@ -741,7 +844,7 @@ export default function VisualBuilderPage() {
       `Added ${pageName}`
     );
 
-    setActivePage(pageName);
+    navigateToPage(pageName);
     setNewPageName("");
     return pageName;
   }
@@ -759,7 +862,7 @@ export default function VisualBuilderPage() {
     const nextPagesContent = { ...(project.pagesContent || {}) };
     delete nextPagesContent[name];
     saveProjectPatch({ pages: nextPages, pageBlocks: nextPageBlocks, chaiData: nextChaiData, pagesContent: nextPagesContent }, `Deleted ${name}`);
-    if (activePage === name) setActivePage(nextPages[0]?.name || "Home");
+    if (activePage === name) navigateToPage(nextPages[0]?.name || "Home");
   }
 
   function handleRenamePage(oldName, newName) {
@@ -783,7 +886,7 @@ export default function VisualBuilderPage() {
       chaiData: renameKey(project.chaiData),
       pagesContent: renameKey(project.pagesContent),
     }, `Renamed to ${trimmed}`);
-    if (activePage === oldName) setActivePage(trimmed);
+    if (activePage === oldName) navigateToPage(trimmed);
   }
 
   // Expose page-add helper for testing / automation
@@ -822,9 +925,25 @@ export default function VisualBuilderPage() {
     );
   }
 
+  // Strip blob: URLs from block props before persisting — blobs are in-memory
+  // only and die on page refresh, so they must never reach the server or localStorage.
+  function stripBlobUrls(blocks) {
+    if (!Array.isArray(blocks)) return blocks;
+    return blocks.map((block) => {
+      if (!block?.props) return block;
+      const cleanProps = { ...block.props };
+      for (const key of Object.keys(cleanProps)) {
+        if (typeof cleanProps[key] === "string" && cleanProps[key].startsWith("blob:")) {
+          cleanProps[key] = "";
+        }
+      }
+      return { ...block, props: cleanProps };
+    });
+  }
+
   function saveBlockPage(blocks, successMessage = `Saved ${activePage}`) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
-    const safeBlocks = Array.isArray(blocks) ? blocks : [];
+    const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
     return saveChaiPage({
       ...(currentProject?.chaiData?.[activePage] || {}),
       blocks: safeBlocks,
@@ -845,7 +964,8 @@ export default function VisualBuilderPage() {
         flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
         return { _saveError: true }; // truthy so handleSave doesn't double-report
       }
-      const safeBlocks = Array.isArray(blocks) ? blocks : [];
+
+      const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
 
       // Build the chai data payload
       const chaiData = {
@@ -872,24 +992,32 @@ export default function VisualBuilderPage() {
 
       const projectWithPatch = { ...currentProject, ...patch, updatedAt: new Date().toISOString() };
 
-      // ── SERVER FIRST ──────────────────────────────────────────────────────────
-      // Always sync to the server BEFORE touching localStorage. This guarantees
-      // your work is safe on the server even if localStorage is full or fails.
+      if (!getWebsiteProject(currentProject.id)) {
+        cacheWebsiteProject(currentProject, { onlyIfNewer: false });
+      }
+      updateWebsiteProject(currentProject.id, projectWithPatch);
+      setProject(projectWithPatch);
+
+      // Stage the current edit locally before cloud sync so the async merge below
+      // cannot treat an older cache entry as the source of truth and roll blocks back.
       let serverSynced = null;
       try {
         serverSynced = await syncProjectToServer(projectWithPatch, { silent: true, force: true });
       } catch (serverErr) {
         console.error("[forceSaveBlockPage] server sync failed:", serverErr);
-        flashNotice("⚠️ Could not save to cloud — check your connection and try again.", "error", 10000);
+        flashNotice("⚠️ Could not save to cloud — check your connection. Work saved locally.", "warning", 10000);
+        // Still write to localStorage so the preview tab can load the latest local copy.
+        if (!getWebsiteProject(currentProject.id)) {
+          cacheWebsiteProject(currentProject, { onlyIfNewer: false });
+        }
+        updateWebsiteProject(currentProject.id, projectWithPatch);
+        setProject(projectWithPatch);
         return { _saveError: true };
       }
 
       const projectToStore = serverSynced || projectWithPatch;
 
-      // ── THEN localStorage (best-effort cache only) ─────────────────────────
-      if (!getWebsiteProject(currentProject.id)) {
-        cacheWebsiteProject(currentProject, { onlyIfNewer: false });
-      }
+      // ── THEN refresh localStorage with the server-normalized project ───────
       const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
       const latest = savedProject && !savedProject._localSaveFailed
         ? getWebsiteProject(currentProject.id)
@@ -920,6 +1048,7 @@ export default function VisualBuilderPage() {
     const syncServerDefaults = async () => {
       try {
         const response = await fetch("/api/website-builder/defaults", {
+          cache: "no-store",
           headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
         });
         const payload = await response.json();
@@ -1100,15 +1229,18 @@ export default function VisualBuilderPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token || "";
         if (!token) throw new Error("You must be signed in to upload videos.");
-        const form = new FormData();
-        form.append("file", file, file.name || "upload.mp4");
         const res = await fetch("/api/website-builder/upload-video", {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: form,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": file.type || "video/mp4",
+            "X-File-Name": encodeURIComponent(file.name || "upload.mp4"),
+            "X-File-Type": file.type || "video/mp4",
+          },
+          body: file,
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json?.src) throw new Error(json?.error || "Video upload failed");
+        if (!res.ok || !json?.src) throw new Error(json?.error || `Video upload failed (HTTP ${res.status})`);
         const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src };
         flashNotice(`${file.name} uploaded`);
         return asset;
@@ -1131,6 +1263,7 @@ export default function VisualBuilderPage() {
       return asset;
     } catch (error) {
       flashNotice(error?.message || "Upload failed.");
+      throw error;
     }
   }
 
@@ -1279,9 +1412,25 @@ export default function VisualBuilderPage() {
             </div>
           </section>
 
+          {/* ── Sticky area: tabs + canvas locks to top as banner scrolls away ── */}
+          <div style={styles.stickyArea}>
+
           {/* ── Persistent pages bar ── */}
           {project?.pages?.length > 0 && (
             <div style={styles.pagesBar}>
+              <label style={styles.pagesBarPickerLabel}>
+                Page
+                <select
+                  value={activePage}
+                  onChange={(event) => navigateToPage(event.target.value)}
+                  style={styles.pagesBarSelect}
+                  aria-label="Select website page"
+                >
+                  {project.pages.map((entry) => (
+                    <option key={entry.name} value={entry.name}>{entry.name}</option>
+                  ))}
+                </select>
+              </label>
               <div style={styles.pagesBarTabs}>
                 {project.pages.map((entry) => (
                   renamingPage === entry.name ? (
@@ -1309,7 +1458,7 @@ export default function VisualBuilderPage() {
                     >
                       <button
                         type="button"
-                        onClick={() => setActivePage(entry.name)}
+                        onClick={() => navigateToPage(entry.name)}
                         onDoubleClick={() => { setRenamingPage(entry.name); setRenameValue(entry.name); }}
                         style={styles.pagesBarTabName}
                         title="Double-click to rename"
@@ -1462,7 +1611,7 @@ export default function VisualBuilderPage() {
                       >
                         <button
                           type="button"
-                          onClick={() => setActivePage(entry.name)}
+                          onClick={() => navigateToPage(entry.name)}
                           onDoubleClick={() => { setRenamingPage(entry.name); setRenameValue(entry.name); }}
                           style={styles.pagePillName}
                           title="Double-click to rename"
@@ -1526,9 +1675,10 @@ export default function VisualBuilderPage() {
                 onUploadImage={handleUploadImage}
                 onSelectAsset={handleSelectAsset}
                 onSaveAsGlobal={saveGlobalBlock}
-                onSaveBlockDefault={saveBlockDefaultToServer}
-                onSaveTemplatePage={saveTemplatePageToServer}
-                onSaveTemplateSite={saveTemplateSiteToServer}
+                onSaveBlockDefault={canSaveTemplates ? saveBlockDefaultToServer : null}
+                onSaveTemplatePage={canSaveTemplates ? saveTemplatePageToServer : null}
+                onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
+                canSaveTemplates={canSaveTemplates}
                 onUpdateGlobalBlock={updateGlobalBlock}
                 onOpenMediaLibrary={openMediaLibrary}
                 onRefreshAssetLibrary={refreshSharedLibrary}
@@ -1539,6 +1689,7 @@ export default function VisualBuilderPage() {
                 showHeader={true}
               />}
             </div>
+          </div>{/* end stickyArea */}
       </main>
     </>
   );
@@ -1546,16 +1697,17 @@ export default function VisualBuilderPage() {
 
 const styles = {
   page: {
+    minHeight: "calc(100dvh - 140px)",
     height: "calc(100dvh - 140px)",
-    overflow: "hidden",
+    overflowY: "auto",
+    overflowX: "hidden",
     background: "linear-gradient(180deg, #0b1016 0%, #0d1420 100%)",
     color: "#e6eef5",
     fontFamily: "system-ui, sans-serif",
     fontSize: 16,
     fontWeight: 600,
-    display: "grid",
-    gridTemplateRows: "auto auto 1fr",
-    alignContent: "stretch",
+    display: "flex",
+    flexDirection: "column",
     minWidth: 0,
   },
   loadingPage: {
@@ -1582,11 +1734,23 @@ const styles = {
     background: "#111827",
     border: "1px solid rgba(255,255,255,.08)",
   },
+  stickyArea: {
+    position: "sticky",
+    top: 0,
+    flex: "1 0 auto",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    height: "calc(100dvh - 140px)",
+    zIndex: 1,
+  },
   mainColumn: {
     minWidth: 0,
+    flex: "1 1 0",
     minHeight: 0,
     overflow: "hidden",
-    display: "grid",
+    display: "flex",
+    flexDirection: "column",
   },
   bannerOuter: {
     padding: "8px 16px 6px",
@@ -2086,6 +2250,30 @@ const styles = {
     overflowY: "hidden",
     scrollbarWidth: "thin",
     flexShrink: 0,
+  },
+  pagesBarPickerLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    flexShrink: 0,
+    paddingRight: 8,
+    borderRight: "1px solid rgba(255,255,255,.10)",
+    color: "#93c5fd",
+    fontSize: 14,
+    fontWeight: 800,
+    letterSpacing: "0.02em",
+  },
+  pagesBarSelect: {
+    minWidth: 150,
+    background: "#020617",
+    color: "#f8fafc",
+    border: "1px solid rgba(56,189,248,0.55)",
+    borderRadius: 8,
+    padding: "6px 32px 6px 10px",
+    fontSize: 15,
+    fontWeight: 800,
+    outline: "none",
+    cursor: "pointer",
   },
   pagesBarTabs: {
     display: "flex",

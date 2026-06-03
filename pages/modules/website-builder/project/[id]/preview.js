@@ -1,5 +1,5 @@
-﻿import Head from "next/head";
-import Link from "next/link";
+﻿import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -48,7 +48,6 @@ function SiteLoader() {
     </>
   );
 }
-import { renderWebsiteBlock, websiteBlockKeyframes } from "../../../../../components/website-builder/WebsiteBlockRenderer";
 import {
   cacheWebsiteProject,
   getWebsiteBuilderAssets,
@@ -59,6 +58,11 @@ import {
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../../../lib/website-builder/remoteProjects";
 import { supabase } from "../../../../../lib/supabaseClient";
+
+const WebsitePreviewSurface = dynamic(() => import("../../../../../components/website-builder/WebsitePreviewSurface"), {
+  ssr: false,
+  loading: () => <SiteLoader />,
+});
 
 function slugify(v) {
   return String(v || "")
@@ -112,7 +116,7 @@ export default function ProjectPreviewPage() {
   const projectSnapshotRef = useRef("");
   const assetSnapshotRef = useRef("");
 
-  function syncStateIfChanged(nextProject, nextAssets) {
+  function syncStateIfChanged(nextProject, nextAssets, options = {}) {
     const nextProjectSnapshot = nextProject ? JSON.stringify(nextProject) : "";
     const nextAssetSnapshot = nextAssets ? JSON.stringify(nextAssets) : "";
 
@@ -121,9 +125,18 @@ export default function ProjectPreviewPage() {
       setAssets(nextAssets || { logo: null, images: [] });
     }
 
-    if (nextProjectSnapshot !== projectSnapshotRef.current) {
+    if (nextProjectSnapshot !== projectSnapshotRef.current && (nextProject || options.allowProjectClear)) {
       projectSnapshotRef.current = nextProjectSnapshot;
       setProject(nextProject || null);
+    }
+  }
+
+  function syncAssetsIfChanged(nextAssets) {
+    const nextAssetSnapshot = nextAssets ? JSON.stringify(nextAssets) : "";
+
+    if (nextAssetSnapshot !== assetSnapshotRef.current) {
+      assetSnapshotRef.current = nextAssetSnapshot;
+      setAssets(nextAssets || { logo: null, images: [] });
     }
   }
 
@@ -262,7 +275,7 @@ export default function ProjectPreviewPage() {
           }
 
           if (!nextProject && !cancelled) {
-            syncStateIfChanged(null, getWebsiteBuilderAssets());
+            syncStateIfChanged(null, getWebsiteBuilderAssets(), { allowProjectClear: true });
           }
         }
         if (!cancelled) setLoadingDone(true);
@@ -316,7 +329,7 @@ export default function ProjectPreviewPage() {
       });
 
       if (!cancelled) {
-        syncStateIfChanged(project, mergedAssets);
+        syncAssetsIfChanged(mergedAssets);
       }
     };
 
@@ -483,84 +496,7 @@ export default function ProjectPreviewPage() {
     );
   }
 
-  return (
-    <>
-      <Head>
-        <title>{project.name} | Preview</title>
-        <style>{`
-          html { background: ${pageBackground} !important; margin: 0; padding: 0; }
-          body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }
-          ${websiteBlockKeyframes()}
-        `}</style>
-      </Head>
-      <main style={styles.page(pageBackground)}>
-        <div style={styles.utilityBar}>
-          <div style={styles.utilityStatus}>{(project.status || "draft").toUpperCase()}</div>
-          <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
-        </div>
-
-        <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
-          {/* Global nav — injected above all page content */}
-          {injectNav ? (
-            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} style={{ overflowX: "clip", minWidth: 0 }}>
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
-            </div>
-          ) : null}
-
-          {/* Page-specific content */}
-          {Array.isArray(pageBlocks) && pageBlocks.length ? (
-            <>
-              {blocksWithoutShellDuplicates.map((block, index) => (
-                <div key={block.id || `${block.type}-${index}`} style={{ overflowX: "clip", minWidth: 0 }}>
-                  {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
-                </div>
-              ))}
-            </>
-          ) : pageContent ? (
-            <section style={styles.content} dangerouslySetInnerHTML={{ __html: pageContent }} />
-          ) : (
-            <>
-              {!globalNavBlock ? (
-                <section style={styles.siteHeader}>
-                  <div style={styles.wrapWide}>
-                    <div style={styles.brandRow}>
-                      <p style={styles.brandMark}>{project.name}</p>
-                      <nav style={styles.nav}>
-                        {project.pages.map((p) => (
-                          <Link
-                            key={p.name}
-                            href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(p.name)}&viewport=${encodeURIComponent(previewViewport)}`}
-                            style={{
-                              ...styles.navLink,
-                              ...(active?.name === p.name ? styles.navLinkActive : {}),
-                            }}
-                          >
-                            {p.name}
-                          </Link>
-                        ))}
-                      </nav>
-                    </div>
-                  </div>
-                </section>
-              ) : null}
-              <section style={styles.content}>
-                <div style={styles.wrap}>
-                  <div style={styles.emptyNotice}>No content yet. Open Canvas to add content.</div>
-                </div>
-              </section>
-            </>
-          )}
-
-          {/* Global footer — injected below all page content */}
-          {injectFooter ? (
-            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} style={{ overflowX: "clip", minWidth: 0 }}>
-              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
-            </div>
-          ) : null}
-        </div>
-      </main>
-    </>
-  );
+  return <WebsitePreviewSurface project={project} page={page} viewport={viewport} assets={assets} />;
 }
 
 const styles = {

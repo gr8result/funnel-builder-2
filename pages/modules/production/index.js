@@ -1,7 +1,7 @@
 ﻿// /pages/modules/production/index.js
 // Production Flow — sticky-note board: jobs as rows, standard steps as columns
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import { supabase } from "../../../utils/supabase-client";
 
 const STEPS = [
@@ -18,15 +18,14 @@ const STEPS = [
   { key: "signed_off",  label: "Signed\nOff" },
 ];
 
-const ST = {
-  pending:     { bg: "#dbeafe", topBorder: "#3b82f6", border: "#bfdbfe", text: "#1e40af", label: "To Do" },
-  in_progress: { bg: "#fef9c3", topBorder: "#eab308", border: "#fde68a", text: "#92400e", label: "In Progress" },
-  done:        { bg: "#dcfce7", topBorder: "#22c55e", border: "#bbf7d0", text: "#14532d", label: "Done" },
-  na:          { bg: "#f1f5f9", topBorder: "#94a3b8", border: "#e2e8f0", text: "#64748b", label: "N / A" },
+const DEFAULT_ST = {
+  pending:     { bg: "#1e3a5f", topBorder: "#3b82f6", border: "#2563eb", text: "#93c5fd", label: "To Do" },
+  in_progress: { bg: "#78350f", topBorder: "#f59e0b", border: "#d97706", text: "#fde68a", label: "In Progress" },
+  done:        { bg: "#14532d", topBorder: "#22c55e", border: "#16a34a", text: "#86efac", label: "Done" },
+  na:          { bg: "#1e293b", topBorder: "#475569", border: "#334155", text: "#64748b", label: "N / A" },
 };
 
 export default function ProductionBoard() {
-  const router = useRouter();
   const [user, setUser]           = useState(null);
   const [jobs, setJobs]           = useState([]);
   const [stepMap, setStepMap]     = useState({});
@@ -39,7 +38,18 @@ export default function ProductionBoard() {
   const [popBy, setPopBy]         = useState("");
   const [saving, setSaving]       = useState(false);
 
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [session, setSession]         = useState(null);
+
+  // Editable status card colors — persisted in localStorage
+  const [ST, setST] = useState(DEFAULT_ST);
+  const [editST, setEditST]       = useState(null); // key being edited
+  const [editSTForm, setEditSTForm] = useState({});
+
   const [showNew, setShowNew]     = useState(false);
+  const [importMode, setImportMode] = useState(false); // true = pick from job board
+  const [jobBoardJobs, setJobBoardJobs] = useState([]);
+  const [selectedJobBoardId, setSelectedJobBoardId] = useState("");
   const [form, setForm]           = useState({ name: "", client_name: "", description: "" });
 
   const [editJob, setEditJob]     = useState(null);
@@ -47,7 +57,23 @@ export default function ProductionBoard() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => { if (user) setUser(user); });
+    supabase.auth.getSession().then(({ data: { session: s } }) => setSession(s));
+    // Restore saved status card colors
+    try {
+      const saved = localStorage.getItem("prod_status_colors");
+      if (saved) setST((prev) => ({ ...prev, ...JSON.parse(saved) }));
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch("/api/production/team-members", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setTeamMembers(j.members || []); })
+      .catch(() => {});
+  }, [session]);
 
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -192,23 +218,38 @@ export default function ProductionBoard() {
         .job-row:hover .edit-job-btn { opacity: 1; }
       `}</style>
 
-      <div style={S.header}>
-        <div>
-          <h1 style={S.title}>⚙️ Production Flow</h1>
-          <p style={S.sub}>
-            {jobs.length} job{jobs.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
-            <span style={{ color: "#93c5fd" }}>🔵 {totalPending} to do</span>&nbsp;·&nbsp;
-            <span style={{ color: "#fde047" }}>🟡 {totalProgress} in progress</span>&nbsp;·&nbsp;
-            <span style={{ color: "#86efac" }}>🟢 {totalDone} done</span>
-          </p>
+      {/* ── Banner ── */}
+      <div style={S.banner}>
+        <div style={S.bannerLeft}>
+          <span style={S.bannerIcon}>⚙️</span>
+          <div>
+            <h1 style={S.bannerTitle}>Production Flow</h1>
+            <p style={S.bannerDesc}>
+              {jobs.length} job{jobs.length !== 1 ? "s" : ""}&nbsp;·&nbsp;
+              <span style={{ color: "#93c5fd" }}>🔵 {totalPending} to do</span>&nbsp;·&nbsp;
+              <span style={{ color: "#fde68a" }}>🟡 {totalProgress} in progress</span>&nbsp;·&nbsp;
+              <span style={{ color: "#86efac" }}>🟢 {totalDone} done</span>
+            </p>
+          </div>
         </div>
-        <button style={S.addBtn} onClick={() => setShowNew(true)}>+ New Job</button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            title="Customise status card colours"
+            style={S.bannerCustomBtn}
+            onClick={() => setEditST("pending")}
+          >
+            🎨 Card Colours
+          </button>
+          <Link href="/modules/construction"><button style={S.backBtn}>← Back</button></Link>
+        </div>
       </div>
 
       <div style={S.filterRow}>
         {[["all","All Jobs"],["pending","🔵 To Do"],["in_progress","🟡 In Progress"],["done","🟢 Done"]].map(([val,label]) => (
           <button key={val} style={filter===val ? S.filterOn : S.filterOff} onClick={() => setFilter(val)}>{label}</button>
         ))}
+        <div style={{ flex: 1 }} />
+        <button style={S.addBtn} onClick={() => { setShowNew(true); setImportMode(false); setSelectedJobBoardId(""); }}>+ New Job</button>
       </div>
 
       {filteredJobs.length === 0 ? (
@@ -268,6 +309,69 @@ export default function ProductionBoard() {
         </div>
       )}
 
+      {/* ── Status Card Color Editor ── */}
+      {editST && (
+        <div style={S.overlay} onClick={(e) => e.target === e.currentTarget && setEditST(null)}>
+          <div style={{ ...S.modal, maxWidth: 480 }}>
+            <div style={S.modalHead}>
+              <div style={S.modalTitle}>🎨 Customise Card Colours</div>
+              <button style={S.closeBtn} onClick={() => setEditST(null)}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 16px" }}>Click a card below to change its colours. Changes are saved locally for your browser.</p>
+            {/* Card selector tabs */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {Object.entries(ST).map(([key, st]) => (
+                <button
+                  key={key}
+                  onClick={() => { setEditST(key); setEditSTForm({ bg: st.bg, topBorder: st.topBorder, border: st.border, text: st.text, label: st.label }); }}
+                  style={{ padding: "8px 14px", borderRadius: 8, border: `2px solid ${editST === key ? st.topBorder : "#334155"}`, background: st.bg, color: st.text, fontWeight: editST === key ? 700 : 400, cursor: "pointer", fontSize: 13 }}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+            {/* Colour inputs for selected card */}
+            {editSTForm.label && (() => {
+              const stKey = editST;
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ padding: "12px 16px", borderRadius: 8, background: editSTForm.bg, borderTop: `4px solid ${editSTForm.topBorder}`, border: `1px solid ${editSTForm.border}`, marginBottom: 8 }}>
+                    <span style={{ color: editSTForm.text, fontWeight: 700, fontSize: 15 }}>{editSTForm.label} — preview</span>
+                  </div>
+                  {[{ k: "label", label: "Label text", type: "text" }, { k: "bg", label: "Background", type: "color" }, { k: "topBorder", label: "Top accent", type: "color" }, { k: "border", label: "Side border", type: "color" }, { k: "text", label: "Text colour", type: "color" }].map(({ k, label, type }) => (
+                    <label key={k} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: "#94a3b8" }}>
+                      <span style={{ minWidth: 100 }}>{label}</span>
+                      <input
+                        type={type}
+                        value={editSTForm[k] || ""}
+                        onChange={(e) => setEditSTForm((f) => ({ ...f, [k]: e.target.value }))}
+                        style={{ flex: 1, background: "#0f1117", border: "1px solid #334155", borderRadius: 6, color: "#f1f5f9", padding: type === "color" ? "2px" : "8px 10px", height: 36, cursor: type === "color" ? "pointer" : "text" }}
+                      />
+                    </label>
+                  ))}
+                  <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button style={S.btnCancel} onClick={() => {
+                      const reset = { ...ST };
+                      const defaults = DEFAULT_ST;
+                      reset[stKey] = defaults[stKey];
+                      setST(reset);
+                      try { localStorage.setItem("prod_status_colors", JSON.stringify(reset)); } catch {}
+                      setEditST(null);
+                    }}>Reset</button>
+                    <button style={S.btnSave} onClick={() => {
+                      const updated = { ...ST, [stKey]: { ...ST[stKey], ...editSTForm } };
+                      setST(updated);
+                      try { localStorage.setItem("prod_status_colors", JSON.stringify(updated)); } catch {}
+                      setEditST(null);
+                    }}>Save Colour</button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {cell && (
         <div style={S.overlay} onClick={(e) => e.target===e.currentTarget && setCell(null)}>
           <div style={S.modal}>
@@ -286,7 +390,23 @@ export default function ProductionBoard() {
               ))}
             </div>
             <label style={S.lbl}>Completed By</label>
-            <input style={S.inp} value={popBy} onChange={(e) => setPopBy(e.target.value)} placeholder="Who actioned this?" />
+            {teamMembers.length > 0 ? (
+              <select
+                style={{ ...S.inp, cursor: "pointer" }}
+                value={popBy}
+                onChange={(e) => setPopBy(e.target.value)}
+              >
+                <option value="">— Select team member —</option>
+                {teamMembers.map((m) => (
+                  <option key={m.user_id} value={m.name}>{m.name}</option>
+                ))}
+                {popBy && !teamMembers.some((m) => m.name === popBy) && (
+                  <option value={popBy}>{popBy} (previous)</option>
+                )}
+              </select>
+            ) : (
+              <input style={S.inp} value={popBy} onChange={(e) => setPopBy(e.target.value)} placeholder="Who actioned this?" />
+            )}
             <label style={S.lbl}>Notes</label>
             <textarea style={{ ...S.inp, resize: "vertical", minHeight: 80 }} value={popNotes} onChange={(e) => setPopNotes(e.target.value)} placeholder="Add details, dates, reference numbers…" rows={3} />
             <div style={S.modalFoot}>
@@ -304,12 +424,65 @@ export default function ProductionBoard() {
               <div style={S.modalTitle}>New Production Job</div>
               <button style={S.closeBtn} onClick={() => setShowNew(false)}>✕</button>
             </div>
-            <label style={S.lbl}>Job Name *</label>
-            <input style={S.inp} value={form.name} onChange={(e) => setForm((p) => ({...p, name: e.target.value}))} placeholder="e.g. Smith Residence" autoFocus />
-            <label style={S.lbl}>Client Name</label>
-            <input style={S.inp} value={form.client_name} onChange={(e) => setForm((p) => ({...p, client_name: e.target.value}))} placeholder="Client name" />
-            <label style={S.lbl}>Description</label>
-            <textarea style={{ ...S.inp, resize: "vertical" }} value={form.description} onChange={(e) => setForm((p) => ({...p, description: e.target.value}))} placeholder="Optional notes…" rows={2} />
+
+            {/* Import from Job Board toggle */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button
+                style={{ ...S.btnCancel, flex: 1, background: !importMode ? "#6366f1" : "transparent", color: !importMode ? "#fff" : "#94a3b8", borderColor: "#6366f1" }}
+                onClick={() => setImportMode(false)}
+              >
+                Create New
+              </button>
+              <button
+                style={{ ...S.btnCancel, flex: 1, background: importMode ? "#6366f1" : "transparent", color: importMode ? "#fff" : "#94a3b8", borderColor: "#6366f1" }}
+                onClick={async () => {
+                  setImportMode(true);
+                  if (!jobBoardJobs.length && user) {
+                    const { data } = await supabase.from("job_board_jobs").select("id,name,client").eq("user_id", user.id).order("created_at", { ascending: false });
+                    setJobBoardJobs(data || []);
+                  }
+                }}
+              >
+                Import from Job Board
+              </button>
+            </div>
+
+            {importMode ? (
+              <>
+                <label style={S.lbl}>Select Job Board Job</label>
+                <select
+                  style={{ ...S.inp, cursor: "pointer" }}
+                  value={selectedJobBoardId}
+                  onChange={(e) => {
+                    setSelectedJobBoardId(e.target.value);
+                    const jb = jobBoardJobs.find((j) => j.id === e.target.value);
+                    if (jb) setForm({ name: jb.name || "", client_name: jb.client || "", description: "" });
+                  }}
+                >
+                  <option value="">— Choose a job —</option>
+                  {jobBoardJobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.name}{j.client ? ` — ${j.client}` : ""}</option>
+                  ))}
+                </select>
+                {selectedJobBoardId && (
+                  <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 8 }}>Job name and client will be copied across. You can edit them below.</div>
+                )}
+                <label style={{ ...S.lbl, marginTop: 12 }}>Job Name *</label>
+                <input style={S.inp} value={form.name} onChange={(e) => setForm((p) => ({...p, name: e.target.value}))} />
+                <label style={S.lbl}>Client Name</label>
+                <input style={S.inp} value={form.client_name} onChange={(e) => setForm((p) => ({...p, client_name: e.target.value}))} />
+              </>
+            ) : (
+              <>
+                <label style={S.lbl}>Job Name *</label>
+                <input style={S.inp} value={form.name} onChange={(e) => setForm((p) => ({...p, name: e.target.value}))} placeholder="e.g. Smith Residence" autoFocus />
+                <label style={S.lbl}>Client Name</label>
+                <input style={S.inp} value={form.client_name} onChange={(e) => setForm((p) => ({...p, client_name: e.target.value}))} placeholder="Client name" />
+                <label style={S.lbl}>Description</label>
+                <textarea style={{ ...S.inp, resize: "vertical" }} value={form.description} onChange={(e) => setForm((p) => ({...p, description: e.target.value}))} placeholder="Optional notes…" rows={2} />
+              </>
+            )}
+
             <div style={S.modalFoot}>
               <button style={S.btnCancel} onClick={() => setShowNew(false)}>Cancel</button>
               <button style={S.btnSave} onClick={createJob} disabled={saving || !form.name.trim()}>{saving ? "Creating…" : "Create Job"}</button>
@@ -346,18 +519,28 @@ export default function ProductionBoard() {
 }
 
 const S = {
-  page:       { padding: "24px 20px", minHeight: "100vh", background: "#0f1117", color: "#e2e8f0", fontFamily: "system-ui, sans-serif" },
+  page:       { padding: "0", minHeight: "100vh", background: "#0f1117", color: "#e2e8f0", fontFamily: "system-ui, sans-serif" },
   loadWrap:   { display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" },
   spinner:    { width: 36, height: 36, border: "3px solid #1e293b", borderTopColor: "#6366f1", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  // Banner
+  banner:          { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)", padding: "22px 28px", marginBottom: 20 },
+  bannerLeft:      { display: "flex", alignItems: "center", gap: 18 },
+  bannerIcon:      { fontSize: 48, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.16)", borderRadius: 999, width: 76, height: 76, flexShrink: 0 },
+  bannerTitle:     { margin: 0, fontSize: 28, fontWeight: 600, lineHeight: 1.1, color: "#fff" },
+  bannerDesc:      { margin: "4px 0 0", fontSize: 14, opacity: 0.92, color: "#fff" },
+  bannerCustomBtn: { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px", fontSize: 14, cursor: "pointer", whiteSpace: "nowrap" },
+  backBtn:         { background: "rgba(15,23,42,0.85)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 10, padding: "9px 18px", fontSize: 15, cursor: "pointer", whiteSpace: "nowrap" },
+  // Content area
+  contentPad: { padding: "0 20px 24px" },
   header:     { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 },
   title:      { fontSize: 22, fontWeight: 600, margin: 0, color: "#f1f5f9" },
-  sub:        { fontSize: 16, color: "#94a3b8", marginTop: 5 },
-  addBtn:     { background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
-  filterRow:  { display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" },
-  filterOff:  { background: "#1e293b", color: "#94a3b8", border: "1px solid #334155", borderRadius: 20, padding: "6px 16px", fontSize: 16, cursor: "pointer" },
-  filterOn:   { background: "#6366f1", color: "#fff", border: "1px solid #6366f1", borderRadius: 20, padding: "6px 16px", fontSize: 16, cursor: "pointer", fontWeight: 600 },
-  empty:      { textAlign: "center", color: "#475569", padding: "60px 20px", fontSize: 16 },
-  boardWrap:  { overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 185px)", borderRadius: 12, border: "1px solid #1e293b" },
+  sub:        { fontSize: 14, color: "#94a3b8", marginTop: 5 },
+  addBtn:     { background: "#6366f1", color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
+  filterRow:  { display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", padding: "0 20px", alignItems: "center" },
+  filterOff:  { background: "#1e293b", color: "#94a3b8", border: "1px solid #334155", borderRadius: 20, padding: "6px 16px", fontSize: 13, cursor: "pointer" },
+  filterOn:   { background: "#6366f1", color: "#fff", border: "1px solid #6366f1", borderRadius: 20, padding: "6px 16px", fontSize: 13, cursor: "pointer", fontWeight: 600 },
+  empty:      { textAlign: "center", color: "#475569", padding: "60px 20px", fontSize: 14 },
+  boardWrap:  { overflowX: "auto", overflowY: "auto", maxHeight: "calc(100vh - 260px)", borderRadius: 12, border: "1px solid #1e293b", margin: "0 20px" },
   table:      { borderCollapse: "collapse", width: "100%" },
   cornerTh:   { position: "sticky", top: 0, left: 0, zIndex: 4, background: "#0d1424", padding: "12px 16px", textAlign: "left", fontSize: 16, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid #1e293b", borderRight: "1px solid #1e293b", minWidth: 170, whiteSpace: "nowrap" },
   stepTh:     { position: "sticky", top: 0, zIndex: 3, background: "#0d1424", padding: "10px 4px", textAlign: "center", fontSize: 16, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #1e293b", minWidth: 88 },

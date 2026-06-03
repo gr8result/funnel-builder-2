@@ -13,6 +13,43 @@ import { WorkspaceProvider } from "../hooks/useWorkspace";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
+function isBenignDevRuntimeNoise(error) {
+  if (process.env.NODE_ENV !== "development") return false;
+
+  const message = String(error?.message || error || "");
+  const stack = String(error?.stack || "");
+
+  if (message.includes("Lock broken by another request with the 'steal' option")) {
+    return true;
+  }
+
+  return message.includes("Cannot read properties of undefined (reading 'components')")
+    && stack.includes("hot-reloader-pages");
+}
+
+function DevRuntimeNoiseGuard() {
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development" || typeof window === "undefined") return undefined;
+
+    const stopOverlay = (event) => {
+      const error = event?.reason || event?.error;
+      if (!isBenignDevRuntimeNoise(error)) return;
+      event.preventDefault?.();
+      event.stopImmediatePropagation?.();
+    };
+
+    window.addEventListener("error", stopOverlay, true);
+    window.addEventListener("unhandledrejection", stopOverlay, true);
+
+    return () => {
+      window.removeEventListener("error", stopOverlay, true);
+      window.removeEventListener("unhandledrejection", stopOverlay, true);
+    };
+  }, []);
+
+  return null;
+}
+
 // ── Full-screen loading overlay shown during route transitions ────────────────
 function RouteProgressBar() {
   const router = useRouter();
@@ -152,6 +189,7 @@ export default function MyApp({ Component, pageProps }) {
     return (
       <AuthProvider>
         <WorkspaceProvider>
+          <DevRuntimeNoiseGuard />
           <RouteProgressBar />
           <Root>
             <Component {...pageProps} />
@@ -164,6 +202,7 @@ export default function MyApp({ Component, pageProps }) {
   return (
     <AuthProvider>
       <WorkspaceProvider>
+        <DevRuntimeNoiseGuard />
         <RouteProgressBar />
         <Root>
           <Layout>

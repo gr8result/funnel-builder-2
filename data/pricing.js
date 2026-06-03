@@ -306,10 +306,10 @@ const PRICING = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Base platform plans — prices in AUD/month
 export const BASE_PLANS = {
-  starter:      { id: "starter",      name: "GR8 RESULT — Starter Plan",      price: 159 },
-  growth:       { id: "growth",       name: "GR8 RESULT — Growth Plan",       price: 359 },
-  scale:        { id: "scale",        name: "GR8 RESULT — Scale Plan",        price: 499 },
-  professional: { id: "professional", name: "GR8 RESULT — Professional Plan", price: 999 },
+  starter:      { id: "starter",      name: "GR8 RESULT — Starter Plan",      price: 159, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
+  growth:       { id: "growth",       name: "GR8 RESULT — Growth Plan",       price: 359, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
+  scale:        { id: "scale",        name: "GR8 RESULT — Scale Plan",        price: 499, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
+  professional: { id: "professional", name: "GR8 RESULT — Professional Plan", price: 999, introDiscountPercent: null, introMonths: 0, trialDays: 14 },
 };
 
 export const BASE_PLAN_INCLUDES = {

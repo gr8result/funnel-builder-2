@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
-import { BlockTypes, BlockDefinitions } from "../../lib/website-builder/pageBlockComponents";
+import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "./gridIconLibrary";
@@ -48,7 +48,7 @@ import {
   ANIMATION_PRESETS as ANIMATION_PRESETS_PANELS,
   ANIMATION_DELAY_OPTIONS, ANIMATION_SPEED_OPTIONS, BLOCK_TYPE_STYLE_PRESETS,
   getTextAnimationBinding, getSelectionStyleSource, getEditableBackgroundTarget,
-  parseBackgroundImageUrl, normalizeToolbarBackgroundColor, normalizeComputedLineHeight,
+  parseBackgroundImageUrl, normalizeToolbarBackgroundColor, normalizeComputedLineHeight, normalizeLineHeightValue, stripInlineCssPropertyFromHtml,
   TextEditingToolbar, BlockAnimationPopover,
   formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
   BlockLibraryPanel, PageSectionsPanel,
@@ -66,7 +66,7 @@ import {
   renderBlockPreview,
 } from "./page-builder/pbCanvasComponents";
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -241,8 +241,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
+      const currentBlocks = latestBlocksRef.current;
       // Use onSaveRef so the timer always calls the latest save function at fire-time
-      Promise.resolve(onSaveRef.current(latestBlocksRef.current)).then((saved) => {
+      Promise.resolve(onSaveRef.current(currentBlocks)).then((saved) => {
         if (saved) setLastSavedAt(Date.now());
       }).catch(() => {});
     }, 1500);
@@ -690,7 +691,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const createNewBlock = (blockType) => {
     const currentWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
-    const extraProps = blockType === "icon-counter" ? { projectId: project?.id || "" } : {};
+    const extraProps = blockType === "icon-counter"
+      ? { projectId: project?.id || "" }
+      : blockType === "competitor-comparison"
+        ? COMPETITOR_COMPARISON_TEMPLATE_PROPS
+        : {};
     return {
       id: Date.now() + Math.floor(Math.random() * 1000),
       type: blockType,
@@ -1320,6 +1325,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       };
     });
 
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     return updated;
@@ -1327,13 +1333,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const syncActiveEditableToBlock = (sourceBlocks = blocks) => {
     const editable = activeEditableRef.current;
-    if (!editable || typeof selectedIndex !== "number" || !Array.isArray(sourceBlocks) || !sourceBlocks[selectedIndex]) {
+    const activeBlockIndex = selectedIndexRef.current;
+    if (!editable || typeof activeBlockIndex !== "number" || !Array.isArray(sourceBlocks) || !sourceBlocks[activeBlockIndex]) {
       return sourceBlocks;
     }
 
     const nextHtml = stripEditorArtifacts(editable.innerHTML);
     const updated = [...sourceBlocks];
-    const currentBlock = updated[selectedIndex];
+    const currentBlock = updated[activeBlockIndex];
 
     // For image-stack layers we still need background geometry — read from the
     // layer container (not the text node) so we only get layout, not typography.
@@ -1363,7 +1370,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const textColor = rgbToHex(computed?.color, "#111827");
       const textAlign = String(computed?.textAlign || "left");
 
-      updated[selectedIndex] = {
+      updated[activeBlockIndex] = {
         ...currentBlock,
         props: {
           ...(currentBlock.props || {}),
@@ -1389,6 +1396,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           )),
         },
       };
+      pendingLocalBlocksRef.current = true;
+      latestBlocksRef.current = updated;
       setBlocks(updated);
       return updated;
     }
@@ -1425,10 +1434,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       nextProps.subheadline = nextHtml;
     }
 
-    updated[selectedIndex] = {
+    updated[activeBlockIndex] = {
       ...currentBlock,
       props: nextProps,
     };
+    pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
     setBlocks(updated);
     return updated;
@@ -1575,6 +1585,22 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     editable.querySelectorAll("[data-temp-selection]").forEach((el) => {
       el.removeAttribute("data-temp-selection");
     });
+
+    // Remove empty rich-text block shells created by browser editing commands.
+    // These saved as <p><br></p> or styled blank paragraphs and showed up as large
+    // unexplained gaps between real lines of copy.
+    editable.querySelectorAll("p,h1,h2,h3,h4,h5,h6,blockquote").forEach((el) => {
+      const text = (el.textContent || "").replace(/\u00a0/g, "").trim();
+      const onlyBreaks = Array.from(el.childNodes).every((node) => {
+        if (node.nodeType === Node.TEXT_NODE) return !node.textContent.replace(/\u00a0/g, "").trim();
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.tagName === "BR") return true;
+          if (node.tagName === "SPAN") return !(node.textContent || "").replace(/\u00a0/g, "").trim() && !Array.from(node.childNodes).some((child) => child.nodeType === Node.ELEMENT_NODE && child.tagName !== "BR");
+        }
+        return false;
+      });
+      if (!text && onlyBreaks) el.remove();
+    });
   };
 
   const applyStyleToActiveEditable = (stylePatch = {}) => {
@@ -1589,6 +1615,61 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       }
     });
     return true;
+  };
+
+  const stripInlineStyleKeys = (root, styleKeys = []) => {
+    if (!root || !styleKeys.length) return;
+    const stripElement = (element) => {
+      if (!(element instanceof Element)) return;
+      styleKeys.forEach((key) => { element.style[key] = ""; });
+      if (!element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    };
+
+    if (root instanceof Element) stripElement(root);
+    root.querySelectorAll?.("[style]").forEach(stripElement);
+  };
+
+  const wrapEditableHtmlWithStyles = (editable, stylePatch = {}) => {
+    const template = document.createElement("template");
+    template.innerHTML = stripEditorArtifacts(editable.innerHTML) || htmlToPlainText(editable.textContent || "");
+    stripInlineStyleKeys(template.content, Object.keys(stylePatch));
+    if (stylePatch.lineHeight !== undefined) {
+      stripInlineStyleKeys(template.content, ["marginTop", "marginBottom"]);
+    }
+
+    const blockSelector = "p,h1,h2,h3,h4,h5,h6,ul,ol,li,blockquote,div";
+    const hasBlockContent = editable.classList?.contains("wb-text-block") || !!template.content.querySelector(blockSelector);
+
+    if (hasBlockContent) {
+      const topLevelNodes = Array.from(template.content.childNodes);
+      topLevelNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.matches?.(blockSelector)) {
+          Object.entries(stylePatch).forEach(([key, value]) => {
+            node.style[key] = value;
+          });
+          return;
+        }
+
+        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+          const span = document.createElement("span");
+          Object.entries(stylePatch).forEach(([key, value]) => {
+            span.style[key] = value;
+          });
+          span.textContent = node.textContent;
+          node.replaceWith(span);
+        }
+      });
+
+      return template.innerHTML;
+    }
+
+    const wrapper = document.createElement("span");
+    Object.entries(stylePatch).forEach(([key, value]) => {
+      wrapper.style[key] = value;
+    });
+    wrapper.appendChild(template.content.cloneNode(true));
+
+    return wrapper.outerHTML;
   };
 
   const applyTextBoxBackground = (patch = {}) => {
@@ -1666,23 +1747,33 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return false;
     }
 
-    // Before extracting, capture the computed font-size from the range's parent.
-    // If the patch doesn't set fontSize and the parent has a size different from the
-    // editable root (e.g. a <span style="font-size:48px"> wrapper), preserve it on the
-    // new wrapper so text doesn't visually jump to the block's base size.
+    // Before extracting, preserve an explicit inline font-size from the selected
+    // text's own ancestry. Do not copy a computed/default font-size here: color-only
+    // commands must never introduce a new size and make the text jump.
     const rangeParentEl = range.commonAncestorContainer?.nodeType === 3
       ? range.commonAncestorContainer.parentElement
       : (range.commonAncestorContainer instanceof Element ? range.commonAncestorContainer : null);
     let preservedFontSize = null;
-    if (!stylePatch.fontSize && rangeParentEl instanceof Element && editable.contains(rangeParentEl) && rangeParentEl !== editable) {
-      const parentComputedSize = window.getComputedStyle(rangeParentEl).fontSize;
-      const editableBaseSize = window.getComputedStyle(editable).fontSize;
-      if (parentComputedSize && parentComputedSize !== editableBaseSize) {
-        preservedFontSize = parentComputedSize;
+    if (!stylePatch.fontSize && rangeParentEl instanceof Element && editable.contains(rangeParentEl)) {
+      let sizeSource = rangeParentEl;
+      while (sizeSource instanceof Element && sizeSource !== editable) {
+        if (sizeSource.style?.fontSize) {
+          preservedFontSize = sizeSource.style.fontSize;
+          break;
+        }
+        sizeSource = sizeSource.parentElement;
       }
     }
 
     const extracted = range.extractContents();
+
+    // Strip the same properties from descendants so the new wrapper is the sole
+    // source of truth. Without this, inner spans override toolbar changes.
+    if (Object.keys(stylePatch).length) {
+      const propsToStrip = Object.keys(stylePatch);
+      stripInlineStyleKeys(extracted, propsToStrip);
+    }
+
     const wrapper = document.createElement("span");
     if (preservedFontSize) {
       wrapper.style.fontSize = preservedFontSize;
@@ -1734,8 +1825,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     };
     const explicitFontSize = getExplicitFontSize();
     const fontSizeValue = Math.max(12, Math.round(parseFloat(explicitFontSize || editableComputed.fontSize || "18") || 18));
-    const lineHeightValue = normalizeComputedLineHeight(editableComputed.lineHeight, editableComputed.fontSize, tagName === "P" ? 1.7 : 1.2);
-    const currentBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
+    const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
+    const currentBlockIndex = selectedIndexRef.current;
+    const currentBlock = typeof currentBlockIndex === "number" ? latestBlocksRef.current[currentBlockIndex] || null : null;
     const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
     const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
     const motionBinding = getTextAnimationBinding(currentBlock, editable);
@@ -1783,6 +1875,116 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }));
   };
 
+  const updateActiveTextBlockLineHeight = (value) => {
+    const editable = activeEditableRef.current;
+    const blockIndex = selectedIndexRef.current;
+    const currentBlocks = latestBlocksRef.current;
+    const currentBlock = Number.isInteger(blockIndex) && Array.isArray(currentBlocks) ? currentBlocks[blockIndex] : null;
+    const propName = editable?.getAttribute?.("data-text-prop");
+
+    if (!editable || !currentBlock || currentBlock.type !== BlockTypes.TEXT || propName !== "text") return false;
+
+    const nextLineHeight = normalizeLineHeightValue(value, currentBlock.props?.textLineHeight || currentBlock.props?.lineHeight || 1.35);
+
+    editable.style.lineHeight = String(nextLineHeight);
+    editable.querySelectorAll?.("[style]").forEach((element) => {
+      element.style.lineHeight = "";
+      element.style.marginTop = "";
+      element.style.marginBottom = "";
+      if (!element.getAttribute("style")?.trim()) element.removeAttribute("style");
+    });
+    cleanupEditableMarkup();
+
+    const nextProps = {
+      ...(currentBlock.props || {}),
+      textLineHeight: nextLineHeight,
+      bodyLineHeight: nextLineHeight,
+      lineHeight: nextLineHeight,
+      text: stripInlineCssPropertyFromHtml(stripEditorArtifacts(editable.innerHTML), "line-height"),
+    };
+
+    handleUpdateBlock(blockIndex, nextProps);
+    latestBlocksRef.current = latestBlocksRef.current.map((block, idx) => (
+      idx === blockIndex ? { ...block, props: nextProps } : block
+    ));
+    setTextToolbarState((prev) => ({ ...prev, lineHeight: nextLineHeight }));
+    preserveCurrentSelection();
+    return true;
+  };
+
+  const updateActiveBlockTypography = (patch = {}) => {
+    const editable = activeEditableRef.current;
+    const blockIndex = selectedIndexRef.current;
+    const currentBlocks = latestBlocksRef.current;
+    const currentBlock = Number.isInteger(blockIndex) && Array.isArray(currentBlocks) ? currentBlocks[blockIndex] : null;
+    const propPath = String(editable?.getAttribute?.("data-text-prop") || "");
+    const propName = propPath.toLowerCase();
+
+    if (!editable || !currentBlock || !propName) return false;
+
+    const isHeadingText = /(headline|heading|title|name|price|eyebrow)/i.test(propName);
+    let nextProps = { ...(currentBlock.props || {}) };
+    const inlineStylePatch = {};
+
+    if (patch.fontSize !== undefined) {
+      const nextSize = Math.max(8, Math.min(240, Number.parseInt(String(patch.fontSize), 10) || 18));
+      editable.style.fontSize = `${nextSize}px`;
+      inlineStylePatch.fontSize = `${nextSize}px`;
+      if (isHeadingText) {
+        nextProps.headlineFontSize = nextSize;
+        nextProps.headingFontSize = nextSize;
+      } else {
+        nextProps.textFontSize = nextSize;
+        nextProps.bodyFontSize = nextSize;
+        if (/(subheadline|subtitle|description|body)/i.test(propName)) {
+          nextProps.subheadlineFontSize = nextSize;
+        }
+      }
+    }
+
+    if (patch.fontFamily !== undefined) {
+      const nextFamily = String(patch.fontFamily || "Arial");
+      editable.style.fontFamily = nextFamily;
+      inlineStylePatch.fontFamily = nextFamily;
+      if (isHeadingText) {
+        nextProps.headlineFontFamily = nextFamily;
+        nextProps.headingFontFamily = nextFamily;
+      } else {
+        nextProps.fontFamily = nextFamily;
+        nextProps.bodyFontFamily = nextFamily;
+      }
+    }
+
+    if (Object.keys(inlineStylePatch).length) {
+      const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
+      nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
+      editable.innerHTML = nextHtml;
+
+      const selection = window.getSelection?.();
+      const nextRange = document.createRange();
+      nextRange.selectNodeContents(editable);
+      selection?.removeAllRanges();
+      selection?.addRange(nextRange);
+      selectionRangeRef.current = nextRange.cloneRange();
+    }
+
+    pushHistory(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
+    const updatedBlocks = latestBlocksRef.current.map((block, idx) => (
+      idx === blockIndex ? { ...block, props: nextProps } : block
+    ));
+    latestBlocksRef.current = updatedBlocks;
+    setBlocks(updatedBlocks);
+    setTextToolbarState((prev) => ({
+      ...prev,
+      ...(patch.fontSize !== undefined ? { fontSize: Math.max(8, Math.min(240, Number.parseInt(String(patch.fontSize), 10) || 18)) } : {}),
+      ...(patch.fontFamily !== undefined ? { fontFamily: String(patch.fontFamily || "Arial") } : {}),
+    }));
+    preserveCurrentSelection();
+    refreshToolbarFromEditable();
+    return true;
+  };
+
   const runTextCommand = (command, value = null) => {
     const editable = activeEditableRef.current;
     if (!editable || typeof document === "undefined") return;
@@ -1815,23 +2017,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       }
     }
 
-    if (command === "formatBlock") {
-      const blockKey = String(nextValue || "P").toUpperCase();
-      const stylePreset = BLOCK_TYPE_STYLE_PRESETS[blockKey] || BLOCK_TYPE_STYLE_PRESETS.P;
-      applyStyleToActiveEditable(stylePreset);
-      setTextToolbarState((prev) => ({
-        ...prev,
-        blockType: blockKey,
-        fontSize: Number.parseInt(stylePreset.fontSize, 10) || prev.fontSize,
-      }));
-      finishTextCommand();
-      return;
-    }
-
-    // Helper: select all content inside the active editable so applyInlineStyleToSelection
-    // can wrap it in a span. This is needed when the user changes font-size/family without
-    // first highlighting text — the style change must land inside innerHTML (persisted) not
-    // on the element's own style property (overwritten by React on next render).
+    // Helper: select all content inside the active editable so toolbar changes land
+    // inside innerHTML (persisted) rather than on the live DOM element (lost on render).
     const selectAllInEditable = () => {
       if (!editable || typeof document === "undefined") return;
       const sel = window.getSelection?.();
@@ -1843,35 +2030,62 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       selectionRangeRef.current = range.cloneRange();
     };
 
+    const ensureTextSelection = () => {
+      const currentRange = getActiveSelectionRange();
+      if (currentRange && !currentRange.collapsed) return true;
+      selectAllInEditable();
+      const nextRange = getActiveSelectionRange();
+      return !!nextRange && !nextRange.collapsed;
+    };
+
+    const applyPersistentInlineStyle = (stylePatch = {}) => {
+      if (!ensureTextSelection()) return false;
+      return applyInlineStyleToSelection(stylePatch);
+    };
+
+    if (command === "formatBlock") {
+      const blockKey = String(nextValue || "P").toUpperCase();
+      const stylePreset = BLOCK_TYPE_STYLE_PRESETS[blockKey] || BLOCK_TYPE_STYLE_PRESETS.P;
+      applyPersistentInlineStyle(stylePreset);
+      setTextToolbarState((prev) => ({
+        ...prev,
+        blockType: blockKey,
+        fontSize: Number.parseInt(stylePreset.fontSize, 10) || prev.fontSize,
+        lineHeight: Number.parseFloat(stylePreset.lineHeight) || prev.lineHeight,
+      }));
+      finishTextCommand();
+      return;
+    }
+
     if (command === "fontSize") {
       const pxValue = `${Number(nextValue || 18)}px`;
-      // Try to apply only to selected text first; if nothing is selected, apply to all.
-      let applied = applyInlineStyleToSelection({ fontSize: pxValue });
-      if (!applied) {
-        selectAllInEditable();
-        applyInlineStyleToSelection({ fontSize: pxValue });
+      if (!hasTextSelection && updateActiveBlockTypography({ fontSize: pxValue })) {
+        return;
       }
+      applyPersistentInlineStyle({ fontSize: pxValue });
       setTextToolbarState((prev) => ({ ...prev, fontSize: Number(nextValue || 18) }));
       finishTextCommand();
       return;
     }
 
     if (command === "lineHeight") {
-      applyInlineStyleToSelection({ lineHeight: String(Number(nextValue || 1.5)) }, { fallbackToEditable: true });
-      setTextToolbarState((prev) => ({ ...prev, lineHeight: Number(nextValue || 1.5) }));
+      const lineHeightValue = normalizeLineHeightValue(nextValue || 1.5);
+      if (!hasTextSelection && updateActiveTextBlockLineHeight(lineHeightValue)) {
+        refreshToolbarFromEditable();
+        return;
+      }
+      applyPersistentInlineStyle({ lineHeight: String(lineHeightValue) });
+      setTextToolbarState((prev) => ({ ...prev, lineHeight: lineHeightValue }));
       finishTextCommand();
       return;
     }
 
     if (command === "fontName") {
       const fontValue = String(nextValue || "Arial");
-      // Use span-based approach (consistent with fontSize/color) — avoids deprecated
-      // <font face> elements that can conflict with inline style spans.
-      let applied = applyInlineStyleToSelection({ fontFamily: fontValue });
-      if (!applied) {
-        selectAllInEditable();
-        applyInlineStyleToSelection({ fontFamily: fontValue });
+      if (!hasTextSelection && updateActiveBlockTypography({ fontFamily: fontValue })) {
+        return;
       }
+      applyPersistentInlineStyle({ fontFamily: fontValue });
       setTextToolbarState((prev) => ({ ...prev, fontFamily: fontValue }));
       finishTextCommand();
       return;
@@ -1879,15 +2093,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     if (command === "foreColor") {
       const colorValue = String(nextValue || "#111827");
-      if (hasTextSelection) {
-        // Use span-based approach to avoid <font> elements that reset font-size
-        const applied = applyInlineStyleToSelection({ color: colorValue });
-        if (!applied) {
-          applyStyleToActiveEditable({ color: colorValue });
-        }
-      } else {
-        applyStyleToActiveEditable({ color: colorValue });
-      }
+      applyPersistentInlineStyle({ color: colorValue });
       setTextToolbarState((prev) => ({ ...prev, color: colorValue }));
       finishTextCommand();
       return;
@@ -1896,15 +2102,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (command === "hiliteColor") {
       const isRemove = nextValue === "transparent" || nextValue === "none" || !nextValue;
       const bgValue = isRemove ? "transparent" : String(nextValue);
-      if (hasTextSelection) {
-        // Use span-based approach to avoid <font> elements that reset font-size
-        const applied = applyInlineStyleToSelection({ backgroundColor: bgValue });
-        if (!applied) {
-          applyStyleToActiveEditable({ backgroundColor: bgValue });
-        }
-      } else {
-        applyStyleToActiveEditable({ backgroundColor: bgValue });
-      }
+      applyPersistentInlineStyle({ backgroundColor: bgValue });
       if (!isRemove) {
         setTextToolbarState((prev) => ({ ...prev, highlight: String(nextValue) }));
       }
@@ -1913,44 +2111,42 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     if (command === "bold") {
-      if (hasTextSelection) {
+      if (ensureTextSelection()) {
         try { document.execCommand("bold", false, null); } catch {}
-      } else {
-        const computedWeight = Number(window.getComputedStyle(editable).fontWeight || 400);
-        applyStyleToActiveEditable({ fontWeight: computedWeight >= 600 ? "400" : "700" });
       }
       finishTextCommand();
       return;
     }
 
     if (command === "italic") {
-      if (hasTextSelection) {
+      if (ensureTextSelection()) {
         try { document.execCommand("italic", false, null); } catch {}
-      } else {
-        applyStyleToActiveEditable({ fontStyle: editable.style.fontStyle === "italic" ? "normal" : "italic" });
       }
       finishTextCommand();
       return;
     }
 
     if (command === "underline") {
-      if (hasTextSelection) {
+      if (ensureTextSelection()) {
         try { document.execCommand("underline", false, null); } catch {}
-      } else {
-        applyStyleToActiveEditable({ textDecoration: editable.style.textDecoration === "underline" ? "none" : "underline" });
       }
       finishTextCommand();
       return;
     }
 
-    if (command === "justifyLeft" || command === "justifyCenter" || command === "justifyRight") {
-      const align = command === "justifyCenter" ? "center" : command === "justifyRight" ? "right" : "left";
-      applyStyleToActiveEditable({ textAlign: align, display: "block" });
+    if (command === "justifyLeft" || command === "justifyCenter" || command === "justifyRight" || command === "justifyFull") {
+      const align = command === "justifyCenter" ? "center" : command === "justifyRight" ? "right" : command === "justifyFull" ? "justify" : "left";
+      if (ensureTextSelection()) {
+        try { document.execCommand(command, false, null); } catch {}
+      } else {
+        applyStyleToActiveEditable({ textAlign: align, display: "block" });
+      }
       finishTextCommand();
       return;
     }
 
     if (["insertUnorderedList", "insertOrderedList", "unlink", "removeFormat", "createLink"].includes(command)) {
+      if (command === "removeFormat") ensureTextSelection();
       try {
         document.execCommand(command, false, nextValue);
       } catch {}
@@ -2089,7 +2285,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   handleSaveRef.current = handleSave;
 
   const handleSaveCurrentPageAsTemplate = async () => {
-    if (!onSaveTemplatePage) return;
+    if (!canSaveTemplates || !onSaveTemplatePage) return;
     showSavePopup("Saving template page...", "info");
     try {
       const committedBlocks = await commitPendingInlineEdits();
@@ -2111,7 +2307,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleSaveCurrentSiteAsTemplate = async () => {
-    if (!onSaveTemplateSite) return;
+    if (!canSaveTemplates || !onSaveTemplateSite) return;
     showSavePopup("Saving full template...", "info");
     try {
       const committedBlocks = await commitPendingInlineEdits();
@@ -2209,6 +2405,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             >
               Refresh Library
             </button>
+            {canSaveTemplates && onSaveTemplatePage ? (
+              <button
+                type="button"
+                style={{ ...styles.panelToggleBtn, borderColor: "#7c3aed", color: "#ddd6fe" }}
+                onClick={handleSaveCurrentPageAsTemplate}
+              >
+                Save Page Template
+              </button>
+            ) : null}
+            {canSaveTemplates && onSaveTemplateSite ? (
+              <button
+                type="button"
+                style={{ ...styles.panelToggleBtn, borderColor: "#7c3aed", color: "#ddd6fe" }}
+                onClick={handleSaveCurrentSiteAsTemplate}
+              >
+                Save Site Template
+              </button>
+            ) : null}
             <button
               type="button"
               style={styles.panelToggleBtn}
@@ -2464,7 +2678,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         onBlockDragEnd={handleBlockDragEnd}
                         onColumnSlotDrop={handleColumnSlotDrop}
                         onSaveAsGlobal={onSaveAsGlobal}
-                        onSaveBlockDefault={onSaveBlockDefault}
+                        onSaveBlockDefault={canSaveTemplates ? onSaveBlockDefault : null}
                       />
                     </React.Fragment>
                   ))}

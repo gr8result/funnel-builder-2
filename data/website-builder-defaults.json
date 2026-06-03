@@ -1016,14 +1016,30 @@
                   ],
                   "price": 47,
                   "category": "DOCUMENT SIGNING"
+                },
+                {
+                  "logos": [
+                    {
+                      "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184958398-monday-logo-png_seeklogo-394605.png",
+                      "name": "Monday",
+                      "domain": ""
+                    },
+                    {
+                      "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184964941-aha-logo-2x.png",
+                      "name": "Aha",
+                      "domain": ""
+                    }
+                  ],
+                  "price": 39,
+                  "category": "GHANTT CHARTS JOB BOARDS"
                 }
               ],
-              "title": "",
+              "title": "What you'd pay elsewhere",
               "eyebrow": "our All-in-One Platform",
               "planName": "COMPETITOR ANALYSIS",
               "subtitle": "We replace every tool below — one platform, one price.",
               "alignment": "center",
-              "planPrice": 299,
+              "planPrice": 359,
               "textColor": "#ffffff",
               "fontFamily": "system-ui",
               "fontWeight": "700",
@@ -1531,7 +1547,7 @@
                   "x": 77,
                   "y": 97,
                   "id": "txt-1779675952582",
-                  "text": "* Savings is achievable. It is based based on Enterprise Plans Annual Payment",
+                  "text": "* Savings comparison is based on current monthly platform pricing versus equivalent standalone module pricing. Annual figures are monthly savings multiplied by 12.",
                   "color": "#ffffff",
                   "width": 989,
                   "height": 30,
@@ -1953,38 +1969,40 @@
                 {
                   "id": "pricing-default-1",
                   "name": "Starter Plan",
-                  "price": "$129/month",
+                  "price": "$159/month",
                   "description": "For solo operators and small teams just getting started.",
                   "includedFeatures": [
                     "Team Seats — 2 users",
                     "CRM Pipelines — 1",
                     "Communities — 1",
-                    "Social Profiles — 5",
+                    "Social Profiles — 3",
                     "Automation Workflows — 5",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Marketplace Access",
-                    "Reporting — Basic",
+                    "Reporting — Email & CRM stats",
                     "Support — Email"
                   ],
                   "features": [
                     "Team Seats — 2 users",
                     "CRM Pipelines — 1",
                     "Communities — 1",
-                    "Social Profiles — 5",
+                    "Social Profiles — 3",
                     "Automation Workflows — 5",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Marketplace Access",
-                    "Reporting — Basic",
+                    "Reporting — Email & CRM stats",
                     "Support — Email"
                   ],
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 5,000",
                     "Email sends/mo — 50,000",
                     "SMS credits/mo — 500",
                     "Websites — 1",
                     "Funnels — Landing pages only",
+                    "Projects Hub — 3 jobs · 5 projects · 2 users",
                     "AI credits/mo — 50",
                     "Storage — 5 GB"
                   ],
@@ -1996,45 +2014,49 @@
                   "badge": "",
                   "cta": "Select This Plan",
                   "highlighted": false,
-                  "individualPrice": "$200"
+                  "individualPrice": "$215"
                 },
                 {
                   "id": "pricing-default-2",
                   "name": "Growth Plan",
-                  "price": "$299/month",
+                  "price": "$359/month",
                   "description": "For growing teams scaling sales and marketing operations.",
                   "includedFeatures": [
                     "Team Seats — 5 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 3",
                     "Communities — 3",
-                    "Social Profiles — 10",
-                    "Automation Workflows — 15",
+                    "Social Profiles — 7",
+                    "Automation Workflows — 8",
+                    "SMS Scheduled Campaigns — 3",
                     "Call Recording & AI Transcription",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Affiliate Management",
-                    "Reporting — Advanced",
+                    "Reporting — Email, SMS & Call Analytics",
                     "Support — Priority Email"
                   ],
                   "features": [
                     "Team Seats — 5 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 3",
                     "Communities — 3",
-                    "Social Profiles — 10",
-                    "Automation Workflows — 15",
+                    "Social Profiles — 7",
+                    "Automation Workflows — 8",
+                    "SMS Scheduled Campaigns — 3",
                     "Call Recording & AI Transcription",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Affiliate Management",
-                    "Reporting — Advanced",
+                    "Reporting — Email, SMS & Call Analytics",
                     "Support — Priority Email"
                   ],
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 15,000",
                     "Email sends/mo — 150,000",
                     "SMS credits/mo — 2,500",
-                    "Websites — 3",
+                    "Websites — 2",
                     "Funnels — 1 (+ extras at cost)",
+                    "Projects Hub — 15 jobs · 20 projects · dependencies",
                     "AI credits/mo — 250",
                     "Storage — 25 GB"
                   ],
@@ -2046,43 +2068,47 @@
                   "badge": "Most Popular",
                   "cta": "Select This Plan",
                   "highlighted": true,
-                  "individualPrice": "$415"
+                  "individualPrice": "$474"
                 },
                 {
                   "id": "pricing-default-3",
                   "name": "Scale Plan",
-                  "price": "$449/month",
+                  "price": "$499/month",
                   "description": "For established businesses scaling teams and operations.",
                   "includedFeatures": [
                     "Team Seats — 10 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 10",
                     "Communities — Unlimited",
-                    "Social Profiles — 50",
-                    "Automation Workflows — Unlimited",
+                    "Social Profiles — 15",
+                    "Automation Workflows — 10",
+                    "SMS Scheduled Campaigns — 10",
                     "AI Transcription + Sentiment",
                     "AI Website Builder",
                     "Shared Phone Number",
-                    "Reporting — Custom",
+                    "Reporting — Full Analytics + CSV export",
                     "Support — Dedicated Onboarding"
                   ],
                   "features": [
                     "Team Seats — 10 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 10",
                     "Communities — Unlimited",
-                    "Social Profiles — 50",
-                    "Automation Workflows — Unlimited",
+                    "Social Profiles — 15",
+                    "Automation Workflows — 10",
+                    "SMS Scheduled Campaigns — 10",
                     "AI Transcription + Sentiment",
                     "AI Website Builder",
                     "Shared Phone Number",
-                    "Reporting — Custom",
+                    "Reporting — Full Analytics + CSV export",
                     "Support — Dedicated Onboarding"
                   ],
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 40,000",
                     "Email sends/mo — 400,000",
                     "SMS credits/mo — 5,000",
-                    "Websites — 7",
+                    "Websites — 3",
                     "Funnels — 3 (+ extras at cost)",
+                    "Projects Hub — Unlimited jobs & projects · resource allocation · critical path",
                     "AI credits/mo — 750",
                     "Storage — 100 GB"
                   ],
@@ -2094,23 +2120,23 @@
                   "badge": "Best Value",
                   "cta": "Select This Plan",
                   "highlighted": false,
-                  "individualPrice": "$814"
+                  "individualPrice": "$913"
                 },
                 {
                   "id": "pricing-default-4",
                   "name": "Professional Plan",
-                  "price": "$899/month",
-                  "description": "Complete business OS for large teams and agencies.",
+                  "price": "$999/month",
+                  "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
                   "includedFeatures": [
                     "Team Seats — Up to 25 users",
                     "CRM Pipelines — Unlimited",
                     "Communities — Unlimited",
                     "Social Profiles — Unlimited",
-                    "Automation + Custom Integrations",
-                    "Full AI Telephone System",
-                    "Full AI Suite",
+                    "Automation Workflows — Unlimited",
+                    "AI Call Transcription & Sentiment",
+                    "AI Content & Post Generation",
                     "Shared Phone Number",
-                    "Reporting — White-label Reports",
+                    "Reporting — Full Analytics + Scheduled Reports",
                     "Support — Account Manager + SLA"
                   ],
                   "features": [
@@ -2118,19 +2144,21 @@
                     "CRM Pipelines — Unlimited",
                     "Communities — Unlimited",
                     "Social Profiles — Unlimited",
-                    "Automation + Custom Integrations",
-                    "Full AI Telephone System",
-                    "Full AI Suite",
+                    "Automation Workflows — Unlimited",
+                    "AI Call Transcription & Sentiment",
+                    "AI Content & Post Generation",
                     "Shared Phone Number",
-                    "Reporting — White-label Reports",
+                    "Reporting — Full Analytics + Scheduled Reports",
                     "Support — Account Manager + SLA"
                   ],
                   "extras": [
+                    "14 days free trial",
                     "Email contacts — 200,000",
                     "Email sends/mo — 2,000,000",
                     "SMS credits/mo — 10,000",
-                    "Websites — Unlimited",
+                    "Websites — 5",
                     "Funnels — 10 (+ extras at cost)",
+                    "Projects Hub — Unlimited · API",
                     "AI credits/mo — 5,000",
                     "Storage — 500 GB"
                   ],
@@ -2142,7 +2170,7 @@
                   "badge": "Enterprise",
                   "cta": "Select This Plan",
                   "highlighted": false,
-                  "individualPrice": "$1724"
+                  "individualPrice": "$1883"
                 }
               ],
               "baseLayoutWidth": 1500,
@@ -3077,7 +3105,7 @@
               "eyebrow": "Flexible Pricing Plans",
               "contentX": 50,
               "contentY": 58,
-              "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $9,900 Per Year</span></span>",
+              "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
               "minHeight": "1302px",
               "subheadline": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 24px;\">Why pay for dozens of disconnected platforms when you can manage your entire business from one powerful ecosystem? Our flexible pricing plans combine CRM, marketing, funnels, websites, automation, communications, bookings, communities, AI tools, and more into one streamlined platform designed to save businesses thousands every year while simplifying operations and boosting productivity.<br><br>Choose a complete business bundle or scale individual modules independently as your business grows. Whether you are a solo operator or managing a growing team, our platform gives you the flexibility to only pay for what you need while keeping everything connected from one powerful command centre.</span></span>",
               "contentWidth": 1497,
@@ -3107,7 +3135,7 @@
               ],
               "contentBackground": "transparent",
               "headlineBlock": {
-                "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $9,900 Per Year</span></span>",
+                "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
                 "fontSize": 64,
                 "lineHeight": 1.1,
                 "fontFamily": "system-ui",
@@ -3185,13 +3213,15 @@
                   "cta": "Select This Plan",
                   "name": "Starter",
                   "badge": "",
-                  "price": "$129",
+                  "price": "$159",
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 5,000",
                     "Email sends/mo — 50,000",
                     "SMS credits/mo — 500",
                     "Websites — 1",
                     "Funnels — Landing pages only",
+                    "Projects Hub — 3 jobs · 5 projects · 2 users",
                     "AI credits/mo — 50",
                     "Storage — 5 GB"
                   ],
@@ -3199,28 +3229,28 @@
                     "Team Seats — 2 users",
                     "CRM Pipelines — 1",
                     "Communities — 1",
-                    "Social Profiles — 5",
+                    "Social Profiles — 3",
                     "Automation Workflows — 5",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Marketplace Access",
-                    "Reporting — Basic",
+                    "Reporting — Email & CRM stats",
                     "Support — Email"
                   ],
                   "description": "For solo operators and small teams just getting started.",
                   "featureIcon": "tick",
                   "highlighted": false,
-                  "individualPrice": "$200",
+                  "individualPrice": "$215",
                   "includedFeatures": [
                     "Team Seats — 2 users",
                     "CRM Pipelines — 1",
                     "Communities — 1",
-                    "Social Profiles — 5",
+                    "Social Profiles — 3",
                     "Automation Workflows — 5",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Marketplace Access",
-                    "Reporting — Basic",
+                    "Reporting — Email & CRM stats",
                     "Support — Email"
                   ]
                 },
@@ -3229,44 +3259,48 @@
                   "cta": "Select This Plan",
                   "name": "Growth",
                   "badge": "Most Popular",
-                  "price": "$299",
+                  "price": "$359",
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 15,000",
                     "Email sends/mo — 150,000",
                     "SMS credits/mo — 2,500",
-                    "Websites — 3",
+                    "Websites — 2",
                     "Funnels — 1 (+ extras at cost)",
+                    "Projects Hub — 15 jobs · 20 projects · dependencies",
                     "AI credits/mo — 250",
                     "Storage — 25 GB"
                   ],
                   "features": [
                     "Team Seats — 5 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 3",
                     "Communities — 3",
-                    "Social Profiles — 10",
-                    "Automation Workflows — 15",
+                    "Social Profiles — 7",
+                    "Automation Workflows — 8",
+                    "SMS Scheduled Campaigns — 3",
                     "Call Recording & AI Transcription",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Affiliate Management",
-                    "Reporting — Advanced",
+                    "Reporting — Email, SMS & Call Analytics",
                     "Support — Priority Email"
                   ],
                   "description": "For growing teams scaling sales and marketing operations.",
                   "featureIcon": "spark",
                   "highlighted": true,
-                  "individualPrice": "$415",
+                  "individualPrice": "$474",
                   "includedFeatures": [
                     "Team Seats — 5 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 3",
                     "Communities — 3",
-                    "Social Profiles — 10",
-                    "Automation Workflows — 15",
+                    "Social Profiles — 7",
+                    "Automation Workflows — 8",
+                    "SMS Scheduled Campaigns — 3",
                     "Call Recording & AI Transcription",
                     "Calendar & Bookings",
                     "Shared Phone Number",
                     "Affiliate Management",
-                    "Reporting — Advanced",
+                    "Reporting — Email, SMS & Call Analytics",
                     "Support — Priority Email"
                   ]
                 },
@@ -3275,42 +3309,46 @@
                   "cta": "Select This Plan",
                   "name": "Scale",
                   "badge": "Best Value",
-                  "price": "$449",
+                  "price": "$499",
                   "extras": [
+                    "14 days free, then 50% off first 3 months",
                     "Email contacts — 40,000",
                     "Email sends/mo — 400,000",
                     "SMS credits/mo — 5,000",
-                    "Websites — 7",
+                    "Websites — 3",
                     "Funnels — 3 (+ extras at cost)",
+                    "Projects Hub — Unlimited jobs & projects · resource allocation · critical path",
                     "AI credits/mo — 750",
                     "Storage — 100 GB"
                   ],
                   "features": [
                     "Team Seats — 10 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 10",
                     "Communities — Unlimited",
-                    "Social Profiles — 50",
-                    "Automation Workflows — Unlimited",
+                    "Social Profiles — 15",
+                    "Automation Workflows — 10",
+                    "SMS Scheduled Campaigns — 10",
                     "AI Transcription + Sentiment",
                     "AI Website Builder",
                     "Shared Phone Number",
-                    "Reporting — Custom",
+                    "Reporting — Full Analytics + CSV export",
                     "Support — Dedicated Onboarding"
                   ],
                   "description": "For established businesses scaling teams and operations.",
                   "featureIcon": "arrow",
                   "highlighted": false,
-                  "individualPrice": "$814",
+                  "individualPrice": "$913",
                   "includedFeatures": [
                     "Team Seats — 10 users",
-                    "CRM Pipelines — Unlimited",
+                    "CRM Pipelines — 10",
                     "Communities — Unlimited",
-                    "Social Profiles — 50",
-                    "Automation Workflows — Unlimited",
+                    "Social Profiles — 15",
+                    "Automation Workflows — 10",
+                    "SMS Scheduled Campaigns — 10",
                     "AI Transcription + Sentiment",
                     "AI Website Builder",
                     "Shared Phone Number",
-                    "Reporting — Custom",
+                    "Reporting — Full Analytics + CSV export",
                     "Support — Dedicated Onboarding"
                   ]
                 },
@@ -3319,13 +3357,15 @@
                   "cta": "Select This Plan",
                   "name": "Professional",
                   "badge": "Enterprise",
-                  "price": "$899",
+                  "price": "$999",
                   "extras": [
+                    "14 days free trial",
                     "Email contacts — 200,000",
                     "Email sends/mo — 2,000,000",
                     "SMS credits/mo — 10,000",
-                    "Websites — Unlimited",
+                    "Websites — 5",
                     "Funnels — 10 (+ extras at cost)",
+                    "Projects Hub — Unlimited · API",
                     "AI credits/mo — 5,000",
                     "Storage — 500 GB"
                   ],
@@ -3334,32 +3374,32 @@
                     "CRM Pipelines — Unlimited",
                     "Communities — Unlimited",
                     "Social Profiles — Unlimited",
-                    "Automation + Custom Integrations",
-                    "Full AI Telephone System",
-                    "Full AI Suite",
+                    "Automation Workflows — Unlimited",
+                    "AI Call Transcription & Sentiment",
+                    "AI Content & Post Generation",
                     "Shared Phone Number",
-                    "Reporting — White-label Reports",
+                    "Reporting — Full Analytics + Scheduled Reports",
                     "Support — Account Manager + SLA"
                   ],
-                  "description": "Complete business OS for large teams and agencies.",
+                  "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
                   "featureIcon": "tick",
                   "highlighted": false,
-                  "individualPrice": "$1724",
+                  "individualPrice": "$1883",
                   "includedFeatures": [
                     "Team Seats — Up to 25 users",
                     "CRM Pipelines — Unlimited",
                     "Communities — Unlimited",
                     "Social Profiles — Unlimited",
-                    "Automation + Custom Integrations",
-                    "Full AI Telephone System",
-                    "Full AI Suite",
+                    "Automation Workflows — Unlimited",
+                    "AI Call Transcription & Sentiment",
+                    "AI Content & Post Generation",
                     "Shared Phone Number",
-                    "Reporting — White-label Reports",
+                    "Reporting — Full Analytics + Scheduled Reports",
                     "Support — Account Manager + SLA"
                   ]
                 }
               ],
-              "title": "Our Pricing Plans - Save up to $9,900 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">Thats $9,900 back in your bank, not wasted on multiple platforms that really dont do what you need. Our platform is deigned to help you scale your Business to new heights.</span></div>",
+              "title": "Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">That's $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>",
               "alignment": "start",
               "textColor": "#f8fafc",
               "fontFamily": "system-ui",
@@ -3382,29 +3422,29 @@
                   "id": "starter",
                   "name": "Starter",
                   "color": "#6366f1",
-                  "billingPrice": 129,
-                  "individualPrice": 200
+                  "billingPrice": 159,
+                  "individualPrice": 215
                 },
                 {
                   "id": "growth",
                   "name": "Growth",
                   "color": "#22c55e",
-                  "billingPrice": 299,
-                  "individualPrice": 415
+                  "billingPrice": 359,
+                  "individualPrice": 474
                 },
                 {
                   "id": "scale",
                   "name": "Scale",
                   "color": "#f59e0b",
-                  "billingPrice": 449,
-                  "individualPrice": 814
+                  "billingPrice": 499,
+                  "individualPrice": 913
                 },
                 {
                   "id": "professional",
                   "name": "Professional",
                   "color": "#7c3aed",
-                  "billingPrice": 899,
-                  "individualPrice": 1724
+                  "billingPrice": 999,
+                  "individualPrice": 1883
                 }
               ],
               "heading": "Price Savings Comparison",
@@ -3414,9 +3454,9 @@
               "baseLayoutWidth": 1500,
               "showAnnualSavings": true,
               "fullWidthBackground": true,
-              "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $9,900 Per Year</span></span>",
+              "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
               "headlineBlock": {
-                "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $9,900 Per Year</span></span>",
+                "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
                 "fontSize": 64,
                 "lineHeight": 1.1,
                 "fontFamily": "system-ui",
@@ -4152,74 +4192,285 @@
     }
   },
   "blockDefaults": {
+    "competitor-comparison": {
+      "title": "What you'd pay elsewhere",
+      "eyebrow": "our All-in-One Platform",
+      "subtitle": "We replace every tool below — one platform, one price.",
+      "alignment": "center",
+      "planName": "COMPETITOR ANALYSIS",
+      "planPrice": 359,
+      "planTagline": "Everything above, included",
+      "textColor": "#ffffff",
+      "fontFamily": "system-ui",
+      "fontWeight": "700",
+      "lineHeight": 1.04,
+      "textFontSize": 40,
+      "textLineHeight": 1.04,
+      "backgroundColor": "#121c26",
+      "baseLayoutWidth": 1500,
+      "rows": [
+        {
+          "logos": [
+            {
+              "name": "HubSpot",
+              "domain": "hubspot.com"
+            },
+            {
+              "name": "Salesforce",
+              "domain": "salesforce.com"
+            },
+            {
+              "name": "Pipedrive",
+              "domain": "pipedrive.com"
+            }
+          ],
+          "price": 97,
+          "category": "CRM & PIPELINE MANAGEMENT"
+        },
+        {
+          "logos": [
+            {
+              "name": "Mailchimp",
+              "domain": "mailchimp.com"
+            },
+            {
+              "name": "ActiveCampaign",
+              "domain": "activecampaign.com"
+            },
+            {
+              "name": "Klaviyo",
+              "domain": "klaviyo.com"
+            }
+          ],
+          "price": 99,
+          "category": "EMAIL MARKETING"
+        },
+        {
+          "logos": [
+            {
+              "name": "ClickFunnels",
+              "domain": "clickfunnels.com"
+            },
+            {
+              "name": "Leadpages",
+              "domain": "leadpages.com"
+            },
+            {
+              "name": "Unbounce",
+              "domain": "unbounce.com"
+            }
+          ],
+          "price": 97,
+          "category": "FUNNELS & WEBSITE BUILDER"
+        },
+        {
+          "logos": [
+            {
+              "name": "Twilio",
+              "domain": "twilio.com"
+            },
+            {
+              "name": "SimpleTexting",
+              "domain": "simpletexting.com"
+            },
+            {
+              "name": "Attentive",
+              "domain": "attentivemobile.com"
+            }
+          ],
+          "price": 89,
+          "category": "2-WAY SMS MARKETING"
+        },
+        {
+          "logos": [
+            {
+              "name": "Calendly",
+              "domain": "calendly.com"
+            },
+            {
+              "name": "Acuity",
+              "domain": "acuityscheduling.com"
+            },
+            {
+              "name": "Square",
+              "domain": "squareup.com"
+            }
+          ],
+          "price": 29,
+          "category": "BOOKING & APPOINTMENTS"
+        },
+        {
+          "logos": [
+            {
+              "name": "HubSpot",
+              "domain": "hubspot.com"
+            },
+            {
+              "name": "Zapier",
+              "domain": "zapier.com"
+            },
+            {
+              "name": "Keap",
+              "domain": "keap.com"
+            }
+          ],
+          "price": 169,
+          "category": "WORKFLOW AUTOMATIONS"
+        },
+        {
+          "logos": [
+            {
+              "name": "Teachable",
+              "domain": "teachable.com"
+            },
+            {
+              "name": "Kajabi",
+              "domain": "kajabi.com"
+            },
+            {
+              "name": "Thinkific",
+              "domain": "thinkific.com"
+            }
+          ],
+          "price": 99,
+          "category": "COURSES / PRODUCTS"
+        },
+        {
+          "logos": [
+            {
+              "name": "CallRail",
+              "domain": "callrail.com"
+            },
+            {
+              "name": "Twilio",
+              "domain": "twilio.com"
+            }
+          ],
+          "price": 49,
+          "category": "CALL TRACKING"
+        },
+        {
+          "logos": [
+            {
+              "name": "Birdeye",
+              "domain": "birdeye.com"
+            },
+            {
+              "name": "Podium",
+              "domain": "podium.com"
+            },
+            {
+              "name": "Grade.us",
+              "domain": "grade.us"
+            }
+          ],
+          "price": 159,
+          "category": "REPUTATION MANAGEMENT"
+        },
+        {
+          "logos": [
+            {
+              "name": "Amplitude",
+              "domain": "amplitude.com"
+            },
+            {
+              "name": "Mixpanel",
+              "domain": "mixpanel.com"
+            }
+          ],
+          "price": 299,
+          "category": "TRACKING & ANALYTICS"
+        },
+        {
+          "logos": [
+            {
+              "name": "Skool",
+              "domain": "skool.com"
+            },
+            {
+              "name": "Mighty Networks",
+              "domain": "mightynetworks.com"
+            },
+            {
+              "name": "Circle",
+              "domain": "circle.so"
+            }
+          ],
+          "price": 89,
+          "category": "COMMUNITIES"
+        },
+        {
+          "logos": [
+            {
+              "name": "DocuSign",
+              "domain": "docusign.com"
+            },
+            {
+              "name": "PandaDoc",
+              "domain": "pandadoc.com"
+            }
+          ],
+          "price": 47,
+          "category": "DOCUMENT SIGNING"
+        },
+        {
+          "logos": [
+            {
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184958398-monday-logo-png_seeklogo-394605.png",
+              "name": "Monday",
+              "domain": ""
+            },
+            {
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184964941-aha-logo-2x.png",
+              "name": "Aha",
+              "domain": ""
+            }
+          ],
+          "price": 39,
+          "category": "GHANTT CHARTS JOB BOARDS"
+        }
+      ]
+    },
     "grid-section": {
       "items": [
         {
-          "icon": "",
-          "link": "",
-          "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1679707860-2cd99574b08ca768371f.jpg",
-          "title": "Eliminate Platform Switching",
-          "content": "Access all your marketing tools in one unified dashboard. No more juggling between multiple platforms and losing productivity.",
-          "eyebrow": "All-in-One Platform",
-          "iconName": "",
-          "imageAlt": "1679707860",
-          "iconGlyph": "",
-          "iconImage": "",
-          "iconAssetId": "",
-          "imageHeight": 0,
-          "imageAssetId": "asset:generic/library-1679707860-2cd99574b08ca768371f.jpg",
-          "iconFontFamily": "dticon"
+          "id": "f6ecc632-c4b2-499a-b587-ddd24b267006",
+          "title": "Getting Started Guide",
+          "eyebrow": "Documentation",
+          "iconName": "book",
+          "content": "Everything you need to set up your account, import your contacts, and launch your first campaign in under 30 minutes.",
+          "link": "#",
+          "image": "https://images.unsplash.com/photo-1456406644174-8ddd4cd52a06?auto=format&fit=crop&w=800&q=80",
+          "imageAlt": "Getting started guide",
+          "imageHeight": 180
         },
         {
-          "icon": "💰",
-          "link": "",
-          "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1563981389-8fb7639e051d8252d771.jpg",
-          "title": "Reduce Subscription Costs",
-          "content": "Replace 5–10 separate subscriptions with one comprehensive platform. Save thousands annually while gaining more capabilities.",
-          "eyebrow": "Save Thousands",
-          "iconName": "",
-          "imageAlt": "1563981389",
-          "iconGlyph": "",
-          "iconImage": "",
-          "iconAssetId": "",
-          "imageHeight": 0,
-          "iconFontFamily": ""
+          "id": "493bdc0f-2fe9-480b-9ba4-858fdb85ea3c",
+          "title": "Live Demo — Book a Slot",
+          "eyebrow": "Sales",
+          "iconName": "calendar",
+          "content": "See Gr8 Result in action with one of our product specialists. We'll show you exactly how it maps to your business in 30 minutes.",
+          "link": "#",
+          "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80",
+          "imageAlt": "Book a demo",
+          "imageHeight": 180
         },
         {
-          "icon": "🔄",
-          "link": "",
-          "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-190997736-41e325c95b6b390272dc.png",
-          "title": "Streamline Workflows",
-          "content": "Connect all your marketing activities seamlessly. Data flows automatically between tools, eliminating manual data entry and errors.",
-          "eyebrow": "Automation Made Easy",
-          "iconName": "",
-          "imageAlt": "190997736",
-          "iconGlyph": "",
-          "iconImage": "",
-          "iconAssetId": "",
-          "imageHeight": 0,
-          "iconFontFamily": ""
-        },
-        {
-          "icon": "📈",
-          "link": "",
-          "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1809094467-c4a08735f77dc1b94f18.jpg",
-          "title": "Scale Faster",
-          "content": "Grow your business without platform limitations. Our infrastructure helps you to scale your business from startup to enterprise.  The sky is the limit.",
-          "eyebrow": "Built to Grow",
-          "iconName": "",
-          "imageAlt": "1809094467",
-          "iconGlyph": "",
-          "iconImage": "",
-          "iconAssetId": "",
-          "imageHeight": 0,
-          "iconFontFamily": ""
+          "id": "3ecd7539-0de3-4e8c-ac28-dbce3b79d818",
+          "title": "Agency Playbook — Free Download",
+          "eyebrow": "Resource",
+          "iconName": "download",
+          "content": "The complete 47-page playbook for digital agencies scaling to 7-figures using automation and AI tools.",
+          "link": "#",
+          "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80",
+          "imageAlt": "Agency playbook download",
+          "imageHeight": 180
         }
       ],
-      "title": "<span style=\"font-size: 48px; color: rgb(255, 192, 0);\">Real benefits that impact your bottom line from day one.</span>",
-      "columns": 4,
+      "title": "Resources to get you started faster",
+      "columns": 3,
       "eyebrow": "Our Platform",
-      "iconSize": 36,
+      "iconSize": 24,
       "alignment": "left",
       "bodyBlock": {
         "color": "#bdbcbf",
@@ -4231,44 +4482,44 @@
         "lineHeight": 1.6
       },
       "columnGap": 24,
-      "iconColor": "",
-      "textColor": "#000000",
+      "iconColor": "#818cf8",
+      "textColor": "#ffffff",
       "fontFamily": "system-ui",
       "fontWeight": "600",
       "lineHeight": 1.2,
-      "borderColor": "rgba(148,163,184,0.22)",
+      "borderColor": "rgba(99,102,241,.15)",
       "buttonColor": "#ffffff",
-      "cardStagger": 0.1,
+      "cardStagger": 0.12,
       "gridVariant": "services",
-      "imageRadius": 16,
+      "imageRadius": 14,
       "subheadline": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
       "cardBodySize": 16,
-      "columnRadius": 22,
-      "columnShadow": "soft",
+      "columnRadius": 20,
+      "columnShadow": "glow",
       "eyebrowColor": "",
       "textFontSize": 28,
-      "blockMaxWidth": 1700,
+      "blockMaxWidth": 1100,
       "bodyAnimation": "fade-up",
-      "cardAnimation": "zoom",
+      "cardAnimation": "fade-up",
       "cardTitleSize": 28,
-      "columnPadding": 22,
-      "iconAnimation": "rotate-in-down-right",
+      "columnPadding": 28,
+      "iconAnimation": "fade-up",
       "iconBadgeWidth": 90,
       "imageAnimation": "zoom",
       "pageBackground": "#121c26",
       "textLineHeight": 1.2,
       "titleAnimation": "fade-up",
-      "backgroundColor": "",
+      "backgroundColor": "#0a0a0f",
       "baseLayoutWidth": 1500,
       "buttonTextColor": "#00b0f0",
-      "columnBodyColor": "",
+      "columnBodyColor": "rgba(255,255,255,.6)",
       "eyebrowFontSize": 20,
       "iconBadgeHeight": 90,
-      "stretchToCanvas": true,
-      "columnTitleColor": "",
-      "columnsTopMargin": 18,
-      "sectionAnimation": "light-speed-in",
-      "columnBorderColor": "#ec4899",
+      "stretchToCanvas": false,
+      "columnTitleColor": "#ffffff",
+      "columnsTopMargin": 40,
+      "sectionAnimation": "fade-up",
+      "columnBorderColor": "rgba(99,102,241,.2)",
       "gridItemMinHeight": 0,
       "headingFontFamily": "Verdana",
       "sectionTitleColor": "",
@@ -4276,15 +4527,479 @@
       "headlineFontFamily": "Verdana",
       "servicesLayoutMode": "grid",
       "cardBackgroundColor": "",
-      "iconBackgroundColor": "",
+      "iconBackgroundColor": "rgba(99,102,241,.15)",
       "servicesColorPreset": "blue",
       "servicesStylePreset": "style-03",
       "subheadlineFontSize": 18,
       "columnsVerticalAlign": "top",
-      "columnBackgroundColor": "",
+      "columnBackgroundColor": "#0f1729",
       "subheadlineLineHeight": 1.6,
-      "surfaceAnimationSpeed": 0.3,
-      "sectionBackgroundImage": "/imported/gr8-services/software.png"
+      "surfaceAnimationSpeed": 0.8,
+      "sectionBackgroundImage": "/imported/gr8-services/software.png",
+      "backgroundGradient": "linear-gradient(180deg,#0a0a0f 0%,#0d1b2a 100%)"
+    },
+    "marquee-strip": {
+      "items": [
+        {
+          "text": "CRM & Pipeline",
+          "icon": "✦"
+        },
+        {
+          "text": "Email Automation",
+          "icon": "✦"
+        },
+        {
+          "text": "Funnel Builder",
+          "icon": "✦"
+        },
+        {
+          "text": "AI Phone System",
+          "icon": "✦"
+        },
+        {
+          "text": "Social Scheduler",
+          "icon": "✦"
+        },
+        {
+          "text": "Website Builder",
+          "icon": "✦"
+        },
+        {
+          "text": "Affiliate Management",
+          "icon": "✦"
+        },
+        {
+          "text": "Project Intelligence",
+          "icon": "✦"
+        },
+        {
+          "text": "SMS & Broadcasts",
+          "icon": "✦"
+        },
+        {
+          "text": "Reporting & Analytics",
+          "icon": "✦"
+        }
+      ],
+      "speed": 35,
+      "direction": "left",
+      "backgroundColor": "#0f172a",
+      "textColor": "#94a3b8",
+      "accentColor": "#6366f1",
+      "fontSize": 14,
+      "fontWeight": "600",
+      "letterSpacing": "0.1em",
+      "textTransform": "uppercase",
+      "paddingY": 18,
+      "gap": 48,
+      "duplicateCount": 2,
+      "pauseOnHover": true,
+      "divider": "dot",
+      "borderTop": "1px solid rgba(255,255,255,.06)",
+      "borderBottom": "1px solid rgba(255,255,255,.06)"
+    },
+    "stats": {
+      "statsVariant": "spotlight-orbs",
+      "backgroundColor": "#0a0a0f",
+      "backgroundGradient": "linear-gradient(180deg,#0a0a0f 0%,#0d1b2a 100%)",
+      "accentColor": "#6366f1",
+      "eyebrow": "By the numbers",
+      "title": "Real results for real businesses",
+      "textColor": "#ffffff",
+      "subtleColor": "rgba(255,255,255,.5)",
+      "sectionAnimation": "fade-up",
+      "cardAnimation": "fade-up",
+      "cardStagger": 0.15,
+      "animationSpeed": 0.9,
+      "countDuration": 2200,
+      "items": [
+        {
+          "id": "891bb80f-4e4b-49ab-b188-a5370e6b306c",
+          "value": 4800,
+          "prefix": "",
+          "suffix": "+",
+          "label": "Active Users",
+          "description": "Businesses running on the Gr8 Result platform right now"
+        },
+        {
+          "id": "e62eb014-be94-4dc5-85e0-748f0f3c3a2e",
+          "value": 94,
+          "prefix": "",
+          "suffix": "%",
+          "label": "Client Retention",
+          "description": "Average 12-month retention rate across all plan tiers"
+        },
+        {
+          "id": "54e0f0cb-cd43-4d2c-bacd-6e54012a77eb",
+          "value": 3,
+          "prefix": "",
+          "suffix": "x",
+          "label": "Revenue Growth",
+          "description": "Average revenue increase reported by clients after 6 months"
+        }
+      ]
+    },
+    "trust-badges": {
+      "title": "Trusted by leading digital agencies",
+      "titleVisible": true,
+      "titleAlignment": "center",
+      "badgeVariant": "logo-row",
+      "backgroundColor": "#0d1b2a",
+      "textColor": "rgba(255,255,255,.35)",
+      "columns": 5,
+      "logoHeight": 36,
+      "grayscale": true,
+      "hoverColor": true,
+      "paddingY": 56,
+      "sectionAnimation": "fade-up",
+      "items": [
+        {
+          "id": "42886ffe-fc36-4738-8311-5afb5801bcc1",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/1200px-Google_2015_logo.svg.png",
+          "alt": "Google"
+        },
+        {
+          "id": "7ec1f72d-5846-474b-96e4-0217715b8ebb",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/1200px-Netflix_2015_logo.svg.png",
+          "alt": "Netflix"
+        },
+        {
+          "id": "bb93e283-bde2-475c-a2ca-bb71672a4326",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1200px-Amazon_logo.svg.png",
+          "alt": "Amazon"
+        },
+        {
+          "id": "b7f0fa9a-6437-457a-aa63-62833f0734e1",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/1280px-Microsoft_logo_%282012%29.svg.png",
+          "alt": "Microsoft"
+        },
+        {
+          "id": "404d96bf-a727-4881-addc-d31d37bc358a",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1200px-Spotify_logo_without_text.svg.png",
+          "alt": "Spotify"
+        }
+      ]
+    },
+    "testimonial": {
+      "testimonialVariant": "stacked-card",
+      "spacingScale": "normal",
+      "backgroundColor": "#0a0a0f",
+      "textColor": "#ffffff",
+      "cardBackgroundColor": "#0f1729",
+      "cardBorderColor": "rgba(99,102,241,.2)",
+      "accentColor": "#6366f1",
+      "eyebrow": "Client Stories",
+      "title": "The platform agencies can't stop talking about",
+      "sectionAnimation": "fade-up",
+      "autoplay": true,
+      "autoplaySpeed": 5000,
+      "items": [
+        {
+          "id": "8ff27e7f-e8ca-4f4a-b79b-9e7c0a5eefe3",
+          "text": "We switched to Gr8 Result six months ago and cut our tool stack from 9 apps to 1. Our team saves 12 hours a week and our lead-to-close rate is up 40%.",
+          "author": "Sarah Mitchell",
+          "role": "CEO, Elevate Digital Agency",
+          "avatar": "https://i.pravatar.cc/80?img=47",
+          "rating": 5
+        },
+        {
+          "id": "225b5cab-fe01-4c8d-bc89-f68aaed376cf",
+          "text": "The CRM and email automation alone are worth the price. But the AI phone system? That's what blew our team away. We're handling 3× the leads without adding headcount.",
+          "author": "James Okafor",
+          "role": "Founder, Apex Growth Co.",
+          "avatar": "https://i.pravatar.cc/80?img=12",
+          "rating": 5
+        },
+        {
+          "id": "ef6e9cdc-a050-45c6-8d21-c70bb86cf89f",
+          "text": "Their onboarding team had us live in under a week. The website builder replaced our old drag-and-drop tool and the funnel templates are stunning.",
+          "author": "Priya Nair",
+          "role": "Marketing Director, LaunchLab",
+          "avatar": "https://i.pravatar.cc/80?img=31",
+          "rating": 5
+        },
+        {
+          "id": "92c11cc1-150a-4b49-801e-3e1f8578b8cd",
+          "text": "I've tried every all-in-one platform. Gr8 Result is the first one that doesn't sacrifice depth for breadth. Best decision we made this year.",
+          "author": "Tom Hargreaves",
+          "role": "Operations Manager, Sprint Media",
+          "avatar": "https://i.pravatar.cc/80?img=57",
+          "rating": 5
+        },
+        {
+          "id": "2fe9c52e-e1f1-4c42-b37b-b6aaa32e4de3",
+          "text": "Finally a platform that thinks like an agency. The reporting, the pipelines, the automation — it all clicks together. Support team is exceptional too.",
+          "author": "Angela Yip",
+          "role": "Head of Growth, NovaSpark",
+          "avatar": "https://i.pravatar.cc/80?img=23",
+          "rating": 5
+        }
+      ]
+    },
+    "feature-accordion": {
+      "eyebrow": "Platform Capabilities",
+      "title": "Everything you need to grow. Nothing you don't.",
+      "backgroundColor": "#0d1b2a",
+      "textColor": "#ffffff",
+      "accentColor": "#6366f1",
+      "imagePosition": "right",
+      "cardInset": 24,
+      "cardGap": 16,
+      "cardHeight": 440,
+      "items": [
+        {
+          "id": "d89275a3-2c51-435e-baa1-b6f09e201300",
+          "label": "Visual Funnel Builder",
+          "panelBg": "#3730a3",
+          "accentColor": "#818cf8",
+          "image": "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?auto=format&fit=crop&w=1200&q=80",
+          "imageAlt": "Funnel builder interface",
+          "contentBlocks": [
+            {
+              "id": "bef48665-028c-4e4c-8e17-d2981befccf9",
+              "type": "eyebrow",
+              "text": "Funnels"
+            },
+            {
+              "id": "fc88118b-fe78-4274-8661-83c56a9c4563",
+              "type": "heading",
+              "text": "Build high-converting funnels without code"
+            },
+            {
+              "id": "f036a972-697c-492d-9acf-98de9c5964c4",
+              "type": "text",
+              "text": "Drag-and-drop funnel pages with A/B testing, conversion tracking, and real-time analytics built right in."
+            },
+            {
+              "id": "744ba24c-8a21-4158-8a33-9fa67e9046a5",
+              "type": "stat",
+              "number": "60+",
+              "label": "funnel templates"
+            },
+            {
+              "id": "8a446b10-74b1-4e9f-bdc4-e61bcde7603c",
+              "type": "stat",
+              "number": "3.4×",
+              "label": "average conversion lift"
+            },
+            {
+              "id": "796693da-90c4-40ab-a6f2-58b7f6c85796",
+              "type": "tags",
+              "tags": [
+                "Drag & Drop",
+                "A/B Testing",
+                "Analytics"
+              ]
+            },
+            {
+              "id": "d0ac80ee-a6e7-465d-b152-cf5f3fdb90e0",
+              "type": "cta",
+              "text": "Explore Funnels",
+              "link": "#"
+            }
+          ]
+        },
+        {
+          "id": "3b6758ba-9514-40a1-b036-185a3f15088f",
+          "label": "AI Reporting Dashboard",
+          "panelBg": "#0c4a6e",
+          "accentColor": "#38bdf8",
+          "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+          "imageAlt": "Analytics dashboard",
+          "contentBlocks": [
+            {
+              "id": "2accb629-a400-40ab-a11f-9a189731fe2b",
+              "type": "eyebrow",
+              "text": "Reporting"
+            },
+            {
+              "id": "e9add47b-d303-4598-9b79-d8506cc58778",
+              "type": "heading",
+              "text": "Know your numbers. Grow your business."
+            },
+            {
+              "id": "27fbf698-3fa2-4464-b955-e493e08e0d8c",
+              "type": "text",
+              "text": "Real-time dashboards for every team. Track pipeline velocity, email performance, ad spend, and team utilisation from one view."
+            },
+            {
+              "id": "4f91330e-2227-45b9-b681-3a7be21cdeb8",
+              "type": "stat",
+              "number": "35+",
+              "label": "report types"
+            },
+            {
+              "id": "412f4551-b6af-4aee-be77-88af3d740682",
+              "type": "stat",
+              "number": "Real-time",
+              "label": "data refresh"
+            },
+            {
+              "id": "338cf6a3-c925-4c9d-a2ef-8684480cdbb6",
+              "type": "tags",
+              "tags": [
+                "Dashboards",
+                "Pipeline",
+                "ROI"
+              ]
+            },
+            {
+              "id": "2259cd54-5afb-493f-9b6f-0f9fcc9bcd77",
+              "type": "cta",
+              "text": "See Reporting",
+              "link": "#"
+            }
+          ]
+        },
+        {
+          "id": "b22f0ec9-f745-4b02-a3a9-d2b07941c33e",
+          "label": "AI Telephone System",
+          "panelBg": "#14532d",
+          "accentColor": "#4ade80",
+          "image": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+          "imageAlt": "Phone system interface",
+          "contentBlocks": [
+            {
+              "id": "c3848a1e-9e09-4e52-a5c9-5b8e51e4adcb",
+              "type": "eyebrow",
+              "text": "Telephony"
+            },
+            {
+              "id": "9addbea6-cdc1-4f62-92d9-a39746656b81",
+              "type": "heading",
+              "text": "An AI phone system that never sleeps"
+            },
+            {
+              "id": "c10ad412-a6b0-4039-863f-8e21fb1c4cdd",
+              "type": "text",
+              "text": "Inbound call routing, AI transcription, call scoring, and CRM logging — all automated. Never miss a lead again."
+            },
+            {
+              "id": "144526dc-eb94-4733-9540-12d1c8c66aac",
+              "type": "stat",
+              "number": "99.9%",
+              "label": "uptime SLA"
+            },
+            {
+              "id": "c90235f4-9323-4ada-b191-3934164fbe24",
+              "type": "stat",
+              "number": "AI",
+              "label": "call transcription"
+            },
+            {
+              "id": "4c2f96db-8c3b-41d3-832f-b2f8025b4d8b",
+              "type": "tags",
+              "tags": [
+                "Inbound",
+                "AI",
+                "Transcription"
+              ]
+            },
+            {
+              "id": "f69f1692-a707-436a-abae-ced459d776a8",
+              "type": "cta",
+              "text": "Explore Telephony",
+              "link": "#"
+            }
+          ]
+        },
+        {
+          "id": "0cef1395-1b91-4f7a-9c5e-5eddaada95d1",
+          "label": "Affiliate Management",
+          "panelBg": "#4a1d96",
+          "accentColor": "#c4b5fd",
+          "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+          "imageAlt": "Affiliate dashboard",
+          "contentBlocks": [
+            {
+              "id": "8a48a895-91e2-4eec-9ad4-41dbfbecbf86",
+              "type": "eyebrow",
+              "text": "Affiliates"
+            },
+            {
+              "id": "0671e66c-3680-4cef-8556-a94e280f9e38",
+              "type": "heading",
+              "text": "Turn your clients into your best sales team"
+            },
+            {
+              "id": "ba5a124f-d57a-49ec-8dbd-914959325914",
+              "type": "text",
+              "text": "Launch and manage affiliate programmes with unique links, automated commission tracking, and instant payouts."
+            },
+            {
+              "id": "306069b0-75ab-4a87-9c1e-41394a604111",
+              "type": "stat",
+              "number": "Instant",
+              "label": "commission tracking"
+            },
+            {
+              "id": "fe2d6c6a-9178-496c-b01e-471b497c2b5f",
+              "type": "stat",
+              "number": "Unlimited",
+              "label": "affiliate partners"
+            },
+            {
+              "id": "b8f5c59a-d0e5-41d0-a2eb-e043d5ef445a",
+              "type": "tags",
+              "tags": [
+                "Affiliates",
+                "Commissions",
+                "Growth"
+              ]
+            },
+            {
+              "id": "496984c0-eada-4fa6-9463-ba7e7b9a0a2e",
+              "type": "cta",
+              "text": "Explore Affiliates",
+              "link": "#"
+            }
+          ]
+        }
+      ]
+    },
+    "cta-button": {
+      "eyebrow": "<br>",
+      "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+      "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+      "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Clich Here To Start Your 14 Day Free Trial</span></span></span>",
+      "link": "https://gr8result.digital/login.",
+      "note": "<br>",
+      "style": "stacked-card",
+      "size": "large",
+      "alignment": "center",
+      "backgroundColor": "#121c26",
+      "textColor": "#ffffff",
+      "buttonColor": "#00b0f0",
+      "buttonTextColor": "#1f2937",
+      "borderColor": "rgba(255,255,255,0.18)",
+      "baseLayoutWidth": 1500,
+      "fullWidthBackground": true
+    },
+    "text": {
+      "text": "",
+      "alignment": "left",
+      "textSize": "medium",
+      "textFontSize": 18,
+      "fontFamily": "system-ui",
+      "fontWeight": "400",
+      "minHeight": "120px",
+      "fullWidthBackground": false,
+      "enableParallax": false,
+      "textColor": "#e6eef5",
+      "backgroundColor": "#111827",
+      "backgroundImage": "",
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "textLineHeight": 1.35,
+      "verticalAlign": "top",
+      "contentY": 32,
+      "contentHeight": 120,
+      "textAnimation": "fade-in",
+      "baseLayoutWidth": 1500,
+      "hideBorder": true
+    },
+    "space": {
+      "height": "42px"
     }
   }
 }

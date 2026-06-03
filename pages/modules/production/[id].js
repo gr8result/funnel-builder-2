@@ -10,24 +10,24 @@ import { supabase } from "../../../utils/supabase-client";
 // ─── Production stages (columns) ─────────────────────────────────────────────
 
 const STAGES = [
-  { key: "quote_req",    label: "Quote\nReq'd",     color: "#8b5cf6" },
+  { key: "quote_req",    label: "Quote\nReq'd",     color: "#a855f7" },
   { key: "quote_rcvd",   label: "Quote\nRcvd",      color: "#7c3aed" },
-  { key: "quote_appr",   label: "Quote\nApproved",  color: "#a855f7" },
+  { key: "quote_appr",   label: "Quote\nApproved",  color: "#6366f1" },
   { key: "sample_req",   label: "Sample\nReq'd",    color: "#3b82f6" },
-  { key: "sample_appr",  label: "Sample\nOK",       color: "#2563eb" },
+  { key: "sample_appr",  label: "Sample\nOK",       color: "#06b6d4" },
   { key: "ordered",      label: "Ordered",          color: "#f59e0b" },
-  { key: "eta_conf",     label: "ETA\nConf'd",      color: "#d97706" },
+  { key: "eta_conf",     label: "ETA\nConf'd",      color: "#f97316" },
   { key: "delivered",    label: "Delivered",        color: "#ef4444" },
-  { key: "on_site",      label: "On Site\nVerified",color: "#f97316" },
+  { key: "on_site",      label: "On Site\nVerified",color: "#ec4899" },
   { key: "installed",    label: "Installed",        color: "#22c55e" },
-  { key: "signed_off",   label: "Signed\nOff",      color: "#15803d" },
+  { key: "signed_off",   label: "Signed\nOff",      color: "#14b8a6" },
 ];
 
 const STATUS = {
   done:        { bg: "#22c55e", border: "none",              text: "#fff",    icon: "✓" },
   in_progress: { bg: "#f59e0b", border: "none",              text: "#fff",    icon: "◑" },
-  pending:     { bg: "#1e293b", border: "1px solid #374151", text: "#4b5563", icon: "" },
-  na:          { bg: "#0f0f1a", border: "1px solid #1e293b", text: "#374151", icon: "—" },
+  pending:     { bg: "#334155", border: "1px solid #64748b", text: "#cbd5e1", icon: "○" },
+  na:          { bg: "#1e293b", border: "1px solid #334155", text: "#475569", icon: "—" },
 };
 
 function fmtDate(d) {
@@ -51,6 +51,15 @@ export default function ProductionBoard() {
   const [cellForm, setCellForm]         = useState({ status: "pending", notes: "", completed_by: "" });
   const [savingCell, setSavingCell]     = useState(false);
 
+  // Session + team members for "Who actioned this?" dropdown
+  const [session, setSession]                     = useState(null);
+  const [teamMembers, setTeamMembers]             = useState([]);
+
+  // Per-job stage config: overrides for label / colour (stored in localStorage)
+  const [stageConfig, setStageConfig]             = useState({});
+  const [editingStageKey, setEditingStageKey]     = useState(null);
+  const [editingStageForm, setEditingStageForm]   = useState({ label: "", color: "" });
+
   // Add items modal
   const [showAdd, setShowAdd]     = useState(false);
   const [addMode, setAddMode]     = useState("single"); // "single" | "bulk"
@@ -65,6 +74,31 @@ export default function ProductionBoard() {
     if (!router.isReady || !id) return;
     loadBoard();
   }, [router.isReady, id]);
+
+  // Load Supabase session so we can call the team-members API
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => setSession(s));
+  }, []);
+
+  // Load per-job stage config from localStorage
+  useEffect(() => {
+    if (!id) return;
+    try {
+      const saved = localStorage.getItem(`prod_stage_cfg_${id}`);
+      if (saved) setStageConfig(JSON.parse(saved));
+    } catch {}
+  }, [id]);
+
+  // Fetch team members once session is available
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch("/api/production/team-members", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((j) => { if (j.ok) setTeamMembers(j.members || []); })
+      .catch(() => {});
+  }, [session]);
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +159,17 @@ export default function ProductionBoard() {
   function colProgress(stageKey) {
     const done = items.filter((it) => statusMap[it.id]?.[stageKey]?.status === "done").length;
     return { done, total: items.length };
+  }
+
+  // Stage config helpers (falls back to STAGES defaults)
+  function stageLabel(stage) { return stageConfig[stage.key]?.label ?? stage.label; }
+  function stageColor(stage) { return stageConfig[stage.key]?.color ?? stage.color; }
+  function saveStageEdit() {
+    if (!editingStageKey || !editingStageForm.label.trim()) return;
+    const updated = { ...stageConfig, [editingStageKey]: { label: editingStageForm.label.trim(), color: editingStageForm.color } };
+    setStageConfig(updated);
+    try { localStorage.setItem(`prod_stage_cfg_${id}`, JSON.stringify(updated)); } catch {}
+    setEditingStageKey(null);
   }
 
   // ── Cell click ────────────────────────────────────────────────────────────
@@ -241,23 +286,29 @@ export default function ProductionBoard() {
       <Head><title>{job.name} — Production Board</title></Head>
       <div style={S.page}>
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <div style={S.header}>
-          <div>
-            <Link href="/modules/production" style={S.backLink}>← Production Jobs</Link>
-            <h1 style={S.jobTitle}>{job.name}</h1>
-            {job.client_name && <div style={S.jobSub}>👤 {job.client_name}</div>}
-            {job.description  && <div style={{ ...S.jobSub, fontStyle: "italic" }}>{job.description}</div>}
+        {/* ── Banner ──────────────────────────────────────────────────── */}
+        <div style={S.banner}>
+          <div style={S.bannerLeft}>
+            <span style={S.bannerIcon}>⚙️</span>
+            <div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>
+                <Link href="/modules/production" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none" }}>← Production Jobs</Link>
+              </div>
+              <h1 style={S.bannerTitle}>{job.name}</h1>
+              <p style={S.bannerDesc}>
+                {job.client_name && <span>👤 {job.client_name}&nbsp;·&nbsp;</span>}
+                {overallPct}% complete&nbsp;·&nbsp;{completeItems} of {items.length} items done
+              </p>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-            {/* Stats */}
+          <div style={{ display: "flex", gap: 10 }}>
             <div style={S.statBox}>
               <div style={S.statNum}>{overallPct}%</div>
               <div style={S.statLbl}>Overall</div>
             </div>
             <div style={S.statBox}>
               <div style={{ ...S.statNum, color: "#22c55e" }}>{completeItems}</div>
-              <div style={S.statLbl}>of {items.length} items done</div>
+              <div style={S.statLbl}>of {items.length}</div>
             </div>
             <button style={S.addBtn} onClick={() => setShowAdd(true)}>+ Add Items</button>
           </div>
@@ -289,7 +340,7 @@ export default function ProductionBoard() {
             ))}
           </div>
           <div style={{ fontSize: 16, color: "#9ca3af", marginLeft: "auto" }}>
-            Click any cell to view / update
+            Click column header to rename/recolour · Click cell to update
           </div>
         </div>
 
@@ -314,12 +365,18 @@ export default function ProductionBoard() {
                   {STAGES.map((stage) => {
                     const cp  = colProgress(stage.key);
                     const pct = cp.total ? Math.round((cp.done / cp.total) * 100) : 0;
+                    const lbl = stageLabel(stage);
+                    const clr = stageColor(stage);
                     return (
                       <th key={stage.key} style={{ ...S.th, position: "sticky", top: 0, zIndex: 20, width: 54, minWidth: 54, padding: "6px 2px" }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: stage.color, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-line" }}>
-                          {stage.label}
+                        <div
+                          title="Click to rename or change colour"
+                          style={{ fontSize: 13, fontWeight: 700, color: clr, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre-line", cursor: "pointer", userSelect: "none" }}
+                          onClick={() => { setEditingStageKey(stage.key); setEditingStageForm({ label: lbl, color: clr }); }}
+                        >
+                          {lbl}
                         </div>
-                        <div style={{ fontSize: 16, color: pct === 100 ? "#22c55e" : "#4b5563", marginTop: 3 }}>
+                        <div style={{ fontSize: 11, color: pct === 100 ? "#22c55e" : "#4b5563", marginTop: 3 }}>
                           {cp.done}/{cp.total}
                         </div>
                       </th>
@@ -368,7 +425,7 @@ export default function ProductionBoard() {
                           <td key={stage.key} style={{ ...S.td, background: rowBg, textAlign: "center", padding: "4px 2px" }}>
                             <button
                               onClick={() => handleCellClick(item, stage)}
-                              title={`${item.name} — ${stage.label.replace("\n", " ")}: ${rec.status}${rec.notes ? "\n" + rec.notes : ""}`}
+                              title={`${item.name} — ${stageLabel(stage).replace("\n", " ")}: ${rec.status}${rec.notes ? "\n" + rec.notes : ""}`}
                               style={{
                                 width: 36, height: 36, borderRadius: 8,
                                 background: st.bg,
@@ -410,8 +467,8 @@ export default function ProductionBoard() {
             {/* Popup header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: selectedCell.stage.color, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
-                  {selectedCell.stage.label.replace("\n", " ")}
+                <div style={{ fontSize: 16, fontWeight: 600, color: stageColor(selectedCell.stage), textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
+                  {stageLabel(selectedCell.stage).replace("\n", " ")}
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 600, color: "#f1f5f9" }}>{selectedCell.item.name}</div>
                 {(selectedCell.item.category || selectedCell.item.supplier) && (
@@ -463,13 +520,29 @@ export default function ProductionBoard() {
 
             {/* Completed by */}
             <label style={S.fl}>
-              Completed by
-              <input
-                style={S.input}
-                placeholder="Name / initials"
-                value={cellForm.completed_by}
-                onChange={(e) => setCellForm((f) => ({ ...f, completed_by: e.target.value }))}
-              />
+              Who actioned this?
+              {teamMembers.length > 0 ? (
+                <select
+                  style={{ ...S.input, cursor: "pointer" }}
+                  value={cellForm.completed_by}
+                  onChange={(e) => setCellForm((f) => ({ ...f, completed_by: e.target.value }))}
+                >
+                  <option value="">— Select team member —</option>
+                  {teamMembers.map((m) => (
+                    <option key={m.user_id} value={m.name}>{m.name}</option>
+                  ))}
+                  {cellForm.completed_by && !teamMembers.some((m) => m.name === cellForm.completed_by) && (
+                    <option value={cellForm.completed_by}>{cellForm.completed_by} (previous)</option>
+                  )}
+                </select>
+              ) : (
+                <input
+                  style={S.input}
+                  placeholder="Name / initials"
+                  value={cellForm.completed_by}
+                  onChange={(e) => setCellForm((f) => ({ ...f, completed_by: e.target.value }))}
+                />
+              )}
             </label>
 
             {/* Notes */}
@@ -488,6 +561,46 @@ export default function ProductionBoard() {
               <button style={S.saveBtn} onClick={saveCellUpdate} disabled={savingCell}>
                 {savingCell ? "Saving…" : "Save"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stage Edit Popup ──────────────────────────────────────────────── */}
+      {editingStageKey && (
+        <div style={S.overlay} onClick={() => setEditingStageKey(null)}>
+          <div style={{ ...S.popup, width: "min(360px, 95vw)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: "#f1f5f9" }}>Edit Stage Heading</div>
+            <label style={S.fl}>
+              Label
+              <input
+                autoFocus
+                style={S.input}
+                value={editingStageForm.label}
+                onChange={(e) => setEditingStageForm((f) => ({ ...f, label: e.target.value }))}
+                onKeyDown={(e) => e.key === "Enter" && saveStageEdit()}
+              />
+            </label>
+            <label style={S.fl}>
+              Colour
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                <input
+                  type="color"
+                  value={editingStageForm.color}
+                  onChange={(e) => setEditingStageForm((f) => ({ ...f, color: e.target.value }))}
+                  style={{ width: 48, height: 36, border: "none", borderRadius: 6, cursor: "pointer", background: "none", padding: 0 }}
+                />
+                <input
+                  style={{ ...S.input, flex: 1 }}
+                  value={editingStageForm.color}
+                  onChange={(e) => setEditingStageForm((f) => ({ ...f, color: e.target.value }))}
+                  placeholder="#hexcolor"
+                />
+              </div>
+            </label>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button style={S.cancelBtn} onClick={() => setEditingStageKey(null)}>Cancel</button>
+              <button style={S.saveBtn} onClick={saveStageEdit}>Save</button>
             </div>
           </div>
         </div>
@@ -586,13 +699,20 @@ export default function ProductionBoard() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const S = {
-  page:      { minHeight: "100vh", background: "#0f0f1a", color: "#f1f5f9", padding: "22px 20px", fontFamily: "system-ui, -apple-system, sans-serif" },
-  loadScreen:{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f1a", color: "#9ca3af", fontSize: 16, fontFamily: "system-ui, sans-serif", gap: 8 },
+  page:      { minHeight: "100vh", background: "#0f0f1a", color: "#f1f5f9", fontFamily: "system-ui, -apple-system, sans-serif" },
+  loadScreen:{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f0f1a", color: "#9ca3af", fontSize: 14, fontFamily: "system-ui, sans-serif", gap: 8 },
 
-  header:  { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 },
-  backLink:{ fontSize: 16, color: "#3b82f6", textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 6 },
-  jobTitle:{ fontSize: 24, fontWeight: 600, margin: 0 },
-  jobSub:  { fontSize: 16, color: "#9ca3af", marginTop: 2 },
+  // Banner
+  banner:     { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)", padding: "20px 24px", marginBottom: 14, flexWrap: "wrap" },
+  bannerLeft: { display: "flex", alignItems: "center", gap: 16 },
+  bannerIcon: { fontSize: 44, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.16)", borderRadius: 999, width: 68, height: 68, flexShrink: 0 },
+  bannerTitle:{ margin: 0, fontSize: 22, fontWeight: 600, lineHeight: 1.15, color: "#fff" },
+  bannerDesc: { margin: "3px 0 0", fontSize: 13, opacity: 0.9, color: "#fff" },
+
+  header:  { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12, padding: "0 20px" },
+  backLink:{ fontSize: 13, color: "#3b82f6", textDecoration: "none", fontWeight: 500, display: "block", marginBottom: 6 },
+  jobTitle:{ fontSize: 22, fontWeight: 600, margin: 0 },
+  jobSub:  { fontSize: 13, color: "#9ca3af", marginTop: 2 },
 
   statBox: { background: "#1a1a2e", border: "1px solid #334155", borderRadius: 10, padding: "8px 16px", textAlign: "center" },
   statNum: { fontSize: 22, fontWeight: 600, color: "#3b82f6" },

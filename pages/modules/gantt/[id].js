@@ -40,6 +40,16 @@ const STATUS_OPTS = [
 ];
 const STATUS_COLOR = Object.fromEntries(STATUS_OPTS.map((s) => [s.key, s.color]));
 
+// ─── Trade tag options for contact tagging ───────────────────────────────────
+const TRADE_TAGS = [
+  "Builder", "Architect", "Designer", "Engineer", "Surveyor", "Certifier",
+  "Excavator", "Concreter", "Framer", "Roofer", "Bricklayer", "Renderer",
+  "Electrician", "Plumber", "HVAC", "Insulation", "Plasterer",
+  "Waterproofer", "Tiler", "Painter", "Carpenter", "Glazier",
+  "Flooring", "Cabinet Maker", "Stone Mason", "Landscaper",
+  "Fencing", "Garage Door", "Window Installer", "Cleaner", "Inspector",
+];
+
 // ─── Full 63-task construction template ─────────────────────────────────────
 const DEFAULT_TEMPLATE = [
   // PRE-CONSTRUCTION
@@ -158,25 +168,44 @@ export default function GanttChart() {
   const [project, setProject]         = useState(null);
   const [tasks, setTasks]             = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [zoom, setZoom]               = useState("month");    // quarter | month | week
-  const [showDeps, setShowDeps]       = useState(false);
+  const [zoom, setZoom]               = useState("quarter");   // quarter | month | week | fit
+  const [showDeps, setShowDeps]       = useState(true);
   const [collapsedPhases, setCollapsedPhases] = useState(new Set());
   const [editTask, setEditTask]       = useState(null);       // task being edited
   const [editForm, setEditForm]       = useState({});
   const [saving, setSaving]           = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
-  const [addForm, setAddForm]         = useState({ name: "", phase: "Pre-Construction", start_day: 0, duration_days: 7, assigned_trade: "", is_milestone: false, is_long_lead: false, notes: "" });
+  const [addForm, setAddForm]         = useState({ name: "", phase: "Pre-Construction", start_day: 0, duration_days: 7, assigned_trade: "", contact_id: "", is_milestone: false, is_long_lead: false, notes: "" });
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [todayLine, setTodayLine]     = useState(null); // day offset from project start
   const [taskDrag, setTaskDrag]     = useState(null); // { taskId, startX, deltaDay, affectedIds }
   const [taskResize, setTaskResize] = useState(null); // { taskId, origDuration, startX, deltaDays }
+
+  // ── Trade contacts ───────────────────────────────────────────────────────
+  const [contacts, setContacts]       = useState([]);
+  const [showContacts, setShowContacts] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", company: "", email: "", phone: "", tags: [], notes: "" });
+  const [editContact, setEditContact] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [showDelayModal, setShowDelayModal] = useState(false);
+  const [delayDays, setDelayDays]     = useState(7);
+  const [highlightedDay, setHighlightedDay] = useState(null);
+  const [showSettings, setShowSettings]   = useState(false);
+  const [settingsForm, setSettingsForm]   = useState({ name: "", client_name: "", job_address: "", start_date: "" });
 
   const scrollRef     = useRef(null);
   const taskDragRef   = useRef(null);
   const taskResizeRef = useRef(null);
   const latestRef     = useRef({});
   const dayWidthRef   = useRef(DAY_W_MAP["month"] || 7);
-  const dayWidth      = DAY_W_MAP[zoom] || 7;
+  // 'fit' zoom: auto-calculates dayWidth to fill the scroll container
+  const fitDayWidth = useMemo(() => {
+    if (zoom !== "fit" || !scrollRef.current) return null;
+    const availW = (scrollRef.current.clientWidth || 836) - LEFT_W - 20;
+    return Math.max(2, Math.floor(availW / Math.max(1, (Math.max(...(tasks.length ? tasks.map(t => t.start_day + t.duration_days) : [365])) + 14))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom, tasks.length]);
+  const dayWidth = zoom === "fit" ? (fitDayWidth || 2) : (DAY_W_MAP[zoom] || 7);
 
   // Keep refs in sync with latest state (avoids stale closures in window listeners)
   useEffect(() => { latestRef.current = { tasks }; }, [tasks]);
@@ -254,13 +283,21 @@ export default function GanttChart() {
 
   async function load() {
     setLoading(true);
-    const [{ data: proj, error: pErr }, { data: taskData, error: tErr }] = await Promise.all([
+    const [{ data: proj, error: pErr }, { data: taskData }, { data: contactData }] = await Promise.all([
       supabase.from("gantt_projects").select("*").eq("id", id).single(),
       supabase.from("gantt_tasks").select("*").eq("project_id", id).order("phase_order").order("start_day"),
+      supabase.from("gantt_contacts").select("*").order("name"),
     ]);
     if (pErr || !proj) { alert("Project not found"); router.push("/modules/gantt"); return; }
     setProject(proj);
     setTasks(taskData || []);
+    setContacts(contactData || []);
+    setSettingsForm({
+      name:        proj.name || "",
+      client_name: proj.client_name || "",
+      job_address: proj.job_address || "",
+      start_date:  proj.start_date ? proj.start_date.split("T")[0] : "",
+    });
     if (proj.start_date) {
       const diff = daysBetween(proj.start_date, new Date());
       if (diff >= 0) setTodayLine(diff);
@@ -415,11 +452,18 @@ export default function GanttChart() {
       duration_days: Math.max(1, Number(editForm.duration_days)),
       status:        editForm.status,
       assigned_trade: editForm.assigned_trade || null,
+      contact_id:    editForm.contact_id || null,
       is_milestone:  editForm.is_milestone,
       is_long_lead:  editForm.is_long_lead,
       notes:         editForm.notes || null,
     };
-    const { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id);
+    let { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id);
+    if (error?.message?.includes("contact_id")) {
+      // Migration not run yet — retry without contact_id
+      const { contact_id: _c, ...rest } = payload;
+      const res2 = await supabase.from("gantt_tasks").update(rest).eq("id", editTask.id);
+      error = res2.error;
+    }
     if (error) { alert("Error: " + error.message); setSaving(false); return; }
     setTasks((prev) => prev.map((t) => t.id === editTask.id ? { ...t, ...payload } : t));
     setSaving(false);
@@ -446,18 +490,26 @@ export default function GanttChart() {
       duration_days: Math.max(1, Number(addForm.duration_days)),
       status:        "pending",
       assigned_trade: addForm.assigned_trade || null,
+      contact_id:    addForm.contact_id || null,
       is_milestone:  addForm.is_milestone,
       is_long_lead:  addForm.is_long_lead,
       dependencies:  [],
       notes:         null,
       sort_order:    tasks.length,
     };
-    const { data, error } = await supabase.from("gantt_tasks").insert(newTask).select().single();
+    let { data, error } = await supabase.from("gantt_tasks").insert(newTask).select().single();
+    if (error?.message?.includes("contact_id")) {
+      // Migration not run yet — retry without contact_id
+      const { contact_id: _c, ...rest } = newTask;
+      const res2 = await supabase.from("gantt_tasks").insert(rest).select().single();
+      data = res2.data;
+      error = res2.error;
+    }
     if (error) { alert("Error: " + error.message); setSaving(false); return; }
     setTasks((prev) => [...prev, data]);
     setSaving(false);
     setShowAddTask(false);
-    setAddForm({ name: "", phase: "Pre-Construction", start_day: 0, duration_days: 7, assigned_trade: "", is_milestone: false, is_long_lead: false, notes: "" });
+    setAddForm({ name: "", phase: "Pre-Construction", start_day: 0, duration_days: 7, assigned_trade: "", contact_id: "", is_milestone: false, is_long_lead: false, notes: "" });
   }
 
   function openEdit(task) {
@@ -469,6 +521,7 @@ export default function GanttChart() {
       duration_days: task.duration_days,
       status:        task.status,
       assigned_trade: task.assigned_trade || "",
+      contact_id:    task.contact_id || "",
       is_milestone:  task.is_milestone,
       is_long_lead:  task.is_long_lead,
       notes:         task.notes || "",
@@ -499,6 +552,134 @@ export default function GanttChart() {
     }
   }
 
+  // ── Save project settings ─────────────────────────────────────────────────
+  async function saveSettings() {
+    if (!settingsForm.name.trim()) return alert("Project name is required");
+    setSaving(true);
+    const payload = {
+      name:        settingsForm.name.trim(),
+      client_name: settingsForm.client_name.trim() || null,
+      job_address: settingsForm.job_address.trim() || null,
+      start_date:  settingsForm.start_date || null,
+    };
+    const { error } = await supabase.from("gantt_projects").update(payload).eq("id", id);
+    if (error) { alert("Error saving: " + error.message); setSaving(false); return; }
+    setProject((prev) => ({ ...prev, ...payload }));
+    if (payload.start_date) {
+      const diff = daysBetween(payload.start_date, new Date());
+      if (diff >= 0) setTodayLine(diff);
+    } else {
+      setTodayLine(null);
+    }
+    setSaving(false);
+    setShowSettings(false);
+  }
+
+  // ── Export CSV ────────────────────────────────────────────────────────────
+  function exportCSV() {
+    const contactMap = Object.fromEntries(contacts.map((c) => [c.id, c]));
+    const headers = ["Phase", "Task Name", "Start Day", "Duration (days)", "Status", "Trade", "Contact Name", "Contact Email", "Milestone", "Long Lead", "Notes"];
+    const rows = tasks
+      .slice()
+      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || a.start_day - b.start_day)
+      .map((t) => {
+        const contact = t.contact_id ? contactMap[t.contact_id] : null;
+        return [
+          t.phase,
+          t.name,
+          t.start_day,
+          t.duration_days,
+          t.status,
+          t.assigned_trade || "",
+          contact?.name || "",
+          contact?.email || "",
+          t.is_milestone ? "Yes" : "No",
+          t.is_long_lead ? "Yes" : "No",
+          (t.notes || "").replace(/\n/g, " "),
+        ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+      });
+    const csv = [headers.map((h) => `"${h}"`).join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(project?.name || "gantt").replace(/[^a-z0-9]+/gi, "-")}-schedule.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Contact CRUD ──────────────────────────────────────────────────────────
+  async function saveContact() {
+    if (!contactForm.name.trim()) return alert("Name is required");
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (editContact) {
+        const { error } = await supabase.from("gantt_contacts").update({ ...contactForm }).eq("id", editContact.id);
+        if (error) throw error;
+        setContacts((prev) => prev.map((c) => c.id === editContact.id ? { ...c, ...contactForm } : c));
+        setEditContact(null);
+      } else {
+        const { data, error } = await supabase.from("gantt_contacts").insert({ ...contactForm, user_id: user.id }).select().single();
+        if (error) throw error;
+        setContacts((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      setContactForm({ name: "", company: "", email: "", phone: "", tags: [], notes: "" });
+    } catch (err) {
+      alert("Error saving contact: " + err.message);
+    }
+    setSaving(false);
+  }
+
+  async function deleteContact(contactId) {
+    if (!confirm("Delete this contact? Their tasks will become unassigned.")) return;
+    await supabase.from("gantt_contacts").delete().eq("id", contactId);
+    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    setTasks((prev) => prev.map((t) => t.contact_id === contactId ? { ...t, contact_id: null } : t));
+  }
+
+  // ── Send work orders ───────────────────────────────────────────────────────
+  async function sendWorkOrders() {
+    if (!confirm("Email work orders to all assigned contacts?")) return;
+    setSendingEmails(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/gantt/send-work-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ projectId: id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      alert(`Work orders sent to ${json.sent} contact${json.sent !== 1 ? "s" : ""}!`);
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setSendingEmails(false);
+  }
+
+  // ── Send delay update ─────────────────────────────────────────────────────
+  async function sendDelayUpdate() {
+    setSendingEmails(true);
+    setShowDelayModal(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/gantt/send-delay-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ projectId: id, delayDays }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      alert(`Delay notifications sent to ${json.sent} contact${json.sent !== 1 ? "s" : ""}!`);
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+    setSendingEmails(false);
+  }
+
   // ── Rendering ─────────────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#0c111c", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 18 }}>
@@ -524,22 +705,30 @@ export default function GanttChart() {
               </p>
             </div>
           </div>
-          <Link href="/modules/gantt">
-            <button style={S.backBtn}>← Back</button>
-          </Link>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              style={{ ...S.backBtn, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)" }}
+              onClick={() => { setSettingsForm({ name: project.name || "", client_name: project.client_name || "", job_address: project.job_address || "", start_date: project.start_date ? project.start_date.split("T")[0] : "" }); setShowSettings(true); }}
+            >
+              ⚙️ Settings
+            </button>
+            <Link href="/modules/gantt">
+              <button style={S.backBtn}>← Back</button>
+            </Link>
+          </div>
         </div>
 
         {/* ── Controls bar ─────────────────────────────────────────────────── */}
         <div style={S.controlsBar}>
           {/* Zoom */}
           <div style={S.zoomGroup}>
-            {["quarter", "month", "week"].map((z) => (
+            {["fit", "quarter", "month", "week"].map((z) => (
               <button
                 key={z}
                 style={{ ...S.zoomBtn, ...(zoom === z ? S.zoomBtnActive : {}) }}
                 onClick={() => setZoom(z)}
               >
-                {z.charAt(0).toUpperCase() + z.slice(1)}
+                {z === "fit" ? "⊡ Fit All" : z.charAt(0).toUpperCase() + z.slice(1)}
               </button>
             ))}
           </div>
@@ -556,6 +745,36 @@ export default function GanttChart() {
               {loadingTemplate ? "Loading…" : "⚡ Load Template"}
             </button>
           )}
+          <div style={{ flex: 1 }} />
+          <button
+            style={{ ...S.toolBtn, background: "#1a2640", border: "1px solid #334155" }}
+            onClick={() => { setEditContact(null); setContactForm({ name: "", company: "", email: "", phone: "", tags: [], notes: "" }); setShowContacts(true); }}
+          >
+            👷 Contacts ({contacts.length})
+          </button>
+          <button
+            style={{ ...S.toolBtn, background: "#14293d", border: "1px solid #1e3a5e", color: "#60a5fa" }}
+            onClick={exportCSV}
+            disabled={tasks.length === 0}
+          >
+            ⬇ Export CSV
+          </button>
+          {tasks.some((t) => t.contact_id) && (<>
+            <button
+              style={{ ...S.toolBtn, background: "#0f2e4a", border: "1px solid #1d4ed8", color: "#93c5fd", opacity: sendingEmails ? 0.5 : 1 }}
+              onClick={sendWorkOrders}
+              disabled={sendingEmails}
+            >
+              {sendingEmails ? "Sending…" : "📧 Work Orders"}
+            </button>
+            <button
+              style={{ ...S.toolBtn, background: "#2d1a0a", border: "1px solid #92400e", color: "#fbbf24", opacity: sendingEmails ? 0.5 : 1 }}
+              onClick={() => setShowDelayModal(true)}
+              disabled={sendingEmails}
+            >
+              🌧️ Delay Update
+            </button>
+          </>)}
         </div>
 
         {/* ── Stats strip ──────────────────────────────────────────────────── */}
@@ -651,22 +870,30 @@ export default function GanttChart() {
                       <span style={{ fontSize: 11, color: "#4b5563" }}>Set a project start date to see real dates</span>
                     </div>
                   )}
-                  {/* Bottom row: week/date markers */}
-                  {weekMarkers.map(({ day, label }) => (
-                    <div key={day} style={{
-                      position: "absolute",
-                      left: day * dayWidth,
-                      top: 32,
-                      width: (zoom === "week" ? 7 : zoom === "month" ? 14 : 28) * dayWidth,
-                      height: 48,
-                      borderLeft: "1px solid #1e2d45",
-                      display: "flex",
-                      alignItems: "center",
-                      paddingLeft: 6,
-                    }}>
-                      <span style={{ fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>{label}</span>
+                  {/* Bottom row: week/date markers — click to highlight that column */}
+                  {weekMarkers.map(({ day, label }) => {
+                    const isHighlighted = highlightedDay === day;
+                    return (
+                    <div key={day}
+                      onClick={() => setHighlightedDay(isHighlighted ? null : day)}
+                      style={{
+                        position: "absolute",
+                        left: day * dayWidth,
+                        top: 32,
+                        width: (zoom === "week" ? 7 : zoom === "month" ? 14 : 28) * dayWidth,
+                        height: 48,
+                        borderLeft: isHighlighted ? "2px solid rgba(99,102,241,0.7)" : "1px solid #1e2d45",
+                        display: "flex",
+                        alignItems: "center",
+                        paddingLeft: 6,
+                        cursor: "pointer",
+                        background: isHighlighted ? "rgba(99,102,241,0.15)" : "transparent",
+                        userSelect: "none",
+                      }}>
+                      <span style={{ fontSize: 12, color: isHighlighted ? "#a5b4fc" : "#9ca3af", fontWeight: isHighlighted ? 700 : 400, whiteSpace: "nowrap" }}>{label}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                   {/* Today line in header */}
                   {todayLine !== null && (
                     <div style={{
@@ -857,8 +1084,8 @@ export default function GanttChart() {
                   }}
                 >
                   <defs>
-                    <marker id="arr" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
-                      <path d="M0,0 L0,5 L5,2.5 z" fill="#374151" />
+                    <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L6,3 z" fill="#60a5fa" />
                     </marker>
                   </defs>
                   {tasks.map((task) =>
@@ -870,21 +1097,57 @@ export default function GanttChart() {
                       if (y1 === undefined || y2 === undefined) return null;
                       const x1 = (dep.start_day + dep.duration_days) * dayWidth;
                       const x2 = task.start_day * dayWidth;
-                      const mx = x1 + Math.max(30, (x2 - x1) * 0.5);
+                      const gap = x2 - x1;
+                      const mx = gap > 0
+                        ? x1 + Math.min(gap, Math.max(12, gap * 0.5))
+                        : x1 + 12;
                       return (
                         <path
                           key={`${depId}-${task.id}`}
                           d={`M${x1},${y1} L${mx},${y1} L${mx},${y2} L${x2},${y2}`}
-                          stroke="#2d4a6e"
+                          stroke="#3b82f6"
                           strokeWidth={1.5}
                           fill="none"
                           markerEnd="url(#arr)"
-                          opacity={0.7}
+                          opacity={0.75}
                         />
                       );
                     })
                   )}
                 </svg>
+              )}
+              {/* Day column highlight — single day wide, click header to pick any day */}
+              {highlightedDay !== null && (
+                <div style={{
+                  position: "absolute",
+                  left: LEFT_W + highlightedDay * dayWidth,
+                  top: HEADER_H,
+                  width: Math.max(dayWidth, 2),
+                  height: rowYMap.totalH,
+                  background: "rgba(99,102,241,0.12)",
+                  borderLeft: "2px solid rgba(99,102,241,0.7)",
+                  pointerEvents: "none",
+                  zIndex: 10,
+                }} />
+              )}
+              {/* Day label tooltip */}
+              {highlightedDay !== null && project?.start_date && (
+                <div style={{
+                  position: "absolute",
+                  left: LEFT_W + highlightedDay * dayWidth + 4,
+                  top: HEADER_H + 4,
+                  background: "rgba(99,102,241,0.9)",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                  pointerEvents: "none",
+                  zIndex: 15,
+                  whiteSpace: "nowrap",
+                }}>
+                  {addDays(project.start_date, highlightedDay).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
+                </div>
               )}
             </div>
           </div>
@@ -933,6 +1196,15 @@ export default function GanttChart() {
 
             <ModalField label="Assigned Trade">
               <input style={S.inp} value={editForm.assigned_trade} onChange={(e) => setEditForm((f) => ({ ...f, assigned_trade: e.target.value }))} placeholder="e.g. Framer, Electrician…" />
+            </ModalField>
+
+            <ModalField label="Assigned Contact">
+              <select style={S.inp} value={editForm.contact_id || ""} onChange={(e) => setEditForm((f) => ({ ...f, contact_id: e.target.value || "" }))}>
+                <option value="">— No contact assigned —</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}{c.company ? ` · ${c.company}` : ""}{c.email ? ` (${c.email})` : ""}</option>
+                ))}
+              </select>
             </ModalField>
 
             <div style={{ display: "flex", gap: 20 }}>
@@ -998,6 +1270,15 @@ export default function GanttChart() {
               <input style={S.inp} value={addForm.assigned_trade} onChange={(e) => setAddForm((f) => ({ ...f, assigned_trade: e.target.value }))} placeholder="e.g. Roofer" />
             </ModalField>
 
+            <ModalField label="Assigned Contact">
+              <select style={S.inp} value={addForm.contact_id || ""} onChange={(e) => setAddForm((f) => ({ ...f, contact_id: e.target.value || "" }))}>
+                <option value="">— No contact assigned —</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}{c.company ? ` · ${c.company}` : ""}{c.email ? ` (${c.email})` : ""}</option>
+                ))}
+              </select>
+            </ModalField>
+
             <div style={{ display: "flex", gap: 20 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, color: "#9ca3af", cursor: "pointer" }}>
                 <input type="checkbox" checked={addForm.is_milestone} onChange={(e) => setAddForm((f) => ({ ...f, is_milestone: e.target.checked }))} />
@@ -1013,6 +1294,152 @@ export default function GanttChart() {
               <button style={S.cancelBtn} onClick={() => setShowAddTask(false)}>Cancel</button>
               <button style={{ ...S.primaryBtn, opacity: (!addForm.name.trim() || saving) ? 0.5 : 1 }} disabled={!addForm.name.trim() || saving} onClick={addTask}>
                 {saving ? "Adding…" : "Add Task"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Contacts Modal ─────────────────────────────────────────────────── */}
+      {showContacts && (
+        <div style={S.overlay} onClick={() => setShowContacts(false)}>
+          <div style={{ ...S.modal, maxWidth: 620, maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ ...S.modalTitle, margin: 0 }}>👷 Trade Contacts</h2>
+              <button style={S.cancelBtn} onClick={() => setShowContacts(false)}>Close</button>
+            </div>
+
+            {/* Contact list */}
+            <div style={{ flex: 1, overflowY: "auto", marginBottom: 20, paddingRight: 4 }}>
+              {contacts.length === 0 && (
+                <p style={{ color: "#6b7280", fontSize: 15 }}>No contacts yet. Add one below.</p>
+              )}
+              {contacts.map((c) => (
+                <div key={c.id} style={{ background: "#0e1520", border: "1px solid #1e2d45", borderRadius: 8, padding: "12px 16px", marginBottom: 10, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 15 }}>{c.name}</span>
+                      {c.company && <span style={{ color: "#9ca3af", fontSize: 14 }}>{c.company}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#6b7280", marginBottom: 5 }}>
+                      {c.email && <span>✉ {c.email}</span>}
+                      {c.phone && <span>📞 {c.phone}</span>}
+                    </div>
+                    {c.tags?.length > 0 && (
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        {c.tags.map((tag) => (
+                          <span key={tag} style={{ background: "#1e2d45", color: "#60a5fa", fontSize: 12, padding: "2px 8px", borderRadius: 4 }}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button style={{ ...S.toolBtn, fontSize: 13, padding: "4px 10px" }} onClick={() => { setEditContact(c); setContactForm({ name: c.name, company: c.company || "", email: c.email || "", phone: c.phone || "", tags: c.tags || [], notes: c.notes || "" }); }}>Edit</button>
+                    <button style={{ ...S.cancelBtn, fontSize: 13, padding: "4px 10px" }} onClick={() => deleteContact(c.id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add / Edit form */}
+            <div style={{ borderTop: "1px solid #1e2d45", paddingTop: 20 }}>
+              <h3 style={{ margin: "0 0 14px", fontSize: 16, color: "#cbd5e1" }}>{editContact ? "Edit Contact" : "Add Contact"}</h3>
+              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                <ModalField label="Name *" style={{ flex: 1 }}>
+                  <input style={S.inp} value={contactForm.name} onChange={(e) => setContactForm((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" />
+                </ModalField>
+                <ModalField label="Company" style={{ flex: 1 }}>
+                  <input style={S.inp} value={contactForm.company} onChange={(e) => setContactForm((f) => ({ ...f, company: e.target.value }))} placeholder="Company / ABN" />
+                </ModalField>
+              </div>
+              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                <ModalField label="Email" style={{ flex: 1 }}>
+                  <input style={S.inp} type="email" value={contactForm.email} onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+                </ModalField>
+                <ModalField label="Phone" style={{ flex: 1 }}>
+                  <input style={S.inp} value={contactForm.phone} onChange={(e) => setContactForm((f) => ({ ...f, phone: e.target.value }))} placeholder="0400 000 000" />
+                </ModalField>
+              </div>
+              <ModalField label="Trade Tags">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                  {TRADE_TAGS.map((tag) => {
+                    const active = contactForm.tags.includes(tag);
+                    return (
+                      <button key={tag} onClick={() => setContactForm((f) => ({ ...f, tags: active ? f.tags.filter((t) => t !== tag) : [...f.tags, tag] }))}
+                        style={{ fontSize: 13, padding: "4px 10px", borderRadius: 5, border: active ? "1px solid #3b82f6" : "1px solid #334155", background: active ? "#1e3a5e" : "#0e1520", color: active ? "#60a5fa" : "#6b7280", cursor: "pointer" }}>
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ModalField>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 14 }}>
+                {editContact && <button style={S.cancelBtn} onClick={() => { setEditContact(null); setContactForm({ name: "", company: "", email: "", phone: "", tags: [], notes: "" }); }}>Cancel Edit</button>}
+                <button style={{ ...S.primaryBtn, opacity: (!contactForm.name.trim() || saving) ? 0.5 : 1 }} disabled={!contactForm.name.trim() || saving} onClick={saveContact}>
+                  {saving ? "Saving…" : editContact ? "Save Changes" : "Add Contact"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delay Update Modal ─────────────────────────────────────────────── */}
+      {showDelayModal && (
+        <div style={S.overlay} onClick={() => setShowDelayModal(false)}>
+          <div style={{ ...S.modal, maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={S.modalTitle}>🌧️ Send Delay Notification</h2>
+            <p style={{ color: "#9ca3af", fontSize: 15, lineHeight: 1.65, margin: "0 0 20px" }}>
+              This will email all contacts assigned to <strong style={{ color: "#f1f5f9" }}>pending</strong> or <strong style={{ color: "#f1f5f9" }}>in-progress</strong> tasks,
+              notifying them that the schedule has shifted by the number of days below.
+            </p>
+            <ModalField label="Delay (days)">
+              <input style={{ ...S.inp, fontSize: 22, fontWeight: 700, textAlign: "center" }} type="number" min="1" max="365" value={delayDays} onChange={(e) => setDelayDays(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+            </ModalField>
+            <p style={{ color: "#6b7280", fontSize: 14, margin: "10px 0 0" }}>
+              Note: this sends notifications only — it does not update task dates in the schedule. Drag the bars to reschedule tasks.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 22 }}>
+              <button style={S.cancelBtn} onClick={() => setShowDelayModal(false)}>Cancel</button>
+              <button
+                style={{ ...S.primaryBtn, background: "linear-gradient(135deg,#b45309,#d97706)", opacity: sendingEmails ? 0.5 : 1 }}
+                disabled={sendingEmails}
+                onClick={sendDelayUpdate}
+              >
+                {sendingEmails ? "Sending…" : `Send Delay (+${delayDays} day${delayDays !== 1 ? "s" : ""})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Project Settings Modal ────────────────────────────────────────── */}
+      {showSettings && (
+        <div style={S.overlay} onClick={() => setShowSettings(false)}>
+          <div style={{ ...S.modal, maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={S.modalTitle}>⚙️ Project Settings</h2>
+
+            <ModalField label="Project Name *">
+              <input style={S.inp} autoFocus value={settingsForm.name} onChange={(e) => setSettingsForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Smith Residence" />
+            </ModalField>
+
+            <ModalField label="Client Name">
+              <input style={S.inp} value={settingsForm.client_name} onChange={(e) => setSettingsForm((f) => ({ ...f, client_name: e.target.value }))} placeholder="e.g. John & Jane Smith" />
+            </ModalField>
+
+            <ModalField label="Site Address">
+              <input style={S.inp} value={settingsForm.job_address} onChange={(e) => setSettingsForm((f) => ({ ...f, job_address: e.target.value }))} placeholder="e.g. 12 Builder St, Sydney NSW" />
+            </ModalField>
+
+            <ModalField label="Commencement Date">
+              <input style={S.inp} type="date" value={settingsForm.start_date} onChange={(e) => setSettingsForm((f) => ({ ...f, start_date: e.target.value }))} />
+              <span style={{ fontSize: 13, color: "#6b7280" }}>Setting a commencement date shows real calendar dates on the timeline instead of week numbers.</span>
+            </ModalField>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+              <button style={S.cancelBtn} onClick={() => setShowSettings(false)}>Cancel</button>
+              <button style={{ ...S.primaryBtn, opacity: (!settingsForm.name.trim() || saving) ? 0.5 : 1 }} disabled={!settingsForm.name.trim() || saving} onClick={saveSettings}>
+                {saving ? "Saving…" : "Save Settings"}
               </button>
             </div>
           </div>
