@@ -47,6 +47,7 @@ const PROJECT_PALETTE = [
 const TASK_FORM_DEFAULT = {
   name: "",
   phase: "Pre-Construction",
+  sort_order: 1,
   start_day: 0,
   duration_days: 7,
   status: "pending",
@@ -69,6 +70,11 @@ function statusFromProgress(progress) {
 
 function progressFromStatus(status) {
   return status === "complete" ? 100 : status === "in_progress" ? 50 : 0;
+}
+
+function isMissingProgressColumn(error) {
+  return error?.code === "PGRST204" && error?.message?.includes("progress_percent")
+    || error?.message?.includes("progress_percent");
 }
 
 function parseCSV(text) {
@@ -122,20 +128,24 @@ function tasksFromCSVText(text) {
   return parsed.slice(1).map((row, index) => {
     const phase = normalizePhase(csvValue(row, headers, ["phase"]));
     const name = csvValue(row, headers, ["task name", "name", "task"]).trim();
+    const position = Number(csvValue(row, headers, ["no.", "no", "number", "order", "position", "task number"]));
+    const status = normalizeStatus(csvValue(row, headers, ["status"]));
+    const rawProgress = csvValue(row, headers, ["progress", "progress_percent", "percent complete", "% complete"]);
+    const progress = rawProgress === "" ? progressFromStatus(status) : clampProgress(rawProgress);
     return {
       phase,
       phase_order: PHASE_ORDER[phase] ?? 99,
       name,
       start_day: Math.max(0, Number(csvValue(row, headers, ["start day", "start_day", "start"])) || 0),
       duration_days: Math.max(1, Number(csvValue(row, headers, ["duration (days)", "duration_days", "duration", "days"])) || 1),
-      progress_percent: clampProgress(csvValue(row, headers, ["progress", "progress_percent", "percent complete", "% complete"])),
-      status: normalizeStatus(csvValue(row, headers, ["status"])),
+      progress_percent: progress,
+      status: statusFromProgress(progress),
       assigned_trade: csvValue(row, headers, ["trade", "assigned trade", "assigned_trade"]).trim() || null,
       is_milestone: parseBool(csvValue(row, headers, ["milestone", "is milestone", "is_milestone"])),
       is_long_lead: parseBool(csvValue(row, headers, ["long lead", "long_lead", "is long lead", "is_long_lead"])),
       dependencies: [],
       notes: csvValue(row, headers, ["notes", "note"]).trim() || null,
-      sort_order: index,
+      sort_order: Number.isFinite(position) && position > 0 ? Math.round(position) - 1 : index,
     };
   }).filter((t) => t.name);
 }
@@ -171,6 +181,7 @@ export default function GanttDashboard() {
   const scrollRef  = useRef(null);
   const csvImportRef = useRef(null);
   const csvProjectRef = useRef(null);
+  const progressColumnAvailableRef = useRef(true);
   const panRef     = useRef({ active: false, startX: 0, scrollStart: 0 });
   const barDragRef = useRef(null);
   const progressDragRef = useRef(null);
@@ -189,6 +200,8 @@ export default function GanttDashboard() {
   const [taskForm, setTaskForm]   = useState(TASK_FORM_DEFAULT);
   const [newCsvTasks, setNewCsvTasks] = useState([]);
   const [newCsvName, setNewCsvName] = useState("");
+  const [showSetback, setShowSetback] = useState(false);
+  const [setbackForm, setSetbackForm] = useState({ days: 1, scope: "all" });
   const [form, setForm] = useState({
     name: "", client_name: "", job_address: "", job_type: "New Build", start_date: "",
   });
@@ -201,12 +214,31 @@ export default function GanttDashboard() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("gantt_projects")
-      .select("*, gantt_tasks(id, name, phase, phase_order, start_day, duration_days, status, progress_percent, assigned_trade, is_milestone, is_long_lead, dependencies, notes)")
+      .select("*, gantt_tasks(id, name, phase, phase_order, sort_order, start_day, duration_days, status, progress_percent, assigned_trade, is_milestone, is_long_lead, dependencies, notes)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    if (isMissingProgressColumn(error)) {
+      progressColumnAvailableRef.current = false;
+      const fallback = await supabase
+        .from("gantt_projects")
+        .select("*, gantt_tasks(id, name, phase, phase_order, sort_order, start_day, duration_days, status, assigned_trade, is_milestone, is_long_lead, dependencies, notes)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      data = (fallback.data || []).map((p) => ({
+        ...p,
+        gantt_tasks: (p.gantt_tasks || []).map((t) => ({
+          ...t,
+          progress_percent: progressFromStatus(t.status),
+        })),
+      }));
+      error = fallback.error;
+    } else if (!error) {
+      progressColumnAvailableRef.current = true;
+    }
     if (!error) setProjects(data || []);
+    else console.error("Gantt projects failed to load:", error);
     setLoading(false);
   }
 
@@ -228,12 +260,12 @@ export default function GanttDashboard() {
         .single();
       if (error) throw error;
       if (newCsvTasks.length) {
-        const rows = newCsvTasks.map((task, index) => ({
+        const rows = normaliseTaskOrder(newCsvTasks).map((task, index) => ({
           ...task,
           project_id: data.id,
           sort_order: index,
         }));
-        const { error: taskErr } = await supabase.from("gantt_tasks").insert(rows);
+        const { error: taskErr } = await insertTasksWithProgressFallback(rows);
         if (taskErr) throw taskErr;
       }
       router.push(`/modules/gantt/${data.id}`);
@@ -282,12 +314,54 @@ export default function GanttDashboard() {
     setTaskForm({ ...TASK_FORM_DEFAULT, ...overrides });
   }
 
+  function orderedTasks(tasks = []) {
+    return tasks.slice().sort((a, b) => (
+      (a.sort_order ?? 9999) - (b.sort_order ?? 9999)
+      || (a.phase_order ?? 99) - (b.phase_order ?? 99)
+      || (a.start_day || 0) - (b.start_day || 0)
+      || String(a.name || "").localeCompare(String(b.name || ""))
+    ));
+  }
+
+  function normaliseTaskOrder(tasks = [], movedTaskId = null, requestedPosition = 1) {
+    const taskList = orderedTasks(tasks);
+    if (!taskList.length) return [];
+    if (!movedTaskId) return taskList.map((task, index) => ({ ...task, sort_order: index }));
+
+    const movingIndex = taskList.findIndex((task) => task.id === movedTaskId);
+    if (movingIndex === -1) return taskList.map((task, index) => ({ ...task, sort_order: index }));
+
+    const [movingTask] = taskList.splice(movingIndex, 1);
+    const targetIndex = Math.max(0, Math.min(taskList.length, Math.round(Number(requestedPosition) || 1) - 1));
+    taskList.splice(targetIndex, 0, movingTask);
+    return taskList.map((task, index) => ({ ...task, sort_order: index }));
+  }
+
+  async function insertTasksWithProgressFallback(rows) {
+    const insertRows = progressColumnAvailableRef.current
+      ? rows
+      : rows.map(({ progress_percent: _progress, ...task }) => task);
+    let { data, error } = await supabase.from("gantt_tasks").insert(insertRows).select();
+    if (isMissingProgressColumn(error)) {
+      progressColumnAvailableRef.current = false;
+      const rowsWithoutProgress = rows.map(({ progress_percent: _progress, ...task }) => task);
+      const retry = await supabase.from("gantt_tasks").insert(rowsWithoutProgress).select();
+      data = (retry.data || []).map((task, index) => ({
+        ...task,
+        progress_percent: rows[index]?.progress_percent ?? progressFromStatus(task.status),
+      }));
+      error = retry.error;
+    }
+    return { data: data || [], error };
+  }
+
   function openAddTask(project) {
     const tasks = project?.gantt_tasks || [];
     const lastTask = tasks.slice().sort((a, b) => (b.start_day || 0) - (a.start_day || 0))[0];
     setEditTask(null);
     resetTaskForm({
       phase: lastTask?.phase || "Pre-Construction",
+      sort_order: tasks.length + 1,
       start_day: lastTask ? (lastTask.start_day || 0) + (lastTask.duration_days || 7) : 0,
     });
     setShowAddTask(true);
@@ -300,6 +374,7 @@ export default function GanttDashboard() {
     resetTaskForm({
       name: task.name || "",
       phase: task.phase || "Pre-Construction",
+      sort_order: (task.sort_order ?? 0) + 1,
       start_day: task.start_day ?? 0,
       duration_days: task.duration_days ?? 7,
       status: task.status || "pending",
@@ -332,20 +407,56 @@ export default function GanttDashboard() {
     };
 
     if (editTask) {
-      const { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id).eq("project_id", project.id);
+      const nextOrderedTasks = normaliseTaskOrder(
+        (project.gantt_tasks || []).map((task) => task.id === editTask.id ? { ...task, ...payload } : task),
+        editTask.id,
+        taskForm.sort_order
+      );
+      const updatedTask = nextOrderedTasks.find((task) => task.id === editTask.id);
+      let { error } = await supabase.from("gantt_tasks").update({ ...payload, sort_order: updatedTask?.sort_order ?? 0 }).eq("id", editTask.id).eq("project_id", project.id);
+      if (error?.message?.includes("progress_percent")) {
+        const { progress_percent: _progress, ...payloadWithoutProgress } = payload;
+        const retry = await supabase.from("gantt_tasks").update({ ...payloadWithoutProgress, sort_order: updatedTask?.sort_order ?? 0 }).eq("id", editTask.id).eq("project_id", project.id);
+        error = retry.error;
+      }
       if (error) { alert("Error: " + error.message); setSaving(false); return; }
-      patchProjectTasks(project.id, (tasks) => tasks.map((t) => t.id === editTask.id ? { ...t, ...payload } : t));
+      const changedOrderTasks = nextOrderedTasks.filter((task) => {
+        const previous = (project.gantt_tasks || []).find((t) => t.id === task.id);
+        return previous && (previous.sort_order ?? 0) !== (task.sort_order ?? 0) && task.id !== editTask.id;
+      });
+      const orderResults = await Promise.all(changedOrderTasks.map((task) => (
+        supabase.from("gantt_tasks").update({ sort_order: task.sort_order }).eq("id", task.id).eq("project_id", project.id)
+      )));
+      const orderError = orderResults.find((result) => result.error)?.error;
+      if (orderError) { alert("Error saving task order: " + orderError.message); setSaving(false); return; }
+      patchProjectTasks(project.id, () => nextOrderedTasks);
       setEditTask(null);
     } else {
       const newTask = {
         ...payload,
         project_id: project.id,
         dependencies: [],
-        sort_order: (project.gantt_tasks || []).length,
+        sort_order: Math.max(0, Math.min((project.gantt_tasks || []).length, Math.round(Number(taskForm.sort_order) || 1) - 1)),
       };
-      const { data, error } = await supabase.from("gantt_tasks").insert(newTask).select().single();
+      let { data, error } = await supabase.from("gantt_tasks").insert(newTask).select().single();
+      if (error?.message?.includes("progress_percent")) {
+        const { progress_percent: _progress, ...newTaskWithoutProgress } = newTask;
+        const retry = await supabase.from("gantt_tasks").insert(newTaskWithoutProgress).select().single();
+        data = retry.data ? { ...retry.data, progress_percent: newTask.progress_percent } : retry.data;
+        error = retry.error;
+      }
       if (error) { alert("Error: " + error.message); setSaving(false); return; }
-      patchProjectTasks(project.id, (tasks) => [...tasks, data]);
+      const nextOrderedTasks = normaliseTaskOrder([...(project.gantt_tasks || []), data], data.id, taskForm.sort_order);
+      const changedOrderTasks = nextOrderedTasks.filter((task) => {
+        const previous = task.id === data.id ? data : (project.gantt_tasks || []).find((t) => t.id === task.id);
+        return (previous?.sort_order ?? 0) !== (task.sort_order ?? 0);
+      });
+      const orderResults = await Promise.all(changedOrderTasks.map((task) => (
+        supabase.from("gantt_tasks").update({ sort_order: task.sort_order }).eq("id", task.id).eq("project_id", project.id)
+      )));
+      const orderError = orderResults.find((result) => result.error)?.error;
+      if (orderError) { alert("Error saving task order: " + orderError.message); setSaving(false); return; }
+      patchProjectTasks(project.id, () => nextOrderedTasks);
       setShowAddTask(false);
     }
     resetTaskForm();
@@ -357,7 +468,14 @@ export default function GanttDashboard() {
     if (!confirm(`Delete "${editTask.name}"?`)) return;
     const { error } = await supabase.from("gantt_tasks").delete().eq("id", editTask.id).eq("project_id", editTask.project_id);
     if (error) { alert("Error: " + error.message); return; }
-    patchProjectTasks(editTask.project_id, (tasks) => tasks.filter((t) => t.id !== editTask.id));
+    const project = projects.find((p) => p.id === editTask.project_id);
+    const nextOrderedTasks = normaliseTaskOrder((project?.gantt_tasks || []).filter((t) => t.id !== editTask.id));
+    const orderResults = await Promise.all(nextOrderedTasks.map((task) => (
+      supabase.from("gantt_tasks").update({ sort_order: task.sort_order }).eq("id", task.id).eq("project_id", editTask.project_id)
+    )));
+    const orderError = orderResults.find((result) => result.error)?.error;
+    if (orderError) return alert("Task deleted, but order cleanup failed: " + orderError.message);
+    patchProjectTasks(editTask.project_id, () => nextOrderedTasks);
     setEditTask(null);
     resetTaskForm();
   }
@@ -366,9 +484,45 @@ export default function GanttDashboard() {
     const current = statusFromProgress(clampProgress(task.progress_percent ?? progressFromStatus(task.status)));
     const next = status || nextStatus(current);
     const progress = progressFromStatus(next);
-    const { error } = await supabase.from("gantt_tasks").update({ status: next, progress_percent: progress }).eq("id", task.id).eq("project_id", project.id);
+    let { error } = await supabase.from("gantt_tasks").update({ status: next, progress_percent: progress }).eq("id", task.id).eq("project_id", project.id);
+    if (error?.message?.includes("progress_percent")) {
+      const retry = await supabase.from("gantt_tasks").update({ status: next }).eq("id", task.id).eq("project_id", project.id);
+      error = retry.error;
+    }
     if (error) return alert("Error updating progress: " + error.message);
     patchProjectTasks(project.id, (tasks) => tasks.map((t) => t.id === task.id ? { ...t, status: next, progress_percent: progress } : t));
+  }
+
+  async function applySetback() {
+    const project = focusedProject;
+    if (!project) return;
+    const days = Math.max(1, Math.round(Number(setbackForm.days) || 1));
+    const allTasks = project.gantt_tasks || [];
+    const tasksToMove = setbackForm.scope === "unfinished"
+      ? allTasks.filter((t) => statusFromProgress(clampProgress(t.progress_percent ?? progressFromStatus(t.status))) !== "complete")
+      : allTasks;
+    if (!tasksToMove.length) return alert("There are no tasks to move for this setback.");
+    if (!confirm(`Move ${tasksToMove.length} task${tasksToMove.length !== 1 ? "s" : ""} back by ${days} day${days !== 1 ? "s" : ""}?`)) return;
+    setSaving(true);
+    try {
+      for (const task of tasksToMove) {
+        const nextStart = Math.max(0, (task.start_day || 0) + days);
+        const { error } = await supabase
+          .from("gantt_tasks")
+          .update({ start_day: nextStart })
+          .eq("id", task.id)
+          .eq("project_id", project.id);
+        if (error) throw error;
+      }
+      const ids = new Set(tasksToMove.map((t) => t.id));
+      patchProjectTasks(project.id, (tasks) => tasks.map((t) => (
+        ids.has(t.id) ? { ...t, start_day: Math.max(0, (t.start_day || 0) + days) } : t
+      )));
+      setShowSetback(false);
+    } catch (err) {
+      alert("Setback failed: " + err.message);
+    }
+    setSaving(false);
   }
 
   function csvEscape(value) {
@@ -377,12 +531,13 @@ export default function GanttDashboard() {
 
   function downloadTasksCSV(projectScope) {
     const scope = projectScope ? [projectScope] : visible;
-    const headers = ["Project", "Phase", "Task Name", "Start Day", "Duration (days)", "Status", "Trade", "Milestone", "Long Lead", "Notes"];
+    const headers = ["Project", "No.", "Phase", "Task Name", "Start Day", "Duration (days)", "Status", "Trade", "Milestone", "Long Lead", "Notes"];
     const rows = scope.flatMap((p) => (p.gantt_tasks || [])
       .slice()
-      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
       .map((t) => [
         p.name,
+        (t.sort_order ?? 0) + 1,
         t.phase,
         t.name,
         t.start_day ?? 0,
@@ -428,14 +583,32 @@ export default function GanttDashboard() {
       : false;
     setSaving(true);
     try {
-      if (replace) await supabase.from("gantt_tasks").delete().eq("project_id", project.id);
       const offset = replace ? 0 : (project.gantt_tasks || []).length;
-      const rows = parsedTasks.map((task, index) => ({ ...task, project_id: project.id, sort_order: offset + index }));
-      const { data, error } = await supabase.from("gantt_tasks").insert(rows).select();
+      const rows = normaliseTaskOrder(parsedTasks).map((task, index) => ({ ...task, project_id: project.id, sort_order: offset + index }));
+      const { data, error } = await insertTasksWithProgressFallback(rows);
       if (error) throw error;
-      patchProjectTasks(project.id, (tasks) => replace ? (data || []) : [...tasks, ...(data || [])]);
+
+      if (replace) {
+        const oldTaskIds = (project.gantt_tasks || []).map((task) => task.id).filter(Boolean);
+        if (oldTaskIds.length) {
+          const { error: deleteError } = await supabase
+            .from("gantt_tasks")
+            .delete()
+            .eq("project_id", project.id)
+            .in("id", oldTaskIds);
+          if (deleteError) {
+            const newTaskIds = data.map((task) => task.id).filter(Boolean);
+            if (newTaskIds.length) {
+              await supabase.from("gantt_tasks").delete().eq("project_id", project.id).in("id", newTaskIds);
+            }
+            throw new Error(`The new tasks were uploaded, but the existing tasks could not be replaced: ${deleteError.message}`);
+          }
+        }
+      }
+
+      patchProjectTasks(project.id, (tasks) => replace ? data : [...tasks, ...data]);
       setFocusId(project.id);
-      alert(`Imported ${rows.length} task${rows.length !== 1 ? "s" : ""}.`);
+      alert(`${replace ? "Replaced the existing schedule with" : "Imported"} ${rows.length} task${rows.length !== 1 ? "s" : ""}.`);
     } catch (err) {
       alert("Import failed: " + err.message);
     }
@@ -447,7 +620,7 @@ export default function GanttDashboard() {
     const title = projectScope?.name || "Gantt Tasks";
     const rows = scope.flatMap((p) => (p.gantt_tasks || [])
       .slice()
-      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
       .map((t) => ({ project: p.name, ...t })));
     if (!rows.length) return;
     const win = window.open("", "_blank");
@@ -460,8 +633,8 @@ export default function GanttDashboard() {
     </style></head><body>
       <button onclick="window.print()" style="margin-bottom:16px;padding:8px 12px">Print / Save PDF</button>
       <h1>${htmlEscape(title)}</h1><p>${rows.length} task${rows.length !== 1 ? "s" : ""}</p>
-      <table><thead><tr><th>Project</th><th>Phase</th><th>Task</th><th>Start Day</th><th>Duration</th><th>Status</th><th>Trade</th><th>Flags</th><th>Notes</th></tr></thead><tbody>
-      ${rows.map((t) => `<tr><td>${htmlEscape(t.project)}</td><td>${htmlEscape(t.phase)}</td><td>${htmlEscape(t.name)}</td><td>${htmlEscape(t.start_day ?? 0)}</td><td>${htmlEscape(t.duration_days ?? 0)}</td><td>${htmlEscape(t.status || "pending")}</td><td>${htmlEscape(t.assigned_trade || "")}</td><td>${t.is_milestone ? "Milestone" : ""}${t.is_milestone && t.is_long_lead ? ", " : ""}${t.is_long_lead ? "Long lead" : ""}</td><td>${htmlEscape(t.notes || "")}</td></tr>`).join("")}
+      <table><thead><tr><th>Project</th><th>No.</th><th>Phase</th><th>Task</th><th>Start Day</th><th>Duration</th><th>Status</th><th>Trade</th><th>Flags</th><th>Notes</th></tr></thead><tbody>
+      ${rows.map((t) => `<tr><td>${htmlEscape(t.project)}</td><td>${htmlEscape((t.sort_order ?? 0) + 1)}</td><td>${htmlEscape(t.phase)}</td><td>${htmlEscape(t.name)}</td><td>${htmlEscape(t.start_day ?? 0)}</td><td>${htmlEscape(t.duration_days ?? 0)}</td><td>${htmlEscape(t.status || "pending")}</td><td>${htmlEscape(t.assigned_trade || "")}</td><td>${t.is_milestone ? "Milestone" : ""}${t.is_milestone && t.is_long_lead ? ", " : ""}${t.is_long_lead ? "Long lead" : ""}</td><td>${htmlEscape(t.notes || "")}</td></tr>`).join("")}
       </tbody></table></body></html>`);
     win.document.close();
     win.focus();
@@ -600,14 +773,16 @@ export default function GanttDashboard() {
       const offset   = projBarOffset(p);
       const duration = projectMaxDay(p);
       const phases   = [...new Set(tasks.map((t) => t.phase))].sort((a, b) => {
+        const aMin = Math.min(...tasks.filter((t) => t.phase === a).map((t) => t.sort_order ?? 9999));
+        const bMin = Math.min(...tasks.filter((t) => t.phase === b).map((t) => t.sort_order ?? 9999));
         const ao = tasks.find((t) => t.phase === a)?.phase_order ?? 99;
         const bo = tasks.find((t) => t.phase === b)?.phase_order ?? 99;
-        return ao - bo;
+        return aMin - bMin || ao - bo;
       });
       out.push({ type: "project", p, pIdx, color, pct, offset, duration });
       if (focusId === p.id) {
         phases.forEach((phase) => {
-          const phaseTasks = tasks.filter((t) => t.phase === phase);
+          const phaseTasks = orderedTasks(tasks.filter((t) => t.phase === phase));
           const phaseColor = PHASE_COLORS[phase] || "#8b5cf6";
           const phasePct   = phaseTasks.length
             ? Math.round(phaseTasks.filter((t) => t.status === "complete").length / phaseTasks.length * 100)
@@ -715,7 +890,12 @@ export default function GanttDashboard() {
         const progress = clampProgress(pd.originalProgress + (dx / pd.width) * 100);
         const status = statusFromProgress(progress);
         try {
-          await supabase.from("gantt_tasks").update({ progress_percent: progress, status }).eq("id", pd.taskId).eq("project_id", pd.projectId);
+          let { error } = await supabase.from("gantt_tasks").update({ progress_percent: progress, status }).eq("id", pd.taskId).eq("project_id", pd.projectId);
+          if (error?.message?.includes("progress_percent")) {
+            const retry = await supabase.from("gantt_tasks").update({ status }).eq("id", pd.taskId).eq("project_id", pd.projectId);
+            error = retry.error;
+          }
+          if (error) throw error;
           patchProjectTasks(pd.projectId, (tasks) => tasks.map((t) => t.id === pd.taskId ? { ...t, progress_percent: progress, status } : t));
         } catch (err) {
           console.error("Progress drag save failed:", err);
@@ -796,6 +976,9 @@ export default function GanttDashboard() {
               <button style={S.todayBtn} onClick={() => openAddTask(focusedProject)}>+ Task</button>
             )}
             {focusedProject && (
+              <button style={S.todayBtn} onClick={() => setShowSetback(true)}>Setback</button>
+            )}
+            {focusedProject && (
               <button style={S.todayBtn} onClick={() => promptImportTasks(focusedProject)}>Import CSV</button>
             )}
             <button
@@ -861,7 +1044,8 @@ export default function GanttDashboard() {
             {/* Left name column */}
             <div style={S.leftCol}>
               <div style={S.nameHeader}>
-                <div style={S.headerGrid}>
+                <div style={{ ...S.headerGrid, gridTemplateColumns: focusedProject ? "44px minmax(0, 1fr) 138px" : "minmax(0, 1fr) 138px" }}>
+                  {focusedProject && <span>No.</span>}
                   <span>{focusedProject ? "Task Name" : "Project Name"}</span>
                   <span>State</span>
                 </div>
@@ -961,6 +1145,7 @@ export default function GanttDashboard() {
                     >
                       <div style={{ position:"absolute", left:26, top:0, height:"50%", width:2, background:"#94a3b8", pointerEvents:"none" }} />
                       <div style={{ position:"absolute", left:26, top:"50%", width:16, height:2, background:"#94a3b8", pointerEvents:"none" }} />
+                      <span style={S.orderBadge}>{(task.sort_order ?? 0) + 1}</span>
                       <span style={{ ...S.taskDot, background: statusColor(taskStatus) }} />
                       <span style={S.taskName}>{task.is_milestone ? "⭐ " : ""}{task.name}</span>
                       <button
@@ -1013,7 +1198,7 @@ export default function GanttDashboard() {
                       style={{
                         ...S.dayCell,
                         width: DAY_W, minWidth: DAY_W,
-                        background: t.offset === todayOffset ? "#fef2f2" : t.isWeekend ? "#ecfdf5" : undefined,
+                        background: t.offset === todayOffset ? "#fef2f2" : t.isWeekend ? "#dcfce7" : undefined,
                         color: t.offset === todayOffset ? "#ef4444" : undefined,
                         fontWeight: t.offset === todayOffset ? 700 : 400,
                       }}
@@ -1034,7 +1219,7 @@ export default function GanttDashboard() {
                 {dayTicks.filter((t) => t.isWeekend).map((t) => (
                   <div
                     key={`weekend-${t.offset}`}
-                    style={{ position:"absolute", left:t.offset*DAY_W, top:64, width:DAY_W, height:9999, background:"#ecfdf5", pointerEvents:"none", zIndex:0 }}
+                    style={{ position:"absolute", left:t.offset*DAY_W, top:64, width:DAY_W, height:9999, background:"#dcfce7", opacity:0.72, pointerEvents:"none", zIndex:0 }}
                   />
                 ))}
 
@@ -1199,10 +1384,71 @@ export default function GanttDashboard() {
             {focusedProject.start_date && <span style={{ color: "#64748b" }}> · Started {fmtDate(focusedProject.start_date)}</span>}
             <span style={{ color: "#64748b" }}> · {projectPct(focusedProject)}% complete</span>
             <button style={S.footerBtn} onClick={() => openAddTask(focusedProject)}>+ Add Task</button>
+            <button style={S.footerBtn} onClick={() => setShowSetback(true)}>Add Setback</button>
             <button style={S.footerBtn} onClick={() => promptImportTasks(focusedProject)}>Import CSV</button>
           </div>
         )}
       </div>
+
+      {/* ── Setback modal ── */}
+      {showSetback && focusedProject && (
+        <div style={S.overlay} onClick={() => setShowSetback(false)}>
+          <div style={{ ...S.modal, maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={S.modalTitle}>Add Setback</h2>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 14, lineHeight: 1.5 }}>
+              Push tasks in {focusedProject.name} later by a number of days.
+            </p>
+
+            <label style={S.fieldLabel}>
+              Delay
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <button
+                  style={{ ...S.choiceBtn, ...(setbackForm.days === 7 ? S.choiceBtnActive : {}) }}
+                  onClick={() => setSetbackForm((f) => ({ ...f, days: 7 }))}
+                >
+                  1 Week
+                </button>
+                <button
+                  style={{ ...S.choiceBtn, ...(setbackForm.days === 14 ? S.choiceBtnActive : {}) }}
+                  onClick={() => setSetbackForm((f) => ({ ...f, days: 14 }))}
+                >
+                  2 Weeks
+                </button>
+              </div>
+              <input
+                style={S.input}
+                type="number"
+                min="1"
+                value={setbackForm.days}
+                onChange={(e) => setSetbackForm((f) => ({ ...f, days: e.target.value }))}
+              />
+            </label>
+
+            <label style={S.fieldLabel}>
+              Move
+              <select
+                style={S.input}
+                value={setbackForm.scope}
+                onChange={(e) => setSetbackForm((f) => ({ ...f, scope: e.target.value }))}
+              >
+                <option value="all">All tasks</option>
+                <option value="unfinished">Only pending and in-progress tasks</option>
+              </select>
+            </label>
+
+            <div style={S.modalActions}>
+              <button style={S.cancelBtn} onClick={() => setShowSetback(false)}>Cancel</button>
+              <button
+                style={{ ...S.primaryBtn, opacity: saving ? 0.5 : 1 }}
+                disabled={saving}
+                onClick={applySetback}
+              >
+                {saving ? "Applying..." : "Apply Setback"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Add / edit task modal ── */}
       {(showAddTask || editTask) && (
@@ -1227,6 +1473,17 @@ export default function GanttDashboard() {
                 placeholder="e.g. Frame inspection"
                 onChange={(e) => setTaskForm((f) => ({ ...f, name: e.target.value }))}
                 onKeyDown={(e) => { if (e.key === "Enter") saveTask(); }}
+              />
+            </label>
+
+            <label style={S.fieldLabel}>
+              Task Number
+              <input
+                style={S.input}
+                type="number"
+                min="1"
+                value={taskForm.sort_order}
+                onChange={(e) => setTaskForm((f) => ({ ...f, sort_order: e.target.value }))}
               />
             </label>
 
@@ -1493,7 +1750,7 @@ const S = {
   projectRow: {
     display: "flex", alignItems: "center", gap: 8,
     padding: "0 10px 0 12px", height: 56,
-    cursor: "pointer", borderBottom: "1px solid #e2e8f0",
+    cursor: "pointer", borderBottom: "1px solid #cbd5e1",
     transition: "background 0.12s", userSelect: "none",
   },
   chevron:  { fontSize: 12, width: 16, flexShrink: 0, textAlign: "center" },
@@ -1507,11 +1764,11 @@ const S = {
     borderRadius: 6, padding: "3px 7px", fontSize: 11, fontWeight: 700,
     cursor: "pointer", flexShrink: 0, lineHeight: 1.2,
   },
-  headerGrid: { flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 138px", gap: 12, alignItems: "center" },
+  headerGrid: { flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "44px minmax(0, 1fr) 138px", gap: 10, alignItems: "center" },
   phaseRow: {
     display: "flex", alignItems: "center", gap: 8,
     padding: "0 10px 0 32px", height: 48,
-    cursor: "pointer", borderBottom: "1px solid #e2e8f0",
+    cursor: "pointer", borderBottom: "1px solid #cbd5e1",
     background: "#f8fafc", userSelect: "none",
   },
   phChevron: { fontSize: 12, color: "#475569", width: 14, flexShrink: 0 },
@@ -1520,7 +1777,13 @@ const S = {
   taskRow: {
     display: "flex", alignItems: "center", gap: 8,
     padding: "0 10px 0 48px", height: 40,
-    borderBottom: "1px solid #e8edf2", background: "#f8fafc",
+    borderBottom: "1px solid #d1d9e4", background: "#f8fafc",
+  },
+  orderBadge: {
+    width: 34, height: 24, borderRadius: 6,
+    background: "#eef2ff", border: "1px solid #c7d2fe", color: "#4338ca",
+    fontSize: 13, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
   taskDot:  { width: 9, height: 9, borderRadius: "50%", flexShrink: 0 },
   taskName: { flex: 1, minWidth: 0, fontSize: 15, color: "#1e293b", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
@@ -1559,7 +1822,7 @@ const S = {
     fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 4, whiteSpace: "nowrap",
   },
   // Bars
-  barRow: { borderBottom: "1px solid #e8edf2", position: "relative", display: "flex", alignItems: "center" },
+  barRow: { borderBottom: "1px solid #cbd5e1", position: "relative", display: "flex", alignItems: "center" },
   track: { position: "absolute", height: 28, borderRadius: 7, top: "50%", transform: "translateY(-50%)" },
   fill:  { position: "absolute", height: 28, borderRadius: 7, top: "50%", transform: "translateY(-50%)" },
   barPct: { position: "absolute", top: "50%", transform: "translateY(-50%)", fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" },
@@ -1593,6 +1856,8 @@ const S = {
   checkboxRow: { display: "flex", gap: 20, flexWrap: "wrap" },
   checkLabel: { display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "#334155", fontWeight: 600, cursor: "pointer" },
   modalActions: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 },
+  choiceBtn: { background: "#f8fafc", border: "1px solid #cbd5e1", color: "#334155", borderRadius: 8, padding: "9px 12px", fontSize: 14, fontWeight: 700, cursor: "pointer" },
+  choiceBtnActive: { background: "#ede9fe", border: "1px solid #7c3aed", color: "#6d28d9" },
   miniBtn:    { background: "#e2e8f0", border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 12px", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#1e293b", whiteSpace: "nowrap" },
   legendRow:  { display: "flex", flexWrap: "wrap", gap: "8px 22px", padding: "14px 28px 18px", background: "white", borderTop: "2px solid #e2e8f0", margin: "0 0 80px" },
   legendItem: { display: "flex", alignItems: "center", gap: 8 },

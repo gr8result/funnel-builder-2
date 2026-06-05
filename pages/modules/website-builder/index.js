@@ -216,6 +216,7 @@ export default function WebsiteBuilderDashboard() {
   const [renameValue, setRenameValue] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
   const [error, setError] = useState("");
+  const [templateError, setTemplateError] = useState("");
   const [websiteUsage, setWebsiteUsage] = useState(null);
 
   const selectedWebsite = useMemo(() => {
@@ -255,6 +256,7 @@ export default function WebsiteBuilderDashboard() {
   async function refreshDashboard() {
     setLoading(true);
     setError("");
+    setTemplateError("");
 
     try {
       let nextProjects = listWebsiteProjects({ includeUnsaved: true });
@@ -276,6 +278,14 @@ export default function WebsiteBuilderDashboard() {
         pageCount: Array.isArray(site?.pages) && site.pages.length ? site.pages.length : Object.keys(site?.pagesContent || {}).length || 1,
       }));
 
+      setWebsites(nextWebsites);
+      setSelectedWebsiteId((prev) => prev || String(nextWebsites[0]?.id || ""));
+    } catch (err) {
+      setError(err?.message || "Could not load the local visual builder dashboard.");
+      setWebsites([]);
+    }
+
+    try {
       const nextThemes = TEMPLATES.filter((item) => String(item?.type || "website") === "website").map((item, index) => ({
         id: item.id || item.slug || `theme-${index}`,
         slug: item.slug,
@@ -287,12 +297,9 @@ export default function WebsiteBuilderDashboard() {
         state: "installed",
       }));
 
-      setWebsites(nextWebsites);
       setThemes(nextThemes);
-      setSelectedWebsiteId((prev) => prev || String(nextWebsites[0]?.id || ""));
     } catch (err) {
-      setError(err?.message || "Could not load the local visual builder dashboard.");
-      setWebsites([]);
+      setTemplateError(err?.message || "Could not load website templates.");
       setThemes([]);
     } finally {
       setLoading(false);
@@ -522,6 +529,13 @@ export default function WebsiteBuilderDashboard() {
             <section className={s.wizardCard}>
               <h3 className={s.wizardTitle}>Builder Message</h3>
               <p className={s.wizardText}>{error}</p>
+            </section>
+          ) : null}
+
+          {templateError ? (
+            <section className={s.wizardCard}>
+              <h3 className={s.wizardTitle}>Template Message</h3>
+              <p className={s.wizardText}>{templateError}</p>
             </section>
           ) : null}
 
