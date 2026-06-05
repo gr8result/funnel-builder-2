@@ -299,7 +299,7 @@ export default function VisualBuilderPage() {
 
       if ((!nextProject || shouldForceReload) && projectId && session?.access_token) {
         try {
-          const remoteProject = await fetchWebsiteProjectFromServer(session, projectId);
+          const remoteProject = await fetchWebsiteProjectFromServer(session, projectId, { pageName: requestedPage });
           if (remoteProject) {
             nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: !shouldForceReload });
           }
@@ -310,7 +310,7 @@ export default function VisualBuilderPage() {
         // Local cache exists — still fetch server in background to pick up newer
         // server-side edits and any new pages added externally. Don't block the
         // initial render.
-        fetchWebsiteProjectFromServer(session, projectId).then((remoteProject) => {
+        fetchWebsiteProjectFromServer(session, projectId, { pageName: requestedPage }).then((remoteProject) => {
           if (!remoteProject || cancelled) return;
           const localProject = getWebsiteProject(projectId);
           const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
@@ -496,6 +496,7 @@ export default function VisualBuilderPage() {
 
   async function syncProjectToServer(nextProject, options = {}) {
     if (!session?.access_token || !nextProject?.id) return nextProject;
+    const syncPageName = String(options?.pageName || activePage || "").trim();
 
     // Throttle: if a sync is already in-flight, or fired too recently,
     // queue this project and bail. The queued sync fires automatically.
@@ -534,14 +535,20 @@ export default function VisualBuilderPage() {
     try {
       let syncedProject;
       try {
-        syncedProject = await saveWebsiteProjectToServer(session, nextProject);
+        syncedProject = await saveWebsiteProjectToServer(session, nextProject, {
+          pageName: options?.siteOnly ? "" : syncPageName,
+          siteOnly: options?.siteOnly === true,
+        });
       } catch (firstError) {
         // If the token is stale (401), refresh and retry once
         if (String(firstError?.message || "").includes("401")) {
           try {
             const { data: refreshed } = await supabase.auth.refreshSession();
             if (refreshed?.session?.access_token) {
-              syncedProject = await saveWebsiteProjectToServer(refreshed.session, nextProject);
+              syncedProject = await saveWebsiteProjectToServer(refreshed.session, nextProject, {
+                pageName: options?.siteOnly ? "" : syncPageName,
+                siteOnly: options?.siteOnly === true,
+              });
             } else {
               throw firstError;
             }
@@ -739,7 +746,7 @@ export default function VisualBuilderPage() {
     }
   }
 
-  function saveProjectPatch(patch, successMessage = "Saved changes") {
+  function saveProjectPatch(patch, successMessage = "Saved changes", syncOptions = {}) {
     if (!project?.id) return null;
 
     // If the project isn't in localStorage yet (e.g. freshly loaded from server),
@@ -760,7 +767,7 @@ export default function VisualBuilderPage() {
     if (savedProject?._localSaveFailed) {
       const projectToSync = { ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined };
       flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
-      void syncProjectToServer(projectToSync, { silent: false, force: true }).then((synced) => {
+      void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, ...syncOptions }).then((synced) => {
         if (synced) flashNotice("✓ Auto-saved to cloud (local storage full)", "success", 6000);
       });
       return projectToSync;
@@ -776,7 +783,7 @@ export default function VisualBuilderPage() {
     if (savedProject && latest) {
       setProject(latest);
       flashNotice(successMessage);
-      void syncProjectToServer(latest, { silent: true });
+      void syncProjectToServer(latest, { silent: true, pageName: activePage, ...syncOptions });
       return latest;
     }
 
@@ -785,7 +792,7 @@ export default function VisualBuilderPage() {
     } else {
       setProject(savedProject);
       flashNotice(successMessage);
-      void syncProjectToServer(savedProject, { silent: true });
+      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, ...syncOptions });
       return savedProject;
     }
 
@@ -841,7 +848,8 @@ export default function VisualBuilderPage() {
           [pageName]: renderChaiHtml(starterData),
         },
       },
-      `Added ${pageName}`
+      `Added ${pageName}`,
+      { pageName }
     );
 
     navigateToPage(pageName);
@@ -861,7 +869,7 @@ export default function VisualBuilderPage() {
     delete nextChaiData[name];
     const nextPagesContent = { ...(project.pagesContent || {}) };
     delete nextPagesContent[name];
-    saveProjectPatch({ pages: nextPages, pageBlocks: nextPageBlocks, chaiData: nextChaiData, pagesContent: nextPagesContent }, `Deleted ${name}`);
+    saveProjectPatch({ pages: nextPages, pageBlocks: nextPageBlocks, chaiData: nextChaiData, pagesContent: nextPagesContent }, `Deleted ${name}`, { siteOnly: true });
     if (activePage === name) navigateToPage(nextPages[0]?.name || "Home");
   }
 
@@ -885,8 +893,18 @@ export default function VisualBuilderPage() {
       pageBlocks: renameKey(project.pageBlocks),
       chaiData: renameKey(project.chaiData),
       pagesContent: renameKey(project.pagesContent),
-    }, `Renamed to ${trimmed}`);
+    }, `Renamed to ${trimmed}`, { pageName: trimmed });
     if (activePage === oldName) navigateToPage(trimmed);
+  }
+
+  function beginRenamePage(event, pageName) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (event?.nativeEvent?.stopImmediatePropagation) {
+      event.nativeEvent.stopImmediatePropagation();
+    }
+    setRenamingPage(pageName);
+    setRenameValue(pageName);
   }
 
   // Expose page-add helper for testing / automation
@@ -1002,7 +1020,7 @@ export default function VisualBuilderPage() {
       // cannot treat an older cache entry as the source of truth and roll blocks back.
       let serverSynced = null;
       try {
-        serverSynced = await syncProjectToServer(projectWithPatch, { silent: true, force: true });
+        serverSynced = await syncProjectToServer(projectWithPatch, { silent: true, force: true, pageName: activePage });
       } catch (serverErr) {
         console.error("[forceSaveBlockPage] server sync failed:", serverErr);
         flashNotice("⚠️ Could not save to cloud — check your connection. Work saved locally.", "warning", 10000);
@@ -1167,14 +1185,14 @@ export default function VisualBuilderPage() {
   function saveGlobalBlock(block, role) {
     if (!project?.id || !block) return;
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
-    saveProjectPatch({ [field]: block }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`);
+    saveProjectPatch({ [field]: block }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true });
   }
 
   function updateGlobalBlock(role, block) {
     if (!project?.id) return;
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
     // block === null means "delete this global block"
-    saveProjectPatch({ [field]: block ?? null }, `Updated global ${role === "nav" ? "navigation" : "footer"}`);
+    saveProjectPatch({ [field]: block ?? null }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true });
   }
 
   function applyDesignPreset(presetName) {
@@ -1242,6 +1260,12 @@ export default function VisualBuilderPage() {
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json?.src) throw new Error(json?.error || `Video upload failed (HTTP ${res.status})`);
         const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src };
+        const existingVideos = Array.isArray(brandAssets?.videos) ? brandAssets.videos : [];
+        const dedupedVideos = existingVideos.filter((video) => video?.src && video.src !== asset.src && video.name !== asset.name);
+        persistAssets(mergeWebsiteBuilderAssetSources({
+          ...brandAssets,
+          videos: [asset, ...dedupedVideos],
+        }));
         flashNotice(`${file.name} uploaded`);
         return asset;
       }
@@ -1439,6 +1463,7 @@ export default function VisualBuilderPage() {
                         // eslint-disable-next-line jsx-a11y/no-autofocus
                         autoFocus
                         value={renameValue}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setRenameValue(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") { handleRenamePage(entry.name, renameValue); setRenamingPage(null); }
@@ -1459,7 +1484,10 @@ export default function VisualBuilderPage() {
                       <button
                         type="button"
                         onClick={() => navigateToPage(entry.name)}
-                        onDoubleClick={() => { setRenamingPage(entry.name); setRenameValue(entry.name); }}
+                        onMouseDown={(e) => {
+                          if (e.detail > 1) e.preventDefault();
+                        }}
+                        onDoubleClick={(e) => beginRenamePage(e, entry.name)}
                         style={styles.pagesBarTabName}
                         title="Double-click to rename"
                       >
@@ -1592,6 +1620,7 @@ export default function VisualBuilderPage() {
                           // eslint-disable-next-line jsx-a11y/no-autofocus
                           autoFocus
                           value={renameValue}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => setRenameValue(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") { handleRenamePage(entry.name, renameValue); setRenamingPage(null); }
@@ -1612,7 +1641,10 @@ export default function VisualBuilderPage() {
                         <button
                           type="button"
                           onClick={() => navigateToPage(entry.name)}
-                          onDoubleClick={() => { setRenamingPage(entry.name); setRenameValue(entry.name); }}
+                          onMouseDown={(e) => {
+                            if (e.detail > 1) e.preventDefault();
+                          }}
+                          onDoubleClick={(e) => beginRenamePage(e, entry.name)}
                           style={styles.pagePillName}
                           title="Double-click to rename"
                         >

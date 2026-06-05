@@ -20,7 +20,7 @@ import {
   DEFAULT_ENQUIRY_BOOKING_URL, resolveContactBookingUrl, htmlToPlainText,
   createPricingPlan, normalizePricingPlans,
   NAVBAR_STYLE_PRESETS, BLOCK_STYLE_PRESETS, COPY_TONE_OPTIONS,
-  getHeroLayoutDefaults, applyHeroPresetLayout, withHeroOverlayDefaults,
+  applyHeroPresetLayout,
   TEXT_SIZE_OPTIONS, ANIMATION_PRESETS,
 } from "./pbEditorUtils";
 import { styles } from "./pbStyles";
@@ -134,7 +134,9 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? (() => {
           const sp    = block.props || {};
-          const spBg  = sp.backgroundStyle === "color"    ? sp.backgroundColor || "transparent"
+          const spColor = String(sp.backgroundColor || "").trim().toLowerCase();
+          const defaultWhiteSpacer = spColor === "" || spColor === "#fff" || spColor === "#ffffff" || spColor === "white" || spColor === "rgb(255, 255, 255)";
+          const spBg  = sp.backgroundStyle === "color"    ? (defaultWhiteSpacer ? "transparent" : sp.backgroundColor)
                       : sp.backgroundStyle === "gradient" ? sp.backgroundGradient || "transparent"
                       : sp.backgroundStyle === "image" && sp.backgroundImage
                           ? `url(${JSON.stringify(sp.backgroundImage)}) ${sp.backgroundPosition || "center center"} / ${sp.backgroundSize || "cover"} no-repeat`
@@ -390,54 +392,6 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
     </div>
   );
 };
-
-function CounterLiveStats({ projectId, startNumber }) {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const fetchStats = React.useCallback(() => {
-    if (!projectId) return;
-    setLoading(true);
-    const base = Math.max(0, Number(startNumber || 0));
-    fetch(`/api/website/track-visit?projectId=${encodeURIComponent(projectId)}&base=${base}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setStats(data); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId, startNumber]);
-
-  useEffect(() => { fetchStats(); }, [fetchStats]);
-
-  const realVisits = stats?.totalVisits ?? 0;
-  const totalShown = stats?.count ?? startNumber ?? 0;
-
-  return (
-    <div style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.08em" }}>LIVE VISIT DATA</span>
-        <button
-          type="button"
-          onClick={fetchStats}
-          disabled={loading}
-          style={{ fontSize: 16, padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(14,165,233,0.4)", background: "transparent", color: "#38bdf8", cursor: loading ? "default" : "pointer", opacity: loading ? 0.5 : 1 }}
-        >{loading ? "…" : "↻ Refresh"}</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#0ea5e9", lineHeight: 1 }}>{totalShown.toLocaleString()}</div>
-          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>shown on counter</div>
-        </div>
-        <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#10b981", lineHeight: 1 }}>{realVisits.toLocaleString()}</div>
-          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>real visits tracked</div>
-        </div>
-      </div>
-      <p style={{ margin: "8px 0 0", fontSize: 16, color: "#64748b", lineHeight: 1.4 }}>
-        Visits are recorded when someone opens your <strong style={{ color: "#94a3b8" }}>Preview</strong> or <strong style={{ color: "#94a3b8" }}>live published page</strong> — not this editor.
-      </p>
-    </div>
-  );
-}
 
 function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -2798,25 +2752,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   const def = BlockDefinitions[block.type];
   const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+  const savedVideos = Array.isArray(brandAssets?.videos) ? brandAssets.videos : [];
   const savedLogo = brandAssets?.logo || null;
   const currentBackgroundPreview = resolveAssetField(block?.props || {}, "backgroundImage", brandAssets);
-  const currentOverlayPreview = resolveAssetField(block?.props || {}, "floatingImage", brandAssets);
-  const effectiveOverlayPreview = currentOverlayPreview || savedLogo?.src || "";
   const isHero = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
-  const fontWeightKey = isHero ? "headlineFontWeight" : "fontWeight";
-  const fontFamilyKey = isHero ? "headlineFontFamily" : "fontFamily";
-  const colorKey = isHero ? "headlineColor" : "textColor";
-  const alignKey = isHero ? "headlineAlignment" : "alignment";
   const supportsParallaxToggle = [BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.HERO].includes(block.type);
-  const isPositionableText = block.type === BlockTypes.PARALLAX || (!!block?.props?.enableParallax && [BlockTypes.HERO, BlockTypes.TEXT].includes(block.type));
-  const supportsOverlayImage = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
   const heroSections = [
     { id: "layout", label: "Layout" },
     { id: "media", label: "Media" },
-    { id: "style", label: "Style" },
     { id: "animations", label: "Animations" },
-    { id: "overlays", label: "Overlays" },
-    { id: "counter", label: "Counter ✦" },
   ];
   const heroTabBtnStyle = (active) => ({
     ...styles.tabChip,
@@ -2832,35 +2776,22 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     boxSizing: "border-box",
   });
   const heroTabRowBase = { display: "flex", gap: 4, marginBottom: 4 };
-  const heroLayoutKeys = new Set(["heroVariant", "spacingScale", "headlineAlignment"]);
+  const heroLayoutKeys = new Set(["heroVariant", "spacingScale", "marginTop"]);
   const heroContentKeys = new Set(["headline", "subheadline", "ctaText", "ctaLink", "ctaSubtext", "eyebrow", "tagline", "brand"]);
   const heroAnimationKeys = new Set([
     "sectionAnimation",
     "sectionAnimationDelay",
     "sectionAnimationSpeed",
-    "textAnimation",
-    "textAnimationDelay",
-    "textAnimationSpeed",
-    "subheadlineAnimation",
-    "subheadlineAnimationDelay",
-    "subheadlineAnimationSpeed",
-    "ctaAnimation",
-    "ctaAnimationDelay",
-    "ctaAnimationSpeed",
-    "contentOverlayAnimation",
-    "contentOverlayAnimationDelay",
-    "contentOverlayAnimationSpeed",
-    "imageOverlayAnimation",
-    "imageOverlayAnimationDelay",
-    "imageOverlayAnimationSpeed",
   ]);
 
   function shouldShowHeroPanelSection(sectionId) {
+    if (isHero && !heroSections.some((section) => section.id === sectionId)) return false;
     return !isHero || heroEditorSection === sectionId;
   }
 
   function shouldRenderHeroGenericField(key, value) {
     if (!isHero) return true;
+    if (!heroSections.some((section) => section.id === heroEditorSection)) return false;
 
     if (heroAnimationKeys.has(key) || /animation/i.test(key)) {
       return heroEditorSection === "animations";
@@ -2918,19 +2849,12 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
-  function applyCanvasAlignment(axis, value) {
-    const nextProps = { ...(block.props || {}) };
-
-    if (axis === "x") {
-      nextProps[alignKey] = value;
-    } else {
-      nextProps.verticalAlign = value;
+  function openAssetBrowser(fieldKey, title) {
+    if (["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(fieldKey || ""))) {
+      setAssetBrowser({ visible: true, fieldKey, title });
+      return;
     }
 
-    onChange(index, nextProps);
-  }
-
-  function openAssetBrowser(fieldKey, title) {
     const opened = openSharedMediaPicker({
       onPick: (asset) => {
         if (!assetBrowser.fieldKey && !fieldKey) return;
@@ -2943,7 +2867,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   const selectedBrowserImage = assetBrowser.fieldKey ? String(block?.props?.[assetBrowser.fieldKey] || "") : "";
-  const browserAssets = [savedLogo, ...savedImages].filter(Boolean);
+  const isVideoAssetBrowser = ["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(assetBrowser.fieldKey || ""));
+  const browserAssets = isVideoAssetBrowser
+    ? savedVideos
+    : [savedLogo, ...savedImages].filter(Boolean);
 
   async function regenerateBlockCopy() {
     if (!block || typeof index !== "number") return;
@@ -3938,6 +3865,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         title={assetBrowser.title || "Media Library"}
         assets={browserAssets}
         selectedSrc={selectedBrowserImage}
+        uploadAccept={isVideoAssetBrowser ? "video/*" : "image/*"}
         onClose={() => setAssetBrowser({ visible: false, fieldKey: "", title: "" })}
         onSelect={(asset) => {
           if (!assetBrowser.fieldKey) return;
@@ -3982,6 +3910,17 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </label>
           </div>
         ) : null}
+        {isHero && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <NumberField
+              label="Top Margin (px)"
+              value={Number(block?.props?.marginTop || 0)}
+              min={0}
+              max={400}
+              onChange={(value) => onChange(index, { ...block.props, marginTop: value })}
+            />
+          </div>
+        ) : null}
         {supportsParallaxToggle && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Parallax Mode</label>
@@ -4001,128 +3940,6 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               />
               Enable parallax background
             </label>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("layout") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Hero Copy</label>
-            <p style={styles.aiHint}>This sits with layout so the copy and positioning stay in one place.</p>
-            <label style={styles.inlineToggle}>
-              <input
-                type="checkbox"
-                checked={!block?.props?.hideTextOverlay}
-                onChange={(e) => onChange(index, { ...block.props, hideTextOverlay: !e.target.checked })}
-                style={styles.checkboxInput}
-              />
-              Show text overlay in preview
-            </label>
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Eyebrow</label>
-            <input
-              type="text"
-              value={htmlToPlainText(block?.props?.eyebrow || "")}
-              onChange={(event) => onChange(index, { ...block.props, eyebrow: event.target.value })}
-              style={styles.propertyInput}
-              placeholder="Section label"
-            />
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Headline</label>
-            <textarea
-              value={htmlToPlainText(block?.props?.headline || "")}
-              onChange={(event) => onChange(index, { ...block.props, headline: event.target.value })}
-              placeholder="Write headline..."
-              style={{ ...styles.propertyInput, minHeight: 88, resize: "vertical", lineHeight: 1.45 }}
-            />
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Body Copy</label>
-            <textarea
-              value={htmlToPlainText(block?.props?.subheadline || "")}
-              onChange={(event) => onChange(index, { ...block.props, subheadline: event.target.value })}
-              placeholder="Write supporting text..."
-              style={{ ...styles.propertyInput, minHeight: 108, resize: "vertical", lineHeight: 1.5 }}
-            />
-            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Primary CTA</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.ctaText || "")}
-                  onChange={(event) => onChange(index, { ...block.props, ctaText: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="Get Started"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Primary Link</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.ctaLink || "")}
-                  onChange={(event) => onChange(index, { ...block.props, ctaLink: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="#contact"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Secondary CTA</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.secondaryCtaText || "")}
-                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaText: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="Learn More"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Secondary Link</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.secondaryCtaLink || "")}
-                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaLink: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="#services"
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("layout") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Text Block Position</label>
-            <div style={styles.inlineChipRow}>
-              {[
-                { value: "left", label: "Left" },
-                { value: "center", label: "Center" },
-                { value: "right", label: "Right" },
-              ].map((option) => (
-                <button
-                  key={`hero-align-${option.value}`}
-                  type="button"
-                  style={{ ...styles.presetChip, ...(String(block?.props?.headlineAlignment || "center") === option.value ? styles.presetChipActive : {}) }}
-                  onClick={() => applyCanvasAlignment("x", option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div style={styles.inlineChipRow}>
-              {[
-                { value: "top", label: "Top" },
-                { value: "center", label: "Middle" },
-                { value: "bottom", label: "Bottom" },
-              ].map((option) => (
-                <button
-                  key={`hero-vertical-${option.value}`}
-                  type="button"
-                  style={{ ...styles.presetChip, ...(String(block?.props?.verticalAlign || "center") === option.value ? styles.presetChipActive : {}) }}
-                  onClick={() => applyCanvasAlignment("y", option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div style={styles.colorGrid}>
-              <NumberField label="Text X %" value={Number(block?.props?.contentX ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentX)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentX: value })} />
-              <NumberField label="Text Y %" value={Number(block?.props?.contentY ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentY)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentY: value })} />
-              <NumberField label="Text Width" value={Number(block?.props?.contentWidth ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentWidth)} min={180} max={1400} onChange={(value) => onChange(index, { ...block.props, contentWidth: value })} />
-              <NumberField label="Text Height" value={Number(block?.props?.contentHeight ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentHeight)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, contentHeight: value })} />
-            </div>
           </div>
         ) : null}
         {isHero && shouldShowHeroPanelSection("media") ? (
@@ -4245,12 +4062,16 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     type="file"
                     accept="video/mp4,video/*"
                     style={{ display: "none" }}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
+                      e.target.value = "";
                       if (!file) return;
                       const localUrl = URL.createObjectURL(file);
                       onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
-                      onUploadImage?.(index, "backgroundVideoUrl", file);
+                      const asset = await Promise.resolve(onUploadImage?.(index, "backgroundVideoUrl", file));
+                      if (asset?.src) {
+                        onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: asset.src, backgroundVideoUrlAssetId: asset.id || "" });
+                      }
                     }}
                   />
                 </label>
@@ -4268,6 +4089,13 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     onClick={() => onChange(index, { ...block.props, backgroundVideoUrl: "" })}
                   >Remove Video</button>
                 ) : null}
+                <button
+                  type="button"
+                  style={{ ...styles.assetLibraryBtn, marginTop: 8 }}
+                  onClick={() => openAssetBrowser("backgroundVideoUrl", "Video Library")}
+                >
+                  Open Video Library
+                </button>
                 <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Video Overlay (darken/tint)</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input
@@ -4327,7 +4155,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             ) : null}
           </div>
         ) : null}
-        {supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
+        {!isHero && supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>AI Copy</label>
             <label style={styles.propertyLabel}>Tone</label>
@@ -4361,532 +4189,19 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         {isHero && shouldShowHeroPanelSection("animations") ? (
           <>
             {renderAnimationControlCard("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", { animation: "fade-up", delay: 0.06, speed: 0.9 })}
-            {renderAnimationControlCard("Content Shell", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", { animation: "sweep-right", delay: 0.22, speed: 1.05 })}
-            {renderAnimationControlCard("Overlay Image", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", { animation: "sweep-left", delay: 0.08, speed: 1.45 })}
-            {renderAnimationControlCard("Headline", "textAnimation", "textAnimationDelay", "textAnimationSpeed", { animation: "fade-up", delay: 0, speed: 0.8 })}
-            {renderAnimationControlCard("Body Copy", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", { animation: "fade-in", delay: 0.12, speed: 0.9 })}
-            {renderAnimationControlCard("CTA Buttons", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", { animation: "fade-up", delay: 0.18, speed: 0.9 })}
           </>
         ) : null}
-        {/* ─── Overlays tab ─── */}
-        {isHero && shouldShowHeroPanelSection("overlays") ? (
-          <>
-            {/* Hero stat items */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Inline Hero Stats (below CTA buttons)</label>
-              <p style={styles.aiHint}>Small number + label pairs shown inline in the hero, e.g. "500+ Clients".</p>
-              {(Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).map((stat, sIdx) => {
-                const updateStat = (patch) => {
-                  const next = (Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).map((s, i) => i !== sIdx ? s : { ...s, ...patch });
-                  onChange(index, { ...block.props, heroStatItems: next });
-                };
-                const deleteStat = () => {
-                  const next = (Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).filter((_, i) => i !== sIdx);
-                  onChange(index, { ...block.props, heroStatItems: next });
-                };
-                return (
-                  <div key={stat.id || sIdx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                    <input type="text" value={stat.number || ""} onChange={(e) => updateStat({ number: e.target.value })} style={styles.propertyInput} placeholder="e.g. 500+" />
-                    <input type="text" value={stat.label || ""} onChange={(e) => updateStat({ label: e.target.value })} style={styles.propertyInput} placeholder="e.g. Clients" />
-                    <button type="button" onClick={deleteStat} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px" }}>✕</button>
-                  </div>
-                );
-              })}
-              <button
-                type="button"
-                style={styles.secondaryBtn}
-                onClick={() => {
-                  const current = Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : [];
-                  onChange(index, { ...block.props, heroStatItems: [...current, { id: `stat-${Date.now()}`, number: "", label: "" }] });
-                }}
-              >+ Add Stat</button>
-            </div>
-            {/* Extra text overlays */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Text Overlays</label>
-              <p style={styles.aiHint}>Free-floating text blocks. Add them with the green "+ Text Block" chip on the hero canvas.</p>
-              {(Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).length === 0 ? (
-                <p style={{ margin: 0, fontSize: 16, color: "#64748b" }}>No text overlays yet.</p>
-              ) : (Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).map((txt, tIdx) => {
-                const deleteTxt = () => {
-                  const next = (Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).filter((_, i) => i !== tIdx);
-                  onChange(index, { ...block.props, extraTextOverlays: next });
-                };
-                return (
-                  <div key={txt.id || tIdx} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6, minWidth: 0 }}>
-                    <div style={{ flex: 1, fontSize: 16, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "4px 8px" }}>
-                      {(txt.text || "(empty)").replace(/<[^>]*>/g, "").trim() || "(empty)"}
-                    </div>
-                    <button type="button" onClick={deleteTxt} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px", flexShrink: 0 }}>Remove</button>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Floating images */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Floating Images</label>
-              <p style={styles.aiHint}>Images overlaid on the hero. Drag on canvas to reposition. Add via "+ Logo" or "+ Image / GIF" on the hero.</p>
-              {(Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).length === 0 ? (
-                <p style={{ margin: "0 0 8px", fontSize: 16, color: "#64748b" }}>No floating images yet.</p>
-              ) : (Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).map((img, iIdx) => {
-                const deleteImg = () => {
-                  const next = (Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).filter((_, i) => i !== iIdx);
-                  onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
-                };
-                const imgSrc = resolveAssetField(img, "src", brandAssets) || img?.src || "";
-                const replaceInputId = `replace-float-img-${index}-${iIdx}`;
-                return (
-                  <div key={img.id || iIdx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, padding: 8, borderRadius: 8, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(0,0,0,0.15)", minWidth: 0 }}>
-                    <label htmlFor={replaceInputId} title="Click to replace image" style={{ cursor: "pointer", flexShrink: 0, position: "relative" }}>
-                      {imgSrc ? <img src={imgSrc} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, display: "block" }} /> : <div style={{ width: 44, height: 44, borderRadius: 6, background: "rgba(255,255,255,0.05)" }} />}
-                      <div style={{ position: "absolute", inset: 0, borderRadius: 6, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s" }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-                        onMouseLeave={e => e.currentTarget.style.opacity = "0"}
-                      >
-                        <span style={{ fontSize: 18, color: "#fff" }}>✎</span>
-                      </div>
-                      <input id={replaceInputId} type="file" accept="image/*,image/gif" style={{ display: "none" }} onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (!file) return;
-                        Promise.resolve(onUploadImage?.(index, "__addFloatingImage", file)).then((asset) => {
-                          if (!asset?.src) return;
-                          const current = Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : [];
-                          const next = current.map((fi, i) => i !== iIdx ? fi : { ...fi, src: asset.src, assetId: asset.id || "" });
-                          onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
-                        });
-                      }} />
-                    </label>
-                    <span style={{ flex: 1, fontSize: 16, color: "#94a3b8" }}>Image {iIdx + 1}</span>
-                    <button type="button" onClick={deleteImg} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px", flexShrink: 0 }}>Remove</button>
-                  </div>
-                );
-              })}
-              <label style={{ ...styles.secondaryBtn, display: "block", textAlign: "center", cursor: "pointer", marginTop: 4 }}>
-                Upload Floating Image
-                <input type="file" accept="image/*,image/gif" style={{ display: "none" }} onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (!file) return;
-                  Promise.resolve(onUploadImage?.(index, "__addFloatingImage", file)).then((asset) => {
-                    if (!asset?.src) return;
-                    const current = Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : [];
-                    onChange(index, { ...block.props, floatingImages: [...current, { src: asset.src, assetId: asset.id || "", x: 76, y: 52, width: 280, height: 320, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 }] });
-                  });
-                }} />
-              </label>
-            </div>
-            {/* Orbit feature cards editor */}
-            {block?.props?.heroVariant === "orbit" ? (
-              <div style={styles.sectionCard}>
-                <label style={styles.propertyLabel}>Orbit Feature Cards</label>
-                <p style={styles.aiHint}>6 floating cards shown around your avatar. Customize the title, icon (emoji), and up to 2 lines each.</p>
-                {(Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
-                  ? block.props.orbitCards
-                  : [
-                    { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
-                    { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
-                    { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
-                    { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
-                    { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
-                    { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
-                  ]
-                ).slice(0, 6).map((card, cIdx) => {
-                  const updateCard = (patch) => {
-                    const base = Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
-                      ? block.props.orbitCards
-                      : [
-                        { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
-                        { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
-                        { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
-                        { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
-                        { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
-                        { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
-                      ];
-                    const next = base.map((c, i) => i !== cIdx ? c : { ...c, ...patch });
-                    onChange(index, { ...block.props, orbitCards: next });
-                  };
-                  const SLOT_LABELS = ["Top Left", "Top Right", "Mid Left", "Mid Right", "Bot Left", "Bot Right"];
-                  return (
-                    <div key={card.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.18)", borderRadius: 10, padding: "10px 10px 8px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", marginBottom: 8 }}>Card {cIdx + 1} — {SLOT_LABELS[cIdx] || ""}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 52px", gap: 6, marginBottom: 6 }}>
-                        <div>
-                          <label style={styles.propertyLabel}>Icon</label>
-                          <input type="text" value={card.icon || ""} onChange={(e) => updateCard({ icon: e.target.value })} style={{ ...styles.propertyInput, textAlign: "center", fontSize: 18 }} placeholder="📊" maxLength={4} />
-                        </div>
-                        <div>
-                          <label style={styles.propertyLabel}>Title</label>
-                          <input type="text" value={card.title || ""} onChange={(e) => updateCard({ title: e.target.value })} style={styles.propertyInput} placeholder="Feature name" />
-                        </div>
-                        <div>
-                          <label style={styles.propertyLabel}>Accent</label>
-                          <input type="color" value={card.accent || "#6366f1"} onChange={(e) => updateCard({ accent: e.target.value })} style={{ ...styles.propertyInput, padding: 2, height: 32, cursor: "pointer" }} title="Card accent colour" />
-                        </div>
-                      </div>
-                      <label style={styles.propertyLabel}>Line 1</label>
-                      <input type="text" value={(card.lines || [])[0] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[0] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. 1,240 visits" />
-                      <label style={{ ...styles.propertyLabel, marginTop: 5 }}>Line 2</label>
-                      <input type="text" value={(card.lines || [])[1] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[1] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. +8.4% this week" />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-            {/* Counter Widgets */}
-            {(Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).length > 0 ? (
-              <div style={styles.sectionCard}>
-                <label style={styles.propertyLabel}>Counter Widgets</label>
-                <p style={styles.aiHint}>Counters dragged onto the hero. Edit each one below.</p>
-                {(Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).map((ctr, cIdx) => {
-                  const updateCtr = (patch) => {
-                    const next = (Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).map((t, i) => i !== cIdx ? t : { ...t, ...patch });
-                    onChange(index, { ...block.props, extraCounterOverlays: next });
-                  };
-                  const deleteCtr = () => {
-                    const next = (Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).filter((_, i) => i !== cIdx);
-                    onChange(index, { ...block.props, extraCounterOverlays: next });
-                  };
-                  return (
-                    <div key={ctr.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.2)", borderRadius: 10, padding: "10px 10px 6px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8" }}>Counter {cIdx + 1}</span>
-                        <button type="button" onClick={deleteCtr} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "2px 8px", fontSize: 16 }}>Remove</button>
-                      </div>
-                      <label style={styles.propertyLabel}>Label</label>
-                      <input type="text" value={ctr.label || ""} onChange={(e) => updateCtr({ label: e.target.value })} style={styles.propertyInput} placeholder="e.g. Site Visits" />
-                      <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Background</label>
-                      <input type="text" value={ctr.background || ""} onChange={(e) => updateCtr({ background: e.target.value })} style={styles.propertyInput} placeholder="e.g. rgba(0,0,0,0.6)" />
-                      <div style={{ ...styles.colorGrid, marginTop: 6 }}>
-                        <ColorSelector label="Number color" value={ctr.numberColor || "#0c8ce9"} fallback="#0c8ce9" onChange={(v) => updateCtr({ numberColor: v })} />
-                        <ColorSelector label="Label color" value={ctr.labelColor || "#ffffff"} fallback="#ffffff" onChange={(v) => updateCtr({ labelColor: v })} />
-                      </div>
-                      <div style={{ ...styles.colorGrid, marginTop: 6 }}>
-                        <ColorSelector label="Icon color" value={ctr.iconColor || "#ffffff"} fallback="#ffffff" onChange={(v) => updateCtr({ iconColor: v })} />
-                        <NumberField label="Number size" value={Number(ctr.numberSize ?? 52)} min={20} max={120} onChange={(v) => updateCtr({ numberSize: v })} />
-                      </div>
-                      <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Icon shape</label>
-                      <select value={ctr.bgIcon || "diamond"} onChange={(e) => updateCtr({ bgIcon: e.target.value })} style={styles.propertyInput}>
-                        <option value="diamond">Diamond</option>
-                        <option value="circle">Circle</option>
-                        <option value="star">Star</option>
-                        <option value="hexagon">Hexagon</option>
-                        <option value="none">None</option>
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </>
-        ) : null}
-        {/* ─── Counter tab ─── */}
-        {isHero && shouldShowHeroPanelSection("counter") ? (
-          <>
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Hero Inline Counter</label>
-              <p style={styles.aiHint}>Embed a draggable animated counter widget inside the hero. Drag it beside your image at the bottom.</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 16, color: "#e2e8f0" }}>
-                  <input
-                    type="checkbox"
-                    checked={!!block?.props?.heroInlineCounter?.enabled}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, enabled: e.target.checked } });
-                    }}
-                    style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#0ea5e9" }}
-                  />
-                  Enable counter in hero
-                </label>
-              </div>
-              {block?.props?.heroInlineCounter?.enabled ? (
-                <>
-                  <CounterLiveStats
-                    projectId={project?.id || ""}
-                    startNumber={block?.props?.heroInlineCounter?.startNumber ?? 0}
-                  />
-                  <label style={styles.propertyLabel}>Starting visit count</label>
-                  <p style={{ ...styles.aiHint, marginBottom: 4 }}>Set the number shown now. Every real page visit adds +1 on top of this.</p>
-                  <input
-                    type="number"
-                    value={block?.props?.heroInlineCounter?.startNumber ?? 0}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      const n = Number(e.target.value);
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, startNumber: n, targetNumber: n } });
-                    }}
-                    placeholder="e.g. 28642"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Suffix (e.g. +, %)</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.suffix || ""}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, suffix: e.target.value } });
-                    }}
-                    placeholder="e.g. +"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Label text</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.label || ""}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, label: e.target.value } });
-                    }}
-                    placeholder="e.g. Happy Customers"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Background</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.backgroundColor || "rgba(0,0,0,0.55)"}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, backgroundColor: e.target.value } });
-                    }}
-                    placeholder="rgba(0,0,0,0.55) or #1e293b"
-                    style={styles.propertyInput}
-                  />
-                  <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-                    <ColorSelector
-                      label="Number color"
-                      value={block?.props?.heroInlineCounter?.numberColor || "#0c8ce9"}
-                      fallback="#0c8ce9"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, numberColor: v } });
-                      }}
-                    />
-                    <ColorSelector
-                      label="Label color"
-                      value={block?.props?.heroInlineCounter?.labelColor || "#ffffff"}
-                      fallback="#ffffff"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, labelColor: v } });
-                      }}
-                    />
-                    <ColorSelector
-                      label="Icon color"
-                      value={block?.props?.heroInlineCounter?.iconColor || "#ffffff"}
-                      fallback="#ffffff"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, iconColor: v } });
-                      }}
-                    />
-                  </div>
-                  <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-                    <NumberField
-                      label="Number size"
-                      value={Number(block?.props?.heroInlineCounter?.numberFontSize ?? 64)}
-                      min={24}
-                      max={120}
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, numberFontSize: v } });
-                      }}
-                    />
-                  </div>
-                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background icon shape</label>
-                  <select
-                    value={block?.props?.heroInlineCounter?.iconType || "diamond"}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, iconType: e.target.value } });
-                    }}
-                    style={styles.propertyInput}
-                  >
-                    <option value="diamond">Diamond</option>
-                    <option value="circle">Circle</option>
-                    <option value="star">Star</option>
-                    <option value="hexagon">Hexagon</option>
-                    <option value="none">None</option>
-                  </select>
-                  <p style={{ ...styles.aiHint, marginTop: 8 }}>Drag the counter on the canvas to reposition it. The ✕ button on the widget disables it.</p>
-                </>
-              ) : null}
-            </div>
-          </>
-        ) : null}
+
         {![BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.STATS, BlockTypes.CTA_BUTTON].includes(block.type) && textContentKeys.length ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Text Editing</label>
             <p style={{ margin: 0, color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>Edit text directly on the canvas. Use the floating text toolbar or the on-block size controls when available.</p>
           </div>
         ) : null}
-        {supportsOverlayImage && shouldShowHeroPanelSection("media") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Overlay Image / Logo</label>
-            <p style={styles.aiHint}>Add a logo, badge, or product shot over the background image.</p>
-            {effectiveOverlayPreview ? (
-              <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
-                <div style={{ width: "100%", minHeight: 132, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "linear-gradient(180deg,#0f172a,#111827)", display: "grid", placeItems: "center", padding: 16, boxSizing: "border-box" }}>
-                  <img src={effectiveOverlayPreview} alt="Current overlay media" style={{ maxWidth: "100%", maxHeight: 132, objectFit: currentOverlayPreview ? "cover" : "contain", display: "block" }} />
-                </div>
-                <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.5 }}>
-                  {currentOverlayPreview ? "Current overlay image used on the hero." : "No custom overlay set, so the hero falls back to the saved brand logo."}
-                </div>
-              </div>
-            ) : null}
-            <div style={styles.assetPicker}>
-              <label style={styles.assetUploadCta}>
-                Upload Overlay
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={styles.hiddenInput}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    onChange(index, withHeroOverlayDefaults(block.props || {}));
-                    onUploadImage(index, "floatingImage", file);
-                  }}
-                />
-              </label>
-              {savedLogo ? (
-                <button
-                  type="button"
-                  style={styles.assetChip}
-                  onClick={() => {
-                    const nextProps = applyAssetToProps(block.props || {}, "floatingImage", savedLogo);
-                    onChange(index, {
-                      ...withHeroOverlayDefaults(nextProps),
-                      floatingImage: savedLogo.src || "",
-                    });
-                    onSelectAsset(index, "floatingImage", savedLogo);
-                  }}
-                >
-                  Use Brand Logo
-                </button>
-              ) : null}
-              {!block?.props?.floatingImage ? (
-                <button
-                  type="button"
-                  style={styles.assetChip}
-                  onClick={() => onChange(index, {
-                    ...withHeroOverlayDefaults(block.props || {}),
-                    floatingImage: "https://placehold.co/640x640/e2e8f0/475569?text=%20",
-                  })}
-                >
-                  Add Placeholder
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => onChange(index, { ...block.props, floatingImage: "" })}
-                >
-                  Remove Overlay
-                </button>
-              )}
-              <button
-                type="button"
-                style={styles.assetLibraryBtn}
-                onClick={() => openAssetBrowser("floatingImage", "Overlay Media Library")}
-              >
-                Open Media Library
-              </button>
-            </div>
-            <div style={styles.colorGrid}>
-              <NumberField label="Image X %" value={Number(block?.props?.floatingX ?? 76)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingX: value })} />
-              <NumberField label="Image Y %" value={Number(block?.props?.floatingY ?? 58)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingY: value })} />
-              <NumberField label="Image W" value={Number(block?.props?.floatingWidth ?? 220)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingWidth: value })} />
-              <NumberField label="Image H" value={Number(block?.props?.floatingHeight ?? 220)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingHeight: value })} />
-            </div>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("style") ? (
-          <ColorSelector
-            label="Text Block Background"
-            value={String(block?.props?.contentBackground || "transparent")}
-            fallback="transparent"
-            allowTransparent
-            onChange={(nextValue) => onChange(index, { ...block.props, contentBackground: nextValue })}
-          />
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("style") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Headline Text Style</label>
-            <select
-              value={String(block?.props?.headlineTextStyle || "fill")}
-              onChange={(e) => onChange(index, { ...block.props, headlineTextStyle: e.target.value })}
-              style={styles.propertyInput}
-            >
-              <option value="fill">Fill (default)</option>
-              <option value="outline">Outline</option>
-              <option value="gradient">Gradient</option>
-              <option value="glow">Glow</option>
-              <option value="shadow">Drop Shadow</option>
-            </select>
-            {block?.props?.headlineTextStyle === "outline" ? (
-              <>
-                <ColorSelector label="Outline Color" value={block?.props?.headlineOutlineColor || "#ffffff"} fallback="#ffffff" onChange={(v) => onChange(index, { ...block.props, headlineOutlineColor: v })} />
-                <NumberField label="Outline Width (px)" value={Number(block?.props?.headlineOutlineWidth || 2)} min={1} max={12} onChange={(v) => onChange(index, { ...block.props, headlineOutlineWidth: v })} />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "gradient" ? (
-              <>
-                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Gradient Presets</label>
-                <div style={styles.inlineChipRow}>
-                  {[
-                    { label: "Purple → Pink", value: "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)" },
-                    { label: "Blue → Cyan", value: "linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)" },
-                    { label: "Gold → Orange", value: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)" },
-                    { label: "Green → Teal", value: "linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)" },
-                    { label: "White → Silver", value: "linear-gradient(135deg, #ffffff 0%, #94a3b8 100%)" },
-                  ].map((preset) => (
-                    <button
-                      key={preset.value}
-                      type="button"
-                      style={{ ...styles.presetChip, ...(block?.props?.headlineGradient === preset.value ? styles.presetChipActive : {}) }}
-                      onClick={() => onChange(index, { ...block.props, headlineGradient: preset.value })}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Custom Gradient CSS</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.headlineGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)")}
-                  onChange={(e) => onChange(index, { ...block.props, headlineGradient: e.target.value })}
-                  style={{ ...styles.propertyInput, marginTop: 4 }}
-                  placeholder="linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"
-                />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "glow" ? (
-              <>
-                <ColorSelector label="Glow Color" value={block?.props?.headlineGlowColor || "#7c3aed"} fallback="#7c3aed" onChange={(v) => onChange(index, { ...block.props, headlineGlowColor: v })} />
-                <NumberField label="Glow Blur (px)" value={Number(block?.props?.headlineGlowBlur || 20)} min={4} max={80} onChange={(v) => onChange(index, { ...block.props, headlineGlowBlur: v })} />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "shadow" ? (
-              <>
-                <ColorSelector label="Shadow Color" value={block?.props?.headlineShadowColor || "rgba(0,0,0,0.6)"} fallback="#000000" onChange={(v) => onChange(index, { ...block.props, headlineShadowColor: v })} />
-                <div style={styles.colorGrid}>
-                  <NumberField label="Blur (px)" value={Number(block?.props?.headlineShadowBlur || 12)} min={0} max={60} onChange={(v) => onChange(index, { ...block.props, headlineShadowBlur: v })} />
-                  <NumberField label="Offset X" value={Number(block?.props?.headlineShadowOffsetX ?? 2)} min={-30} max={30} onChange={(v) => onChange(index, { ...block.props, headlineShadowOffsetX: v })} />
-                  <NumberField label="Offset Y" value={Number(block?.props?.headlineShadowOffsetY ?? 4)} min={-30} max={30} onChange={(v) => onChange(index, { ...block.props, headlineShadowOffsetY: v })} />
-                </div>
-              </>
-            ) : null}
-            <div style={{ ...styles.colorGrid, marginTop: 10 }}>
-              <NumberField label="Headline Size" value={Number(block?.props?.headlineFontSize || 52)} min={18} max={120} onChange={(value) => onChange(index, { ...block.props, headlineFontSize: value })} />
-              <NumberField label="Body Size" value={Number(block?.props?.subheadlineFontSize || 20)} min={12} max={72} onChange={(value) => onChange(index, { ...block.props, subheadlineFontSize: value })} />
-            </div>
-          </div>
-        ) : null}
+
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections
           if (Array.isArray(value) || (typeof value === "object" && value !== null)) return null;

@@ -1405,8 +1405,9 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
 function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const defaultLineHeight = 1.35;
   const updateLineHeight = (value) => {
-    const nextLineHeight = normalizeLineHeightValue(value, Number(props.textLineHeight || props.lineHeight || 1.35));
+    const nextLineHeight = normalizeLineHeightValue(value, Number(props.textLineHeight || props.lineHeight || defaultLineHeight));
     update({
       textLineHeight: nextLineHeight,
       bodyLineHeight: nextLineHeight,
@@ -1414,6 +1415,23 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
       text: stripInlineCssPropertyFromHtml(props.text, "line-height"),
     });
   };
+  const resetLineHeight = () => {
+    update({
+      textLineHeight: defaultLineHeight,
+      bodyLineHeight: defaultLineHeight,
+      lineHeight: defaultLineHeight,
+      text: stripInlineCssPropertyFromHtml(props.text, "line-height"),
+    });
+  };
+  const stripInlineTextBackgrounds = (html) => (
+    stripInlineCssPropertyFromHtml(
+      stripInlineCssPropertyFromHtml(
+        stripInlineCssPropertyFromHtml(html, "background-color"),
+        "background"
+      ),
+      "background-image"
+    )
+  );
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
   const [heightDraft, setHeightDraft] = useState(String(parsePixelValue(props.minHeight, 160)));
 
@@ -1506,12 +1524,28 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
             <CompactColorField label="Background" value={props.backgroundColor || "#111827"} fallback="#111827" onChange={(value) => update({ backgroundColor: value })} />
             <CompactColorField label="Text" value={props.textColor || "#e6eef5"} fallback="#e6eef5" onChange={(value) => update({ textColor: value })} />
           </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.stripInlineTextBackgrounds !== false}
+              onChange={(e) => update({ stripInlineTextBackgrounds: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Remove inline text backgrounds
+          </label>
+          <button
+            type="button"
+            style={{ ...styles.secondaryBtn, marginTop: 8 }}
+            onClick={() => update({ text: stripInlineTextBackgrounds(props.text), stripInlineTextBackgrounds: true })}
+          >
+            Clear Text Highlights
+          </button>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Typography</label>
           <div style={styles.colorGrid}>
             <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
-            <NumberField label="Line spacing" value={Number(props.textLineHeight || props.lineHeight || 1.35)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
+            <NumberField label="Line spacing" value={Number(props.textLineHeight || props.lineHeight || defaultLineHeight)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {[1.1, 1.25, 1.35, 1.5, 1.7, 2].map((value) => (
@@ -1524,6 +1558,13 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
                 {value}
               </button>
             ))}
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, padding: "6px 9px", minHeight: 0, background: "rgba(14,165,233,0.12)", borderColor: "rgba(14,165,233,0.35)" }}
+              onClick={resetLineHeight}
+            >
+              Reset spacing
+            </button>
           </div>
         </div>
         <div style={styles.sectionCard}>
@@ -4425,12 +4466,10 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
   const backgroundFileInputRef = useRef(null);
   const currentLineHeight = normalizeLineHeightValue(lineHeight || 1.5);
   const currentFontSize = Math.max(8, Math.min(240, Math.round(Number(fontSize || 18) || 18)));
-  const fontSizeOptions = TEXT_TOOLBAR_SIZES.includes(currentFontSize)
-    ? TEXT_TOOLBAR_SIZES
-    : [...TEXT_TOOLBAR_SIZES, currentFontSize].sort((a, b) => a - b);
   const lineHeightOptions = TEXT_TOOLBAR_LINE_HEIGHTS.includes(currentLineHeight)
     ? TEXT_TOOLBAR_LINE_HEIGHTS
     : [...TEXT_TOOLBAR_LINE_HEIGHTS, currentLineHeight].sort((a, b) => a - b);
+  const defaultToolbarLineHeight = blockType === "P" ? 1.7 : blockType === "H1" ? 1.08 : blockType === "H2" ? 1.14 : blockType === "H3" ? 1.2 : 1.5;
 
   const keepSelection = (event, callback) => {
     event.preventDefault();
@@ -4488,7 +4527,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
         <span style={styles.textToolbarTitle}>Text Controls</span>
         <span style={styles.textToolbarSubtitle}>Quick inline editor</span>
         <button type="button" style={styles.textToolbarDoneBtn} onMouseDown={(event) => keepSelection(event, onClose)}>
-          Hide
+          Done
         </button>
       </div>
       <div style={styles.textToolbarBody}>
@@ -4514,45 +4553,43 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
           <label style={styles.textToolbarLabel}>
             Size
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6 }}>
-              <select
-                value={String(currentFontSize)}
-                style={{ ...styles.textToolbarSelect, minWidth: 82, marginTop: 0 }}
-                onMouseDownCapture={() => onPreserveSelection?.()}
-                onChange={(event) => onFontSize?.(Number(event.target.value))}
-              >
-                {fontSizeOptions.map((value) => (
-                  <option key={`font-size-${value}`} value={value}>{value}px</option>
-                ))}
-              </select>
+              <button
+                type="button"
+                title="Decrease font size"
+                style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+                onMouseDown={(event) => keepSelection(event, () => {
+                  const nextSize = Math.max(8, currentFontSize - 1);
+                  onFontSize?.(nextSize);
+                })}
+              >−</button>
               <input
                 type="number"
                 min={8}
                 max={240}
                 value={currentFontSize}
                 aria-label="Font size in pixels"
-                style={{ ...styles.textToolbarSelect, width: 64, minWidth: 64, marginTop: 0, padding: "4px 6px" }}
+                style={{ ...styles.textToolbarSelect, width: 72, minWidth: 72, marginTop: 0, padding: "4px 6px" }}
                 onMouseDownCapture={() => onPreserveSelection?.()}
                 onChange={(event) => {
+                  if (event.target.value === "") return;
                   const nextSize = Math.max(8, Math.min(240, Number(event.target.value) || currentFontSize));
                   onFontSize?.(nextSize);
                 }}
               />
+              <button
+                type="button"
+                title="Increase font size"
+                style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+                onMouseDown={(event) => keepSelection(event, () => {
+                  const nextSize = Math.min(240, currentFontSize + 1);
+                  onFontSize?.(nextSize);
+                })}
+              >+</button>
             </div>
           </label>
           <label style={styles.textToolbarLabel}>
-            Line
-            <select
-              value={String(currentLineHeight)}
-              style={{ ...styles.textToolbarSelect, minWidth: 88, marginTop: 6 }}
-              onMouseDownCapture={() => onPreserveSelection?.()}
-              onChange={(event) => onLineHeight?.(Number(event.target.value))}
-            >
-              {lineHeightOptions.map((value) => (
-                <option key={`line-height-${value}`} value={value}>{value}</option>
-              ))}
-            </select>
-          </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            Line spacing
+            <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap", marginTop: 6 }}>
             <button
               type="button"
               title="Decrease line spacing"
@@ -4565,51 +4602,24 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
               onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(currentLineHeight + 0.05)))}
             >+</button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            <select
+              value={String(currentLineHeight)}
+              style={{ ...styles.textToolbarSelect, width: 78, minWidth: 78, marginTop: 0 }}
+              onMouseDownCapture={() => onPreserveSelection?.()}
+              onChange={(event) => onLineHeight?.(Number(event.target.value))}
+            >
+              {lineHeightOptions.map((value) => (
+                <option key={`line-height-${value}`} value={value}>{value}</option>
+              ))}
+            </select>
             <button
               type="button"
-              title="Decrease font size"
-              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
-              onMouseDown={(event) => keepSelection(event, () => {
-                const sizes = TEXT_TOOLBAR_SIZES;
-                const cur = Number(fontSize || 18);
-                const idx = sizes.findIndex((s) => s >= cur);
-                const next = idx > 0 ? sizes[idx - 1] : sizes[0];
-                onFontSize?.(next);
-              })}
-            >−</button>
-            {[14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map((size) => (
-              <button
-                key={size}
-                type="button"
-                title={`${size}px`}
-                style={{
-                  ...styles.textToolbarIconBtn,
-                  minWidth: 30,
-                  padding: "0 5px",
-                  fontSize: 12,
-                  fontWeight: Number(fontSize) === size ? 800 : 400,
-                  background: Number(fontSize) === size ? "rgba(14,165,233,0.85)" : undefined,
-                  color: Number(fontSize) === size ? "#fff" : undefined,
-                  outline: Number(fontSize) === size ? "none" : undefined,
-                }}
-                onMouseDown={(event) => keepSelection(event, () => onFontSize?.(size))}
-              >{size}</button>
-            ))}
-            <button
-              type="button"
-              title="Increase font size"
-              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
-              onMouseDown={(event) => keepSelection(event, () => {
-                const sizes = TEXT_TOOLBAR_SIZES;
-                const cur = Number(fontSize || 18);
-                const idx = sizes.findIndex((s) => s > cur);
-                const next = idx >= 0 ? sizes[idx] : sizes[sizes.length - 1];
-                onFontSize?.(next);
-              })}
-            >+</button>
-          </div>
+              title="Reset line spacing"
+              style={{ ...styles.textToolbarActionChip, padding: "4px 8px", minHeight: 30 }}
+              onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(defaultToolbarLineHeight)))}
+            >Reset</button>
+            </div>
+          </label>
         </div>
         <div style={styles.textToolbarInlineDivider} />
         <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarFormattingGroup }}>
@@ -5567,18 +5577,57 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
             </div>
             <div style={styles.propertyField}>
               <label style={styles.propertyLabel}>Text Vertical Position</label>
-              <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
-                <option value="center">Centre of card</option>
+              <select value={String(props.contentVerticalAlign || "top")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
                 <option value="top">Top of card</option>
+                <option value="center">Centre of card</option>
               </select>
             </div>
-            <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
-            <NumberField label="Card Height (px)" value={Number(props.cardHeight || 420)} min={200} max={900} onChange={(v) => update({ cardHeight: v })} />
-            <NumberField label="Card Gap (px)" value={Number(props.cardGap || 16)} min={0} max={60} onChange={(v) => update({ cardGap: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Fit</label>
+              <select value="contain" onChange={() => update({ imageFit: "contain" })} style={styles.propertyInput}>
+                <option value="contain">Contain</option>
+              </select>
+            </div>
+            <NumberField label="Sticky Top Offset (px)" value={Number(props.accordionStickyTopOffset ?? props.stickyTopOffset ?? 110)} min={0} max={260} onChange={(v) => update({ accordionStickyTopOffset: v, stickyTopOffset: v })} />
+            <NumberField label="Card Header Visible Height (px)" value={Number(props.accordionHeaderHeight ?? 58)} min={40} max={96} onChange={(v) => update({ accordionHeaderHeight: v })} />
+            <NumberField label="Card Stack Gap (px)" value={Number(props.accordionStackGap ?? 8)} min={0} max={32} onChange={(v) => update({ accordionStackGap: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Expanded Card Height</label>
+              <select value={String(props.expandedCardHeightMode || "viewport")} onChange={(e) => update({ expandedCardHeightMode: e.target.value })} style={styles.propertyInput}>
+                <option value="viewport">Viewport minus sticky offset</option>
+                <option value="auto">Auto</option>
+                <option value="custom">Custom px</option>
+              </select>
+            </div>
+            {String(props.expandedCardHeightMode || "viewport") === "custom" ? (
+              <NumberField label="Custom Expanded Height (px)" value={Number(props.expandedCardHeightPx || 720)} min={360} max={1200} onChange={(v) => update({ expandedCardHeightPx: v })} />
+            ) : null}
+            <label style={{ ...styles.inlineToggle, alignSelf: "end" }}>
+              <input
+                type="checkbox"
+                checked={props.lastCardRelease !== false}
+                onChange={(e) => update({ lastCardRelease: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Last card releases naturally
+            </label>
+            <NumberField label="Title Size (px)" value={Number(props.itemLabelFontSize || 24)} min={12} max={72} onChange={(v) => update({ itemLabelFontSize: v })} />
+            <NumberField label="Title Line Height" value={Number(props.itemLabelLineHeight || 1.2)} min={0.8} max={2.4} step={0.05} onChange={(v) => update({ itemLabelLineHeight: v })} />
+            <NumberField label="Title Top Padding (px)" value={Number(props.itemLabelPaddingTop ?? 20)} min={0} max={120} onChange={(v) => update({ itemLabelPaddingTop: v })} />
+            <NumberField label="Title Left Padding (px)" value={Number(props.itemLabelPaddingLeft ?? 32)} min={0} max={160} onChange={(v) => update({ itemLabelPaddingLeft: v })} />
+            <NumberField label="Image Max Width (px)" value={Number(props.imageMaxWidth || 0)} min={0} max={1600} onChange={(v) => update({ imageMaxWidth: v })} />
+            <NumberField label="Image Max Height (px)" value={Number(props.imageMaxHeight || 0)} min={0} max={1200} onChange={(v) => update({ imageMaxHeight: v })} />
+            <NumberField label="Card Max Width (px)" value={Number(props.cardWidth || 1180)} min={640} max={1800} onChange={(v) => update({ cardWidth: v })} />
+            <NumberField label="Card Min Height (px)" value={Number(props.cardMinHeight || props.cardHeight || 650)} min={600} max={800} onChange={(v) => update({ cardMinHeight: v, cardHeight: v })} />
+            <NumberField label="Card Padding (px)" value={Number(props.cardPadding ?? 56)} min={24} max={120} onChange={(v) => update({ cardPadding: v })} />
+            <NumberField label="Column Gap (px)" value={Number(props.cardGap || 32)} min={0} max={120} onChange={(v) => update({ cardGap: v })} />
+            <NumberField label="Card Scroll Gap (px)" value={Number(props.cardScrollGap ?? 240)} min={0} max={360} onChange={(v) => update({ cardScrollGap: v })} />
             <NumberField label="Card Inset (px)" value={Number(props.cardInset || 24)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
             <NumberField label="Heading Size (px)" value={Number(props.headingFontSize ?? 48)} min={16} max={96} onChange={(v) => update({ headingFontSize: v })} />
             <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
-            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
+            <NumberField label="Scroll VH Per Card" value={Number(props.scrollVhPerCard || 120)} min={80} max={300} onChange={(v) => update({ scrollVhPerCard: v })} />
+            <NumberField label="Overlap Delay VH" value={Number(props.overlapDelayVh ?? 60)} min={0} max={200} onChange={(v) => update({ overlapDelayVh: v })} />
+            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 28)} min={0} max={80} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
         </div>
