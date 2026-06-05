@@ -4891,9 +4891,29 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const textColor = props.textColor       || "#ffffff";
   const accent    = props.accentColor     || "#0ea5e9";
   const imageRight = (props.imagePosition || "right") !== "left";
-  const contentVerticalAlign = props.contentVerticalAlign === "top" ? "flex-start" : "center";
-  const leadOffset = Number(props.stickyTopOffset ?? 0);
+  const contentVerticalAlign = props.contentVerticalAlign === "center" ? "center" : "flex-start";
+  const accordionStickyTopOffset = Math.max(0, Number(props.accordionStickyTopOffset ?? props.stickyTopOffset ?? 110));
   const [navH, setNavH] = React.useState(0);
+  const itemLabelFontSize = Math.max(12, Number(props.itemLabelFontSize || 24));
+  const itemLabelLineHeight = Math.max(0.8, Number(props.itemLabelLineHeight || 1.2));
+  const itemLabelPaddingTop = Math.max(0, Number(props.itemLabelPaddingTop ?? 20));
+  const itemLabelPaddingLeft = Math.max(0, Number(props.itemLabelPaddingLeft ?? 32));
+  const imageFit = "contain";
+  const imageMaxHeight = Math.max(0, Number(props.imageMaxHeight || 0));
+  const imageMaxWidth = Math.max(0, Number(props.imageMaxWidth || 0));
+  const cardWidth = Math.max(0, Number(props.cardWidth || 1180));
+  const cardMinHeight = Math.max(600, Math.min(800, Number(props.cardMinHeight || props.cardHeight || 650)));
+  const cardPadding = Math.max(24, Number(props.cardPadding ?? 56));
+  const cardGap = Math.max(0, Number(props.cardGap ?? 32));
+  const cardScrollGap = Math.max(0, Number(props.cardScrollGap ?? 240));
+  const accordionHeaderHeight = Math.max(40, Number(props.accordionHeaderHeight ?? 58));
+  const accordionStackGap = Math.max(0, Number(props.accordionStackGap ?? 8));
+  const expandedHeightMode = ["auto", "custom"].includes(props.expandedCardHeightMode) ? props.expandedCardHeightMode : "viewport";
+  const expandedHeightCustom = Math.max(360, Number(props.expandedCardHeightPx || 720));
+  const releaseLastCard = props.lastCardRelease !== false;
+  const scrollVhPerCard = Math.max(80, Number(props.scrollVhPerCard || 120));
+  const overlapDelayVh = Math.max(0, Number(props.overlapDelayVh ?? 60));
+  const scrollStepVh = scrollVhPerCard + overlapDelayVh;
 
   React.useEffect(() => {
     if (editor || compact || typeof window === "undefined") return;
@@ -4911,8 +4931,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     return () => window.removeEventListener("resize", measureNav);
   }, [editor, compact]);
 
-  // auto-detected nav height + manual lead offset
-  const stickyTop = navH + leadOffset;
+  // auto-detected nav height + manual accordion offset
+  const stickyTop = navH + accordionStickyTopOffset;
+  const sectionHeaderHeight = (props.eyebrow || props.title) ? (compact ? 0 : 172) : 0;
 
   // ── border props ───────────────────────────────────────────────────────────
   const bEnabled   = props.itemBorderEnabled !== false;
@@ -4931,16 +4952,16 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
       const el = sectionRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const totalRange = el.offsetHeight - window.innerHeight;
+      const totalRange = Math.max(1, (n * scrollStepVh * window.innerHeight) / 100);
       if (totalRange <= 0) { setScrollProgress(0); return; }
-      const scrolledIn = -rect.top;
+      const scrolledIn = stickyTop - rect.top - sectionHeaderHeight;
       const raw = Math.max(0, Math.min(n - 0.0001, (scrolledIn / totalRange) * n));
       setScrollProgress(raw);
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
-  }, [editor, compact, items.length]);
+  }, [editor, compact, items.length, stickyTop, sectionHeaderHeight, scrollStepVh]);
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -5012,8 +5033,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     const el = sectionRef.current;
     if (!el) return;
     const n = items.length;
-    const totalRange = el.offsetHeight - window.innerHeight;
-    const targetScroll = el.offsetTop + (targetIdx / n) * totalRange;
+    const totalRange = Math.max(1, el.offsetHeight - sectionHeaderHeight - window.innerHeight);
+    const targetScroll = el.offsetTop + sectionHeaderHeight - stickyTop + (targetIdx / n) * totalRange;
     window.scrollTo({ top: targetScroll, behavior: "smooth" });
   }
 
@@ -5029,6 +5050,11 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     const edgeOut    = editor ? "1px dashed rgba(14,165,233,0.35)" : "none";
     const edgePad    = editor ? "4px 6px" : "0";
     const totalBlocks = item.contentBlocks.length;
+    const blockFontSize = (fallback) => {
+      const raw = block.fontSize ?? block.size ?? fallback;
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    };
 
     const reorderControls = editor ? (
       React.createElement("div", { style: { display: "flex", flexShrink: 0, gap: 3, marginLeft: 8, alignSelf: "flex-start", paddingTop: 2 } },
@@ -5068,7 +5094,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               if (shouldSkipToolbarBlur(e)) return;
               patchContentBlock(itemIdx, cbIdx, { text: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ flex: 1, fontSize: 16, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: perCardAccent, outline: edgeOut, borderRadius: 4, padding: edgePad }}
+            style={{ flex: 1, fontSize: blockFontSize(16), fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: perCardAccent, outline: edgeOut, borderRadius: 4, padding: edgePad }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(block.text || "Category") }}
           />
           {reorderControls}
@@ -5089,7 +5115,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               if (shouldSkipToolbarBlur(e)) return;
               patchContentBlock(itemIdx, cbIdx, { text: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ flex: 1, fontSize: compact ? 22 : (Number(props.headingFontSize) || 48), fontWeight: 600, lineHeight: 1.2, color: textColor, outline: edgeOut, borderRadius: 6, padding: edgePad }}
+            style={{ flex: 1, fontSize: compact ? Math.max(18, Math.min(blockFontSize(Number(props.headingFontSize) || 48), 34)) : blockFontSize(Number(props.headingFontSize) || 48), fontWeight: block.fontWeight || 600, lineHeight: Number(block.lineHeight || 1.2), color: textColor, outline: edgeOut, borderRadius: 6, padding: edgePad }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(block.text || "Heading") }}
           />
           {reorderControls}
@@ -5110,7 +5136,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               if (shouldSkipToolbarBlur(e)) return;
               patchContentBlock(itemIdx, cbIdx, { text: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ flex: 1, fontSize: 16, lineHeight: 1.75, color: textColor, outline: edgeOut, borderRadius: 6, padding: edgePad }}
+            style={{ flex: 1, fontSize: blockFontSize(16), lineHeight: Number(block.lineHeight || 1.75), color: textColor, outline: edgeOut, borderRadius: 6, padding: edgePad }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(block.text || "Add your text here.") }}
           />
           {reorderControls}
@@ -5132,7 +5158,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 if (shouldSkipToolbarBlur(e)) return;
                 patchContentBlock(itemIdx, cbIdx, { number: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
               }}
-              style={{ fontSize: 40, fontWeight: 600, color: perCardAccent, lineHeight: 1, outline: edgeOut, borderRadius: 4, padding: editor ? "2px 4px" : "0" }}
+              style={{ fontSize: blockFontSize(40), fontWeight: 600, color: perCardAccent, lineHeight: 1, outline: edgeOut, borderRadius: 4, padding: editor ? "2px 4px" : "0" }}
               dangerouslySetInnerHTML={{ __html: asRichHtml(block.number || "0%") }}
             />
             <div
@@ -5235,7 +5261,15 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
           <img
             src={item.image}
             alt={item.imageAlt || item.label}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            style={{
+              width: imageMaxWidth > 0 ? `min(100%, ${imageMaxWidth}px)` : "100%",
+              height: imageMaxHeight > 0 ? `min(100%, ${imageMaxHeight}px)` : "100%",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: imageFit,
+              display: "block",
+              margin: "auto",
+            }}
           />
         ) : (
           <div style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "rgba(255,255,255,0.35)" }}>
@@ -5276,9 +5310,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
         {items.map((item, idx) => {
           const itemBorder = bEnabled ? `${bWidth}px ${bStyle} ${bActiveColor}` : "none";
           return (
-            <div key={item.id} style={{ margin: "0 0 16px", borderTop: itemBorder, borderBottom: itemBorder, background: item.panelBg || bg, overflow: "hidden" }}>
+            <div key={item.id} style={{ margin: "0 auto 24px", maxWidth: cardWidth > 0 ? cardWidth : undefined, border: itemBorder, borderRadius: Number(props.cardRadius ?? 28), background: item.panelBg || bg, overflow: "hidden", boxShadow: "0 18px 50px rgba(0,0,0,0.22)" }}>
               {/* Header row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "18px 40px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, padding: `${itemLabelPaddingTop}px 40px 18px ${itemLabelPaddingLeft}px`, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <span style={{ width: 4, height: 28, borderRadius: 2, background: item.accentColor || accent, flexShrink: 0 }} />
                 <div
                   data-website-inline-editor="true"
@@ -5287,15 +5321,15 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   onMouseDown={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                   onBlur={(e) => { if (shouldSkipToolbarBlur(e)) return; patchItemField(idx, "label", htmlToPlainText(cleanInlineEditorHtml(e.currentTarget.innerHTML))); }}
-                  style={{ flex: 1, fontSize: 24, fontWeight: 600, lineHeight: 1.2, color: textColor, outline: "1px dashed rgba(14,165,233,0.4)", borderRadius: 6, padding: "3px 8px" }}
+                  style={{ flex: 1, fontSize: itemLabelFontSize, fontWeight: 600, lineHeight: itemLabelLineHeight, color: textColor, outline: "1px dashed rgba(14,165,233,0.4)", borderRadius: 6, padding: "3px 8px" }}
                   dangerouslySetInnerHTML={{ __html: asRichHtml(htmlToPlainText(item.label)) }}
                 />
                 <span style={{ color: "rgba(255,255,255,0.20)", fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{String(idx + 1).padStart(2, "0")}&nbsp;/&nbsp;{String(items.length).padStart(2, "0")}</span>
                 <button type="button" onClick={(e) => { e.stopPropagation(); removeItem(idx); }} style={{ background: "rgba(239,68,68,0.15)", border: "none", color: "#f87171", borderRadius: 6, padding: "4px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove</button>
               </div>
               {/* 2-col body */}
-              <div style={{ display: "flex", flexDirection: imageRight ? "row" : "row-reverse", minHeight: 380 }}>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", flexDirection: "column", justifyContent: contentVerticalAlign, gap: 20, padding: "44px 56px" }}>
+              <div style={{ display: "flex", flexDirection: imageRight ? "row" : "row-reverse", minHeight: cardMinHeight, maxHeight: 800, gap: cardGap, padding: cardPadding, boxSizing: "border-box" }}>
+                <div style={{ flex: "0 0 45%", maxWidth: "45%", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: contentVerticalAlign, gap: 20, padding: 0, overflow: "hidden" }}>
                   {item.contentBlocks.map((block, cbIdx) => renderCb(item, idx, block, cbIdx, item.accentColor || accent))}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingTop: 12, borderTop: "1px dashed rgba(14,165,233,0.2)" }}>
                     {["eyebrow", "heading", "text", "stat", "tags", "cta"].map((type) => (
@@ -5303,7 +5337,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                     ))}
                   </div>
                 </div>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", position: "relative", overflow: "hidden", minHeight: 320 }}>
+                <div style={{ flex: "0 0 55%", maxWidth: "55%", minWidth: 0, position: "relative", overflow: "hidden", minHeight: Math.min(cardMinHeight, 520), display: "flex", alignItems: "center", justifyContent: "center", borderRadius: Math.max(12, Number(props.cardRadius ?? 28) - 8), background: "rgba(255,255,255,0.06)", aspectRatio: "1 / 1", alignSelf: "center" }}>
                   {renderImageSlot(item, idx, true)}
                 </div>
               </div>
@@ -5320,7 +5354,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   // ── COMPACT / MOBILE: click-to-expand accordion ────────────────────────────
   if (compact) {
     return (
-      <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box" }}>
+      <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box", scrollSnapType: "y proximity" }}>
         {(props.eyebrow || props.title) ? (
           <div style={{ padding: "40px 24px 24px" }}>
             {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>{htmlToPlainText(props.eyebrow)}</div> : null}
@@ -5331,15 +5365,15 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
           const isOpen = activeIdx === idx;
           const borderVal = bEnabled ? `${bWidth}px ${bStyle} ${isOpen ? bActiveColor : bColor}` : "none";
           return (
-            <div key={item.id} style={{ borderBottom: borderVal, overflow: "hidden" }}>
-              <div onClick={() => setActiveIdx(isOpen ? -1 : idx)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 24px", cursor: "pointer", userSelect: "none" }}>
+            <div key={item.id} style={{ borderBottom: borderVal, overflow: "hidden", scrollSnapAlign: isOpen ? "start" : undefined }}>
+              <div onClick={() => setActiveIdx(isOpen ? -1 : idx)} style={{ display: "flex", alignItems: "center", gap: 12, padding: `${Math.max(12, itemLabelPaddingTop)}px 24px 16px ${Math.max(24, itemLabelPaddingLeft)}px`, cursor: "pointer", userSelect: "none" }}>
                 <span style={{ width: 3, height: 22, borderRadius: 2, background: isOpen ? (item.accentColor || accent) : "rgba(255,255,255,0.2)", flexShrink: 0, transition: "background 0.3s" }} />
-                <span style={{ flex: 1, fontSize: 17, fontWeight: 600, color: textColor }}>{item.label}</span>
+                <span style={{ flex: 1, fontSize: Math.min(itemLabelFontSize, 28), lineHeight: itemLabelLineHeight, fontWeight: 600, color: textColor }}>{item.label}</span>
                 <span style={{ color: isOpen ? (item.accentColor || accent) : "rgba(255,255,255,0.35)", fontSize: 18, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s", display: "inline-block" }}>▾</span>
               </div>
               <div style={{ display: "grid", gridTemplateRows: isOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1)" }}>
-                <div style={{ overflow: "hidden", minHeight: 0 }}>
-                  {item.image ? <img src={item.image} alt={item.imageAlt || item.label} style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} /> : null}
+                <div style={{ overflow: "hidden", minHeight: isOpen ? "calc(100vh - 120px)" : 0 }}>
+                  {item.image ? <img src={item.image} alt={item.imageAlt || item.label} style={{ width: imageMaxWidth > 0 ? `min(100%, ${imageMaxWidth}px)` : "100%", maxHeight: imageMaxHeight > 0 ? imageMaxHeight : 260, objectFit: imageFit, display: "block", margin: "0 auto" }} /> : null}
                   <div style={{ padding: "16px 24px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
                     {item.contentBlocks.map((block, cbIdx) => renderCb(item, idx, block, cbIdx, item.accentColor || accent))}
                   </div>
@@ -5352,85 +5386,111 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     );
   }
 
-  // ── PUBLISHED: stacked card deck ──────────────────────────────────────────
-  // Peek heights decrease per card: top card shows most, deeper cards show less
-  const peeks = items.map((_, i) => Math.max(60, 90 - i * 8));
-  const n = items.length;
+  // ── PUBLISHED: pinned accordion card stack ────────────────────────────────
   // Subtract nav bar height so cards occupy the space below the nav
-  const vp = ((typeof window !== "undefined" && window.innerHeight) || 800) - stickyTop;
-  // Cumulative settled Y (cards stack from top, each peeking their amount)
+  const viewportSpace = Math.max(600, ((typeof window !== "undefined" && window.innerHeight) || 800) - stickyTop - 16);
+  const expandedCardHeight = expandedHeightMode === "custom"
+    ? expandedHeightCustom
+    : expandedHeightMode === "auto"
+      ? Math.max(cardMinHeight, 650)
+      : Math.max(600, Math.min(900, Math.max(cardMinHeight, viewportSpace)));
+  const vp = expandedCardHeight;
+  const stackStep = accordionHeaderHeight + accordionStackGap;
+  const stackVisibleHeight = Math.max(accordionHeaderHeight, (items.length - 1) * stackStep + accordionHeaderHeight);
+  const stackContainerHeight = Math.max(vp + stackVisibleHeight, vp);
   const cardLead = Number(props.cardLead ?? 0);
   const hInset = Number(props.cardInset ?? 0);
-  const settledYs = items.map((_, idx) => {
-    let y = cardLead;
-    for (let i = 0; i < idx; i++) y += peeks[i];
-    return y;
-  });
-  // Future Y (cards peek from bottom, deeper cards further down)
-  const futureYs = items.map((_, idx) => {
-    let y = vp;
-    for (let i = n - 1; i >= idx; i--) y -= peeks[i];
-    return y;
-  });
+  const cardHeaderHeight = accordionHeaderHeight;
+  const scrollPxPerCard = Math.max(vp * 0.72, (scrollStepVh * ((typeof window !== "undefined" && window.innerHeight) || 800)) / 100);
+  const scrollRange = Math.max(1, items.length * scrollPxPerCard);
+  const sectionScrollHeight = sectionHeaderHeight + cardLead + scrollRange + (releaseLastCard ? stackContainerHeight : 0);
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
   return (
     <section
       ref={sectionRef}
-      style={{ width: "100%", position: "relative", height: `${n * 100}vh`, boxSizing: "border-box" }}
+      style={{
+        "--accordion-sticky-top": `${stickyTop}px`,
+        "--accordion-header-height": `${accordionHeaderHeight}px`,
+        "--accordion-stack-gap": `${accordionStackGap}px`,
+        "--accordion-expanded-height": expandedHeightMode === "viewport" ? `calc(100vh - ${stickyTop}px)` : `${vp}px`,
+        width: "100%",
+        position: "relative",
+        minHeight: `${sectionScrollHeight}px`,
+        boxSizing: "border-box",
+        background: bg,
+        color: textColor,
+        overflow: "visible",
+        padding: `0 ${hInset}px`,
+        scrollSnapAlign: "start",
+        scrollMarginTop: stickyTop,
+      }}
     >
-      <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
+      {sectionHeaderHeight ? (
+        <div style={{ minHeight: sectionHeaderHeight, padding: "54px 80px 34px", boxSizing: "border-box" }}>
+          {props.eyebrow ? <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: accent, marginBottom: 12 }}>{htmlToPlainText(props.eyebrow)}</div> : null}
+          {props.title ? <h2 style={{ fontSize: 44, fontWeight: 600, lineHeight: 1.1, color: textColor, margin: 0 }}>{htmlToPlainText(props.title)}</h2> : null}
+        </div>
+      ) : null}
+      <div style={{ position: "sticky", top: "var(--accordion-sticky-top)", height: `${stackContainerHeight}px`, paddingTop: cardLead, overflow: "hidden", scrollSnapType: "y proximity" }}>
         {items.map((item, idx) => {
           const cardBg = item.panelBg || item.accentColor || bg;
           const cardText = textColor;
           const itemAccent = item.accentColor || accent;
-          const dist = idx - scrollProgress;
-          let y;
-          if (dist <= 0) {
-            y = settledYs[idx];
-          } else if (dist < 1) {
-            const t = 1 - dist;
-            y = futureYs[idx] + t * (settledYs[idx] - futureYs[idx]);
-          } else {
-            y = futureYs[idx];
+          const widthLimited = cardWidth > 0;
+          const currentIndex = Math.floor(scrollProgress);
+          const localProgress = scrollProgress - currentIndex;
+          const settledY = idx * stackStep;
+          const futureY = vp + cardScrollGap + (idx * stackStep);
+          let y = futureY;
+          if (idx <= currentIndex) {
+            y = settledY;
+          } else if (idx === currentIndex + 1) {
+            y = futureY + localProgress * (settledY - futureY);
           }
-          const isPast = dist < -0.02;
-          const isFuture = dist > 0.02;
-          const isActive = !isPast && !isFuture;
-          const peekH = peeks[idx];
+          const isActive = idx === currentIndex || (idx === currentIndex + 1 && localProgress > 0.55);
 
           return (
             <div
               key={item.id}
+              data-feature-accordion-card={idx}
               style={{
                 position: "absolute",
-                left: hInset, right: hInset, top: 0,
-                height: "100vh",
-                transform: `translateY(${y}px)`,
+                ...(widthLimited ? { left: "50%", width: `min(calc(100% - ${hInset * 2}px), ${cardWidth}px)` } : { left: 0, right: 0 }),
+                top: 0,
+                minHeight: "var(--accordion-expanded-height)",
+                height: `${vp}px`,
+                transform: widthLimited ? `translate(-50%, ${y}px)` : `translateY(${y}px)`,
                 zIndex: idx + 1,
                 background: cardBg,
                 color: cardText,
-                borderRadius: (idx > 0 || hInset > 0) ? `${Number(props.cardRadius ?? 18)}px ${Number(props.cardRadius ?? 18)}px 0 0` : 0,
-                boxShadow: idx > 0 ? "0 -6px 24px rgba(0,0,0,0.22)" : "none",
+                borderRadius: Number(props.cardRadius ?? 28),
+                boxShadow: "0 20px 54px rgba(0,0,0,0.28)",
                 border: Number(props.cardBorderWidth ?? 0) > 0 ? `${Number(props.cardBorderWidth)}px solid ${props.cardBorderColor || "#3b82f6"}` : "none",
                 overflow: "hidden",
                 boxSizing: "border-box",
                 willChange: "transform",
+                scrollSnapAlign: "start",
               }}
             >
               {/* ── Header strip — always visible, always clickable ── */}
               <div
-                onClick={() => jumpToCard(idx)}
+                onClick={() => {
+                  const node = sectionRef.current?.querySelector(`[data-feature-accordion-card="${idx}"]`);
+                  node?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
                 style={{
-                  height: peekH,
+                  height: cardHeaderHeight,
                   display: "flex",
                   alignItems: "center",
                   gap: 14,
-                  padding: "0 28px",
+                  padding: `${itemLabelPaddingTop}px 28px 18px ${itemLabelPaddingLeft}px`,
                   cursor: "pointer",
                   userSelect: "none",
                   flexShrink: 0,
+                  boxSizing: "border-box",
                   borderBottom: "1px solid rgba(255,255,255,0.12)",
-                  background: isPast ? "rgba(0,0,0,0.18)" : isFuture ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.14)",
+                  background: "rgba(0,0,0,0.14)",
                 }}
               >
                 <span style={{
@@ -5441,8 +5501,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 }} />
                 <span style={{
                   flex: 1,
-                  fontSize: 16,
+                  fontSize: itemLabelFontSize,
                   fontWeight: 600,
+                  lineHeight: itemLabelLineHeight,
                   color: cardText,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -5455,27 +5516,31 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   opacity: isActive ? 0.85 : 0.45,
                   flexShrink: 0,
                   transform: isActive ? "rotate(90deg)" : "none",
-                  transition: "transform 0.3s, opacity 0.3s",
+                  transition: "transform 0.2s ease, opacity 0.2s ease",
                 }}>▶</span>
               </div>
 
               {/* ── Full content area ── */}
               <div style={{
-                height: `calc(100vh - ${peekH}px)`,
+                height: `${Math.max(240, vp - cardHeaderHeight)}px`,
                 display: "flex",
                 flexDirection: imageRight ? "row" : "row-reverse",
+                gap: cardGap,
+                padding: cardPadding,
                 overflow: "hidden",
+                boxSizing: "border-box",
               }}>
                 {/* Content half */}
                 <div style={{
-                  flex: "0 0 50%",
-                  maxWidth: "50%",
+                  flex: "0 0 45%",
+                  maxWidth: "45%",
+                  minWidth: 0,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: contentVerticalAlign,
                   gap: 18,
-                  padding: "40px 52px",
-                  overflowY: "auto",
+                  padding: 0,
+                  overflow: "hidden",
                   scrollbarWidth: "none",
                   boxSizing: "border-box",
                 }}>
@@ -5483,10 +5548,18 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 </div>
                 {/* Image half */}
                 <div style={{
-                  flex: "0 0 50%",
-                  maxWidth: "50%",
+                  flex: "0 0 55%",
+                  maxWidth: "55%",
+                  minWidth: 0,
                   position: "relative",
                   overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: Math.max(12, Number(props.cardRadius ?? 28) - 8),
+                  background: "rgba(255,255,255,0.06)",
+                  aspectRatio: "1 / 1",
+                  alignSelf: "center",
                 }}>
                   {renderImageSlot(item, idx, false)}
                 </div>
@@ -5586,7 +5659,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       <img
         src={panel.image}
         alt={panel.imageAlt || panel.heading}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: isCard ? 16 : 0 }}
+        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block", borderRadius: isCard ? 16 : 0 }}
       />
     ) : (
       <div style={{
@@ -5868,11 +5941,13 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   const cardLead = Number(props.cardLead ?? 0);
   const hInset = Number(props.cardInset ?? 0);
   const n = panels.length;
-  const vp = ((typeof window !== "undefined" && window.innerHeight) || 800) - stickyTop;
+  const windowHeight = (typeof window !== "undefined" && window.innerHeight) || 800;
+  const safeTop = Math.max(0, stickyTop);
+  const vp = Math.max(480, windowHeight - safeTop);
 
   return (
-    <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative" }}>
-      <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
+    <section ref={sectionRef} style={{ height: `${n * 100}vh`, minHeight: `${n * 100}vh`, position: "relative", background: panels[0]?.backgroundColor || "#0f172a" }}>
+      <div style={{ position: "sticky", top: safeTop, height: `calc(100vh - ${safeTop}px)`, minHeight: vp, overflow: "hidden", background: panels[0]?.backgroundColor || "#0f172a" }}>
         {panels.map((panel, idx) => {
           // dist < 0 → past (settled at top), dist = 0 → active, dist > 0 → future
           const dist = idx - scrollProgress;
@@ -5904,7 +5979,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               style={{
                 position: "absolute",
                 left: hInset, right: hInset, top: 0,
-                height: "100vh",
+                height: `${vp}px`,
                 transform: `translateY(${y}px)`,
                 zIndex: idx + 1,             // later cards always on top
                 background: panel.backgroundColor,
@@ -5944,11 +6019,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               </div>
 
               {/* ── Full card content: image split + text panel ── */}
-              <div style={{ height: `calc(100vh - ${PEEK}px)`, display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden" }}>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
+              <div style={{ minHeight: `calc(${vp}px - ${PEEK}px)`, height: `calc(${vp}px - ${PEEK}px)`, display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden", background: panel.backgroundColor }}>
+                <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden", background: panel.backgroundColor }}>
                   {renderImageHalf(panel, idx, false, "100%")}
                 </div>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center", overflow: "hidden" }}>
+                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center", overflow: "hidden", background: panel.backgroundColor }}>
                   {renderPanelContent(panel, idx)}
                 </div>
               </div>

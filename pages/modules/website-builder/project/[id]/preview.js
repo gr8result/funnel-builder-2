@@ -200,7 +200,7 @@ export default function ProjectPreviewPage() {
       // sufficient in that case — prefer local blocks explicitly.
       if (session?.access_token) {
         try {
-          const remoteProject = await fetchWebsiteProjectFromServer(session, id);
+          const remoteProject = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
           if (remoteProject && !cancelled) {
             // Re-read local now that the async fetch has returned — another tab
             // or a queued sync may have updated localStorage since Step 1.
@@ -260,7 +260,7 @@ export default function ProjectPreviewPage() {
 
             // Re-try server fetch
             try {
-              const retryRemote = await fetchWebsiteProjectFromServer(session, id);
+              const retryRemote = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
               if (retryRemote && !cancelled) {
                 const cached = cacheWebsiteProject(retryRemote, { onlyIfNewer: false });
                 if (cached) {
@@ -383,7 +383,7 @@ export default function ProjectPreviewPage() {
           setProject(latestProject);
           if (session?.access_token) {
             try {
-              const syncedProject = await saveWebsiteProjectToServer(session, latestProject);
+              const syncedProject = await saveWebsiteProjectToServer(session, latestProject, { pageName: page || "" });
               if (syncedProject) {
                 const cachedProject = cacheWebsiteProject(syncedProject, { onlyIfNewer: false });
                 setProject(cachedProject || latestProject);

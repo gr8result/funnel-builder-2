@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { renderGridLibraryIcon } from "./gridIconLibrary";
@@ -122,13 +122,22 @@ function TextColumnResizer({ editor, value, align, onResize, children }) {
   );
 }
 
-function cleanTextSectionHtml(value) {
+function cleanTextSectionHtml(value, options = {}) {
   let html = asRichHtml(value);
+  const removeInlineBackgrounds = options.removeInlineBackgrounds !== false;
 
   if (typeof document !== "undefined" && html) {
     const template = document.createElement("template");
     template.innerHTML = html;
     const blockSelector = "p,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,div";
+    if (removeInlineBackgrounds) {
+      template.content.querySelectorAll("[style]").forEach((element) => {
+        element.style.background = "";
+        element.style.backgroundColor = "";
+        element.style.backgroundImage = "";
+        if (!element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      });
+    }
     template.content.querySelectorAll("span").forEach((span) => {
       const blockChildren = Array.from(span.children).filter((child) => child.matches?.(blockSelector));
       if (!blockChildren.length) return;
@@ -160,7 +169,7 @@ const textSectionRichTextStyles = `
 
 /**
  * Two-column grid shell with a draggable vertical divider for the data-ribbon stats variant.
- * Drag the handle to change the left-column percentage (clamped 20–80 %).
+ * Drag the handle to change the left-column percentage (clamped 20-80 %).
  */
 function StatsSplitResizer({ editor, pct, gap, onResize, children }) {
   const [draft, setDraft] = React.useState(null);
@@ -216,12 +225,12 @@ function StatsSplitResizer({ editor, pct, gap, onResize, children }) {
 }
 
 const ORBIT_CARD_DEFAULTS = [
-  { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
-  { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
-  { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
-  { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
-  { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
-  { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
+  { id: "oc1", title: "Integrations", icon: "??", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
+  { id: "oc2", title: "Dashboards",   icon: "??", accent: "#10b981", lines: ["$120,760 revenue", "? 14% this month"] },
+  { id: "oc3", title: "Conversations",icon: "??", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
+  { id: "oc4", title: "Data records", icon: "???", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
+  { id: "oc5", title: "Files",        icon: "??", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
+  { id: "oc6", title: "Updates",      icon: "??", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
 ];
 
 // Slot positions, scroll parallax rates, and fly-in starting offsets.
@@ -250,10 +259,10 @@ function clamp01(x) { return Math.max(0, Math.min(1, x)); }
  * The section is wrapped in a 360vh tall container and set to position:sticky;
  * top:0; height:100vh. Scroll progress through that 360vh drives 3 phases:
  *
- *   Phase 1 (p 0.00–0.40): Cards fly in from off-screen. Avatar goes from
- *     grayscale → full colour.
- *   Phase 2 (p 0.40–0.62): Cards rest at their positions with an idle bob.
- *   Phase 3 (p 0.62–1.00): Cards converge toward the centre of the section
+ *   Phase 1 (p 0.00-0.40): Cards fly in from off-screen. Avatar goes from
+ *     grayscale ? full colour.
+ *   Phase 2 (p 0.40-0.62): Cards rest at their positions with an idle bob.
+ *   Phase 3 (p 0.62-1.00): Cards converge toward the centre of the section
  *     (behind the avatar), scaling and fading to nothing.
  *
  * Uses [data-orbit-scroll-wrapper] to find the parent scroll container so it
@@ -316,7 +325,7 @@ function OrbitCardsLayer({ orbitCards }) {
     const tick = () => {
       const p = getProgress();
 
-      // ── Colour reveal on avatar ─────────────────────────────────────────
+      // -- Colour reveal on avatar -----------------------------------------
       if (avatarEl) {
         const cp    = easeOutCubic(clamp01(p / 0.38));
         avatarEl.style.filter     = `grayscale(${((1 - cp) * 100).toFixed(0)}%) brightness(${(0.48 + cp * 0.52).toFixed(2)})`;
@@ -329,16 +338,16 @@ function OrbitCardsLayer({ orbitCards }) {
         const slot = ORBIT_CARD_SLOTS[i];
 
         if (p < 0.40) {
-          // Phase 1 — fly in
+          // Phase 1 - fly in
           const fp  = easeOutCubic(clamp01(p / 0.40));
           el.style.transform = `translate(${(slot.flyDX * (1 - fp)).toFixed(1)}px, ${(slot.flyDY * (1 - fp)).toFixed(1)}px) scale(${(0.62 + fp * 0.38).toFixed(3)})`;
           el.style.opacity   = Math.min(1, fp * 1.4).toFixed(3);
         } else if (p < 0.62) {
-          // Phase 2 — rest (identity transform)
+          // Phase 2 - rest (identity transform)
           el.style.transform = "translate(0px,0px) scale(1)";
           el.style.opacity   = "1";
         } else {
-          // Phase 3 — converge behind avatar
+          // Phase 3 - converge behind avatar
           const cp  = easeInCubic(clamp01((p - 0.62) / 0.38));
           const t   = convergeTargets?.[i] || { dx: 0, dy: 0 };
           el.style.transform = `translate(${(t.dx * cp).toFixed(1)}px, ${(t.dy * cp).toFixed(1)}px) scale(${(1 - cp * 0.9).toFixed(3)})`;
@@ -412,7 +421,7 @@ function OrbitCardsLayer({ orbitCards }) {
               <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}66)` }} />
               <div style={{ padding: "10px 14px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: `${accent}20`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, lineHeight: 1 }}>{card.icon || "✦"}</span>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: `${accent}20`, border: `1px solid ${accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, lineHeight: 1 }}>{card.icon || "?"}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", letterSpacing: "0.01em", lineHeight: 1.3 }}>{card.title}</span>
                 </div>
                 {(Array.isArray(card.lines) ? card.lines : []).slice(0, 2).map((line, li) => (
@@ -448,8 +457,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
   const logoSrc = resolveAssetField(props, "logo", assets);
   const defaultAvatarSrc = pickDefaultAvatarSrc(assets);
   const brandLogoSrc = logoSrc || assets?.logo?.src || "";
-  const floatingImageSrc = resolveAssetField(props, "floatingImage", assets);
-
   switch (block?.type) {
     case "nav-bar":
       return <NavBarBlock blockProps={props} compact={compact} logoSrc={brandLogoSrc} editor={editor} navigationContext={navigationContext} />;
@@ -482,38 +489,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         ? `linear-gradient(135deg, ${colorWithAlpha(heroParallaxBaseColor, 0.28)}, ${colorWithAlpha(heroParallaxBaseColor, 0.52)})`
         : null;
       const heroOverlayEnabled = !compact;
-      const hasFloatingHeroImage = !!floatingImageSrc;
-      // Build floatingImages array (supports multiple overlay images)
-      const rawFloatingImages = Array.isArray(props.floatingImages) && props.floatingImages.length > 0
-        ? props.floatingImages
-        : (floatingImageSrc ? [{
-            src: floatingImageSrc,
-            assetId: props.floatingImageAssetId || "",
-            x: props.floatingX,
-            y: props.floatingY,
-            width: props.floatingWidth,
-            height: props.floatingHeight,
-            animation: props.imageOverlayAnimation,
-            animationDelay: props.imageOverlayAnimationDelay,
-            animationSpeed: props.imageOverlayAnimationSpeed,
-          }] : []);
-      const heroOverlayVisualSrc = rawFloatingImages[0]?.src || brandLogoSrc;
-      const heroOverlayImageFit = "contain";
+      const hasFloatingHeroImage = false;
+      const rawFloatingImages = [];
       const heroImageOverlayAnimation = String(props.imageOverlayAnimation || "sweep-left");
       const heroImageOverlayDelay = Number(props.imageOverlayAnimationDelay ?? 0.08) || 0.08;
       const heroImageOverlaySpeed = Number(props.imageOverlayAnimationSpeed ?? 1.45) || 1.45;
-      const heroContentOverlayAnimation = String(props.contentOverlayAnimation || "sweep-right");
-      const heroContentOverlayDelay = Number(props.contentOverlayAnimationDelay ?? 0.22) || 0.22;
-      const heroContentOverlaySpeed = Number(props.contentOverlayAnimationSpeed ?? 1.05) || 1.05;
-      const heroCtaAnimation = String(props.ctaAnimation || "fade-up");
-      const heroCtaDelay = Number(props.ctaAnimationDelay ?? 0.18) || 0.18;
-      const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
-      const headingColor = props.headlineColor || "#ffffff";
-      const headingFamily = props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
-      const headingWeight = props.headlineFontWeight || "700";
-      const bodyColor = props.textColor || headingColor;
-      const bodyFamily = props.fontFamily || headingFamily;
-      const headingAlign = props.headlineAlignment || heroLayout.headlineAlignment || "center";
       const heroHorizontalInset = compact ? 24 : 48;
       const heroContentMaxWidth = Math.max(320, Number(props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
       const heroContentBounds = {
@@ -557,7 +537,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroOverlayProps = normalizedOverlayLayout;
       const heroContentProps = normalizedOverlayLayout;
       // Orbit variant uses a sticky scroll container so the section pins while
-      // scroll progress drives the fly-in → rest → converge animation.
+      // scroll progress drives the fly-in ? rest ? converge animation.
       const isOrbitScroll = props.heroVariant === "orbit" && !compact;
 
       const heroSection = (
@@ -579,6 +559,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ...heroFullWidth,
             ...heroVariant.shell,
             minHeight: isOrbitScroll ? undefined : (compact ? 180 : props.minHeight || "400px"),
+            marginTop: Number(props.marginTop || 0) ? `${Number(props.marginTop || 0)}px` : undefined,
             ...sectionBgStyle,
             padding: compact ? "40px 24px" : "80px 48px",
           }}
@@ -626,9 +607,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           {showHeroMediaControls ? (
             <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 6, display: "grid", gap: 8, maxWidth: compact ? "calc(100% - 24px)" : 460 }}>
               {isVideoHero ? (
-                /* ── Video mode: show video controls ── */
+                /* -- Video mode: show video controls -- */
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: compact ? "10px 12px" : "12px 14px", borderRadius: 16, background: "rgba(15,23,42,0.72)", border: "1px solid rgba(168,85,247,0.5)", boxShadow: "0 16px 34px rgba(15,23,42,0.18)" }}>
-                  <span style={{ color: "#e2e8f0", fontSize: compact ? 12 : 13, fontWeight: 600 }}>🎬 Video background</span>
+                  <span style={{ color: "#e2e8f0", fontSize: compact ? 12 : 13, fontWeight: 600 }}>?? Video background</span>
                   <label style={{ ...sharedStyles.editorChip, background: "#a855f7", color: "#fff", cursor: "pointer" }}>
                     Replace Video
                     <input
@@ -645,7 +626,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       }}
                     />
                   </label>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }} title="Overlay colour — darken/tint the video">
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }} title="Overlay colour - darken/tint the video">
                     <span style={{ color: "#94a3b8", fontSize: 12, whiteSpace: "nowrap" }}>Overlay</span>
                     <input
                       type="color"
@@ -682,7 +663,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   >Switch to Image</button>
                 </div>
               ) : !heroBackgroundImage ? (
-                /* ── Empty state: offer image OR video upload ── */
+                /* -- Empty state: offer image OR video upload -- */
                 <div style={{ borderRadius: 18, border: "2px dashed rgba(125,211,252,0.7)", background: "rgba(15,23,42,0.42)", padding: compact ? 14 : 18, display: "grid", gap: 10, color: "#e2e8f0", boxShadow: "0 16px 34px rgba(15,23,42,0.2)" }}>
                   <div style={{ display: "grid", gap: 4 }}>
                     <strong style={{ fontSize: compact ? 14 : 16 }}>{block?.type === "parallax" ? "Section background" : "Hero background"}</strong>
@@ -690,7 +671,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <label style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49", cursor: "pointer" }}>
-                      📷 Upload Image
+                      ?? Upload Image
                       <input
                         type="file"
                         accept="image/*"
@@ -705,7 +686,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       />
                     </label>
                     <label style={{ ...sharedStyles.editorChip, background: "#a855f7", color: "#fff", cursor: "pointer" }}>
-                      🎬 Upload Video
+                      ?? Upload Video
                       <input
                         type="file"
                         accept="video/mp4,video/webm,video/*"
@@ -734,7 +715,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 </div>
               ) : (
-                /* ── Has image: Replace image + option to switch to video ── */
+                /* -- Has image: Replace image + option to switch to video -- */
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: compact ? "10px 12px" : "12px 14px", borderRadius: 16, background: "rgba(15,23,42,0.52)", border: "1px solid rgba(125,211,252,0.22)", boxShadow: "0 16px 34px rgba(15,23,42,0.18)" }}>
                   <span style={{ color: "#e2e8f0", fontSize: compact ? 12 : 13, fontWeight: 600 }}>{block?.type === "parallax" ? "Section background" : "Hero background"}</span>
                   <label style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49", cursor: "pointer" }}>
@@ -783,84 +764,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               )}
             </div>
           ) : null}
-          {showHeroMediaControls ? (
+          {showHeroMediaControls && props.heroHtmlEmbed ? (
             <div style={{ position: "absolute", top: 12, right: 12, zIndex: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button type="button" onClick={() => onChangeBlock?.({ ...props, headlineFontSize: Math.max(14, Number(props.headlineFontSize || 52) - 2) })} style={sharedStyles.editorChip}>A−</button>
-              <button type="button" onClick={() => onChangeBlock?.({ ...props, headlineFontSize: Math.min(72, Number(props.headlineFontSize || 52) + 2) })} style={sharedStyles.editorChip}>A+</button>
               <button
                 type="button"
-                onClick={() => onChangeBlock?.({
-                  ...props,
-                  hideTextOverlay: false,
-                  headline: props.headline || "Click to type headline",
-                  subheadline: props.subheadline || "Add supporting text here",
-                  contentX: props.contentX ?? heroLayout.contentX,
-                  contentY: props.contentY ?? (hasFloatingHeroImage ? (heroVariant.imageDefaults?.contentY ?? heroLayout.contentY) : heroLayout.contentY),
-                  contentWidth: props.contentWidth ?? heroLayout.contentWidth,
-                  contentHeight: props.contentHeight ?? heroLayout.contentHeight,
-                })}
-                style={{ ...sharedStyles.editorChip, ...(props.hideTextOverlay ? { background: "#ef4444", color: "#fff", fontWeight: 600 } : {}) }}
-                title={props.hideTextOverlay ? "Text is hidden in preview — click to restore" : "Restore main headline/CTA text block"}
-              >
-                {props.hideTextOverlay ? "⚠ Text Hidden" : "Main Text"}
-              </button>
-              {brandLogoSrc ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const logoItem = { src: brandLogoSrc, assetId: "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "fade-in", animationDelay: 0.1, animationSpeed: 1.0 };
-                    const nextImages = rawFloatingImages.length > 0 ? [...rawFloatingImages, logoItem] : [logoItem];
-                    onChangeBlock?.({ ...props, floatingImages: nextImages });
-                  }}
-                  style={{ ...sharedStyles.editorChip, background: "#ffffff", color: "#111827" }}
-                >
-                  + Logo
-                </button>
-              ) : null}
-              <label style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer" }} title="Add image or GIF overlay — freely draggable">
-                + Image / GIF
-                <input
-                  type="file"
-                  accept="image/*,image/gif,image/webp,image/apng"
-                  style={{ display: "none" }}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    Promise.resolve(onUploadImage?.("__addFloatingImage", file)).then((asset) => {
-                      if (!asset?.src) return;
-                      const nextImages = [...rawFloatingImages, {
-                        src: asset.src,
-                        assetId: asset.id || "",
-                        x: 76, y: 52, width: 280, height: 320,
-                        animation: "sweep-left",
-                        animationDelay: 0.08,
-                        animationSpeed: 1.45,
-                      }];
-                      onChangeBlock?.({ ...props, floatingImages: nextImages });
-                    });
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => {
-                  const extraTextOverlays = Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : [];
-                  // Spread new blocks so they don't all stack at the same spot
-                  const baseX = 20 + (extraTextOverlays.length * 8) % 60;
-                  const baseY = 15 + (extraTextOverlays.length * 12) % 55;
-                  onChangeBlock?.({ ...props, extraTextOverlays: [...extraTextOverlays, { id: `txt-${Date.now()}`, text: "New text block", x: baseX, y: baseY, width: 280, height: 60, fontSize: 18, color: "#ffffff", fontWeight: "600", textAlign: "left", background: "transparent", animation: "fade-in", animationDelay: 0 }] });
-                }}
-                style={{ ...sharedStyles.editorChip, background: "#22c55e", color: "#fff" }}
-                title="Add a free-floating text block — drag anywhere"
-              >
-                + Text Block
-              </button>
-              <button
-                type="button"
-                onClick={() => onChangeBlock?.({ ...props, heroHtmlEmbed: props.heroHtmlEmbed ? "" : "<!-- paste embed code here -->" })}
-                style={{ ...sharedStyles.editorChip, ...(props.heroHtmlEmbed ? { background: "#0ea5e9", color: "#fff" } : {}) }}
-                title="Embed custom HTML/widget code inside this hero section"
+                onClick={() => onChangeBlock?.({ ...props, heroHtmlEmbed: "" })}
+                style={{ ...sharedStyles.editorChip, background: "#0ea5e9", color: "#fff" }}
+                title="Remove custom HTML/widget code inside this hero section"
               >
                 {"</>"} HTML
               </button>
@@ -868,364 +778,16 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           ) : null}
           <div data-overlay-bounds="true" style={heroContentBounds}>
             <div style={heroContentBoundsInner}>
-              {!heroOverlayVisualSrc && showHeroMediaControls && !compact ? (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${Number(heroOverlayProps.floatingX)}%`,
-                    top: `${Number(heroOverlayProps.floatingY)}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: `${Math.max(120, Number(heroOverlayProps.floatingWidth))}px`,
-                    height: `${Math.max(120, Number(heroOverlayProps.floatingHeight))}px`,
-                    zIndex: 2,
-                    borderRadius: 18,
-                    border: "2px dashed rgba(251,191,36,0.95)",
-                    background: "rgba(15,23,42,0.30)",
-                    display: "grid",
-                    placeItems: "center",
-                    padding: 14,
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <div style={{ textAlign: "center", color: "#fff", display: "grid", gap: 8 }}>
-                    <strong>Foreground overlay image</strong>
-                    <label style={{ ...sharedStyles.editorChip, display: "inline-flex", justifyContent: "center", background: "#f59e0b", color: "#111827", cursor: "pointer" }}>
-                      Upload Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = "";
-                          if (!file) return;
-                          Promise.resolve(onUploadImage?.("__addFloatingImage", file)).then((asset) => {
-                            if (!asset?.src) return;
-                            const nextImages = [{ src: asset.src, assetId: asset.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 }];
-                            onChangeBlock?.({ ...props, floatingImages: nextImages });
-                          });
-                        }}
-                      />
-                    </label>
-                    {heroLibraryImages.length ? (
-                      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                        {heroLibraryImages.map((image) => (
-                          <button
-                            key={`overlay-empty-library-${image.id || image.src}`}
-                            type="button"
-                            onClick={() => {
-                              const item = { src: image.src || "", assetId: image.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 };
-                              onChangeBlock?.({ ...props, floatingImages: [item] });
-                            }}
-                            style={{ width: 46, height: 46, padding: 0, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.24)", background: "#0f172a", cursor: "pointer" }}
-                            title={image.name || "Use library image"}
-                          >
-                            <img src={image.src} alt={image.name || "Library image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-              {/* ── Orbit feature cards are rendered AFTER the avatar (z=3 > avatar z=2) ── */}
-              {rawFloatingImages.length === 0 ? null : rawFloatingImages.map((imgItem, imgIdx) => {
-                const imgSrc = imgItem.src || "";
-                if (!imgSrc) return null;
-                const imgAnimation = String(imgItem.animation || heroImageOverlayAnimation);
-                const imgDelay = Number(imgItem.animationDelay ?? heroImageOverlayDelay);
-                const imgSpeed = Number(imgItem.animationSpeed ?? heroImageOverlaySpeed);
-                const imgOverlayProps = {
-                  ...heroOverlayProps,
-                  floatingX: Number.isFinite(Number(imgItem.x)) ? Number(imgItem.x) : heroOverlayProps.floatingX,
-                  floatingY: Number.isFinite(Number(imgItem.y)) ? Number(imgItem.y) : heroOverlayProps.floatingY,
-                  floatingWidth: Number.isFinite(Number(imgItem.width)) ? Number(imgItem.width) : heroOverlayProps.floatingWidth,
-                  floatingHeight: Number.isFinite(Number(imgItem.height)) ? Number(imgItem.height) : heroOverlayProps.floatingHeight,
-                  floatingRotation: Number.isFinite(Number(imgItem.rotation)) ? Number(imgItem.rotation) : 0,
-                };
-                const handleImgChange = (nextProps) => {
-                  const nextImages = rawFloatingImages.map((img, i) => i !== imgIdx ? img : {
-                    ...img,
-                    x: nextProps.floatingX,
-                    y: nextProps.floatingY,
-                    width: nextProps.floatingWidth,
-                    height: nextProps.floatingHeight,
-                    ...(nextProps.floatingRotation != null ? { rotation: nextProps.floatingRotation } : {}),
-                  });
-                  onChangeBlock?.({ ...props, floatingImages: nextImages });
-                };
-                const handleImgDelete = () => {
-                  const nextImages = rawFloatingImages.filter((_, i) => i !== imgIdx);
-                  onChangeBlock?.({ ...props, floatingImages: nextImages });
-                };
-                const handleImgMoveLayer = (direction) => {
-                  const arr = [...rawFloatingImages];
-                  const swapIdx = imgIdx + direction;
-                  if (swapIdx < 0 || swapIdx >= arr.length) return;
-                  [arr[imgIdx], arr[swapIdx]] = [arr[swapIdx], arr[imgIdx]];
-                  onChangeBlock?.({ ...props, floatingImages: arr });
-                };
-                // Tag the first image in orbit variant so OrbitCardsLayer can
-                // find and animate its colour-reveal (grayscale → full colour).
-                const orbitAvatarAttr = (props.heroVariant === "orbit" && imgIdx === 0)
-                  ? { "data-orbit-avatar": "true" }
-                  : {};
-                return (
-                  <div key={`fi-${imgIdx}-${imgSrc.slice(-12)}`} {...orbitAvatarAttr} style={overlayAnimationLayer(2 + imgIdx, shouldRunAnimations ? getAnimationStyle(imgAnimation, imgDelay, imgSpeed) : {})}>
-                    <div style={overlayAnimationLayer(1, shouldRunAnimations ? ambientMotionStyle("float", 0.12 + imgIdx * 0.06) : {})}>
-                      <DraggableImageOverlay
-                        props={imgOverlayProps}
-                        compact={compact}
-                        editor={editor}
-                        isSelected={isSelected}
-                        onChangeBlock={handleImgChange}
-                        onUploadImage={onUploadImage}
-                        onSelectAsset={onSelectAsset}
-                        assets={assets}
-                        imageSrc={imgSrc}
-                        overlayEnabled={heroOverlayEnabled}
-                        frameStyle={null}
-                        imageFit="contain"
-                        imageLabel={rawFloatingImages.length > 1 ? `Image ${imgIdx + 1}` : null}
-                        onDelete={editor ? handleImgDelete : null}
-                        onMoveLayer={editor && rawFloatingImages.length > 1 ? handleImgMoveLayer : null}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {/* ── Orbit feature cards — rendered AFTER avatar so z=3 puts them in front ── */}
+              {/* -- Orbit feature cards - rendered AFTER avatar so z=3 puts them in front -- */}
               {props.heroVariant === "orbit" && !compact ? (
                 <OrbitCardsLayer orbitCards={props.orbitCards} />
               ) : null}
-              <div style={overlayAnimationLayer(3, shouldRunAnimations ? getAnimationStyle(heroContentOverlayAnimation, heroContentOverlayDelay, heroContentOverlaySpeed) : {})}>
-                {props.hideTextOverlay && editor ? (
-                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 4, background: "rgba(239,68,68,0.88)", color: "#fff", borderRadius: 10, padding: "8px 14px", fontSize: 16, fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap" }}>
-                    ⚠ Text hidden in preview — click &ldquo;⚠ Text Hidden&rdquo; button to restore
-                  </div>
-                ) : null}
-                {props.hideTextOverlay ? null : (
-                <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
-                  {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
-                  {/* eslint-disable-next-line no-unused-vars */}
-                  <div style={(() => { const { maxWidth: _mw, ...variantContent } = heroVariant.content || {}; return { display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...variantContent }; })()}>
-                  {(editor || !!stripPlaceholder(props.eyebrow)) ? (
-                    <p
-                      data-website-inline-editor="true"
-                      data-text-prop="eyebrow"
-                      contentEditable={editor}
-                      suppressContentEditableWarning
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onBlur={(event) => {
-                        if (shouldSkipToolbarBlur(event)) return;
-                        if (!editor || typeof onChangeBlock !== "function") return;
-                        const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
-                        onChangeBlock({ ...props, eyebrow: (cleaned === "Section label" || cleaned === "Section Label") ? "" : cleaned });
-                      }}
-                      style={{
-                        position: "relative",
-                        zIndex: 1,
-                        margin: 0,
-                        fontSize: compact ? 11 : 13,
-                        lineHeight: 1.4,
-                        fontWeight: 600,
-                        letterSpacing: "0.22em",
-                        textTransform: "uppercase",
-                        color: colorWithAlpha(headingColor, 0.72),
-                        ...(shouldRunAnimations ? getAnimationStyle(props.subheadlineAnimation || "fade-up", Math.max(0, Number(props.subheadlineAnimationDelay || 0) - 0.06), props.subheadlineAnimationSpeed) : {}),
-                        outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
-                        padding: editor ? "4px 6px" : 0,
-                        borderRadius: 8,
-                      }}
-                      dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.eyebrow) || (editor ? "Section label" : "")) }}
-                    />
-                  ) : null}
-                  <h1
-                data-website-inline-editor="true"
-                data-text-prop="headline"
-                contentEditable={editor}
-                suppressContentEditableWarning
-                onMouseDown={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                onBlur={(event) => {
-                  if (shouldSkipToolbarBlur(event)) return;
-                  if (!editor || typeof onChangeBlock !== "function") return;
-                  const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
-                  onChangeBlock({ ...props, headline: cleaned === "Click to type headline" ? "" : cleaned });
-                }}
-                style={{
-                  position: "relative",
-                  zIndex: 1,
-                  margin: 0,
-                  fontSize: compact ? 22 : (props.headlineFontSize || 52),
-                  lineHeight: 1.1,
-                  fontWeight: headingWeight,
-                  fontFamily: headingFamily,
-                  color: headingColor,
-                  ...computeHeadlineTextStyleCss(props),
-                  ...(shouldRunAnimations ? getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) : {}),
-                  width: "100%",
-                  maxWidth: "100%",
-                  boxSizing: "border-box",
-                  outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
-                  padding: editor ? "4px 6px" : 0,
-                  wordBreak: "normal",
-                  overflowWrap: "break-word",
-                  borderRadius: 8,
-                }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.headline) || (editor ? "Click to type headline" : "")) }}
-              />
-                  {(editor || !!stripPlaceholder(props.subheadline)) ? (
-                    <p
-                  data-website-inline-editor="true"
-                  data-text-prop="subheadline"
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onBlur={(event) => {
-                    if (shouldSkipToolbarBlur(event)) return;
-                    if (!editor || typeof onChangeBlock !== "function") return;
-                    const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
-                    onChangeBlock({ ...props, subheadline: cleaned === "Add supporting text here" ? "" : cleaned });
-                  }}
-                  style={{
-                    position: "relative",
-                    zIndex: 1,
-                    margin: 0,
-                    fontSize: compact ? 15 : (props.subheadlineFontSize || 20),
-                    lineHeight: 1.6,
-                    fontFamily: bodyFamily,
-                    fontWeight: props.fontWeight || "400",
-                    color: bodyColor,
-                    ...(shouldRunAnimations ? getAnimationStyle(props.subheadlineAnimation, props.subheadlineAnimationDelay || 0, props.subheadlineAnimationSpeed) : {}),
-                    width: "100%",
-                    maxWidth: "100%",
-                    boxSizing: "border-box",
-                    opacity: 0.92,
-                    wordBreak: "normal",
-                    overflowWrap: "break-word",
-                    outline: editor ? "1px dashed rgba(125,211,252,0.5)" : "none",
-                    padding: editor ? "4px 6px" : 0,
-                    borderRadius: 8,
-                  }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.subheadline) || (editor ? "Add supporting text here" : "")) }}
-                    />
-                  ) : null}
-                  {props.ctaText ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: compact ? 10 : 14,
-                        alignItems: "center",
-                        justifyContent: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
-                        ...(shouldRunAnimations ? getAnimationStyle(heroCtaAnimation, heroCtaDelay, heroCtaSpeed) : {}),
-                      }}
-                    >
-                      <a
-                        href={editor ? "#" : (props.ctaLink || "#")}
-                        onClick={(event) => {
-                          if (editor) event.preventDefault();
-                        }}
-                        style={{
-                          position: "relative",
-                          zIndex: 1,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textDecoration: "none",
-                          background: props.buttonColor || "#2563eb",
-                          color: props.buttonTextColor || "#ffffff",
-                          padding: compact ? "10px 20px" : "14px 28px",
-                          borderRadius: Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999,
-                          fontWeight: 600,
-                          fontSize: compact ? 14 : 17,
-                          fontFamily: bodyFamily,
-                          border: "none",
-                          alignSelf: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
-                        }}
-                      >
-                        {props.ctaText}
-                      </a>
-                      {props.secondaryCtaText ? (
-                        <a
-                          href={editor ? "#" : (props.secondaryCtaLink || "#")}
-                          onClick={(event) => {
-                            if (editor) event.preventDefault();
-                          }}
-                          style={{
-                            position: "relative",
-                            zIndex: 1,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            textDecoration: "none",
-                            background: colorWithAlpha("#081120", 0.18),
-                            color: headingColor,
-                            padding: compact ? "10px 18px" : "14px 24px",
-                            borderRadius: Number.isFinite(Number(props.buttonRadius)) ? Number(props.buttonRadius) : 999,
-                            fontWeight: 600,
-                            fontSize: compact ? 14 : 17,
-                            fontFamily: bodyFamily,
-                            border: `1px solid ${colorWithAlpha(headingColor, 0.3)}`,
-                            backdropFilter: "blur(10px)",
-                          }}
-                        >
-                          {props.secondaryCtaText}
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {/* Hero stat items — inline mini-metrics below the CTA */}
-                  {Array.isArray(props.heroStatItems) && props.heroStatItems.length > 0 ? (
-                    <div style={{ display: "flex", gap: compact ? 16 : 28, flexWrap: "wrap", marginTop: compact ? 8 : 12, alignItems: "center" }}>
-                      {props.heroStatItems.map((stat, sIdx) => (
-                        <div key={stat.id || sIdx} style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 60 }}>
-                          <span style={{ fontSize: compact ? 18 : 26, fontWeight: 600, color: headingColor, lineHeight: 1.1 }}>{stat.number || stat.value || ""}</span>
-                          <span style={{ fontSize: compact ? 11 : 13, fontWeight: 500, color: colorWithAlpha(headingColor, 0.7), lineHeight: 1.3, letterSpacing: "0.04em" }}>{stat.label || ""}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                  </div>
-                </DraggableContentOverlay>
-                )}
-              </div>
-              {/* Extra free text overlays */}
-              {(Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
-                const txtX = Number(txtItem.x ?? 50);
-                const txtY = Number(txtItem.y ?? 30);
-                const txtW = Math.max(80, Number(txtItem.width ?? 320));
-                const txtH = Math.max(30, Number(txtItem.height ?? 80));
-                const txtLeft = `clamp(calc(${txtW}px / 2), ${txtX}%, calc(100% - ${txtW}px / 2))`;
-                const txtTop = `clamp(calc(${txtH}px / 2), ${txtY}%, calc(100% - ${txtH}px / 2))`;
-                const updateTxt = (patch) => {
-                  const next = (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((t, i) => i !== txtIdx ? t : { ...t, ...patch });
-                  onChangeBlock?.({ ...props, extraTextOverlays: next });
-                };
-                const deleteTxt = () => {
-                  const next = (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).filter((_, i) => i !== txtIdx);
-                  onChangeBlock?.({ ...props, extraTextOverlays: next });
-                };
-                return (
-                  <div key={txtItem.id || txtIdx} style={overlayAnimationLayer(10 + txtIdx, shouldRunAnimations ? getAnimationStyle(txtItem.animation || "fade-in", Number(txtItem.animationDelay ?? 0), 0.8) : {})}>
-                    <ExtraTextOverlay
-                      item={txtItem}
-                      editor={editor}
-                      onUpdate={updateTxt}
-                      onDelete={deleteTxt}
-                    />
-                  </div>
-                );
-              })}
               {props.heroHtmlEmbed ? (
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 8, pointerEvents: "auto" }}>
                   <HtmlEmbedBlock html={props.heroHtmlEmbed} editor={editor} />
                 </div>
               ) : null}
-              {/* Extra counter overlays — draggable visit counter widgets */}
+              {/* Extra counter overlays - draggable visit counter widgets */}
               {(Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((ctrItem, ctrIdx) => {
                 const updateCtr = (patch) => {
                   const next = (Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((t, i) => i !== ctrIdx ? t : { ...t, ...patch });
@@ -1241,7 +803,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   </div>
                 );
               })}
-              {/* Hero inline counter — managed from the Counter tab in the right sidebar */}
+              {/* Hero inline counter - managed from the Counter tab in the right sidebar */}
               {props.heroInlineCounter?.enabled ? (
                 <div style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "none" }}>
                   <ExtraCounterOverlay
@@ -1295,8 +857,15 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const textPadBottom = props.paddingBottom ?? 20;
       const textLineHeight = Math.max(0.8, Math.min(3, Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35) || 1.35));
       const textBackground = props.backgroundColor || "#111827";
-      const hasBorder = !props.hideBorder && textBackground && textBackground !== "transparent";
-      const hasBoxShadow = hasBorder;
+      const textBgHex = String(textBackground || "").trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1] || "";
+      const textBgRgb = textBgHex.length === 3
+        ? textBgHex.split("").map((value) => parseInt(value + value, 16))
+        : textBgHex.length === 6
+          ? [textBgHex.slice(0, 2), textBgHex.slice(2, 4), textBgHex.slice(4, 6)].map((value) => parseInt(value, 16))
+          : null;
+      const isDarkTextBackground = !!textBgRgb && ((textBgRgb[0] * 299 + textBgRgb[1] * 587 + textBgRgb[2] * 114) / 1000) < 96;
+      const hasBorder = !props.hideBorder && textBackground && textBackground !== "transparent" && !isDarkTextBackground;
+      const hasBoxShadow = hasBorder && !isDarkTextBackground;
       const textOverlayEnabled = !!props.enableParallax && !!heroBackgroundImage;
       const textFixedBgStyle = textOverlayEnabled
         ? {
@@ -1321,6 +890,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             borderRadius: 0,
             ...textFullWidth,
             minHeight: props.minHeight || "160px",
+            marginTop: isDarkTextBackground ? -1 : undefined,
             paddingTop: `${textPadTop}px`,
             paddingBottom: `${textPadBottom}px`,
             paddingLeft: sectionPad.replace(/\s.*/, ""),
@@ -1352,7 +922,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <div style={{ ...sectionContentStyle(props, compact), position: "relative", zIndex: textOverlayEnabled ? 3 : undefined }}>
             {editor ? (
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
-                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.max(14, Number(props.textFontSize || 18) - 2) })} style={sharedStyles.editorChip}>A−</button>
+                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.max(14, Number(props.textFontSize || 18) - 2) })} style={sharedStyles.editorChip}>A-</button>
                 <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.min(72, Number(props.textFontSize || 18) + 2) })} style={sharedStyles.editorChip}>A+</button>
                 <button type="button" onClick={() => onChangeBlock?.({ ...props, hideBorder: !props.hideBorder })} style={{ ...sharedStyles.editorChip, ...(props.hideBorder ? { background: "#64748b", color: "#fff" } : {}) }} title="Toggle section border">{props.hideBorder ? "Border Off" : "Border On"}</button>
               </div>
@@ -1394,7 +964,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                   }}
                   style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
-                  dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
+                  dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text, { removeInlineBackgrounds: props.stripInlineTextBackgrounds !== false }) }}
                 />
               </TextColumnResizer>
             </div>
@@ -1636,7 +1206,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 onClick={editor ? () => patchTestimonial(idx, { rating: n }) : undefined}
                 onKeyDown={editor ? (e) => { if (e.key === "Enter") patchTestimonial(idx, { rating: n }); } : undefined}
                 style={{ fontSize: compact ? 15 : 18, color: n <= filled ? starAccent : "rgba(148,163,184,0.5)", cursor: editor ? "pointer" : "default", lineHeight: 1, userSelect: "none" }}
-              >★</span>
+              >?</span>
             ))}
           </div>
         );
@@ -1670,7 +1240,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 padding: editor ? "4px 6px" : 0,
                 margin: 0,
               }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(item.text || (editor ? "Click to edit quote…" : "")) }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(item.text || (editor ? "Click to edit quote-" : "")) }}
             />
             <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined }}>
               {avatarSrcItem
@@ -1911,9 +1481,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 <div style={sharedStyles.planFeatures}>
                   {asArray(plan.includedFeatures).map((feature, featureIdx) => {
                     if (pricingVariant.featureSplit) {
-                      const parts = String(feature).split(" — ");
+                      const parts = String(feature).split(" - ");
                       const label = parts[0] || feature;
-                      const value = parts.slice(1).join(" — ");
+                      const value = parts.slice(1).join(" - ");
                       return (
                         <div key={`${feature}-${featureIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...featureRowStyle }}>
                           <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5 }}>{label}</span>
@@ -1942,9 +1512,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   <div style={sharedStyles.planExtrasList}>
                     {asArray(plan.extras).length ? asArray(plan.extras).map((extra, extraIdx) => {
                       if (pricingVariant.featureSplit) {
-                        const parts = String(extra).split(" — ");
+                        const parts = String(extra).split(" - ");
                         const label = parts[0] || extra;
-                        const value = parts.slice(1).join(" — ");
+                        const value = parts.slice(1).join(" - ");
                         return (
                           <div key={`${extra}-${extraIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                             <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16 }}>{label}</span>
@@ -1994,7 +1564,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             if (!pricingVariant.planAccentColor) return null;
             const parsePx = (str) => parseFloat(String(str || "").replace(/[^0-9.]/g, "")) || 0;
             const fmtUSD = (v) => {
-              if (!Number.isFinite(v) || v <= 0) return "—";
+              if (!Number.isFinite(v) || v <= 0) return "-";
               const fixed = v.toFixed(2);
               const [whole, dec] = fixed.split(".");
               return `A$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
@@ -2784,7 +2354,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const statsHeaderDefaultWidth = Number(statsVariant.header?.maxWidth || 720);
       const statsHeaderWidth = props.statsHeaderWidth > 0 ? props.statsHeaderWidth : statsHeaderDefaultWidth;
 
-      // Inner header content (title + subtitle) — shared between resizer wrappers.
+      // Inner header content (title + subtitle) - shared between resizer wrappers.
       const _statsHeaderInner = (
         <div style={{ ...asStyleObject(statsVariant.header), maxWidth: "100%", width: "100%" }}>
           <h2
@@ -3207,7 +2777,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: nlBg || "linear-gradient(135deg,#eff6ff,#dbeafe)" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={{ maxWidth: 520, margin: "0 auto", textAlign: "center" }}>
-            <div style={{ fontSize: compact ? 28 : 40, marginBottom: 8 }}>{props.icon || "✉️"}</div>
+            <div style={{ fontSize: compact ? 28 : 40, marginBottom: 8 }}>{props.icon || "??"}</div>
             <h2
               contentEditable={editor} suppressContentEditableWarning
               onBlur={(e) => patchNl({ title: cleanInlineEditorHtml(e.currentTarget.innerHTML) })}
@@ -3244,7 +2814,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <div style={asStyleObject(trustBadgeSty.row)}>
             {asArray(props.badges).map((badge, idx) => (
               <ScrollReveal key={`${badge.label}-${idx}`} animationName="fade-up" delay={idx * 0.05} disabled={editor} style={asStyleObject(trustBadgeSty.badge)}>
-                <span style={asStyleObject(trustBadgeSty.icon)}>{badge.icon || "✓"}</span>
+                <span style={asStyleObject(trustBadgeSty.icon)}>{badge.icon || "?"}</span>
                 <span style={{ fontSize: trustBadgeSty.badge?.fontSize ?? "inherit" }}>{badge.label || "Badge"}</span>
               </ScrollReveal>
             ))}
@@ -3275,7 +2845,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const marqueeFontWeight = String(props.fontWeight || "800");
       const marqueeFontStyle = String(props.fontStyle || "normal");
       const marqueeTextDecoration = String(props.textDecoration || "none");
-      const dividerText = String(props.dividerText || "✦").trim() || "✦";
+      const dividerText = String(props.dividerText || "?").trim() || "?";
       const accent = props.accentColor || "#7dd3fc";
 
       return (
@@ -3322,7 +2892,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               }}
             >
               {repeated.map((item, idx) => {
-                // Normalize: plain string → { text: item }, object stays as-is
+                // Normalize: plain string ? { text: item }, object stays as-is
                 const norm = item && typeof item === "object" ? item : { text: String(item || "") };
                 const itemText = norm.text || "";
                 const itemIconKey = norm.iconKey || null;
@@ -3487,8 +3057,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     }
 
     case "space": {
+      const spacerColor = String(props.backgroundColor || "").trim().toLowerCase();
+      const isDefaultWhiteSpacer = spacerColor === "" || spacerColor === "#fff" || spacerColor === "#ffffff" || spacerColor === "white" || spacerColor === "rgb(255, 255, 255)";
       const spBg =
-        props.backgroundStyle === "color"    ? (props.backgroundColor  || "transparent") :
+        props.backgroundStyle === "color"    ? (isDefaultWhiteSpacer ? "transparent" : props.backgroundColor) :
         props.backgroundStyle === "gradient" ? (props.backgroundGradient || "transparent") :
         props.backgroundStyle === "image" && props.backgroundImage
           ? undefined
@@ -3658,12 +3230,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               </div>
 
               <div style={{ borderTop: `1px solid ${ftBorder}`, paddingTop: compact ? 14 : 18, display: "flex", alignItems: "center", justifyContent: compact ? "flex-start" : "space-between", gap: 14, flexWrap: "wrap" }}>
-                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink })}>{props.copyrightText || (editor ? "© 2025 Your Brand. All rights reserved." : "")}</span>
+                <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ copyrightText: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink })}>{props.copyrightText || (editor ? "- 2025 Your Brand. All rights reserved." : "")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                   {Array.isArray(extraLinks) && extraLinks.length ? extraLinks.map((link, index) => (
                     <a key={`footer-legal-${index}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftLink, fontSize: 16, textDecoration: "none", letterSpacing: "0.04em", textTransform: "uppercase" }}>{link.label || "Link"}</a>
                   )) : null}
-                  {spotlightItems.length ? <span style={{ fontSize: 16, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" • ")}</span> : null}
+                  {spotlightItems.length ? <span style={{ fontSize: 16, color: colorWithAlpha(ftLink, 0.9) }}>{spotlightItems.slice(0, 2).join(" - ")}</span> : null}
                 </div>
               </div>
             </div>
@@ -3702,7 +3274,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const chartBg = props.backgroundColor || "#0f172a";
       const chartTextColor = props.textColor || "#f8fafc";
       const chartHeading = props.heading || "Stop Paying Full Price";
-      const chartSubheading = props.subheading || "Every plan saves you real money — compared to buying each module separately";
+      const chartSubheading = props.subheading || "Every plan saves you real money - compared to buying each module separately";
       const chartAreaHeight = compact ? 150 : 300;
       const barW = compact ? 26 : 52;
       const barGapPx = compact ? 6 : 14;
@@ -3746,7 +3318,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 </p>
               </div>
 
-              {/* Annual savings — moved to top so it hits first */}
+              {/* Annual savings - moved to top so it hits first */}
               {props.showAnnualSavings !== false && (
                 <div style={{
                   background: "linear-gradient(135deg, rgba(99,102,241,0.14) 0%, rgba(124,58,237,0.09) 100%)",
@@ -3774,12 +3346,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     })}
                   </div>
                   <div style={{ color: colorWithAlpha(chartTextColor, 0.75), fontSize: compact ? 15 : 22, fontWeight: 600, lineHeight: 1.4 }}>
-                    That&apos;s real money back where it belongs — your business.
+                    That&apos;s real money back where it belongs - your business.
                   </div>
                 </div>
               )}
 
-              {/* Big savings cards — the hero of this section */}
+              {/* Big savings cards - the hero of this section */}
               <div style={{ display: "flex", gap: compact ? 10 : 18, marginBottom: compact ? 36 : 60, flexWrap: "wrap" }}>
                 {chartPlans.map((plan, idx) => {
                   const savings = (plan.individualPrice || 0) - (plan.billingPrice || 0);
@@ -3827,7 +3399,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 })}
               </div>
 
-              {/* Bar chart — annual savings per plan */}
+              {/* Bar chart - annual savings per plan */}
               <div style={{
                 background: "rgba(255,255,255,0.03)",
                 borderRadius: compact ? 14 : 24,
@@ -3961,7 +3533,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, subtitle: e.currentTarget.innerText.trim() }); }}
                 onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
                 style={{ color: "#9ca3af", fontSize: 18, textAlign: "center", marginBottom: 48, lineHeight: 1.6, outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-                dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle here…" : "") }}
+                dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle here-" : "") }}
               />
             )}
 
@@ -4026,7 +3598,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, planTagline: e.currentTarget.innerText.trim() }); }}
                       onKeyDown={editor ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
                       style={{ color: "#4ade80", fontSize: 16, marginTop: 4, opacity: 0.8, display: "block", outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "2px 6px" : 0, borderRadius: 4, cursor: editor ? "text" : undefined }}
-                    >{props.planTagline || (editor ? "Add plan tagline…" : "")}</span>
+                    >{props.planTagline || (editor ? "Add plan tagline-" : "")}</span>
                   )}
                 </div>
                 <div style={{ padding: "0 32px" }} />
@@ -4034,7 +3606,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               </div>
 
               <div style={{ ...grid3, padding: "28px 36px", background: "rgba(20,83,45,0.6)", borderTop: "2px solid rgba(74,222,128,0.25)" }}>
-                <span style={{ fontWeight: 600, fontSize: 22, color: "#86efac", letterSpacing: "0.01em" }}>🎉 You save</span>
+                <span style={{ fontWeight: 600, fontSize: 22, color: "#86efac", letterSpacing: "0.01em" }}>?? You save</span>
                 <div style={{ padding: "0 32px" }} />
                 <span style={{ color: "#86efac", fontWeight: 600, fontSize: 36, textAlign: "right", letterSpacing: "-0.02em" }}>${ccSavings.toLocaleString()}/mo</span>
               </div>

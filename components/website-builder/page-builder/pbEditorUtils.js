@@ -331,7 +331,7 @@ function normalizeHeroBackgroundModeProps(props, nextMode) {
   };
 }
 
-function AssetLibraryModal({ visible, title = "Media Library", assets = [], selectedSrc = "", onClose, onSelect, onUpload }) {
+function AssetLibraryModal({ visible, title = "Media Library", assets = [], selectedSrc = "", uploadAccept = "image/*,video/*", onClose, onSelect, onUpload }) {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -342,12 +342,44 @@ function AssetLibraryModal({ visible, title = "Media Library", assets = [], sele
 
   if (!visible) return null;
 
+  const isVideoAsset = (asset) => String(asset?.type || "").startsWith("video/")
+    || /\.(mp4|webm|mov|m4v)(\?|$)/i.test(String(asset?.name || asset?.src || ""));
+
   const filteredAssets = (Array.isArray(assets) ? assets : []).filter((asset) => {
     const needle = String(query || "").trim().toLowerCase();
     if (!needle) return true;
     const haystack = `${String(asset?.name || "")} ${String(asset?.src || "")}`.toLowerCase();
     return haystack.includes(needle);
   });
+  const filteredImages = filteredAssets.filter((asset) => !isVideoAsset(asset));
+  const filteredVideos = filteredAssets.filter((asset) => isVideoAsset(asset));
+  const renderAssetCard = (asset) => {
+    const src = String(asset?.src || "").trim();
+    const selected = !!selectedSrc && src === selectedSrc;
+    const video = isVideoAsset(asset);
+    return (
+      <button
+        key={asset?.id || src}
+        type="button"
+        style={{
+          ...styles.modalAssetCard,
+          ...(selected ? styles.modalAssetCardSelected : {}),
+        }}
+        onClick={() => {
+          onSelect?.(asset);
+          onClose?.();
+        }}
+        title={asset?.name || (video ? "Library video" : "Library image")}
+      >
+        {video ? (
+          <video src={src} muted playsInline preload="metadata" style={styles.modalAssetPreview} />
+        ) : (
+          <img src={src} alt={asset?.name || "Library image"} style={styles.modalAssetPreview} />
+        )}
+        <span style={styles.modalAssetName}>{asset?.name || (video ? "Video" : "Image")}</span>
+      </button>
+    );
+  };
 
   return (
     <div style={styles.modalOverlay} onClick={() => onClose?.()}>
@@ -372,7 +404,7 @@ function AssetLibraryModal({ visible, title = "Media Library", assets = [], sele
             Upload Here
             <input
               type="file"
-              accept="image/*"
+              accept={uploadAccept}
               style={styles.hiddenInput}
               onChange={async (event) => {
                 const file = event.target.files?.[0];
@@ -385,29 +417,11 @@ function AssetLibraryModal({ visible, title = "Media Library", assets = [], sele
           </label>
         </div>
         <div style={styles.modalAssetGrid}>
-          {filteredAssets.map((asset) => {
-            const src = String(asset?.src || "").trim();
-            const selected = !!selectedSrc && src === selectedSrc;
-            return (
-              <button
-                key={asset?.id || src}
-                type="button"
-                style={{
-                  ...styles.modalAssetCard,
-                  ...(selected ? styles.modalAssetCardSelected : {}),
-                }}
-                onClick={() => {
-                  onSelect?.(asset);
-                  onClose?.();
-                }}
-                title={asset?.name || "Library image"}
-              >
-                <img src={src} alt={asset?.name || "Library image"} style={styles.modalAssetPreview} />
-                <span style={styles.modalAssetName}>{asset?.name || "Image"}</span>
-              </button>
-            );
-          })}
-          {!filteredAssets.length ? <div style={styles.modalEmptyState}>No library images match that search.</div> : null}
+          {filteredImages.length ? <div style={styles.modalSectionTitle}>Images</div> : null}
+          {filteredImages.map(renderAssetCard)}
+          {filteredVideos.length ? <div style={styles.modalSectionTitle}>Videos</div> : null}
+          {filteredVideos.map(renderAssetCard)}
+          {!filteredAssets.length ? <div style={styles.modalEmptyState}>No library media match that search.</div> : null}
         </div>
       </div>
     </div>

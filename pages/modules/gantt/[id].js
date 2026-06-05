@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import { supabase } from "../../../utils/supabase-client";
 
 // ─── Layout constants ────────────────────────────────────────────────────────
-const LEFT_W      = 360;  // left panel width px
+const LEFT_W      = 560;  // left panel width px
 const HEADER_H    = 80;   // timeline header height px (32 month band + 48 date row)
 const PHASE_H     = 52;   // phase group header row height px
 const ROW_H       = 48;   // task row height px
@@ -32,13 +32,19 @@ const PHASE_COLOR = Object.fromEntries(PHASE_DEFS.map((p) => [p.key, p.color]));
 const PHASE_ORDER = Object.fromEntries(PHASE_DEFS.map((p) => [p.key, p.order]));
 
 const STATUS_OPTS = [
-  { key: "pending",     label: "Pending",     color: "#9ca3af" },
+  { key: "pending",     label: "Pending",     color: "#ef4444" },
   { key: "in_progress", label: "In Progress", color: "#f59e0b" },
-  { key: "complete",    label: "Complete",    color: "#22c55e" },
+  { key: "complete",    label: "Completed",   color: "#22c55e" },
   { key: "blocked",     label: "Blocked 🚫",  color: "#ef4444" },
   { key: "na",          label: "N/A",         color: "#9ca3af" },
 ];
 const STATUS_COLOR = Object.fromEntries(STATUS_OPTS.map((s) => [s.key, s.color]));
+function statusLabel(s) {
+  return { complete: "Completed", in_progress: "In Progress", pending: "Pending", blocked: "Pending", na: "Pending" }[s] || "Pending";
+}
+function nextStatus(s) {
+  return s === "pending" ? "in_progress" : s === "in_progress" ? "complete" : "pending";
+}
 
 // ─── Trade tag options for contact tagging ───────────────────────────────────
 const TRADE_TAGS = [
@@ -160,6 +166,79 @@ function getDownstreamIds(taskId, allTasks) {
   return visited;
 }
 
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i + 1];
+    if (ch === '"' && quoted && next === '"') { cell += '"'; i++; continue; }
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (ch === "," && !quoted) { row.push(cell); cell = ""; continue; }
+    if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(cell);
+      if (row.some((v) => v.trim())) rows.push(row);
+      row = []; cell = "";
+      continue;
+    }
+    cell += ch;
+  }
+  row.push(cell);
+  if (row.some((v) => v.trim())) rows.push(row);
+  return rows;
+}
+
+function csvValue(row, headers, names) {
+  for (const name of names) {
+    const idx = headers.indexOf(name.toLowerCase());
+    if (idx >= 0) return row[idx] ?? "";
+  }
+  return "";
+}
+
+function parseBool(value) {
+  return /^(yes|true|1|y)$/i.test(String(value || "").trim());
+}
+
+function normalizeStatus(value) {
+  const v = String(value || "pending").trim().toLowerCase().replace(/\s+/g, "_").replace("-", "_");
+  return STATUS_OPTS.some((s) => s.key === v) ? v : "pending";
+}
+
+function normalizePhase(value) {
+  const raw = String(value || "").trim();
+  return PHASE_DEFS.find((p) => p.key.toLowerCase() === raw.toLowerCase())?.key || "Pre-Construction";
+}
+
+function tasksFromCSVText(text) {
+  const parsed = parseCSV(text);
+  if (parsed.length < 2) return [];
+  const headers = parsed[0].map((h) => h.trim().toLowerCase());
+  return parsed.slice(1).map((row, index) => {
+    const phase = normalizePhase(csvValue(row, headers, ["phase"]));
+    const name = csvValue(row, headers, ["task name", "name", "task"]).trim();
+    return {
+      phase,
+      phase_order: PHASE_ORDER[phase] ?? 99,
+      name,
+      start_day: Math.max(0, Number(csvValue(row, headers, ["start day", "start_day", "start"])) || 0),
+      duration_days: Math.max(1, Number(csvValue(row, headers, ["duration (days)", "duration_days", "duration", "days"])) || 1),
+      status: normalizeStatus(csvValue(row, headers, ["status"])),
+      assigned_trade: csvValue(row, headers, ["trade", "assigned trade", "assigned_trade"]).trim() || null,
+      contact_id: null,
+      is_milestone: parseBool(csvValue(row, headers, ["milestone", "is milestone", "is_milestone"])),
+      is_long_lead: parseBool(csvValue(row, headers, ["long lead", "long_lead", "is long lead", "is_long_lead"])),
+      dependencies: [],
+      notes: csvValue(row, headers, ["notes", "note"]).trim() || null,
+      sort_order: index,
+    };
+  }).filter((t) => t.name);
+}
+
+function htmlEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function GanttChart() {
   const router = useRouter();
@@ -167,6 +246,7 @@ export default function GanttChart() {
 
   const [project, setProject]         = useState(null);
   const [tasks, setTasks]             = useState([]);
+  const [user, setUser]               = useState(null);
   const [loading, setLoading]         = useState(true);
   const [zoom, setZoom]               = useState("quarter");   // quarter | month | week | fit
   const [showDeps, setShowDeps]       = useState(true);
@@ -194,6 +274,7 @@ export default function GanttChart() {
   const [settingsForm, setSettingsForm]   = useState({ name: "", client_name: "", job_address: "", start_date: "" });
 
   const scrollRef     = useRef(null);
+  const csvImportRef  = useRef(null);
   const taskDragRef   = useRef(null);
   const taskResizeRef = useRef(null);
   const latestRef     = useRef({});
@@ -263,7 +344,7 @@ export default function GanttChart() {
         const newDuration = Math.max(1, dr.origDuration + dr.deltaDays);
         if (newDuration !== dr.origDuration) {
           setTasks((prev) => prev.map((t) => t.id === dr.taskId ? { ...t, duration_days: newDuration } : t));
-          supabase.from("gantt_tasks").update({ duration_days: newDuration }).eq("id", dr.taskId);
+          supabase.from("gantt_tasks").update({ duration_days: newDuration }).eq("id", dr.taskId).eq("project_id", id);
         }
       }
     }
@@ -283,12 +364,26 @@ export default function GanttChart() {
 
   async function load() {
     setLoading(true);
-    const [{ data: proj, error: pErr }, { data: taskData }, { data: contactData }] = await Promise.all([
-      supabase.from("gantt_projects").select("*").eq("id", id).single(),
-      supabase.from("gantt_tasks").select("*").eq("project_id", id).order("phase_order").order("start_day"),
-      supabase.from("gantt_contacts").select("*").order("name"),
-    ]);
+    const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !authUser) {
+      router.push("/login");
+      return;
+    }
+    setUser(authUser);
+
+    const { data: proj, error: pErr } = await supabase
+      .from("gantt_projects")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", authUser.id)
+      .single();
+
     if (pErr || !proj) { alert("Project not found"); router.push("/modules/gantt"); return; }
+
+    const [{ data: taskData }, { data: contactData }] = await Promise.all([
+      supabase.from("gantt_tasks").select("*").eq("project_id", id).order("phase_order").order("start_day"),
+      supabase.from("gantt_contacts").select("*").eq("user_id", authUser.id).order("name"),
+    ]);
     setProject(proj);
     setTasks(taskData || []);
     setContacts(contactData || []);
@@ -457,11 +552,11 @@ export default function GanttChart() {
       is_long_lead:  editForm.is_long_lead,
       notes:         editForm.notes || null,
     };
-    let { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id);
+    let { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id).eq("project_id", id);
     if (error?.message?.includes("contact_id")) {
       // Migration not run yet — retry without contact_id
       const { contact_id: _c, ...rest } = payload;
-      const res2 = await supabase.from("gantt_tasks").update(rest).eq("id", editTask.id);
+      const res2 = await supabase.from("gantt_tasks").update(rest).eq("id", editTask.id).eq("project_id", id);
       error = res2.error;
     }
     if (error) { alert("Error: " + error.message); setSaving(false); return; }
@@ -473,7 +568,7 @@ export default function GanttChart() {
   async function deleteEditTask() {
     if (!editTask) return;
     if (!confirm(`Delete "${editTask.name}"?`)) return;
-    await supabase.from("gantt_tasks").delete().eq("id", editTask.id);
+    await supabase.from("gantt_tasks").delete().eq("id", editTask.id).eq("project_id", id);
     setTasks((prev) => prev.filter((t) => t.id !== editTask.id));
     setEditTask(null);
   }
@@ -528,6 +623,41 @@ export default function GanttChart() {
     });
   }
 
+  function openAddTaskForPhase(phase) {
+    const phaseTasks = tasks.filter((t) => t.phase === phase);
+    const lastTask = phaseTasks
+      .slice()
+      .sort((a, b) => (b.start_day || 0) - (a.start_day || 0))[0];
+    setAddForm({
+      name: "",
+      phase,
+      start_day: lastTask ? (lastTask.start_day || 0) + (lastTask.duration_days || 7) : 0,
+      duration_days: 7,
+      assigned_trade: "",
+      contact_id: "",
+      is_milestone: false,
+      is_long_lead: false,
+      notes: "",
+    });
+    setShowAddTask(true);
+  }
+
+  async function deleteTaskDirect(task) {
+    if (!task) return;
+    if (!confirm(`Delete "${task.name}"?`)) return;
+    const { error } = await supabase.from("gantt_tasks").delete().eq("id", task.id).eq("project_id", id);
+    if (error) return alert("Error deleting task: " + error.message);
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    if (editTask?.id === task.id) setEditTask(null);
+  }
+
+  async function updateTaskStatus(task, status) {
+    const next = status || nextStatus(task.status);
+    const { error } = await supabase.from("gantt_tasks").update({ status: next }).eq("id", task.id).eq("project_id", id);
+    if (error) return alert("Error updating progress: " + error.message);
+    setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: next } : t));
+  }
+
   function togglePhase(phaseKey) {
     setCollapsedPhases((prev) => {
       const next = new Set(prev);
@@ -548,7 +678,7 @@ export default function GanttChart() {
     // Persist to DB
     for (const t of (currentTasks || []).filter((t) => idsToMove.has(t.id))) {
       const newStartDay = Math.max(0, t.start_day + deltaDay);
-      await supabase.from("gantt_tasks").update({ start_day: newStartDay }).eq("id", t.id);
+      await supabase.from("gantt_tasks").update({ start_day: newStartDay }).eq("id", t.id).eq("project_id", id);
     }
   }
 
@@ -562,7 +692,7 @@ export default function GanttChart() {
       job_address: settingsForm.job_address.trim() || null,
       start_date:  settingsForm.start_date || null,
     };
-    const { error } = await supabase.from("gantt_projects").update(payload).eq("id", id);
+    const { error } = await supabase.from("gantt_projects").update(payload).eq("id", id).eq("user_id", user?.id);
     if (error) { alert("Error saving: " + error.message); setSaving(false); return; }
     setProject((prev) => ({ ...prev, ...payload }));
     if (payload.start_date) {
@@ -610,6 +740,60 @@ export default function GanttChart() {
     URL.revokeObjectURL(url);
   }
 
+  async function importCSV(file) {
+    if (!file || !project) return;
+    const text = await file.text();
+    const parsedTasks = tasksFromCSVText(text);
+    if (!parsedTasks.length) {
+      alert("No valid tasks found. Make sure your CSV has a Task Name or Name column.");
+      return;
+    }
+    const replace = tasks.length
+      ? confirm(`Import ${parsedTasks.length} tasks?\n\nOK = replace existing tasks\nCancel = append to existing tasks`)
+      : false;
+    setSaving(true);
+    try {
+      if (replace) await supabase.from("gantt_tasks").delete().eq("project_id", id);
+      const offset = replace ? 0 : tasks.length;
+      const rows = parsedTasks.map((task, index) => ({
+        ...task,
+        project_id: id,
+        sort_order: offset + index,
+      }));
+      const { data, error } = await supabase.from("gantt_tasks").insert(rows).select();
+      if (error) throw error;
+      setTasks((prev) => replace ? (data || []) : [...prev, ...(data || [])]);
+      alert(`Imported ${rows.length} task${rows.length !== 1 ? "s" : ""}.`);
+    } catch (err) {
+      alert("Import failed: " + err.message);
+    }
+    setSaving(false);
+  }
+
+  function exportPDF() {
+    if (!tasks.length) return;
+    const sorted = tasks
+      .slice()
+      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || a.start_day - b.start_day);
+    const title = project?.name || "Gantt Chart";
+    const win = window.open("", "_blank");
+    if (!win) return alert("Popup blocked. Please allow popups to export PDF.");
+    win.document.write(`<!doctype html><html><head><title>${htmlEscape(title)}</title><style>
+      body{font-family:Arial,sans-serif;margin:28px;color:#0f172a} h1{font-size:22px;margin:0 0 6px} p{margin:0 0 18px;color:#475569}
+      table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #cbd5e1;padding:7px;text-align:left;vertical-align:top}
+      th{background:#e2e8f0} tr:nth-child(even){background:#f8fafc}
+      @media print{button{display:none} body{margin:14mm}}
+    </style></head><body>
+      <button onclick="window.print()" style="margin-bottom:16px;padding:8px 12px">Print / Save PDF</button>
+      <h1>${htmlEscape(title)}</h1>
+      <p>${htmlEscape(project?.client_name || "")}${project?.client_name && project?.start_date ? " · " : ""}${project?.start_date ? `Start ${htmlEscape(fmtDate(project.start_date))}` : ""} · ${sorted.length} tasks</p>
+      <table><thead><tr><th>Phase</th><th>Task</th><th>Start Day</th><th>Duration</th><th>Status</th><th>Trade</th><th>Flags</th><th>Notes</th></tr></thead><tbody>
+      ${sorted.map((t) => `<tr><td>${htmlEscape(t.phase)}</td><td>${htmlEscape(t.name)}</td><td>${htmlEscape(t.start_day ?? 0)}</td><td>${htmlEscape(t.duration_days ?? 0)}</td><td>${htmlEscape(t.status || "pending")}</td><td>${htmlEscape(t.assigned_trade || "")}</td><td>${t.is_milestone ? "Milestone" : ""}${t.is_milestone && t.is_long_lead ? ", " : ""}${t.is_long_lead ? "Long lead" : ""}</td><td>${htmlEscape(t.notes || "")}</td></tr>`).join("")}
+      </tbody></table></body></html>`);
+    win.document.close();
+    win.focus();
+  }
+
   // ── Contact CRUD ──────────────────────────────────────────────────────────
   async function saveContact() {
     if (!contactForm.name.trim()) return alert("Name is required");
@@ -617,7 +801,7 @@ export default function GanttChart() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (editContact) {
-        const { error } = await supabase.from("gantt_contacts").update({ ...contactForm }).eq("id", editContact.id);
+        const { error } = await supabase.from("gantt_contacts").update({ ...contactForm }).eq("id", editContact.id).eq("user_id", user.id);
         if (error) throw error;
         setContacts((prev) => prev.map((c) => c.id === editContact.id ? { ...c, ...contactForm } : c));
         setEditContact(null);
@@ -635,7 +819,7 @@ export default function GanttChart() {
 
   async function deleteContact(contactId) {
     if (!confirm("Delete this contact? Their tasks will become unassigned.")) return;
-    await supabase.from("gantt_contacts").delete().eq("id", contactId);
+    await supabase.from("gantt_contacts").delete().eq("id", contactId).eq("user_id", user?.id);
     setContacts((prev) => prev.filter((c) => c.id !== contactId));
     setTasks((prev) => prev.map((t) => t.contact_id === contactId ? { ...t, contact_id: null } : t));
   }
@@ -692,7 +876,7 @@ export default function GanttChart() {
   return (
     <>
       <Head><title>{project.name} — Gantt Chart</title></Head>
-      <div style={{ minHeight: "100vh", background: "#0c111c", display: "flex", flexDirection: "column", color: "#f1f5f9" }}>
+      <div style={{ minHeight: "100vh", background: "#0c111c", display: "flex", flexDirection: "column", color: "#f1f5f9", paddingBottom: 62 }}>
 
         {/* ── Banner ───────────────────────────────────────────────────────── */}
         <div style={S.banner}>
@@ -736,6 +920,24 @@ export default function GanttChart() {
             Deps {showDeps ? "On" : "Off"}
           </button>
           <button style={S.toolBtn} onClick={() => setShowAddTask(true)}>+ Task</button>
+          <button
+            style={{ ...S.toolBtn, background: "#14293d", border: "1px solid #1e3a5e", color: "#60a5fa" }}
+            onClick={() => {
+              if (csvImportRef.current) {
+                csvImportRef.current.value = "";
+                csvImportRef.current.click();
+              }
+            }}
+          >
+            ⬆ Import CSV
+          </button>
+          <input
+            ref={csvImportRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: "none" }}
+            onChange={(e) => importCSV(e.target.files?.[0])}
+          />
           {tasks.length === 0 && (
             <button
               style={{ ...S.toolBtn, background: "#0f4c2a", border: "1px solid #16a34a", color: "#4ade80" }}
@@ -758,6 +960,13 @@ export default function GanttChart() {
             disabled={tasks.length === 0}
           >
             ⬇ Export CSV
+          </button>
+          <button
+            style={{ ...S.toolBtn, background: "#14293d", border: "1px solid #1e3a5e", color: "#60a5fa" }}
+            onClick={exportPDF}
+            disabled={tasks.length === 0}
+          >
+            ⬇ Export PDF
           </button>
           {tasks.some((t) => t.contact_id) && (<>
             <button
@@ -827,6 +1036,17 @@ export default function GanttChart() {
               >
                 + Add Task Manually
               </button>
+              <button
+                style={{ background: "#14293d", border: "1px solid #1e3a5e", color: "#60a5fa", borderRadius: 8, padding: "12px 24px", fontSize: 16, cursor: "pointer" }}
+                onClick={() => {
+                  if (csvImportRef.current) {
+                    csvImportRef.current.value = "";
+                    csvImportRef.current.click();
+                  }
+                }}
+              >
+                Import CSV
+              </button>
             </div>
           </div>
         )}
@@ -842,9 +1062,21 @@ export default function GanttChart() {
               {/* ── Sticky header row ───────────────────────────────────── */}
               <div style={{ position: "sticky", top: 0, zIndex: 30, display: "flex", background: "#0c111c", borderBottom: "1px solid #1e2d45" }}>
                 {/* Left corner */}
-                <div style={{ width: LEFT_W, flexShrink: 0, padding: "0 14px", display: "flex", flexDirection: "column", justifyContent: "flex-end", height: HEADER_H, borderRight: "1px solid #1e2d45", background: "#0c111c", paddingBottom: 10 }}>
-                  <span style={{ fontSize: 13, color: "#9ca3af", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>TASK</span>
-                  <span style={{ fontSize: 11, color: "#4b5563", marginTop: 2 }}>drag bar to reschedule →</span>
+                <div style={{ width: LEFT_W, flexShrink: 0, padding: "0 14px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: HEADER_H, borderRight: "1px solid #1e2d45", background: "#0c111c", paddingBottom: 10, gap: 10 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={S.leftHeaderGrid}>
+                      <span>Task Name</span>
+                      <span>State</span>
+                    </div>
+                    <span style={{ display: "block", fontSize: 11, color: "#4b5563", marginTop: 2 }}>click progress to advance, or drag bar to reschedule →</span>
+                  </div>
+                  <button
+                    style={S.inlinePrimaryBtn}
+                    onClick={() => setShowAddTask(true)}
+                    title="Add a new task row"
+                  >
+                    + Task
+                  </button>
                 </div>
                 {/* Two-row timeline header */}
                 <div style={{ flex: 1, position: "relative", height: HEADER_H, overflow: "hidden" }}>
@@ -931,6 +1163,13 @@ export default function GanttChart() {
                         <span style={{ fontSize: 17, color: ph.color, transform: isCollapsed ? "rotate(-90deg)" : "none", transition: "transform .15s", display: "inline-block" }}>▾</span>
                         <span style={{ fontSize: 18, fontWeight: 700, color: ph.color, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph.key}</span>
                         <span style={{ fontSize: 15, color: "#6b7280", whiteSpace: "nowrap" }}>{phPct}% · {phaseTasks.length}</span>
+                        <button
+                          style={S.inlineAddBtn}
+                          title={`Add task to ${ph.key}`}
+                          onClick={(e) => { e.stopPropagation(); openAddTaskForPhase(ph.key); }}
+                        >
+                          +
+                        </button>
                       </div>
                       {/* Right: phase band */}
                       <div style={{ flex: 1, background: ph.color + "08", borderBottom: "1px solid #1e2d45", position: "relative" }}>
@@ -964,9 +1203,31 @@ export default function GanttChart() {
                             <span style={{ width: 10, height: 10, borderRadius: "50%", background: statClr, flexShrink: 0 }} />
                             {task.is_long_lead && <span style={{ fontSize: 15, color: "#f59e0b", flexShrink: 0 }}>🚨</span>}
                             {task.is_milestone && <span style={{ fontSize: 15, flexShrink: 0 }}>⭐</span>}
-                            <span style={{ fontSize: 15, color: "#e2e8f0", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: 15, color: "#e2e8f0", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {task.name}
                             </span>
+                            <button
+                              style={S.progressStateBtn}
+                              onClick={(e) => { e.stopPropagation(); updateTaskStatus(task); }}
+                              title="Click to move state to the next step"
+                            >
+                              <span style={{ ...S.progressStateDot, background: STATUS_COLOR[task.status] || STATUS_COLOR.pending }} />
+                              <span>{statusLabel(task.status)}</span>
+                            </button>
+                            <button
+                              style={S.inlineEditBtn}
+                              onClick={(e) => { e.stopPropagation(); openEdit(task); }}
+                              title="Edit this task"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              style={S.inlineDeleteBtn}
+                              onClick={(e) => { e.stopPropagation(); deleteTaskDirect(task); }}
+                              title="Delete this task"
+                            >
+                              Delete
+                            </button>
                           </div>
 
                           {/* Right: timeline bar */}
@@ -1154,7 +1415,24 @@ export default function GanttChart() {
         )}
       </div>
 
-      {/* ── Edit Task Modal ───────────────────────────────────────────────── */}
+      <div style={S.actionDock}>
+        <button style={S.dockPrimaryBtn} onClick={() => setShowAddTask(true)}>+ Add Task</button>
+        <button
+          style={S.dockBtn}
+          onClick={() => {
+            if (csvImportRef.current) {
+              csvImportRef.current.value = "";
+              csvImportRef.current.click();
+            }
+          }}
+        >
+          Import CSV
+        </button>
+        <button style={S.dockBtn} onClick={exportCSV} disabled={tasks.length === 0}>Export CSV</button>
+        <button style={S.dockBtn} onClick={exportPDF} disabled={tasks.length === 0}>Export PDF</button>
+      </div>
+
+      {/* ── Edit Task Modal ───────────────────────────────────────────────── */} 
       {editTask && (
         <div style={S.overlay} onClick={() => setEditTask(null)}>
           <div style={{ ...S.modal, maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
@@ -1486,6 +1764,22 @@ const S = {
   zoomBtn:      { background: "#1e2d45", border: "none", color: "#9ca3af", padding: "6px 14px", cursor: "pointer", fontSize: 16 },
   zoomBtnActive:{ background: "#1d4ed8", color: "#fff" },
   toolBtn:      { background: "#1e2d45", border: "1px solid #2d3748", color: "#9ca3af", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 16 },
+  leftHeaderGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 138px", gap: 12, color: "#9ca3af", fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" },
+  inlinePrimaryBtn: { background: "#1d4ed8", border: "1px solid #3b82f6", color: "#fff", borderRadius: 8, padding: "7px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" },
+  inlineAddBtn: { background: "#1d4ed8", border: "1px solid #60a5fa", color: "#fff", borderRadius: 7, padding: "4px 9px", fontSize: 14, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 },
+  progressStateBtn: { width: 138, border: "none", background: "transparent", color: "#dbeafe", padding: "4px 2px", fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-start", textAlign: "left" },
+  progressStateDot: { width: 18, height: 18, borderRadius: "50%", flexShrink: 0, boxShadow: "0 0 0 3px rgba(148,163,184,0.16)" },
+  inlineEditBtn: { background: "#2563eb", border: "1px solid #60a5fa", color: "#fff", borderRadius: 7, padding: "5px 9px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 },
+  inlineDeleteBtn: { background: "#7f1d1d", border: "1px solid #ef4444", color: "#fecaca", borderRadius: 7, padding: "5px 9px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 },
+  actionDock: {
+    position: "fixed", left: 220, right: 16, bottom: 12, zIndex: 900,
+    display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+    background: "rgba(12,17,28,0.94)", border: "1px solid #1e2d45",
+    borderRadius: 10, padding: "10px 12px", boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
+    backdropFilter: "blur(8px)",
+  },
+  dockPrimaryBtn: { background: "#1d4ed8", color: "#fff", border: "1px solid #60a5fa", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer" },
+  dockBtn: { background: "#1e2d45", color: "#dbeafe", border: "1px solid #334155", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" },
   // Modal
   overlay:      { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 },
   modal:        { background: "#111827", border: "1px solid #1e2d45", borderRadius: 16, padding: 26, width: "100%", display: "flex", flexDirection: "column", gap: 14, maxHeight: "90vh", overflowY: "auto" },

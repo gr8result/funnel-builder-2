@@ -24,10 +24,125 @@ const PHASE_COLORS = {
   "Completion":        "#22c55e",
 };
 
+const PHASE_DEFS = Object.entries(PHASE_COLORS).map(([key, color], index) => ({
+  key,
+  color,
+  order: index + 1,
+}));
+const PHASE_ORDER = Object.fromEntries(PHASE_DEFS.map((p) => [p.key, p.order]));
+
+const STATUS_OPTS = [
+  { key: "pending",     label: "Pending" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "complete",    label: "Completed" },
+  { key: "blocked",     label: "Blocked" },
+  { key: "na",          label: "N/A" },
+];
+
 const PROJECT_PALETTE = [
   "#8b5cf6", "#3b82f6", "#f97316", "#22c55e",
   "#ef4444", "#06b6d4", "#f59e0b", "#ec4899",
 ];
+
+const TASK_FORM_DEFAULT = {
+  name: "",
+  phase: "Pre-Construction",
+  start_day: 0,
+  duration_days: 7,
+  status: "pending",
+  progress_percent: 0,
+  assigned_trade: "",
+  is_milestone: false,
+  is_long_lead: false,
+  notes: "",
+};
+
+function clampProgress(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function statusFromProgress(progress) {
+  if (progress >= 100) return "complete";
+  if (progress > 0) return "in_progress";
+  return "pending";
+}
+
+function progressFromStatus(status) {
+  return status === "complete" ? 100 : status === "in_progress" ? 50 : 0;
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i + 1];
+    if (ch === '"' && quoted && next === '"') { cell += '"'; i++; continue; }
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (ch === "," && !quoted) { row.push(cell); cell = ""; continue; }
+    if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(cell);
+      if (row.some((v) => v.trim())) rows.push(row);
+      row = []; cell = "";
+      continue;
+    }
+    cell += ch;
+  }
+  row.push(cell);
+  if (row.some((v) => v.trim())) rows.push(row);
+  return rows;
+}
+
+function csvValue(row, headers, names) {
+  for (const name of names) {
+    const idx = headers.indexOf(name.toLowerCase());
+    if (idx >= 0) return row[idx] ?? "";
+  }
+  return "";
+}
+
+function parseBool(value) {
+  return /^(yes|true|1|y)$/i.test(String(value || "").trim());
+}
+
+function normalizeStatus(value) {
+  const v = String(value || "pending").trim().toLowerCase().replace(/\s+/g, "_").replace("-", "_");
+  return STATUS_OPTS.some((s) => s.key === v) ? v : "pending";
+}
+
+function normalizePhase(value) {
+  const raw = String(value || "").trim();
+  return PHASE_DEFS.find((p) => p.key.toLowerCase() === raw.toLowerCase())?.key || "Pre-Construction";
+}
+
+function tasksFromCSVText(text) {
+  const parsed = parseCSV(text);
+  if (parsed.length < 2) return [];
+  const headers = parsed[0].map((h) => h.trim().toLowerCase());
+  return parsed.slice(1).map((row, index) => {
+    const phase = normalizePhase(csvValue(row, headers, ["phase"]));
+    const name = csvValue(row, headers, ["task name", "name", "task"]).trim();
+    return {
+      phase,
+      phase_order: PHASE_ORDER[phase] ?? 99,
+      name,
+      start_day: Math.max(0, Number(csvValue(row, headers, ["start day", "start_day", "start"])) || 0),
+      duration_days: Math.max(1, Number(csvValue(row, headers, ["duration (days)", "duration_days", "duration", "days"])) || 1),
+      progress_percent: clampProgress(csvValue(row, headers, ["progress", "progress_percent", "percent complete", "% complete"])),
+      status: normalizeStatus(csvValue(row, headers, ["status"])),
+      assigned_trade: csvValue(row, headers, ["trade", "assigned trade", "assigned_trade"]).trim() || null,
+      is_milestone: parseBool(csvValue(row, headers, ["milestone", "is milestone", "is_milestone"])),
+      is_long_lead: parseBool(csvValue(row, headers, ["long lead", "long_lead", "is long lead", "is_long_lead"])),
+      dependencies: [],
+      notes: csvValue(row, headers, ["notes", "note"]).trim() || null,
+      sort_order: index,
+    };
+  }).filter((t) => t.name);
+}
+
+function htmlEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
 
 function addDays(base, n) {
   const d = new Date(base); d.setDate(d.getDate() + n); return d;
@@ -40,14 +155,25 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 }
 function statusColor(s) {
-  return { complete: "#22c55e", in_progress: "#f59e0b", blocked: "#ef4444" }[s] || "#cbd5e1";
+  return { complete: "#22c55e", in_progress: "#f59e0b", blocked: "#ef4444", na: "#94a3b8", pending: "#ef4444" }[s] || "#ef4444";
+}
+
+function statusLabel(s) {
+  return { complete: "Completed", in_progress: "In Progress", pending: "Pending", blocked: "Pending", na: "Pending" }[s] || "Pending";
+}
+
+function nextStatus(s) {
+  return s === "pending" ? "in_progress" : s === "in_progress" ? "complete" : "pending";
 }
 
 export default function GanttDashboard() {
   const router = useRouter();
   const scrollRef  = useRef(null);
+  const csvImportRef = useRef(null);
+  const csvProjectRef = useRef(null);
   const panRef     = useRef({ active: false, startX: 0, scrollStart: 0 });
   const barDragRef = useRef(null);
+  const progressDragRef = useRef(null);
   const [grabbing, setGrabbing] = useState(false);
 
   const [user, setUser]           = useState(null);
@@ -58,6 +184,11 @@ export default function GanttDashboard() {
   const [focusId, setFocusId]     = useState(null);
   const [expanded, setExpanded]   = useState({});
   const [search, setSearch]       = useState("");
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [editTask, setEditTask]   = useState(null);
+  const [taskForm, setTaskForm]   = useState(TASK_FORM_DEFAULT);
+  const [newCsvTasks, setNewCsvTasks] = useState([]);
+  const [newCsvName, setNewCsvName] = useState("");
   const [form, setForm] = useState({
     name: "", client_name: "", job_address: "", job_type: "New Build", start_date: "",
   });
@@ -72,7 +203,7 @@ export default function GanttDashboard() {
     setLoading(true);
     const { data, error } = await supabase
       .from("gantt_projects")
-      .select("*, gantt_tasks(id, name, phase, phase_order, start_day, duration_days, status, is_milestone)")
+      .select("*, gantt_tasks(id, name, phase, phase_order, start_day, duration_days, status, progress_percent, assigned_trade, is_milestone, is_long_lead, dependencies, notes)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (!error) setProjects(data || []);
@@ -96,6 +227,15 @@ export default function GanttDashboard() {
         .select()
         .single();
       if (error) throw error;
+      if (newCsvTasks.length) {
+        const rows = newCsvTasks.map((task, index) => ({
+          ...task,
+          project_id: data.id,
+          sort_order: index,
+        }));
+        const { error: taskErr } = await supabase.from("gantt_tasks").insert(rows);
+        if (taskErr) throw taskErr;
+      }
       router.push(`/modules/gantt/${data.id}`);
     } catch (err) {
       alert("Error: " + err.message);
@@ -105,9 +245,226 @@ export default function GanttDashboard() {
 
   async function deleteProject(id, name) {
     if (!confirm(`Delete "${name}" and all its Gantt tasks? This cannot be undone.`)) return;
-    await supabase.from("gantt_projects").delete().eq("id", id);
+    await supabase.from("gantt_projects").delete().eq("id", id).eq("user_id", user.id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
     if (focusId === id) setFocusId(null);
+  }
+
+  async function handleNewProjectCSV(file) {
+    if (!file) {
+      setNewCsvTasks([]);
+      setNewCsvName("");
+      return;
+    }
+    const text = await file.text();
+    const tasks = tasksFromCSVText(text);
+    if (!tasks.length) {
+      alert("No valid tasks found. Make sure your CSV has a Task Name or Name column.");
+      return;
+    }
+    setNewCsvTasks(tasks);
+    setNewCsvName(file.name);
+  }
+
+  function patchProjectTasks(projectId, updater) {
+    setProjects((prev) => prev.map((p) => (
+      p.id === projectId ? { ...p, gantt_tasks: updater(p.gantt_tasks || []) } : p
+    )));
+  }
+
+  function focusedTaskProject() {
+    if (focusId) return projects.find((p) => p.id === focusId) || null;
+    if (visible.length === 1) return visible[0];
+    return null;
+  }
+
+  function resetTaskForm(overrides = {}) {
+    setTaskForm({ ...TASK_FORM_DEFAULT, ...overrides });
+  }
+
+  function openAddTask(project) {
+    const tasks = project?.gantt_tasks || [];
+    const lastTask = tasks.slice().sort((a, b) => (b.start_day || 0) - (a.start_day || 0))[0];
+    setEditTask(null);
+    resetTaskForm({
+      phase: lastTask?.phase || "Pre-Construction",
+      start_day: lastTask ? (lastTask.start_day || 0) + (lastTask.duration_days || 7) : 0,
+    });
+    setShowAddTask(true);
+    if (project?.id && !focusId) setFocusId(project.id);
+  }
+
+  function openEditTask(task, project) {
+    setShowAddTask(false);
+    setEditTask({ ...task, project_id: project.id });
+    resetTaskForm({
+      name: task.name || "",
+      phase: task.phase || "Pre-Construction",
+      start_day: task.start_day ?? 0,
+      duration_days: task.duration_days ?? 7,
+      status: task.status || "pending",
+      progress_percent: task.progress_percent ?? progressFromStatus(task.status),
+      assigned_trade: task.assigned_trade || "",
+      is_milestone: !!task.is_milestone,
+      is_long_lead: !!task.is_long_lead,
+      notes: task.notes || "",
+    });
+  }
+
+  async function saveTask() {
+    const project = editTask?.project_id
+      ? projects.find((p) => p.id === editTask.project_id)
+      : focusedTaskProject();
+    if (!project || !taskForm.name.trim()) return;
+    setSaving(true);
+    const payload = {
+      name: taskForm.name.trim(),
+      phase: taskForm.phase,
+      phase_order: PHASE_ORDER[taskForm.phase] ?? 99,
+      start_day: Math.max(0, Number(taskForm.start_day) || 0),
+      duration_days: Math.max(1, Number(taskForm.duration_days) || 1),
+      progress_percent: clampProgress(taskForm.progress_percent ?? progressFromStatus(taskForm.status)),
+      status: statusFromProgress(clampProgress(taskForm.progress_percent ?? progressFromStatus(taskForm.status))),
+      assigned_trade: taskForm.assigned_trade.trim() || null,
+      is_milestone: !!taskForm.is_milestone,
+      is_long_lead: !!taskForm.is_long_lead,
+      notes: taskForm.notes.trim() || null,
+    };
+
+    if (editTask) {
+      const { error } = await supabase.from("gantt_tasks").update(payload).eq("id", editTask.id).eq("project_id", project.id);
+      if (error) { alert("Error: " + error.message); setSaving(false); return; }
+      patchProjectTasks(project.id, (tasks) => tasks.map((t) => t.id === editTask.id ? { ...t, ...payload } : t));
+      setEditTask(null);
+    } else {
+      const newTask = {
+        ...payload,
+        project_id: project.id,
+        dependencies: [],
+        sort_order: (project.gantt_tasks || []).length,
+      };
+      const { data, error } = await supabase.from("gantt_tasks").insert(newTask).select().single();
+      if (error) { alert("Error: " + error.message); setSaving(false); return; }
+      patchProjectTasks(project.id, (tasks) => [...tasks, data]);
+      setShowAddTask(false);
+    }
+    resetTaskForm();
+    setSaving(false);
+  }
+
+  async function deleteTask() {
+    if (!editTask) return;
+    if (!confirm(`Delete "${editTask.name}"?`)) return;
+    const { error } = await supabase.from("gantt_tasks").delete().eq("id", editTask.id).eq("project_id", editTask.project_id);
+    if (error) { alert("Error: " + error.message); return; }
+    patchProjectTasks(editTask.project_id, (tasks) => tasks.filter((t) => t.id !== editTask.id));
+    setEditTask(null);
+    resetTaskForm();
+  }
+
+  async function updateTaskStatus(project, task, status) {
+    const current = statusFromProgress(clampProgress(task.progress_percent ?? progressFromStatus(task.status)));
+    const next = status || nextStatus(current);
+    const progress = progressFromStatus(next);
+    const { error } = await supabase.from("gantt_tasks").update({ status: next, progress_percent: progress }).eq("id", task.id).eq("project_id", project.id);
+    if (error) return alert("Error updating progress: " + error.message);
+    patchProjectTasks(project.id, (tasks) => tasks.map((t) => t.id === task.id ? { ...t, status: next, progress_percent: progress } : t));
+  }
+
+  function csvEscape(value) {
+    return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  }
+
+  function downloadTasksCSV(projectScope) {
+    const scope = projectScope ? [projectScope] : visible;
+    const headers = ["Project", "Phase", "Task Name", "Start Day", "Duration (days)", "Status", "Trade", "Milestone", "Long Lead", "Notes"];
+    const rows = scope.flatMap((p) => (p.gantt_tasks || [])
+      .slice()
+      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
+      .map((t) => [
+        p.name,
+        t.phase,
+        t.name,
+        t.start_day ?? 0,
+        t.duration_days ?? 0,
+        t.status || "pending",
+        t.assigned_trade || "",
+        t.is_milestone ? "Yes" : "No",
+        t.is_long_lead ? "Yes" : "No",
+        t.notes || "",
+      ].map(csvEscape).join(",")));
+    if (!rows.length) return;
+    const csv = [headers.map(csvEscape).join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(projectScope?.name || "gantt-tasks").replace(/[^a-z0-9]+/gi, "-")}-tasks.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function promptImportTasks(project) {
+    csvProjectRef.current = project;
+    if (csvImportRef.current) {
+      csvImportRef.current.value = "";
+      csvImportRef.current.click();
+    }
+  }
+
+  async function importTasksCSV(file) {
+    const project = csvProjectRef.current || focusedProject;
+    if (!file || !project) return;
+    const text = await file.text();
+    const parsedTasks = tasksFromCSVText(text);
+    if (!parsedTasks.length) {
+      alert("No valid tasks found. Make sure your CSV has a Task Name or Name column.");
+      return;
+    }
+    const replace = (project.gantt_tasks || []).length
+      ? confirm(`Import ${parsedTasks.length} tasks into "${project.name}"?\n\nOK = replace existing tasks\nCancel = append to existing tasks`)
+      : false;
+    setSaving(true);
+    try {
+      if (replace) await supabase.from("gantt_tasks").delete().eq("project_id", project.id);
+      const offset = replace ? 0 : (project.gantt_tasks || []).length;
+      const rows = parsedTasks.map((task, index) => ({ ...task, project_id: project.id, sort_order: offset + index }));
+      const { data, error } = await supabase.from("gantt_tasks").insert(rows).select();
+      if (error) throw error;
+      patchProjectTasks(project.id, (tasks) => replace ? (data || []) : [...tasks, ...(data || [])]);
+      setFocusId(project.id);
+      alert(`Imported ${rows.length} task${rows.length !== 1 ? "s" : ""}.`);
+    } catch (err) {
+      alert("Import failed: " + err.message);
+    }
+    setSaving(false);
+  }
+
+  function printTasksPDF(projectScope) {
+    const scope = projectScope ? [projectScope] : visible;
+    const title = projectScope?.name || "Gantt Tasks";
+    const rows = scope.flatMap((p) => (p.gantt_tasks || [])
+      .slice()
+      .sort((a, b) => (a.phase_order ?? 99) - (b.phase_order ?? 99) || (a.start_day || 0) - (b.start_day || 0))
+      .map((t) => ({ project: p.name, ...t })));
+    if (!rows.length) return;
+    const win = window.open("", "_blank");
+    if (!win) return alert("Popup blocked. Please allow popups to export PDF.");
+    win.document.write(`<!doctype html><html><head><title>${htmlEscape(title)}</title><style>
+      body{font-family:Arial,sans-serif;margin:28px;color:#0f172a} h1{font-size:22px;margin:0 0 6px} p{margin:0 0 18px;color:#475569}
+      table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #cbd5e1;padding:7px;text-align:left;vertical-align:top}
+      th{background:#e2e8f0} tr:nth-child(even){background:#f8fafc}
+      @media print{button{display:none} body{margin:14mm}}
+    </style></head><body>
+      <button onclick="window.print()" style="margin-bottom:16px;padding:8px 12px">Print / Save PDF</button>
+      <h1>${htmlEscape(title)}</h1><p>${rows.length} task${rows.length !== 1 ? "s" : ""}</p>
+      <table><thead><tr><th>Project</th><th>Phase</th><th>Task</th><th>Start Day</th><th>Duration</th><th>Status</th><th>Trade</th><th>Flags</th><th>Notes</th></tr></thead><tbody>
+      ${rows.map((t) => `<tr><td>${htmlEscape(t.project)}</td><td>${htmlEscape(t.phase)}</td><td>${htmlEscape(t.name)}</td><td>${htmlEscape(t.start_day ?? 0)}</td><td>${htmlEscape(t.duration_days ?? 0)}</td><td>${htmlEscape(t.status || "pending")}</td><td>${htmlEscape(t.assigned_trade || "")}</td><td>${t.is_milestone ? "Milestone" : ""}${t.is_milestone && t.is_long_lead ? ", " : ""}${t.is_long_lead ? "Long lead" : ""}</td><td>${htmlEscape(t.notes || "")}</td></tr>`).join("")}
+      </tbody></table></body></html>`);
+    win.document.close();
+    win.focus();
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -143,7 +500,6 @@ export default function GanttDashboard() {
 
   // ── Ruler ─────────────────────────────────────────────────────────────────
   const DAY_W = 20;
-  const RULER_DAYS = 90;
 
   const rulerStart = useMemo(() => {
     const starts = projects.filter((p) => p.start_date).map((p) => new Date(p.start_date));
@@ -153,6 +509,19 @@ export default function GanttDashboard() {
     return base;
   }, [projects]);
 
+  const RULER_DAYS = useMemo(() => {
+    let maxVisibleDay = 90;
+    for (const p of projects) {
+      const projectStartOffset = p.start_date ? Math.max(0, daysBetween(rulerStart, new Date(p.start_date))) : 2;
+      const tasks = p.gantt_tasks || [];
+      const projectEnd = tasks.length
+        ? Math.max(...tasks.map((t) => (t.start_day || 0) + (t.duration_days || 7)))
+        : 60;
+      maxVisibleDay = Math.max(maxVisibleDay, projectStartOffset + projectEnd + 21);
+    }
+    return Math.ceil(maxVisibleDay);
+  }, [projects, rulerStart]);
+
   const todayOffset = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     return daysBetween(rulerStart, today);
@@ -161,9 +530,10 @@ export default function GanttDashboard() {
   const dayTicks = useMemo(() =>
     Array.from({ length: RULER_DAYS }, (_, i) => {
       const d = addDays(rulerStart, i);
-      return { n: d.getDate(), month: d.getMonth(), year: d.getFullYear(), offset: i };
+      const weekday = d.getDay();
+      return { n: d.getDate(), month: d.getMonth(), year: d.getFullYear(), offset: i, isWeekend: weekday === 0 || weekday === 6 };
     }),
-  [rulerStart]);
+  [RULER_DAYS, rulerStart]);
 
   const monthGroups = useMemo(() => {
     const groups = [];
@@ -258,6 +628,36 @@ export default function GanttDashboard() {
 
   const focusedProject = focusId ? projects.find((p) => p.id === focusId) : null;
 
+  const dependencyLinks = useMemo(() => {
+    const taskRows = new Map();
+    let y = 0;
+    rows.forEach((row) => {
+      const h = row.type === "project" ? 56 : row.type === "phase" ? 48 : 40;
+      if (row.type === "task") {
+        const xStart = (row.offset + (row.task.start_day || 0)) * DAY_W;
+        const xEnd = xStart + Math.max((row.task.duration_days || 7) * DAY_W, 12);
+        taskRows.set(row.task.id, { task: row.task, p: row.p, y: y + h / 2, xStart, xEnd });
+      }
+      y += h;
+    });
+    const links = [];
+    taskRows.forEach((to) => {
+      (to.task.dependencies || []).forEach((depId) => {
+        const from = taskRows.get(depId);
+        if (!from || from.p.id !== to.p.id) return;
+        const gap = to.xStart - from.xEnd;
+        const midX = gap > 0
+          ? from.xEnd + Math.min(gap, Math.max(14, gap * 0.5))
+          : from.xEnd + 14;
+        links.push({
+          key: `${depId}-${to.task.id}`,
+          d: `M${from.xEnd},${from.y} L${midX},${from.y} L${midX},${to.y} L${to.xStart},${to.y}`,
+        });
+      });
+    });
+    return { links, height: y };
+  }, [rows]);
+
   function scrollToToday() {
     if (scrollRef.current) {
       scrollRef.current.scrollLeft = Math.max(0, todayOffset * DAY_W - 200);
@@ -274,6 +674,14 @@ export default function GanttDashboard() {
       if (panRef.current.active && scrollRef.current) {
         const dx = e.clientX - panRef.current.startX;
         scrollRef.current.scrollLeft = panRef.current.scrollStart - dx;
+      }
+      const pd = progressDragRef.current;
+      if (pd) {
+        const dx = e.clientX - pd.startX;
+        const next = clampProgress(pd.originalProgress + (dx / pd.width) * 100);
+        const fillEl = document.getElementById(pd.fillId);
+        if (fillEl) fillEl.style.width = `${next}%`;
+        return;
       }
       const bd = barDragRef.current;
       if (!bd) return;
@@ -300,6 +708,20 @@ export default function GanttDashboard() {
     const onUp = async (e) => {
       panRef.current.active = false;
       setGrabbing(false);
+      const pd = progressDragRef.current;
+      if (pd) {
+        progressDragRef.current = null;
+        const dx = e.clientX - pd.startX;
+        const progress = clampProgress(pd.originalProgress + (dx / pd.width) * 100);
+        const status = statusFromProgress(progress);
+        try {
+          await supabase.from("gantt_tasks").update({ progress_percent: progress, status }).eq("id", pd.taskId).eq("project_id", pd.projectId);
+          patchProjectTasks(pd.projectId, (tasks) => tasks.map((t) => t.id === pd.taskId ? { ...t, progress_percent: progress, status } : t));
+        } catch (err) {
+          console.error("Progress drag save failed:", err);
+        }
+        return;
+      }
       const bd = barDragRef.current;
       if (!bd) return;
       barDragRef.current = null;
@@ -309,18 +731,18 @@ export default function GanttDashboard() {
         if (bd.entityType === "project" && bd.side === "left" && bd.projectRef?.start_date) {
           const newDate = addDays(new Date(bd.projectRef.start_date), deltaDays);
           const iso = newDate.toISOString().split("T")[0];
-          await supabase.from("gantt_projects").update({ start_date: iso }).eq("id", bd.entityId);
+          await supabase.from("gantt_projects").update({ start_date: iso }).eq("id", bd.entityId).eq("user_id", user.id);
           setProjects((prev) => prev.map((pp) => pp.id === bd.entityId ? { ...pp, start_date: iso } : pp));
         } else if (bd.entityType === "task" && bd.side === "left") {
           const newVal = Math.max(0, bd.originalValue + deltaDays);
-          await supabase.from("gantt_tasks").update({ start_day: newVal }).eq("id", bd.entityId);
+          await supabase.from("gantt_tasks").update({ start_day: newVal }).eq("id", bd.entityId).eq("project_id", bd.projectId);
           setProjects((prev) => prev.map((pp) => ({
             ...pp, gantt_tasks: (pp.gantt_tasks || []).map((t) =>
               t.id === bd.entityId ? { ...t, start_day: newVal } : t),
           })));
         } else if (bd.entityType === "task" && bd.side === "right") {
           const newVal = Math.max(1, bd.originalValue + deltaDays);
-          await supabase.from("gantt_tasks").update({ duration_days: newVal }).eq("id", bd.entityId);
+          await supabase.from("gantt_tasks").update({ duration_days: newVal }).eq("id", bd.entityId).eq("project_id", bd.projectId);
           setProjects((prev) => prev.map((pp) => ({
             ...pp, gantt_tasks: (pp.gantt_tasks || []).map((t) =>
               t.id === bd.entityId ? { ...t, duration_days: newVal } : t),
@@ -370,10 +792,37 @@ export default function GanttDashboard() {
               />
             )}
             <button style={S.todayBtn} onClick={scrollToToday}>Today</button>
+            {focusedProject && (
+              <button style={S.todayBtn} onClick={() => openAddTask(focusedProject)}>+ Task</button>
+            )}
+            {focusedProject && (
+              <button style={S.todayBtn} onClick={() => promptImportTasks(focusedProject)}>Import CSV</button>
+            )}
+            <button
+              style={{ ...S.todayBtn, opacity: visible.some((p) => (p.gantt_tasks || []).length) ? 1 : 0.55 }}
+              disabled={!visible.some((p) => (p.gantt_tasks || []).length)}
+              onClick={() => downloadTasksCSV(focusedProject || null)}
+            >
+              Export CSV
+            </button>
+            <button
+              style={{ ...S.todayBtn, opacity: visible.some((p) => (p.gantt_tasks || []).length) ? 1 : 0.55 }}
+              disabled={!visible.some((p) => (p.gantt_tasks || []).length)}
+              onClick={() => printTasksPDF(focusedProject || null)}
+            >
+              Export PDF
+            </button>
             <button style={S.primaryBtn} onClick={() => setShowNew(true)}>+ New Project</button>
             <Link href="/modules/construction"><button style={S.backBtnBanner}>← Back</button></Link>
           </div>
         </div>
+        <input
+          ref={csvImportRef}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: "none" }}
+          onChange={(e) => importTasksCSV(e.target.files?.[0])}
+        />
 
         {/* ── Stats ── */}
         <div style={S.statsRow}>
@@ -412,8 +861,20 @@ export default function GanttDashboard() {
             {/* Left name column */}
             <div style={S.leftCol}>
               <div style={S.nameHeader}>
-                <span>Task Name</span>
-                <div style={{ display: "flex", gap: 4 }}>
+                <div style={S.headerGrid}>
+                  <span>{focusedProject ? "Task Name" : "Project Name"}</span>
+                  <span>State</span>
+                </div>
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  {focusedProject && (
+                    <button
+                      style={{ ...S.miniBtn, background: "#7c3aed", borderColor: "#6d28d9", color: "#fff" }}
+                      title="Add a task to this schedule"
+                      onClick={() => openAddTask(focusedProject)}
+                    >
+                      + Task
+                    </button>
+                  )}
                   <button style={S.miniBtn} title="Expand all phases" onClick={expandAll}>⊞ All</button>
                   <button style={S.miniBtn} title="Collapse all" onClick={collapseAll}>⊟</button>
                 </div>
@@ -435,6 +896,36 @@ export default function GanttDashboard() {
                       </div>
                       <span style={{ ...S.pctLabel, color }}>{pct}%</span>
                       <button
+                        style={S.rowActionBtn}
+                        title="Add task"
+                        onClick={(e) => { e.stopPropagation(); openAddTask(p); }}
+                      >
+                        +
+                      </button>
+                      <button
+                        style={S.rowActionBtn}
+                        title="Download tasks CSV"
+                        disabled={!(p.gantt_tasks || []).length}
+                        onClick={(e) => { e.stopPropagation(); downloadTasksCSV(p); }}
+                      >
+                        CSV
+                      </button>
+                      <button
+                        style={S.rowActionBtn}
+                        title="Download tasks PDF"
+                        disabled={!(p.gantt_tasks || []).length}
+                        onClick={(e) => { e.stopPropagation(); printTasksPDF(p); }}
+                      >
+                        PDF
+                      </button>
+                      <button
+                        style={S.rowActionBtn}
+                        title="Import tasks CSV"
+                        onClick={(e) => { e.stopPropagation(); promptImportTasks(p); }}
+                      >
+                        Import
+                      </button>
+                      <button
                         style={S.delBtn} title="Delete"
                         onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}
                       >✕</button>
@@ -454,17 +945,38 @@ export default function GanttDashboard() {
                       <span style={S.phChevron}>{exp ? "▼" : "▶"}</span>
                       <span style={S.phName}>{phase}</span>
                       <span style={{ ...S.pctLabel, color: phaseColor }}>{phasePct}%</span>
+                      <span style={S.progressSpacer} />
                     </div>
                   );
                 }
                 if (row.type === "task") {
-                  const { task } = row;
+                  const { task, p } = row;
+                  const taskStatus = statusFromProgress(clampProgress(task.progress_percent ?? progressFromStatus(task.status)));
                   return (
-                    <div key={`L-t-${task.id}`} style={{ ...S.taskRow, position: "relative" }}>
+                    <div
+                      key={`L-t-${task.id}`}
+                      style={{ ...S.taskRow, position: "relative", cursor: "pointer" }}
+                      title="Click to edit task"
+                      onClick={() => openEditTask(task, p)}
+                    >
                       <div style={{ position:"absolute", left:26, top:0, height:"50%", width:2, background:"#94a3b8", pointerEvents:"none" }} />
                       <div style={{ position:"absolute", left:26, top:"50%", width:16, height:2, background:"#94a3b8", pointerEvents:"none" }} />
-                      <span style={{ ...S.taskDot, background: statusColor(task.status) }} />
+                      <span style={{ ...S.taskDot, background: statusColor(taskStatus) }} />
                       <span style={S.taskName}>{task.is_milestone ? "⭐ " : ""}{task.name}</span>
+                      <button
+                        style={S.statusStateBtn}
+                        title="Click to move state to the next step"
+                        onClick={(e) => { e.stopPropagation(); updateTaskStatus(p, task); }}
+                      >
+                        <span style={{ ...S.statusStateDot, background: statusColor(taskStatus) }} />
+                        <span>{statusLabel(taskStatus)}</span>
+                      </button>
+                      <button
+                        style={{ ...S.rowActionBtn, background: "#7c3aed", borderColor: "#6d28d9", color: "#fff" }}
+                        onClick={(e) => { e.stopPropagation(); openEditTask(task, p); }}
+                      >
+                        Edit
+                      </button>
                     </div>
                   );
                 }
@@ -501,7 +1013,7 @@ export default function GanttDashboard() {
                       style={{
                         ...S.dayCell,
                         width: DAY_W, minWidth: DAY_W,
-                        background: t.offset === todayOffset ? "#fef2f2" : undefined,
+                        background: t.offset === todayOffset ? "#fef2f2" : t.isWeekend ? "#ecfdf5" : undefined,
                         color: t.offset === todayOffset ? "#ef4444" : undefined,
                         fontWeight: t.offset === todayOffset ? 700 : 400,
                       }}
@@ -518,10 +1030,54 @@ export default function GanttDashboard() {
                   </div>
                 )}
 
-                {/* Week grid lines */}
-                {Array.from({ length: Math.floor(RULER_DAYS / 7) }, (_, i) => (
-                  <div key={`grid-${i}`} style={{ position:"absolute", left:(i+1)*7*DAY_W, top:64, width:1, height:9999, background:"#dde3eb", pointerEvents:"none", zIndex:0 }} />
+                {/* Weekend shading */}
+                {dayTicks.filter((t) => t.isWeekend).map((t) => (
+                  <div
+                    key={`weekend-${t.offset}`}
+                    style={{ position:"absolute", left:t.offset*DAY_W, top:64, width:DAY_W, height:9999, background:"#ecfdf5", pointerEvents:"none", zIndex:0 }}
+                  />
                 ))}
+
+                {/* Day grid lines */}
+                {dayTicks.map((t) => (
+                  <div
+                    key={`grid-${t.offset}`}
+                    style={{ position:"absolute", left:t.offset*DAY_W, top:64, width:1, height:9999, background:t.n === 1 ? "#b8c4d2" : "#dde3eb", pointerEvents:"none", zIndex:1 }}
+                  />
+                ))}
+
+                {/* Dependency / run-on arrows */}
+                {dependencyLinks.links.length > 0 && (
+                  <svg
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 64,
+                      width: RULER_DAYS * DAY_W,
+                      height: dependencyLinks.height,
+                      pointerEvents: "none",
+                      zIndex: 4,
+                      overflow: "visible",
+                    }}
+                  >
+                    <defs>
+                      <marker id="gantt-runon-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                        <path d="M0,0 L0,7 L7,3.5 z" fill="#e11d48" />
+                      </marker>
+                    </defs>
+                    {dependencyLinks.links.map((link) => (
+                      <path
+                        key={link.key}
+                        d={link.d}
+                        stroke="#e11d48"
+                        strokeWidth="1.5"
+                        fill="none"
+                        markerEnd="url(#gantt-runon-arrow)"
+                        opacity="0.8"
+                      />
+                    ))}
+                  </svg>
+                )}
 
                 {/* Bar rows (mirrors left column exactly) */}
                 {rows.map((row) => {
@@ -557,24 +1113,60 @@ export default function GanttDashboard() {
                     );
                   }
                   if (row.type === "task") {
-                    const { task, offset } = row;
+                    const { task, offset, p } = row;
                     const left = (offset + (task.start_day || 0)) * DAY_W;
                     const w    = Math.max((task.duration_days || 7) * DAY_W, 12);
-                    const sc   = statusColor(task.status);
+                    const phaseColor = PHASE_COLORS[task.phase] || "#3b82f6";
+                    const progress = clampProgress(task.progress_percent ?? progressFromStatus(task.status));
                     if (task.is_milestone) {
                       return (
                         <div key={`R-t-${task.id}`} style={{ ...S.barRow, height: 40 }}>
-                          <div style={{ position: "absolute", top: "50%", left: left + w / 2 - 9, width: 18, height: 18, transform: "translateY(-50%) rotate(45deg)", borderRadius: 3, background: sc }} />
+                          <div style={{ position: "absolute", top: "50%", left: left + w / 2 - 9, width: 18, height: 18, transform: "translateY(-50%) rotate(45deg)", borderRadius: 3, background: phaseColor }} />
                         </div>
                       );
                     }
                     return (
                       <div key={`R-t-${task.id}`} style={{ ...S.barRow, height: 40 }}>
-                        <div id={`bar-task-${task.id}`} style={{ position: "absolute", top: "50%", left, width: w, height: 16, borderRadius: 5, transform: "translateY(-50%)", background: sc }} />
+                        <div
+                          id={`bar-task-${task.id}`}
+                          style={{
+                            position: "absolute", top: "50%", left, width: w, height: 18,
+                            borderRadius: 5, transform: "translateY(-50%)", overflow: "hidden",
+                            border: `1px solid ${phaseColor}`,
+                            backgroundColor: `${phaseColor}22`,
+                            backgroundImage: `repeating-linear-gradient(135deg, ${phaseColor}33 0, ${phaseColor}33 5px, transparent 5px, transparent 10px)`,
+                          }}
+                        >
+                          <div
+                            id={`progress-task-${task.id}`}
+                            style={{ height: "100%", width: `${progress}%`, background: phaseColor, borderRadius: progress >= 100 ? 4 : "4px 0 0 4px" }}
+                          />
+                        </div>
+                        <div
+                          title="Drag to update progress"
+                          style={{
+                            position: "absolute", top: "50%",
+                            left: left + Math.max(0, Math.min(w - 8, (w * progress / 100) - 4)),
+                            width: 10, height: 24, marginTop: -12,
+                            borderRadius: 6, background: "#0f172a", border: "1px solid #fff",
+                            cursor: "ew-resize", zIndex: 7,
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            progressDragRef.current = {
+                              taskId: task.id,
+                              projectId: p.id,
+                              startX: e.clientX,
+                              width: w,
+                              originalProgress: progress,
+                              fillId: `progress-task-${task.id}`,
+                            };
+                          }}
+                        />
                         <div data-handle="1" title="← Drag to move" style={{ position:"absolute", top:"50%", left, width:12, height:24, marginTop:-12, cursor:"ew-resize", zIndex:6, background:"rgba(0,0,0,0.3)", borderRadius:"5px 0 0 5px", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(255,255,255,0.9)", fontSize:9 }}
-                          onMouseDown={(e)=>{ e.stopPropagation(); barDragRef.current={ side:"left", entityType:"task", entityId:task.id, startX:e.clientX, originalOffset:offset+(task.start_day||0), originalDuration:task.duration_days||7, originalValue:task.start_day||0, pct:0, trackId:`bar-task-${task.id}`, fillId:null }; }}>⡣</div>
+                          onMouseDown={(e)=>{ e.stopPropagation(); barDragRef.current={ side:"left", entityType:"task", entityId:task.id, projectId:p.id, startX:e.clientX, originalOffset:offset+(task.start_day||0), originalDuration:task.duration_days||7, originalValue:task.start_day||0, pct:0, trackId:`bar-task-${task.id}`, fillId:null }; }}>⡣</div>
                         <div data-handle="1" title="→ Drag to resize" style={{ position:"absolute", top:"50%", left:left+w-12, width:12, height:24, marginTop:-12, cursor:"e-resize", zIndex:6, background:"rgba(0,0,0,0.3)", borderRadius:"0 5px 5px 0", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(255,255,255,0.9)", fontSize:9 }}
-                          onMouseDown={(e)=>{ e.stopPropagation(); barDragRef.current={ side:"right", entityType:"task", entityId:task.id, startX:e.clientX, originalOffset:offset+(task.start_day||0), originalDuration:task.duration_days||7, originalValue:task.duration_days||7, pct:0, trackId:`bar-task-${task.id}`, fillId:null }; }}>⡣</div>
+                          onMouseDown={(e)=>{ e.stopPropagation(); barDragRef.current={ side:"right", entityType:"task", entityId:task.id, projectId:p.id, startX:e.clientX, originalOffset:offset+(task.start_day||0), originalDuration:task.duration_days||7, originalValue:task.duration_days||7, pct:0, trackId:`bar-task-${task.id}`, fillId:null }; }}>⡣</div>
                       </div>
                     );
                   }
@@ -606,9 +1198,154 @@ export default function GanttDashboard() {
             {focusedProject.client_name && <span style={{ color: "#64748b" }}> · {focusedProject.client_name}</span>}
             {focusedProject.start_date && <span style={{ color: "#64748b" }}> · Started {fmtDate(focusedProject.start_date)}</span>}
             <span style={{ color: "#64748b" }}> · {projectPct(focusedProject)}% complete</span>
+            <button style={S.footerBtn} onClick={() => openAddTask(focusedProject)}>+ Add Task</button>
+            <button style={S.footerBtn} onClick={() => promptImportTasks(focusedProject)}>Import CSV</button>
           </div>
         )}
       </div>
+
+      {/* ── Add / edit task modal ── */}
+      {(showAddTask || editTask) && (
+        <div
+          style={S.overlay}
+          onClick={() => { setShowAddTask(false); setEditTask(null); resetTaskForm(); }}
+        >
+          <div style={S.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <h2 style={S.modalTitle}>{editTask ? "Edit Task" : "Add Task"}</h2>
+              {editTask && (
+                <button style={S.dangerBtn} onClick={deleteTask}>Delete</button>
+              )}
+            </div>
+
+            <label style={S.fieldLabel}>
+              Task Name <span style={{ color: "#ef4444" }}>*</span>
+              <input
+                style={S.input}
+                autoFocus
+                value={taskForm.name}
+                placeholder="e.g. Frame inspection"
+                onChange={(e) => setTaskForm((f) => ({ ...f, name: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") saveTask(); }}
+              />
+            </label>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <label style={{ ...S.fieldLabel, flex: 1 }}>
+                Phase
+                <select
+                  style={S.input}
+                  value={taskForm.phase}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, phase: e.target.value }))}
+                >
+                  {PHASE_DEFS.map((ph) => <option key={ph.key}>{ph.key}</option>)}
+                </select>
+              </label>
+              <label style={{ ...S.fieldLabel, flex: 1 }}>
+                Status
+                <select
+                  style={S.input}
+                  value={taskForm.status}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, status: e.target.value, progress_percent: progressFromStatus(e.target.value) }))}
+                >
+                  {STATUS_OPTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <label style={{ ...S.fieldLabel, flex: 1 }}>
+                Start Day
+                <input
+                  style={S.input}
+                  type="number"
+                  min="0"
+                  value={taskForm.start_day}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, start_day: e.target.value }))}
+                />
+              </label>
+              <label style={{ ...S.fieldLabel, flex: 1 }}>
+                Duration (days)
+                <input
+                  style={S.input}
+                  type="number"
+                  min="1"
+                  value={taskForm.duration_days}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, duration_days: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <label style={S.fieldLabel}>
+              Progress ({clampProgress(taskForm.progress_percent)}%)
+              <input
+                style={S.input}
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={clampProgress(taskForm.progress_percent)}
+                onChange={(e) => setTaskForm((f) => ({ ...f, progress_percent: clampProgress(e.target.value), status: statusFromProgress(clampProgress(e.target.value)) }))}
+              />
+            </label>
+
+            <label style={S.fieldLabel}>
+              Assigned Trade
+              <input
+                style={S.input}
+                value={taskForm.assigned_trade}
+                placeholder="e.g. Electrician"
+                onChange={(e) => setTaskForm((f) => ({ ...f, assigned_trade: e.target.value }))}
+              />
+            </label>
+
+            <div style={S.checkboxRow}>
+              <label style={S.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={taskForm.is_milestone}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, is_milestone: e.target.checked }))}
+                />
+                Milestone
+              </label>
+              <label style={S.checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={taskForm.is_long_lead}
+                  onChange={(e) => setTaskForm((f) => ({ ...f, is_long_lead: e.target.checked }))}
+                />
+                Long lead
+              </label>
+            </div>
+
+            <label style={S.fieldLabel}>
+              Notes
+              <textarea
+                style={{ ...S.input, minHeight: 82, resize: "vertical" }}
+                value={taskForm.notes}
+                placeholder="Notes, warnings, contacts..."
+                onChange={(e) => setTaskForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </label>
+
+            <div style={S.modalActions}>
+              <button
+                style={S.cancelBtn}
+                onClick={() => { setShowAddTask(false); setEditTask(null); resetTaskForm(); }}
+              >
+                Cancel
+              </button>
+              <button
+                style={{ ...S.primaryBtn, opacity: (!taskForm.name.trim() || saving) ? 0.5 : 1 }}
+                disabled={!taskForm.name.trim() || saving}
+                onClick={saveTask}
+              >
+                {saving ? "Saving..." : editTask ? "Save Changes" : "Add Task"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── New project modal ── */}
       {showNew && (
@@ -650,6 +1387,20 @@ export default function GanttDashboard() {
                   onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} />
               </label>
             </div>
+            <label style={S.fieldLabel}>
+              Upload Tasks CSV
+              <input
+                style={S.input}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => handleNewProjectCSV(e.target.files?.[0])}
+              />
+              {newCsvTasks.length > 0 && (
+                <span style={{ fontSize: 13, color: "#475569" }}>
+                  {newCsvName}: {newCsvTasks.length} task{newCsvTasks.length !== 1 ? "s" : ""} ready to import
+                </span>
+              )}
+            </label>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
               <button style={S.cancelBtn} onClick={() => setShowNew(false)}>Cancel</button>
               <button
@@ -730,7 +1481,7 @@ const S = {
     background: "white", borderRadius: 14, border: "2px solid #e2e8f0",
     overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", minHeight: 200,
   },
-  leftCol: { width: 310, minWidth: 310, flexShrink: 0, borderRight: "2px solid #e2e8f0", overflow: "hidden" },
+  leftCol: { width: 520, minWidth: 520, flexShrink: 0, borderRight: "2px solid #e2e8f0", overflow: "hidden" },
   nameHeader: {
     height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "0 14px", borderBottom: "2px solid #e2e8f0",
@@ -751,6 +1502,12 @@ const S = {
   pSub:     { fontSize: 14, color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   pctLabel: { fontSize: 15, fontWeight: 700, flexShrink: 0 },
   delBtn:   { background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14, padding: "2px 6px", flexShrink: 0, lineHeight: 1 },
+  rowActionBtn: {
+    background: "#e2e8f0", border: "1px solid #cbd5e1", color: "#334155",
+    borderRadius: 6, padding: "3px 7px", fontSize: 11, fontWeight: 700,
+    cursor: "pointer", flexShrink: 0, lineHeight: 1.2,
+  },
+  headerGrid: { flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 138px", gap: 12, alignItems: "center" },
   phaseRow: {
     display: "flex", alignItems: "center", gap: 8,
     padding: "0 10px 0 32px", height: 48,
@@ -759,13 +1516,24 @@ const S = {
   },
   phChevron: { fontSize: 12, color: "#475569", width: 14, flexShrink: 0 },
   phName:    { flex: 1, fontSize: 16, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  progressSpacer: { width: 138, flexShrink: 0 },
   taskRow: {
     display: "flex", alignItems: "center", gap: 8,
     padding: "0 10px 0 48px", height: 40,
     borderBottom: "1px solid #e8edf2", background: "#f8fafc",
   },
   taskDot:  { width: 9, height: 9, borderRadius: "50%", flexShrink: 0 },
-  taskName: { flex: 1, fontSize: 15, color: "#1e293b", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  taskName: { flex: 1, minWidth: 0, fontSize: 15, color: "#1e293b", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  statusStateBtn: {
+    width: 138, border: "none", background: "transparent", color: "#334155",
+    padding: "4px 2px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+    flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
+    justifyContent: "flex-start", textAlign: "left",
+  },
+  statusStateDot: {
+    width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+    boxShadow: "0 0 0 3px rgba(148,163,184,0.14)",
+  },
   // Ruler
   monthBand: { display: "flex", height: 34, borderBottom: "1px solid #cbd5e1", background: "#f1f5f9" },
   monthCell: {
@@ -802,6 +1570,11 @@ const S = {
     padding: "12px 28px", display: "flex", alignItems: "center", gap: 12,
     fontSize: 16, zIndex: 50, boxShadow: "0 -4px 16px rgba(0,0,0,0.1)",
   },
+  footerBtn: {
+    background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8,
+    padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
   openFullBtn: {
     marginLeft: "auto", background: "#7c3aed", color: "white",
     borderRadius: 8, padding: "9px 22px", fontWeight: 700,
@@ -816,6 +1589,10 @@ const S = {
   fieldLabel: { display: "flex", flexDirection: "column", gap: 5, fontSize: 15, color: "#334155", fontWeight: 600 },
   input:      { background: "white", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontSize: 16, padding: "10px 14px", outline: "none", width: "100%", boxSizing: "border-box" },
   cancelBtn:  { background: "white", color: "#475569", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 20px", fontSize: 16, cursor: "pointer" },
+  dangerBtn:  { background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" },
+  checkboxRow: { display: "flex", gap: 20, flexWrap: "wrap" },
+  checkLabel: { display: "flex", alignItems: "center", gap: 8, fontSize: 15, color: "#334155", fontWeight: 600, cursor: "pointer" },
+  modalActions: { display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 },
   miniBtn:    { background: "#e2e8f0", border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 12px", fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#1e293b", whiteSpace: "nowrap" },
   legendRow:  { display: "flex", flexWrap: "wrap", gap: "8px 22px", padding: "14px 28px 18px", background: "white", borderTop: "2px solid #e2e8f0", margin: "0 0 80px" },
   legendItem: { display: "flex", alignItems: "center", gap: 8 },
