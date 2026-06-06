@@ -13,7 +13,6 @@ import {
   formatLabel, isImageField, isColorField, isLongTextField, getSelectOptions,
   supportsSectionHeight, supportsFullWidthBackground, isFullWidthBackgroundEnabled,
   supportsCopyRegeneration, parsePixelValue,
-  createImageStackLayer, createTextStackLayer,
   createFaqItem, normalizeFaqItems, createContactField, normalizeContactFields,
   isCssGradient, extractSolidColor, normalizeHeroBackgroundModeProps,
   AssetLibraryModal, openSharedLibraryAssetPicker,
@@ -2432,7 +2431,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 backgroundColor: "transparent",
                 showGrid: true,
                 snapToGrid: true,
-                images: [createImageStackLayer(0), createTextStackLayer(0), createImageStackLayer(1)],
+                images: [],
               })}
             >
               + Image Stack

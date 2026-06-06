@@ -3625,8 +3625,8 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
               checked={!!props.showOverlayText}
               onChange={(e) => update({
                 showOverlayText: e.target.checked,
-                headline: e.target.checked ? (props.headline || "Add image headline") : props.headline,
-                subheadline: e.target.checked ? (props.subheadline || "Add supporting text") : props.subheadline,
+                headline: props.headline,
+                subheadline: props.subheadline,
               })}
               style={styles.checkboxInput}
             />

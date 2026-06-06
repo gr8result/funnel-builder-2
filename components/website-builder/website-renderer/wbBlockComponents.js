@@ -429,7 +429,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
       kind: layer?.kind || (layer?.content ? "text" : "image"),
       src: getAssetFromLibrary(assets, layer?.assetId)?.src || layer?.src || "",
       assetId: layer?.assetId || "",
-      content: layer?.content || "Headline Text",
+      content: layer?.content || "",
       x: Number(layer?.x ?? 40 + (index * 30)),
       y: Number(layer?.y ?? 40 + (index * 30)),
       width: Number(layer?.width ?? (layer?.kind === "text" ? 320 : 260)),
@@ -1247,7 +1247,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
                   borderRadius: 10,
                   padding: editor ? "6px 8px" : 0,
                 }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(props?.headline || "Add image headline") }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props?.headline || "") }}
               />
               {props?.subheadline || editor ? (
                 <div
@@ -1271,7 +1271,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
                     borderRadius: 10,
                     padding: editor ? "6px 8px" : 0,
                   }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(props?.subheadline || "Add supporting text") }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(props?.subheadline || "") }}
                 />
               ) : null}
               {editor ? (
