@@ -423,7 +423,7 @@
       "type": "columns-2",
       "props": {
         "ratio": "50-50",
-        "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free <span style=\"font-size: 72px; color: rgb(236, 72, 153);\">Demo</span> of our platform and see how well it can integrate into your business</span></li></ol>",
+        "title": "",
         "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780032551049-14-day-free-trial.png",
         "leftTitle": "<span style=\"font-size: 46px;\"><span><span><span style=\"color: rgb(255, 192, 0);\"><span><span><span style=\"font-size: 46px;\">Look how much you can save!</span></span></span></span></span></span></span>",
         "textColor": "#0f172a",

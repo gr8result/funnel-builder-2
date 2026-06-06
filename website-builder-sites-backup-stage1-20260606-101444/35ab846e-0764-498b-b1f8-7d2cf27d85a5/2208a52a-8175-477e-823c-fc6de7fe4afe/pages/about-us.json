@@ -64,24 +64,7 @@
         "backgroundStyle": "image",
         "baseLayoutWidth": 1500,
         "fullWidthBackground": true,
-        "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9",
-        "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\"><span style=\"font-size: 56px;\">Built to Help Businesses Grow Smarter</span></span></span>",
-        "subheadline": "We created our platform to give businesses an all-in-one solution for marketing, automation, sales, communication, and growth — without the complexity or massive costs of multiple systems. Our mission is simple: help businesses scale faster with powerful tools that are easy to use and built for real results.",
-        "ctaText": "Contact Us",
-        "floatingImages": [
-          {
-            "x": 50,
-            "y": 36,
-            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779674287487-logo-1776030030268-gr8-result-logo-transparant-background.png",
-            "width": 176,
-            "height": 176,
-            "assetId": "fca9e5f5-f1a5-493f-afb3-6e7ead676773",
-            "animation": "sweep-left",
-            "animationDelay": 0.08,
-            "animationSpeed": 1.45
-          }
-        ],
-        "ctaLink": "/CONTACT"
+        "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9"
       }
     },
     {
@@ -291,75 +274,6 @@
       }
     },
     {
-      "id": 1780270354617,
-      "type": "columns-3",
-      "props": {
-        "title": "",
-        "column1": "",
-        "column2": "sdfgn gn sr",
-        "column3": "",
-        "textColor": "#0f172a",
-        "borderColor": "#dbeafe",
-        "column1Image": "",
-        "column1Title": "",
-        "column2Image": "",
-        "column2Title": "dng d",
-        "column3Image": "",
-        "column3Title": "",
-        "backgroundColor": "transparent",
-        "baseLayoutWidth": 1500,
-        "column1ContentType": "text",
-        "column1ExtraImages": [
-          {
-            "gap": 8,
-            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780030465830-3bd8f2c4-af13-4e37-9d84-708de14e3058-1-.png"
-          }
-        ],
-        "column3ExtraImages": [
-          {
-            "gap": 8,
-            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780270752459-0985a386-4a4c-4c81-bfb4-6f505802373e.png"
-          }
-        ],
-        "cardBackgroundColor": "#f8fafc"
-      }
-    },
-    {
-      "id": "team-v7nxqqi",
-      "type": "team",
-      "props": {
-        "title": "Meet the Team",
-        "members": [
-          {
-            "id": "team-member-1",
-            "bio": "Shapes the offer, messaging, and customer journey for every launch.",
-            "name": "Ava Bennett",
-            "role": "Client Strategy Lead",
-            "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80"
-          },
-          {
-            "id": "team-member-2",
-            "bio": "Turns strategy into bold visual systems, landing pages, and campaigns.",
-            "name": "Marcus Reed",
-            "role": "Creative Director",
-            "image": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80"
-          },
-          {
-            "id": "team-member-3",
-            "bio": "Builds the follow-up, CRM, and reporting flows that keep leads moving.",
-            "name": "Nina Patel",
-            "role": "Automation Specialist",
-            "image": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=900&q=80"
-          }
-        ],
-        "subtitle": "Introduce the people clients will trust with the work.",
-        "textColor": "#0f172a",
-        "borderColor": "rgba(226,232,240,0.9)",
-        "teamVariant": "studio-cards",
-        "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)"
-      }
-    },
-    {
       "id": "image-gallery-u0pp2b0",
       "type": "image-gallery",
       "props": {
@@ -468,24 +382,7 @@
           "backgroundStyle": "image",
           "baseLayoutWidth": 1500,
           "fullWidthBackground": true,
-          "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9",
-          "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\"><span style=\"font-size: 56px;\">Built to Help Businesses Grow Smarter</span></span></span>",
-          "subheadline": "We created our platform to give businesses an all-in-one solution for marketing, automation, sales, communication, and growth — without the complexity or massive costs of multiple systems. Our mission is simple: help businesses scale faster with powerful tools that are easy to use and built for real results.",
-          "ctaText": "Contact Us",
-          "floatingImages": [
-            {
-              "x": 50,
-              "y": 36,
-              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779674287487-logo-1776030030268-gr8-result-logo-transparant-background.png",
-              "width": 176,
-              "height": 176,
-              "assetId": "fca9e5f5-f1a5-493f-afb3-6e7ead676773",
-              "animation": "sweep-left",
-              "animationDelay": 0.08,
-              "animationSpeed": 1.45
-            }
-          ],
-          "ctaLink": "/CONTACT"
+          "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9"
         }
       },
       {
@@ -692,75 +589,6 @@
           "sectionBackgroundColor": "#000000",
           "faqPanelBackgroundColor": "rgba(3, 18, 28, 0.26)",
           "contentPanelBackgroundColor": "#121c26"
-        }
-      },
-      {
-        "id": 1780270354617,
-        "type": "columns-3",
-        "props": {
-          "title": "",
-          "column1": "",
-          "column2": "sdfgn gn sr",
-          "column3": "",
-          "textColor": "#0f172a",
-          "borderColor": "#dbeafe",
-          "column1Image": "",
-          "column1Title": "",
-          "column2Image": "",
-          "column2Title": "dng d",
-          "column3Image": "",
-          "column3Title": "",
-          "backgroundColor": "transparent",
-          "baseLayoutWidth": 1500,
-          "column1ContentType": "text",
-          "column1ExtraImages": [
-            {
-              "gap": 8,
-              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780030465830-3bd8f2c4-af13-4e37-9d84-708de14e3058-1-.png"
-            }
-          ],
-          "column3ExtraImages": [
-            {
-              "gap": 8,
-              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780270752459-0985a386-4a4c-4c81-bfb4-6f505802373e.png"
-            }
-          ],
-          "cardBackgroundColor": "#f8fafc"
-        }
-      },
-      {
-        "id": "team-v7nxqqi",
-        "type": "team",
-        "props": {
-          "title": "Meet the Team",
-          "members": [
-            {
-              "id": "team-member-1",
-              "bio": "Shapes the offer, messaging, and customer journey for every launch.",
-              "name": "Ava Bennett",
-              "role": "Client Strategy Lead",
-              "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80"
-            },
-            {
-              "id": "team-member-2",
-              "bio": "Turns strategy into bold visual systems, landing pages, and campaigns.",
-              "name": "Marcus Reed",
-              "role": "Creative Director",
-              "image": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80"
-            },
-            {
-              "id": "team-member-3",
-              "bio": "Builds the follow-up, CRM, and reporting flows that keep leads moving.",
-              "name": "Nina Patel",
-              "role": "Automation Specialist",
-              "image": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=900&q=80"
-            }
-          ],
-          "subtitle": "Introduce the people clients will trust with the work.",
-          "textColor": "#0f172a",
-          "borderColor": "rgba(226,232,240,0.9)",
-          "teamVariant": "studio-cards",
-          "backgroundColor": "linear-gradient(180deg,#ffffff,#f8fafc)"
         }
       },
       {

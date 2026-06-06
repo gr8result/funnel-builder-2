@@ -54,22 +54,13 @@
       "order": 5
     },
     {
-      "id": "crm",
-      "name": "CRM",
-      "slug": "crm",
-      "title": "CRM",
-      "description": "",
-      "objective": "Recovered CRM page from Test Page content.",
-      "file": "crm.json",
+      "id": "bb07cd5a-07de-42a1-a43e-e2f1a3997a9c",
+      "name": "Test Page",
+      "slug": "test-page",
+      "title": "Test Page — Feature Showcase",
+      "description": "A showcase of every layout pattern and animation available in the Gr8 Result website builder.",
+      "file": "test-page.json",
       "order": 6
-    },
-    {
-      "id": "sms",
-      "name": "SMS",
-      "slug": "sms",
-      "objective": "Recovered SMS page from previous project data.",
-      "file": "sms.json",
-      "order": 7
     }
   ],
   "status": "saved",
@@ -124,7 +115,7 @@
             },
             {
               "id": "nav-child-1780606586612-utx34h",
-              "href": "/crm",
+              "href": "#",
               "label": "CRM"
             }
           ],
@@ -145,12 +136,8 @@
           "label": "Email"
         },
         {
-          "href": "/crm",
-          "label": "CRM"
-        },
-        {
-          "href": "/sms",
-          "label": "SMS"
+          "href": "#test-page",
+          "label": "Test Page"
         }
       ],
       "ctaLink": "#contact",
@@ -235,8 +222,8 @@
           "label": "Pricing"
         },
         {
-          "href": "/crm",
-          "label": "CRM"
+          "href": "#test-page",
+          "label": "Test Page"
         }
       ],
       "linkColor": "#f59e0b",
@@ -288,8 +275,7 @@
     "contact-us",
     "email",
     "pricing",
-    "crm",
-    "sms"
+    "bb07cd5a-07de-42a1-a43e-e2f1a3997a9c"
   ],
   "pageSlugs": {
     "Home": "home",
@@ -298,8 +284,7 @@
     "Contact Us": "contact-us",
     "Email": "email",
     "Pricing": "pricing",
-    "CRM": "crm",
-    "SMS": "sms"
+    "Test Page": "test-page"
   },
   "published": false,
   "storageVersion": 2

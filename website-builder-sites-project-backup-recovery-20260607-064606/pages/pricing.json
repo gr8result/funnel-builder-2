@@ -193,7 +193,7 @@
       "props": {
         "ratio": "50-50",
         "title": "",
-        "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780270752459-0985a386-4a4c-4c81-bfb4-6f505802373e.png",
+        "leftImage": "",
         "leftTitle": "<span style=\"font-size: 32px;\"><span><span><span><span><span><span><span style=\"font-size: 32px;\">Our FREE Gift To You!</span></span></span></span></span></span></span></span>",
         "textColor": "#0f172a",
         "rightImage": "",
@@ -220,8 +220,7 @@
             "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780270752459-0985a386-4a4c-4c81-bfb4-6f505802373e.png"
           }
         ],
-        "rightColumnBackgroundColor": "#121c26",
-        "leftImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780270752459-0985a386-4a4c-4c81-bfb4-6f505802373e.png"
+        "rightColumnBackgroundColor": "#121c26"
       }
     },
     {

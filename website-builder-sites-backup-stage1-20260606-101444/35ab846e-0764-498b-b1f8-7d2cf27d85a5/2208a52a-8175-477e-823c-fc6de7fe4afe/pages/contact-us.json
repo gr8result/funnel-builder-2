@@ -55,27 +55,6 @@
       }
     },
     {
-      "id": "hero-yzv4m4c",
-      "type": "hero",
-      "props": {
-        "ctaLink": "#",
-        "ctaText": "Send Enquiry",
-        "eyebrow": "Section label",
-        "contentX": 50,
-        "contentY": 58,
-        "headline": "Talk to Gr8 Result Digital Solutions",
-        "minHeight": "500px",
-        "subheadline": "Remove friction and tell visitors exactly how to start the conversation about your main offer.",
-        "contentWidth": 680,
-        "contentHeight": 320,
-        "verticalAlign": "center",
-        "backgroundImage": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1600&q=80",
-        "backgroundStyle": "image",
-        "headlineAlignment": "center",
-        "fullWidthBackground": true
-      }
-    },
-    {
       "id": 1780441237277,
       "type": "text",
       "props": {
@@ -197,32 +176,6 @@
         "cardBackgroundColor": "#ffffff",
         "inputBackgroundColor": "#ffffff",
         "buttonBackgroundColor": "#0f172a"
-      }
-    },
-    {
-      "id": "faq-1u7w0fu",
-      "type": "faq",
-      "props": {
-        "items": [
-          {
-            "id": "faq-default-1",
-            "answer": "This is the answer",
-            "content": "This is the answer",
-            "heading": "What is this?",
-            "question": "What is this?"
-          },
-          {
-            "id": "faq-default-2",
-            "answer": "It works like this...",
-            "content": "It works like this...",
-            "heading": "How does it work?",
-            "question": "How does it work?"
-          }
-        ],
-        "title": "Before You Contact Us",
-        "faqMaxWidth": 980,
-        "faqStartCollapsed": false,
-        "faqAllowMultipleOpen": false
       }
     },
     {

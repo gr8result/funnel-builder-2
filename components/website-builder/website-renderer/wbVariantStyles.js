@@ -93,6 +93,8 @@ const CANVAS_PLACEHOLDER_STRINGS = new Set([
   "Launch label",
   "Click to type headline",
   "Add supporting text here",
+  "Add image headline",
+  "Add supporting text",
 ]);
 function stripPlaceholder(value) {
   if (!value) return "";
