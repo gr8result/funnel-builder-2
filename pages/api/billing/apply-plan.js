@@ -3,11 +3,61 @@
 // Uses supabaseAdmin to bypass RLS and reliably write plan tiers to accounts table.
 
 import { createClient } from "@supabase/supabase-js";
+import { normalizePlanId } from "../../../lib/planResolver";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+const OPTIONAL_ACCOUNT_COLUMNS = [
+  "selected_plan",
+  "subscription_status",
+  "status",
+  "is_approved",
+  "calendar_plan_tier",
+  "sms_plan_tier",
+  "email_plan_tier",
+  "email_plan",
+  "email_plan_price",
+];
+
+function missingSchemaColumn(error) {
+  const message = String(error?.message || "");
+  const details = String(error?.details || "");
+  const text = `${message} ${details}`;
+  const match = text.match(/'([^']+)'\s+column/i) || text.match(/column\s+"?([a-zA-Z0-9_]+)"?/i);
+  return match?.[1] || "";
+}
+
+function withoutColumn(payload, column) {
+  const next = { ...payload };
+  delete next[column];
+  return next;
+}
+
+async function writeAccount({ accountId, user, payload }) {
+  const basePayload = { ...payload };
+  let currentPayload = basePayload;
+
+  for (let attempt = 0; attempt <= OPTIONAL_ACCOUNT_COLUMNS.length; attempt += 1) {
+    const result = accountId
+      ? await supabaseAdmin.from("accounts").update(currentPayload).eq("id", accountId)
+      : await supabaseAdmin.from("accounts").insert({ user_id: user.id, email: user.email || null, ...currentPayload });
+
+    if (!result.error) return { error: null, omittedColumns: OPTIONAL_ACCOUNT_COLUMNS.filter((column) => !(column in currentPayload) && column in basePayload) };
+
+    const missing = missingSchemaColumn(result.error);
+    if (!missing || !OPTIONAL_ACCOUNT_COLUMNS.includes(missing) || !(missing in currentPayload)) {
+      return { error: result.error, omittedColumns: OPTIONAL_ACCOUNT_COLUMNS.filter((column) => !(column in currentPayload) && column in basePayload) };
+    }
+
+    console.warn(`apply-plan: accounts.${missing} is unavailable; retrying without it.`);
+    currentPayload = withoutColumn(currentPayload, missing);
+  }
+
+  return { error: new Error("Could not write account after schema fallback retries."), omittedColumns: [] };
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -21,9 +71,9 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
   if (authErr || !user) return res.status(401).json({ error: "Unauthorized" });
 
-  const { emailPlan, smsPlan, calendarPlan, socialPlan, selectedModules, basePlan, stripeSubscriptionId, stripeCustomerId } = req.body || {};
+  const { emailPlan, smsPlan, calendarPlan, socialPlan, websitePlan, selectedModules, basePlan, stripeSubscriptionId, stripeCustomerId } = req.body || {};
 
-  if (!basePlan && !emailPlan && !smsPlan && !calendarPlan && !socialPlan && (!selectedModules || selectedModules.length === 0)) {
+  if (!basePlan && !emailPlan && !smsPlan && !calendarPlan && !socialPlan && !websitePlan && (!selectedModules || selectedModules.length === 0)) {
     return res.status(400).json({ error: "No plan tiers provided" });
   }
 
@@ -46,6 +96,12 @@ export default async function handler(req, res) {
     }
   }
   if (socialPlan) payload.social_plan_tier = socialPlan;
+  if (basePlan) {
+    payload.selected_plan = basePlan;
+    payload.subscription_status = "active";
+    payload.status = "active";
+    payload.is_approved = true;
+  }
 
   // Find the user's accounts row
   const { data: accountRows, error: fetchErr } = await supabaseAdmin
@@ -67,25 +123,11 @@ export default async function handler(req, res) {
   const safePayload = { ...payload };
   delete safePayload.social_plan_tier;
 
-  if (accountId) {
-    const { error: updateErr } = await supabaseAdmin
-      .from("accounts")
-      .update(safePayload)
-      .eq("id", accountId);
+  const writeResult = await writeAccount({ accountId, user, payload: safePayload });
 
-    if (updateErr) {
-      console.error("apply-plan: update error", updateErr);
-      return res.status(500).json({ error: updateErr.message });
-    }
-  } else {
-    const { error: insertErr } = await supabaseAdmin
-      .from("accounts")
-      .insert({ user_id: user.id, email: user.email || null, ...safePayload });
-
-    if (insertErr) {
-      console.error("apply-plan: insert error", insertErr);
-      return res.status(500).json({ error: insertErr.message });
-    }
+  if (writeResult.error) {
+    console.error("apply-plan: accounts write error", writeResult.error);
+    return res.status(500).json({ error: writeResult.error.message });
   }
 
   // Keep legacy profile flag in sync for environments still using it.
@@ -110,6 +152,9 @@ export default async function handler(req, res) {
   if (socialPlan) {
     moduleRows.push(`__social_plan_tier:${socialPlan}`);
   }
+  if (websitePlan) {
+    moduleRows.push(`__website_plan_tier:${websitePlan}`);
+  }
   if (moduleRows.length > 0) {
     const rows = moduleRows.map((module_id) => ({
       user_id: user.id,
@@ -124,17 +169,28 @@ export default async function handler(req, res) {
     }
   }
 
-  console.log(`✅ apply-plan: ${user.email} → plan=${basePlan} calendarPlan=${calendarPlan} emailPlan=${emailPlan} smsPlan=${smsPlan} socialPlan=${socialPlan} modules=${(selectedModules||[]).join(",")}`);
+  console.log(`✅ apply-plan: ${user.email} → plan=${basePlan} calendarPlan=${calendarPlan} emailPlan=${emailPlan} smsPlan=${smsPlan} socialPlan=${socialPlan} websitePlan=${websitePlan} modules=${(selectedModules||[]).join(",")}`);
 
   // Write/update the subscriptions record for the base plan
   if (basePlan) {
+    const normalizedBasePlan = normalizePlanId(basePlan);
+    if (normalizedBasePlan) {
+      const { error: workspaceErr } = await supabaseAdmin
+        .from("workspaces")
+        .update({ plan: normalizedBasePlan, updated_at: new Date().toISOString() })
+        .eq("owner_id", user.id);
+
+      if (workspaceErr) {
+        console.warn("apply-plan: workspace plan sync warning:", workspaceErr.message);
+      }
+    }
+
     const subPayload = {
       account_id: user.id,
-      plan_id: basePlan,
+      plan_id: normalizedBasePlan || basePlan,
       status: "active",
       current_period_start: new Date().toISOString(),
       current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
     };
     if (stripeSubscriptionId) subPayload.stripe_subscription_id = stripeSubscriptionId;
     if (stripeCustomerId)     subPayload.stripe_customer_id     = stripeCustomerId;

@@ -5823,7 +5823,7 @@ export default function EmailEditor({
     setIsSaving(true);
     try {
       // If this editor was opened from an existing template path, save back in place.
-      if (!docId && templatePath) {
+      if (templatePath) {
         const html = exportFullHtml(blocks, docName, docSettings);
         const resp = await fetch("/api/email/save-base-template", {
           method: "POST",
@@ -5888,9 +5888,17 @@ export default function EmailEditor({
       if (!data.ok) throw new Error(data.error || "Save failed");
       setDocId(newId);
       setDocName(newName);
+      setTemplatePath("");
+      setTemplateScope("");
       // Update URL without reload so the user edits the new copy
       const url = new URL(window.location.href);
       url.searchParams.set("id", newId);
+      url.searchParams.delete("templatePath");
+      url.searchParams.delete("templateScope");
+      url.searchParams.delete("templateName");
+      url.searchParams.delete("templateUrl");
+      url.searchParams.delete("starter");
+      url.searchParams.delete("preset");
       window.history.replaceState({}, "", url.toString());
       showToast(`Saved as "${newName}"!`, "ok");
       showSaveDialog(`Your file was saved properly as "${newName}".`, "ok");

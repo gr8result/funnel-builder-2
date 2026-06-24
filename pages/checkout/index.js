@@ -14,7 +14,7 @@ const getBasePlanModuleKey = (moduleId) => {
 
 export default function Checkout() {
   const router = useRouter();
-  const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "", annual = "" } = router.query;
+  const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "", websitePlan = "", annual = "" } = router.query;
   const [loading, setLoading] = useState(false);
 
   const selectedModules = selected.split(",").filter(Boolean);
@@ -58,6 +58,7 @@ export default function Checkout() {
       const smsPlanParam = params.get("smsPlan") || smsPlan || "";
       const calendarPlanParam = params.get("calendarPlan") || calendarPlan || "";
       const socialPlanParam = params.get("socialPlan") || socialPlan || "";
+      const websitePlanParam = params.get("websitePlan") || websitePlan || "";
       const selectedParam = params.get("selected") || selected || "";
       const planParam = params.get("plan") || plan || "";
       const annualParam = params.get("annual") || annual || "";
@@ -66,6 +67,12 @@ export default function Checkout() {
       const lineItems = [];
       if (basePlan) {
         lineItems.push({ name: basePlan.name, amount: basePlanBillingAmount });
+      }
+      if (websitePlanParam && PRICING[websitePlanParam]) {
+        lineItems.push({
+          name: PRICING[websitePlanParam].name || websitePlanParam,
+          amount: isAnnual ? (PRICING[websitePlanParam]?.price || 0) * 12 * 0.80 : (PRICING[websitePlanParam]?.price || 0),
+        });
       }
       billableModules.forEach((id) => {
         lineItems.push({
@@ -86,6 +93,7 @@ export default function Checkout() {
             smsPlan: smsPlanParam,
             calendarPlan: calendarPlanParam,
             socialPlan: socialPlanParam,
+            websitePlan: websitePlanParam,
             annual: annualParam,
           },
         }),

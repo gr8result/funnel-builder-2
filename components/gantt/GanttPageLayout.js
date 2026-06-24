@@ -74,10 +74,12 @@ export function GanttPageLayout() {
     setPlannerStep,
     plannerAnswers,
     plannerPlan,
+    estimatePreview,
     visiblePlannerQuestions,
     openPlanner,
     updatePlannerAnswer,
     generatePlannerPreview,
+    generateEstimatePreview,
     requestCreateGanttFromPlan,
   } = useGanttPlanner();
 
@@ -2253,9 +2255,11 @@ export function GanttPageLayout() {
         setPlannerStep={setPlannerStep}
         plannerAnswers={plannerAnswers}
         plannerPlan={plannerPlan}
+        estimatePreview={estimatePreview}
         visiblePlannerQuestions={visiblePlannerQuestions}
         updatePlannerAnswer={updatePlannerAnswer}
         generatePlannerPreview={generatePlannerPreview}
+        generateEstimatePreview={generateEstimatePreview}
         requestCreateGanttFromPlan={requestCreateGanttFromPlan}
       />
 

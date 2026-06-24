@@ -65,6 +65,38 @@ import {
   renderBlockPreview,
 } from "./page-builder/pbCanvasComponents";
 
+const INLINE_EDITOR_PLACEHOLDERS = new Set([
+  "Section label",
+  "Section Label",
+  "Launch label",
+  "Click to type headline",
+  "Add supporting text here",
+  "Add image headline",
+  "Add supporting text",
+  "Column title",
+  "Column content",
+]);
+
+const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
+
+function parseToolbarFontSize(value, fallback = 18) {
+  const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
+  const fallbackParsed = Number.parseFloat(String(fallback ?? "").replace("px", ""));
+  const next = Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : Number.isFinite(fallbackParsed) && fallbackParsed > 0
+      ? fallbackParsed
+      : 18;
+  return Math.max(8, Math.min(240, Math.round(next)));
+}
+
+function createPreviewToken() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -85,6 +117,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     fontFamily: "Arial",
     fontSize: 18,
     lineHeight: 1.5,
+    fontWeight: "400",
+    fontStyle: "normal",
+    textDecoration: "none",
+    textAlign: "left",
     blockType: "P",
     canStyleBox: false,
     boxBackgroundColor: "transparent",
@@ -95,6 +131,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     textAnimationDelay: 0,
     motionLabel: "Text Motion",
   });
+  const [copiedTextFormat, setCopiedTextFormat] = useState(null);
+  const copiedTextFormatRef = useRef(null);
   const [textToolbarPosition, setTextToolbarPosition] = useState({ x: 160, y: 120, width: 1120 });
   const [animationPopover, setAnimationPopover] = useState({ visible: false, index: null, x: 24, y: 120, width: 980 });
   const [animationReplayState, setAnimationReplayState] = useState({ index: null, tick: 0 });
@@ -104,6 +142,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const [futureLen, setFutureLen] = useState(0);
   const [imageEditState, setImageEditState] = useState(null);
   const activeEditableRef = useRef(null);
+  const activeTextTargetRef = useRef({ editable: null, blockIndex: null, propPath: "" });
   const latestBlocksRef = useRef(Array.isArray(pageBlocks) ? pageBlocks : []);
   const selectionRangeRef = useRef(null);
   const textToolbarDraggedRef = useRef(false);
@@ -126,19 +165,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const suppressBlurUpdateRef = useRef(false);
   const selectedIndexRef = useRef(null);
   const selectedGlobalRoleRef = useRef(null);
+  const propSyncPageRef = useRef(activePage);
   const canvasMeasureRef = useRef(null);
   const blocksContainerRef = useRef(null);
   const [canvasScale, setCanvasScale] = useState(1);
   const [blocksNaturalHeight, setBlocksNaturalHeight] = useState(0);
+  const globalNavBlock = project?.globalNavBlock?.type === BlockTypes.NAV_BAR ? project.globalNavBlock : null;
+  const globalFooterBlock = project?.globalFooterBlock?.type === BlockTypes.FOOTER ? project.globalFooterBlock : null;
 
   const selectedBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
   const selectedGlobalBlock = selectedGlobalRole === "nav"
-    ? (project?.globalNavBlock || null)
+    ? globalNavBlock
     : selectedGlobalRole === "footer"
-      ? (project?.globalFooterBlock || null)
+      ? globalFooterBlock
       : null;
   const imageEditorUserId = project?.userId || project?.user_id || project?.ownerId || project?.owner_id || undefined;
-  latestBlocksRef.current = blocks;
+  if (!pendingLocalBlocksRef.current || JSON.stringify(latestBlocksRef.current) === JSON.stringify(blocks)) {
+    latestBlocksRef.current = blocks;
+  }
   selectedIndexRef.current = selectedIndex;
   selectedGlobalRoleRef.current = selectedGlobalRole;
   onSaveRef.current = onSave;
@@ -188,16 +232,20 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const nextBlocks = Array.isArray(pageBlocks) ? pageBlocks : [];
     const localBlocks = latestBlocksRef.current;
     const blocksMatch = JSON.stringify(localBlocks) === JSON.stringify(nextBlocks);
+    const pageChanged = propSyncPageRef.current !== activePage;
+    propSyncPageRef.current = activePage;
 
-    if (pendingLocalBlocksRef.current && !blocksMatch) {
-      // Local edits are pending — keep the local version as source of truth.
-      // Do not merge server blocks back in, as this would resurrect deleted blocks.
+    if (!pageChanged && !blocksMatch && localBlocks.length > 0) {
+      // Same page, different incoming blocks: keep the live canvas as source of
+      // truth. Background refreshes/server responses can be older than the
+      // user's current tab, and accepting them here rolls the canvas backward.
+      if (pendingLocalBlocksRef.current) {
+        Promise.resolve(onSaveRef.current(localBlocks)).catch(() => {});
+      }
       return;
     }
 
-    if (blocksMatch) {
-      pendingLocalBlocksRef.current = false;
-    }
+    if (pageChanged) pendingLocalBlocksRef.current = false;
 
     const previousSelectedIndex = selectedIndexRef.current;
     const previousSelectedGlobalRole = selectedGlobalRoleRef.current;
@@ -209,10 +257,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setBlocks(nextBlocks);
     skipNextAutosaveRef.current = true;
 
-    if (previousSelectedGlobalRole === "nav" && project?.globalNavBlock) {
+    if (previousSelectedGlobalRole === "nav" && globalNavBlock) {
       setSelectedGlobalRole("nav");
       setSelectedIndex(null);
-    } else if (previousSelectedGlobalRole === "footer" && project?.globalFooterBlock) {
+    } else if (previousSelectedGlobalRole === "footer" && globalFooterBlock) {
       setSelectedGlobalRole("footer");
       setSelectedIndex(null);
     } else if (previousSelectedBlockId != null) {
@@ -225,7 +273,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     setDropIndex(null);
-  }, [pageBlocks, project?.globalFooterBlock, project?.globalNavBlock]);
+  }, [activePage, pageBlocks, globalFooterBlock, globalNavBlock]);
 
   useEffect(() => {
     if (skipNextAutosaveRef.current) {
@@ -243,7 +291,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const currentBlocks = latestBlocksRef.current;
       // Use onSaveRef so the timer always calls the latest save function at fire-time
       Promise.resolve(onSaveRef.current(currentBlocks)).then((saved) => {
-        if (saved) setLastSavedAt(Date.now());
+        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
       }).catch(() => {});
     }, 1500);
 
@@ -278,14 +326,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   }, []); // empty — all values accessed via refs
 
   useEffect(() => {
-    if (selectedGlobalRole === "nav" && !project?.globalNavBlock) {
+    if (selectedGlobalRole === "nav" && !globalNavBlock) {
       setSelectedGlobalRole(null);
       return;
     }
-    if (selectedGlobalRole === "footer" && !project?.globalFooterBlock) {
+    if (selectedGlobalRole === "footer" && !globalFooterBlock) {
       setSelectedGlobalRole(null);
     }
-  }, [project?.globalFooterBlock, project?.globalNavBlock, selectedGlobalRole]);
+  }, [globalFooterBlock, globalNavBlock, selectedGlobalRole]);
 
   useEffect(() => {
     showTextToolbarRef.current = showTextToolbar;
@@ -294,6 +342,44 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const findEditable = (node) => {
     if (!(node instanceof Element)) return null;
     return node.closest?.('[contenteditable="true"], [data-inline-editor="true"], [data-layer-editor="true"], [data-website-inline-editor="true"]') || null;
+  };
+
+  const getEditablePlainText = (editable) => htmlToPlainText(editable?.innerHTML || editable?.textContent || "").replace(/\u00a0/g, " ").trim();
+
+  const getEditablePlaceholder = (editable) => {
+    const declared = String(editable?.getAttribute?.("data-placeholder") || editable?.getAttribute?.("data-text-placeholder") || "").trim();
+    if (declared) return declared;
+    const text = getEditablePlainText(editable);
+    return INLINE_EDITOR_PLACEHOLDERS.has(text) ? text : "";
+  };
+
+  const editableHasOnlyPlaceholder = (editable) => {
+    const placeholder = getEditablePlaceholder(editable);
+    return !!placeholder && getEditablePlainText(editable) === placeholder;
+  };
+
+  const clearEditablePlaceholder = (editable) => {
+    if (!editable || !editableHasOnlyPlaceholder(editable)) return false;
+    editable.innerHTML = "";
+    editable.setAttribute("data-placeholder-active", "true");
+    return true;
+  };
+
+  const normalizeEditableHtmlForSave = (editable) => (
+    editableHasOnlyPlaceholder(editable) ? "" : stripEditorArtifacts(editable?.innerHTML || "")
+  );
+
+  const scheduleLatestBlocksAutosave = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      Promise.resolve(onSaveRef.current(latestBlocksRef.current)).then((saved) => {
+        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
+      }).catch(() => {});
+    }, 1500);
   };
 
   const getTextToolbarDockPosition = () => {
@@ -317,7 +403,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     const blockRoot = editable.closest?.("[data-canvas-block-index]");
     const blockIndex = Number(blockRoot?.getAttribute?.("data-canvas-block-index"));
+    const propPath = String(editable.getAttribute?.("data-text-prop") || "");
+    activeTextTargetRef.current = {
+      editable,
+      blockIndex: Number.isInteger(blockIndex) ? blockIndex : null,
+      propPath,
+    };
     if (Number.isInteger(blockIndex)) {
+      selectedIndexRef.current = blockIndex;
+      selectedGlobalRoleRef.current = null;
       setSelectedGlobalRole(null);
       setSelectedIndex((prev) => (prev === blockIndex ? prev : blockIndex));
     }
@@ -341,7 +435,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       .trim() || "Arial";
     const fontSizeValue = Math.max(12, Math.round(parseFloat(computed.fontSize || "18") || 18));
     const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
-    const currentBlock = Number.isInteger(blockIndex) ? blocks[blockIndex] || null : null;
+    const currentBlocks = latestBlocksRef.current;
+    const currentBlock = Number.isInteger(blockIndex) && Array.isArray(currentBlocks) ? currentBlocks[blockIndex] || null : null;
     const layerIndex = Number.isInteger(currentBlock?.props?.selectedLayerIndex) ? currentBlock.props.selectedLayerIndex : null;
     const activeLayer = layerIndex != null && Array.isArray(currentBlock?.props?.images) ? currentBlock.props.images[layerIndex] : null;
     const motionBinding = getTextAnimationBinding(currentBlock, editable);
@@ -351,6 +446,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
       lineHeight: lineHeightValue,
+      fontWeight: String(computed.fontWeight || "400"),
+      fontStyle: String(computed.fontStyle || "normal"),
+      textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
+      textAlign: String(computed.textAlign || currentBlock?.props?.textAlign || currentBlock?.props?.alignment || "left"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -455,6 +554,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const handleEditableClick = (event) => {
       const editable = findEditable(event.target);
       if (!editable) return;
+      const clearedPlaceholder = clearEditablePlaceholder(editable);
+      if (clearedPlaceholder) {
+        const selection = window.getSelection?.();
+        const range = document.createRange();
+        range.selectNodeContents(editable);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        selectionRangeRef.current = range.cloneRange();
+      }
       // Only reset the drag flag when the toolbar is first being revealed (not already visible).
       // If the toolbar is already showing and the user just clicks into a different word/element,
       // keep the toolbar where they dragged it.
@@ -462,6 +571,40 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         textToolbarDraggedRef.current = false;
       }
       syncToolbarForEditable(editable, window.getSelection?.(), { reveal: true });
+      if (copiedTextFormatRef.current) {
+        applyCopiedTextFormatToActiveEditable();
+      }
+    };
+
+    const handleEditableBeforeInput = (event) => {
+      const editable = findEditable(event.target);
+      if (!editable) return;
+      if (!editableHasOnlyPlaceholder(editable)) return;
+      clearEditablePlaceholder(editable);
+      const selection = window.getSelection?.();
+      const range = document.createRange();
+      range.selectNodeContents(editable);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      selectionRangeRef.current = range.cloneRange();
+    };
+
+    const handleEditableInput = (event) => {
+      const editable = findEditable(event.target);
+      if (!editable) return;
+      syncToolbarForEditable(editable, window.getSelection?.(), { reveal: false });
+      syncActiveEditableToBlock(latestBlocksRef.current, { render: false });
+      scheduleLatestBlocksAutosave();
+    };
+
+    const handleVisibilityCommit = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        syncActiveEditableToBlock(latestBlocksRef.current, { render: false });
+        if (pendingLocalBlocksRef.current) {
+          Promise.resolve(onSaveRef.current(latestBlocksRef.current)).catch(() => {});
+        }
+      }
     };
 
     const handleOutside = (event) => {
@@ -514,6 +657,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         if (typeof window !== "undefined") {
           window.requestAnimationFrame(() => {
             activeEditableRef.current = null;
+            activeTextTargetRef.current = { editable: null, blockIndex: null, propPath: "" };
             selectionRangeRef.current = null;
             textToolbarDraggedRef.current = false;
             setShowTextToolbar(false);
@@ -521,6 +665,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           });
         } else {
           activeEditableRef.current = null;
+          activeTextTargetRef.current = { editable: null, blockIndex: null, propPath: "" };
           selectionRangeRef.current = null;
           textToolbarDraggedRef.current = false;
           setShowTextToolbar(false);
@@ -552,7 +697,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     document.addEventListener("keydown", handleEditableKeyDown, true);
     document.addEventListener("click", handleEditableClick, true);
     document.addEventListener("dblclick", handleEditableClick, true);
+    document.addEventListener("focusin", handleEditableClick, true);
+    document.addEventListener("beforeinput", handleEditableBeforeInput, true);
+    document.addEventListener("input", handleEditableInput, true);
+    document.addEventListener("paste", handleEditableBeforeInput, true);
     document.addEventListener("pointerdown", handleOutside, true);
+    document.addEventListener("visibilitychange", handleVisibilityCommit);
+    window.addEventListener("pagehide", handleVisibilityCommit);
 
     return () => {
       document.removeEventListener("selectionchange", syncTextToolbar);
@@ -561,7 +712,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       document.removeEventListener("keydown", handleEditableKeyDown, true);
       document.removeEventListener("click", handleEditableClick, true);
       document.removeEventListener("dblclick", handleEditableClick, true);
+      document.removeEventListener("focusin", handleEditableClick, true);
+      document.removeEventListener("beforeinput", handleEditableBeforeInput, true);
+      document.removeEventListener("input", handleEditableInput, true);
+      document.removeEventListener("paste", handleEditableBeforeInput, true);
       document.removeEventListener("pointerdown", handleOutside, true);
+      document.removeEventListener("visibilitychange", handleVisibilityCommit);
+      window.removeEventListener("pagehide", handleVisibilityCommit);
     };
   }, []);
 
@@ -747,31 +904,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleColumnSlotDrop = (sourceBlockIndex, targetColumnsBlockIndex, slotKey) => {
-    const sourceBlock = latestBlocksRef.current[sourceBlockIndex];
-    if (!sourceBlock) return;
-    // Remove source block from list
-    const without = latestBlocksRef.current.filter((_, i) => i !== sourceBlockIndex);
-    // Adjust target index after removal
-    const adjustedTarget = sourceBlockIndex < targetColumnsBlockIndex ? targetColumnsBlockIndex - 1 : targetColumnsBlockIndex;
-    const targetBlock = without[adjustedTarget];
-    if (!targetBlock || (targetBlock.type !== "columns-2" && targetBlock.type !== "columns-3")) return;
-    const ctKey = slotKey.replace("Block", "ContentType"); // e.g. rightColumnBlock → rightColumnContentType
-    const updated = without.map((b, i) => {
-      if (i !== adjustedTarget) return b;
-      return {
-        ...b,
-        props: {
-          ...b.props,
-          [slotKey]: { type: sourceBlock.type, id: sourceBlock.id, props: sourceBlock.props },
-          [ctKey]: "block",
-        },
-      };
-    });
-    pushHistory(latestBlocksRef.current.slice());
-    pendingLocalBlocksRef.current = true;
-    latestBlocksRef.current = updated;
-    setBlocks(updated);
-    selectCanvasBlock(adjustedTarget);
+    void sourceBlockIndex;
+    void targetColumnsBlockIndex;
+    void slotKey;
     setDraggedBlockIndex(null);
   };
 
@@ -905,6 +1040,38 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const handleCanvasAssetSelect = (index, key, asset) => {
     const normalizedAsset = normalizeSelectedAsset(asset);
+    if (key === "__addFloatingImage") {
+      if (!normalizedAsset?.src || typeof index !== "number") return;
+      const updated = [...blocks];
+      const target = updated[index];
+      if (!target) return;
+      const currentImages = Array.isArray(target?.props?.floatingImages) ? target.props.floatingImages : [];
+      updated[index] = {
+        ...target,
+        props: {
+          ...(target.props || {}),
+          floatingImages: [
+            ...currentImages,
+            {
+              src: normalizedAsset.src || "",
+              assetId: normalizedAsset.id || "",
+              x: 76,
+              y: 52,
+              width: 280,
+              height: 320,
+              animation: "sweep-left",
+              animationDelay: 0.08,
+              animationSpeed: 1.45,
+            },
+          ],
+        },
+      };
+      pendingLocalBlocksRef.current = true;
+      latestBlocksRef.current = updated;
+      setBlocks(updated);
+      onSelectAsset?.(index, key, normalizedAsset, updated);
+      return;
+    }
     const updated = applyAssetToCanvasBlock(index, key, normalizedAsset);
     if (!updated) return;
     onSelectAsset?.(index, key, normalizedAsset, updated);
@@ -1135,8 +1302,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   }, []);
 
   const canvasBlockEntries = useMemo(() => {
-    const hasGlobalNav = !!project?.globalNavBlock;
-    const hasGlobalFooter = !!project?.globalFooterBlock;
+    const hasGlobalNav = !!globalNavBlock;
+    const hasGlobalFooter = !!globalFooterBlock;
 
     return blocks
       .map((block, index) => ({ block, index }))
@@ -1145,7 +1312,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         if (hasGlobalFooter && block?.type === BlockTypes.FOOTER) return false;
         return true;
       });
-  }, [blocks, project?.globalFooterBlock, project?.globalNavBlock]);
+  }, [blocks, globalFooterBlock, globalNavBlock]);
 
   const applyGlobalStyles = (patch = {}) => {
     setBlocks((prev) => prev.map((block) => {
@@ -1292,6 +1459,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return assignPath(patched, [path[0], path[1], "content"], nextValue);
     }
 
+    if (path[0] === "items" && (path[2] === "title" || path[2] === "body")) {
+      const normalizedItemValue = stripEditorArtifacts(nextValue).replace(/<p>\s*<\/p>/gi, "").trim();
+      return assignPath(patched, path, normalizedItemValue);
+    }
+
+    if (path[0] === "items" && path[2] === "textBlocks" && path[4] === "text") {
+      const itemIndex = Number(path[1]);
+      const textBlockIndex = Number(path[3]);
+      const nextItems = Array.isArray(patched.items) ? [...patched.items] : [];
+      const nextItem = nextItems[itemIndex] && typeof nextItems[itemIndex] === "object" ? { ...nextItems[itemIndex] } : {};
+      const nextTextBlocks = Array.isArray(nextItem.textBlocks) ? [...nextItem.textBlocks] : [];
+      nextTextBlocks[textBlockIndex] = {
+        ...(nextTextBlocks[textBlockIndex] || {}),
+        text: nextValue,
+        style: nextTextBlocks[textBlockIndex]?.style || {},
+      };
+      nextItem.textBlocks = nextTextBlocks;
+      nextItem.title = nextTextBlocks.find((block) => block?.type === "headline")?.text || nextItem.title || "";
+      nextItem.body = nextTextBlocks.filter((block) => block?.type === "text").map((block) => block?.text || "").join("\n\n");
+      nextItems[itemIndex] = nextItem;
+      return { ...patched, items: nextItems };
+    }
+
     if (path[0] === "faqBlock" && path[1] === "items" && path[3] === "question") {
       return assignPath(patched, [path[0], path[1], path[2], "heading"], nextValue);
     }
@@ -1320,7 +1510,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
       updated[blockIndex] = {
         ...updated[blockIndex],
-        props: applyInlinePropPatch(updated[blockIndex]?.props || {}, propPath, stripEditorArtifacts(node.innerHTML)),
+        props: applyInlinePropPatch(updated[blockIndex]?.props || {}, propPath, normalizeEditableHtmlForSave(node)),
       };
     });
 
@@ -1330,14 +1520,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return updated;
   };
 
-  const syncActiveEditableToBlock = (sourceBlocks = blocks) => {
+  const syncActiveEditableToBlock = (sourceBlocks = blocks, options = {}) => {
     const editable = activeEditableRef.current;
     const activeBlockIndex = selectedIndexRef.current;
     if (!editable || typeof activeBlockIndex !== "number" || !Array.isArray(sourceBlocks) || !sourceBlocks[activeBlockIndex]) {
       return sourceBlocks;
     }
 
-    const nextHtml = stripEditorArtifacts(editable.innerHTML);
+    const nextHtml = normalizeEditableHtmlForSave(editable);
     const updated = [...sourceBlocks];
     const currentBlock = updated[activeBlockIndex];
 
@@ -1397,7 +1587,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       };
       pendingLocalBlocksRef.current = true;
       latestBlocksRef.current = updated;
-      setBlocks(updated);
+      if (options?.render !== false) setBlocks(updated);
       return updated;
     }
 
@@ -1439,7 +1629,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     };
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
-    setBlocks(updated);
+    if (options?.render !== false) setBlocks(updated);
     return updated;
   };
 
@@ -1462,6 +1652,48 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return serializeCanvasInlineEditors(syncedActive);
   };
 
+  const writePreviewSnapshot = (committedBlocks, savedProject = null) => {
+    if (typeof window === "undefined" || !project?.id) return "";
+    const token = createPreviewToken();
+    const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
+    const sourceProject = savedProject && typeof savedProject === "object" ? savedProject : project;
+    const pages = Array.isArray(sourceProject?.pages) ? sourceProject.pages : [];
+    const selectedPage = pages.find((entry) => entry?.name === pageName) || pages[0] || { name: pageName };
+    const snapshotProject = {
+      ...sourceProject,
+      id: project.id,
+      pages: selectedPage ? [selectedPage] : [{ name: pageName }],
+      pageBlocks: {
+        [pageName]: committedBlocks,
+      },
+      pagesContent: {
+        ...(sourceProject?.pagesContent?.[pageName] !== undefined ? { [pageName]: sourceProject.pagesContent[pageName] || "" } : {}),
+      },
+      chaiData: {
+        ...(sourceProject?.chaiData?.[pageName] ? { [pageName]: sourceProject.chaiData[pageName] } : {}),
+      },
+      updatedAt: new Date().toISOString(),
+      status: "saved",
+    };
+    try {
+      const snapshotPrefix = `${PREVIEW_SNAPSHOT_STORAGE_PREFIX}${project.id}:`;
+      for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+        const key = window.localStorage.key(index);
+        if (key?.startsWith(snapshotPrefix)) {
+          window.localStorage.removeItem(key);
+        }
+      }
+      window.localStorage.setItem(
+        `${snapshotPrefix}${token}`,
+        JSON.stringify({ project: snapshotProject, pageName, savedAt: Date.now() })
+      );
+    } catch (error) {
+      console.warn("Could not write website preview snapshot", error);
+      return "";
+    }
+    return token;
+  };
+
   const handlePreviewPage = async () => {
     if (!project?.id) return;
     const previewWindow = window.open("about:blank", "_blank");
@@ -1472,19 +1704,32 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    const saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks));
-    if (!saved) {
-      previewWindow.close();
-      showSavePopup("Could not save before preview", "error");
-      return;
+    let saved = null;
+    try {
+      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+    } catch (error) {
+      console.error("Could not save before preview", error);
+      saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
     }
-    // saved._saveError: forceSaveBlockPage hit an error but still returned truthy — proceed to preview anyway
+    const previewToken = writePreviewSnapshot(committedBlocks, saved && !saved?._saveError ? saved : null);
     const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
     const pageSlug = pageName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "home";
     const previewUrl = new URL(
       `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageSlug)}&viewport=${encodeURIComponent(previewMode)}`,
       window.location.origin,
     ).toString();
+    if (!saved || saved?._saveError) {
+      const message = saved?._saveErrorMessage || "Preview blocked because the page did not save successfully.";
+      previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message}</p>`;
+      showSavePopup(message, "error");
+      return;
+    }
+    if (previewToken) {
+      const url = new URL(previewUrl);
+      url.searchParams.set("previewToken", previewToken);
+      previewWindow.location.replace(url.toString());
+      return;
+    }
     previewWindow.location.replace(previewUrl);
   };
 
@@ -1498,17 +1743,30 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    const saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks));
-    if (!saved) {
-      previewWindow.close();
-      showSavePopup("Could not save before preview", "error");
-      return;
+    let saved = null;
+    try {
+      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+    } catch (error) {
+      console.error("Could not save before preview", error);
+      saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
     }
-    // saved._saveError: proceed to preview with whatever was last saved
+    const previewToken = writePreviewSnapshot(committedBlocks, saved && !saved?._saveError ? saved : null);
     const previewUrl = new URL(
       `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewMode)}`,
       window.location.origin,
     ).toString();
+    if (!saved || saved?._saveError) {
+      const message = saved?._saveErrorMessage || "Preview blocked because the site did not save successfully.";
+      previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message}</p>`;
+      showSavePopup(message, "error");
+      return;
+    }
+    if (previewToken) {
+      const url = new URL(previewUrl);
+      url.searchParams.set("previewToken", previewToken);
+      previewWindow.location.replace(url.toString());
+      return;
+    }
     previewWindow.location.replace(previewUrl);
   };
 
@@ -1520,7 +1778,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const restoreSavedSelection = () => {
     if (typeof window === "undefined") return;
-    const editable = activeEditableRef.current;
+    const editable = activeTextTargetRef.current?.editable || activeEditableRef.current;
     const savedRange = selectionRangeRef.current;
     if (!editable || !savedRange) return;
     editable.focus();
@@ -1558,7 +1816,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const cleanupEditableMarkup = () => {
-    const editable = activeEditableRef.current;
+    const editable = activeTextTargetRef.current?.editable || activeEditableRef.current;
     if (!editable || typeof document === "undefined") return;
     // Remove zero-width spaces from text nodes in-place (preserves live DOM selection).
     // Previously this used editable.innerHTML = cleanedHtml which destroyed the DOM and
@@ -1628,10 +1886,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     root.querySelectorAll?.("[style]").forEach(stripElement);
   };
 
+  const stripSemanticTextTagsForPatch = (root, stylePatch = {}) => {
+    if (!root) return;
+    const unwrapSelector = [
+      stylePatch.fontWeight !== undefined && Number.parseInt(String(stylePatch.fontWeight || "400"), 10) < 600 ? "b,strong" : "",
+      stylePatch.fontStyle !== undefined && String(stylePatch.fontStyle || "normal") !== "italic" ? "i,em" : "",
+      stylePatch.textDecoration !== undefined && !String(stylePatch.textDecoration || "").includes("underline") ? "u" : "",
+    ].filter(Boolean).join(",");
+    if (!unwrapSelector) return;
+    root.querySelectorAll?.(unwrapSelector).forEach((element) => {
+      element.replaceWith(...Array.from(element.childNodes));
+    });
+  };
+
   const wrapEditableHtmlWithStyles = (editable, stylePatch = {}) => {
     const template = document.createElement("template");
     template.innerHTML = stripEditorArtifacts(editable.innerHTML) || htmlToPlainText(editable.textContent || "");
     stripInlineStyleKeys(template.content, Object.keys(stylePatch));
+    stripSemanticTextTagsForPatch(template.content, stylePatch);
     if (stylePatch.lineHeight !== undefined) {
       stripInlineStyleKeys(template.content, ["marginTop", "marginBottom"]);
     }
@@ -1640,6 +1912,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const hasBlockContent = editable.classList?.contains("wb-text-block") || !!template.content.querySelector(blockSelector);
 
     if (hasBlockContent) {
+      template.content.querySelectorAll(blockSelector).forEach((node) => {
+        Object.entries(stylePatch).forEach(([key, value]) => {
+          node.style[key] = value;
+        });
+      });
+
       const topLevelNodes = Array.from(template.content.childNodes);
       topLevelNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE && node.matches?.(blockSelector)) {
@@ -1746,13 +2024,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return false;
     }
 
-    // Before extracting, preserve an explicit inline font-size from the selected
-    // text's own ancestry. Do not copy a computed/default font-size here: color-only
-    // commands must never introduce a new size and make the text jump.
+    // Before extracting, preserve the selected text size when requested by commands
+    // that wrap text without otherwise changing typography, such as color changes.
     const rangeParentEl = range.commonAncestorContainer?.nodeType === 3
       ? range.commonAncestorContainer.parentElement
       : (range.commonAncestorContainer instanceof Element ? range.commonAncestorContainer : null);
     let preservedFontSize = null;
+    const requestedPreservedFontSize = options.preserveFontSize
+      ? `${parseToolbarFontSize(options.preserveFontSize, 18)}px`
+      : null;
     if (!stylePatch.fontSize && rangeParentEl instanceof Element && editable.contains(rangeParentEl)) {
       let sizeSource = rangeParentEl;
       while (sizeSource instanceof Element && sizeSource !== editable) {
@@ -1763,6 +2043,20 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         sizeSource = sizeSource.parentElement;
       }
     }
+    if (!preservedFontSize && options.preserveRenderedFontSize) {
+      const selection = window.getSelection?.();
+      const renderedSizeSource = getSelectionStyleSource(editable, selection) || rangeParentEl || editable;
+      const renderedFontSize = renderedSizeSource instanceof Element
+        ? window.getComputedStyle(renderedSizeSource).fontSize
+        : "";
+      const renderedFontSizeValue = Number.parseFloat(renderedFontSize);
+      if (Number.isFinite(renderedFontSizeValue) && renderedFontSizeValue > 0) {
+        preservedFontSize = `${Math.max(8, Math.min(240, Math.round(renderedFontSizeValue)))}px`;
+      }
+    }
+    if (!preservedFontSize && requestedPreservedFontSize) {
+      preservedFontSize = requestedPreservedFontSize;
+    }
 
     const extracted = range.extractContents();
 
@@ -1771,6 +2065,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (Object.keys(stylePatch).length) {
       const propsToStrip = Object.keys(stylePatch);
       stripInlineStyleKeys(extracted, propsToStrip);
+      stripSemanticTextTagsForPatch(extracted, stylePatch);
     }
 
     const wrapper = document.createElement("span");
@@ -1815,7 +2110,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const getExplicitFontSize = () => {
       const focusNode = selection?.focusNode || selection?.anchorNode;
       const el = focusNode?.nodeType === 3 ? focusNode.parentElement : (focusNode instanceof Element ? focusNode : null);
-      if (el instanceof Element && editable.contains(el)) {
+      if (el instanceof Element && el !== editable && editable.contains(el)) {
         // Use the computed style of the immediate element at the cursor — this gives
         // the actual rendered size including CSS-class sizes and inherited inline sizes.
         return window.getComputedStyle(el).fontSize || null;
@@ -1823,7 +2118,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return null;
     };
     const explicitFontSize = getExplicitFontSize();
-    const fontSizeValue = Math.max(12, Math.round(parseFloat(explicitFontSize || editableComputed.fontSize || "18") || 18));
+    const fontSizeValue = Math.max(12, Math.round(parseFloat(explicitFontSize || computed.fontSize || editableComputed.fontSize || "18") || 18));
     const lineHeightValue = normalizeComputedLineHeight(computed.lineHeight, computed.fontSize, tagName === "P" ? 1.7 : 1.2);
     const currentBlockIndex = selectedIndexRef.current;
     const currentBlock = typeof currentBlockIndex === "number" ? latestBlocksRef.current[currentBlockIndex] || null : null;
@@ -1837,6 +2132,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontFamily: fontFamilyRaw,
       fontSize: fontSizeValue,
       lineHeight: lineHeightValue,
+      fontWeight: String(computed.fontWeight || "400"),
+      fontStyle: String(computed.fontStyle || "normal"),
+      textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : prev.blockType || "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -1847,6 +2145,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       textAnimationDelay: motionBinding ? Number(currentBlock?.props?.[motionBinding.delayKey] || 0) : (prev.textAnimationDelay || 0),
       motionLabel: motionBinding?.label || prev.motionLabel || "Text Motion",
     }));
+  };
+
+  const lockTextTargetFromSelection = () => {
+    if (typeof window === "undefined" || typeof document === "undefined") return null;
+    const selection = window.getSelection?.();
+    const node = selection?.focusNode || selection?.anchorNode || null;
+    const element = node?.nodeType === 3 ? node.parentElement : node;
+    const editable = findEditable(element) || activeTextTargetRef.current?.editable || activeEditableRef.current;
+    if (!editable) return null;
+
+    const blockRoot = editable.closest?.("[data-canvas-block-index]");
+    const blockIndex = Number(blockRoot?.getAttribute?.("data-canvas-block-index"));
+    const propPath = String(editable.getAttribute?.("data-text-prop") || "");
+    activeEditableRef.current = editable;
+    activeTextTargetRef.current = {
+      editable,
+      blockIndex: Number.isInteger(blockIndex) ? blockIndex : null,
+      propPath,
+    };
+    if (Number.isInteger(blockIndex)) {
+      selectedIndexRef.current = blockIndex;
+    }
+    return activeTextTargetRef.current;
   };
 
   const applyTextAnimationChange = (patch = {}) => {
@@ -1911,28 +2232,139 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     return true;
   };
 
-  const updateActiveBlockTypography = (patch = {}) => {
+  const getActiveTextFormat = () => {
+    if (typeof window === "undefined" || typeof document === "undefined") return null;
     const editable = activeEditableRef.current;
-    const blockIndex = selectedIndexRef.current;
+    if (!editable) return null;
+    const selection = window.getSelection?.();
+    const styleSource = getSelectionStyleSource(editable, selection) || editable;
+    const computed = window.getComputedStyle(styleSource);
+    const editableComputed = window.getComputedStyle(editable);
+    const firstStyledDescendant = Array.from(editable.querySelectorAll?.("[style]") || []).find((element) => (
+      element instanceof Element
+      && element.textContent?.trim()
+      && (
+        element.style.fontSize
+        || element.style.color
+        || element.style.fontFamily
+        || element.style.fontWeight
+        || element.style.lineHeight
+        || element.style.textAlign
+        || element.style.backgroundColor
+      )
+    ));
+
+    const findInlineStyle = (key) => {
+      let current = styleSource instanceof Element ? styleSource : null;
+      while (current && current instanceof Element && editable.contains(current)) {
+        const value = current.style?.[key];
+        if (value) return value;
+        if (current === editable) break;
+        current = current.parentElement;
+      }
+      const descendantValue = firstStyledDescendant?.style?.[key];
+      return descendantValue || "";
+    };
+
+    const rawFontSize = findInlineStyle("fontSize") || computed.fontSize || editableComputed.fontSize;
+    const rawColor = findInlineStyle("color") || computed.color || editableComputed.color;
+    const rawBackground = findInlineStyle("backgroundColor") || computed.backgroundColor || "transparent";
+    const rawFontFamily = findInlineStyle("fontFamily") || computed.fontFamily || editableComputed.fontFamily;
+    const rawFontWeight = findInlineStyle("fontWeight") || computed.fontWeight || editableComputed.fontWeight || "400";
+    const rawFontStyle = findInlineStyle("fontStyle") || computed.fontStyle || editableComputed.fontStyle || "normal";
+    const rawTextDecoration = findInlineStyle("textDecoration") || computed.textDecorationLine || computed.textDecoration || "none";
+    const rawTextAlign = editable.style.textAlign || editableComputed.textAlign || findInlineStyle("textAlign") || computed.textAlign || "left";
+    const rawLineHeight = findInlineStyle("lineHeight") || computed.lineHeight || editableComputed.lineHeight;
+
+    return {
+      color: rgbToHex(rawColor, "#111827"),
+      backgroundColor: normalizeToolbarBackgroundColor(rawBackground) || "transparent",
+      fontFamily: String(rawFontFamily || "Arial").split(",")[0].replace(/["']/g, "").trim() || "Arial",
+      fontSize: parseToolbarFontSize(rawFontSize, textToolbarState.fontSize || 18),
+      lineHeight: normalizeComputedLineHeight(rawLineHeight, rawFontSize || computed.fontSize, textToolbarState.lineHeight || 1.5),
+      fontWeight: String(rawFontWeight || "400"),
+      fontStyle: String(rawFontStyle || "normal"),
+      textDecoration: String(rawTextDecoration || "none"),
+      textAlign: String(rawTextAlign || "left"),
+    };
+  };
+
+  const handleCopyTextFormat = () => {
+    const format = getActiveTextFormat();
+    if (!format) {
+      showSavePopup("Click text before copying format", "error");
+      return;
+    }
+    copiedTextFormatRef.current = format;
+    setCopiedTextFormat(format);
+    showSavePopup("Format copied. Click another text box to apply it.", "success");
+  };
+
+  const handleClearCopiedTextFormat = () => {
+    copiedTextFormatRef.current = null;
+    setCopiedTextFormat(null);
+  };
+
+  const applyCopiedTextFormatToActiveEditable = () => {
+    const format = copiedTextFormatRef.current;
+    if (!format) return false;
+    const editable = activeEditableRef.current;
+    if (editable && typeof document !== "undefined" && typeof window !== "undefined") {
+      const selection = window.getSelection?.();
+      const range = document.createRange();
+      range.selectNodeContents(editable);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      selectionRangeRef.current = range.cloneRange();
+    }
+    const applied = updateActiveBlockTypography(format);
+    if (applied) {
+      copiedTextFormatRef.current = null;
+      setCopiedTextFormat(null);
+      showSavePopup("Format applied", "success");
+    }
+    return applied;
+  };
+
+  const updateActiveBlockTypography = (patch = {}) => {
+    const target = activeTextTargetRef.current || {};
+    const editable = target.editable || activeEditableRef.current;
+    const blockIndex = Number.isInteger(target.blockIndex) ? target.blockIndex : selectedIndexRef.current;
     const currentBlocks = latestBlocksRef.current;
     const currentBlock = Number.isInteger(blockIndex) && Array.isArray(currentBlocks) ? currentBlocks[blockIndex] : null;
-    const propPath = String(editable?.getAttribute?.("data-text-prop") || "");
+    let propPath = String(target.propPath || editable?.getAttribute?.("data-text-prop") || "");
+    if (!propPath && /^H[1-6]$/i.test(String(editable?.tagName || "")) && Object.prototype.hasOwnProperty.call(currentBlock?.props || {}, "title")) {
+      propPath = "title";
+    }
     const propName = propPath.toLowerCase();
 
     if (!editable || !currentBlock || !propName) return false;
 
+    const featureTextBlockMatch = propPath.match(/^items\.(\d+)\.textBlocks\.(\d+)\.text$/);
+    const isFeatureTextBlock = !!featureTextBlockMatch;
+    const textBlockStylePatch = {};
     const isHeadingText = /(headline|heading|title|name|price|eyebrow)/i.test(propName);
     let nextProps = { ...(currentBlock.props || {}) };
     const inlineStylePatch = {};
 
     if (patch.fontSize !== undefined) {
-      const nextSize = Math.max(8, Math.min(240, Number.parseInt(String(patch.fontSize), 10) || 18));
+      const nextSize = parseToolbarFontSize(patch.fontSize, textToolbarState.fontSize || 18);
       editable.style.fontSize = `${nextSize}px`;
       inlineStylePatch.fontSize = `${nextSize}px`;
-      if (isHeadingText) {
+      textBlockStylePatch.fontSize = `${nextSize}px`;
+      editable.querySelectorAll?.("[style]").forEach((element) => {
+        element.style.fontSize = "";
+        if (!element.getAttribute("style")?.trim()) element.removeAttribute("style");
+      });
+      if (!isFeatureTextBlock && currentBlock.type === BlockTypes.TEXT && propName === "text") {
+        nextProps.textFontSize = nextSize;
+        nextProps.bodyFontSize = nextSize;
+        nextProps.subheadlineFontSize = nextSize;
+      }
+      if (!isFeatureTextBlock && isHeadingText) {
         nextProps.headlineFontSize = nextSize;
         nextProps.headingFontSize = nextSize;
-      } else {
+      } else if (!isFeatureTextBlock) {
         nextProps.textFontSize = nextSize;
         nextProps.bodyFontSize = nextSize;
         if (/(subheadline|subtitle|description|body)/i.test(propName)) {
@@ -1941,16 +2373,112 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       }
     }
 
+    if (patch.color !== undefined) {
+      const nextColor = String(patch.color || "#111827");
+      editable.style.color = nextColor;
+      inlineStylePatch.color = nextColor;
+      textBlockStylePatch.color = nextColor;
+      if (!isFeatureTextBlock && isHeadingText) {
+        nextProps.headlineColor = nextColor;
+        nextProps.headingColor = nextColor;
+      } else if (!isFeatureTextBlock) {
+        nextProps.textColor = nextColor;
+        nextProps.bodyColor = nextColor;
+        nextProps.subtleTextColor = nextColor;
+      }
+    }
+
+    if (patch.backgroundColor !== undefined) {
+      const nextBackground = String(patch.backgroundColor || "transparent");
+      editable.style.backgroundColor = nextBackground === "transparent" ? "" : nextBackground;
+      inlineStylePatch.backgroundColor = nextBackground;
+      textBlockStylePatch.backgroundColor = nextBackground;
+      if (!isFeatureTextBlock) {
+        nextProps.textBackgroundColor = nextBackground;
+        nextProps.highlightColor = nextBackground;
+      }
+    }
+
     if (patch.fontFamily !== undefined) {
       const nextFamily = String(patch.fontFamily || "Arial");
       editable.style.fontFamily = nextFamily;
       inlineStylePatch.fontFamily = nextFamily;
-      if (isHeadingText) {
+      textBlockStylePatch.fontFamily = nextFamily;
+      if (!isFeatureTextBlock && isHeadingText) {
         nextProps.headlineFontFamily = nextFamily;
         nextProps.headingFontFamily = nextFamily;
-      } else {
+      } else if (!isFeatureTextBlock) {
         nextProps.fontFamily = nextFamily;
         nextProps.bodyFontFamily = nextFamily;
+      }
+    }
+
+    if (patch.lineHeight !== undefined) {
+      const nextLineHeight = normalizeLineHeightValue(patch.lineHeight, textToolbarState.lineHeight || 1.5);
+      editable.style.lineHeight = String(nextLineHeight);
+      inlineStylePatch.lineHeight = String(nextLineHeight);
+      textBlockStylePatch.lineHeight = String(nextLineHeight);
+      if (!isFeatureTextBlock) {
+        nextProps.textLineHeight = nextLineHeight;
+        nextProps.bodyLineHeight = nextLineHeight;
+        nextProps.lineHeight = nextLineHeight;
+      }
+      if (!isFeatureTextBlock && isHeadingText) {
+        nextProps.headlineLineHeight = nextLineHeight;
+        nextProps.headingLineHeight = nextLineHeight;
+      }
+    }
+
+    if (patch.fontWeight !== undefined) {
+      const nextWeight = String(patch.fontWeight || "400");
+      editable.style.fontWeight = nextWeight;
+      inlineStylePatch.fontWeight = nextWeight;
+      textBlockStylePatch.fontWeight = nextWeight;
+      if (!isFeatureTextBlock && isHeadingText) {
+        nextProps.headlineFontWeight = nextWeight;
+        nextProps.headingFontWeight = nextWeight;
+      } else if (!isFeatureTextBlock) {
+        nextProps.fontWeight = nextWeight;
+        nextProps.bodyFontWeight = nextWeight;
+      }
+    }
+
+    if (patch.fontStyle !== undefined) {
+      const nextStyle = String(patch.fontStyle || "normal");
+      editable.style.fontStyle = nextStyle;
+      inlineStylePatch.fontStyle = nextStyle;
+      textBlockStylePatch.fontStyle = nextStyle;
+    }
+
+    if (patch.textDecoration !== undefined) {
+      const nextDecoration = String(patch.textDecoration || "none");
+      editable.style.textDecoration = nextDecoration;
+      inlineStylePatch.textDecoration = nextDecoration;
+      textBlockStylePatch.textDecoration = nextDecoration;
+    }
+
+    if (patch.textAlign !== undefined) {
+      const nextAlign = ["left", "center", "right", "justify"].includes(String(patch.textAlign))
+        ? String(patch.textAlign)
+        : "left";
+      editable.style.textAlign = nextAlign;
+      inlineStylePatch.textAlign = nextAlign;
+      textBlockStylePatch.textAlign = nextAlign;
+      if (!isFeatureTextBlock) {
+        nextProps.textAlign = nextAlign;
+        nextProps.alignment = nextAlign;
+        nextProps.contentAlign = nextAlign;
+      }
+      if (!isFeatureTextBlock && isHeadingText) {
+        nextProps.headingAlign = nextAlign;
+        nextProps.headlineAlign = nextAlign;
+        nextProps.headlineAlignment = nextAlign;
+      } else if (!isFeatureTextBlock) {
+        nextProps.bodyAlign = nextAlign;
+      }
+      const columnPrefix = propPath.match(/^(left|right|column1|column2|column3)(?:title|content)?$/i)?.[1];
+      if (!isFeatureTextBlock && columnPrefix) {
+        nextProps[`${columnPrefix}ContentAlign`] = nextAlign;
       }
     }
 
@@ -1958,6 +2486,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
       nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
       editable.innerHTML = nextHtml;
+
+      if (isFeatureTextBlock && Object.keys(textBlockStylePatch).length) {
+        const itemIndex = Number(featureTextBlockMatch[1]);
+        const textBlockIndex = Number(featureTextBlockMatch[2]);
+        const nextItems = Array.isArray(nextProps.items) ? [...nextProps.items] : [];
+        const nextItem = nextItems[itemIndex] && typeof nextItems[itemIndex] === "object" ? { ...nextItems[itemIndex] } : {};
+        const nextTextBlocks = Array.isArray(nextItem.textBlocks) ? [...nextItem.textBlocks] : [];
+        const nextTextBlock = nextTextBlocks[textBlockIndex] && typeof nextTextBlocks[textBlockIndex] === "object"
+          ? { ...nextTextBlocks[textBlockIndex] }
+          : {};
+        nextTextBlocks[textBlockIndex] = {
+          ...nextTextBlock,
+          style: {
+            ...(nextTextBlock.style || {}),
+            ...textBlockStylePatch,
+          },
+        };
+        nextItem.textBlocks = nextTextBlocks;
+        nextItems[itemIndex] = nextItem;
+        nextProps = { ...nextProps, items: nextItems };
+      }
 
       const selection = window.getSelection?.();
       const nextRange = document.createRange();
@@ -1976,8 +2525,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setBlocks(updatedBlocks);
     setTextToolbarState((prev) => ({
       ...prev,
-      ...(patch.fontSize !== undefined ? { fontSize: Math.max(8, Math.min(240, Number.parseInt(String(patch.fontSize), 10) || 18)) } : {}),
+      ...(patch.fontSize !== undefined ? { fontSize: parseToolbarFontSize(patch.fontSize, prev.fontSize || 18) } : {}),
+      ...(patch.lineHeight !== undefined ? { lineHeight: normalizeLineHeightValue(patch.lineHeight, prev.lineHeight || 1.5) } : {}),
       ...(patch.fontFamily !== undefined ? { fontFamily: String(patch.fontFamily || "Arial") } : {}),
+      ...(patch.color !== undefined ? { color: String(patch.color || "#111827") } : {}),
+      ...(patch.backgroundColor !== undefined ? { highlight: String(patch.backgroundColor || "transparent") } : {}),
+      ...(patch.fontWeight !== undefined ? { fontWeight: String(patch.fontWeight || "400") } : {}),
+      ...(patch.fontStyle !== undefined ? { fontStyle: String(patch.fontStyle || "normal") } : {}),
+      ...(patch.textDecoration !== undefined ? { textDecoration: String(patch.textDecoration || "none") } : {}),
+      ...(patch.textAlign !== undefined ? { textAlign: String(patch.textAlign || "left") } : {}),
     }));
     preserveCurrentSelection();
     refreshToolbarFromEditable();
@@ -1985,15 +2541,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const runTextCommand = (command, value = null) => {
-    const editable = activeEditableRef.current;
+    lockTextTargetFromSelection();
+    const editable = activeTextTargetRef.current?.editable || activeEditableRef.current;
     if (!editable || typeof document === "undefined") return;
 
     restoreSavedSelection();
     editable.focus();
-
-    try {
-      document.execCommand("styleWithCSS", false, true);
-    } catch {}
 
     const activeRange = getActiveSelectionRange();
     const hasTextSelection = !!activeRange && !activeRange.collapsed;
@@ -2006,156 +2559,155 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       refreshToolbarFromEditable();
     };
 
-    if (command === "createLink") {
-      nextValue = typeof window !== "undefined" ? window.prompt("Enter link URL", "https://") : "";
-      if (!hasTextSelection) return;
-      if (!nextValue) {
-        try { document.execCommand("unlink", false, null); } catch {}
-        finishTextCommand();
-        return;
-      }
-    }
-
-    // Helper: select all content inside the active editable so toolbar changes land
-    // inside innerHTML (persisted) rather than on the live DOM element (lost on render).
-    const selectAllInEditable = () => {
-      if (!editable || typeof document === "undefined") return;
-      const sel = window.getSelection?.();
-      if (!sel) return;
-      const range = document.createRange();
-      range.selectNodeContents(editable);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      selectionRangeRef.current = range.cloneRange();
-    };
-
-    const ensureTextSelection = () => {
+    const applyStyleCommand = (stylePatch = {}, options = {}) => {
       const currentRange = getActiveSelectionRange();
-      if (currentRange && !currentRange.collapsed) return true;
-      selectAllInEditable();
-      const nextRange = getActiveSelectionRange();
-      return !!nextRange && !nextRange.collapsed;
-    };
-
-    const applyPersistentInlineStyle = (stylePatch = {}) => {
-      if (!ensureTextSelection()) return false;
-      return applyInlineStyleToSelection(stylePatch);
+      const currentHasSelection = !!currentRange && !currentRange.collapsed;
+      if (currentHasSelection) {
+        const appliedInline = applyInlineStyleToSelection(stylePatch, options);
+        if (appliedInline) {
+          syncActiveEditableToBlock(latestBlocksRef.current);
+          finishTextCommand();
+          return true;
+        }
+      }
+      const appliedBlock = updateActiveBlockTypography(stylePatch);
+      if (appliedBlock) {
+        finishTextCommand();
+        return true;
+      }
+      return false;
     };
 
     if (command === "formatBlock") {
       const blockKey = String(nextValue || "P").toUpperCase();
       const stylePreset = BLOCK_TYPE_STYLE_PRESETS[blockKey] || BLOCK_TYPE_STYLE_PRESETS.P;
-      applyPersistentInlineStyle(stylePreset);
+      applyStyleCommand(stylePreset);
       setTextToolbarState((prev) => ({
         ...prev,
         blockType: blockKey,
         fontSize: Number.parseInt(stylePreset.fontSize, 10) || prev.fontSize,
         lineHeight: Number.parseFloat(stylePreset.lineHeight) || prev.lineHeight,
       }));
-      finishTextCommand();
       return;
     }
 
     if (command === "fontSize") {
-      const pxValue = `${Number(nextValue || 18)}px`;
-      if (!hasTextSelection && updateActiveBlockTypography({ fontSize: pxValue })) {
-        return;
-      }
-      applyPersistentInlineStyle({ fontSize: pxValue });
-      setTextToolbarState((prev) => ({ ...prev, fontSize: Number(nextValue || 18) }));
-      finishTextCommand();
+      const nextSize = parseToolbarFontSize(nextValue, textToolbarState.fontSize || 18);
+      const pxValue = `${nextSize}px`;
+      syncActiveEditableToBlock(latestBlocksRef.current);
+      setTextToolbarState((prev) => ({ ...prev, fontSize: nextSize }));
+      applyStyleCommand({ fontSize: pxValue });
       return;
     }
 
     if (command === "lineHeight") {
       const lineHeightValue = normalizeLineHeightValue(nextValue || 1.5);
-      if (!hasTextSelection && updateActiveTextBlockLineHeight(lineHeightValue)) {
+      if (!hasTextSelection && editable.getAttribute?.("data-text-prop") === "text" && updateActiveTextBlockLineHeight(lineHeightValue)) {
         refreshToolbarFromEditable();
         return;
       }
-      applyPersistentInlineStyle({ lineHeight: String(lineHeightValue) });
       setTextToolbarState((prev) => ({ ...prev, lineHeight: lineHeightValue }));
-      finishTextCommand();
+      applyStyleCommand({ lineHeight: String(lineHeightValue) });
       return;
     }
 
     if (command === "fontName") {
       const fontValue = String(nextValue || "Arial");
-      if (!hasTextSelection && updateActiveBlockTypography({ fontFamily: fontValue })) {
-        return;
-      }
-      applyPersistentInlineStyle({ fontFamily: fontValue });
       setTextToolbarState((prev) => ({ ...prev, fontFamily: fontValue }));
-      finishTextCommand();
+      applyStyleCommand({ fontFamily: fontValue });
       return;
     }
 
     if (command === "foreColor") {
       const colorValue = String(nextValue || "#111827");
-      applyPersistentInlineStyle({ color: colorValue });
-      setTextToolbarState((prev) => ({ ...prev, color: colorValue }));
-      finishTextCommand();
+      setTextToolbarState((prev) => ({ ...prev, color: colorValue, fontSize: prev.fontSize }));
+      applyStyleCommand({ color: colorValue }, { preserveRenderedFontSize: true, preserveFontSize: textToolbarState.fontSize });
       return;
     }
 
     if (command === "hiliteColor") {
       const isRemove = nextValue === "transparent" || nextValue === "none" || !nextValue;
       const bgValue = isRemove ? "transparent" : String(nextValue);
-      applyPersistentInlineStyle({ backgroundColor: bgValue });
       if (!isRemove) {
-        setTextToolbarState((prev) => ({ ...prev, highlight: String(nextValue) }));
+        setTextToolbarState((prev) => ({ ...prev, highlight: String(nextValue), fontSize: prev.fontSize }));
       }
-      finishTextCommand();
+      applyStyleCommand({ backgroundColor: bgValue }, { preserveRenderedFontSize: true, preserveFontSize: textToolbarState.fontSize });
       return;
     }
 
     if (command === "bold") {
-      if (ensureTextSelection()) {
-        try { document.execCommand("bold", false, null); } catch {}
+      const current = String(textToolbarState.fontWeight || getActiveTextFormat()?.fontWeight || "400");
+      const nextWeight = Number.parseInt(current, 10) >= 600 ? "400" : "700";
+      if (updateActiveBlockTypography({ fontWeight: nextWeight })) {
+        setTextToolbarState((prev) => ({ ...prev, fontWeight: nextWeight }));
+        preserveCurrentSelection();
+        refreshToolbarFromEditable();
       }
-      finishTextCommand();
       return;
     }
 
     if (command === "italic") {
-      if (ensureTextSelection()) {
-        try { document.execCommand("italic", false, null); } catch {}
+      const current = String(textToolbarState.fontStyle || getActiveTextFormat()?.fontStyle || "normal");
+      const nextStyle = current === "italic" ? "normal" : "italic";
+      if (updateActiveBlockTypography({ fontStyle: nextStyle })) {
+        setTextToolbarState((prev) => ({ ...prev, fontStyle: nextStyle }));
+        preserveCurrentSelection();
+        refreshToolbarFromEditable();
       }
-      finishTextCommand();
       return;
     }
 
     if (command === "underline") {
-      if (ensureTextSelection()) {
-        try { document.execCommand("underline", false, null); } catch {}
+      const current = String(textToolbarState.textDecoration || getActiveTextFormat()?.textDecoration || "none");
+      const nextDecoration = current.includes("underline") ? "none" : "underline";
+      if (updateActiveBlockTypography({ textDecoration: nextDecoration })) {
+        setTextToolbarState((prev) => ({ ...prev, textDecoration: nextDecoration }));
+        preserveCurrentSelection();
+        refreshToolbarFromEditable();
       }
-      finishTextCommand();
       return;
     }
 
     if (command === "justifyLeft" || command === "justifyCenter" || command === "justifyRight" || command === "justifyFull") {
       const align = command === "justifyCenter" ? "center" : command === "justifyRight" ? "right" : command === "justifyFull" ? "justify" : "left";
-      if (ensureTextSelection()) {
-        try { document.execCommand(command, false, null); } catch {}
+      if (updateActiveBlockTypography({ textAlign: align })) {
+        setTextToolbarState((prev) => ({ ...prev, textAlign: align }));
+        preserveCurrentSelection();
+        refreshToolbarFromEditable();
+      }
+      return;
+    }
+
+    if (command === "removeFormat") {
+      if (hasTextSelection) {
+        stripInlineStyleKeys(activeRange.cloneContents(), []);
+        try { document.execCommand("removeFormat", false, null); } catch {}
       } else {
-        applyStyleToActiveEditable({ textAlign: align, display: "block" });
+        editable.removeAttribute("style");
+        editable.querySelectorAll?.("[style]").forEach((element) => element.removeAttribute("style"));
+        syncActiveEditableToBlock(latestBlocksRef.current);
       }
       finishTextCommand();
       return;
     }
 
-    if (["insertUnorderedList", "insertOrderedList", "unlink", "removeFormat", "createLink"].includes(command)) {
-      if (command === "removeFormat") ensureTextSelection();
-      try {
-        document.execCommand(command, false, nextValue);
-      } catch {}
+    if (command === "createLink") {
+      nextValue = typeof window !== "undefined" ? window.prompt("Enter link URL", "https://") : "";
+      if (!hasTextSelection) return;
+      if (!nextValue) {
+        try { document.execCommand("unlink", false, null); } catch {}
+      } else {
+        try { document.execCommand("createLink", false, nextValue); } catch {}
+      }
       finishTextCommand();
       return;
     }
 
-    try {
-      document.execCommand(command, false, nextValue);
-    } catch {}
+    if (["insertUnorderedList", "insertOrderedList", "unlink"].includes(command)) {
+      try { document.execCommand(command, false, nextValue); } catch {}
+      finishTextCommand();
+      return;
+    }
 
     finishTextCommand();
   };
@@ -2268,16 +2820,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       // Use onForceSave (awaits cloud sync) if available, otherwise fall back to onSave
       const saveFn = typeof onForceSave === "function" ? onForceSave : onSave;
       const saved = await Promise.resolve(saveFn?.(committedBlocks));
-      // saved._saveError means forceSaveBlockPage already showed its own error toast — don't double-report
       if (!saved || saved?._saveError) {
-        if (!saved) showSavePopup("Could not save page", "error");
-        // else: error already shown by forceSaveBlockPage via flashNotice
+        showSavePopup(saved?._saveErrorMessage || "Could not save page", "error");
         return;
       }
       setLastSavedAt(Date.now());
       showSavePopup("Saved ✓");
     } catch (err) {
-      console.error("[handleSave]", err);
+      console.warn("[handleSave]", err);
       showSavePopup(err?.message || "Could not save page", "error");
     }
   };
@@ -2291,8 +2841,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       const saved = await Promise.resolve(onSaveTemplatePage({
         pageName: activePage,
         blocks: committedBlocks,
-        globalNavBlock: project?.globalNavBlock || null,
-        globalFooterBlock: project?.globalFooterBlock || null,
+        globalNavBlock,
+        globalFooterBlock,
       }));
       if (!saved) {
         showSavePopup("Could not save template page", "error");
@@ -2315,8 +2865,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           ...(project?.pageBlocks || {}),
           [activePage]: committedBlocks,
         },
-        globalNavBlock: project?.globalNavBlock || null,
-        globalFooterBlock: project?.globalFooterBlock || null,
+        globalNavBlock,
+        globalFooterBlock,
       }));
       if (!saved) {
         showSavePopup("Could not save full template", "error");
@@ -2333,6 +2883,20 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     <div style={styles.container}>
       <style>{`
         ${websiteBlockKeyframes()}
+        [data-builder-canvas="true"] [data-canvas-block-index] {
+          margin-top: 0 !important;
+          margin-bottom: 0 !important;
+          border-top: 0 !important;
+          border-bottom: 0 !important;
+          box-shadow: none;
+          background-clip: padding-box;
+        }
+        [data-builder-canvas="true"] [data-canvas-block-index] img,
+        [data-builder-canvas="true"] [data-canvas-block-index] video,
+        [data-builder-canvas="true"] [data-canvas-block-index] canvas,
+        [data-builder-canvas="true"] [data-canvas-block-index] svg {
+          display: block;
+        }
       `}</style>
       {showHeader ? (
         <div style={styles.header}>
@@ -2504,7 +3068,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         fontFamily={textToolbarState.fontFamily}
         fontSize={textToolbarState.fontSize}
         lineHeight={textToolbarState.lineHeight}
+        fontWeight={textToolbarState.fontWeight}
+        fontStyle={textToolbarState.fontStyle}
+        textDecoration={textToolbarState.textDecoration}
+        textAlign={textToolbarState.textAlign}
         blockType={textToolbarState.blockType}
+        hasCopiedFormat={!!copiedTextFormat}
         canStyleBox={textToolbarState.canStyleBox}
         boxBackgroundColor={textToolbarState.boxBackgroundColor}
         boxBackgroundImage={textToolbarState.boxBackgroundImage}
@@ -2521,6 +3090,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         onLineHeight={(value) => runTextCommand("lineHeight", value)}
         onBlockType={(value) => runTextCommand("formatBlock", value)}
         onFontFamily={(value) => runTextCommand("fontName", value)}
+        onCopyFormat={handleCopyTextFormat}
+        onClearCopiedFormat={handleClearCopiedTextFormat}
         onOpenAnimations={(triggerNode) => {
           if (typeof selectedIndex !== "number") return;
           openAnimationPanelForBlock(selectedIndex, triggerNode);
@@ -2593,31 +3164,22 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         >
           <div style={styles.canvasLabel}>Drag widgets here • {previewMode}</div>
           <div ref={canvasMeasureRef} style={styles.canvasViewport}>
-            <div
-              style={{
-                height: previewMode === "desktop" && blocksNaturalHeight > 0 && canvasScale < 1
-                  ? `${Math.round(blocksNaturalHeight * canvasScale)}px`
-                  : undefined,
-                overflow: previewMode === "desktop" && canvasScale < 1 ? "hidden" : undefined,
-              }}
-            >
+            <div>
             <div
               ref={blocksContainerRef}
-              data-canvas-scale={previewMode === "desktop" ? canvasScale : 1}
+              data-canvas-scale={1}
               style={{
                 ...styles.blocksList,
-                width: previewMode === "desktop" ? (canvasScale >= 1 ? "100%" : `${pageCanvasWidth}px`) : previewWidth,
-                maxWidth: previewMode === "desktop" ? (canvasScale >= 1 ? "100%" : `${pageCanvasWidth}px`) : previewWidth,
+                width: previewMode === "desktop" ? "100%" : previewWidth,
+                maxWidth: previewMode === "desktop" ? "100%" : previewWidth,
                 margin: "0 auto",
-                transform: previewMode === "desktop" ? (canvasScale >= 1 ? undefined : `scale(${canvasScale})`) : undefined,
-                transformOrigin: previewMode === "desktop" ? "top left" : undefined,
               }}
             >
-              {project?.globalNavBlock ? (
+              {globalNavBlock ? (
                 <GlobalBlockPreview
                   label="🌐 Global Navigation"
                   role="nav"
-                  block={project.globalNavBlock}
+                  block={globalNavBlock}
                   brandAssets={brandAssets}
                   compact={previewMode === "mobile"}
                   selected={selectedGlobalRole === "nav"}
@@ -2651,7 +3213,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         block={block}
                         index={blockIndex}
                         pageCanvasWidth={pageCanvasWidth}
-                        canvasScale={canvasScale}
+                        canvasScale={1}
                         brandAssets={brandAssets}
                         compactPreview={previewMode === "mobile"}
                         animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
@@ -2694,11 +3256,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       setDropIndex(null);
                     }}
                   />
-                  {project?.globalFooterBlock ? (
+                  {globalFooterBlock ? (
                     <GlobalBlockPreview
                       label="🌐 Global Footer"
                       role="footer"
-                      block={project.globalFooterBlock}
+                      block={globalFooterBlock}
                       brandAssets={brandAssets}
                       compact={previewMode === "mobile"}
                       selected={selectedGlobalRole === "footer"}

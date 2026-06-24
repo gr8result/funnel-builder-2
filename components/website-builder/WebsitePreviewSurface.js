@@ -40,8 +40,8 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
 
   const pageBlocks = active?.name ? (project?.pageBlocks || {})[active.name] || [] : [];
   const pageContent = active?.name ? (project?.pagesContent || {})[active.name] || "" : "";
-  const globalNavBlock = project?.globalNavBlock || null;
-  const globalFooterBlock = project?.globalFooterBlock || null;
+  const globalNavBlock = project?.globalNavBlock?.type === "nav-bar" ? project.globalNavBlock : null;
+  const globalFooterBlock = project?.globalFooterBlock?.type === "footer" ? project.globalFooterBlock : null;
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
   const injectFooter = !!globalFooterBlock;
@@ -82,6 +82,28 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
         <style>{`
           html { background: ${pageBackground} !important; margin: 0; padding: 0; }
           body { background: ${pageBackground} !important; margin: 0; padding: 0; overflow-x: hidden; }
+          [data-website-preview-block] {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border-top: 0 !important;
+            border-bottom: 0 !important;
+            background-clip: padding-box;
+          }
+          [data-website-preview-block-type="image"] {
+            margin-top: -1px !important;
+            margin-bottom: -1px !important;
+            line-height: 0 !important;
+            font-size: 0 !important;
+            overflow: hidden !important;
+            position: relative;
+            z-index: 1;
+          }
+          [data-website-preview-block] img,
+          [data-website-preview-block] video,
+          [data-website-preview-block] canvas,
+          [data-website-preview-block] svg {
+            display: block;
+          }
           ${websiteBlockKeyframes()}
         `}</style>
       </Head>
@@ -91,16 +113,16 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        <div style={styles.previewViewport(previewViewport, previewShellWidth)}>
+        <div style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
           {injectNav ? (
-            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} style={styles.blockFrame}>
+            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(pageBackground)}>
               {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
 
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             blocksWithoutShellDuplicates.map((block, index) => (
-              <div key={block.id || `${block.type}-${index}`} style={styles.blockFrame}>
+              <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-type={block.type || ""} style={styles.blockFrame(block.type === "image" ? (block.props?.backgroundColor || block.props?.seamlessBackgroundColor || pageBackground) : pageBackground)}>
                 {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
               </div>
             ))
@@ -137,7 +159,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           )}
 
           {injectFooter ? (
-            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} style={styles.blockFrame}>
+            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-type={globalFooterBlock?.type || ""} style={styles.blockFrame(pageBackground)}>
               {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
@@ -198,7 +220,7 @@ const styles = {
     gridTemplateColumns: "minmax(0, 1fr)",
     gap: 0,
   },
-  previewViewport: (viewport, previewShellWidth) => ({
+  previewViewport: (viewport, previewShellWidth, background) => ({
     ...styles.previewStack,
     width: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
     maxWidth: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
@@ -206,8 +228,17 @@ const styles = {
     marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     overflowX: "clip",
+    background,
   }),
-  blockFrame: { overflowX: "clip", minWidth: 0 },
+  blockFrame: (background) => ({
+    overflowX: "clip",
+    minWidth: 0,
+    margin: 0,
+    padding: 0,
+    border: 0,
+    background,
+    display: "block",
+  }),
   siteHeader: { paddingTop: 70, paddingBottom: 14 },
   brandRow: {
     borderRadius: 18,

@@ -522,6 +522,13 @@ export default function WebsiteBuilderDashboard() {
               <button type="button" onClick={() => router.push("/modules/website-builder/domains")} className={s.secondaryAction}>
                 Manage Domains
               </button>
+              <button
+                type="button"
+                onClick={() => router.push(`/modules/website-builder/backups${selectedWebsite?.id ? `?projectId=${encodeURIComponent(selectedWebsite.id)}` : ""}`)}
+                className={s.secondaryAction}
+              >
+                Backups
+              </button>
             </div>
           </section>
 
@@ -616,6 +623,14 @@ export default function WebsiteBuilderDashboard() {
                       disabled={deletingId === String(site.id)}
                     >
                       Open Site
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/modules/website-builder/backups?projectId=${encodeURIComponent(site.id)}`)}
+                      className={s.secondaryAction}
+                      disabled={deletingId === String(site.id)}
+                    >
+                      Backups
                     </button>
                     <button
                       type="button"

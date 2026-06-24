@@ -334,8 +334,8 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
   const activePage = pages.find((page) => resolvePublishedPageName(page) === slugifyPage(requested)) || pages[0] || null;
   const pageBlocks = activePage?.name ? (project?.pageBlocks || {})[activePage.name] || [] : [];
   const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";
-  const globalNavBlock = project?.globalNavBlock || null;
-  const globalFooterBlock = project?.globalFooterBlock || null;
+  const globalNavBlock = project?.globalNavBlock?.type === "nav-bar" ? project.globalNavBlock : null;
+  const globalFooterBlock = project?.globalFooterBlock?.type === "footer" ? project.globalFooterBlock : null;
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const injectFooter = !!globalFooterBlock;
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;

@@ -5,6 +5,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
 import { getLimit, PLANS } from "../../../lib/featureGates";
+import { getUserPlan } from "../../../lib/planResolver";
 
 async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).end();
@@ -12,17 +13,7 @@ async function handler(req, res) {
   const authUserId = req.user?.id;
   if (!authUserId) return res.status(401).json({ ok: false, error: "Unauthorized" });
 
-  // Look up workspace
-  const { data: ws } = await supabaseAdmin
-    .from("workspaces")
-    .select("id, plan")
-    .eq("owner_id", authUserId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const plan = ws?.plan || "starter";
-  const workspaceId = ws?.id || null;
+  const { plan, workspaceId } = await getUserPlan(supabaseAdmin, authUserId);
   const planName = PLANS[plan]?.name || plan;
 
   // Start of current calendar month for monthly counters

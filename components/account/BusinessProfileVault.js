@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase-client";
 import {
   BUSINESS_PROFILE_SECTIONS,
@@ -38,6 +39,7 @@ function makeDocumentMap(documents) {
 }
 
 export default function BusinessProfileVault() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState("Saved");
@@ -213,6 +215,10 @@ export default function BusinessProfileVault() {
       setDocuments(payload.documents || documents);
       setSubmitState("Submitted for review");
       setSaveState("Saved");
+      const next = typeof router.query.next === "string" && router.query.next.startsWith("/")
+        ? router.query.next
+        : "/billing";
+      router.push(next);
     } catch (err) {
       setSubmitState("");
       setError(err.message || "Submission failed.");

@@ -1,0 +1,817 @@
+{
+  "projectId": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "pageName": "Funnels",
+  "blocks": [
+    {
+      "id": "nav-bar-funnels",
+      "type": "nav-bar",
+      "props": {
+        "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home",
+            "highlighted": false
+          },
+          {
+            "id": "nav-modules-funnels",
+            "href": "#modules",
+            "label": "Modules",
+            "children": [
+              {
+                "id": "nav-child-email",
+                "href": "#email",
+                "label": "Email Marketing"
+              },
+              {
+                "id": "nav-child-sms",
+                "href": "#sms",
+                "label": "SMS Marketing"
+              },
+              {
+                "id": "nav-child-crm",
+                "href": "#crm",
+                "label": "CRM Management"
+              },
+              {
+                "id": "nav-child-funnels",
+                "href": "#funnels",
+                "label": "Funnels"
+              }
+            ],
+            "highlighted": false
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us",
+            "highlighted": false
+          },
+          {
+            "href": "#pricing",
+            "label": "Pricing"
+          },
+          {
+            "href": "#contact-us",
+            "label": "Contact Us"
+          }
+        ],
+        "ctaLink": "#contact-us",
+        "ctaText": "Build My Funnel",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 150,
+        "textColor": "#06b6d4",
+        "stickyMode": "normal",
+        "borderColor": "rgba(125,211,252,0.24)",
+        "buttonColor": "#22c55e",
+        "ctaFontSize": 20,
+        "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
+        "linkFontSize": 20,
+        "brandFontSize": 24,
+        "backgroundColor": "#121c26",
+        "buttonTextColor": "#052e16",
+        "linkHoverEffect": "glow",
+        "mobileMenuStyle": "hamburger",
+        "linkHoverTextColor": "#ec4899",
+        "activeLinkTextColor": "#f59e0b",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "#ec4899",
+        "activeLinkBackgroundColor": "#121c26"
+      }
+    },
+    {
+      "id": "funnels-hero",
+      "type": "hero",
+      "props": {
+        "ctaLink": "#contact-us",
+        "ctaText": "Build My Funnel",
+        "eyebrow": "Funnels + automation + CRM",
+        "contentX": 7,
+        "contentY": 28,
+        "headline": "Funnels That Turn Traffic Into Leads, Bookings, Quotes and Sales",
+        "marginTop": 0,
+        "minHeight": "1250px",
+        "textColor": "#dbeafe",
+        "borderColor": "rgba(34,197,94,0.45)",
+        "buttonColor": "#22c55e",
+        "heroVariant": "split",
+        "subheadline": "A website tells people who you are. A funnel guides each visitor through one clear journey: capture attention, collect details, follow up automatically, and move the right prospects into your CRM so your team can close more business.",
+        "contentWidth": 670,
+        "contentHeight": 520,
+        "headlineColor": "#ffffff",
+        "textAnimation": "edge-left",
+        "backgroundSize": "cover",
+        "backgroundColor": "linear-gradient(135deg,#081120,#10213a 58%,#17304d)",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782177363315-ChatGPT-Image-Jun-23-2026-09_53_18-AM.png",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#052e16",
+        "hideTextOverlay": false,
+        "sectionAnimation": "fade-in",
+        "contentBackground": "rgba(8,17,32,0.72)",
+        "backgroundPosition": "center center",
+        "fullWidthBackground": true,
+        "subheadlineAnimation": "fade-up",
+        "backgroundImageAssetId": "cd80c5c2-1888-42a6-b9d9-b259b3c267b6"
+      }
+    },
+    {
+      "id": "funnels-wave-flow",
+      "type": "wave-marquee",
+      "props": {
+        "text": "TRAFFIC TO LEAD TO CRM TO FOLLOW-UP TO SALE TO REPEAT BUSINESS",
+        "angle": -3,
+        "speed": 18,
+        "height": 290,
+        "fontSize": 24,
+        "amplitude": 100,
+        "direction": "left",
+        "separator": "  -  ",
+        "textColor": "#ffc000",
+        "fontWeight": "900",
+        "wavelength": 720,
+        "repeatCount": 4,
+        "letterSpacing": 2,
+        "backgroundColor": "#121c26",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "funnels-intro",
+      "type": "text",
+      "props": {
+        "text": "<h1><span style=\"color: #ffc000; font-size: 48px; font-weight: 800\">A funnel is not just a page. It is a guided sales system.</span></h1><br>        <p><span style=\"color: #ffffff; font-size: 22px; font-weight: 400\">Most businesses lose leads because visitors are given too many choices, no clear next step, and no automatic follow-up after they leave. A funnel fixes that by focusing every page, form, message, offer and automation around one conversion goal.</span></p><br>        <p><span style=\"color: #e6eef5; font-size: 22px; font-weight: 400\">With Gr8 Result Digital Solutions, a funnel can connect your landing pages, lead magnets, forms, calendar bookings, quotes, email marketing, SMS follow-ups, CRM pipelines, phone activity and reporting into one connected journey. The result is simple: more enquiries captured, faster follow-up, better sales conversations, and fewer opportunities slipping through the cracks.</span></p>",
+        "textSize": "medium",
+        "alignment": "center",
+        "minHeight": "90px",
+        "textColor": "#e6eef5",
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "hideBorder": true,
+        "lineHeight": 1.45,
+        "paddingTop": 70,
+        "paddingBottom": 70,
+        "textAnimation": "fade-up",
+        "enableParallax": false,
+        "textLineHeight": 1.45,
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "funnels-stage-marquee",
+      "type": "marquee-strip",
+      "props": {
+        "text": "AD CAMPAIGN - LANDING PAGE - LEAD MAGNET - FORM - BOOKING - CRM PIPELINE - EMAIL - SMS - CALL - QUOTE - SALE - REVIEW - REFERRAL",
+        "speed": 32,
+        "fontSize": 18,
+        "direction": "left",
+        "separator": "  -  ",
+        "textColor": "#121c26",
+        "fontWeight": "900",
+        "paddingTop": 18,
+        "paddingBottom": 18,
+        "backgroundColor": "#ffc000",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "funnels-scroll-stack",
+      "type": "scroll-stack",
+      "props": {
+        "panels": [
+          {
+            "id": "ss-traffic",
+            "eyebrow": "01 - Traffic",
+            "eyebrowDot": true,
+            "heading": "Start with a single campaign goal",
+            "body": "Every funnel starts by deciding what the visitor should do next: request a quote, book a call, download a guide, claim an offer, register interest, join a list, or apply for a service. The page, copy and automation all work toward that one outcome.",
+            "showCta": false,
+            "ctaText": "Map the goal",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "filled",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782177453411-ChatGPT-Image-Jun-23-2026-10_55_05-AM.png",
+            "imageAlt": "Website and campaign builder",
+            "imageStyle": "card",
+            "imageCardBg": "#0ea5e9",
+            "imagePosition": "right",
+            "backgroundColor": "#07111f",
+            "textColor": "#ffffff",
+            "accentColor": "#38bdf8"
+          },
+          {
+            "id": "ss-capture",
+            "eyebrow": "02 - Capture",
+            "eyebrowDot": true,
+            "heading": "Turn anonymous visitors into real leads",
+            "body": "Lead capture is where the funnel earns its keep. Forms, lead magnets, quote requests, booking calendars and offer pages collect the details your business needs to follow up properly.",
+            "showCta": false,
+            "ctaText": "Capture more leads",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "filled",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253895573-ChatGPT-Image-Jun-4-2026-07_34_19-AM.png",
+            "imageAlt": "Landing page builder",
+            "imageStyle": "card",
+            "imageCardBg": "#7c3aed",
+            "imagePosition": "left",
+            "backgroundColor": "#f8fafc",
+            "textColor": "#0f172a",
+            "accentColor": "#7c3aed"
+          },
+          {
+            "id": "ss-nurture",
+            "eyebrow": "03 - Nurture",
+            "eyebrowDot": true,
+            "heading": "Follow up automatically while interest is hot",
+            "body": "The moment a lead enters the funnel, email and SMS sequences can educate, remind, qualify and encourage them to take the next step. That means less manual chasing and more consistent conversion.",
+            "showCta": false,
+            "ctaText": "Automate follow-up",
+            "ctaUrl": "#email",
+            "ctaStyle": "filled",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253877023-ChatGPT-Image-Jun-4-2026-07_32_15-AM.png",
+            "imageAlt": "Email automation",
+            "imageStyle": "card",
+            "imageCardBg": "#16a34a",
+            "imagePosition": "right",
+            "backgroundColor": "#052e16",
+            "textColor": "#ffffff",
+            "accentColor": "#86efac"
+          },
+          {
+            "id": "ss-close",
+            "eyebrow": "04 - Close",
+            "eyebrowDot": true,
+            "heading": "Push serious opportunities into the CRM",
+            "body": "Qualified leads can be routed into pipelines, assigned to team members, tagged by source, tracked by campaign, and followed up with calls, quotes, tasks and reminders.",
+            "showCta": false,
+            "ctaText": "Connect CRM",
+            "ctaUrl": "#crm",
+            "ctaStyle": "filled",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253912618-ChatGPT-Image-Jun-4-2026-07_34_02-AM.png",
+            "imageAlt": "CRM pipeline",
+            "imageStyle": "card",
+            "imageCardBg": "#f59e0b",
+            "imagePosition": "left",
+            "backgroundColor": "#111827",
+            "textColor": "#ffffff",
+            "accentColor": "#ffc000"
+          }
+        ],
+        "peekHeight": 92,
+        "contentTopPadding": 82,
+        "fullWidthBackground": true,
+        "contentVerticalAlign": "top",
+        "baseLayoutWidth": 1500,
+        "cardInset": 300,
+        "cardRadius": 24,
+        "cardBorderWidth": 35
+      }
+    },
+    {
+      "id": "funnels-types",
+      "type": "hover-cards",
+      "props": {
+        "cards": [
+          {
+            "id": "hc-lead",
+            "link": "#contact-us",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920325.png",
+            "title": "Lead Magnet Funnels",
+            "cardColor": "#dbeafe",
+            "description": "Give visitors a useful guide, checklist, offer or resource in exchange for contact details, then nurture them with automated follow-up."
+          },
+          {
+            "id": "hc-booking",
+            "link": "#contact-us",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983071.png",
+            "title": "Booking Funnels",
+            "cardColor": "#dcfce7",
+            "description": "Move prospects from ad or page to calendar booking, then send reminders, confirmation messages and CRM tasks."
+          },
+          {
+            "id": "hc-quote",
+            "link": "#crm",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985934.png",
+            "title": "Quote Request Funnels",
+            "cardColor": "#fef3c7",
+            "description": "Collect project details, budget, timing and contact information so your team can respond with speed and context."
+          },
+          {
+            "id": "hc-reactivation",
+            "link": "#email",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985167.png",
+            "title": "Reactivation Funnels",
+            "cardColor": "#fae8ff",
+            "description": "Wake up cold contacts, old customers and unconverted leads with targeted offers, email sequences and SMS reminders."
+          },
+          {
+            "id": "hc-application",
+            "link": "#contact-us",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740987780.png",
+            "title": "High-Ticket Application Funnels",
+            "cardColor": "#ecfdf5",
+            "description": "Qualify prospects before a sales conversation with forms, scoring, automation and pipeline routing."
+          },
+          {
+            "id": "hc-vendor",
+            "link": "#modules",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920886.png",
+            "title": "Vendor And Marketplace Funnels",
+            "cardColor": "#e0f2fe",
+            "description": "Promote products, courses, offers or vendor opportunities with connected landing pages, affiliate paths and follow-up."
+          }
+        ],
+        "arrowBg": "#ffffff",
+        "cardGap": 24,
+        "cardColor": "#dde3ea",
+        "fullWidth": true,
+        "arrowColor": "#0f172a",
+        "buttonText": "Explore funnel",
+        "cardHeight": 750,
+        "cardRadius": 18,
+        "paddingTop": 72,
+        "buttonColor": "#22c55e",
+        "cardPadding": 24,
+        "minCardWidth": 420,
+        "overlayColor": "rgba(8,17,32,0.88)",
+        "paddingSides": 36,
+        "sectionTitle": "Funnels We Can Build For Different Business Goals",
+        "visibleCards": 3,
+        "paddingBottom": 82,
+        "continuousLoop": true,
+        "backgroundColor": "#07111f",
+        "buttonTextColor": "#052e16",
+        "continuousSpeed": 38,
+        "sectionTitleSize": 44,
+        "sectionTitleColor": "#ffc000"
+      }
+    },
+    {
+      "id": 1782252505837,
+      "type": "image",
+      "props": {
+        "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782252523735-ChatGPT-Image-Jun-24-2026-08_07_08-AM.png",
+        "alt": "Image",
+        "width": "1500px",
+        "height": "1850px",
+        "caption": "",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500,
+        "srcAssetId": "b034c73f-e928-4ad3-a014-988b5c7cf647",
+        "overlayTextAlign": "center",
+        "showOverlayText": false,
+        "overlayTextVerticalAlign": "top",
+        "headline": "",
+        "headlineBlock": {
+          "content": ""
+        },
+        "overlayTextWidth": 420,
+        "overlayTextX": 1255,
+        "overlayTextY": 0,
+        "overlayTextXRatio": 0.816526,
+        "overlayTextYRatio": 0,
+        "subheadline": "",
+        "textAnimation": "none",
+        "sectionAnimation": "sweep-right",
+        "overlayTextBackground": "#0f172a",
+        "overlaySubheadlineColor": "#0f172a",
+        "textColor": "#0f172a"
+      }
+    },
+    {
+      "id": 1782252491804,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    }
+  ],
+  "html": "",
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "nav-bar-funnels",
+        "type": "nav-bar",
+        "props": {
+          "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home",
+              "highlighted": false
+            },
+            {
+              "id": "nav-modules-funnels",
+              "href": "#modules",
+              "label": "Modules",
+              "children": [
+                {
+                  "id": "nav-child-email",
+                  "href": "#email",
+                  "label": "Email Marketing"
+                },
+                {
+                  "id": "nav-child-sms",
+                  "href": "#sms",
+                  "label": "SMS Marketing"
+                },
+                {
+                  "id": "nav-child-crm",
+                  "href": "#crm",
+                  "label": "CRM Management"
+                },
+                {
+                  "id": "nav-child-funnels",
+                  "href": "#funnels",
+                  "label": "Funnels"
+                }
+              ],
+              "highlighted": false
+            },
+            {
+              "href": "#about-us",
+              "label": "About Us",
+              "highlighted": false
+            },
+            {
+              "href": "#pricing",
+              "label": "Pricing"
+            },
+            {
+              "href": "#contact-us",
+              "label": "Contact Us"
+            }
+          ],
+          "ctaLink": "#contact-us",
+          "ctaText": "Build My Funnel",
+          "variant": "boxed-brand",
+          "showLogo": true,
+          "logoWidth": 150,
+          "textColor": "#06b6d4",
+          "stickyMode": "normal",
+          "borderColor": "rgba(125,211,252,0.24)",
+          "buttonColor": "#22c55e",
+          "ctaFontSize": 20,
+          "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
+          "linkFontSize": 20,
+          "brandFontSize": 24,
+          "backgroundColor": "#121c26",
+          "buttonTextColor": "#052e16",
+          "linkHoverEffect": "glow",
+          "mobileMenuStyle": "hamburger",
+          "linkHoverTextColor": "#ec4899",
+          "activeLinkTextColor": "#f59e0b",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "#ec4899",
+          "activeLinkBackgroundColor": "#121c26"
+        }
+      },
+      {
+        "id": "funnels-hero",
+        "type": "hero",
+        "props": {
+          "ctaLink": "#contact-us",
+          "ctaText": "Build My Funnel",
+          "eyebrow": "Funnels + automation + CRM",
+          "contentX": 7,
+          "contentY": 28,
+          "headline": "Funnels That Turn Traffic Into Leads, Bookings, Quotes and Sales",
+          "marginTop": 0,
+          "minHeight": "1250px",
+          "textColor": "#dbeafe",
+          "borderColor": "rgba(34,197,94,0.45)",
+          "buttonColor": "#22c55e",
+          "heroVariant": "split",
+          "subheadline": "A website tells people who you are. A funnel guides each visitor through one clear journey: capture attention, collect details, follow up automatically, and move the right prospects into your CRM so your team can close more business.",
+          "contentWidth": 670,
+          "contentHeight": 520,
+          "headlineColor": "#ffffff",
+          "textAnimation": "edge-left",
+          "backgroundSize": "cover",
+          "backgroundColor": "linear-gradient(135deg,#081120,#10213a 58%,#17304d)",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782177363315-ChatGPT-Image-Jun-23-2026-09_53_18-AM.png",
+          "backgroundStyle": "image",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#052e16",
+          "hideTextOverlay": false,
+          "sectionAnimation": "fade-in",
+          "contentBackground": "rgba(8,17,32,0.72)",
+          "backgroundPosition": "center center",
+          "fullWidthBackground": true,
+          "subheadlineAnimation": "fade-up",
+          "backgroundImageAssetId": "cd80c5c2-1888-42a6-b9d9-b259b3c267b6"
+        }
+      },
+      {
+        "id": "funnels-wave-flow",
+        "type": "wave-marquee",
+        "props": {
+          "text": "TRAFFIC TO LEAD TO CRM TO FOLLOW-UP TO SALE TO REPEAT BUSINESS",
+          "angle": -3,
+          "speed": 18,
+          "height": 290,
+          "fontSize": 24,
+          "amplitude": 100,
+          "direction": "left",
+          "separator": "  -  ",
+          "textColor": "#ffc000",
+          "fontWeight": "900",
+          "wavelength": 720,
+          "repeatCount": 4,
+          "letterSpacing": 2,
+          "backgroundColor": "#121c26",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "funnels-intro",
+        "type": "text",
+        "props": {
+          "text": "<h1><span style=\"color: #ffc000; font-size: 48px; font-weight: 800\">A funnel is not just a page. It is a guided sales system.</span></h1><br>        <p><span style=\"color: #ffffff; font-size: 22px; font-weight: 400\">Most businesses lose leads because visitors are given too many choices, no clear next step, and no automatic follow-up after they leave. A funnel fixes that by focusing every page, form, message, offer and automation around one conversion goal.</span></p><br>        <p><span style=\"color: #e6eef5; font-size: 22px; font-weight: 400\">With Gr8 Result Digital Solutions, a funnel can connect your landing pages, lead magnets, forms, calendar bookings, quotes, email marketing, SMS follow-ups, CRM pipelines, phone activity and reporting into one connected journey. The result is simple: more enquiries captured, faster follow-up, better sales conversations, and fewer opportunities slipping through the cracks.</span></p>",
+          "textSize": "medium",
+          "alignment": "center",
+          "minHeight": "90px",
+          "textColor": "#e6eef5",
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "hideBorder": true,
+          "lineHeight": 1.45,
+          "paddingTop": 70,
+          "paddingBottom": 70,
+          "textAnimation": "fade-up",
+          "enableParallax": false,
+          "textLineHeight": 1.45,
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "funnels-stage-marquee",
+        "type": "marquee-strip",
+        "props": {
+          "text": "AD CAMPAIGN - LANDING PAGE - LEAD MAGNET - FORM - BOOKING - CRM PIPELINE - EMAIL - SMS - CALL - QUOTE - SALE - REVIEW - REFERRAL",
+          "speed": 32,
+          "fontSize": 18,
+          "direction": "left",
+          "separator": "  -  ",
+          "textColor": "#121c26",
+          "fontWeight": "900",
+          "paddingTop": 18,
+          "paddingBottom": 18,
+          "backgroundColor": "#ffc000",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "funnels-scroll-stack",
+        "type": "scroll-stack",
+        "props": {
+          "panels": [
+            {
+              "id": "ss-traffic",
+              "eyebrow": "01 - Traffic",
+              "eyebrowDot": true,
+              "heading": "Start with a single campaign goal",
+              "body": "Every funnel starts by deciding what the visitor should do next: request a quote, book a call, download a guide, claim an offer, register interest, join a list, or apply for a service. The page, copy and automation all work toward that one outcome.",
+              "showCta": false,
+              "ctaText": "Map the goal",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "filled",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782177453411-ChatGPT-Image-Jun-23-2026-10_55_05-AM.png",
+              "imageAlt": "Website and campaign builder",
+              "imageStyle": "card",
+              "imageCardBg": "#0ea5e9",
+              "imagePosition": "right",
+              "backgroundColor": "#07111f",
+              "textColor": "#ffffff",
+              "accentColor": "#38bdf8"
+            },
+            {
+              "id": "ss-capture",
+              "eyebrow": "02 - Capture",
+              "eyebrowDot": true,
+              "heading": "Turn anonymous visitors into real leads",
+              "body": "Lead capture is where the funnel earns its keep. Forms, lead magnets, quote requests, booking calendars and offer pages collect the details your business needs to follow up properly.",
+              "showCta": false,
+              "ctaText": "Capture more leads",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "filled",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253895573-ChatGPT-Image-Jun-4-2026-07_34_19-AM.png",
+              "imageAlt": "Landing page builder",
+              "imageStyle": "card",
+              "imageCardBg": "#7c3aed",
+              "imagePosition": "left",
+              "backgroundColor": "#f8fafc",
+              "textColor": "#0f172a",
+              "accentColor": "#7c3aed"
+            },
+            {
+              "id": "ss-nurture",
+              "eyebrow": "03 - Nurture",
+              "eyebrowDot": true,
+              "heading": "Follow up automatically while interest is hot",
+              "body": "The moment a lead enters the funnel, email and SMS sequences can educate, remind, qualify and encourage them to take the next step. That means less manual chasing and more consistent conversion.",
+              "showCta": false,
+              "ctaText": "Automate follow-up",
+              "ctaUrl": "#email",
+              "ctaStyle": "filled",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253877023-ChatGPT-Image-Jun-4-2026-07_32_15-AM.png",
+              "imageAlt": "Email automation",
+              "imageStyle": "card",
+              "imageCardBg": "#16a34a",
+              "imagePosition": "right",
+              "backgroundColor": "#052e16",
+              "textColor": "#ffffff",
+              "accentColor": "#86efac"
+            },
+            {
+              "id": "ss-close",
+              "eyebrow": "04 - Close",
+              "eyebrowDot": true,
+              "heading": "Push serious opportunities into the CRM",
+              "body": "Qualified leads can be routed into pipelines, assigned to team members, tagged by source, tracked by campaign, and followed up with calls, quotes, tasks and reminders.",
+              "showCta": false,
+              "ctaText": "Connect CRM",
+              "ctaUrl": "#crm",
+              "ctaStyle": "filled",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782253912618-ChatGPT-Image-Jun-4-2026-07_34_02-AM.png",
+              "imageAlt": "CRM pipeline",
+              "imageStyle": "card",
+              "imageCardBg": "#f59e0b",
+              "imagePosition": "left",
+              "backgroundColor": "#111827",
+              "textColor": "#ffffff",
+              "accentColor": "#ffc000"
+            }
+          ],
+          "peekHeight": 92,
+          "contentTopPadding": 82,
+          "fullWidthBackground": true,
+          "contentVerticalAlign": "top",
+          "baseLayoutWidth": 1500,
+          "cardInset": 300,
+          "cardRadius": 24,
+          "cardBorderWidth": 35
+        }
+      },
+      {
+        "id": "funnels-types",
+        "type": "hover-cards",
+        "props": {
+          "cards": [
+            {
+              "id": "hc-lead",
+              "link": "#contact-us",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920325.png",
+              "title": "Lead Magnet Funnels",
+              "cardColor": "#dbeafe",
+              "description": "Give visitors a useful guide, checklist, offer or resource in exchange for contact details, then nurture them with automated follow-up."
+            },
+            {
+              "id": "hc-booking",
+              "link": "#contact-us",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983071.png",
+              "title": "Booking Funnels",
+              "cardColor": "#dcfce7",
+              "description": "Move prospects from ad or page to calendar booking, then send reminders, confirmation messages and CRM tasks."
+            },
+            {
+              "id": "hc-quote",
+              "link": "#crm",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985934.png",
+              "title": "Quote Request Funnels",
+              "cardColor": "#fef3c7",
+              "description": "Collect project details, budget, timing and contact information so your team can respond with speed and context."
+            },
+            {
+              "id": "hc-reactivation",
+              "link": "#email",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985167.png",
+              "title": "Reactivation Funnels",
+              "cardColor": "#fae8ff",
+              "description": "Wake up cold contacts, old customers and unconverted leads with targeted offers, email sequences and SMS reminders."
+            },
+            {
+              "id": "hc-application",
+              "link": "#contact-us",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740987780.png",
+              "title": "High-Ticket Application Funnels",
+              "cardColor": "#ecfdf5",
+              "description": "Qualify prospects before a sales conversation with forms, scoring, automation and pipeline routing."
+            },
+            {
+              "id": "hc-vendor",
+              "link": "#modules",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920886.png",
+              "title": "Vendor And Marketplace Funnels",
+              "cardColor": "#e0f2fe",
+              "description": "Promote products, courses, offers or vendor opportunities with connected landing pages, affiliate paths and follow-up."
+            }
+          ],
+          "arrowBg": "#ffffff",
+          "cardGap": 24,
+          "cardColor": "#dde3ea",
+          "fullWidth": true,
+          "arrowColor": "#0f172a",
+          "buttonText": "Explore funnel",
+          "cardHeight": 750,
+          "cardRadius": 18,
+          "paddingTop": 72,
+          "buttonColor": "#22c55e",
+          "cardPadding": 24,
+          "minCardWidth": 420,
+          "overlayColor": "rgba(8,17,32,0.88)",
+          "paddingSides": 36,
+          "sectionTitle": "Funnels We Can Build For Different Business Goals",
+          "visibleCards": 3,
+          "paddingBottom": 82,
+          "continuousLoop": true,
+          "backgroundColor": "#07111f",
+          "buttonTextColor": "#052e16",
+          "continuousSpeed": 38,
+          "sectionTitleSize": 44,
+          "sectionTitleColor": "#ffc000"
+        }
+      },
+      {
+        "id": 1782252505837,
+        "type": "image",
+        "props": {
+          "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782252523735-ChatGPT-Image-Jun-24-2026-08_07_08-AM.png",
+          "alt": "Image",
+          "width": "1500px",
+          "height": "1850px",
+          "caption": "",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500,
+          "srcAssetId": "b034c73f-e928-4ad3-a014-988b5c7cf647",
+          "overlayTextAlign": "center",
+          "showOverlayText": false,
+          "overlayTextVerticalAlign": "top",
+          "headline": "",
+          "headlineBlock": {
+            "content": ""
+          },
+          "overlayTextWidth": 420,
+          "overlayTextX": 1255,
+          "overlayTextY": 0,
+          "overlayTextXRatio": 0.816526,
+          "overlayTextYRatio": 0,
+          "subheadline": "",
+          "textAnimation": "none",
+          "sectionAnimation": "sweep-right",
+          "overlayTextBackground": "#0f172a",
+          "overlaySubheadlineColor": "#0f172a",
+          "textColor": "#0f172a"
+        }
+      },
+      {
+        "id": 1782252491804,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "savedAt": "2026-06-23T23:44:39.683Z",
+  "source": "autosave"
+}

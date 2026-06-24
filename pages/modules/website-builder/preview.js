@@ -116,7 +116,13 @@ export default function ThemePreviewPage() {
     const syncServerTemplateDefaults = async () => {
       try {
         const response = await fetch("/api/website-builder/defaults");
-        const payload = await response.json();
+        const text = await response.text();
+        let payload = {};
+        try {
+          payload = text ? JSON.parse(text) : {};
+        } catch {
+          payload = { ok: false };
+        }
         if (!response.ok || !payload?.ok || cancelled) return;
 
         const serverOverride = payload.templateOverrides?.[templateSlug] || null;

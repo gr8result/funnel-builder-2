@@ -2,7 +2,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   applyAssetToProps,
   createStoredAsset,
@@ -24,6 +24,7 @@ import {
   updateWebsiteTemplateOverride,
   updateWebsiteProject,
 } from "../../../lib/website-builder/projectStore";
+import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
@@ -137,12 +138,205 @@ const PageBuilderCanvas = dynamic(() => import("../../../components/website-buil
   loading: () => <StudioLoader label="Preparing canvas..." />,
 });
 
+class CanvasErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    if (typeof console !== "undefined") {
+      console.error("Website builder canvas failed", { error, info });
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={styles.canvasErrorPanel}>
+          <strong style={styles.canvasErrorTitle}>Canvas preview could not render.</strong>
+          <span style={styles.canvasErrorText}>
+            {this.state.error?.message || "An editor preview error stopped this page from drawing."}
+          </span>
+          <button type="button" style={styles.canvasErrorButton} onClick={() => this.setState({ error: null })}>
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function pageNameFromValue(value) {
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text && text !== "[object Object]" ? text : "";
+  }
+  if (value && typeof value === "object") {
+    return pageNameFromValue(value.name || value.title || value.slug || "");
+  }
+  return "";
+}
+
+async function readApiJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const rawMessage = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return { ok: false, error: rawMessage || `Request returned non-JSON response (HTTP ${response.status})` };
+  }
+}
+
+function shouldUseEmergencyDraft(project, pageName, draft) {
+  if (!draft || !Array.isArray(draft.blocks)) return false;
+  const currentBlocks = Array.isArray(project?.pageBlocks?.[pageName]) ? project.pageBlocks[pageName] : [];
+  const draftSavedAt = Date.parse(draft.savedAt || 0) || 0;
+  const projectUpdatedAt = Date.parse(project?.updatedAt || project?.createdAt || 0) || 0;
+  return draft.blocks.length > currentBlocks.length || draftSavedAt >= projectUpdatedAt;
+}
+
+async function fetchEmergencyPageDraft(projectId, pageName) {
+  if (!projectId || !pageName) return null;
+  try {
+    const response = await fetch(`/api/website-builder/emergency-page-draft?projectId=${encodeURIComponent(projectId)}&pageName=${encodeURIComponent(pageName)}`, {
+      cache: "no-store",
+    });
+    const payload = await readApiJson(response);
+    if (!response.ok || !payload?.ok) return null;
+    return payload.draft || null;
+  } catch (error) {
+    console.warn("Could not load emergency website page draft", error);
+    return null;
+  }
+}
+
+async function saveEmergencyPageDraft(projectId, pageName, { blocks, html = "", chaiData = null, source = "builder-save" } = {}) {
+  if (!projectId || !pageName) return false;
+  try {
+    const response = await fetch("/api/website-builder/emergency-page-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId,
+        pageName,
+        blocks: Array.isArray(blocks) ? blocks : [],
+        html,
+        chaiData,
+        source,
+      }),
+    });
+    const payload = await readApiJson(response);
+    return response.ok && payload?.ok;
+  } catch (error) {
+    console.warn("Could not write emergency website page draft", error);
+    return false;
+  }
+}
+
+async function fetchLocalProjectRepair(projectId) {
+  if (!projectId) return null;
+  try {
+    const response = await fetch(`/api/website-builder/local-project-repair?projectId=${encodeURIComponent(projectId)}`, {
+      cache: "no-store",
+    });
+    const payload = await readApiJson(response);
+    if (!response.ok || !payload?.ok || !payload?.project) return null;
+    return payload.project;
+  } catch (error) {
+    console.warn("Could not repair local website project", error);
+    return null;
+  }
+}
+
+function shouldRepairCollapsedProject(project) {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  return !!project?.id && pages.length <= 1;
+}
+
+function shouldUseLocalRepairProject(project, repairedProject) {
+  if (!project?.id || !repairedProject?.id) return false;
+  const localPages = Array.isArray(project?.pages) ? project.pages : [];
+  const repairedPages = Array.isArray(repairedProject?.pages) ? repairedProject.pages : [];
+  if (repairedPages.length <= 1) return false;
+  if (localPages.length <= 1) return true;
+  if (repairedPages.length > localPages.length) return true;
+
+  const localPageSlugs = new Set(localPages.map((page) => slugify(page?.slug || page?.name || "")));
+  const repairedPageSlugs = new Set(repairedPages.map((page) => slugify(page?.slug || page?.name || "")));
+  const corePages = ["about-us", "modules", "contact-us"];
+  if (corePages.some((pageSlug) => repairedPageSlugs.has(pageSlug) && !localPageSlugs.has(pageSlug))) return true;
+
+  const localBlocks = project?.pageBlocks || {};
+  const repairedBlocks = repairedProject?.pageBlocks || {};
+  const countBlocks = (pageMap) => Object.values(pageMap || {}).reduce((total, blocks) => (
+    total + (Array.isArray(blocks) ? blocks.length : 0)
+  ), 0);
+  if (countBlocks(repairedBlocks) > countBlocks(localBlocks)) return true;
+
+  return repairedPages.some((page) => {
+    const pageName = page?.name || "";
+    const localPageName = localPages.find((entry) => slugify(entry?.name) === slugify(pageName) || slugify(entry?.slug) === slugify(pageName))?.name || pageName;
+    const localCount = Array.isArray(localBlocks[localPageName]) ? localBlocks[localPageName].length : 0;
+    const repairedCount = Array.isArray(repairedBlocks[pageName]) ? repairedBlocks[pageName].length : 0;
+    return repairedCount > localCount;
+  });
+}
+
+function applyEmergencyDraftToProject(project, pageName, draft) {
+  if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
+  const nextChaiData = draft.chaiData && typeof draft.chaiData === "object"
+    ? draft.chaiData
+    : {
+        ...(project?.chaiData?.[pageName] || {}),
+        blocks: draft.blocks,
+      };
+  return {
+    ...project,
+    updatedAt: draft.savedAt || project.updatedAt || new Date().toISOString(),
+    pageBlocks: {
+      ...(project.pageBlocks || {}),
+      [pageName]: draft.blocks,
+    },
+    pagesContent: {
+      ...(project.pagesContent || {}),
+      [pageName]: draft.html || project?.pagesContent?.[pageName] || "",
+    },
+    chaiData: {
+      ...(project.chaiData || {}),
+      [pageName]: nextChaiData,
+    },
+  };
+}
+
+function normalizeBuilderNotice(message) {
+  const text = String(message || "");
+  if (/Unexpected token|not valid JSON|Unexpected end of JSON input|JSON\.parse/i.test(text)) {
+    return "";
+  }
+  return text;
 }
 
 function sanitizeSlugInput(value) {
@@ -166,6 +360,12 @@ function isLegacyAiStarterProject(project) {
   // User has manually saved content — never silently replace their work
   if (project?.status === "saved") return false;
   if (project?.globalNavBlock || project?.globalFooterBlock) return false;
+  const pageBlockEntries = Object.entries(project?.pageBlocks || {});
+  if (pageBlockEntries.some(([pageName, blocks]) => (
+    String(pageName || "").toLowerCase() !== "home"
+    && Array.isArray(blocks)
+    && blocks.length > 0
+  ))) return false;
 
   const homePageName = Array.isArray(project?.pages) && project.pages.length
     ? project.pages[0]?.name || "Home"
@@ -202,7 +402,7 @@ export default function VisualBuilderPage() {
   const canSaveTemplates = DEVELOPER_USER_IDS.has(String(session?.user?.id || ""));
   const previewActionsRef = useRef(null);
   const syncInFlightRef = useRef(false);
-  const syncQueuedRef = useRef(null); // holds latest project pending sync
+  const syncQueuedRef = useRef(null); // holds latest project + page/options pending sync
   const syncTimerRef = useRef(null);  // timer for queued sync
   const lastSyncAtRef = useRef(0);    // timestamp of last completed sync
   // Tracks which projectId we've already resolved activePage for.
@@ -297,11 +497,33 @@ export default function VisualBuilderPage() {
 
       setMissingProjectId("");
 
-      if ((!nextProject || shouldForceReload) && projectId && session?.access_token) {
+      if (projectId && session?.access_token) {
         try {
           const remoteProject = await fetchWebsiteProjectFromServer(session, projectId, { pageName: requestedPage });
           if (remoteProject) {
-            nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: !shouldForceReload });
+            const localProject = !shouldForceReload ? nextProject : null;
+            const localPages = Array.isArray(localProject?.pages) ? localProject.pages : [];
+            const remotePages = Array.isArray(remoteProject.pages) ? remoteProject.pages : [];
+            const localPageName = localPages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || requestedPage;
+            const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
+            const localBlocksForPage = Array.isArray(localProject?.pageBlocks?.[localPageName]) ? localProject.pageBlocks[localPageName] : [];
+            const remoteBlocksForPage = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : [];
+            const localTypes = new Set(localBlocksForPage.map((block) => String(block?.type || "")));
+            const remoteHasMissingStructure = remoteBlocksForPage.some((block) => !localTypes.has(String(block?.type || "")));
+            const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
+            const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
+              localBlocksForPage.length === 0
+              || remoteCleansInlineImages
+              || (remoteBlocksForPage.length > localBlocksForPage.length && remoteHasMissingStructure)
+            );
+
+            const shouldUseRemoteNow = shouldForceReload || !localProject || shouldRecoverRequestedPage;
+            if (localProject?.id && !shouldForceReload) {
+              const mergedProject = mergeRemotePageIntoProject(localProject, remoteProject, requestedPage);
+              nextProject = updateWebsiteProject(localProject.id, mergedProject) || mergedProject;
+            } else {
+              nextProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: !shouldUseRemoteNow });
+            }
           }
         } catch (error) {
           console.warn("Could not load website draft from the server", error);
@@ -316,26 +538,49 @@ export default function VisualBuilderPage() {
           const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
           const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
 
-          if (remoteUpdatedAt > localUpdatedAt) {
-            const refreshedProject = cacheWebsiteProject(remoteProject, { onlyIfNewer: false });
-            if (refreshedProject && !cancelled) setProject(refreshedProject);
-            return;
-          }
-
           const localPages = Array.isArray(localProject?.pages) ? localProject.pages : [];
           const remotePages = Array.isArray(remoteProject.pages) ? remoteProject.pages : [];
           const localNames = new Set(localPages.map((p) => p.name));
           const newPages = remotePages.filter((p) => !localNames.has(p.name));
-          if (newPages.length === 0) return;
-          // Merge new pages + their blocks into the local project
           const remotePageBlocks = remoteProject.pageBlocks || {};
+          const localPageBlocks = localProject?.pageBlocks || {};
+          const localPageName = localPages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || requestedPage;
+          const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
+          const localBlocksForPage = Array.isArray(localPageBlocks[localPageName]) ? localPageBlocks[localPageName] : [];
+          const remoteBlocksForPage = Array.isArray(remotePageBlocks[remotePageName]) ? remotePageBlocks[remotePageName] : [];
+          const localTypes = new Set(localBlocksForPage.map((block) => String(block?.type || "")));
+          const remoteHasMissingStructure = remoteBlocksForPage.some((block) => !localTypes.has(String(block?.type || "")));
+          const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
+          const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
+            localBlocksForPage.length === 0
+            || remoteCleansInlineImages
+            || (remoteBlocksForPage.length > localBlocksForPage.length && remoteHasMissingStructure)
+          );
+
+          if (newPages.length === 0 && !shouldRecoverRequestedPage) {
+            if (remoteUpdatedAt > localUpdatedAt) {
+              console.warn("Skipped background website refresh because local project content is already loaded. Use force reload only when you intentionally want the server copy.");
+            }
+            return;
+          }
+          // Merge new pages + their blocks into the local project. Also recover
+          // the requested page when a stale local cache has lost real page blocks.
           const mergedBlocks = { ...(localProject?.pageBlocks || {}) };
           for (const np of newPages) {
             if (remotePageBlocks[np.name]) mergedBlocks[np.name] = remotePageBlocks[np.name];
           }
+          if (shouldRecoverRequestedPage) {
+            mergedBlocks[localPageName] = remoteBlocksForPage;
+          }
           updateWebsiteProject(projectId, {
             pages: [...localPages, ...newPages],
             pageBlocks: mergedBlocks,
+            pagesContent: shouldRecoverRequestedPage
+              ? { ...(localProject?.pagesContent || {}), [localPageName]: remoteProject?.pagesContent?.[remotePageName] || "" }
+              : localProject?.pagesContent,
+            chaiData: shouldRecoverRequestedPage && remoteProject?.chaiData?.[remotePageName]
+              ? { ...(localProject?.chaiData || {}), [localPageName]: remoteProject.chaiData[remotePageName] }
+              : localProject?.chaiData,
           });
           // Only update React state with the new pages — no existing blocks change,
           // so this won't disrupt any active editing.
@@ -378,6 +623,27 @@ export default function VisualBuilderPage() {
           }],
           status: "unsaved",
         });
+      }
+
+      const resolvedDraftPage = resolveProjectPageName(requestedPage, nextProject) || requestedPage;
+      const emergencyDraft = await fetchEmergencyPageDraft(nextProject.id || projectId, resolvedDraftPage);
+      if (!cancelled && shouldUseEmergencyDraft(nextProject, resolvedDraftPage, emergencyDraft)) {
+        nextProject = applyEmergencyDraftToProject(nextProject, resolvedDraftPage, emergencyDraft);
+        cacheWebsiteProject(nextProject, { onlyIfNewer: false });
+        flashNotice(`Recovered unsynced ${resolvedDraftPage} edits from disk`, "success", 6000);
+      }
+
+      if (!cancelled && nextProject?.id) {
+        const repairedProject = await fetchLocalProjectRepair(nextProject.id || projectId);
+        if (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject)) {
+          const repairedPageCount = Array.isArray(repairedProject?.pages) ? repairedProject.pages.length : 0;
+          const repairedPageName = resolveProjectPageName(requestedPage, repairedProject) || resolvedDraftPage;
+          nextProject = emergencyDraft && shouldUseEmergencyDraft(repairedProject, repairedPageName, emergencyDraft)
+            ? applyEmergencyDraftToProject(repairedProject, repairedPageName, emergencyDraft)
+            : repairedProject;
+          cacheWebsiteProject(nextProject, { onlyIfNewer: false });
+          flashNotice(`Recovered ${repairedPageCount} website pages from disk`, "success", 8000);
+        }
       }
 
       if (cancelled) return;
@@ -423,7 +689,7 @@ export default function VisualBuilderPage() {
           }),
         });
 
-        const payload = await response.json();
+        const payload = await readApiJson(response);
         if (!response.ok || !payload?.ok) {
           throw new Error(payload?.error || "Could not refresh AI website content");
         }
@@ -488,15 +754,146 @@ export default function VisualBuilderPage() {
     return pageEntry?.objective || "Build this page in the visual editor.";
   }, [project, activePage]);
 
+  function resolveProjectPageName(pageName = activePage, sourceProject = project) {
+    const requested = pageNameFromValue(pageName);
+    if (!requested) return "";
+    return sourceProject?.pages?.find((entry) => entry.name === requested || slugify(entry.name) === slugify(requested))?.name || requested;
+  }
+
+  function mergeRemotePageIntoProject(localProject, remoteProject, requestedPage) {
+    if (!remoteProject) return localProject || null;
+    if (!localProject?.id) return remoteProject;
+
+    const localPages = Array.isArray(localProject.pages) ? localProject.pages : [];
+    const remotePages = Array.isArray(remoteProject.pages) ? remoteProject.pages : [];
+    const localPageName = localPages.find((p) => slugify(p.name) === slugify(requestedPage))?.name
+      || remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name
+      || requestedPage;
+    const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
+    const localBlocks = Array.isArray(localProject?.pageBlocks?.[localPageName]) ? localProject.pageBlocks[localPageName] : [];
+    const remoteBlocks = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : null;
+    const remoteHtml = remoteProject?.pagesContent?.[remotePageName];
+    const remoteChai = remoteProject?.chaiData?.[remotePageName];
+    const localTypes = new Set(localBlocks.map((block) => String(block?.type || "")));
+    const remoteHasMissingStructure = Array.isArray(remoteBlocks)
+      && remoteBlocks.some((block) => !localTypes.has(String(block?.type || "")));
+    const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
+    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && (
+      localBlocks.length === 0
+      || remoteCleansInlineImages
+      || (remoteBlocks.length > localBlocks.length && remoteHasMissingStructure)
+    );
+
+    const localNames = new Set(localPages.map((p) => p.name));
+    const mergedPages = [
+      ...localPages,
+      ...remotePages.filter((p) => p?.name && !localNames.has(p.name)),
+    ];
+
+    return {
+      ...localProject,
+      ...remoteProject,
+      pages: mergedPages.length ? mergedPages : remotePages,
+      pageBlocks: {
+        ...(localProject?.pageBlocks || {}),
+        ...(shouldUseRemoteBlocks ? { [localPageName]: remoteBlocks } : {}),
+      },
+      pagesContent: {
+        ...(localProject?.pagesContent || {}),
+        ...(shouldUseRemoteBlocks && remoteHtml !== undefined ? { [localPageName]: remoteHtml || "" } : {}),
+      },
+      chaiData: {
+        ...(localProject?.chaiData || {}),
+        ...(shouldUseRemoteBlocks && remoteChai ? { [localPageName]: remoteChai } : {}),
+      },
+      globalNavBlock: "globalNavBlock" in remoteProject ? remoteProject.globalNavBlock : localProject.globalNavBlock,
+      globalFooterBlock: "globalFooterBlock" in remoteProject ? remoteProject.globalFooterBlock : localProject.globalFooterBlock,
+      updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
+    };
+  }
+
+  function stableJson(value) {
+    if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+    if (value && typeof value === "object") {
+      return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+    }
+    return JSON.stringify(value);
+  }
+
+  function jsonRoundTrip(value) {
+    return JSON.parse(JSON.stringify(value ?? null));
+  }
+
+  function isImageLikeField(key = "") {
+    return /(^|[._-])(image|src|logo|avatar|poster|backgroundImage|mediaImage)$/i.test(String(key || ""));
+  }
+
+  function isExternalizedBuilderAsset(value = "") {
+    return /^\/assets\/website-builder\//i.test(String(value || ""));
+  }
+
+  function containsInlineDataImage(value) {
+    if (typeof value === "string") return /^data:image\//i.test(value);
+    if (Array.isArray(value)) return value.some((entry) => containsInlineDataImage(entry));
+    if (value && typeof value === "object") {
+      return Object.values(value).some((entry) => containsInlineDataImage(entry));
+    }
+    return false;
+  }
+
+  function normalizeForSaveCompare(value, key = "") {
+    if (typeof value === "string") {
+      if (/^data:image\//i.test(value)) return "__WB_DATA_IMAGE__";
+      if (value === "__WB_PRESERVE_DATA_URL__") return "__WB_DATA_IMAGE__";
+      if (isImageLikeField(key) && isExternalizedBuilderAsset(value)) return "__WB_DATA_IMAGE__";
+      return value;
+    }
+    if (Array.isArray(value)) return value.map((entry) => normalizeForSaveCompare(entry, key));
+    if (value && typeof value === "object") {
+      const next = {};
+      for (const [key, child] of Object.entries(value)) {
+        next[key] = normalizeForSaveCompare(child, key);
+      }
+      return next;
+    }
+    return value;
+  }
+
+  function blocksMatchForSave(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    return stableJson(jsonRoundTrip(normalizeForSaveCompare(left))) === stableJson(jsonRoundTrip(normalizeForSaveCompare(right)));
+  }
+
+  function getSavedPageBlocks(projectLike, pageName) {
+    if (Array.isArray(projectLike?.pageBlocks?.[pageName])) return projectLike.pageBlocks[pageName];
+    if (Array.isArray(projectLike?.chaiData?.[pageName]?.blocks)) return projectLike.chaiData[pageName].blocks;
+    return null;
+  }
+
+  function waitForSaveVerification(ms = 750) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   function flashNotice(message, tone = "info", duration = null) {
-    setNotice(String(message || ""));
+    const normalized = normalizeBuilderNotice(message);
+    if (!normalized) {
+      clearNotice();
+      return;
+    }
+    setNotice(normalized);
     setNoticeTone(tone);
     setNoticeDuration(duration ?? (tone === "error" ? 6500 : 2400));
   }
 
+  function clearNotice() {
+    setNotice("");
+    setNoticeTone("info");
+    setNoticeDuration(2400);
+  }
+
   async function syncProjectToServer(nextProject, options = {}) {
     if (!session?.access_token || !nextProject?.id) return nextProject;
-    const syncPageName = String(options?.pageName || activePage || "").trim();
+    const syncPageName = resolveProjectPageName(options?.pageName || activePage, nextProject);
 
     // Throttle: if a sync is already in-flight, or fired too recently,
     // queue this project and bail. The queued sync fires automatically.
@@ -505,7 +902,13 @@ export default function VisualBuilderPage() {
       const MIN_INTERVAL_MS = 5000;
       const now = Date.now();
       if (syncInFlightRef.current || now - lastSyncAtRef.current < MIN_INTERVAL_MS) {
-        syncQueuedRef.current = nextProject;
+        syncQueuedRef.current = {
+          project: nextProject,
+          options: {
+            ...options,
+            pageName: syncPageName,
+          },
+        };
         if (!syncTimerRef.current) {
           const delay = syncInFlightRef.current
             ? MIN_INTERVAL_MS
@@ -514,7 +917,9 @@ export default function VisualBuilderPage() {
             syncTimerRef.current = null;
             const queued = syncQueuedRef.current;
             syncQueuedRef.current = null;
-            if (queued) syncProjectToServer(queued, { ...options, force: true });
+            if (queued?.project) {
+              syncProjectToServer(queued.project, { ...(queued.options || {}), force: true });
+            }
           }, Math.max(delay, 100));
         }
         return nextProject;
@@ -538,6 +943,7 @@ export default function VisualBuilderPage() {
         syncedProject = await saveWebsiteProjectToServer(session, nextProject, {
           pageName: options?.siteOnly ? "" : syncPageName,
           siteOnly: options?.siteOnly === true,
+          saveSource: options?.saveSource || (options?.force ? "manual-save" : "autosave"),
         });
       } catch (firstError) {
         // If the token is stale (401), refresh and retry once
@@ -548,6 +954,7 @@ export default function VisualBuilderPage() {
               syncedProject = await saveWebsiteProjectToServer(refreshed.session, nextProject, {
                 pageName: options?.siteOnly ? "" : syncPageName,
                 siteOnly: options?.siteOnly === true,
+                saveSource: options?.saveSource || (options?.force ? "manual-save" : "autosave"),
               });
             } else {
               throw firstError;
@@ -612,8 +1019,12 @@ export default function VisualBuilderPage() {
       return cachedProject || nextProject;
     } catch (error) {
       console.warn("Could not sync website draft to the server", error);
+      if (options?.force) {
+        flashNotice(error?.message || "Cloud sync failed. Work is local only and no server backup was created yet.", "error", 15000);
+        return { ...(nextProject || {}), _saveError: true, _saveErrorMessage: error?.message || "Cloud sync failed" };
+      }
       if (!options?.silent) {
-        flashNotice(error?.message || "Saved locally, but cloud sync failed.", "error", 5000);
+        flashNotice(error?.message || "Saved locally only. Cloud sync failed, so this edit is not protected by a server backup yet.", "error", 10000);
       }
       return nextProject;
     } finally {
@@ -632,7 +1043,9 @@ export default function VisualBuilderPage() {
         syncQueuedRef.current = null;
         syncTimerRef.current = setTimeout(() => {
           syncTimerRef.current = null;
-          syncProjectToServer(queued, { ...options, force: true });
+          if (queued?.project) {
+            syncProjectToServer(queued.project, { ...(queued.options || {}), force: true });
+          }
         }, 500);
       }
     }
@@ -734,7 +1147,7 @@ export default function VisualBuilderPage() {
         customDomainInstructions: payload.customDomainInstructions || null,
       };
 
-      const updated = saveProjectPatch({ publication: nextPublication }, "Website published");
+      const updated = saveProjectPatch({ publication: nextPublication }, "Website published", { siteOnly: true, saveSource: "publish" });
       if (!updated) {
         setProject((current) => current ? { ...current, publication: nextPublication } : current);
         flashNotice("Website published", "success");
@@ -767,9 +1180,9 @@ export default function VisualBuilderPage() {
     if (savedProject?._localSaveFailed) {
       const projectToSync = { ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined };
       flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
-      void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, ...syncOptions }).then((synced) => {
+      void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, saveSource: "manual-save", ...syncOptions }).then((synced) => {
         if (synced) flashNotice("✓ Auto-saved to cloud (local storage full)", "success", 6000);
-      });
+      }).catch(() => {});
       return projectToSync;
     }
 
@@ -782,8 +1195,9 @@ export default function VisualBuilderPage() {
 
     if (savedProject && latest) {
       setProject(latest);
-      flashNotice(successMessage);
-      void syncProjectToServer(latest, { silent: true, pageName: activePage, ...syncOptions });
+      if (successMessage) flashNotice(successMessage);
+      else clearNotice();
+      void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions });
       return latest;
     }
 
@@ -791,8 +1205,9 @@ export default function VisualBuilderPage() {
       flashNotice("⚠️ Could not save — storage full. Please click Save to force cloud sync.", "error", 8000);
     } else {
       setProject(savedProject);
-      flashNotice(successMessage);
-      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, ...syncOptions });
+      if (successMessage) flashNotice(successMessage);
+      else clearNotice();
+      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions });
       return savedProject;
     }
 
@@ -800,7 +1215,7 @@ export default function VisualBuilderPage() {
   }
 
   function navigateToPage(pageName) {
-    const nextPage = String(pageName || "").trim();
+    const nextPage = pageNameFromValue(pageName);
     if (!nextPage) return;
     setActivePage(nextPage);
 
@@ -819,7 +1234,7 @@ export default function VisualBuilderPage() {
   }
 
   function handleAddPage(nameOverride) {
-    const pageName = String(nameOverride || newPageName || "").trim();
+    const pageName = pageNameFromValue(nameOverride || newPageName);
     if (!pageName || !project?.id) return;
 
     if (project.pages?.some((entry) => slugify(entry.name) === slugify(pageName))) {
@@ -849,7 +1264,7 @@ export default function VisualBuilderPage() {
         },
       },
       `Added ${pageName}`,
-      { pageName }
+      { pageName, saveSource: "manual-save" }
     );
 
     navigateToPage(pageName);
@@ -862,15 +1277,17 @@ export default function VisualBuilderPage() {
       flashNotice("Cannot delete the only page.");
       return;
     }
-    const nextPages = project.pages.filter((p) => p.name !== name);
+    const pageName = pageNameFromValue(name);
+    if (!pageName) return;
+    const nextPages = project.pages.filter((p) => p.name !== pageName);
     const nextPageBlocks = { ...(project.pageBlocks || {}) };
-    delete nextPageBlocks[name];
+    delete nextPageBlocks[pageName];
     const nextChaiData = { ...(project.chaiData || {}) };
-    delete nextChaiData[name];
+    delete nextChaiData[pageName];
     const nextPagesContent = { ...(project.pagesContent || {}) };
-    delete nextPagesContent[name];
-    saveProjectPatch({ pages: nextPages, pageBlocks: nextPageBlocks, chaiData: nextChaiData, pagesContent: nextPagesContent }, `Deleted ${name}`, { siteOnly: true });
-    if (activePage === name) navigateToPage(nextPages[0]?.name || "Home");
+    delete nextPagesContent[pageName];
+    saveProjectPatch({ pages: nextPages, pageBlocks: nextPageBlocks, chaiData: nextChaiData, pagesContent: nextPagesContent }, `Deleted ${pageName}`, { siteOnly: true, saveSource: "manual-save" });
+    if (activePage === pageName) navigateToPage(nextPages[0]?.name || "Home");
   }
 
   function handleRenamePage(oldName, newName) {
@@ -893,7 +1310,7 @@ export default function VisualBuilderPage() {
       pageBlocks: renameKey(project.pageBlocks),
       chaiData: renameKey(project.chaiData),
       pagesContent: renameKey(project.pagesContent),
-    }, `Renamed to ${trimmed}`, { pageName: trimmed });
+    }, `Renamed to ${trimmed}`, { pageName: trimmed, saveSource: "manual-save" });
     if (activePage === oldName) navigateToPage(trimmed);
   }
 
@@ -914,32 +1331,37 @@ export default function VisualBuilderPage() {
     return () => { delete window.__addBuilderPage; };
   });
 
-  function saveChaiPage(data, successMessage = `Saved ${activePage}`) {
+  async function saveChaiPage(data, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
-    const safeData = data || buildStarterChaiData(currentProject, activePage);
-    let html = "";
-    try {
-      html = renderChaiHtml(safeData, brandAssets);
-    } catch (renderErr) {
-      console.error("[saveChaiPage] renderChaiHtml threw — saving without pre-rendered HTML:", renderErr);
-    }
+    const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    const safeData = data || buildStarterChaiData(currentProject, pageName);
+    const safeBlocks = Array.isArray(safeData?.blocks) ? safeData.blocks : [];
+    const html = "";
+
+    await saveEmergencyPageDraft(currentProject?.id, pageName, {
+      blocks: safeBlocks,
+      html,
+      chaiData: safeData,
+      source: options?.saveSource || "autosave",
+    });
 
     return saveProjectPatch(
       {
         chaiData: {
           ...(currentProject?.chaiData || {}),
-          [activePage]: safeData,
+          [pageName]: safeData,
         },
         pageBlocks: {
           ...(currentProject?.pageBlocks || {}),
-          [activePage]: Array.isArray(safeData?.blocks) ? safeData.blocks : [],
+          [pageName]: safeBlocks,
         },
         pagesContent: {
           ...(currentProject?.pagesContent || {}),
-          [activePage]: html,
+          [pageName]: "",
         },
       },
-      successMessage
+      successMessage,
+      { pageName, saveSource: options?.saveSource || "autosave" }
     );
   }
 
@@ -959,81 +1381,200 @@ export default function VisualBuilderPage() {
     });
   }
 
-  function saveBlockPage(blocks, successMessage = `Saved ${activePage}`) {
+  function validateImageReferences(blocks) {
+    const issues = [];
+    const visit = (value, path = []) => {
+      if (typeof value === "string") {
+        const key = String(path[path.length - 1] || "");
+        if (/^blob:/i.test(value)) {
+          issues.push({ path: path.join("."), reason: "temporary browser image URL" });
+        }
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((entry, index) => visit(entry, [...path, index]));
+        return;
+      }
+      if (value && typeof value === "object") {
+        Object.entries(value).forEach(([key, entry]) => visit(entry, [...path, key]));
+      }
+    };
+    visit(Array.isArray(blocks) ? blocks : []);
+    return issues;
+  }
+
+  function saveBlockPage(blocks, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+    const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    const imageIssues = validateImageReferences(Array.isArray(blocks) ? blocks : []);
+    if (imageIssues.length) {
+      const message = `Cannot save ${pageName}: ${imageIssues.length} image reference must finish uploading first.`;
+      flashNotice(message, "error", 15000);
+      return { _saveError: true, _saveErrorMessage: message, imageIssues };
+    }
     const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
     return saveChaiPage({
-      ...(currentProject?.chaiData?.[activePage] || {}),
+      ...(currentProject?.chaiData?.[pageName] || {}),
       blocks: safeBlocks,
-      theme: currentProject?.chaiData?.[activePage]?.theme || { preset: currentProject?.stylePack || "premium" },
-      designTokens: currentProject?.chaiData?.[activePage]?.designTokens || {},
-    }, successMessage);
+      theme: currentProject?.chaiData?.[pageName]?.theme || { preset: currentProject?.stylePack || "premium" },
+      designTokens: currentProject?.chaiData?.[pageName]?.designTokens || {},
+    }, successMessage, { pageName, saveSource: options?.saveSource || "autosave" });
   }
 
   // forceSaveBlockPage: used by the manual Save button / Ctrl+S.
   // Awaits the cloud sync and surfaces errors so the user knows if data didn't reach the server.
-  // IMPORTANT: this function must NEVER return null — handleSave treats null as a hard failure.
-  // All errors are already reported via flashNotice; returning a truthy value lets handleSave show "Saved ✓".
-  async function forceSaveBlockPage(blocks) {
+  async function forceSaveBlockPage(blocks, options = {}) {
     try {
       const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+      const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+      const isPreviewSave = options?.saveSource === "preview-autosave";
       if (!currentProject?.id) {
         console.error("[forceSaveBlockPage] project has no id — project state:", project);
         flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
-        return { _saveError: true }; // truthy so handleSave doesn't double-report
+        return null;
+      }
+
+      const imageIssues = validateImageReferences(Array.isArray(blocks) ? blocks : []);
+      if (imageIssues.length) {
+        const message = `Cannot save ${pageName}: ${imageIssues.length} image reference must finish uploading first.`;
+        flashNotice(message, "error", 15000);
+        return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message, imageIssues };
       }
 
       const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
 
       // Build the chai data payload
       const chaiData = {
-        ...(currentProject?.chaiData?.[activePage] || {}),
+        ...(currentProject?.chaiData?.[pageName] || {}),
         blocks: safeBlocks,
-        theme: currentProject?.chaiData?.[activePage]?.theme || { preset: currentProject?.stylePack || "premium" },
-        designTokens: currentProject?.chaiData?.[activePage]?.designTokens || {},
+        theme: currentProject?.chaiData?.[pageName]?.theme || { preset: currentProject?.stylePack || "premium" },
+        designTokens: currentProject?.chaiData?.[pageName]?.designTokens || {},
       };
 
-      // Render HTML — wrapped in try/catch so a broken block component never kills the save.
-      let html = "";
-      try {
-        html = renderChaiHtml(chaiData, brandAssets);
-      } catch (renderErr) {
-        console.error("[forceSaveBlockPage] renderChaiHtml threw — saving without pre-rendered HTML:", renderErr);
-      }
+      const html = "";
 
       const patch = {
-        chaiData: { ...(currentProject?.chaiData || {}), [activePage]: chaiData },
-        pageBlocks: { ...(currentProject?.pageBlocks || {}), [activePage]: safeBlocks },
-        pagesContent: { ...(currentProject?.pagesContent || {}), [activePage]: html },
+        chaiData: { ...(currentProject?.chaiData || {}), [pageName]: chaiData },
+        pageBlocks: { ...(currentProject?.pageBlocks || {}), [pageName]: safeBlocks },
+        pagesContent: { ...(currentProject?.pagesContent || {}), [pageName]: html },
         status: "saved",
       };
 
       const projectWithPatch = { ...currentProject, ...patch, updatedAt: new Date().toISOString() };
 
-      if (!getWebsiteProject(currentProject.id)) {
+      if (!isPreviewSave) {
+        await saveEmergencyPageDraft(currentProject.id, pageName, {
+          blocks: safeBlocks,
+          html,
+          chaiData,
+          source: options?.saveSource || "manual-save",
+        });
+      }
+
+      if (!isPreviewSave && !getWebsiteProject(currentProject.id)) {
         cacheWebsiteProject(currentProject, { onlyIfNewer: false });
       }
-      updateWebsiteProject(currentProject.id, projectWithPatch);
-      setProject(projectWithPatch);
+      const stagedProject = isPreviewSave
+        ? projectWithPatch
+        : (updateWebsiteProject(currentProject.id, projectWithPatch) || projectWithPatch);
+      const projectToSync = {
+        ...stagedProject,
+        _localSaveFailed: undefined,
+      };
+      const normalizedBlocks = Array.isArray(projectToSync?.pageBlocks?.[pageName])
+        ? projectToSync.pageBlocks[pageName]
+        : safeBlocks;
+      if (!isPreviewSave) setProject(projectToSync);
 
       // Stage the current edit locally before cloud sync so the async merge below
       // cannot treat an older cache entry as the source of truth and roll blocks back.
       let serverSynced = null;
       try {
-        serverSynced = await syncProjectToServer(projectWithPatch, { silent: true, force: true, pageName: activePage });
+        serverSynced = await syncProjectToServer(projectToSync, { silent: true, force: true, pageName, saveSource: options?.saveSource || "manual-save" });
       } catch (serverErr) {
-        console.error("[forceSaveBlockPage] server sync failed:", serverErr);
-        flashNotice("⚠️ Could not save to cloud — check your connection. Work saved locally.", "warning", 10000);
+        console.warn("[forceSaveBlockPage] server sync failed:", serverErr);
+        flashNotice("Could not save to cloud. Work is local only and no server backup was created yet.", "error", 15000);
+        if (isPreviewSave) {
+          return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: serverErr?.message || "Cloud sync failed" };
+        }
         // Still write to localStorage so the preview tab can load the latest local copy.
         if (!getWebsiteProject(currentProject.id)) {
           cacheWebsiteProject(currentProject, { onlyIfNewer: false });
         }
         updateWebsiteProject(currentProject.id, projectWithPatch);
         setProject(projectWithPatch);
-        return { _saveError: true };
+        return { ...projectWithPatch, _saveError: true, _saveErrorMessage: serverErr?.message || "Cloud sync failed" };
       }
 
-      const projectToStore = serverSynced || projectWithPatch;
+      if (serverSynced?._saveError) {
+        if (isPreviewSave) return serverSynced;
+        updateWebsiteProject(currentProject.id, projectWithPatch);
+        setProject(projectWithPatch);
+        return serverSynced;
+      }
+
+      let verifiedProject = null;
+      let verifiedSaveMatches = false;
+      try {
+        verifiedProject = session?.access_token
+          ? await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName })
+          : null;
+        let verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
+        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks) && session?.access_token) {
+          await waitForSaveVerification();
+          verifiedProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
+          verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
+        }
+        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks)) {
+          const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
+          if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+            verifiedProject = serverSynced;
+            verifiedBlocks = syncedBlocks;
+            verifiedSaveMatches = true;
+          } else {
+            console.error("[forceSaveBlockPage] save verification mismatch; keeping staged save as local source.", {
+            pageName,
+            editorBlockCount: normalizedBlocks.length,
+            verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
+            syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
+          });
+            verifiedProject = null;
+          }
+        } else {
+          verifiedSaveMatches = true;
+        }
+      } catch (verifyErr) {
+        console.error("[forceSaveBlockPage] save verification check failed after cloud save.", verifyErr);
+        verifiedProject = null;
+      }
+
+      const verifiedPagePatch = verifiedProject && typeof verifiedProject === "object" ? {
+        ...(Array.isArray(verifiedProject?.pageBlocks?.[pageName]) ? {
+          pageBlocks: {
+            ...(projectWithPatch.pageBlocks || {}),
+            [pageName]: verifiedProject.pageBlocks[pageName],
+          },
+        } : {}),
+        ...(Object.prototype.hasOwnProperty.call(verifiedProject?.pagesContent || {}, pageName) ? {
+          pagesContent: {
+            ...(projectWithPatch.pagesContent || {}),
+            [pageName]: verifiedProject.pagesContent[pageName] || "",
+          },
+        } : {}),
+        ...(Object.prototype.hasOwnProperty.call(verifiedProject?.chaiData || {}, pageName) ? {
+          chaiData: {
+            ...(projectWithPatch.chaiData || {}),
+            [pageName]: verifiedProject.chaiData[pageName],
+          },
+        } : {}),
+        updatedAt: verifiedProject.updatedAt || projectWithPatch.updatedAt,
+        status: "saved",
+      } : {};
+
+      const projectToStore = {
+        ...((verifiedSaveMatches && serverSynced) || projectWithPatch),
+        ...verifiedPagePatch,
+      };
 
       // ── THEN refresh localStorage with the server-normalized project ───────
       const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
@@ -1050,13 +1591,13 @@ export default function VisualBuilderPage() {
       }
 
       if (latest) setProject(latest);
-      flashNotice(`Saved ✓ ${activePage}`, "success");
+      clearNotice();
+      flashNotice(`Saved ✓ ${pageName}`, "success");
       return latest || savedProject;
     } catch (unexpectedErr) {
-      // Catch-all: never let an unexpected error cause handleSave to show "Could not save page"
       console.error("[forceSaveBlockPage] unexpected error:", unexpectedErr);
       flashNotice("Save encountered an error — please try again.", "error");
-      return { _saveError: true }; // truthy fallback
+      return null;
     }
   }
 
@@ -1069,7 +1610,7 @@ export default function VisualBuilderPage() {
           cache: "no-store",
           headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
         });
-        const payload = await response.json();
+        const payload = await readApiJson(response);
         if (!response.ok || !payload?.ok || cancelled) return;
 
         setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
@@ -1084,9 +1625,6 @@ export default function VisualBuilderPage() {
           deleteWebsiteTemplateOverride(templateSlug);
         }
 
-        if (!project?.id) return;
-        const refreshed = getWebsiteProject(project.id);
-        if (!cancelled && refreshed) setProject(refreshed);
       } catch (error) {
         console.warn("Could not load website builder defaults", error);
       }
@@ -1115,7 +1653,7 @@ export default function VisualBuilderPage() {
           globalFooterBlock,
         }),
       });
-      const payload = await response.json();
+      const payload = await readApiJson(response);
       if (!response.ok || !payload?.ok) return false;
 
       updateWebsiteTemplateOverride(project.templateSlug, payload.templateOverride || {});
@@ -1143,7 +1681,7 @@ export default function VisualBuilderPage() {
           globalFooterBlock,
         }),
       });
-      const payload = await response.json();
+      const payload = await readApiJson(response);
       if (!response.ok || !payload?.ok) return false;
 
       updateWebsiteTemplateOverride(project.templateSlug, payload.templateOverride || {});
@@ -1170,7 +1708,7 @@ export default function VisualBuilderPage() {
           props: block?.props || {},
         }),
       });
-      const payload = await response.json();
+      const payload = await readApiJson(response);
       if (!response.ok || !payload?.ok) return false;
 
       setBlockDefaults(payload.blockDefaults && typeof payload.blockDefaults === "object" ? payload.blockDefaults : {});
@@ -1184,15 +1722,23 @@ export default function VisualBuilderPage() {
 
   function saveGlobalBlock(block, role) {
     if (!project?.id || !block) return;
+    if (role === "nav" && block.type !== BlockTypes.NAV_BAR) {
+      flashNotice("Only a Navigation Bar block can be saved as global navigation.", "error", 6000);
+      return;
+    }
+    if (role === "footer" && block.type !== BlockTypes.FOOTER) {
+      flashNotice("Only a Footer block can be saved as global footer.", "error", 6000);
+      return;
+    }
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
-    saveProjectPatch({ [field]: block }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true });
+    saveProjectPatch({ [field]: block }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function updateGlobalBlock(role, block) {
     if (!project?.id) return;
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
     // block === null means "delete this global block"
-    saveProjectPatch({ [field]: block ?? null }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true });
+    saveProjectPatch({ [field]: block ?? null }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function applyDesignPreset(presetName) {
@@ -1372,6 +1918,20 @@ export default function VisualBuilderPage() {
   }
 
   const studioProject = project;
+  const activeProjectPageName = resolveProjectPageName(activePage, studioProject);
+  const activePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName]) && studioProject.pageBlocks[activeProjectPageName].length > 0
+    ? studioProject.pageBlocks[activeProjectPageName]
+    : Array.isArray(studioProject?.chaiData?.[activeProjectPageName]?.blocks)
+      ? studioProject.chaiData[activeProjectPageName].blocks
+      : Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
+        ? studioProject.pageBlocks[activeProjectPageName]
+        : [];
+  const canvasInstanceKey = [
+    studioProject?.id || "",
+    activeProjectPageName,
+    activePageBlocks.length,
+    activePageBlocks.map((block) => block?.id || block?.type || "").join(":"),
+  ].join("|");
 
   return (
     <>
@@ -1694,32 +2254,42 @@ export default function VisualBuilderPage() {
           )}
 
             <div style={styles.mainColumn}>
+              <div style={styles.builderStatusStrip}>
+                <span>Builder active</span>
+                <strong>{activeProjectPageName}</strong>
+                <span>{activePageBlocks.length} blocks loaded</span>
+              </div>
               {isUpgrading ? (
                 <StudioLoader label="Rebuilding AI layout…" />
-              ) : <PageBuilderCanvas
-                project={studioProject}
-                brandAssets={brandAssets}
-                pageBlocks={studioProject?.pageBlocks?.[activePage] || studioProject?.chaiData?.[activePage]?.blocks || []}
-                activePage={activePage}
-                currentObjective={currentObjective}
-                onSave={(blocks) => saveBlockPage(blocks, `Saved ${activePage}`)}
-                onForceSave={forceSaveBlockPage}
-                onUploadImage={handleUploadImage}
-                onSelectAsset={handleSelectAsset}
-                onSaveAsGlobal={saveGlobalBlock}
-                onSaveBlockDefault={canSaveTemplates ? saveBlockDefaultToServer : null}
-                onSaveTemplatePage={canSaveTemplates ? saveTemplatePageToServer : null}
-                onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
-                canSaveTemplates={canSaveTemplates}
-                onUpdateGlobalBlock={updateGlobalBlock}
-                onOpenMediaLibrary={openMediaLibrary}
-                onRefreshAssetLibrary={refreshSharedLibrary}
-                onRegisterPreviewActions={(actions) => {
-                  previewActionsRef.current = actions;
-                }}
-                blockDefaults={blockDefaults}
-                showHeader={true}
-              />}
+              ) : (
+                <CanvasErrorBoundary resetKey={`${studioProject?.id || ""}:${activeProjectPageName}`}>
+                  <PageBuilderCanvas
+                    key={canvasInstanceKey}
+                    project={studioProject}
+                    brandAssets={brandAssets}
+                    pageBlocks={activePageBlocks}
+                    activePage={activeProjectPageName}
+                    currentObjective={currentObjective}
+                    onSave={(blocks) => saveBlockPage(blocks, `Saved ${activeProjectPageName}`, { pageName: activeProjectPageName })}
+                    onForceSave={(blocks, options = {}) => forceSaveBlockPage(blocks, { ...options, pageName: activeProjectPageName })}
+                    onUploadImage={handleUploadImage}
+                    onSelectAsset={handleSelectAsset}
+                    onSaveAsGlobal={saveGlobalBlock}
+                    onSaveBlockDefault={canSaveTemplates ? saveBlockDefaultToServer : null}
+                    onSaveTemplatePage={canSaveTemplates ? saveTemplatePageToServer : null}
+                    onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
+                    canSaveTemplates={canSaveTemplates}
+                    onUpdateGlobalBlock={updateGlobalBlock}
+                    onOpenMediaLibrary={openMediaLibrary}
+                    onRefreshAssetLibrary={refreshSharedLibrary}
+                    onRegisterPreviewActions={(actions) => {
+                      previewActionsRef.current = actions;
+                    }}
+                    blockDefaults={blockDefaults}
+                    showHeader={true}
+                  />
+                </CanvasErrorBoundary>
+              )}
             </div>
           </div>{/* end stickyArea */}
       </main>
@@ -1783,6 +2353,54 @@ const styles = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+  },
+  builderStatusStrip: {
+    position: "relative",
+    zIndex: 50,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    minHeight: 34,
+    padding: "7px 12px",
+    background: "#052e16",
+    color: "#dcfce7",
+    borderTop: "1px solid rgba(134,239,172,0.35)",
+    borderBottom: "1px solid rgba(134,239,172,0.35)",
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  canvasErrorPanel: {
+    display: "grid",
+    gap: 12,
+    alignContent: "center",
+    justifyItems: "start",
+    minHeight: "100%",
+    padding: 28,
+    background: "#fff7ed",
+    color: "#7c2d12",
+    border: "1px solid #fdba74",
+  },
+  canvasErrorTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+  },
+  canvasErrorText: {
+    maxWidth: 720,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontSize: 14,
+    fontWeight: 500,
+    lineHeight: 1.5,
+    overflowWrap: "anywhere",
+  },
+  canvasErrorButton: {
+    border: "1px solid #fb923c",
+    borderRadius: 8,
+    background: "#ffffff",
+    color: "#9a3412",
+    padding: "9px 14px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
   },
   bannerOuter: {
     padding: "8px 16px 6px",

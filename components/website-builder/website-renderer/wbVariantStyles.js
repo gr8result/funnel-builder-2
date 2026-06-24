@@ -557,10 +557,19 @@ function heroVariantStyles(props, compact) {
 
 function normalizeFeatureItem(item, index) {
   if (item && typeof item === "object" && !Array.isArray(item)) {
+    const textBlocks = Array.isArray(item.textBlocks)
+      ? item.textBlocks.map((block, blockIndex) => ({
+          id: block?.id || `feature-item-${index}-text-${blockIndex}`,
+          type: block?.type === "headline" ? "headline" : block?.type === "label" ? "label" : "text",
+          text: String(block?.text || ""),
+          style: block?.style && typeof block.style === "object" ? { ...block.style } : {},
+        })).filter((block) => block.text.trim() || block.type === "headline" || block.type === "label")
+      : null;
     return {
       id: item.id || `feature-item-${index}`,
       title: String(item.title || item.label || item.text || `Feature ${index + 1}`),
       body: String(item.body || item.description || item.copy || ""),
+      textBlocks,
       image: String(item.image || item.src || ""),
       imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
       imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,

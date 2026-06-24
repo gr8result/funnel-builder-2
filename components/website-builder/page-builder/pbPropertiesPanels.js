@@ -233,10 +233,25 @@ function NavbarLinksEditor({ links, onChange }) {
 
 function normalizeFeatureListItem(item, index) {
   if (item && typeof item === "object" && !Array.isArray(item)) {
+    const rawTextBlocks = Array.isArray(item.textBlocks) && item.textBlocks.length
+      ? item.textBlocks
+      : [
+          { id: `feature-${index}-headline`, type: "headline", text: item.title || item.label || item.text || `Feature ${index + 1}` },
+          ...(item.body || item.description || item.copy ? [{ id: `feature-${index}-text`, type: "text", text: item.body || item.description || item.copy }] : []),
+        ];
+    const textBlocks = rawTextBlocks.map((block, blockIndex) => ({
+      id: block?.id || `feature-${index}-text-${blockIndex}`,
+      type: block?.type === "headline" ? "headline" : block?.type === "label" ? "label" : "text",
+      text: String(block?.text || ""),
+      style: block?.style && typeof block.style === "object" ? { ...block.style } : {},
+    })).filter((block) => block.text.trim() || block.type === "headline" || block.type === "label");
+    const headline = textBlocks.find((block) => block.type === "headline")?.text || item.title || item.label || item.text || `Feature ${index + 1}`;
+    const body = textBlocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n") || item.body || item.description || item.copy || "";
     return {
       id: item.id || `feature-item-${index}`,
-      title: String(item.title || item.label || item.text || `Feature ${index + 1}`),
-      body: String(item.body || item.description || item.copy || ""),
+      title: String(headline),
+      body: String(body),
+      textBlocks,
       image: String(item.image || item.src || ""),
       imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
       imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,
@@ -247,6 +262,7 @@ function normalizeFeatureListItem(item, index) {
     id: `feature-item-${index}`,
     title: String(item || `Feature ${index + 1}`),
     body: "",
+    textBlocks: [{ id: `feature-${index}-headline`, type: "headline", text: String(item || `Feature ${index + 1}`) }],
     image: "",
     imageX: 50,
     imageY: 50,
@@ -372,12 +388,13 @@ function buildEditableTeamRows(members, rowSizes) {
 }
 
 function normalizeStatItem(item, index) {
+  const defaultDetail = "Shows visitors a clear proof point tied to faster launches, stronger lead capture and better follow-up.";
   if (item && typeof item === "object" && !Array.isArray(item)) {
     return {
       id: item.id || `stat-item-${index}`,
       number: String(item.number || item.value || `0${index + 1}`),
       label: String(item.label || item.title || `Metric ${index + 1}`),
-      detail: String(item.detail || item.description || "Add a short line of context."),
+      detail: String(item.detail || item.description || defaultDetail),
       cardAnimation: item.cardAnimation != null ? String(item.cardAnimation) : "",
     };
   }
@@ -386,7 +403,7 @@ function normalizeStatItem(item, index) {
     id: `stat-item-${index}`,
     number: String(item || `0${index + 1}`),
     label: `Metric ${index + 1}`,
-    detail: "Add a short line of context.",
+    detail: defaultDetail,
     cardAnimation: "",
   };
 }
@@ -416,7 +433,7 @@ function StatsItemsEditor({ stats, onChange }) {
         id: `stat-item-${Date.now()}-${safeStats.length}`,
         number: `${(safeStats.length + 1) * 10}+`,
         label: `Metric ${safeStats.length + 1}`,
-        detail: "Add a short line of context.",
+        detail: "Use this space to explain the business result behind the number, such as time saved, leads captured or pages launched.",
       },
     ]);
   }
@@ -466,7 +483,7 @@ function StatsItemsEditor({ stats, onChange }) {
               value={stat.detail || ""}
               onChange={(event) => updateStat(index, { detail: event.target.value })}
               style={{ ...styles.propertyInput, minHeight: 88 }}
-              placeholder="Add a short line of context."
+              placeholder="Explain the business result behind this number."
             />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Card Animation</label>
             <select
@@ -919,7 +936,7 @@ function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-function TestimonialItemsEditor({ items, onChange, brandAssets }) {
+function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, blockIndex }) {
   const safeItems = (Array.isArray(items) && items.length)
     ? items.map(normalizeTestimonialItemForEditor)
     : [normalizeTestimonialItemForEditor({}, 0)];
@@ -978,15 +995,23 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
                   const file = event.target.files?.[0];
                   event.target.value = "";
                   if (!file) return;
-                  const asset = await createStoredAsset(file);
-                  updateItem(index, { avatarUrl: asset.src, avatarAssetId: asset.id || "" });
+                  const asset = typeof onUploadImage === "function"
+                    ? await onUploadImage(blockIndex, `__testimonial_avatar_${index}__`, file)
+                    : await createStoredAsset(file);
+                  if (asset?.src) {
+                    updateItem(index, {
+                      avatarUrl: asset.src,
+                      avatar: asset.src,
+                      avatarAssetId: asset.id || "",
+                    });
+                  }
                 }}
               />
             </label>
             <button
               type="button"
               style={styles.secondaryBtn}
-              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatarAssetId: asset.id || "" }))}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatar: asset.src || "", avatarAssetId: asset.id || "" }))}
             >
               Choose From Library
             </button>
@@ -995,7 +1020,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
                 key={`tav-${index}-${image.id || image.src}`}
                 type="button"
                 style={styles.assetThumbBtn}
-                onClick={() => updateItem(index, { avatarUrl: image.src, avatarAssetId: image.id || "" })}
+                onClick={() => updateItem(index, { avatarUrl: image.src, avatar: image.src, avatarAssetId: image.id || "" })}
                 title={image.name}
               >
                 <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
@@ -1003,7 +1028,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
             ))}
           </div>
           {item.avatarUrl ? (
-            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatarAssetId: "" })}>Remove Avatar</button>
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatar: "", avatarAssetId: "" })}>Remove Avatar</button>
           ) : null}
         </div>
       ))}
@@ -1012,7 +1037,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
   );
 }
 
-function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
+function TestimonialPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
 
@@ -1056,6 +1081,8 @@ function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
             items={props.items}
             onChange={(items) => update({ items })}
             brandAssets={brandAssets}
+            onUploadImage={onUploadImage}
+            blockIndex={index}
           />
         </div>
         <div style={styles.sectionCard}>
@@ -1988,7 +2015,7 @@ function ensureGalleryImagesCount(images, count) {
   return nextImages;
 }
 
-function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
+function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor, onUploadImage, blockIndex }) {
   const safeItems = Array.isArray(items) ? items : [];
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
 
@@ -2005,12 +2032,51 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
   function addItem() {
     onChange([...safeItems, {
       id: `feature-item-${Date.now()}-${safeItems.length}`,
-      title: `List item ${safeItems.length + 1}`,
-      body: "Add a short supporting sentence.",
+      title: `Card ${safeItems.length + 1}`,
+      body: "Add supporting text.",
+      textBlocks: [
+        { id: `headline-${Date.now()}`, type: "headline", text: `Card ${safeItems.length + 1}` },
+        { id: `text-${Date.now()}`, type: "text", text: "Add supporting text." },
+      ],
       image: `https://placehold.co/960x720/e2e8f0/0f172a?text=${encodeURIComponent(`Item ${safeItems.length + 1}`)}`,
       imageX: 50,
       imageY: 50,
     }]);
+  }
+
+  function syncLegacyTextFields(textBlocks) {
+    const headline = textBlocks.find((block) => block.type === "headline")?.text || "";
+    const body = textBlocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n");
+    return { title: headline, body };
+  }
+
+  function updateTextBlock(itemIndex, blockIndex, patch) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const textBlocks = item.textBlocks.map((block, currentIndex) => (
+      currentIndex === blockIndex ? { ...block, ...patch } : block
+    ));
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
+  }
+
+  function removeTextBlock(itemIndex, blockIndex) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const textBlocks = item.textBlocks.filter((_, currentIndex) => currentIndex !== blockIndex);
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
+  }
+
+  function addTextBlock(itemIndex, type) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const text = type === "headline" ? "New headline" : type === "label" ? "New label" : "New text block";
+    const textBlocks = [
+      ...item.textBlocks,
+      {
+        id: `feature-text-${Date.now()}-${item.textBlocks.length}`,
+        type,
+        text,
+        style: {},
+      },
+    ];
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
   }
 
   return (
@@ -2020,12 +2086,10 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
         return (
         <div key={`${index}-${item.id}`} style={styles.linkRowCard}>
           <div style={styles.linkRowHeader}>
-            <span style={styles.linkRowTitle}>Item {index + 1}</span>
+            <span style={styles.linkRowTitle}>Card {index + 1}</span>
             <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
           </div>
-          <p style={{ margin: 0, color: "#475569", fontSize: 16 }}>
-            Edit the item title and copy directly on the page. Use SVG icons or normal images here.
-          </p>
+          <label style={{ ...styles.propertyLabel, marginTop: 8, display: "block" }}>Card Image</label>
           <input
             type="text"
             value={item.image}
@@ -2044,15 +2108,25 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
                   const file = event.target.files?.[0];
                   event.target.value = "";
                   if (!file) return;
-                  const asset = await createStoredAsset(file);
-                  updateItem(index, { image: asset.src });
+                  const asset = typeof onUploadImage === "function"
+                    ? await onUploadImage(blockIndex, `items.${index}.image`, file)
+                    : await createStoredAsset(file);
+                  updateItem(index, {
+                    image: asset?.src || "",
+                    imageAssetId: asset?.id || "",
+                    imageAlt: htmlToPlainText(asset?.name || item.imageAlt || ""),
+                  });
                 }}
               />
             </label>
             <button
               type="button"
               style={styles.secondaryBtn}
-              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { image: asset.src || "" }))}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, {
+                image: asset.src || "",
+                imageAssetId: asset.id || "",
+                imageAlt: htmlToPlainText(asset.name || item.imageAlt || ""),
+              }))}
             >
               Choose From Library
             </button>
@@ -2061,7 +2135,11 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
                 key={`feature-item-${index}-${image.id || image.src}`}
                 type="button"
                 style={styles.assetThumbBtn}
-                onClick={() => updateItem(index, { image: image.src || "" })}
+                onClick={() => updateItem(index, {
+                  image: image.src || "",
+                  imageAssetId: image.id || "",
+                  imageAlt: htmlToPlainText(image.name || item.imageAlt || ""),
+                })}
                 title={image.name}
               >
                 <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
@@ -2075,14 +2153,59 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
             onChange={(patch) => updateItem(index, patch)}
             onEditImage={() => onOpenImageEditor?.(index, "image", item.image)}
           />
+          <div style={{ ...styles.stackSm, marginTop: 12 }}>
+            <div style={styles.linkRowHeader}>
+              <span style={styles.linkRowTitle}>Card Text Blocks</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "label")}>+ Label</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "headline")}>+ Headline</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "text")}>+ Text Block</button>
+              </div>
+            </div>
+            {item.textBlocks.map((textBlock, blockIndex) => (
+              <div key={textBlock.id || `${index}-text-${blockIndex}`} style={{ ...styles.sectionCard, padding: 10 }}>
+                <div style={styles.linkRowHeader}>
+                  <select
+                    value={textBlock.type}
+                    onChange={(event) => {
+                      const nextType = event.target.value === "headline" ? "headline" : event.target.value === "label" ? "label" : "text";
+                      updateTextBlock(index, blockIndex, { type: nextType });
+                    }}
+                    style={{ ...styles.propertyInput, maxWidth: 150 }}
+                  >
+                    <option value="label">Label</option>
+                    <option value="headline">Headline</option>
+                    <option value="text">Text block</option>
+                  </select>
+                  <button type="button" style={styles.linkRowDelete} onClick={() => removeTextBlock(index, blockIndex)}>Remove</button>
+                </div>
+                {textBlock.type === "headline" || textBlock.type === "label" ? (
+                  <input
+                    type="text"
+                    value={textBlock.text}
+                    onChange={(event) => updateTextBlock(index, blockIndex, { text: event.target.value })}
+                    style={{ ...styles.propertyInput, marginTop: 8, fontWeight: textBlock.type === "headline" ? 700 : 600 }}
+                    placeholder={textBlock.type === "label" ? "Label text" : "Headline text"}
+                  />
+                ) : (
+                  <textarea
+                    value={textBlock.text}
+                    onChange={(event) => updateTextBlock(index, blockIndex, { text: event.target.value })}
+                    style={{ ...styles.propertyInput, minHeight: 88, marginTop: 8, resize: "vertical" }}
+                    placeholder="Text block"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       );})}
-      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Item</button>
+      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Card</button>
     </div>
   );
 }
 
-function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor }) {
+function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor, onUploadImage }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
   const [activeTab, setActiveTab] = useState("content");
@@ -2141,10 +2264,29 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
       </div>
       <div style={styles.propertyGrid}>
         {activeTab === "content" ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>List Items / Icons</label>
-            <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
-          </div>
+          <>
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Section Headline</label>
+              <input
+                type="text"
+                value={htmlToPlainText(props.title || "")}
+                onChange={(event) => update({ title: event.target.value })}
+                style={styles.propertyInput}
+                placeholder="Section headline"
+              />
+            </div>
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Cards</label>
+              <ListItemsEditor
+                items={props.items}
+                onChange={(items) => update({ items })}
+                brandAssets={brandAssets}
+                blockIndex={index}
+                onUploadImage={onUploadImage}
+                onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)}
+              />
+            </div>
+          </>
         ) : null}
         {activeTab === "style" ? (
           <div style={styles.sectionCard}>
@@ -2154,6 +2296,16 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
                 <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
               ))}
             </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Background Width</label>
+            <label style={styles.inlineToggle}>
+              <input
+                type="checkbox"
+                checked={props.fullWidthBackground === true}
+                onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Full width background
+            </label>
             <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
               Card Width: {Math.round(displayCardWidth)}px
             </label>
@@ -2195,6 +2347,13 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
         {activeTab === "colours" ? (
           <>
             <ColorSelector label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(v) => update({ backgroundColor: v })} />
+            <input
+              type="text"
+              value={String(props.backgroundColor || "")}
+              onChange={(e) => update({ backgroundColor: e.target.value })}
+              style={styles.propertyInput}
+              placeholder="Section background or CSS gradient"
+            />
             <ColorSelector label="Item Background" value={props.itemBackgroundColor || "#eff6ff"} fallback="#eff6ff" allowTransparent onChange={(v) => update({ itemBackgroundColor: v })} />
             <ColorSelector label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ textColor: v })} />
             <ColorSelector label="Accent / Icon" value={props.accentColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ accentColor: v })} />
@@ -4282,9 +4441,41 @@ function getTextAnimationBinding(block, editable) {
 function getSelectionStyleSource(editable, selection) {
   if (!editable) return null;
   const activeSelection = selection || (typeof window !== "undefined" ? window.getSelection?.() : null);
+  if (activeSelection?.rangeCount) {
+    const range = activeSelection.getRangeAt(0);
+    if (!range.collapsed) {
+      const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+          try {
+            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          } catch {
+            return NodeFilter.FILTER_REJECT;
+          }
+        },
+      });
+      const selectedTextNode = walker.nextNode();
+      if (selectedTextNode?.parentElement && editable.contains(selectedTextNode.parentElement)) {
+        return selectedTextNode.parentElement;
+      }
+
+      const elementWalker = document.createTreeWalker(editable, NodeFilter.SHOW_ELEMENT, {
+        acceptNode(node) {
+          if (!(node instanceof Element) || node === editable) return NodeFilter.FILTER_REJECT;
+          try {
+            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          } catch {
+            return NodeFilter.FILTER_REJECT;
+          }
+        },
+      });
+      const selectedElement = elementWalker.nextNode();
+      if (selectedElement instanceof Element) return selectedElement;
+    }
+  }
   const node = activeSelection?.focusNode || activeSelection?.anchorNode || null;
   const element = node?.nodeType === 3 ? node.parentElement : node;
-  if (element instanceof Element && editable.contains(element)) {
+  if (element instanceof Element && element !== editable && editable.contains(element)) {
     return element;
   }
   return editable;
@@ -4330,6 +4521,17 @@ function normalizeLineHeightValue(value, fallback = 1.5) {
   const fallbackValue = Number.isFinite(Number(fallback)) ? Number(fallback) : 1.5;
   if (!Number.isFinite(parsed) || parsed <= 0) return Math.max(0.8, Math.min(3, Number(fallbackValue.toFixed(2))));
   return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function parseToolbarFontSize(value, fallback = 18) {
+  const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
+  const fallbackParsed = Number.parseFloat(String(fallback ?? "").replace("px", ""));
+  const next = Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : Number.isFinite(fallbackParsed) && fallbackParsed > 0
+      ? fallbackParsed
+      : 18;
+  return Math.max(8, Math.min(240, Math.round(next)));
 }
 
 function stripInlineCssPropertyFromHtml(value, propertyName) {
@@ -4462,10 +4664,13 @@ function FontPickerDropdown({ value, onChange, onPreserveSelection }) {
   );
 }
 
-function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, fontWeight, fontStyle, textDecoration, textAlign, blockType, hasCopiedFormat, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onCopyFormat, onClearCopiedFormat, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   const backgroundFileInputRef = useRef(null);
   const currentLineHeight = normalizeLineHeightValue(lineHeight || 1.5);
-  const currentFontSize = Math.max(8, Math.min(240, Math.round(Number(fontSize || 18) || 18)));
+  const currentFontSize = parseToolbarFontSize(fontSize, 18);
+  const fontSizeOptions = TEXT_TOOLBAR_SIZES.includes(currentFontSize)
+    ? TEXT_TOOLBAR_SIZES
+    : [...TEXT_TOOLBAR_SIZES, currentFontSize].sort((a, b) => a - b);
   const lineHeightOptions = TEXT_TOOLBAR_LINE_HEIGHTS.includes(currentLineHeight)
     ? TEXT_TOOLBAR_LINE_HEIGHTS
     : [...TEXT_TOOLBAR_LINE_HEIGHTS, currentLineHeight].sort((a, b) => a - b);
@@ -4473,7 +4678,14 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
 
   const keepSelection = (event, callback) => {
     event.preventDefault();
+    onPreserveSelection?.();
     callback?.();
+  };
+
+  const handleFontSizeChange = (value) => {
+    onPreserveSelection?.();
+    const nextSize = parseToolbarFontSize(value, currentFontSize);
+    onFontSize?.(nextSize);
   };
 
   const startHeaderDrag = (event) => {
@@ -4489,16 +4701,17 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
   ];
 
   const textButtons = [
-    { label: "B", title: "Bold", action: () => onCommand("bold") },
-    { label: "I", title: "Italic", action: () => onCommand("italic") },
-    { label: "U", title: "Underline", action: () => onCommand("underline") },
+    { label: "B", title: "Bold", active: Number.parseInt(fontWeight || "400", 10) >= 600, action: () => onCommand("bold") },
+    { label: "I", title: "Italic", active: fontStyle === "italic", action: () => onCommand("italic") },
+    { label: "U", title: "Underline", active: String(textDecoration || "").includes("underline"), action: () => onCommand("underline") },
   ];
 
+  const currentTextAlign = ["left", "center", "right", "justify"].includes(String(textAlign || "")) ? String(textAlign) : "left";
   const alignButtons = [
-    { label: "Left", title: "Align left", action: () => onCommand("justifyLeft") },
-    { label: "Center", title: "Align center", action: () => onCommand("justifyCenter") },
-    { label: "Right", title: "Align right", action: () => onCommand("justifyRight") },
-    { label: "Justify", title: "Justify", action: () => onCommand("justifyFull") },
+    { label: "Left", title: "Align left", value: "left", action: () => onCommand("justifyLeft") },
+    { label: "Center", title: "Align center", value: "center", action: () => onCommand("justifyCenter") },
+    { label: "Right", title: "Align right", value: "right", action: () => onCommand("justifyRight") },
+    { label: "Justify", title: "Justify", value: "justify", action: () => onCommand("justifyFull") },
   ];
 
   const utilityButtons = [
@@ -4562,20 +4775,18 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
                   onFontSize?.(nextSize);
                 })}
               >−</button>
-              <input
-                type="number"
-                min={8}
-                max={240}
+              <select
                 value={currentFontSize}
                 aria-label="Font size in pixels"
-                style={{ ...styles.textToolbarSelect, width: 72, minWidth: 72, marginTop: 0, padding: "4px 6px" }}
+                style={{ ...styles.textToolbarSelect, width: 86, minWidth: 86, marginTop: 0, padding: "4px 6px" }}
                 onMouseDownCapture={() => onPreserveSelection?.()}
-                onChange={(event) => {
-                  if (event.target.value === "") return;
-                  const nextSize = Math.max(8, Math.min(240, Number(event.target.value) || currentFontSize));
-                  onFontSize?.(nextSize);
-                }}
-              />
+                onFocus={() => onPreserveSelection?.()}
+                onChange={(event) => handleFontSizeChange(event.target.value)}
+              >
+                {fontSizeOptions.map((value) => (
+                  <option key={`font-size-${value}`} value={value}>{value}px</option>
+                ))}
+              </select>
               <button
                 type="button"
                 title="Increase font size"
@@ -4625,14 +4836,23 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
         <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarFormattingGroup }}>
           <div style={styles.textToolbarButtonRow}>
             {textButtons.map((item) => (
-              <button key={item.title} type="button" title={item.title} style={styles.textToolbarIconBtn} onMouseDown={(event) => keepSelection(event, item.action)}>
+              <button key={item.title} type="button" title={item.title} style={{ ...styles.textToolbarIconBtn, ...(item.active ? { background: "#0ea5e9", color: "#ffffff", borderColor: "#0284c7" } : {}) }} onMouseDown={(event) => keepSelection(event, item.action)}>
                 {item.label}
               </button>
             ))}
           </div>
           <div style={styles.textToolbarButtonRow}>
             {alignButtons.map((item) => (
-              <button key={item.title} type="button" title={item.title} style={styles.textToolbarMiniActionChip} onMouseDown={(event) => keepSelection(event, item.action)}>
+              <button
+                key={item.title}
+                type="button"
+                title={item.title}
+                style={{
+                  ...styles.textToolbarMiniActionChip,
+                  ...(currentTextAlign === item.value ? { background: "#0ea5e9", color: "#ffffff", borderColor: "#0284c7" } : {}),
+                }}
+                onMouseDown={(event) => keepSelection(event, item.action)}
+              >
                 {item.label}
               </button>
             ))}
@@ -4645,6 +4865,27 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               {item.label}
             </button>
           ))}
+          <button
+            type="button"
+            title="Copy format, then click another text box to apply it"
+            style={{
+              ...styles.textToolbarActionChip,
+              ...(hasCopiedFormat ? { background: "#22c55e", color: "#052e16", borderColor: "#16a34a" } : {}),
+            }}
+            onMouseDown={(event) => keepSelection(event, () => onCopyFormat?.())}
+          >
+            Copy Format
+          </button>
+          {hasCopiedFormat ? (
+            <button
+              type="button"
+              title="Cancel copied format"
+              style={styles.textToolbarActionChip}
+              onMouseDown={(event) => keepSelection(event, () => onClearCopiedFormat?.())}
+            >
+              Cancel Format
+            </button>
+          ) : null}
           <button
             type="button"
             style={styles.textToolbarActionChip}
@@ -5679,14 +5920,32 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <div style={styles.colorGrid}>
             <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
             <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
+            <NumberField label="Visible Header (px)" value={Number(props.peekHeight ?? props.cardPeekHeight ?? 52)} min={48} max={140} onChange={(v) => update({ peekHeight: v })} />
+            <NumberField label="Text Top Padding (px)" value={Number(props.contentTopPadding ?? 72)} min={24} max={180} onChange={(v) => update({ contentTopPadding: v })} />
             <NumberField label="Card Side Padding (px)" value={Number(props.cardInset ?? 0)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
             <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Text Vertical Alignment</label>
+          <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
+            <option value="top">Top</option>
+            <option value="center">Center</option>
+            <option value="bottom">Bottom</option>
+          </select>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.hideHeaderDivider === true}
+              onChange={(e) => update({ hideHeaderDivider: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Hide header divider line
+          </label>
           <ColorSelector label="Card Border Colour" value={props.cardBorderColor || "#3b82f6"} fallback="#3b82f6" onChange={(v) => update({ cardBorderColor: v })} />
         </div>
         {panels.map((panel, panelIdx) => {
           const expanded = expandedIdx === panelIdx;
+          const showPanelCta = panel.showCta !== false;
           return (
             <div key={panel.id || `ss-${panelIdx}`} style={styles.linkRowCard}>
               <div style={styles.linkRowHeader}>
@@ -5723,14 +5982,22 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                     <label style={styles.propertyLabel}>Body</label>
                     <textarea value={String(panel.body || "")} onChange={(e) => updatePanel(panelIdx, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 80, resize: "vertical" }} placeholder="Body text" />
                   </div>
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA Text</label>
-                    <input type="text" value={String(panel.ctaText || "")} onChange={(e) => updatePanel(panelIdx, { ctaText: e.target.value })} style={styles.propertyInput} placeholder="Learn More" />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="checkbox" id={`ss-cta-${panelIdx}`} checked={showPanelCta} onChange={(e) => updatePanel(panelIdx, { showCta: e.target.checked })} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                    <label htmlFor={`ss-cta-${panelIdx}`} style={{ ...styles.propertyLabel, margin: 0, cursor: "pointer" }}>Show CTA button</label>
                   </div>
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA URL</label>
-                    <input type="text" value={String(panel.ctaUrl || "")} onChange={(e) => updatePanel(panelIdx, { ctaUrl: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
-                  </div>
+                  {showPanelCta ? (
+                    <>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>CTA Text</label>
+                        <input type="text" value={String(panel.ctaText || "")} onChange={(e) => updatePanel(panelIdx, { ctaText: e.target.value })} style={styles.propertyInput} placeholder="Learn More" />
+                      </div>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>CTA URL</label>
+                        <input type="text" value={String(panel.ctaUrl || "")} onChange={(e) => updatePanel(panelIdx, { ctaUrl: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                      </div>
+                    </>
+                  ) : null}
                   <div style={styles.propertyField}>
                     <label style={styles.propertyLabel}>Image URL</label>
                     <input type="text" value={String(panel.image || "")} onChange={(e) => updatePanel(panelIdx, { image: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
@@ -5752,19 +6019,21 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                     <label style={styles.propertyLabel}>Image Style</label>
                     <select value={String(panel.imageStyle || "bleed")} onChange={(e) => updatePanel(panelIdx, { imageStyle: e.target.value })} style={styles.propertyInput}>
                       <option value="bleed">Full Bleed</option>
-                      <option value="card">Inset Card (monday.com style)</option>
+                      <option value="card">Inset Card</option>
                     </select>
                   </div>
                   {(panel.imageStyle || "bleed") === "card" ? (
                     <ColorSelector label="Card Background" value={panel.imageCardBg || panel.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => updatePanel(panelIdx, { imageCardBg: v })} />
                   ) : null}
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA Style</label>
-                    <select value={String(panel.ctaStyle || "filled")} onChange={(e) => updatePanel(panelIdx, { ctaStyle: e.target.value })} style={styles.propertyInput}>
-                      <option value="filled">Filled</option>
-                      <option value="pill">Pill (rounded)</option>
-                    </select>
-                  </div>
+                  {showPanelCta ? (
+                    <div style={styles.propertyField}>
+                      <label style={styles.propertyLabel}>CTA Style</label>
+                      <select value={String(panel.ctaStyle || "filled")} onChange={(e) => updatePanel(panelIdx, { ctaStyle: e.target.value })} style={styles.propertyInput}>
+                        <option value="filled">Filled</option>
+                        <option value="pill">Pill (rounded)</option>
+                      </select>
+                    </div>
+                  ) : null}
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <input type="checkbox" id={`ss-dot-${panelIdx}`} checked={panel.eyebrowDot !== false} onChange={(e) => updatePanel(panelIdx, { eyebrowDot: e.target.checked })} style={{ width: 14, height: 14, cursor: "pointer" }} />
                     <label htmlFor={`ss-dot-${panelIdx}`} style={{ ...styles.propertyLabel, margin: 0, cursor: "pointer" }}>Show eyebrow colour dot</label>
@@ -5797,7 +6066,7 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
           style={{ ...styles.primaryBtn, width: "100%", marginTop: 4 }}
           onClick={() => {
             const now = Date.now(); const len = panels.length;
-            update({ panels: [...panels, { id: `ss-panel-${now}`, eyebrow: `Section ${len + 1}`, heading: "A bold, compelling headline", body: "Explain your value proposition clearly and concisely.", ctaText: "Learn More", ctaUrl: "#", image: "", imageAlt: "", imagePosition: len % 2 === 0 ? "right" : "left", backgroundColor: "#0f172a", textColor: "#ffffff", accentColor: "#0ea5e9" }] });
+            update({ panels: [...panels, { id: `ss-panel-${now}`, eyebrow: `Section ${len + 1}`, heading: "A bold, compelling headline", body: "Explain your value proposition clearly and concisely.", showCta: true, ctaText: "Learn More", ctaUrl: "#", image: "", imageAlt: "", imagePosition: len % 2 === 0 ? "right" : "left", backgroundColor: "#0f172a", textColor: "#ffffff", accentColor: "#0ea5e9" }] });
             setExpandedIdx(len);
           }}
         >+ Add Panel</button>

@@ -386,6 +386,8 @@ const styles = {
     height: "100%",
     alignItems: "stretch",
     justifyContent: "stretch",
+    position: "relative",
+    isolation: "isolate",
   },
   workspaceNarrow: {
     gridTemplateColumns: "1fr",
@@ -398,6 +400,7 @@ const styles = {
     position: "sticky",
     top: 0,
     alignSelf: "start",
+    zIndex: 30,
   },
   library: {
     background: "#111827",
@@ -498,6 +501,9 @@ const styles = {
     overflowY: "auto",
     overflowX: "hidden",
     position: "relative",
+    zIndex: 1,
+    isolation: "isolate",
+    contain: "paint",
     minWidth: 0,
     width: "100%",
     minHeight: 0,
@@ -506,8 +512,11 @@ const styles = {
   canvasViewport: {
     width: "100%",
     minWidth: 0,
-    overflow: "hidden",
+    overflow: "visible",
     position: "relative",
+    isolation: "isolate",
+    contain: "layout style",
+    transform: "translateZ(0)",
     minHeight: "60vh",
   },
   sidePanelShell: {
@@ -518,6 +527,7 @@ const styles = {
     position: "sticky",
     top: 0,
     alignSelf: "start",
+    zIndex: 30,
   },
   canvasGridBg: {
     backgroundImage: "linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px)",
@@ -579,6 +589,26 @@ const styles = {
   },
   globalBlockPreviewSurface: {
     overflow: "visible",
+  },
+  blockPreviewError: {
+    display: "grid",
+    gap: 6,
+    minHeight: 140,
+    alignContent: "center",
+    padding: 24,
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+    color: "#7c2d12",
+    fontSize: 14,
+    lineHeight: 1.4,
+  },
+  blockPreviewErrorTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+  },
+  blockPreviewErrorText: {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    overflowWrap: "anywhere",
   },
   globalBlockBannerHint: {
     marginLeft: "auto",

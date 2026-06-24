@@ -365,6 +365,7 @@ export default function Billing() {
         email: acc?.email_plan_tier || null,
         sms: acc?.sms_plan_tier || null,
         calendar: acc?.calendar_plan_tier || null,
+        website: null,
       });
 
       // Seed tier badges from DB so module cards show the user's current
@@ -405,7 +406,16 @@ export default function Billing() {
 
       if (moduleRows && moduleRows.length > 0) {
         const ids = moduleRows.map((r) => r.module_id);
-        // Extract social plan tier stored as __social_plan_tier:xxx (only apply if set via URL)
+        const savedWebsiteTier = ids
+          .find((id) => String(id || "").startsWith("__website_plan_tier:"))
+          ?.replace(/^__website_plan_tier:/, "") || null;
+        if (savedWebsiteTier && !params?.get("websitePlan")) {
+          setWebsitePlanTier(savedWebsiteTier);
+        }
+        if (savedWebsiteTier) {
+          setDbPlanTiers((prev) => ({ ...prev, website: savedWebsiteTier }));
+        }
+
         const realIds = ids
           .filter((id) => !id.startsWith("__") && id !== "automation")
           .map(normalizeActiveModuleId);
@@ -525,6 +535,7 @@ export default function Billing() {
   const socialPlanPrice   = (tiersFromUrl.social   && tiersFromUrl.social   !== dbPlanTiers.social)   ? getPlanPrice(tiersFromUrl.social)   : 0;
   const crmPlanPrice      = (tiersFromUrl.crm      && tiersFromUrl.crm      !== dbPlanTiers.crm)      ? getPlanPrice(tiersFromUrl.crm)      : 0;
   const funnelPackPrice   = (tiersFromUrl.funnels  && tiersFromUrl.funnels  !== dbPlanTiers.funnels)  ? getPlanPrice(tiersFromUrl.funnels)  : 0;
+  const websitePlanPrice  = (tiersFromUrl.website  && tiersFromUrl.website  !== dbPlanTiers.website)  ? getPlanPrice(tiersFromUrl.website)  : 0;
   const projectsHubPlanPrice = (tiersFromUrl.projectsHub && tiersFromUrl.projectsHub !== dbPlanTiers.projectsHub) ? getPlanPrice(tiersFromUrl.projectsHub) : 0;
   const basePlanPrice = selectedPlan ? (BASE_PLANS.find((p) => p.id === selectedPlan)?.price || 0) : 0;
   const privateNumbersCost = privateNumbers * 35;
@@ -532,11 +543,11 @@ export default function Billing() {
   const extraSendsCost = extraSendBlocks * 20;
   const extraSeatsCost = extraSeats * 15;
   const annualMultiplier = isAnnual ? 0.80 : 1;
-  const billingSubtotal = basePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const billingSubtotal = basePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + websitePlanPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
   const selectedBasePlan = selectedPlan ? BASE_PLANS.find((p) => p.id === selectedPlan) : null;
   const introDiscountPercent = !isAnnual ? (selectedBasePlan?.introDiscountPercent || 0) : 0;
   const introBasePlanPrice = introDiscountPercent > 0 ? basePlanPrice * (1 - introDiscountPercent / 100) : basePlanPrice;
-  const introBillingSubtotal = introBasePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const introBillingSubtotal = introBasePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + websitePlanPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
   const total = billingSubtotal * annualMultiplier * (1 - discountPercent / 100);
   const introTotal = introBillingSubtotal * (1 - discountPercent / 100);
   const introPrepaidTotal = selectedBasePlan?.introMonths ? introTotal * selectedBasePlan.introMonths : introTotal;
@@ -554,6 +565,7 @@ export default function Billing() {
       if (socialPlanTier) manualParams.set("socialPlan", socialPlanTier);
       if (crmPlanTier) manualParams.set("crmPlan", crmPlanTier);
       if (funnelPackTier) manualParams.set("funnelPlan", funnelPackTier);
+      if (websitePlanTier) manualParams.set("websitePlan", websitePlanTier);
       if (projectsHubPlanTier) manualParams.set("projectsHubPlan", projectsHubPlanTier);
       if (selected.length) manualParams.set("selected", selected.join(","));
       router.push(`/checkout/success?${manualParams.toString()}`);
@@ -568,6 +580,7 @@ export default function Billing() {
     if (socialPlanTier) params.set("socialPlan", socialPlanTier);
     if (crmPlanTier) params.set("crmPlan", crmPlanTier);
     if (funnelPackTier) params.set("funnelPlan", funnelPackTier);
+    if (websitePlanTier) params.set("websitePlan", websitePlanTier);
     if (projectsHubPlanTier) params.set("projectsHubPlan", projectsHubPlanTier);
     if (isAnnual) params.set("annual", "1");
     router.push(`/checkout?${params.toString()}`);
@@ -996,8 +1009,8 @@ export default function Billing() {
         .section-title { font-size: 28px; font-weight: 700; margin: 0 0 4px; }
         .section-sub { font-size: 20px; color: #9ca3af; margin: 0; }
         /* ── Core Plan Cards ── */
-        .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin: 0 auto 48px; align-items: start; }
-        .plan-card { position: relative; border: 2px solid; border-radius: 16px; padding: 28px 20px 24px; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .plans-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; width: 100%; max-width: 1320px; margin: 0 auto 48px; align-items: start; }
+        .plan-card { position: relative; min-width: 0; overflow: hidden; border: 2px solid; border-radius: 16px; padding: 28px 20px 24px; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .plan-card:hover { transform: translateY(-4px); }
         .plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 16px; border-radius: 20px; white-space: nowrap; }
         .current-plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; white-space: nowrap; }
@@ -1015,13 +1028,13 @@ export default function Billing() {
         .plan-divider { height: 2px; opacity: 0.22; border-radius: 2px; margin-bottom: 14px; }
         .plan-features { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
         .feature-row { display: flex; align-items: flex-start; gap: 7px; font-size: 18px; line-height: 1.45; }
-        .feature-label { flex: 1; color: #d1d5db; }
-        .feature-value { font-weight: 600; font-size: 18px; text-align: right; white-space: nowrap; flex-shrink: 0; }
+        .feature-label { flex: 1; min-width: 0; color: #d1d5db; overflow-wrap: anywhere; }
+        .feature-value { font-weight: 600; font-size: 18px; text-align: right; white-space: normal; flex-shrink: 1; min-width: 0; max-width: 52%; overflow-wrap: anywhere; }
         .quota-header { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border-top: 1px solid; padding-top: 12px; margin-bottom: 10px; opacity: 0.8; }
-        .quota-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-        .quota-row { display: flex; justify-content: space-between; font-size: 18px; }
-        .quota-label { color: #9ca3af; }
-        .quota-value { font-weight: 600; }
+        .quota-list { min-width: 0; width: 100%; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+        .quota-row { display: grid; grid-template-columns: minmax(68px, 0.72fr) minmax(0, 1fr); gap: 8px; align-items: start; width: 100%; min-width: 0; max-width: 100%; font-size: 18px; line-height: 1.35; overflow: hidden; }
+        .quota-label { display: block; min-width: 0; max-width: 100%; color: #9ca3af; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+        .quota-value { display: block; min-width: 0; max-width: 100%; font-weight: 600; text-align: right; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
         /* ── Module grid ── */
         .actions { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; max-width: 1320px; width: 100%; }
         .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 20px; font-weight: 600; cursor: pointer; }

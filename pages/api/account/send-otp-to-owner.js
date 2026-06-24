@@ -23,7 +23,7 @@ async function handler(req, res) {
   const { data: acct, error: acctErr } = await supabaseAdmin
     .from("accounts")
     .select("phone")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (acctErr) {
@@ -58,7 +58,7 @@ async function handler(req, res) {
     await supabaseAdmin
       .from("accounts")
       .update({ phone_otp_pending: JSON.stringify({ code, phone, expiresAt }) })
-      .eq("id", userId);
+      .eq("user_id", userId);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

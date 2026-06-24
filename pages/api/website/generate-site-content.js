@@ -150,6 +150,8 @@ function pickBriefImageUrls(brief) {
 function buildRequestedImageLabels(brief) {
   const requested = splitBriefList(brief?.imageRequests);
   if (requested.length) return requested;
+  const profile = getIndustryContentProfile(inferIndustryKey({ ...brief }));
+  if (profile?.imagery?.length) return profile.imagery;
   return [
     `${safeTrim(brief?.offer) || safeTrim(brief?.businessName) || "Brand"} hero image`,
     `${safeTrim(brief?.businessName) || "Brand"} team or process image`,
@@ -157,8 +159,8 @@ function buildRequestedImageLabels(brief) {
   ];
 }
 
-function inferIndustryKey({ templateSlug = "", businessName = "", offer = "", targetAudience = "", goal = "", notes = "" } = {}) {
-  const text = `${templateSlug} ${businessName} ${offer} ${targetAudience} ${goal} ${notes}`.toLowerCase();
+function inferIndustryKey({ templateSlug = "", businessName = "", businessCategory = "", category = "", industry = "", offer = "", targetAudience = "", goal = "", notes = "" } = {}) {
+  const text = `${templateSlug} ${businessName} ${businessCategory} ${category} ${industry} ${offer} ${targetAudience} ${goal} ${notes}`.toLowerCase();
   if (/(coach|consultant|speaker|author|personal brand)/.test(text)) return "coach";
   if (/(saas|software|app|platform|crm|automation|dashboard|ai tool)/.test(text)) return "saas";
   if (/(restaurant|cafe|bar|dining|venue|food)/.test(text)) return "restaurant";
@@ -172,6 +174,205 @@ function inferIndustryKey({ templateSlug = "", businessName = "", offer = "", ta
   if (/(shop|store|ecommerce|product|retail)/.test(text)) return "ecommerce";
   if (/(creative|designer|photographer|videographer|portfolio|studio|agency)/.test(text)) return "creative";
   return "business";
+}
+
+const INDUSTRY_CONTENT_PROFILES = {
+  business: {
+    offer: "business growth, lead generation, and customer conversion support",
+    audience: "business owners who need a clearer way to attract and convert customers",
+    goal: "generate more qualified enquiries",
+    services: ["Lead generation strategy", "Conversion-focused website pages", "Customer enquiry workflows", "Brand messaging", "Campaign landing pages"],
+    painPoints: ["unclear messaging", "inconsistent enquiry quality", "weak follow-up", "low trust on first visit", "too many manual steps"],
+    benefits: ["clear positioning", "better-qualified enquiries", "stronger trust signals", "simpler next steps", "a more complete online presence"],
+    faqs: ["How do we get more qualified enquiries?", "What should our website explain first?", "Can this help if our offer is still evolving?", "What happens after a visitor enquires?", "How do we make the page feel credible?"],
+    imagery: ["Business owner reviewing a customer enquiry dashboard", "Team planning a customer acquisition campaign", "Professional consultation between business owner and advisor"],
+    stats: [
+      { number: "1", label: "Clear offer", detail: "Make the business easy to understand in the first few seconds." },
+      { number: "24/7", label: "Lead capture", detail: "Let visitors enquire whenever intent is highest." },
+      { number: "5", label: "Trust signals", detail: "Use proof, FAQs, imagery, service detail, and a clear CTA to reduce hesitation." },
+      { number: "100%", label: "Ready to edit", detail: "Start with complete copy, visuals, and conversion sections already populated." },
+    ],
+  },
+  trade: {
+    offer: "residential and commercial trade services",
+    audience: "homeowners, property managers, and businesses that need reliable trade work",
+    goal: "request a quote or book a site visit",
+    services: ["Repairs and maintenance", "New installations", "Emergency call-outs", "Compliance checks", "Project quotes"],
+    painPoints: ["urgent faults", "unclear pricing", "unreliable callbacks", "safety concerns", "poor workmanship from previous providers"],
+    benefits: ["fast response", "clear quoting", "licensed workmanship", "clean communication", "confidence before booking"],
+    faqs: ["Do you handle urgent jobs?", "Can I request a quote before booking?", "Are you licensed and insured?", "What information should I send first?", "Do you work with homes and businesses?"],
+    imagery: ["Licensed tradesperson completing a neat installation in a modern home", "Trade vehicle and technician arriving for a scheduled service call", "Close-up of professional tools and completed workmanship"],
+    stats: [
+      { number: "250+", label: "Jobs completed", detail: "Give visitors confidence that the team handles practical work every week." },
+      { number: "24/7", label: "Emergency response", detail: "Make urgent service enquiries easy to start." },
+      { number: "15 yrs", label: "Trade experience", detail: "Position practical know-how and reliability as reasons to call." },
+      { number: "5-star", label: "Customer rating", detail: "Use reviews and job photos to support trust before the quote request." },
+    ],
+  },
+  saas: {
+    offer: "software, CRM, automation, and workflow management",
+    audience: "growing teams that need simpler systems and better visibility",
+    goal: "book a product walkthrough",
+    services: ["CRM setup", "Workflow automation", "Email and SMS follow-up", "Forms and lead capture", "Reporting dashboards"],
+    painPoints: ["tool sprawl", "duplicated data", "slow follow-up", "unclear pipeline visibility", "rising subscription costs"],
+    benefits: ["one source of truth", "faster follow-up", "cleaner reporting", "less admin", "simpler team adoption"],
+    faqs: ["What tools can this replace?", "How long does setup take?", "Can we migrate existing contacts?", "Will our team need training?", "What happens during onboarding?"],
+    imagery: ["Business owner using CRM dashboard to manage leads and automate follow-up", "Team reviewing software analytics on a large display", "Close-up of automation workflow and customer pipeline dashboard"],
+    stats: [
+      { number: "1", label: "Connected platform", detail: "Unify leads, messages, automations, reporting, and next steps." },
+      { number: "24/7", label: "Automation running", detail: "Keep follow-up moving even when the team is offline." },
+      { number: "Unlimited", label: "Pages and funnels", detail: "Support campaigns, service pages, and lead capture flows as the business grows." },
+      { number: "100%", label: "Business ownership", detail: "Keep customer data, pages, and workflows under the business owner's control." },
+    ],
+  },
+  restaurant: {
+    offer: "dining, bookings, takeaway, and private event hospitality",
+    audience: "local diners, families, groups, and event organisers",
+    goal: "book a table or place an order",
+    services: ["Table bookings", "Seasonal menus", "Takeaway orders", "Private events", "Catering enquiries"],
+    painPoints: ["finding a trusted local venue", "checking menu options", "booking for groups", "dietary questions", "planning events"],
+    benefits: ["easy reservations", "clear menu presentation", "warm venue story", "event enquiry flow", "strong food imagery"],
+    faqs: ["Do you take bookings?", "Can you handle dietary requirements?", "Do you offer takeaway?", "Can groups or events enquire online?", "Where are you located?"],
+    imagery: ["Chef plating signature dish in a welcoming modern restaurant", "Friends dining together at a warmly lit restaurant table", "Restaurant team preparing takeaway and dine-in orders"],
+    stats: [
+      { number: "7 days", label: "Booking visibility", detail: "Make opening hours, bookings, and availability easy to find." },
+      { number: "Fresh", label: "Seasonal menu", detail: "Show the dishes and ingredients that make the venue memorable." },
+      { number: "Groups", label: "Event friendly", detail: "Invite birthdays, team meals, and private events to enquire." },
+      { number: "Local", label: "Neighbourhood favourite", detail: "Position the restaurant as an easy choice for nearby diners." },
+    ],
+  },
+  medical: {
+    offer: "healthcare appointments, patient support, and treatment information",
+    audience: "patients who want trusted care, clear information, and easy booking",
+    goal: "book an appointment",
+    services: ["Initial consultations", "Treatment plans", "Preventive care", "Follow-up appointments", "Patient education"],
+    painPoints: ["uncertainty about symptoms", "difficulty choosing a provider", "confusing appointment steps", "concerns about cost", "needing trusted advice"],
+    benefits: ["clear care pathways", "professional reassurance", "simple appointment booking", "patient-friendly FAQs", "trust-focused presentation"],
+    faqs: ["Do I need a referral?", "What should I bring to my appointment?", "How do I book?", "What treatments do you provide?", "Can I ask questions before booking?"],
+    imagery: ["Friendly healthcare professional consulting with patient in modern clinic", "Clean treatment room prepared for patient appointment", "Reception team welcoming patient at clinic front desk"],
+    stats: [
+      { number: "Patient-first", label: "Care approach", detail: "Explain services in calm, practical language." },
+      { number: "Easy", label: "Appointments", detail: "Make booking and enquiry steps obvious." },
+      { number: "Clear", label: "Treatment info", detail: "Answer common patient questions before the visit." },
+      { number: "Trusted", label: "Clinic experience", detail: "Use professional imagery and credentials to build confidence." },
+    ],
+  },
+  law: {
+    offer: "legal advice, matter assessment, and client representation",
+    audience: "people and businesses that need clear legal guidance",
+    goal: "book a confidential consultation",
+    services: ["Initial consultations", "Contract review", "Dispute advice", "Business legal support", "Matter strategy"],
+    painPoints: ["legal uncertainty", "risk of making the wrong move", "unclear costs", "time pressure", "needing confidential guidance"],
+    benefits: ["clear next steps", "risk-aware advice", "confidential consultation", "professional authority", "plain-English explanations"],
+    faqs: ["Can I discuss my matter confidentially?", "What should I prepare before a consultation?", "Do you explain costs upfront?", "Can you help businesses and individuals?", "What happens after the first call?"],
+    imagery: ["Lawyer reviewing legal documents with client in professional office", "Close-up of contract review and handwritten legal notes", "Professional legal team in modern meeting room"],
+    stats: [
+      { number: "Confidential", label: "Consultations", detail: "Give visitors a safe path to explain their matter." },
+      { number: "Clear", label: "Next steps", detail: "Turn legal uncertainty into a practical action plan." },
+      { number: "Risk-aware", label: "Advice", detail: "Frame decisions around timing, obligations, and likely outcomes." },
+      { number: "Plain English", label: "Communication", detail: "Make complex legal issues easier to understand." },
+    ],
+  },
+  property: {
+    offer: "property sales, leasing, appraisals, and buyer support",
+    audience: "homeowners, buyers, landlords, and property investors",
+    goal: "request an appraisal or property consultation",
+    services: ["Property appraisals", "Sales campaigns", "Rental management", "Buyer support", "Market updates"],
+    painPoints: ["uncertain property value", "choosing the right agent", "poor campaign visibility", "tenant management stress", "market timing"],
+    benefits: ["local market clarity", "strong presentation", "qualified buyer interest", "clear communication", "better campaign confidence"],
+    faqs: ["What is my property worth?", "How do you market listings?", "Can you help landlords?", "What happens after an appraisal?", "Which areas do you service?"],
+    imagery: ["Real estate agent presenting property appraisal to homeowner", "Modern home exterior photographed for property listing", "Agent welcoming buyers during open home inspection"],
+    stats: [
+      { number: "Local", label: "Market insight", detail: "Show knowledge of suburbs, buyer demand, and campaign timing." },
+      { number: "High intent", label: "Buyer enquiries", detail: "Position listings and appraisals to attract serious interest." },
+      { number: "Clear", label: "Campaign plan", detail: "Explain how the property will be presented and promoted." },
+      { number: "Fast", label: "Appraisal request", detail: "Make the first step easy for owners and landlords." },
+    ],
+  },
+  beauty: {
+    offer: "beauty treatments, skin services, and appointment bookings",
+    audience: "clients who want expert care, visible results, and a relaxing appointment experience",
+    goal: "book a treatment",
+    services: ["Skin consultations", "Facials and treatments", "Cosmetic services", "Lash and brow appointments", "Product recommendations"],
+    painPoints: ["choosing the right treatment", "skin concerns", "trusting a new provider", "understanding aftercare", "finding appointment availability"],
+    benefits: ["personalised treatment guidance", "visible service presentation", "easy booking", "aftercare reassurance", "premium client experience"],
+    faqs: ["Which treatment should I book?", "Do you offer consultations?", "What aftercare is needed?", "How long does an appointment take?", "Can new clients book online?"],
+    imagery: ["Beauty therapist preparing treatment room for premium facial service", "Client receiving professional skincare treatment in modern clinic", "Close-up of skincare products and calming treatment space"],
+    stats: [
+      { number: "Personalised", label: "Treatment plans", detail: "Match services to skin goals, comfort, and timing." },
+      { number: "Easy", label: "Online booking", detail: "Help clients choose and reserve the right appointment." },
+      { number: "Glow", label: "Result focus", detail: "Use imagery and service detail to show the desired outcome." },
+      { number: "Care", label: "Aftercare guidance", detail: "Answer common questions before and after the appointment." },
+    ],
+  },
+  fitness: {
+    offer: "fitness coaching, classes, training plans, and membership support",
+    audience: "people who want structure, accountability, and measurable fitness progress",
+    goal: "book a trial or join a program",
+    services: ["Group classes", "Personal training", "Nutrition guidance", "Fitness assessments", "Membership programs"],
+    painPoints: ["lack of motivation", "unclear training plan", "plateaus", "gym intimidation", "inconsistent routines"],
+    benefits: ["clear training structure", "accountability", "progress tracking", "supportive coaching", "community energy"],
+    faqs: ["Can beginners join?", "Do you offer trials?", "What should I bring?", "Are programs tailored?", "How do memberships work?"],
+    imagery: ["Personal trainer coaching client through strength session", "Group fitness class in energetic modern studio", "Fitness coach reviewing progress plan with member"],
+    stats: [
+      { number: "Beginner-friendly", label: "Coaching", detail: "Make the first session feel approachable and clear." },
+      { number: "Weekly", label: "Progress rhythm", detail: "Position consistency and accountability as the path to results." },
+      { number: "1:1", label: "Support options", detail: "Show personal training and tailored coaching pathways." },
+      { number: "Community", label: "Motivation", detail: "Use class energy and coach support to reduce drop-off." },
+    ],
+  },
+  finance: {
+    offer: "accounting, bookkeeping, tax, and financial advisory services",
+    audience: "business owners and individuals who want clarity around money, tax, and compliance",
+    goal: "book a financial consultation",
+    services: ["Tax returns", "Bookkeeping", "Business advisory", "Payroll support", "Financial reporting"],
+    painPoints: ["tax stress", "messy books", "cashflow uncertainty", "compliance deadlines", "unclear financial decisions"],
+    benefits: ["cleaner records", "deadline confidence", "clear reporting", "practical advice", "less admin pressure"],
+    faqs: ["Can you help catch up overdue books?", "Do you work with small businesses?", "What should I bring to a consultation?", "Can you handle payroll?", "How do you explain fees?"],
+    imagery: ["Accountant reviewing financial dashboard with business owner", "Bookkeeper organising receipts and cloud accounting records", "Advisor explaining tax planning on laptop in office"],
+    stats: [
+      { number: "ATO-ready", label: "Compliance", detail: "Frame tax and reporting around confidence and deadlines." },
+      { number: "Monthly", label: "Bookkeeping rhythm", detail: "Show how clean records support better decisions." },
+      { number: "Clear", label: "Cashflow insight", detail: "Help owners understand where the business stands." },
+      { number: "Less admin", label: "Owner time", detail: "Position support as a way to reduce finance stress." },
+    ],
+  },
+  ecommerce: {
+    offer: "online shopping, product discovery, fulfilment, and customer support",
+    audience: "shoppers looking for quality products, easy buying, and reliable delivery",
+    goal: "shop the collection",
+    services: ["Product collections", "Online checkout", "Gift guides", "Shipping support", "Customer care"],
+    painPoints: ["choosing the right product", "unclear shipping", "trusting product quality", "returns questions", "finding gifts"],
+    benefits: ["clear product categories", "easy checkout", "trust-building product detail", "shipping clarity", "customer support"],
+    faqs: ["How long does shipping take?", "What is your return policy?", "How do I choose the right product?", "Do you offer gift options?", "Can I contact support before ordering?"],
+    imagery: ["Customer browsing curated online store on laptop", "Premium product collection arranged for ecommerce photography", "Small business packing online orders for delivery"],
+    stats: [
+      { number: "Secure", label: "Checkout", detail: "Make buying feel simple and trustworthy." },
+      { number: "Curated", label: "Collections", detail: "Help shoppers find the right products faster." },
+      { number: "Fast", label: "Order support", detail: "Answer shipping and returns questions before checkout." },
+      { number: "Quality", label: "Product focus", detail: "Use imagery and descriptions to build purchase confidence." },
+    ],
+  },
+  creative: {
+    offer: "creative strategy, design, content, and campaign production",
+    audience: "brands that need stronger visual presentation and clearer storytelling",
+    goal: "request a creative consultation",
+    services: ["Brand identity", "Website design", "Content production", "Campaign creative", "Visual storytelling"],
+    painPoints: ["inconsistent brand presentation", "weak creative direction", "outdated visuals", "unclear campaign message", "lack of content assets"],
+    benefits: ["stronger brand recall", "clear creative direction", "polished visuals", "campaign-ready assets", "more confident launches"],
+    faqs: ["Can you work with an existing brand?", "What assets do we need to start?", "Do you handle strategy and design?", "Can you support campaigns?", "What does the creative process look like?"],
+    imagery: ["Creative team planning brand campaign in modern studio", "Designer reviewing website mockups and visual identity boards", "Content creator capturing polished brand photography"],
+    stats: [
+      { number: "Brand-ready", label: "Visual system", detail: "Make every section feel intentional and recognisable." },
+      { number: "Campaign", label: "Creative assets", detail: "Support launches with images, copy, and consistent messaging." },
+      { number: "Clear", label: "Creative direction", detail: "Reduce guesswork with a stronger story and visual plan." },
+      { number: "Polished", label: "First impression", detail: "Help visitors understand quality before they enquire." },
+    ],
+  },
+};
+
+function getIndustryContentProfile(industryKey) {
+  return INDUSTRY_CONTENT_PROFILES[industryKey] || INDUSTRY_CONTENT_PROFILES.business;
 }
 
 const INDUSTRY_IMAGE_SETS = {
@@ -339,15 +540,106 @@ function normalizeItems(items, minCount, factory) {
   return next.slice(0, Math.max(minCount, next.length));
 }
 
+const PLACEHOLDER_TEXT_RE = /\b(lorem ipsum|placeholder|dummy text|sample content|enter your text|add supporting detail|add proof|answer here|quote \d+|author \d+|question \d+\?|feature \d+|visual \d+|badge \d+|point \d+|result \d+|click here|your brand|your business|image)$/i;
+
+function isIncompleteText(value) {
+  const text = safeTrim(value).replace(/\s+/g, " ");
+  return !text || PLACEHOLDER_TEXT_RE.test(text);
+}
+
+function completeText(value, fallback) {
+  return isIncompleteText(value) ? safeTrim(fallback) : safeTrim(value);
+}
+
+function buildImageRecommendation(label, businessName, pageName) {
+  const subject = safeTrim(label) || `${businessName} ${pageName} visual`;
+  return {
+    prompt: `${subject} for ${businessName}, website-ready marketing photography, natural lighting, clear subject focus`,
+    alt: `${subject} for ${businessName}`,
+    caption: `${pageName} visual: ${subject}`,
+  };
+}
+
+function buildFallbackFaqItem({ businessName, offer, audience, goal, pageName }, index) {
+  const profile = getIndustryContentProfile(inferIndustryKey({ businessName, offer, targetAudience: audience, goal }));
+  if (profile?.faqs?.[index]) {
+    const question = profile.faqs[index];
+    const pain = profile.painPoints?.[index % profile.painPoints.length] || "the main buying question";
+    const benefit = profile.benefits?.[index % profile.benefits.length] || "a clearer next step";
+    return {
+      question,
+      answer: `${businessName} addresses ${pain} by giving ${audience} ${benefit}. The ${pageName} page explains the service, sets expectations, and points visitors toward ${goal}.`,
+    };
+  }
+  const items = [
+    {
+      question: `Is ${offer} right for ${audience}?`,
+      answer: `Yes. ${businessName} positions ${offer} around the needs, questions, and decision points that matter most to ${audience}.`,
+    },
+    {
+      question: `What happens after someone gets in touch with ${businessName}?`,
+      answer: `They are guided toward ${goal} with enough context for the team to respond quickly and keep the conversation useful from the first reply.`,
+    },
+    {
+      question: `What makes the ${pageName} page useful?`,
+      answer: `It explains the offer, gives visitors practical reasons to trust the business, and makes the next action clear without relying on filler copy.`,
+    },
+    {
+      question: `Can ${businessName} support buyers who are still comparing options?`,
+      answer: `Yes. The page answers common objections, shows relevant proof, and gives visitors a low-friction path to ask a more specific question.`,
+    },
+    {
+      question: `What should visitors do next?`,
+      answer: `Visitors should use the main CTA to start the conversation, request the next step, or book time with ${businessName}.`,
+    },
+  ];
+  return items[index % items.length];
+}
+
+function buildFallbackStatItem({ businessName, offer, audience, goal, industryKey }, index) {
+  const profile = getIndustryContentProfile(industryKey);
+  if (profile?.stats?.[index]) {
+    return profile.stats[index];
+  }
+  const industryStats = {
+    trade: [
+      { number: "250+", label: "Projects handled", detail: `Show ${audience} that ${businessName} can manage real jobs, not just talk about ${offer}.` },
+      { number: "24/7", label: "Response focus", detail: `Give urgent buyers a clear path to contact the team when timing matters.` },
+      { number: "5-star", label: "Trust signal", detail: "Use reviews, job photos, and proof points to make the service feel dependable." },
+      { number: "15 yrs", label: "Experience cue", detail: "Frame skill, reliability, and practical know-how as reasons to enquire." },
+    ],
+    saas: [
+      { number: "1", label: "Connected platform", detail: `Bring the core ${offer} journey into one simpler system.` },
+      { number: "24/7", label: "Automation running", detail: "Keep follow-up, capture, and reporting moving outside office hours." },
+      { number: "Unlimited", label: "Page potential", detail: "Support campaigns, funnels, and service pages without rebuilding from scratch." },
+      { number: "100%", label: "Business ownership", detail: "Keep the website, data, and customer journey under the business owner's control." },
+    ],
+    business: [
+      { number: "1", label: "Clear offer", detail: `Make ${offer} easy for ${audience} to understand and act on.` },
+      { number: "3", label: "Decision drivers", detail: "Clarify value, proof, and next step in every major section." },
+      { number: "24/7", label: "Lead capture", detail: `Let visitors move toward ${goal} whenever they are ready.` },
+      { number: "100%", label: "Ready to edit", detail: "Keep copy, visuals, CTAs, and FAQs complete from the first generated draft." },
+    ],
+  };
+  const key = industryStats[industryKey] ? industryKey : "business";
+  return {
+    ...industryStats[key][index % industryStats[key].length],
+    detail: industryStats[key][index % industryStats[key].length].detail.replace("the business", businessName),
+  };
+}
+
 function buildFallbackTestimonialItems({ businessName, offer, audience, goal, differentiators, proofPoints, pageName }) {
+  const profile = getIndustryContentProfile(inferIndustryKey({ businessName, offer, targetAudience: audience, goal }));
+  const benefits = profile.benefits || [];
+  const pains = profile.painPoints || [];
   return [
     {
-      quote: `${businessName} made it much easier to understand the offer, trust the process, and take the next step without second guessing anything.`,
+      quote: `${businessName} made it much easier to understand ${offer}, trust the process, and take the next step without second guessing anything.`,
       author: "Satisfied Client",
       role: audience,
     },
     {
-      quote: `The site finally explained what we do, who it is for, and why it matters. That clarity helped more of the right people move toward ${goal}.`,
+      quote: `The page spoke directly to ${pains[0] || "the problem we were trying to solve"} and made ${benefits[0] || "the next step"} feel obvious. That clarity helped more of the right people move toward ${goal}.`,
       author: "Business Owner",
       role: `${pageName} client`,
     },
@@ -365,10 +657,12 @@ function buildFallbackTestimonialItems({ businessName, offer, audience, goal, di
 }
 
 function buildFallbackContent({ brief, pages }) {
-  const businessName = safeTrim(brief.businessName) || "Your Business";
-  const offer = safeTrim(brief.offer) || "your main offer";
-  const audience = safeTrim(brief.targetAudience) || "your ideal customer";
-  const goal = safeTrim(brief.goal) || "generate more qualified enquiries";
+  const industryKey = inferIndustryKey({ ...brief });
+  const industryProfile = getIndustryContentProfile(industryKey);
+  const businessName = safeTrim(brief.businessName) || safeTrim(brief.businessCategory) || safeTrim(brief.category) || "This Business";
+  const offer = safeTrim(brief.offer) || industryProfile.offer;
+  const audience = safeTrim(brief.targetAudience) || industryProfile.audience;
+  const goal = safeTrim(brief.goal) || industryProfile.goal;
   const keywords = splitBriefList(brief.primaryKeywords).slice(0, 5);
   const serviceAreas = splitBriefList(brief.serviceAreas).slice(0, 3);
   const differentiators = splitBriefList(brief.differentiators).slice(0, 3);
@@ -376,9 +670,11 @@ function buildFallbackContent({ brief, pages }) {
   const mustIncludeSections = splitBriefList(brief.mustIncludeSections).slice(0, 4);
   const tone = safeTrim(brief.tone) || "clear, premium, and confident";
   const imageLabels = buildRequestedImageLabels(brief);
-  const keywordPhrase = keywords.length ? keywords.join(", ") : `${offer}, ${businessName}`;
+  const inferredServices = industryProfile.services || [];
+  const inferredPains = industryProfile.painPoints || [];
+  const inferredBenefits = industryProfile.benefits || [];
+  const keywordPhrase = keywords.length ? keywords.join(", ") : [offer, ...inferredServices.slice(0, 2)].filter(Boolean).join(", ");
   const serviceAreaLine = serviceAreas.length ? ` Serving ${serviceAreas.join(", ")}.` : "";
-  const differentiatorLine = differentiators.length ? ` Differentiators include ${differentiators.join(", ")}.` : "";
   const proofLine = proofPoints.length ? ` Proof points: ${proofPoints.join(", ")}.` : "";
 
   return {
@@ -392,53 +688,60 @@ function buildFallbackContent({ brief, pages }) {
       heroHeadline: index === 0 ? `${businessName} for ${audience} who want ${goal}` : `${page.name} at ${businessName}`,
       heroSubheadline: joinSentences([
         page.objective || `${offer} built to ${goal}`,
-        `${businessName} helps ${audience} understand the offer quickly, see why it matters, and move toward a clear next step`,
+        `${businessName} helps ${audience} understand ${offer} quickly, see why it matters, and move toward a clear next step`,
+        inferredPains.length ? `The content speaks to real concerns like ${inferredPains.slice(0, 3).join(", ")} and shows how the business solves them` : "",
         serviceAreas.length ? `The message is grounded in ${serviceAreas.join(", ")} so the site feels locally relevant as well as commercially strong` : "",
-        differentiators.length ? `It leans on differentiators like ${differentiators.join(", ")} instead of vague claims` : "",
+        differentiators.length ? `It leans on differentiators like ${differentiators.join(", ")} instead of vague claims` : `It uses category-specific services like ${inferredServices.slice(0, 3).join(", ")} so the page feels useful even from a limited brief`,
       ]),
       ctaText: /book|call|consult/i.test(goal) ? "Book a Call" : /buy|shop|order/i.test(goal) ? "View Options" : "Get Started",
       introTitle: index === 0 && keywords[0] ? `${page.name}: ${keywords[0]}` : page.name,
       introBody: `${joinSentences([
         `${businessName} offers ${offer} for ${audience}`,
         `This page is built to ${goal}`,
+        inferredServices.length ? `Likely services include ${inferredServices.slice(0, 5).join(", ")}` : "",
         `The copy should feel ${tone} while still making the commercial case clearly and without filler`,
       ])}\n\n${joinSentences([
         serviceAreas.length ? `${businessName} is positioned to serve ${serviceAreas.join(", ")}` : "",
         differentiators.length ? `The strongest points of difference are ${differentiators.join(", ")}` : "",
+        inferredBenefits.length ? `The main benefits to communicate are ${inferredBenefits.slice(0, 5).join(", ")}` : "",
         proofPoints.length ? `Proof should show up naturally through details like ${proofPoints.join(", ")}` : "",
         `Every section should help a visitor understand what the business does, why it is credible, and what to do next`,
       ])}`,
-      features: [
-        { title: differentiators[0] || `Built for ${audience}`, body: `${offer} is positioned for the people most likely to buy, with messaging tuned to ${keywordPhrase} and written to feel specific instead of generic.` },
-        { title: differentiators[1] || "Clear next step", body: `Each section explains what happens, why it matters, and how visitors can move toward ${goal} without needing to guess.` },
-        { title: differentiators[2] || "Trust-first presentation", body: `Proof, visuals, and CTA hierarchy work together so the page feels ready to publish and easy to trust.${proofLine}` },
-        { title: mustIncludeSections[0] || "Relevant detail", body: `The copy should answer practical buying questions, reduce hesitation, and connect the offer to the real problem facing ${audience}.` },
-        { title: mustIncludeSections[1] || "Commercial clarity", body: `${businessName} should sound credible, capable, and clear about outcomes, scope, and fit rather than leaning on vague hype.` },
-      ],
-      stats: [
-        { number: proofPoints[0] || "Focused", label: "Clear positioning", detail: `Explain ${offer} quickly and clearly for ${audience}.` },
-        { number: proofPoints[1] || "Relevant", label: "Visual trust", detail: `Use imagery like ${imageLabels[0] || "a strong hero visual"} across the site.` },
-        { number: proofPoints[2] || "Ready", label: "Conversion flow", detail: `Move visitors toward ${goal} with direct CTAs and SEO-focused copy.` },
-        { number: serviceAreas[0] || "Specific", label: "Market relevance", detail: `Tie the offer to the audience, service area, and buying context so the page feels grounded in the real business.` },
-      ],
-      faq: [
-        { question: `Who is ${offer} for?`, answer: `${offer} is built for ${audience}.` },
-        { question: "What happens next?", answer: `The page guides visitors to ${goal} with a clear next step.` },
-        { question: "Why choose this business?", answer: `${businessName} combines ${differentiators.join(", ") || "clear positioning, relevant proof, and a stronger user journey"}.` },
-        { question: `What makes ${businessName} different?`, answer: differentiators.length ? `${businessName} stands out through ${differentiators.join(", ")}, which gives buyers a clearer reason to choose it over a generic alternative.` : `${businessName} is presented with stronger clarity, trust signals, and a more complete explanation of the offer.` },
-        { question: `How does ${page.name} help a buyer decide?`, answer: `This page explains the offer in plain language, shows why it matters, and reduces uncertainty by answering the most common objections before the CTA.` },
-      ],
-      marqueeItems: [...keywords, ...mustIncludeSections, ...differentiators, ...proofPoints].filter(Boolean).slice(0, 8),
+      features: normalizeItems(
+        [
+          ...differentiators.map((title, featureIndex) => ({ title, body: `${title} gives ${audience} a clearer reason to choose ${businessName} when comparing ${offer}.` })),
+          ...inferredServices.map((title, serviceIndex) => ({
+            title,
+            body: `${title} helps address ${inferredPains[serviceIndex % Math.max(1, inferredPains.length)] || "a common buying concern"} while creating ${inferredBenefits[serviceIndex % Math.max(1, inferredBenefits.length)] || "a clearer result"} for ${audience}.`,
+          })),
+          ...inferredBenefits.map((title, benefitIndex) => ({
+            title,
+            body: `${businessName} uses this page to show ${title}, answer practical questions, and move visitors toward ${goal}.`,
+          })),
+        ],
+        5,
+        (featureIndex) => ({
+          title: mustIncludeSections[featureIndex] || inferredServices[featureIndex % Math.max(1, inferredServices.length)] || `Built for ${audience}`,
+          body: `${offer} is positioned around ${inferredPains[featureIndex % Math.max(1, inferredPains.length)] || "the buying problem"} with messaging tuned to ${keywordPhrase}.`,
+        })
+      ).slice(0, 5),
+      stats: normalizeItems(
+        proofPoints.map((point, statIndex) => ({ number: point, label: industryProfile.stats?.[statIndex]?.label || "Proof point", detail: `Support trust with ${point}.` })),
+        4,
+        (statIndex) => buildFallbackStatItem({ businessName, offer, audience, goal, industryKey }, statIndex)
+      ).slice(0, 4),
+      faq: normalizeItems([], 5, (faqIndex) => buildFallbackFaqItem({ businessName, offer, audience, goal, pageName: page.name }, faqIndex)),
+      marqueeItems: [...keywords, ...mustIncludeSections, ...differentiators, ...proofPoints, ...inferredServices, ...inferredBenefits].filter(Boolean).slice(0, 8),
       galleryCaptions: [imageLabels[0] || "Signature experience", imageLabels[1] || "Process and presentation", imageLabels[2] || "Proof and trust"],
       testimonial: {
-        quote: `${businessName} made the next step obvious and easy by explaining the offer properly, answering the real questions, and giving the page a much stronger sense of trust.`,
+        quote: `${businessName} made the next step obvious by explaining ${offer}, answering the real questions, and showing why the service was the right fit.`,
         author: "Satisfied Client",
         role: "Customer",
       },
       testimonialItems: buildFallbackTestimonialItems({ businessName, offer, audience, goal, differentiators, proofPoints, pageName: page.name }),
       contactTitle: /contact|book|apply/i.test(page.name) ? page.name : `Talk to ${businessName}`,
       contactSubtitle: page.objective || `Reach out to learn how ${offer} can help.`,
-      trustBadges: [offer, audience, goal, serviceAreas[0], differentiators[0]].filter(Boolean),
+      trustBadges: [offer, audience, goal, serviceAreas[0], differentiators[0], ...inferredBenefits, ...inferredServices].filter(Boolean).slice(0, 5),
     })),
   };
 }
@@ -473,47 +776,52 @@ function normalizeAiPayload(raw, requestedPages, fallback) {
   const normalizedPages = (requestedPages || []).map((page) => {
     const matching = pagePayload.find((entry) => safeTrim(entry?.name).toLowerCase() === safeTrim(page?.name).toLowerCase()) || {};
     const fallbackPage = fallback.pages.find((entry) => safeTrim(entry?.name).toLowerCase() === safeTrim(page?.name).toLowerCase()) || {};
-    const normalizedStats = normalizeItems(matching.stats, 4, (index) => fallbackPage.stats?.[index] || { number: "Strong", label: `Point ${index + 1}`, detail: "Add proof." }).map((item, index) => {
-      const fallbackStat = fallbackPage.stats?.[index] || { number: "Strong", label: `Point ${index + 1}`, detail: "Add proof." };
+    const normalizedStats = normalizeItems(matching.stats, 4, (index) => fallbackPage.stats?.[index] || { number: "Ready", label: "Proof point", detail: "This page gives visitors a clear reason to trust the business." }).map((item, index) => {
+      const fallbackStat = fallbackPage.stats?.[index] || { number: "Ready", label: "Proof point", detail: "This page gives visitors a clear reason to trust the business." };
       const nextNumber = safeTrim(item?.number) || fallbackStat.number;
       return {
         number: hasUnsupportedNumericClaim(nextNumber, allowedFragments) ? fallbackStat.number : nextNumber,
-        label: safeTrim(item?.label) || fallbackStat.label,
-        detail: safeTrim(item?.detail) || fallbackStat.detail,
+        label: completeText(item?.label, fallbackStat.label),
+        detail: completeText(item?.detail, fallbackStat.detail),
       };
     });
     return {
       name: page.name,
-      heroEyebrow: safeTrim(matching.heroEyebrow) || fallbackPage.heroEyebrow,
-      heroHeadline: safeTrim(matching.heroHeadline) || fallbackPage.heroHeadline,
-      heroSubheadline: safeTrim(matching.heroSubheadline) || fallbackPage.heroSubheadline,
-      ctaText: safeTrim(matching.ctaText) || fallbackPage.ctaText,
-      introTitle: safeTrim(matching.introTitle) || fallbackPage.introTitle,
-      introBody: safeTrim(matching.introBody) || fallbackPage.introBody,
-      features: normalizeItems(matching.features, 5, (index) => fallbackPage.features?.[index] || { title: `Feature ${index + 1}`, body: "Add supporting detail." }).map((item, index) => ({
-        title: safeTrim(item?.title) || fallbackPage.features?.[index]?.title || `Feature ${index + 1}`,
-        body: safeTrim(item?.body) || fallbackPage.features?.[index]?.body || "Add supporting detail.",
+      heroEyebrow: completeText(matching.heroEyebrow, fallbackPage.heroEyebrow),
+      heroHeadline: completeText(matching.heroHeadline, fallbackPage.heroHeadline),
+      heroSubheadline: completeText(matching.heroSubheadline, fallbackPage.heroSubheadline),
+      ctaText: completeText(matching.ctaText, fallbackPage.ctaText),
+      introTitle: completeText(matching.introTitle, fallbackPage.introTitle),
+      introBody: completeText(matching.introBody, fallbackPage.introBody),
+      features: normalizeItems(matching.features, 5, (index) => fallbackPage.features?.[index] || { title: "Audience-ready benefit", body: "This section explains a concrete reason to choose the business." }).map((item, index) => ({
+        title: completeText(item?.title, fallbackPage.features?.[index]?.title || "Audience-ready benefit"),
+        body: completeText(item?.body, fallbackPage.features?.[index]?.body || "This section explains a concrete reason to choose the business."),
       })),
       stats: normalizedStats,
-      faq: normalizeItems(matching.faq, 5, (index) => fallbackPage.faq?.[index] || { question: `Question ${index + 1}?`, answer: "Answer here." }).map((item, index) => ({
-        question: safeTrim(item?.question) || fallbackPage.faq?.[index]?.question || `Question ${index + 1}?`,
-        answer: safeTrim(item?.answer) || fallbackPage.faq?.[index]?.answer || "Answer here.",
+      faq: normalizeItems(matching.faq, 5, (index) => fallbackPage.faq?.[index] || { question: "What should visitors know before enquiring?", answer: "They should understand the offer, the fit, the proof, and the next step." }).map((item, index) => ({
+        question: completeText(item?.question, fallbackPage.faq?.[index]?.question || "What should visitors know before enquiring?"),
+        answer: completeText(item?.answer, fallbackPage.faq?.[index]?.answer || "They should understand the offer, the fit, the proof, and the next step."),
       })),
-      marqueeItems: normalizeItems(matching.marqueeItems, 6, (index) => fallbackPage.marqueeItems?.[index] || `Message ${index + 1}`).map((item) => safeTrim(item)),
-      galleryCaptions: normalizeItems(matching.galleryCaptions, 3, (index) => fallbackPage.galleryCaptions?.[index] || `Visual ${index + 1}`),
+      marqueeItems: normalizeItems(matching.marqueeItems, 6, (index) => fallbackPage.marqueeItems?.[index] || fallbackPage.trustBadges?.[index] || fallbackPage.ctaText).map((item, index) => completeText(item, fallbackPage.marqueeItems?.[index] || fallbackPage.ctaText)).filter(Boolean),
+      galleryCaptions: normalizeItems(matching.galleryCaptions, 3, (index) => fallbackPage.galleryCaptions?.[index] || `${page.name} visual ${index + 1}`).map((item, index) => completeText(item, fallbackPage.galleryCaptions?.[index] || `${fallback.siteTitle} ${page.name} visual`)),
       testimonial: {
-        quote: safeTrim(matching?.testimonial?.quote) || fallbackPage?.testimonial?.quote,
-        author: safeTrim(matching?.testimonial?.author) || fallbackPage?.testimonial?.author,
-        role: safeTrim(matching?.testimonial?.role) || fallbackPage?.testimonial?.role,
+        quote: completeText(matching?.testimonial?.quote, fallbackPage?.testimonial?.quote),
+        author: completeText(matching?.testimonial?.author, fallbackPage?.testimonial?.author),
+        role: completeText(matching?.testimonial?.role, fallbackPage?.testimonial?.role),
       },
-      testimonialItems: normalizeItems(matching.testimonialItems, 4, (index) => fallbackPage.testimonialItems?.[index] || { quote: `Quote ${index + 1}`, author: `Author ${index + 1}`, role: "Customer" }).map((item, index) => ({
-        quote: safeTrim(item?.quote) || fallbackPage.testimonialItems?.[index]?.quote || `Quote ${index + 1}`,
-        author: safeTrim(item?.author) || fallbackPage.testimonialItems?.[index]?.author || `Author ${index + 1}`,
-        role: safeTrim(item?.role) || fallbackPage.testimonialItems?.[index]?.role || "Customer",
+      testimonialItems: normalizeItems(matching.testimonialItems, 4, (index) => fallbackPage.testimonialItems?.[index] || fallbackPage.testimonial).map((item, index) => ({
+        quote: completeText(item?.quote || item?.text, fallbackPage.testimonialItems?.[index]?.quote || fallbackPage.testimonial?.quote),
+        author: completeText(item?.author, fallbackPage.testimonialItems?.[index]?.author || fallbackPage.testimonial?.author),
+        role: completeText(item?.role, fallbackPage.testimonialItems?.[index]?.role || fallbackPage.testimonial?.role || "Customer"),
       })),
-      contactTitle: safeTrim(matching.contactTitle) || fallbackPage.contactTitle,
-      contactSubtitle: safeTrim(matching.contactSubtitle) || fallbackPage.contactSubtitle,
-      trustBadges: normalizeItems(matching.trustBadges, 5, (index) => fallbackPage.trustBadges?.[index] || `Badge ${index + 1}`).map((item) => safeTrim(item)).filter(Boolean),
+      contactTitle: completeText(matching.contactTitle, fallbackPage.contactTitle),
+      contactSubtitle: completeText(matching.contactSubtitle, fallbackPage.contactSubtitle),
+      trustBadges: normalizeItems(matching.trustBadges, 5, (index) => fallbackPage.trustBadges?.[index] || fallbackPage.features?.[index]?.title || fallbackPage.ctaText).map((item, index) => completeText(item, fallbackPage.trustBadges?.[index] || fallbackPage.features?.[index]?.title || fallbackPage.ctaText)).filter(Boolean),
+      metadata: {
+        title: completeText(matching?.metadata?.title || matching?.seoTitle, `${fallback.siteTitle} | ${page.name}`),
+        description: completeText(matching?.metadata?.description || matching?.metaDescription, fallbackPage.heroSubheadline),
+        imageRecommendation: buildImageRecommendation(fallbackPage.galleryCaptions?.[0], fallback.siteTitle, page.name),
+      },
     };
   });
 
@@ -678,6 +986,230 @@ function buildSaasFaqItems(pageContent, brief, businessName, offer, stackCostRef
   ].concat((pageContent.faq || []).slice(0, 2));
 }
 
+function completeGeneratedBlocks(blocks, context) {
+  const {
+    businessName,
+    pageName,
+    pageKey,
+    pageContent,
+    visuals,
+    industryKey,
+    primaryOffer,
+    audience,
+    goal,
+  } = context;
+  const faqContext = { businessName, offer: primaryOffer, audience, goal, pageName };
+  const pageFallbackText = pageContent.introBody || `${businessName} helps ${audience} understand ${primaryOffer} and take the next step with confidence.`;
+  const imageFallback = visuals.hero || visuals.media || INDUSTRY_IMAGE_SETS.business[0];
+
+  return (Array.isArray(blocks) ? blocks : []).map((block) => {
+    if (!block || typeof block !== "object") return block;
+    const props = block.props && typeof block.props === "object" ? { ...block.props } : {};
+    const type = block.type;
+
+    if (type === BlockTypes.HERO) {
+      props.eyebrow = completeText(props.eyebrow, pageContent.heroEyebrow || primaryOffer);
+      props.headline = completeText(props.headline, pageContent.heroHeadline || `${businessName} ${pageName}`);
+      props.subheadline = completeText(props.subheadline, pageContent.heroSubheadline || pageFallbackText);
+      props.ctaText = completeText(props.ctaText, pageContent.ctaText || "Get Started");
+      props.ctaLink = safeTrim(props.ctaLink) || "#contact";
+      props.backgroundImage = safeTrim(props.backgroundImage) || imageFallback;
+      props.backgroundImageAlt = completeText(props.backgroundImageAlt, `${businessName} ${pageName} hero image`);
+      props.imageRecommendation = props.imageRecommendation || buildImageRecommendation(`${primaryOffer} hero image`, businessName, pageName);
+      if (props.floatingImage) {
+        props.floatingImageAlt = completeText(props.floatingImageAlt, `${businessName} supporting website visual`);
+      }
+    }
+
+    if (type === "marquee-strip") {
+      props.items = normalizeItems(props.items, 6, (index) => pageContent.trustBadges?.[index] || pageContent.features?.[index]?.title || pageContent.ctaText || primaryOffer)
+        .map((item, index) => completeText(item, pageContent.trustBadges?.[index] || pageContent.ctaText || primaryOffer))
+        .filter(Boolean);
+    }
+
+    if (type === BlockTypes.TEXT) {
+      props.text = completeText(props.text, `${pageContent.introTitle || pageName}\n\n${pageFallbackText}`);
+    }
+
+    if (type === BlockTypes.COLUMNS_2) {
+      props.title = completeText(props.title, pageContent.introTitle || `${pageName} overview`);
+      props.leftTitle = completeText(props.leftTitle, pageContent.features?.[0]?.title || `For ${audience}`);
+      props.leftContent = completeText(props.leftContent, pageContent.features?.[0]?.body || pageFallbackText);
+      props.rightTitle = completeText(props.rightTitle, pageContent.features?.[1]?.title || "Why it matters");
+      props.rightContent = completeText(props.rightContent, pageContent.features?.[1]?.body || pageContent.heroSubheadline || pageFallbackText);
+      props.leftImage = safeTrim(props.leftImage) || visuals.gallery?.[0]?.src || imageFallback;
+      props.rightImage = safeTrim(props.rightImage) || visuals.gallery?.[1]?.src || visuals.media || imageFallback;
+      props.leftImageAlt = completeText(props.leftImageAlt, `${businessName} ${props.leftTitle}`);
+      props.rightImageAlt = completeText(props.rightImageAlt, `${businessName} ${props.rightTitle}`);
+      props.leftImageRecommendation = props.leftImageRecommendation || buildImageRecommendation(props.leftTitle, businessName, pageName);
+      props.rightImageRecommendation = props.rightImageRecommendation || buildImageRecommendation(props.rightTitle, businessName, pageName);
+    }
+
+    if (type === BlockTypes.FEATURE_LIST) {
+      props.title = completeText(props.title, pageContent.introTitle || `${pageName} features`);
+      props.items = normalizeItems(props.items, 5, (index) => pageContent.features?.[index] || pageContent.features?.[index % Math.max(1, pageContent.features.length)] || {})
+        .map((item, index) => {
+          const fallbackFeature = pageContent.features?.[index] || { title: `${primaryOffer} benefit`, body: pageFallbackText };
+          const title = completeText(item?.title, fallbackFeature.title);
+          const imageInfo = buildImageRecommendation(title, businessName, pageName);
+          return {
+            ...item,
+            title,
+            body: completeText(item?.body, fallbackFeature.body),
+            image: safeTrim(item?.image) || visuals.gallery?.[index % visuals.gallery.length]?.src || imageFallback,
+            imageAlt: completeText(item?.imageAlt, imageInfo.alt),
+            imageCaption: completeText(item?.imageCaption, imageInfo.caption),
+            imageSearchPrompt: safeTrim(item?.imageSearchPrompt) || imageInfo.prompt,
+            iconRecommendation: completeText(item?.iconRecommendation, `${title} icon`),
+          };
+        });
+    }
+
+    if (type === BlockTypes.IMAGE_GALLERY) {
+      props.title = completeText(props.title, `${pageName} visuals`);
+      props.images = normalizeItems(props.images, 3, (index) => visuals.gallery?.[index] || {})
+        .map((image, index) => {
+          const caption = completeText(image?.caption, pageContent.galleryCaptions?.[index] || `${businessName} ${pageName} visual ${index + 1}`);
+          const recommendation = buildImageRecommendation(caption, businessName, pageName);
+          return {
+            ...image,
+            src: safeTrim(image?.src) || visuals.gallery?.[index % visuals.gallery.length]?.src || imageFallback,
+            alt: completeText(image?.alt, recommendation.alt),
+            caption,
+            searchPrompt: safeTrim(image?.searchPrompt) || recommendation.prompt,
+          };
+        });
+    }
+
+    if (type === BlockTypes.STATS) {
+      props.title = completeText(props.title, `${pageName} proof`);
+      props.subtitle = completeText(props.subtitle, pageContent.heroSubheadline || pageFallbackText);
+      props.stats = normalizeItems(props.stats, 4, (index) => buildFallbackStatItem({ businessName, offer: primaryOffer, audience, goal, industryKey }, index))
+        .map((item, index) => {
+          const fallbackStat = buildFallbackStatItem({ businessName, offer: primaryOffer, audience, goal, industryKey }, index);
+          return {
+            ...item,
+            number: completeText(item?.number, fallbackStat.number),
+            label: completeText(item?.label, fallbackStat.label),
+            detail: completeText(item?.detail, fallbackStat.detail),
+          };
+        });
+    }
+
+    if (type === BlockTypes.FAQ) {
+      props.title = completeText(props.title, `Questions about ${pageName}`);
+      props.items = normalizeItems(props.items, 5, (index) => buildFallbackFaqItem(faqContext, index))
+        .map((item, index) => {
+          const fallbackItem = buildFallbackFaqItem(faqContext, index);
+          const question = completeText(item?.question || item?.heading, fallbackItem.question);
+          const answer = completeText(item?.answer || item?.content, fallbackItem.answer);
+          return {
+            ...item,
+            id: safeTrim(item?.id) || `${pageKey}-faq-${index + 1}`,
+            question,
+            answer,
+            heading: question,
+            content: answer,
+          };
+        });
+    }
+
+    if (type === BlockTypes.TESTIMONIAL) {
+      const fallbackItems = buildFallbackTestimonialItems({
+        businessName,
+        offer: primaryOffer,
+        audience,
+        goal,
+        differentiators: pageContent.features?.map((item) => item.title).filter(Boolean) || [],
+        proofPoints: pageContent.stats?.map((item) => `${item.number} ${item.label}`).filter(Boolean) || [],
+        pageName,
+      });
+      const firstFallback = fallbackItems[0];
+      props.title = completeText(props.title, `${businessName} customer proof`);
+      props.text = completeText(props.text || props.quote, firstFallback.quote);
+      props.author = completeText(props.author, firstFallback.author);
+      props.role = completeText(props.role, firstFallback.role);
+      props.items = normalizeItems(props.items, 4, (index) => fallbackItems[index % fallbackItems.length])
+        .map((item, index) => {
+          const fallbackItem = fallbackItems[index % fallbackItems.length];
+          const text = completeText(item?.text || item?.quote, fallbackItem.quote);
+          const avatarInfo = buildImageRecommendation(`Professional headshot of ${fallbackItem.author}`, businessName, pageName);
+          return {
+            ...item,
+            id: safeTrim(item?.id) || `${pageKey}-testimonial-${index + 1}`,
+            text,
+            quote: text,
+            author: completeText(item?.author, fallbackItem.author),
+            role: completeText(item?.role, fallbackItem.role),
+            rating: Number(item?.rating || 5),
+            avatarAlt: completeText(item?.avatarAlt, avatarInfo.alt),
+            avatarSearchPrompt: safeTrim(item?.avatarSearchPrompt) || avatarInfo.prompt,
+          };
+        });
+    }
+
+    if (type === BlockTypes.TRUST_BADGES) {
+      props.badges = normalizeItems(props.badges, 5, (index) => ({ label: pageContent.trustBadges?.[index] || pageContent.features?.[index]?.title || primaryOffer }))
+        .map((badge, index) => ({
+          ...badge,
+          icon: completeText(badge?.icon, index === 0 ? "*" : "+"),
+          label: completeText(badge?.label || badge, pageContent.trustBadges?.[index] || pageContent.features?.[index]?.title || primaryOffer),
+        }));
+    }
+
+    if (type === BlockTypes.CONTACT_FORM) {
+      props.title = completeText(props.title, pageContent.contactTitle || `Talk to ${businessName}`);
+      props.subtitle = completeText(props.subtitle, pageContent.contactSubtitle || `Reach out to learn how ${primaryOffer} can help.`);
+      props.submitText = completeText(props.submitText, pageContent.ctaText || "Send Enquiry");
+      props.mediaImage = safeTrim(props.mediaImage) || visuals.media || imageFallback;
+      props.mediaAlt = completeText(props.mediaAlt, `${businessName} contact image`);
+      props.mediaCaption = completeText(props.mediaCaption, `Start a conversation with ${businessName}.`);
+      props.imageRecommendation = props.imageRecommendation || buildImageRecommendation(`${businessName} contact consultation`, businessName, pageName);
+    }
+
+    if (type === BlockTypes.IMAGE_STACK) {
+      props.title = completeText(props.title, `${businessName} in motion`);
+      props.images = normalizeItems(props.images, 3, (index) => {
+        if (index === 2) return { kind: "text", content: `${pageContent.introTitle}\n${pageContent.ctaText}` };
+        return { kind: "image", src: visuals.stack?.[index] || imageFallback };
+      }).map((item, index) => {
+        if (item?.kind === "text") {
+          return { ...item, content: completeText(item?.content, `${pageContent.introTitle}\n${pageContent.ctaText}`) };
+        }
+        const imageInfo = buildImageRecommendation(`${businessName} layered visual ${index + 1}`, businessName, pageName);
+        return {
+          ...item,
+          src: safeTrim(item?.src) || visuals.stack?.[index] || imageFallback,
+          alt: completeText(item?.alt, imageInfo.alt),
+          caption: completeText(item?.caption, imageInfo.caption),
+          searchPrompt: safeTrim(item?.searchPrompt) || imageInfo.prompt,
+        };
+      });
+    }
+
+    if (type === BlockTypes.PRICING_TABLE) {
+      props.title = completeText(props.title, `${businessName} options`);
+      props.plans = normalizeItems(props.plans, 3, (index) => ({
+        name: index === 0 ? "Starter" : index === 1 ? "Growth" : "Scale",
+        price: index === 0 ? "Entry" : index === 1 ? "Recommended" : "Custom",
+        description: `${primaryOffer} option for ${audience}.`,
+        cta: pageContent.ctaText || "Get Started",
+        features: [primaryOffer, goal, businessName],
+      })).map((plan, index) => ({
+        ...plan,
+        name: completeText(plan?.name, index === 0 ? "Starter" : index === 1 ? "Growth" : "Scale"),
+        price: completeText(plan?.price, index === 0 ? "Entry" : index === 1 ? "Recommended" : "Custom"),
+        description: completeText(plan?.description, `${primaryOffer} option for ${audience}.`),
+        cta: completeText(plan?.cta, pageContent.ctaText || "Get Started"),
+        features: normalizeItems(plan?.features || plan?.includedFeatures, 3, (featureIndex) => [primaryOffer, goal, businessName][featureIndex] || primaryOffer)
+          .map((feature) => completeText(feature, primaryOffer)),
+      }));
+    }
+
+    return { ...block, props };
+  });
+}
+
 function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildType }) {
   const businessName = safeTrim(siteContent.siteTitle || brief.businessName) || "Your Business";
   const industryKey = inferIndustryKey({ ...brief, templateSlug });
@@ -686,7 +1218,10 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
   const pageLinks = buildPageLinks(pages);
   const footerContact = buildFooterContactDetails(brief, businessName);
   const stackCostReference = inferStackCostReference(brief);
-  const primaryOffer = safeTrim(brief.offer) || "your platform";
+  const industryProfile = getIndustryContentProfile(industryKey);
+  const primaryOffer = safeTrim(brief.offer) || industryProfile.offer;
+  const audience = safeTrim(brief.targetAudience) || industryProfile.audience;
+  const goal = safeTrim(brief.goal) || industryProfile.goal;
 
   // Apply AI-generated design tokens with sensible fallbacks per industry
   const design = siteContent.design && typeof siteContent.design === "object" ? siteContent.design : {};
@@ -870,8 +1405,8 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
     const featuresBlock = createBlock(BlockTypes.FEATURE_LIST, {
       title: pageContent.introTitle,
       items: pageContent.features.map((item, index) => ({
-        title: safeTrim(item?.title) || `Feature ${index + 1}`,
-        body: safeTrim(item?.body) || "Add supporting detail.",
+        title: completeText(item?.title, pageContent.features?.[index]?.title || `${primaryOffer} benefit`),
+        body: completeText(item?.body, pageContent.features?.[index]?.body || pageContent.introBody),
         image: galleryImages[index]?.src || visuals.hero,
       })),
       layout: "vertical",
@@ -901,9 +1436,9 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
         { number: stackCostReference, label: "Typical stack cost", detail: "What some teams are paying before they consolidate sales, follow-up, and marketing." },
         { number: "1", label: "Source of truth", detail: "One platform for leads, conversations, automations, reporting, and next steps." },
       ] : pageContent.stats).map((item, index) => ({
-        number: safeTrim(item?.number) || `Point ${index + 1}`,
-        label: safeTrim(item?.label) || `Result ${index + 1}`,
-        detail: safeTrim(item?.detail) || "Add supporting proof.",
+        number: completeText(item?.number, buildFallbackStatItem({ businessName, offer: primaryOffer, audience, goal, industryKey }, index).number),
+        label: completeText(item?.label, buildFallbackStatItem({ businessName, offer: primaryOffer, audience, goal, industryKey }, index).label),
+        detail: completeText(item?.detail, buildFallbackStatItem({ businessName, offer: primaryOffer, audience, goal, industryKey }, index).detail),
       })),
       ...buildAnimationProps({ sectionAnimation: "blur-in", sectionAnimationDelay: 0.16, textAnimation: "fade-up", subheadlineAnimation: "slide-right" }),
     });
@@ -920,13 +1455,18 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
 
     const faqBlock = createBlock(BlockTypes.FAQ, {
       title: isSaasHome ? "Questions teams ask before they consolidate their stack" : `Questions about ${pageName}`,
-      items: (isSaasHome ? buildSaasFaqItems(pageContent, brief, businessName, primaryOffer, stackCostReference) : pageContent.faq).map((item, index) => ({
-        id: `${pageKey}-faq-${index + 1}`,
-        question: safeTrim(item?.question) || `Question ${index + 1}?`,
-        answer: safeTrim(item?.answer) || "Answer here.",
-        heading: safeTrim(item?.question) || `Question ${index + 1}?`,
-        content: safeTrim(item?.answer) || "Answer here.",
-      })),
+      items: (isSaasHome ? buildSaasFaqItems(pageContent, brief, businessName, primaryOffer, stackCostReference) : pageContent.faq).map((item, index) => {
+        const fallbackFaq = buildFallbackFaqItem({ businessName, offer: primaryOffer, audience, goal, pageName }, index);
+        const question = completeText(item?.question, fallbackFaq.question);
+        const answer = completeText(item?.answer, fallbackFaq.answer);
+        return {
+          id: `${pageKey}-faq-${index + 1}`,
+          question,
+          answer,
+          heading: question,
+          content: answer,
+        };
+      }),
       backgroundColor: resolvedHeroGradient,
       faqPanelBackgroundColor: design.darkSections !== false ? `linear-gradient(180deg,${resolvedColorBg}f5,${resolvedColorBg}e0)` : "rgba(255,255,255,0.94)",
       headlineColor: resolvedColorText,
@@ -958,7 +1498,7 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
     const trustBadges = createBlock(BlockTypes.TRUST_BADGES, {
       badges: pageContent.trustBadges.map((label, index) => ({
         icon: index === 0 ? "⚡" : index === 1 ? "🎯" : index === 2 ? "✅" : index === 3 ? "🔐" : "⭐",
-        label: safeTrim(label) || `Badge ${index + 1}`,
+        label: completeText(label, pageContent.features?.[index]?.title || primaryOffer),
       })),
       backgroundColor: resolvedHeroGradient,
       textColor: resolvedColorText,
@@ -1038,12 +1578,23 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
               ? [commonHero, introText, columnsBlock, galleryBlock, statsBlock, trustBadges, testimonialBlock, faqBlock, contactBlock]
               : [commonHero, introText, columnsBlock, featuresBlock, galleryBlock, trustBadges, testimonialBlock, faqBlock, contactBlock];
 
-    pageBlocks[pageName] = applyGeneratedMotion(blocks, {
+    const animatedBlocks = applyGeneratedMotion(blocks, {
       isHome,
       isSaasHome,
       isPremiumBuild,
       baseDelay: isPremiumBuild ? 0 : isHome ? 0.02 : 0.04,
       stagger: isPremiumBuild ? 0.05 : isSaasHome ? 0.06 : 0.08,
+    });
+    pageBlocks[pageName] = completeGeneratedBlocks(animatedBlocks, {
+      businessName,
+      pageName,
+      pageKey,
+      pageContent,
+      visuals,
+      industryKey,
+      primaryOffer,
+      audience,
+      goal,
     });
     pagesContent[pageName] = "";
   });
@@ -1052,6 +1603,16 @@ function buildProjectBlueprint({ brief, pages, templateSlug, siteContent, buildT
     name: businessName,
     pageBlocks,
     pagesContent,
+    pageMetadata: Object.fromEntries(
+      siteContent.pages.map((page) => [
+        safeTrim(page.name),
+        page.metadata || {
+          title: `${businessName} | ${safeTrim(page.name) || "Page"}`,
+          description: safeTrim(page.heroSubheadline) || `${businessName} helps ${audience} with ${primaryOffer}.`,
+          imageRecommendation: buildImageRecommendation(`${primaryOffer} website image`, businessName, safeTrim(page.name) || "Page"),
+        },
+      ])
+    ),
     globalNavBlock,
     globalFooterBlock,
   };
@@ -1073,8 +1634,10 @@ Copy rules:
 - Write in the brand's authentic voice. A premium law firm sounds different from a local gym. A SaaS startup sounds different from a boutique spa. Let the personality come through.
 - Make every sentence earn its place. No filler words like "cutting-edge", "industry-leading", "world-class", or "innovative solutions".
 - Avoid vague claims. Say what the business actually does, for whom, and what outcome they can expect.
-- Do not invent specific percentages, numbers, or statistics unless they were provided in the brief.
+- Stat cards must never be blank or generic. Use realistic industry-specific metrics, platform facts, proof words, or brief-provided proof points. Do not invent unverifiable precise performance percentages unless they were provided in the brief.
 - The home page should feel like a complete, publishable sales page after light editing.
+- Every visible section must be complete: headline, subheadline/body copy, CTA text, CTA destination suggestion, image recommendation, alt text, caption where useful, card content, testimonial content, FAQ content, and metadata.
+- Never return placeholder copy, lorem ipsum, dummy content, generic labels such as "Feature 1", empty strings, blank arrays, missing image guidance, or partial cards.
 
 Design rules:
 - Choose a visual personality that genuinely fits this brand: bold for disruptors, refined for premium service firms, warm for community-focused brands, authoritative for professional services, playful for consumer brands, modern for tech.
@@ -1087,6 +1650,7 @@ Design rules:
         content: `Create production-ready starter website copy and a design brief for this business.
 
 Business Name: ${safeTrim(brief.businessName) || "(not provided)"}
+Business Category: ${safeTrim(brief.businessCategory || brief.category || brief.industry) || "(not provided)"}
 Offer: ${safeTrim(brief.offer) || "(not provided)"}
 Target Audience: ${safeTrim(brief.targetAudience) || "(not provided)"}
 Main Goal: ${safeTrim(brief.goal) || "(not provided)"}
@@ -1157,6 +1721,12 @@ Return JSON in this exact shape:
       ],
       "marqueeItems": ["short message", "short message", "short message", "short message", "short message", "short message"],
       "galleryCaptions": ["caption 1", "caption 2", "caption 3"],
+      "imageRecommendations": [
+        { "section": "Hero", "prompt": "specific image search or generation prompt", "alt": "alt text", "caption": "caption or empty only if decorative" },
+        { "section": "Feature", "prompt": "specific image search or generation prompt", "alt": "alt text", "caption": "caption" },
+        { "section": "Testimonial Avatar", "prompt": "specific avatar/headshot prompt", "alt": "alt text", "caption": "caption" }
+      ],
+      "iconRecommendations": ["icon idea 1", "icon idea 2", "icon idea 3", "icon idea 4", "icon idea 5"],
       "testimonial": { "quote": "quote", "author": "name", "role": "role" },
       "testimonialItems": [
         { "quote": "quote", "author": "name", "role": "role" },
@@ -1166,7 +1736,16 @@ Return JSON in this exact shape:
       ],
       "contactTitle": "contact section title",
       "contactSubtitle": "contact section subtitle",
-      "trustBadges": ["badge 1", "badge 2", "badge 3", "badge 4", "badge 5"]
+      "trustBadges": ["badge 1", "badge 2", "badge 3", "badge 4", "badge 5"],
+      "ctaDestinations": [
+        { "text": "CTA label", "destination": "#contact", "reason": "why this is the right next step" }
+      ],
+      "metadata": {
+        "title": "SEO title for this page",
+        "description": "SEO meta description for this page",
+        "imagePrompt": "Open graph image recommendation prompt",
+        "imageAlt": "Open graph image alt text"
+      }
     }
   ]
 }
@@ -1194,11 +1773,19 @@ Design variant selection guide:
 Copy rules:
 - Every page must be aligned to its specific objective.
 - Copy must be specific to this business, offer, audience, and goal.
+- If business information is limited, infer likely services, customer pain points, customer benefits, FAQs, testimonials, imagery, statistics, CTA destinations, and metadata from the business category. Do not leave anything blank because the brief is sparse.
+- When inferring from category, use realistic category language. An electrician should include services like fault finding, switchboard upgrades, lighting, safety checks, emergency work, and quote requests. A beauty clinic should include treatment guidance, booking, aftercare, skin goals, and client comfort. A SaaS/platform page should include CRM, automation, dashboards, forms, and ownership.
 - Use SEO keywords naturally in headings and body copy.
 - Make the home page feel like a complete sales page with enough depth to publish after light editing.
 - Do not write placeholder lorem ipsum style copy or generic phrases.
 - Keep CTA text short and concrete.
+- Every CTA must include clear destination intent, usually #contact, #pricing, #book, #quote, or another page anchor from the requested page list.
+- Every visual recommendation must include a prompt, alt text, and a caption unless the visual is purely decorative.
+- Testimonials must include believable full quote content, author label, role/context, and avatar/headshot prompt guidance.
+- FAQs must include complete questions and complete answers that address buying objections.
+- Metadata must be filled for every page.
 - Write enough copy to fully explain the business, the offer, why it matters, and what the next step is.
+- Before returning JSON, scan every section, card, stat, FAQ, testimonial, gallery item, CTA, and metadata object. If any visible field is empty or placeholder-like, replace it with relevant business-specific content.
 - Return one page object for every requested page name.`,
       },
     ],

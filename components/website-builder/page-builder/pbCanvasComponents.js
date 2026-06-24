@@ -55,6 +55,52 @@ import {
   BlockLibraryPanel, PageSectionsPanel,
 } from "./pbPropertiesPanels";
 
+class BlockPreviewBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    if (typeof console !== "undefined") {
+      console.error("Website builder block preview failed", {
+        blockId: this.props.block?.id,
+        blockType: this.props.block?.type,
+        error,
+        info,
+      });
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.error && (prevProps.block !== this.props.block || prevProps.resetKey !== this.props.resetKey)) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      const message = this.state.error?.message || "This block could not be rendered.";
+      return (
+        <div style={styles.blockPreviewError}>
+          <strong style={styles.blockPreviewErrorTitle}>
+            {this.props.label || "Block preview failed"}
+          </strong>
+          <span style={styles.blockPreviewErrorText}>
+            {this.props.block?.type ? `${this.props.block.type}: ${message}` : message}
+          </span>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected, layoutWidth }) {
   return renderBlockPreview(block, brandAssets, {
     compact,
@@ -81,7 +127,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
   const [hoveredSlot, setHoveredSlot] = useState(null);
-  const isDragTarget = activeDragIndex !== null && activeDragIndex !== index && block.type === "columns-2";
+  const isDragTarget = false;
   const stickyMode = String(block?.props?.stickyMode || "normal");
   const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
@@ -279,7 +325,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             >
               🗑
             </button>
-            {!compactPreview && onSaveAsGlobal ? (
+            {!compactPreview && onSaveAsGlobal && block?.type === BlockTypes.NAV_BAR ? (
               <>
                 <button
                   type="button"
@@ -292,6 +338,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                 >
                   📌 Nav
                 </button>
+              </>
+            ) : null}
+            {!compactPreview && onSaveAsGlobal && block?.type === BlockTypes.FOOTER ? (
+              <>
                 <button
                   type="button"
                   style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
@@ -328,20 +378,22 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         </div>
         ) : null}
         <div style={{ ...styles.blockPreview, ...(showOverlay ? styles.blockPreviewWithOverlay : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
-          <CanvasBlockPreview
-            key={`${block.id || index}-${animationReplayToken || 0}`}
-            block={block}
-            index={index}
-            brandAssets={brandAssets}
-            compact={compactPreview}
-            layoutWidth={pageCanvasWidth}
-            selected={selected}
-            onChange={onChange}
-            onUploadImage={onUploadImage}
-            onUploadLayerImage={onUploadLayerImage}
-            onSelectAsset={onSelectAsset}
-            replayToken={animationReplayToken}
-          />
+          <BlockPreviewBoundary block={block} resetKey={animationReplayToken} label="Block preview failed">
+            <CanvasBlockPreview
+              key={`${block.id || index}-${animationReplayToken || 0}`}
+              block={block}
+              index={index}
+              brandAssets={brandAssets}
+              compact={compactPreview}
+              layoutWidth={pageCanvasWidth}
+              selected={selected}
+              onChange={onChange}
+              onUploadImage={onUploadImage}
+              onUploadLayerImage={onUploadLayerImage}
+              onSelectAsset={onSelectAsset}
+              replayToken={animationReplayToken}
+            />
+          </BlockPreviewBoundary>
           {isDragTarget ? (
             <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "1fr 1fr", zIndex: 30, pointerEvents: "all" }}>
               {[{ key: "leftColumnBlock", label: "Left Column" }, { key: "rightColumnBlock", label: "Right Column" }].map(({ key, label }) => (
@@ -596,13 +648,14 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
         </div>
       ) : null}
       <div style={styles.globalBlockPreviewSurface}>
-        
-        {renderWebsiteBlock(block, {
-          compact,
-          assets: brandAssets,
-          editor: true,
-          onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
-        })}
+        <BlockPreviewBoundary block={block} label="Global block preview failed">
+          {renderWebsiteBlock(block, {
+            compact,
+            assets: brandAssets,
+            editor: true,
+            onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
+          })}
+        </BlockPreviewBoundary>
       </div>
     </div>
   );
@@ -1070,9 +1123,10 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
 
         {columnConfigs.map((column) => {
           const imageValue = resolveAssetField(props, column.imageKey, brandAssets) || props?.[column.imageKey] || "";
-          const colContentType = String(props?.[`${column.prefix}ContentType`] || "text");
+          const rawContentType = String(props?.[`${column.prefix}ContentType`] || "text");
+          const colContentType = rawContentType === "newsletter" ? "newsletter" : "text";
           const isNewsletter = colContentType === "newsletter";
-          const isBlock = colContentType === "block";
+          const isBlock = false;
           const embeddedBlock = props?.[`${column.prefix}Block`] || null;
           const colBg = props[`${column.prefix}BackgroundColor`] || props.columnBackgroundColor || props.cardBackgroundColor || "#f8fafc";
           return (
@@ -1091,10 +1145,10 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
 
               {/* Column type selector */}
               <div style={styles.inlineChipRow}>
-                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }, { value: "block", label: "📦 Embedded Block" }].map((opt) => (
+                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }].map((opt) => (
                   <button key={opt.value} type="button"
                     style={{ ...styles.presetChip, ...(colContentType === opt.value ? styles.presetChipActive : {}) }}
-                    onClick={() => update({ [`${column.prefix}ContentType`]: opt.value })}
+                    onClick={() => update({ [`${column.prefix}ContentType`]: opt.value, [`${column.prefix}Block`]: null })}
                   >{opt.label}</button>
                 ))}
               </div>
@@ -1238,7 +1292,7 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                                             updateEB({ rows: next });
                                           }}
                                           style={{ ...styles.propertyInput, flex: 1, margin: 0, fontSize: 11 }}
-                                          placeholder="monday.com"
+                                          placeholder="asana.com"
                                         />
                                         {logo.src ? (
                                           <button
@@ -1911,7 +1965,15 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
   useEffect(() => {
     let cancelled = false;
     fetch("/api/website-builder/icon-library")
-      .then((response) => response.ok ? response.json() : { entries: [] })
+      .then(async (response) => {
+        if (!response.ok) return { entries: [] };
+        const text = await response.text();
+        try {
+          return text ? JSON.parse(text) : { entries: [] };
+        } catch {
+          return { entries: [] };
+        }
+      })
       .then((payload) => {
         if (cancelled) return;
         setDiscoveredIconEntries(Array.isArray(payload?.entries) ? payload.entries : []);
@@ -2234,6 +2296,187 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
   );
 }
 
+function TemplateShowcasePropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const templates = Array.isArray(props.templates) ? props.templates : [];
+  const stats = Array.isArray(props.stats) ? props.stats : [];
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateTemplate = (itemIndex, patch) => {
+    update({
+      templates: templates.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+  const updateStat = (itemIndex, patch) => {
+    update({
+      stats: stats.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>Edit: Template Showcase</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Eyebrow</label>
+          <input type="text" value={String(props.eyebrow || "")} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Headline</label>
+          <textarea value={String(props.headline || "")} onChange={(e) => update({ headline: e.target.value })} style={{ ...styles.propertyInput, minHeight: 76, resize: "vertical" }} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subheadline</label>
+          <textarea value={String(props.subheadline || "")} onChange={(e) => update({ subheadline: e.target.value })} style={{ ...styles.propertyInput, minHeight: 92, resize: "vertical" }} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Primary CTA</label>
+          <input type="text" value={String(props.ctaText || "")} onChange={(e) => update({ ctaText: e.target.value })} style={styles.propertyInput} placeholder="Button text" />
+          <input type="text" value={String(props.ctaLink || "")} onChange={(e) => update({ ctaLink: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="#contact-us" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Secondary CTA</label>
+          <input type="text" value={String(props.secondaryCtaText || "")} onChange={(e) => update({ secondaryCtaText: e.target.value })} style={styles.propertyInput} placeholder="Button text" />
+          <input type="text" value={String(props.secondaryCtaLink || "")} onChange={(e) => update({ secondaryCtaLink: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="#templates" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <NumberField label="Animation Speed (s)" value={Number(props.speed || 34)} min={12} max={90} onChange={(value) => update({ speed: value })} />
+          <NumberField label="Minimum Height (px)" value={parsePixelValue(props.minHeight, 720)} min={420} max={1100} onChange={(value) => update({ minHeight: `${value}px` })} />
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.reverse === true} onChange={(e) => update({ reverse: e.target.checked })} style={styles.checkboxInput} />
+            Reverse scroll direction
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input type="checkbox" checked={props.showDeviceFocus !== false} onChange={(e) => update({ showDeviceFocus: e.target.checked })} style={styles.checkboxInput} />
+            Show laptop and phone focus
+          </label>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <ColorSelector label="Background" value={props.backgroundColor || "#080b14"} fallback="#080b14" onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Text" value={props.textColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Muted Text" value={props.mutedTextColor || "#b8c2d8"} fallback="#b8c2d8" onChange={(value) => update({ mutedTextColor: value })} />
+          <ColorSelector label="Accent" value={props.accentColor || "#24d3ee"} fallback="#24d3ee" onChange={(value) => update({ accentColor: value })} />
+          <ColorSelector label="Second Accent" value={props.secondaryAccentColor || "#8b5cf6"} fallback="#8b5cf6" onChange={(value) => update({ secondaryAccentColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Stats</label>
+          {stats.map((stat, statIndex) => (
+            <div key={`ts-stat-${statIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <input type="text" value={String(stat.value || "")} onChange={(e) => updateStat(statIndex, { value: e.target.value })} style={styles.propertyInput} placeholder="80+" />
+              <input type="text" value={String(stat.label || "")} onChange={(e) => updateStat(statIndex, { label: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="industry layouts" />
+            </div>
+          ))}
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Template Cards</label>
+          {templates.map((item, itemIndex) => (
+            <div key={item.id || `ts-template-${itemIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <div style={styles.linkRowHeader}>
+                <span style={styles.linkRowTitle}>Card {itemIndex + 1}</span>
+                <input type="color" value={String(item.palette || "#24d3ee")} onChange={(e) => updateTemplate(itemIndex, { palette: e.target.value })} style={{ width: 38, height: 30, border: 0, background: "transparent" }} />
+              </div>
+              <input type="text" value={String(item.title || "")} onChange={(e) => updateTemplate(itemIndex, { title: e.target.value })} style={styles.propertyInput} placeholder="Template name" />
+              <input type="text" value={String(item.category || "")} onChange={(e) => updateTemplate(itemIndex, { category: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Category" />
+              <input type="text" value={String(item.cta || "")} onChange={(e) => updateTemplate(itemIndex, { cta: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Badge / CTA" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SideScrollAccordionPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const items = Array.isArray(props.items) ? props.items : [];
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateItem = (itemIndex, patch) => {
+    update({
+      items: items.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>Edit: Side Scroll Accordion</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Eyebrow</label>
+          <input type="text" value={String(props.eyebrow || "")} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Title</label>
+          <textarea value={String(props.title || "")} onChange={(e) => update({ title: e.target.value })} style={{ ...styles.propertyInput, minHeight: 70, resize: "vertical" }} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subtitle</label>
+          <textarea value={String(props.subtitle || "")} onChange={(e) => update({ subtitle: e.target.value })} style={{ ...styles.propertyInput, minHeight: 90, resize: "vertical" }} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Display Mode</label>
+          <select value={String(props.displayMode || "side-stack")} onChange={(e) => update({ displayMode: e.target.value })} style={styles.propertyInput}>
+            <option value="side-stack">Scroll stack from right</option>
+            <option value="marquee">Continuous side scroll</option>
+          </select>
+          {String(props.displayMode || "side-stack") === "marquee" ? (
+            <>
+              <NumberField label="Scroll Speed (s)" value={Number(props.speed || 42)} min={18} max={120} onChange={(value) => update({ speed: value })} />
+              <NumberField label="Card Width (px)" value={Number(props.cardWidth || 410)} min={280} max={620} onChange={(value) => update({ cardWidth: value })} />
+              <NumberField label="Card Height (px)" value={Number(props.cardHeight || 520)} min={380} max={760} onChange={(value) => update({ cardHeight: value })} />
+            </>
+          ) : (
+            <>
+              <NumberField label="Stack Strip Width (px)" value={Number(props.peekWidth || 78)} min={58} max={170} onChange={(value) => update({ peekWidth: value })} />
+              <NumberField label="Card Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={40} onChange={(value) => update({ cardRadius: value })} />
+            </>
+          )}
+          {String(props.displayMode || "side-stack") === "marquee" ? (
+            <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+              <input type="checkbox" checked={props.autoScroll !== false} onChange={(e) => update({ autoScroll: e.target.checked })} style={styles.checkboxInput} />
+              Auto-scroll right to left
+            </label>
+          ) : null}
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Button Text</label>
+          <input type="text" value={String(props.buttonText || "")} onChange={(e) => update({ buttonText: e.target.value })} style={styles.propertyInput} placeholder="Explore More" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Button URL</label>
+          <input type="text" value={String(props.buttonUrl || "")} onChange={(e) => update({ buttonUrl: e.target.value })} style={styles.propertyInput} placeholder="#contact-us" />
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.showButtons === true} onChange={(e) => update({ showButtons: e.target.checked })} style={styles.checkboxInput} />
+            Show panel buttons
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.buttonFullWidth === true} onChange={(e) => update({ buttonFullWidth: e.target.checked })} style={styles.checkboxInput} />
+            Full-width buttons
+          </label>
+        </div>
+        <div style={styles.sectionCard}>
+          <ColorSelector label="Background" value={props.backgroundColor || "#07111f"} fallback="#07111f" onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Text" value={props.textColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Muted Text" value={props.mutedTextColor || "#b8c2d8"} fallback="#b8c2d8" onChange={(value) => update({ mutedTextColor: value })} />
+          <ColorSelector label="Accent" value={props.accentColor || "#00d5ff"} fallback="#00d5ff" onChange={(value) => update({ accentColor: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Panels</label>
+          {items.map((item, itemIndex) => (
+            <div key={item.id || `ssa-${itemIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <div style={styles.linkRowHeader}>
+                <span style={styles.linkRowTitle}>Panel {itemIndex + 1}</span>
+              </div>
+              <input type="text" value={String(item.eyebrow || "")} onChange={(e) => updateItem(itemIndex, { eyebrow: e.target.value })} style={styles.propertyInput} placeholder="Eyebrow" />
+              <input type="text" value={String(item.title || "")} onChange={(e) => updateItem(itemIndex, { title: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Title" />
+              <textarea value={String(item.body || "")} onChange={(e) => updateItem(itemIndex, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 92, resize: "vertical", marginTop: 8 }} placeholder="Body" />
+              <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Image URL" />
+              <input type="text" value={(Array.isArray(item.tags) ? item.tags : []).join(", ")} onChange={(e) => updateItem(itemIndex, { tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="SEO, local search, bookings" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Hover Cards Properties Panel ─────────────────────────────────────────────
 function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
   const props = block?.props || {};
@@ -2340,8 +2583,20 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
             <NumberField label="Card Radius (px)" value={Number(props.cardRadius || 12)} min={0} max={48} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Gap Between Cards (px)" value={Number(props.cardGap || 16)} min={0} max={64} onChange={(v) => update({ cardGap: v })} />
             <NumberField label="Card Padding (px)" value={Number(props.cardPadding || 20)} min={8} max={60} onChange={(v) => update({ cardPadding: v })} />
-            <NumberField label="Auto-Play Interval (ms)" value={Number(props.autoPlayInterval || 3500)} min={1000} max={10000} onChange={(v) => update({ autoPlayInterval: v })} />
+            <NumberField label="Loop Speed (px/sec)" value={Number(props.continuousSpeed || 45)} min={8} max={180} onChange={(v) => update({ continuousSpeed: v })} />
+            {props.continuousLoop === false ? (
+              <NumberField label="Auto-Play Interval (ms)" value={Number(props.autoPlayInterval || 3500)} min={1000} max={10000} onChange={(v) => update({ autoPlayInterval: v })} />
+            ) : null}
           </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.continuousLoop !== false}
+              onChange={(event) => update({ continuousLoop: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Seamless continuous loop
+          </label>
         </div>
 
         {/* Section spacing */}
@@ -2487,6 +2742,217 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, width: "100%" }} onClick={addCard}>+ Add Card</button>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+function FramerPortfolioPropertiesPanel({ block, index, onChange, onUploadImage }) {
+  const props = block?.props || {};
+  const cards = Array.isArray(props.cards) ? props.cards : [];
+  const [expandedCard, setExpandedCard] = useState(0);
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const updateCard = (cardIndex, patch) => {
+    update({
+      cards: cards.map((card, currentIndex) => (
+        currentIndex === cardIndex ? { ...card, ...patch } : card
+      )),
+    });
+  };
+
+  const addCard = () => {
+    const nextIndex = cards.length + 1;
+    update({
+      cards: [
+        ...cards,
+        {
+          id: `fp-${Date.now()}`,
+          title: `Project ${nextIndex}`,
+          desc: "Add a short project summary.",
+          image: "",
+          link: "#",
+        },
+      ],
+    });
+    setExpandedCard(cards.length);
+  };
+
+  const removeCard = (cardIndex) => {
+    if (cards.length <= 1) return;
+    const nextCards = cards.filter((_, currentIndex) => currentIndex !== cardIndex);
+    update({ cards: nextCards });
+    setExpandedCard((current) => Math.min(current, Math.max(0, nextCards.length - 1)));
+  };
+
+  const moveCard = (cardIndex, direction) => {
+    const nextIndex = cardIndex + direction;
+    if (nextIndex < 0 || nextIndex >= cards.length) return;
+    const nextCards = [...cards];
+    const [moved] = nextCards.splice(cardIndex, 1);
+    nextCards.splice(nextIndex, 0, moved);
+    update({ cards: nextCards });
+    setExpandedCard(nextIndex);
+  };
+
+  const openCardImagePicker = (cardIndex) => {
+    openSharedMediaPicker({
+      view: "generic",
+      onPick: (asset) => {
+        if (!asset?.src) return;
+        updateCard(cardIndex, { image: asset.src, imageAssetId: asset.id || "" });
+      },
+      onBlocked: () => window.open("/assets?view=generic", "_blank", "noopener,noreferrer"),
+    });
+  };
+
+  const uploadCardImage = async (cardIndex, file) => {
+    if (!file) return;
+    const asset = await Promise.resolve(onUploadImage?.(index, `__fp_card_${cardIndex}__`, file));
+    if (asset?.src) updateCard(cardIndex, { image: asset.src, imageAssetId: asset.id || "" });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🎨 Edit: Framer Portfolio</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Text</label>
+          <input type="text" value={String(props.title || "")} onChange={(event) => update({ title: event.target.value })} style={styles.propertyInput} placeholder="Selected Projects" />
+          <textarea value={String(props.subtitle || "")} onChange={(event) => update({ subtitle: event.target.value })} style={{ ...styles.propertyInput, minHeight: 72, resize: "vertical", marginTop: 8 }} placeholder="A collection of recent work" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Visible Cards" value={Number(props.visibleCount || 2.5)} min={1} max={6} onChange={(value) => update({ visibleCount: value })} />
+            <NumberField label="Card Height (px)" value={Number(props.cardHeight || 520)} min={180} max={900} onChange={(value) => update({ cardHeight: value })} />
+            <NumberField label="Card Radius (px)" value={Number(props.cardRadius || 12)} min={0} max={48} onChange={(value) => update({ cardRadius: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Scroll Behaviour</label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.autoScroll}
+              onChange={(event) => update({ autoScroll: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Auto-scroll cards
+          </label>
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Scroll Mode</label>
+          <select value={String(props.scrollMode || "card")} onChange={(event) => update({ scrollMode: event.target.value })} style={styles.propertyInput}>
+            <option value="card">One card at a time</option>
+            <option value="continuous">Continuous scroll</option>
+          </select>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.loopScroll !== false}
+              onChange={(event) => update({ loopScroll: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Continuous loop
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.pauseOnHover !== false}
+              onChange={(event) => update({ pauseOnHover: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Pause on hover
+          </label>
+          {String(props.scrollMode || "card") === "continuous" ? (
+            <NumberField label="Continuous Speed (px/sec)" value={Number(props.continuousScrollSpeed || 45)} min={5} max={240} onChange={(value) => update({ continuousScrollSpeed: value })} />
+          ) : (
+            <NumberField label="Card Interval (ms)" value={Number(props.cardScrollInterval || 2500)} min={700} max={10000} onChange={(value) => update({ cardScrollInterval: value })} />
+          )}
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <div>
+              <label style={styles.propertyLabel}>Background</label>
+              <input type="color" value={String(props.backgroundColor || "#0a0a0a")} onChange={(event) => update({ backgroundColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+            <div>
+              <label style={styles.propertyLabel}>Text</label>
+              <input type="color" value={String(props.textColor || "#ffffff")} onChange={(event) => update({ textColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+            <div>
+              <label style={styles.propertyLabel}>Accent</label>
+              <input type="color" value={String(props.accentColor || "#a78bfa")} onChange={(event) => update({ accentColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Cards ({cards.length})</label>
+          <div style={{ display: "grid", gap: 8 }}>
+            {cards.map((card, cardIndex) => {
+              const isOpen = expandedCard === cardIndex;
+              return (
+                <div key={card.id || cardIndex} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, overflow: "hidden" }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "rgba(255,255,255,0.05)", cursor: "pointer" }}
+                    onClick={() => setExpandedCard(isOpen ? -1 : cardIndex)}
+                  >
+                    <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {card.title || `Project ${cardIndex + 1}`}
+                    </span>
+                    <button type="button" style={styles.linkMoveBtn} disabled={cardIndex === 0} onClick={(event) => { event.stopPropagation(); moveCard(cardIndex, -1); }} title="Move up">↑</button>
+                    <button type="button" style={styles.linkMoveBtn} disabled={cardIndex === cards.length - 1} onClick={(event) => { event.stopPropagation(); moveCard(cardIndex, 1); }} title="Move down">↓</button>
+                    {cards.length > 1 ? (
+                      <button type="button" style={{ ...styles.linkMoveBtn, color: "#f87171" }} onClick={(event) => { event.stopPropagation(); removeCard(cardIndex); }} title="Remove">×</button>
+                    ) : null}
+                    <span style={{ color: "#94a3b8", fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
+                  </div>
+                  {isOpen ? (
+                    <div style={{ padding: "10px 10px 14px", display: "grid", gap: 8 }}>
+                      <div>
+                        <label style={styles.propertyLabel}>Title</label>
+                        <input type="text" value={String(card.title || "")} onChange={(event) => updateCard(cardIndex, { title: event.target.value })} style={styles.propertyInput} placeholder="Project title" />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Description</label>
+                        <textarea value={String(card.desc || card.description || "")} onChange={(event) => updateCard(cardIndex, { desc: event.target.value })} style={{ ...styles.propertyInput, minHeight: 78, resize: "vertical" }} placeholder="Short project summary..." />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Link URL</label>
+                        <input type="text" value={String(card.link || "")} onChange={(event) => updateCard(cardIndex, { link: event.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Image</label>
+                        {card.image ? (
+                          <img src={card.image} alt="" style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
+                        ) : null}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button type="button" style={styles.secondaryBtn} onClick={() => openCardImagePicker(cardIndex)}>Library</button>
+                          <label style={{ ...styles.secondaryBtn, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+                            Upload
+                            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              event.target.value = "";
+                              uploadCardImage(cardIndex, file);
+                            }} />
+                          </label>
+                          {card.image ? (
+                            <button type="button" style={{ ...styles.secondaryBtn, color: "#f87171" }} onClick={() => updateCard(cardIndex, { image: "", imageAssetId: "" })}>Remove</button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, width: "100%" }} onClick={addCard}>+ Add Project Card</button>
+        </div>
       </div>
     </div>
   );
@@ -2956,6 +3422,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         index={index}
         onChange={onChange}
         brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
         onOpenImageEditor={onOpenImageEditor}
       />
     );
@@ -2993,6 +3460,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         index={index}
         onChange={onChange}
         brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
       />
     );
   }
@@ -3114,6 +3582,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
       />
     );
+  }
+
+  if (block.type === BlockTypes.SIDE_SCROLL_ACCORDION) {
+    return <SideScrollAccordionPropertiesPanel block={block} index={index} onChange={onChange} />;
   }
 
   if (block.type === BlockTypes.SCROLL_STACK) {
@@ -3320,8 +3792,16 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.TEMPLATE_SHOWCASE) {
+    return <TemplateShowcasePropertiesPanel block={block} index={index} onChange={onChange} />;
+  }
+
   if (block.type === BlockTypes.HOVER_CARDS) {
     return <HoverCardsPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
+  }
+
+  if (block.type === BlockTypes.FRAMER_PORTFOLIO) {
+    return <FramerPortfolioPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
   }
 
   if (block.type === BlockTypes.VIDEO_HERO) {
@@ -3380,7 +3860,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 Uploading video to CDN…
               </div>
             ) : vp.videoSrc ? (
-              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop playsInline
+              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop={vp.loopVideo === true} playsInline
                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3581,6 +4061,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               <NumberField label="Text Size" value={Number(marqueeProps.fontSize || 16)} min={10} max={48} onChange={(value) => updateMarquee({ fontSize: value })} />
               <NumberField label="Outline Width" value={Number(marqueeProps.textStrokeWidth || 0)} min={0} max={8} onChange={(value) => updateMarquee({ textStrokeWidth: value })} />
               <NumberField label="Divider Size" value={Number(marqueeProps.dividerSize || 14)} min={8} max={48} onChange={(value) => updateMarquee({ dividerSize: value })} />
+              <NumberField label="Angle" value={Number(marqueeProps.angle ?? 0)} min={-45} max={45} onChange={(value) => updateMarquee({ angle: value })} />
               <NumberField label="Animation Duration" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
               <NumberField label="Top Padding" value={Number(marqueeProps.paddingTop ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingTop: value })} />
               <NumberField label="Bottom Padding" value={Number(marqueeProps.paddingBottom ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingBottom: value })} />
@@ -3694,6 +4175,102 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             value={String(marqueeProps.accentColor || "#7dd3fc")}
             fallback="#7dd3fc"
             onChange={(nextValue) => updateMarquee({ accentColor: nextValue })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === BlockTypes.WAVE_MARQUEE) {
+    const waveProps = block.props || {};
+    const updateWave = (patch) => onChange(index, { ...waveProps, ...patch });
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>~ Edit: Wave Marquee</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text</label>
+            <input
+              type="text"
+              value={String(waveProps.text || "")}
+              onChange={(event) => updateWave({ text: event.target.value })}
+              style={styles.propertyInput}
+              placeholder="FULL SERVICE MARKETING AGENCY"
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Separator</label>
+            <input
+              type="text"
+              value={String(waveProps.separator ?? " * ")}
+              onChange={(event) => updateWave({ separator: event.target.value })}
+              style={styles.propertyInput}
+              placeholder=" * "
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Direction</label>
+            <select
+              value={String(waveProps.direction || "left")}
+              onChange={(event) => updateWave({ direction: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="left">Move Left</option>
+              <option value="right">Move Right</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Letter Case</label>
+            <select
+              value={String(waveProps.textTransform || "uppercase")}
+              onChange={(event) => updateWave({ textTransform: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="uppercase">UPPERCASE</option>
+              <option value="none">Normal Case</option>
+              <option value="lowercase">lowercase</option>
+              <option value="capitalize">Capitalize</option>
+            </select>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Wave Motion</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Speed (s)" value={parsePixelValue(waveProps.speed, 22)} min={8} max={120} onChange={(value) => updateWave({ speed: value })} />
+              <NumberField label="Height" value={parsePixelValue(waveProps.height, 190)} min={90} max={420} onChange={(value) => updateWave({ height: value })} />
+              <NumberField label="Wave Height" value={parsePixelValue(waveProps.amplitude, 42)} min={0} max={180} onChange={(value) => updateWave({ amplitude: value })} />
+              <NumberField label="Wave Width" value={parsePixelValue(waveProps.wavelength, 640)} min={360} max={1800} onChange={(value) => updateWave({ wavelength: value })} />
+              <NumberField label="Angle" value={parsePixelValue(waveProps.angle, 0)} min={-20} max={20} onChange={(value) => updateWave({ angle: value })} />
+              <NumberField label="Repeats" value={parsePixelValue(waveProps.repeatCount, 4)} min={2} max={10} onChange={(value) => updateWave({ repeatCount: value })} />
+            </div>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Typography</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Text Size" value={parsePixelValue(waveProps.fontSize, 22)} min={10} max={96} onChange={(value) => updateWave({ fontSize: value })} />
+              <NumberField label="Letter Spacing" value={parsePixelValue(waveProps.letterSpacing, 2.6)} min={0} max={12} onChange={(value) => updateWave({ letterSpacing: value })} />
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Font Weight</label>
+            <select
+              value={String(waveProps.fontWeight || "900")}
+              onChange={(event) => updateWave({ fontWeight: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="500">Medium 500</option>
+              <option value="600">Semi Bold 600</option>
+              <option value="700">Bold 700</option>
+              <option value="800">Extra Bold 800</option>
+              <option value="900">Black 900</option>
+            </select>
+          </div>
+
+          <ColorSelector
+            label="Background Color"
+            value={String(waveProps.backgroundColor || "#000000")}
+            fallback="#000000"
+            allowTransparent
+            onChange={(nextValue) => updateWave({ backgroundColor: nextValue })}
+          />
+          <ColorSelector
+            label="Text Color"
+            value={String(waveProps.textColor || "#00a99d")}
+            fallback="#00a99d"
+            onChange={(nextValue) => updateWave({ textColor: nextValue })}
           />
         </div>
       </div>
@@ -3973,7 +4550,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               <button
                 type="button"
                 style={styles.secondaryBtn}
-                onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+                onClick={() => openAssetBrowser("backgroundImage", block.type === BlockTypes.PARALLAX ? "Section Background Library" : "Hero Background Library")}
               >
                 Choose From Library
               </button>
@@ -4345,6 +4922,7 @@ export {
   GridSectionPropertiesPanel,
   ContactFormPropertiesPanel,
   HoverCardsPropertiesPanel,
+  FramerPortfolioPropertiesPanel,
   PropertiesPanel,
   renderBlockPreview,
 };
