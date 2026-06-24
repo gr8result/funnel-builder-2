@@ -5,12 +5,31 @@ import { withAuth } from "../../../lib/withWorkspace";
 const DEFAULTS_FILE_PATH = path.join(process.cwd(), "data", "website-builder-defaults.json");
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "15mb",
+    },
+  },
+};
+
 function sanitizeJson(value, fallback) {
   try {
     return JSON.parse(JSON.stringify(value));
   } catch {
     return fallback;
   }
+}
+
+function pageNameFromValue(value) {
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text && text !== "[object Object]" ? text : "";
+  }
+  if (value && typeof value === "object") {
+    return pageNameFromValue(value.name || value.title || value.slug || "");
+  }
+  return "";
 }
 
 async function ensureDefaultsFile() {
@@ -89,7 +108,7 @@ async function handler(req, res) {
 
   if (action === "save-template-page") {
     const templateSlug = String(req.body?.templateSlug || "").trim();
-    const pageName = String(req.body?.pageName || "").trim();
+    const pageName = pageNameFromValue(req.body?.pageName || "");
     if (!templateSlug) return badRequest(res, "Missing template slug");
     if (!pageName) return badRequest(res, "Missing page name");
 

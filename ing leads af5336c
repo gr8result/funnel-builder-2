@@ -1,0 +1,52 @@
+[33mcommit af5336cdb95ee1872c2132bd38831f37c99922e8[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: Grant <support@gr8result.com>
+Date:   Wed Jun 3 11:37:30 2026 +1000
+
+    Backup before Codex refactor
+
+ .next-build.lock.json                              |    6 [32m+[m
+ .next-dev.lock.json                                |    4 [32m+[m[31m-[m
+ components/WhatYoudPayElsewhere.js                 |   34 [32m+[m[31m-[m
+ components/website-builder/PageBuilderCanvas.js    |  380 [32m+++++[m[31m--[m
+ components/website-builder/WebsiteBlockRenderer.js |  387 [32m+++++[m[31m--[m
+ .../website-builder/WebsitePreviewSurface.js       |  252 [32m+++++[m
+ .../page-builder/pbCanvasComponents.js             |  354 [32m++++++[m[31m-[m
+ .../website-builder/page-builder/pbEditorUtils.js  |   16 [32m+[m[31m-[m
+ .../page-builder/pbPropertiesPanels.js             |  417 [32m+++++++[m[31m-[m
+ .../website-renderer/wbBlockComponents.js          |  393 [32m++++[m[31m---[m
+ .../website-renderer/wbVariantStyles.js            |   75 [32m+[m[31m-[m
+ data/pricing.js                                    |    8 [32m+[m[31m-[m
+ data/website-builder-defaults.json                 | 1067 [32m++++++++++++++++[m[31m----[m
+ lib/website-builder/pageBlockComponents.js         |  191 [32m++[m[31m--[m
+ lib/website-builder/projectStore.js                |  222 [32m+++[m[31m-[m
+ next.config.mjs                                    |    2 [32m+[m
+ pages/_app.js                                      |   39 [32m+[m
+ pages/api/billing/create-session.js                |   53 [32m+[m[31m-[m
+ pages/api/billing/get-subscription.js              |   37 [32m+[m
+ pages/api/billing/webhook.js                       |   40 [32m+[m
+ pages/api/gantt/send-delay-update.js               |  156 [32m+++[m
+ pages/api/gantt/send-work-orders.js                |  153 [32m+++[m
+ pages/api/production/team-members.js               |   74 [32m++[m
+ pages/api/website-builder/defaults.js              |   13 [32m+[m
+ pages/api/website-builder/projects.js              |  142 [32m++[m[31m-[m
+ pages/api/website-builder/upload-video.js          |   48 [32m+[m[31m-[m
+ pages/billing.js                                   |  164 [32m++[m[31m-[m
+ pages/checkout/index.js                            |  134 [32m+[m[31m--[m
+ pages/modules/gantt/[id].js                        |  493 [32m++++++++[m[31m-[m
+ pages/modules/gantt/index.js                       |   45 [32m+[m[31m-[m
+ pages/modules/production/[id].js                   |  198 [32m+++[m[31m-[m
+ pages/modules/production/index.js                  |  247 [32m++++[m[31m-[m
+ pages/modules/website-builder/new.js               |    2 [32m+[m[31m-[m
+ pages/modules/website-builder/prices.js            |   26 [32m+[m[31m-[m
+ .../project/[id]/{canvas.js => canvas.bak.js}      |    0
+ .../modules/website-builder/project/[id]/index.js  |    4 [32m+[m[31m-[m
+ .../website-builder/project/[id]/preview.js        |  106 [32m+[m[31m-[m
+ pages/modules/website-builder/visual-builder.js    |  264 [32m++++[m[31m-[m
+ scripts/check-pricing-blocks.cjs                   |   24 [32m+[m
+ scripts/clean-data-attrs.cjs                       |   44 [32m+[m
+ scripts/create-test-page.cjs                       |  912 [32m+++++++++++++++++[m
+ scripts/export-pricing-grid.cjs                    |    2 [32m+[m[31m-[m
+ scripts/gantt-contacts-migration.sql               |   33 [32m+[m
+ scripts/insert-chart-block.cjs                     |    8 [32m+[m[31m-[m
+ supabase/migrations/production_tables.sql          |   70 [32m++[m
+ 45 files changed, 6226 insertions(+), 1113 deletions(-)

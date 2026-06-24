@@ -75,6 +75,7 @@ export default async function handler(req, res) {
     if (metadata.smsPlan)      successParts.push(`smsPlan=${encodeURIComponent(String(metadata.smsPlan))}`);
     if (metadata.calendarPlan) successParts.push(`calendarPlan=${encodeURIComponent(String(metadata.calendarPlan))}`);
     if (metadata.socialPlan)   successParts.push(`socialPlan=${encodeURIComponent(String(metadata.socialPlan))}`);
+    if (metadata.websitePlan)  successParts.push(`websitePlan=${encodeURIComponent(String(metadata.websitePlan))}`);
     if (metadata.selected)     successParts.push(`selected=${encodeURIComponent(String(metadata.selected))}`);
     if (metadata.annual)       successParts.push(`annual=${encodeURIComponent(String(metadata.annual))}`);
 
@@ -88,6 +89,7 @@ export default async function handler(req, res) {
         smsPlan:      metadata.smsPlan      ? String(metadata.smsPlan)      : "",
         calendarPlan: metadata.calendarPlan ? String(metadata.calendarPlan) : "",
         socialPlan:   metadata.socialPlan   ? String(metadata.socialPlan)   : "",
+        websitePlan:  metadata.websitePlan  ? String(metadata.websitePlan)  : "",
         selected:     metadata.selected     ? String(metadata.selected)     : "",
         annual:       metadata.annual       ? String(metadata.annual)       : "",
         rampEligible: rampEligible ? "1" : "",
@@ -97,6 +99,7 @@ export default async function handler(req, res) {
         trial_period_days: trialDays > 0 ? trialDays : undefined,
         metadata: {
           plan:     metadata.plan     ? String(metadata.plan)     : "",
+          websitePlan: metadata.websitePlan ? String(metadata.websitePlan) : "",
           selected: metadata.selected ? String(metadata.selected) : "",
           introDiscountPercent: introDiscountPercent ? String(introDiscountPercent) : "",
           introMonths: introMonths ? String(introMonths) : "",

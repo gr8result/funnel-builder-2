@@ -147,6 +147,7 @@ export default function MyApp({ Component, pageProps }) {
 
   const noLayoutRoutes = [
     "/account",
+    "/create-account",
     "/login",
     "/signup",
     "/verify-email",

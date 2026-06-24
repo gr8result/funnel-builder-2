@@ -32,7 +32,10 @@ export function WorkspaceProvider({ children }) {
       const res = await fetch("/api/workspaces", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(`Workspace request failed with status ${res.status}`);
+      }
+      const json = await res.json().catch(() => ({}));
       const list = json.workspaces || [];
       setWorkspaces(list);
 
@@ -43,7 +46,11 @@ export function WorkspaceProvider({ children }) {
       const match = list.find((w) => w.id === stored) || list[0] || null;
       setActiveWorkspace(match);
     } catch (err) {
-      console.error("[useWorkspace] failed to load workspaces", err);
+      if (process.env.NODE_ENV !== "development") {
+        console.warn("[useWorkspace] failed to load workspaces", err);
+      }
+      setWorkspaces([]);
+      setActiveWorkspace(null);
     } finally {
       setLoading(false);
     }
@@ -56,10 +63,13 @@ export function WorkspaceProvider({ children }) {
       return;
     }
     try {
-      await fetch("/api/workspaces/activate-invite", {
+      const res = await fetch("/api/workspaces/activate-invite", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (!res.ok) {
+        throw new Error(`Workspace invite activation failed with status ${res.status}`);
+      }
     } catch {
       // Non-fatal — just proceed to load workspaces
     }

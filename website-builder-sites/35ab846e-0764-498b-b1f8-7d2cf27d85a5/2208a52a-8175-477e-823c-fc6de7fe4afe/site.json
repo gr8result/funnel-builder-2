@@ -70,25 +70,41 @@
       "objective": "Recovered SMS page from previous project data.",
       "file": "sms.json",
       "order": 7
+    },
+    {
+      "id": "funnels",
+      "name": "Funnels",
+      "slug": "funnels",
+      "objective": "Explain the Funnel Builder module and convert visitors into demo or build requests.",
+      "file": "funnels.json",
+      "order": 8
+    },
+    {
+      "id": "website-builder",
+      "name": "Website Builder",
+      "slug": "website-builder",
+      "objective": "Showcase the website builder module as a premium, AI-assisted website creation system.",
+      "file": "website-builder.json",
+      "order": 9
     }
   ],
   "status": "saved",
   "buildType": "website",
   "createdAt": "2026-05-25T09:48:50.001931+10:00",
   "stylePack": "executive",
-  "updatedAt": "2026-06-05T07:21:23.144Z",
+  "updatedAt": "2026-06-22T21:08:05.027Z",
   "copyAngles": [],
   "__draftSync": true,
   "publication": {
     "id": "bd355ecf-58f4-4b19-ad4a-633f03a31895",
     "slug": "gr8-result-digital-solutions",
-    "liveUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
-    "sitePath": "/sites/gr8-result-digital-solutions",
-    "defaultUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
-    "publishedAt": "2026-06-02T04:56:21.422+10:00",
+    "primaryDomain": "sites.gr8result.digital",
     "customDomain": "",
     "domainStatus": "generated",
-    "primaryDomain": "sites.gr8result.digital",
+    "publishedAt": "2026-06-22T14:11:27.163+10:00",
+    "sitePath": "/sites/gr8-result-digital-solutions",
+    "liveUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
+    "defaultUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
     "customDomainInstructions": null
   },
   "publishedAt": "2026-05-26T02:08:27.123Z",
@@ -103,54 +119,54 @@
         {
           "href": "#home",
           "label": "Home",
-          "children": [
-            {
-              "id": "nav-child-1780606303371-57805g",
-              "href": "/pricing",
-              "label": "Pricing"
-            }
-          ],
           "highlighted": false
         },
         {
           "id": "nav-link-1779144221759-grnh3q",
-          "href": "/modules",
+          "href": "#",
           "label": "Modules",
           "children": [
             {
               "id": "nav-child-1779149028164-pd9mfy",
-              "href": "/email",
+              "href": "#email",
               "label": "Email Marketing"
             },
             {
-              "id": "nav-child-1780606586612-utx34h",
-              "href": "/crm",
-              "label": "CRM"
+              "id": "nav-child-1779149044705-0ov9ih",
+              "href": "#sms",
+              "label": "SMS Marketing"
+            },
+            {
+              "id": "nav-child-1779149064546-ii5sie",
+              "href": "#crm",
+              "label": "CRM  Management"
+            },
+            {
+              "id": "nav-child-funnels",
+              "href": "#funnels",
+              "label": "Funnels"
+            },
+            {
+              "id": "nav-child-website-builder",
+              "href": "#website-builder",
+              "label": "Website Builder"
             }
           ],
           "highlighted": false
         },
         {
           "id": "nav-link-1779143115150-nrgcvs",
-          "href": "/about",
+          "href": "#about",
           "label": "About Us",
           "highlighted": false
         },
         {
-          "href": "/contact",
+          "href": "#pricing",
+          "label": "Pricing"
+        },
+        {
+          "href": "#contact",
           "label": "Contact Us"
-        },
-        {
-          "href": "/email",
-          "label": "Email"
-        },
-        {
-          "href": "/crm",
-          "label": "CRM"
-        },
-        {
-          "href": "/sms",
-          "label": "SMS"
         }
       ],
       "ctaLink": "#contact",
@@ -159,7 +175,7 @@
       "showLogo": true,
       "logoWidth": 150,
       "textColor": "#06b6d4",
-      "stickyMode": "sticky",
+      "stickyMode": "normal",
       "borderColor": "rgba(125,211,252,0.24)",
       "buttonColor": "#22c55e",
       "ctaFontSize": 20,
@@ -235,8 +251,20 @@
           "label": "Pricing"
         },
         {
-          "href": "/crm",
-          "label": "CRM"
+          "label": "[object Object]",
+          "href": "#object-object"
+        },
+        {
+          "label": "Page 9",
+          "href": "#page-9"
+        },
+        {
+          "href": "/funnels",
+          "label": "Funnels"
+        },
+        {
+          "href": "/website-builder",
+          "label": "Website Builder"
         }
       ],
       "linkColor": "#f59e0b",
@@ -262,7 +290,7 @@
       "contactEmail": "support@gr8result.com",
       "contactPhone": "Sunshine Coast 4557",
       "extraHeading": "Company",
-      "copyrightText": "© 202 Gr8 Result Digital Solutions. All rights reserved.",
+      "copyrightText": "© 2026 Gr8 Result Digital Solutions. All rights reserved.",
       "contactAddress": "Queensland, Australia",
       "contactHeading": "Contact details",
       "showNewsletter": true,

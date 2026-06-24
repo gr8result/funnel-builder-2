@@ -21,7 +21,7 @@ async function handler(req, res) {
     const { data: account, error } = await supabaseAdmin
       .from("accounts")
       .select("phone_otp_pending")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (error || !account) return res.status(400).json({ ok: false, error: "No pending verification found" });
@@ -44,8 +44,8 @@ async function handler(req, res) {
     // Clear the pending OTP
     await supabaseAdmin
       .from("accounts")
-      .update({ phone_otp_pending: null })
-      .eq("id", userId);
+      .update({ phone_otp_pending: null, phone_verified: true, phone_verified_at: new Date().toISOString() })
+      .eq("user_id", userId);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

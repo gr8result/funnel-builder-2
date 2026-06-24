@@ -11,7 +11,8 @@ import {
   normalizeDomain,
   slugifyWebsiteValue,
 } from "../../../lib/website-builder/publishConfig";
-import { loadFullSplitWebsiteProject } from "../../../lib/website-builder/siteStorage";
+import { loadFullSplitWebsiteProject } from "../../../lib/website-builder/supabaseSiteStorage";
+import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
 
 export const config = {
   api: {
@@ -71,6 +72,15 @@ async function handler(req, res) {
   const slug = requestedSlug;
   const primaryDomain = buildDefaultSiteDomain(slug) || getPublishHost() || `${slug}--published`;
   const customDomainTarget = getCustomDomainTargetHost();
+
+  if (projectId) {
+    await createWebsiteBuilderBackup(userId, projectId, {
+      source: "publish",
+      reason: "Before publishing website",
+      project,
+      metadata: { slug, customDomain: requestedCustomDomain || "" },
+    });
+  }
 
   const { data: conflictingSlug } = await supabaseAdmin
     .from("published_websites")

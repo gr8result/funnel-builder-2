@@ -1,0 +1,300 @@
+{
+  "id": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "mode": "ai",
+  "name": "Gr8 Result Digital Solutions",
+  "slug": "gr8-result-digital-solutions",
+  "brief": {},
+  "pages": [
+    {
+      "name": "Home",
+      "slug": "home",
+      "objective": "Present the offer and move visitors into a demo request.",
+      "id": "home",
+      "file": "home.json",
+      "order": 0
+    },
+    {
+      "name": "About Us",
+      "objective": "Build the About Us page.",
+      "id": "about-us",
+      "slug": "about-us",
+      "file": "about-us.json",
+      "order": 1
+    },
+    {
+      "name": "Modules",
+      "objective": "Build the Modules page.",
+      "id": "modules",
+      "slug": "modules",
+      "file": "modules.json",
+      "order": 2
+    },
+    {
+      "name": "Contact Us",
+      "objective": "Build the Contact Us page.",
+      "id": "contact-us",
+      "slug": "contact-us",
+      "file": "contact-us.json",
+      "order": 3
+    },
+    {
+      "name": "Email",
+      "objective": "Build the email page.",
+      "id": "email",
+      "slug": "email",
+      "file": "email.json",
+      "order": 4
+    },
+    {
+      "name": "Pricing",
+      "objective": "Build the Pricing page.",
+      "id": "pricing",
+      "slug": "pricing",
+      "file": "pricing.json",
+      "order": 5
+    },
+    {
+      "id": "crm",
+      "name": "CRM",
+      "slug": "crm",
+      "title": "CRM",
+      "description": "",
+      "objective": "Recovered CRM page from Test Page content.",
+      "file": "crm.json",
+      "order": 6
+    },
+    {
+      "id": "sms",
+      "name": "SMS",
+      "slug": "sms",
+      "objective": "Recovered SMS page from previous project data.",
+      "file": "sms.json",
+      "order": 7
+    }
+  ],
+  "status": "saved",
+  "buildType": "website",
+  "createdAt": "2026-05-25T09:48:50.001931+10:00",
+  "stylePack": "executive",
+  "updatedAt": "2026-06-22T04:23:09.437Z",
+  "copyAngles": [],
+  "__draftSync": true,
+  "publication": {
+    "id": "bd355ecf-58f4-4b19-ad4a-633f03a31895",
+    "slug": "gr8-result-digital-solutions",
+    "primaryDomain": "sites.gr8result.digital",
+    "customDomain": "",
+    "domainStatus": "generated",
+    "publishedAt": "2026-06-22T14:11:27.163+10:00",
+    "sitePath": "/sites/gr8-result-digital-solutions",
+    "liveUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
+    "defaultUrl": "https://sites.gr8result.digital/sites/gr8-result-digital-solutions",
+    "customDomainInstructions": null
+  },
+  "publishedAt": "2026-05-26T02:08:27.123Z",
+  "templateSlug": "business-solution-template",
+  "globalNavBlock": {
+    "id": "wb_1778363723819_90ebd6",
+    "type": "nav-bar",
+    "props": {
+      "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "brand": "Gr8 Result Digital Solutions",
+      "links": [
+        {
+          "href": "#home",
+          "label": "Home",
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "href": "#",
+          "label": "Modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "#email",
+              "label": "Email Marketing"
+            },
+            {
+              "id": "nav-child-1779149044705-0ov9ih",
+              "href": "#sms",
+              "label": "SMS Marketing"
+            },
+            {
+              "id": "nav-child-1779149064546-ii5sie",
+              "href": "#crm",
+              "label": "CRM  Management"
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "href": "#about",
+          "label": "About Us",
+          "highlighted": false
+        },
+        {
+          "href": "#pricing",
+          "label": "Pricing"
+        },
+        {
+          "href": "#contact",
+          "label": "Contact Us"
+        }
+      ],
+      "ctaLink": "#contact",
+      "ctaText": "Contact Support",
+      "variant": "boxed-brand",
+      "showLogo": true,
+      "logoWidth": 150,
+      "textColor": "#06b6d4",
+      "stickyMode": "normal",
+      "borderColor": "rgba(125,211,252,0.24)",
+      "buttonColor": "#22c55e",
+      "ctaFontSize": 20,
+      "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
+      "linkFontSize": 20,
+      "brandFontSize": 24,
+      "textAnimation": "slide-up",
+      "backgroundColor": "#121c26",
+      "buttonTextColor": "#052e16",
+      "linkHoverEffect": "glow",
+      "mobileMenuStyle": "hamburger",
+      "sectionAnimation": "fade-in",
+      "linkHoverTextColor": "#ec4899",
+      "textAnimationDelay": 0.08,
+      "textAnimationSpeed": 0.95,
+      "activeLinkTextColor": "#f59e0b",
+      "fullWidthBackground": true,
+      "subheadlineAnimation": "fade-up",
+      "sectionAnimationDelay": 0,
+      "sectionAnimationSpeed": 1,
+      "linkHoverBackgroundColor": "#ec4899",
+      "activeLinkBackgroundColor": "#121c26",
+      "subheadlineAnimationDelay": 0.16,
+      "subheadlineAnimationSpeed": 1.05
+    }
+  },
+  "globalFooterBlock": {
+    "id": 1779416282454,
+    "type": "footer",
+    "props": {
+      "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "brand": "Gr8 Result Digital Solutions",
+      "tagline": "Code Hard or Code Home",
+      "navLinks": [
+        {
+          "href": "/home",
+          "label": "Home"
+        },
+        {
+          "href": "/about",
+          "label": "About"
+        },
+        {
+          "href": "/contact",
+          "label": "Contact"
+        },
+        {
+          "href": "/about",
+          "label": "About Us"
+        },
+        {
+          "href": "/modules",
+          "label": "Modules"
+        },
+        {
+          "href": "/contact-us",
+          "label": "Contact Us"
+        },
+        {
+          "href": "/email",
+          "label": "Email"
+        },
+        {
+          "href": "/sms",
+          "label": "SMS"
+        },
+        {
+          "href": "/crm",
+          "label": "CRM"
+        },
+        {
+          "href": "/pricing",
+          "label": "Pricing"
+        },
+        {
+          "label": "[object Object]",
+          "href": "#object-object"
+        },
+        {
+          "label": "Page 9",
+          "href": "#page-9"
+        }
+      ],
+      "linkColor": "#f59e0b",
+      "logoWidth": 200,
+      "textColor": "#ffffff",
+      "extraLinks": [
+        {
+          "href": "#blog",
+          "label": "Blog"
+        },
+        {
+          "href": "#privacy",
+          "label": "Privacy Policy"
+        },
+        {
+          "href": "#terms",
+          "label": "Terms"
+        }
+      ],
+      "navHeading": "Navigation",
+      "borderColor": "#f59e0b",
+      "logoAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "contactEmail": "support@gr8result.com",
+      "contactPhone": "Sunshine Coast 4557",
+      "extraHeading": "Company",
+      "copyrightText": "© 2026 Gr8 Result Digital Solutions. All rights reserved.",
+      "contactAddress": "Queensland, Australia",
+      "contactHeading": "Contact details",
+      "showNewsletter": true,
+      "backgroundColor": "#121c26",
+      "baseLayoutWidth": 1500,
+      "newsletterHeading": "Stay Updated",
+      "newsletterSubtitle": "Get the latest news or updates on new modules added to the platform, delivered to your inbox.",
+      "newsletterActionUrl": "suppport@gr8result.com",
+      "newsletterButtonText": "Submit",
+      "newsletterButtonColor": "#2563eb",
+      "newsletterSubmitMethod": "post",
+      "newsletterFallbackEmail": "",
+      "newsletterButtonTextColor": "#ffffff"
+    }
+  },
+  "accountId": "35ab846e-0764-498b-b1f8-7d2cf27d85a5",
+  "navigation": null,
+  "theme": null,
+  "pageOrder": [
+    "home",
+    "about-us",
+    "modules",
+    "contact-us",
+    "email",
+    "pricing",
+    "crm",
+    "sms"
+  ],
+  "pageSlugs": {
+    "Home": "home",
+    "About Us": "about-us",
+    "Modules": "modules",
+    "Contact Us": "contact-us",
+    "Email": "email",
+    "Pricing": "pricing",
+    "CRM": "crm",
+    "SMS": "sms"
+  },
+  "published": false,
+  "storageVersion": 2
+}

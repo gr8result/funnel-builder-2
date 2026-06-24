@@ -1,0 +1,1109 @@
+{
+  "projectId": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "pageName": "Pricing",
+  "blocks": [
+    {
+      "id": "da4384ea-3386-4b3e-9287-72d79e7bfd09",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us"
+          },
+          {
+            "href": "#modules",
+            "label": "Modules"
+          },
+          {
+            "href": "#contact-us",
+            "label": "Contact Us"
+          },
+          {
+            "href": "#email",
+            "label": "Email"
+          },
+          {
+            "href": "#sms",
+            "label": "SMS"
+          },
+          {
+            "href": "#crm",
+            "label": "CRM"
+          },
+          {
+            "href": "#pricing",
+            "label": "Pricing"
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Contact",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "sticky-transparent",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#0ea5e9",
+        "ctaFontSize": 16,
+        "linkFontSize": 16,
+        "brandFontSize": 20,
+        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#ffffff",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+      }
+    },
+    {
+      "id": "hero-4xaodxr",
+      "type": "hero",
+      "props": {
+        "contentX": 50,
+        "contentY": 68,
+        "headline": "Click to type headline",
+        "alignment": "center",
+        "floatingX": 50,
+        "floatingY": 24,
+        "marginTop": 130,
+        "minHeight": "1500px",
+        "subheadline": "Add supporting text here",
+        "contentWidth": 760,
+        "contentHeight": 420,
+        "floatingWidth": 176,
+        "floatingHeight": 176,
+        "backgroundColor": "linear-gradient(135deg,#7c3aed 0%,#ec4899 45%,#f97316 100%)",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781659257155-c39d3c71-f414-466d-9ef9-ca59acf027e8.png",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "hideTextOverlay": true,
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "56651d40-cbf5-4c63-bcca-2902059f1cee"
+      }
+    },
+    {
+      "id": 1781660881572,
+      "type": "text",
+      "props": {
+        "text": "<div style=\"text-align: center;\"><span style=\"color: rgb(255, 192, 0);\">OUR PRICING</span></div>",
+        "contentY": 32,
+        "textSize": "medium",
+        "alignment": "left",
+        "minHeight": "120px",
+        "textColor": "#e6eef5",
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "hideBorder": true,
+        "paddingTop": 0,
+        "bodyFontSize": 96,
+        "textFontSize": 96,
+        "contentHeight": 120,
+        "paddingBottom": 0,
+        "textAnimation": "fade-in",
+        "verticalAlign": "top",
+        "enableParallax": false,
+        "textLineHeight": 1.35,
+        "backgroundColor": "#111827",
+        "backgroundImage": "",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true,
+        "subheadlineFontSize": 96
+      }
+    },
+    {
+      "id": 1781659359386,
+      "type": "columns-2",
+      "props": {
+        "ratio": "50-50",
+        "title": "",
+        "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781661943658-ChatGPT-Image-Jun-17-2026-12_05_15-PM.png",
+        "leftTitle": "",
+        "textColor": "#0f172a",
+        "rightImage": "",
+        "rightTitle": "<div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">At Gr8 Result Digital Solutions, we believe powerful business software shouldn't cost a fortune. That's why we've spent countless hours designing and developing a platform that combines the tools businesses need most into one powerful ecosystem—without the excessive price tags and complicated contracts that have become common throughout the industry.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">Unlike many platforms that force businesses into expensive all-or-nothing subscriptions, we've built our system to be flexible. You can start with a complete package or simply choose the modules you need today and add more as your business grows. Whether you're looking for CRM, Email Marketing, SMS Marketing, Funnel Building, Website Creation, Social Media Management, Calendar Bookings, Communities, Business Automation, or Project Management, you only pay for what delivers value to your business.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">Our mission has always been simple: provide world-class business and marketing tools at a price that allows businesses of all sizes to compete, grow, and thrive. We've worked hard to keep our pricing fair, transparent, and scalable, ensuring that startups, small businesses, growing teams, and established organisations can access enterprise-level technology without enterprise-level costs.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">As your business evolves, your platform can evolve with you. Upgrade individual modules, increase usage limits, add team members, or move to a larger plan at any time. You're never locked into features you don't need, and you'll always have the flexibility to build the perfect solution for your business.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><p style=\"text-align: justify; font-size: 20px;\">We've done everything possible to create a platform that delivers exceptional value, powerful functionality, and room to grow—all while keeping affordability at the heart of every pricing decision we make. Our goal is simple: help you achieve better results, faster growth, and greater profitability without the burden of unnecessary software costs.</p>",
+        "borderColor": "#dbeafe",
+        "leftContent": "",
+        "rightContent": "",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "headingFontSize": 20,
+        "leftColumnBlock": null,
+        "leftColumnOrder": [
+          "title",
+          "content",
+          "image"
+        ],
+        "leftImageHeight": 1163,
+        "headlineFontSize": 20,
+        "leftImageAssetId": "0072285c-50f0-4df4-83d7-e347b7601fa0",
+        "rightColumnBlock": null,
+        "rightColumnOrder": [
+          "image",
+          "title",
+          "content"
+        ],
+        "columnOverlayColor": "transparent",
+        "cardBackgroundColor": "#f8fafc",
+        "columnBackgroundColor": "#ffffff",
+        "leftColumnBorderColor": "#ffffff",
+        "leftColumnBackgroundColor": "#ffffff",
+        "rightColumnBackgroundColor": "#ffffff"
+      }
+    },
+    {
+      "id": 1781663796747,
+      "type": "text",
+      "props": {
+        "text": "<h2 data-website-inline-editor=\"true\" data-text-prop=\"title\" style=\"text-align: center; color: rgb(255, 192, 0); padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; font-weight: 600; font-family: system-ui, -apple-system, sans-serif; background-color: rgb(15, 23, 42); line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-size: 48px;\"><span style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ;\">Our Pricing Plans - Save up to $10,600 per year on your subscription costs</span></h2>",
+        "title": "<span style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ;\">Our Pricing Plans - Save up to $10,600 per year on your subscription costs</span>",
+        "contentY": 32,
+        "textSize": "medium",
+        "alignment": "left",
+        "minHeight": "120px",
+        "textColor": "#e6eef5",
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "hideBorder": true,
+        "paddingTop": 0,
+        "bodyFontSize": 48,
+        "textFontSize": 48,
+        "contentHeight": 120,
+        "paddingBottom": 0,
+        "textAnimation": "fade-in",
+        "verticalAlign": "top",
+        "enableParallax": false,
+        "textLineHeight": 1.35,
+        "backgroundColor": "#111827",
+        "backgroundImage": "",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true,
+        "subheadlineFontSize": 48
+      }
+    },
+    {
+      "id": 1779656099605,
+      "type": "pricing-table",
+      "props": {
+        "plans": [
+          {
+            "id": "pricing-default-1",
+            "cta": "Select This Plan",
+            "name": "Starter",
+            "badge": "",
+            "price": "$159",
+            "extras": [
+              "14 days free, then 50% off first 3 months",
+              "Email contacts — 5,000",
+              "Email sends/mo — 50,000",
+              "SMS credits/mo — 500",
+              "Websites — 1",
+              "Funnels — Landing pages only",
+              "Projects Hub — 3 jobs · 5 projects · 2 users",
+              "AI credits/mo — 50",
+              "Storage — 5 GB"
+            ],
+            "features": [
+              "Team Seats — 2 users",
+              "CRM Pipelines — 1",
+              "Communities — 1",
+              "Social Profiles — 3",
+              "Automation Workflows — 5",
+              "Calendar & Bookings",
+              "Shared Phone Number",
+              "Marketplace Access",
+              "Reporting — Email & CRM stats",
+              "Support — Email"
+            ],
+            "description": "For solo operators and small teams just getting started.",
+            "featureIcon": "tick",
+            "highlighted": false,
+            "individualPrice": "$215",
+            "includedFeatures": [
+              "Team Seats — 2 users",
+              "CRM Pipelines — 1",
+              "Communities — 1",
+              "Social Profiles — 3",
+              "Automation Workflows — 5",
+              "Calendar & Bookings",
+              "Shared Phone Number",
+              "Marketplace Access",
+              "Reporting — Email & CRM stats",
+              "Support — Email"
+            ]
+          },
+          {
+            "id": "pricing-default-2",
+            "cta": "Select This Plan",
+            "name": "Growth",
+            "badge": "Most Popular",
+            "price": "$359",
+            "extras": [
+              "14 days free, then 50% off first 3 months",
+              "Email contacts — 15,000",
+              "Email sends/mo — 150,000",
+              "SMS credits/mo — 2,500",
+              "Websites — 2",
+              "Funnels — 1 (+ extras at cost)",
+              "Projects Hub — 15 jobs · 20 projects · dependencies",
+              "AI credits/mo — 250",
+              "Storage — 25 GB"
+            ],
+            "features": [
+              "Team Seats — 5 users",
+              "CRM Pipelines — 3",
+              "Communities — 3",
+              "Social Profiles — 7",
+              "Automation Workflows — 8",
+              "SMS Scheduled Campaigns — 3",
+              "Call Recording & AI Transcription",
+              "Calendar & Bookings",
+              "Shared Phone Number",
+              "Affiliate Management",
+              "Reporting — Email, SMS & Call Analytics",
+              "Support — Priority Email"
+            ],
+            "description": "For growing teams scaling sales and marketing operations.",
+            "featureIcon": "spark",
+            "highlighted": true,
+            "individualPrice": "$474",
+            "includedFeatures": [
+              "Team Seats — 5 users",
+              "CRM Pipelines — 3",
+              "Communities — 3",
+              "Social Profiles — 7",
+              "Automation Workflows — 8",
+              "SMS Scheduled Campaigns — 3",
+              "Call Recording & AI Transcription",
+              "Calendar & Bookings",
+              "Shared Phone Number",
+              "Affiliate Management",
+              "Reporting — Email, SMS & Call Analytics",
+              "Support — Priority Email"
+            ]
+          },
+          {
+            "id": "pricing-default-3",
+            "cta": "Select This Plan",
+            "name": "Scale",
+            "badge": "Best Value",
+            "price": "$499",
+            "extras": [
+              "14 days free, then 50% off first 3 months",
+              "Email contacts — 40,000",
+              "Email sends/mo — 400,000",
+              "SMS credits/mo — 5,000",
+              "Websites — 3",
+              "Funnels — 3 (+ extras at cost)",
+              "Projects Hub — Unlimited jobs & projects · resource allocation · critical path",
+              "AI credits/mo — 750",
+              "Storage — 100 GB"
+            ],
+            "features": [
+              "Team Seats — 10 users",
+              "CRM Pipelines — 10",
+              "Communities — Unlimited",
+              "Social Profiles — 15",
+              "Automation Workflows — 10",
+              "SMS Scheduled Campaigns — 10",
+              "AI Transcription + Sentiment",
+              "AI Website Builder",
+              "Shared Phone Number",
+              "Reporting — Full Analytics + CSV export",
+              "Support — Dedicated Onboarding"
+            ],
+            "description": "For established businesses scaling teams and operations.",
+            "featureIcon": "arrow",
+            "highlighted": false,
+            "individualPrice": "$913",
+            "includedFeatures": [
+              "Team Seats — 10 users",
+              "CRM Pipelines — 10",
+              "Communities — Unlimited",
+              "Social Profiles — 15",
+              "Automation Workflows — 10",
+              "SMS Scheduled Campaigns — 10",
+              "AI Transcription + Sentiment",
+              "AI Website Builder",
+              "Shared Phone Number",
+              "Reporting — Full Analytics + CSV export",
+              "Support — Dedicated Onboarding"
+            ]
+          },
+          {
+            "id": "pricing-default-4",
+            "cta": "Select This Plan",
+            "name": "Professional",
+            "badge": "Enterprise",
+            "price": "$999",
+            "extras": [
+              "14 days free trial",
+              "Email contacts — 200,000",
+              "Email sends/mo — 2,000,000",
+              "SMS credits/mo — 10,000",
+              "Websites — 5",
+              "Funnels — 10 (+ extras at cost)",
+              "Projects Hub — Unlimited · API",
+              "AI credits/mo — 5,000",
+              "Storage — 500 GB"
+            ],
+            "features": [
+              "Team Seats — Up to 25 users",
+              "CRM Pipelines — Unlimited",
+              "Communities — Unlimited",
+              "Social Profiles — Unlimited",
+              "Automation Workflows — Unlimited",
+              "AI Call Transcription & Sentiment",
+              "AI Content & Post Generation",
+              "Shared Phone Number",
+              "Reporting — Full Analytics + Scheduled Reports",
+              "Support — Account Manager + SLA"
+            ],
+            "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
+            "featureIcon": "tick",
+            "highlighted": false,
+            "individualPrice": "$1883",
+            "includedFeatures": [
+              "Team Seats — Up to 25 users",
+              "CRM Pipelines — Unlimited",
+              "Communities — Unlimited",
+              "Social Profiles — Unlimited",
+              "Automation Workflows — Unlimited",
+              "AI Call Transcription & Sentiment",
+              "AI Content & Post Generation",
+              "Shared Phone Number",
+              "Reporting — Full Analytics + Scheduled Reports",
+              "Support — Account Manager + SLA"
+            ]
+          }
+        ],
+        "title": "Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">That's $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>",
+        "alignment": "start",
+        "textColor": "#f8fafc",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.15,
+        "spacingScale": "normal",
+        "textFontSize": 28,
+        "pricingVariant": "billing",
+        "textLineHeight": 1.15,
+        "backgroundColor": "#0f172a",
+        "baseLayoutWidth": 1500,
+        "headingFontSize": 20,
+        "headlineFontSize": 20
+      }
+    },
+    {
+      "id": "3b857ebf-8153-42ea-8dbd-49e835f1d080",
+      "type": "chart",
+      "props": {
+        "plans": [
+          {
+            "id": "starter",
+            "name": "Starter",
+            "color": "#6366f1",
+            "billingPrice": 159,
+            "individualPrice": 215
+          },
+          {
+            "id": "growth",
+            "name": "Growth",
+            "color": "#22c55e",
+            "billingPrice": 359,
+            "individualPrice": 474
+          },
+          {
+            "id": "scale",
+            "name": "Scale",
+            "color": "#f59e0b",
+            "billingPrice": 499,
+            "individualPrice": 913
+          },
+          {
+            "id": "professional",
+            "name": "Professional",
+            "color": "#7c3aed",
+            "billingPrice": 999,
+            "individualPrice": 1883
+          }
+        ],
+        "heading": "Price Savings Comparison",
+        "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
+        "textColor": "#f8fafc",
+        "subheading": "See how much you save vs. buying each module individually",
+        "headlineBlock": {
+          "color": "#ffff00",
+          "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
+          "fontSize": 64,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffff00",
+        "backgroundColor": "#0f172a",
+        "baseLayoutWidth": 1500,
+        "headlineFontSize": 64,
+        "headlineAlignment": "center",
+        "showAnnualSavings": true,
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": 1781724947207,
+      "type": "testimonial",
+      "props": {
+        "role": "CEO at Company",
+        "text": "This is a great product/service!",
+        "items": [
+          {
+            "id": "8ff27e7f-e8ca-4f4a-b79b-9e7c0a5eefe3",
+            "role": "CEO, Waite and Sea Health &amp; Fitness",
+            "text": "We switched to Gr8 Result six months ago and cut our tool stack from 9 apps to 1. Our team saves 12 hours a week and our lead-to-close rate is up 40%.",
+            "author": "David Waite",
+            "rating": 5,
+            "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779061738959-default-avatar.png",
+            "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779061738959-default-avatar.png"
+          },
+          {
+            "id": "225b5cab-fe01-4c8d-bc89-f68aaed376cf",
+            "role": "Owner, Truline Cabinets.",
+            "text": "The CRM and email automation alone are worth the price. But the AI phone system? That's what blew our team away. We're handling 3× the leads without adding headcount.",
+            "author": "Josh Rohde",
+            "rating": 5,
+            "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png",
+            "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png"
+          },
+          {
+            "id": "ef6e9cdc-a050-45c6-8d21-c70bb86cf89f",
+            "role": "Marketing Director, Easyway Building Brokers",
+            "text": "Their onboarding team had us live in under a week. The website builder replaced our old drag-and-drop tool and the funnel templates are stunning.",
+            "author": "Ethan Cooper",
+            "rating": 5,
+            "avatarUrl": "__WB_PRESERVE_DATA_URL__",
+            "avatarAssetId": "a03beaeb-df1f-48d0-a8a6-4a80ccee4c33"
+          },
+          {
+            "id": "92c11cc1-150a-4b49-801e-3e1f8578b8cd",
+            "role": "Founder, Elan Interiors",
+            "text": "I've tried every all-in-one platform. Gr8 Result is the first one that doesn't sacrifice depth for breadth. Best decision we made this year.",
+            "author": "Sarah Reid",
+            "rating": 5,
+            "avatarUrl": "__WB_PRESERVE_DATA_URL__",
+            "avatarAssetId": "d76f28b2-f810-4e66-af1e-73603dc29873"
+          }
+        ],
+        "title": "The platform agencies can't stop talking about",
+        "author": "Customer Name",
+        "avatar": "",
+        "rating": 5,
+        "eyebrow": "Client Stories",
+        "autoplay": true,
+        "textColor": "#ffffff",
+        "accentColor": "#6366f1",
+        "spacingScale": "normal",
+        "autoplaySpeed": 5000,
+        "backgroundColor": "#0a0a0f",
+        "baseLayoutWidth": 1500,
+        "cardBorderColor": "rgba(99,102,241,.2)",
+        "sectionAnimation": "fade-up",
+        "testimonialColumns": 4,
+        "testimonialVariant": "cards",
+        "cardBackgroundColor": "#0f1729"
+      }
+    },
+    {
+      "id": 1781655154576,
+      "type": "cta-button",
+      "props": {
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
+      }
+    }
+  ],
+  "html": "",
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "da4384ea-3386-4b3e-9287-72d79e7bfd09",
+        "type": "nav-bar",
+        "props": {
+          "logo": "",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home"
+            },
+            {
+              "href": "#about-us",
+              "label": "About Us"
+            },
+            {
+              "href": "#modules",
+              "label": "Modules"
+            },
+            {
+              "href": "#contact-us",
+              "label": "Contact Us"
+            },
+            {
+              "href": "#email",
+              "label": "Email"
+            },
+            {
+              "href": "#sms",
+              "label": "SMS"
+            },
+            {
+              "href": "#crm",
+              "label": "CRM"
+            },
+            {
+              "href": "#pricing",
+              "label": "Pricing"
+            }
+          ],
+          "ctaLink": "#contact",
+          "ctaText": "Contact",
+          "variant": "boxed-brand",
+          "showLogo": true,
+          "logoWidth": 44,
+          "textColor": "#e2e8f0",
+          "stickyMode": "sticky-transparent",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "buttonColor": "#0ea5e9",
+          "ctaFontSize": 16,
+          "linkFontSize": 16,
+          "brandFontSize": 20,
+          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+          "backgroundColor": "#0b1220",
+          "buttonTextColor": "#ffffff",
+          "linkHoverEffect": "fill",
+          "mobileMenuStyle": "hamburger",
+          "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
+          "linkHoverTextColor": "#ffffff",
+          "activeLinkTextColor": "#ffffff",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+        }
+      },
+      {
+        "id": "hero-4xaodxr",
+        "type": "hero",
+        "props": {
+          "contentX": 50,
+          "contentY": 68,
+          "headline": "Click to type headline",
+          "alignment": "center",
+          "floatingX": 50,
+          "floatingY": 24,
+          "marginTop": 130,
+          "minHeight": "1500px",
+          "subheadline": "Add supporting text here",
+          "contentWidth": 760,
+          "contentHeight": 420,
+          "floatingWidth": 176,
+          "floatingHeight": 176,
+          "backgroundColor": "linear-gradient(135deg,#7c3aed 0%,#ec4899 45%,#f97316 100%)",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781659257155-c39d3c71-f414-466d-9ef9-ca59acf027e8.png",
+          "backgroundStyle": "image",
+          "baseLayoutWidth": 1500,
+          "hideTextOverlay": true,
+          "fullWidthBackground": true,
+          "backgroundImageAssetId": "56651d40-cbf5-4c63-bcca-2902059f1cee"
+        }
+      },
+      {
+        "id": 1781660881572,
+        "type": "text",
+        "props": {
+          "text": "<div style=\"text-align: center;\"><span style=\"color: rgb(255, 192, 0);\">OUR PRICING</span></div>",
+          "contentY": 32,
+          "textSize": "medium",
+          "alignment": "left",
+          "minHeight": "120px",
+          "textColor": "#e6eef5",
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "hideBorder": true,
+          "paddingTop": 0,
+          "bodyFontSize": 96,
+          "textFontSize": 96,
+          "contentHeight": 120,
+          "paddingBottom": 0,
+          "textAnimation": "fade-in",
+          "verticalAlign": "top",
+          "enableParallax": false,
+          "textLineHeight": 1.35,
+          "backgroundColor": "#111827",
+          "backgroundImage": "",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true,
+          "subheadlineFontSize": 96
+        }
+      },
+      {
+        "id": 1781659359386,
+        "type": "columns-2",
+        "props": {
+          "ratio": "50-50",
+          "title": "",
+          "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781661943658-ChatGPT-Image-Jun-17-2026-12_05_15-PM.png",
+          "leftTitle": "",
+          "textColor": "#0f172a",
+          "rightImage": "",
+          "rightTitle": "<div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">At Gr8 Result Digital Solutions, we believe powerful business software shouldn't cost a fortune. That's why we've spent countless hours designing and developing a platform that combines the tools businesses need most into one powerful ecosystem—without the excessive price tags and complicated contracts that have become common throughout the industry.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">Unlike many platforms that force businesses into expensive all-or-nothing subscriptions, we've built our system to be flexible. You can start with a complete package or simply choose the modules you need today and add more as your business grows. Whether you're looking for CRM, Email Marketing, SMS Marketing, Funnel Building, Website Creation, Social Media Management, Calendar Bookings, Communities, Business Automation, or Project Management, you only pay for what delivers value to your business.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">Our mission has always been simple: provide world-class business and marketing tools at a price that allows businesses of all sizes to compete, grow, and thrive. We've worked hard to keep our pricing fair, transparent, and scalable, ensuring that startups, small businesses, growing teams, and established organisations can access enterprise-level technology without enterprise-level costs.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><div style=\"font-size: 20px; text-align: justify;\"><span style=\"font-size: 20px;\">As your business evolves, your platform can evolve with you. Upgrade individual modules, increase usage limits, add team members, or move to a larger plan at any time. You're never locked into features you don't need, and you'll always have the flexibility to build the perfect solution for your business.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 20px;\"><br></span></div><p style=\"text-align: justify; font-size: 20px;\">We've done everything possible to create a platform that delivers exceptional value, powerful functionality, and room to grow—all while keeping affordability at the heart of every pricing decision we make. Our goal is simple: help you achieve better results, faster growth, and greater profitability without the burden of unnecessary software costs.</p>",
+          "borderColor": "#dbeafe",
+          "leftContent": "",
+          "rightContent": "",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "headingFontSize": 20,
+          "leftColumnBlock": null,
+          "leftColumnOrder": [
+            "title",
+            "content",
+            "image"
+          ],
+          "leftImageHeight": 1163,
+          "headlineFontSize": 20,
+          "leftImageAssetId": "0072285c-50f0-4df4-83d7-e347b7601fa0",
+          "rightColumnBlock": null,
+          "rightColumnOrder": [
+            "image",
+            "title",
+            "content"
+          ],
+          "columnOverlayColor": "transparent",
+          "cardBackgroundColor": "#f8fafc",
+          "columnBackgroundColor": "#ffffff",
+          "leftColumnBorderColor": "#ffffff",
+          "leftColumnBackgroundColor": "#ffffff",
+          "rightColumnBackgroundColor": "#ffffff"
+        }
+      },
+      {
+        "id": 1781663796747,
+        "type": "text",
+        "props": {
+          "text": "<h2 data-website-inline-editor=\"true\" data-text-prop=\"title\" style=\"text-align: center; color: rgb(255, 192, 0); padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; font-weight: 600; font-family: system-ui, -apple-system, sans-serif; background-color: rgb(15, 23, 42); line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-size: 48px;\"><span style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ;\">Our Pricing Plans - Save up to $10,600 per year on your subscription costs</span></h2>",
+          "title": "<span style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ;\">Our Pricing Plans - Save up to $10,600 per year on your subscription costs</span>",
+          "contentY": 32,
+          "textSize": "medium",
+          "alignment": "left",
+          "minHeight": "120px",
+          "textColor": "#e6eef5",
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "hideBorder": true,
+          "paddingTop": 0,
+          "bodyFontSize": 48,
+          "textFontSize": 48,
+          "contentHeight": 120,
+          "paddingBottom": 0,
+          "textAnimation": "fade-in",
+          "verticalAlign": "top",
+          "enableParallax": false,
+          "textLineHeight": 1.35,
+          "backgroundColor": "#111827",
+          "backgroundImage": "",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true,
+          "subheadlineFontSize": 48
+        }
+      },
+      {
+        "id": 1779656099605,
+        "type": "pricing-table",
+        "props": {
+          "plans": [
+            {
+              "id": "pricing-default-1",
+              "cta": "Select This Plan",
+              "name": "Starter",
+              "badge": "",
+              "price": "$159",
+              "extras": [
+                "14 days free, then 50% off first 3 months",
+                "Email contacts — 5,000",
+                "Email sends/mo — 50,000",
+                "SMS credits/mo — 500",
+                "Websites — 1",
+                "Funnels — Landing pages only",
+                "Projects Hub — 3 jobs · 5 projects · 2 users",
+                "AI credits/mo — 50",
+                "Storage — 5 GB"
+              ],
+              "features": [
+                "Team Seats — 2 users",
+                "CRM Pipelines — 1",
+                "Communities — 1",
+                "Social Profiles — 3",
+                "Automation Workflows — 5",
+                "Calendar & Bookings",
+                "Shared Phone Number",
+                "Marketplace Access",
+                "Reporting — Email & CRM stats",
+                "Support — Email"
+              ],
+              "description": "For solo operators and small teams just getting started.",
+              "featureIcon": "tick",
+              "highlighted": false,
+              "individualPrice": "$215",
+              "includedFeatures": [
+                "Team Seats — 2 users",
+                "CRM Pipelines — 1",
+                "Communities — 1",
+                "Social Profiles — 3",
+                "Automation Workflows — 5",
+                "Calendar & Bookings",
+                "Shared Phone Number",
+                "Marketplace Access",
+                "Reporting — Email & CRM stats",
+                "Support — Email"
+              ]
+            },
+            {
+              "id": "pricing-default-2",
+              "cta": "Select This Plan",
+              "name": "Growth",
+              "badge": "Most Popular",
+              "price": "$359",
+              "extras": [
+                "14 days free, then 50% off first 3 months",
+                "Email contacts — 15,000",
+                "Email sends/mo — 150,000",
+                "SMS credits/mo — 2,500",
+                "Websites — 2",
+                "Funnels — 1 (+ extras at cost)",
+                "Projects Hub — 15 jobs · 20 projects · dependencies",
+                "AI credits/mo — 250",
+                "Storage — 25 GB"
+              ],
+              "features": [
+                "Team Seats — 5 users",
+                "CRM Pipelines — 3",
+                "Communities — 3",
+                "Social Profiles — 7",
+                "Automation Workflows — 8",
+                "SMS Scheduled Campaigns — 3",
+                "Call Recording & AI Transcription",
+                "Calendar & Bookings",
+                "Shared Phone Number",
+                "Affiliate Management",
+                "Reporting — Email, SMS & Call Analytics",
+                "Support — Priority Email"
+              ],
+              "description": "For growing teams scaling sales and marketing operations.",
+              "featureIcon": "spark",
+              "highlighted": true,
+              "individualPrice": "$474",
+              "includedFeatures": [
+                "Team Seats — 5 users",
+                "CRM Pipelines — 3",
+                "Communities — 3",
+                "Social Profiles — 7",
+                "Automation Workflows — 8",
+                "SMS Scheduled Campaigns — 3",
+                "Call Recording & AI Transcription",
+                "Calendar & Bookings",
+                "Shared Phone Number",
+                "Affiliate Management",
+                "Reporting — Email, SMS & Call Analytics",
+                "Support — Priority Email"
+              ]
+            },
+            {
+              "id": "pricing-default-3",
+              "cta": "Select This Plan",
+              "name": "Scale",
+              "badge": "Best Value",
+              "price": "$499",
+              "extras": [
+                "14 days free, then 50% off first 3 months",
+                "Email contacts — 40,000",
+                "Email sends/mo — 400,000",
+                "SMS credits/mo — 5,000",
+                "Websites — 3",
+                "Funnels — 3 (+ extras at cost)",
+                "Projects Hub — Unlimited jobs & projects · resource allocation · critical path",
+                "AI credits/mo — 750",
+                "Storage — 100 GB"
+              ],
+              "features": [
+                "Team Seats — 10 users",
+                "CRM Pipelines — 10",
+                "Communities — Unlimited",
+                "Social Profiles — 15",
+                "Automation Workflows — 10",
+                "SMS Scheduled Campaigns — 10",
+                "AI Transcription + Sentiment",
+                "AI Website Builder",
+                "Shared Phone Number",
+                "Reporting — Full Analytics + CSV export",
+                "Support — Dedicated Onboarding"
+              ],
+              "description": "For established businesses scaling teams and operations.",
+              "featureIcon": "arrow",
+              "highlighted": false,
+              "individualPrice": "$913",
+              "includedFeatures": [
+                "Team Seats — 10 users",
+                "CRM Pipelines — 10",
+                "Communities — Unlimited",
+                "Social Profiles — 15",
+                "Automation Workflows — 10",
+                "SMS Scheduled Campaigns — 10",
+                "AI Transcription + Sentiment",
+                "AI Website Builder",
+                "Shared Phone Number",
+                "Reporting — Full Analytics + CSV export",
+                "Support — Dedicated Onboarding"
+              ]
+            },
+            {
+              "id": "pricing-default-4",
+              "cta": "Select This Plan",
+              "name": "Professional",
+              "badge": "Enterprise",
+              "price": "$999",
+              "extras": [
+                "14 days free trial",
+                "Email contacts — 200,000",
+                "Email sends/mo — 2,000,000",
+                "SMS credits/mo — 10,000",
+                "Websites — 5",
+                "Funnels — 10 (+ extras at cost)",
+                "Projects Hub — Unlimited · API",
+                "AI credits/mo — 5,000",
+                "Storage — 500 GB"
+              ],
+              "features": [
+                "Team Seats — Up to 25 users",
+                "CRM Pipelines — Unlimited",
+                "Communities — Unlimited",
+                "Social Profiles — Unlimited",
+                "Automation Workflows — Unlimited",
+                "AI Call Transcription & Sentiment",
+                "AI Content & Post Generation",
+                "Shared Phone Number",
+                "Reporting — Full Analytics + Scheduled Reports",
+                "Support — Account Manager + SLA"
+              ],
+              "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
+              "featureIcon": "tick",
+              "highlighted": false,
+              "individualPrice": "$1883",
+              "includedFeatures": [
+                "Team Seats — Up to 25 users",
+                "CRM Pipelines — Unlimited",
+                "Communities — Unlimited",
+                "Social Profiles — Unlimited",
+                "Automation Workflows — Unlimited",
+                "AI Call Transcription & Sentiment",
+                "AI Content & Post Generation",
+                "Shared Phone Number",
+                "Reporting — Full Analytics + Scheduled Reports",
+                "Support — Account Manager + SLA"
+              ]
+            }
+          ],
+          "title": "Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">That's $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>",
+          "alignment": "start",
+          "textColor": "#f8fafc",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.15,
+          "spacingScale": "normal",
+          "textFontSize": 28,
+          "pricingVariant": "billing",
+          "textLineHeight": 1.15,
+          "backgroundColor": "#0f172a",
+          "baseLayoutWidth": 1500,
+          "headingFontSize": 20,
+          "headlineFontSize": 20
+        }
+      },
+      {
+        "id": "3b857ebf-8153-42ea-8dbd-49e835f1d080",
+        "type": "chart",
+        "props": {
+          "plans": [
+            {
+              "id": "starter",
+              "name": "Starter",
+              "color": "#6366f1",
+              "billingPrice": 159,
+              "individualPrice": 215
+            },
+            {
+              "id": "growth",
+              "name": "Growth",
+              "color": "#22c55e",
+              "billingPrice": 359,
+              "individualPrice": 474
+            },
+            {
+              "id": "scale",
+              "name": "Scale",
+              "color": "#f59e0b",
+              "billingPrice": 499,
+              "individualPrice": 913
+            },
+            {
+              "id": "professional",
+              "name": "Professional",
+              "color": "#7c3aed",
+              "billingPrice": 999,
+              "individualPrice": 1883
+            }
+          ],
+          "heading": "Price Savings Comparison",
+          "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
+          "textColor": "#f8fafc",
+          "subheading": "See how much you save vs. buying each module individually",
+          "headlineBlock": {
+            "color": "#ffff00",
+            "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
+            "fontSize": 64,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "700",
+            "lineHeight": 1.1
+          },
+          "headlineColor": "#ffff00",
+          "backgroundColor": "#0f172a",
+          "baseLayoutWidth": 1500,
+          "headlineFontSize": 64,
+          "headlineAlignment": "center",
+          "showAnnualSavings": true,
+          "headlineFontFamily": "system-ui",
+          "headlineFontWeight": "700",
+          "headlineLineHeight": 1.1,
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": 1781724947207,
+        "type": "testimonial",
+        "props": {
+          "role": "CEO at Company",
+          "text": "This is a great product/service!",
+          "items": [
+            {
+              "id": "8ff27e7f-e8ca-4f4a-b79b-9e7c0a5eefe3",
+              "role": "CEO, Waite and Sea Health &amp; Fitness",
+              "text": "We switched to Gr8 Result six months ago and cut our tool stack from 9 apps to 1. Our team saves 12 hours a week and our lead-to-close rate is up 40%.",
+              "author": "David Waite",
+              "rating": 5,
+              "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779061738959-default-avatar.png",
+              "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779061738959-default-avatar.png"
+            },
+            {
+              "id": "225b5cab-fe01-4c8d-bc89-f68aaed376cf",
+              "role": "Owner, Truline Cabinets.",
+              "text": "The CRM and email automation alone are worth the price. But the AI phone system? That's what blew our team away. We're handling 3× the leads without adding headcount.",
+              "author": "Josh Rohde",
+              "rating": 5,
+              "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png",
+              "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png"
+            },
+            {
+              "id": "ef6e9cdc-a050-45c6-8d21-c70bb86cf89f",
+              "role": "Marketing Director, Easyway Building Brokers",
+              "text": "Their onboarding team had us live in under a week. The website builder replaced our old drag-and-drop tool and the funnel templates are stunning.",
+              "author": "Ethan Cooper",
+              "rating": 5,
+              "avatarUrl": "__WB_PRESERVE_DATA_URL__",
+              "avatarAssetId": "a03beaeb-df1f-48d0-a8a6-4a80ccee4c33"
+            },
+            {
+              "id": "92c11cc1-150a-4b49-801e-3e1f8578b8cd",
+              "role": "Founder, Elan Interiors",
+              "text": "I've tried every all-in-one platform. Gr8 Result is the first one that doesn't sacrifice depth for breadth. Best decision we made this year.",
+              "author": "Sarah Reid",
+              "rating": 5,
+              "avatarUrl": "__WB_PRESERVE_DATA_URL__",
+              "avatarAssetId": "d76f28b2-f810-4e66-af1e-73603dc29873"
+            }
+          ],
+          "title": "The platform agencies can't stop talking about",
+          "author": "Customer Name",
+          "avatar": "",
+          "rating": 5,
+          "eyebrow": "Client Stories",
+          "autoplay": true,
+          "textColor": "#ffffff",
+          "accentColor": "#6366f1",
+          "spacingScale": "normal",
+          "autoplaySpeed": 5000,
+          "backgroundColor": "#0a0a0f",
+          "baseLayoutWidth": 1500,
+          "cardBorderColor": "rgba(99,102,241,.2)",
+          "sectionAnimation": "fade-up",
+          "testimonialColumns": 4,
+          "testimonialVariant": "cards",
+          "cardBackgroundColor": "#0f1729"
+        }
+      },
+      {
+        "id": 1781655154576,
+        "type": "cta-button",
+        "props": {
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "size": "large",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "style": "stacked-card",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "eyebrow": "<br>",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "buttonColor": "#00b0f0",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "fullWidthBackground": true
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "savedAt": "2026-06-24T03:57:08.604Z",
+  "source": "autosave"
+}

@@ -400,6 +400,22 @@ function AssetLibraryModal({ visible, title = "Media Library", assets = [], sele
             placeholder="Search library"
             style={styles.modalSearchInput}
           />
+          <button
+            type="button"
+            style={styles.modalUploadBtn}
+            onClick={() => {
+              openSharedMediaPicker({
+                onPick: (asset) => {
+                  const normalizedAsset = normalizeSelectedAsset(asset);
+                  if (!normalizedAsset?.src) return;
+                  onSelect?.(normalizedAsset);
+                  onClose?.();
+                },
+              });
+            }}
+          >
+            Open Shared Library
+          </button>
           <label style={styles.modalUploadBtn}>
             Upload Here
             <input

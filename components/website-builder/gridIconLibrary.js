@@ -35,7 +35,7 @@ import {
   MdAnalytics, MdAutoAwesome, MdBusiness, MdCampaign, MdContactPage,
   MdDashboard, MdEmail, MdGroups, MdInsights, MdIntegrationInstructions,
   MdNotifications, MdPayment, MdPeople, MdSchedule, MdSecurity,
-  MdSmartphone, MdSpeed, MdSupport, MdTrendingUp, MdAccountTree, MdViewKanban,
+  MdSmartphone, MdSpeed, MdSupport, MdTrendingUp, MdAccountTree,
   MdFormatQuote, MdArticle, MdWeb, MdOutlineStorefront, MdOutlineLocalOffer,
   MdOutlinePrecisionManufacturing, MdOutlineRocketLaunch, MdOutlineVerified,
   MdOutlineAutoFixHigh,
@@ -429,7 +429,6 @@ const SI_ICONS = [
   { key: "si-jira",        label: "Jira",            group: "Brand Logos", Icon: SiJira },
   { key: "si-clickup",     label: "ClickUp",         group: "Brand Logos", Icon: SiClickup },
   { key: "si-airtable",    label: "Airtable",        group: "Brand Logos", Icon: SiAirtable },
-  { key: "si-monday",      label: "Monday",          group: "Brand Logos", Icon: MdViewKanban },
   { key: "si-gads",        label: "Google Ads",      group: "Brand Logos", Icon: SiGoogleads },
 ];
 

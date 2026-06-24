@@ -1,14 +1,14 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
-import { getLimit } from "../../../lib/featureGates";
+import { getWebsiteLimitForResolvedPlan, getUserPlan } from "../../../lib/planResolver";
 import { COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
 import {
   deleteSplitWebsiteProject,
   listSplitWebsiteProjects,
-  loadSplitWebsiteProject,
+  loadFullSplitWebsiteProject,
   migrateWebsiteProjectToSplitStorage,
   saveSplitWebsiteProject,
-} from "../../../lib/website-builder/siteStorage";
+} from "../../../lib/website-builder/supabaseSiteStorage";
 
 const TABLE_NAME = "published_websites";
 
@@ -210,6 +210,21 @@ function compactProjectForDb(project) {
   };
 }
 
+function pageNameFromValue(value) {
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text && text !== "[object Object]" ? text : "";
+  }
+  if (value && typeof value === "object") {
+    return pageNameFromValue(value.name || value.title || value.slug || "");
+  }
+  return "";
+}
+
+function isMissingSplitPageError(error) {
+  return error?.code === "WEBSITE_PAGE_FILE_MISSING";
+}
+
 async function requireUserId(req, res) {
   const token = getBearerToken(req);
   if (!token) {
@@ -232,7 +247,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     const projectId = String(req.query?.projectId || "").trim();
-    const requestedPage = String(req.query?.page || "").trim();
+    const requestedPage = pageNameFromValue(req.query?.page || "");
     const draftProjectId = projectId ? toDraftProjectId(projectId) : "";
 
     const baseSelect = supabaseAdmin
@@ -242,9 +257,16 @@ async function handler(req, res) {
       .order("updated_at", { ascending: false });
 
     if (projectId) {
-      const splitProject = await loadSplitWebsiteProject(userId, projectId, requestedPage);
-      if (splitProject) {
-        return res.status(200).json({ ok: true, project: splitProject });
+      try {
+        const splitProject = await loadFullSplitWebsiteProject(userId, projectId);
+        if (splitProject) {
+          return res.status(200).json({ ok: true, project: splitProject });
+        }
+      } catch (error) {
+        if (isMissingSplitPageError(error)) {
+          return res.status(409).json({ ok: false, error: error.message, code: error.code, pageName: error.pageName });
+        }
+        throw error;
       }
 
       // Try draft-prefixed row first, then fall back to the raw project_id (published sites)
@@ -338,8 +360,9 @@ async function handler(req, res) {
     }
 
     const draftProjectId = toDraftProjectId(projectId);
-    const requestedPage = String(req.body?.pageName || req.query?.page || "").trim();
+    const requestedPage = pageNameFromValue(req.body?.pageName || req.query?.page || "");
     const siteOnly = req.body?.siteOnly === true;
+    const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
     const now = new Date().toISOString();
     const nextProject = syncPlatformPricingPage({
@@ -351,7 +374,7 @@ async function handler(req, res) {
 
     let splitProject = null;
     try {
-      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly });
+      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource });
     } catch (storageError) {
       return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
     }
@@ -413,16 +436,9 @@ async function handler(req, res) {
         .maybeSingle()
       : await (async () => {
           // ── QUOTA CHECK on new project insert ─────────────────────────────
-          const { data: wsRow } = await supabaseAdmin
-            .from("workspaces")
-            .select("plan")
-            .eq("owner_id", userId)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          const plan = wsRow?.plan || "starter";
-          const websiteLimit = getLimit(plan, "websites");
+          const resolvedPlan = await getUserPlan(supabaseAdmin, userId);
+          const { plan } = resolvedPlan;
+          const websiteLimit = getWebsiteLimitForResolvedPlan(resolvedPlan).limit;
 
           if (websiteLimit !== null) {
             const { data: existingRows } = await supabaseAdmin
@@ -496,9 +512,9 @@ async function handler(req, res) {
       const nextSiteData = { ...(row.site_data && typeof row.site_data === "object" ? row.site_data : {}), name: newName };
       await supabaseAdmin.from(TABLE_NAME).update({ name: newName, site_data: nextSiteData, updated_at: now }).eq("id", row.id);
       const splitId = String(row.project_id || "").replace(/^draft:/, "");
-      const splitProject = await loadSplitWebsiteProject(userId, splitId);
+      const splitProject = await loadFullSplitWebsiteProject(userId, splitId);
       if (splitProject) {
-        await saveSplitWebsiteProject(userId, { ...splitProject, name: newName, updatedAt: now }, { siteOnly: true });
+        await saveSplitWebsiteProject(userId, { ...splitProject, name: newName, updatedAt: now }, { siteOnly: true, backupSource: "rename" });
       }
     }
 

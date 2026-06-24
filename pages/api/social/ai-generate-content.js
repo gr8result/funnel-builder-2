@@ -1,5 +1,6 @@
 // /pages/api/social/ai-generate-content.js
 import { createClient } from '@supabase/supabase-js';
+import { withAuth } from "../../../lib/withWorkspace";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -726,7 +727,6 @@ function buildPromptForPlatform({
   return `Generate EXACTLY ${count} ${p.toUpperCase()} posts about: "${topic}".
 
 IMPORTANT: Use Australian English spelling throughout. Examples: colour (not color), behaviour (not behavior), organise (not organize), realise (not realize), centre (not center), analyse (not analyse), apologise (not apologize), programme (not program), travelling (not traveling), licence (noun), practice (noun) / practise (verb).
-import { withAuth } from "../../../lib/withWorkspace";
 
 Tone/style: ${style}
 

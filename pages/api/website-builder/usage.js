@@ -4,7 +4,7 @@
 
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
-import { getLimit, PLANS } from "../../../lib/featureGates";
+import { getWebsiteLimitForResolvedPlan, getUserPlan } from "../../../lib/planResolver";
 
 async function handler(req, res) {
   if (req.method !== "GET") {
@@ -15,17 +15,10 @@ async function handler(req, res) {
   try {
     const auth_user_id = req.user.id;
 
-    // Get workspace plan
-    const { data: wsRow } = await supabaseAdmin
-      .from("workspaces")
-      .select("plan")
-      .eq("owner_id", auth_user_id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    const plan = wsRow?.plan || "starter";
-    const limit = getLimit(plan, "websites"); // null = unlimited
+    const resolvedPlan = await getUserPlan(supabaseAdmin, auth_user_id);
+    const { plan, workspacePlan, subscriptionPlan, websitePlan, accountId } = resolvedPlan;
+    const websiteEntitlement = getWebsiteLimitForResolvedPlan(resolvedPlan);
+    const limit = websiteEntitlement.limit; // null = unlimited
 
     // Count unique website projects. A project can have both a draft: row and
     // a published row — we deduplicate by stripping the draft: prefix.
@@ -50,7 +43,12 @@ async function handler(req, res) {
       limit,
       atLimit,
       plan,
-      planName: PLANS[plan]?.name || plan,
+      planName: websiteEntitlement.planName,
+      workspacePlan,
+      subscriptionPlan,
+      websitePlan,
+      effectiveWebsitePlan: websiteEntitlement.websitePlan,
+      accountId,
       remaining: limit === null ? null : Math.max(0, limit - used),
     });
   } catch (err) {

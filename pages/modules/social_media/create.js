@@ -783,6 +783,18 @@ export default function CreateContent() {
     try { localStorage.removeItem('sm_draft_images'); } catch {}
   }
 
+  async function readApiJson(response, fallbackLabel = 'Request failed') {
+    const raw = await response.text();
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw);
+    } catch {
+      const htmlTitle = raw.match(/<title>(.*?)<\/title>/i)?.[1];
+      const message = htmlTitle || raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
+      throw new Error(`${fallbackLabel}: ${message || `HTTP ${response.status}`}`);
+    }
+  }
+
   function formatImageError(imageResult) {
     const code = String(imageResult?.errorCode || '').toLowerCase();
     const base = imageResult?.error || 'Image generation failed.';
@@ -986,7 +998,7 @@ export default function CreateContent() {
           userId, saveDrafts: false, doNotRewrite,
         }),
       });
-      const data = await res.json();
+      const data = await readApiJson(res, 'AI content generation failed');
       if (!res.ok || !data.ok) throw new Error(data.error || 'AI generation failed');
 
       const byPlatform = ensureRequestedPlatformPosts(
@@ -1019,7 +1031,7 @@ export default function CreateContent() {
               brand: aiBrand.trim() || undefined,
             }),
           });
-          const imgData = await imgRes.json();
+          const imgData = await readApiJson(imgRes, 'AI image generation failed');
           setGenStage('finishing');
           if (imgRes.ok && imgData.ok && imgData.images?.length) {
             setAiImages(imgData.images);
@@ -1095,7 +1107,7 @@ export default function CreateContent() {
           brand: aiBrand.trim() || undefined,
         }),
       });
-      const data = await res.json();
+      const data = await readApiJson(res, 'AI image generation failed');
       if (!res.ok || !data.ok || !data.images?.length) {
         setAiImages([]);
         clearDraftImages();

@@ -60,3 +60,14 @@ tmp-thumbs/
 .tmp-*
 .nextignor
 
+# website builder local exports, recovery snapshots, and autosave backups
+website-builder-backups/
+recovery/
+/2208a52a-8175-477e-823c-fc6de7fe4afe/
+website-builder-sites/**/full-project.json
+website-builder-sites/**/metadata.json
+website-builder-sites/**/*.tmp
+
+# local dev runtime locks
+.next-dev.lock.json
+

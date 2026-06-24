@@ -32,8 +32,14 @@ export default function CheckoutSuccess() {
           typeof router.query.calendarPlan === "string" ? router.query.calendarPlan : null;
         const socialPlanTier =
           typeof router.query.socialPlan === "string" ? router.query.socialPlan : null;
+        const websitePlanTier =
+          typeof router.query.websitePlan === "string" ? router.query.websitePlan : null;
         const basePlan =
-          typeof router.query.plan === "string" ? router.query.plan : null;
+          typeof router.query.plan === "string"
+            ? router.query.plan
+            : typeof router.query.basePlan === "string"
+              ? router.query.basePlan
+              : null;
         const selectedModules =
           typeof router.query.selected === "string"
             ? router.query.selected.split(",").filter(Boolean)
@@ -52,19 +58,27 @@ export default function CheckoutSuccess() {
             smsPlan: smsPlanTier || null,
             calendarPlan: calendarPlanTier || null,
             socialPlan: socialPlanTier || null,
+            websitePlan: websitePlanTier || null,
             selectedModules,
           }),
         });
 
         if (!applyRes.ok) {
           const err = await applyRes.json().catch(() => ({}));
-          throw new Error(err.error || "Plan activation failed");
+          console.warn("Plan activation delayed:", err.error || applyRes.statusText);
+          if (!cancelled) {
+            setStatusText("Payment confirmed. Plan sync is delayed, but your checkout completed.");
+          }
+          redirectTimer = setTimeout(() => {
+            router.replace("/dashboard");
+          }, 2200);
+          return;
         }
 
-        const redirectTarget = "/billing";
+        const redirectTarget = "/dashboard";
 
         if (!cancelled) {
-          setStatusText("Subscription activated. Redirecting to Billing...");
+          setStatusText("Subscription activated. Opening your dashboard...");
         }
 
         redirectTimer = setTimeout(() => {
@@ -76,7 +90,7 @@ export default function CheckoutSuccess() {
           setStatusText("Payment confirmed, but plan sync is delayed. Redirecting...");
         }
         redirectTimer = setTimeout(() => {
-          router.replace("/billing");
+          router.replace("/dashboard");
         }, 2200);
       }
     };
@@ -87,7 +101,7 @@ export default function CheckoutSuccess() {
       cancelled = true;
       if (redirectTimer) clearTimeout(redirectTimer);
     };
-  }, [router.isReady, router.query.emailPlan, router.query.smsPlan, router.query.calendarPlan]);
+  }, [router.isReady, router.query.plan, router.query.basePlan, router.query.emailPlan, router.query.smsPlan, router.query.calendarPlan, router.query.websitePlan]);
 
   return (
     <div className="wrap">
