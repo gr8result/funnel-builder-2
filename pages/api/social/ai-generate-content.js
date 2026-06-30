@@ -1,10 +1,13 @@
 // /pages/api/social/ai-generate-content.js
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function createSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL');
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY');
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
 
 // 28 per platform = monthly pack
 const DEFAULT_POSTS_PER_PLATFORM = 28;
@@ -900,7 +903,7 @@ async function generateForPlatform({
 }
 
 async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ success: false, ok: false, error: 'Method not allowed' });
 
   try {
     const {
@@ -921,8 +924,8 @@ async function handler(req, res) {
       saveDrafts = false
     } = req.body;
 
-    if (!topic || topic.trim().length === 0) return res.status(400).json({ error: 'Topic is required' });
-    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    if (!topic || topic.trim().length === 0) return res.status(400).json({ success: false, ok: false, error: 'Topic is required' });
+    if (!userId) return res.status(400).json({ success: false, ok: false, error: 'User ID is required' });
 
     const safePlatforms = Array.isArray(platforms) && platforms.length
       ? platforms.map(sanitizePlatform)
@@ -998,25 +1001,36 @@ async function handler(req, res) {
         status: 'draft'
       }));
 
+      const supabase = createSupabaseAdmin();
       const { error: dbError } = await supabase.from('posts').insert(rows);
       if (dbError) {
         console.error('❌ DB ERROR:', dbError);
-        return res.status(500).json({ error: 'Failed to save posts' });
+        return res.status(500).json({
+          success: false,
+          ok: false,
+          error: dbError.message || 'Failed to save posts. Check that the posts table exists.',
+        });
       }
     }
 
-    return res.status(200).json({
-      ok: true,
+    const data = {
       postsPerPlatform: count,
       platforms: safePlatforms,
       total: flat.length,
       generationMeta,
       postsByPlatform,
       posts: flat
+    };
+
+    return res.status(200).json({
+      success: true,
+      ok: true,
+      data,
+      ...data
     });
   } catch (err) {
     console.error('❌ API ERROR:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, ok: false, error: err.message || 'AI content generation failed.' });
   }
 }
 
