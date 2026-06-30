@@ -7,10 +7,13 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import { withAuth } from "../../../lib/withWorkspace";
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function createSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL');
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY');
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
 
 const SHARED_ASSET_BUCKET = 'assets';
 
@@ -81,6 +84,7 @@ async function findExistingImage(auth, userId, storagePath) {
 }
 
 export async function persistImageForUser(auth, { imageUrl, description = '', tags = [], source = 'social', skipLibrary = false }) {
+  const admin = auth?.admin || createSupabaseAdmin();
   const userId = auth.user.id;
   const { mimeType, buffer, suggestedExt } = await readImageInput(imageUrl);
   const descriptionText = String(description || '').slice(0, 500);
@@ -129,21 +133,21 @@ export async function persistImageForUser(auth, { imageUrl, description = '', ta
 }
 
 async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
-
-  const auth = await requireUser(req);
-  if (auth.error) return res.status(401).json({ ok: false, error: auth.error });
-
-  const { imageUrl, description = '', tags = [] } = req.body || {};
-  if (!imageUrl) return res.status(400).json({ ok: false, error: 'imageUrl is required' });
+  if (req.method !== 'POST') return res.status(405).json({ success: false, ok: false, error: 'Method not allowed' });
 
   try {
+    const auth = await requireUser(req);
+    if (auth.error) return res.status(401).json({ success: false, ok: false, error: auth.error });
+
+    const { imageUrl, description = '', tags = [] } = req.body || {};
+    if (!imageUrl) return res.status(400).json({ success: false, ok: false, error: 'imageUrl is required' });
+
     const data = await persistImageForUser(auth, { imageUrl, description, tags });
 
-    return res.json({ ok: true, image: data });
+    return res.json({ success: true, ok: true, data: { image: data }, image: data });
   } catch (err) {
     console.error('save-image error:', err);
-    return res.status(500).json({ ok: false, error: err.message });
+    return res.status(500).json({ success: false, ok: false, error: err.message || 'Failed to save image.' });
   }
 }
 

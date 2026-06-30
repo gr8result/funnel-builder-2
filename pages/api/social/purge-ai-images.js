@@ -19,12 +19,12 @@ function resolveStoragePath(row) {
 }
 
 async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const auth = await requireUser(req);
-  if (auth.error) return res.status(401).json({ error: auth.error });
+  if (req.method !== 'POST') return res.status(405).json({ success: false, ok: false, error: 'Method not allowed' });
 
   try {
+    const auth = await requireUser(req);
+    if (auth.error) return res.status(401).json({ success: false, ok: false, error: auth.error });
+
     // Load all auto-generated social images for this user
     const { data: rows, error: fetchError } = await admin
       .from('social_image_library')
@@ -34,7 +34,7 @@ async function handler(req, res) {
 
     if (fetchError) throw fetchError;
     if (!rows || rows.length === 0) {
-      return res.status(200).json({ ok: true, deleted: 0, message: 'Nothing to purge.' });
+      return res.status(200).json({ success: true, ok: true, data: { deleted: 0 }, deleted: 0, message: 'Nothing to purge.' });
     }
 
     // Delete the storage objects first
@@ -59,10 +59,10 @@ async function handler(req, res) {
 
     if (deleteError) throw deleteError;
 
-    return res.status(200).json({ ok: true, deleted: ids.length });
+    return res.status(200).json({ success: true, ok: true, data: { deleted: ids.length }, deleted: ids.length });
   } catch (err) {
     console.error('purge-ai-images error:', err.message);
-    return res.status(500).json({ error: err.message || 'Failed to purge images' });
+    return res.status(500).json({ success: false, ok: false, error: err.message || 'Failed to purge images' });
   }
 }
 

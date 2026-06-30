@@ -785,14 +785,41 @@ export default function CreateContent() {
 
   async function readApiJson(response, fallbackLabel = 'Request failed') {
     const raw = await response.text();
-    if (!raw) return {};
+    if (!raw) {
+      if (!response.ok) throw new Error(`${fallbackLabel}: HTTP ${response.status}`);
+      return { success: true, ok: true };
+    }
+    let payload;
     try {
-      return JSON.parse(raw);
+      payload = JSON.parse(raw);
     } catch {
       const htmlTitle = raw.match(/<title>(.*?)<\/title>/i)?.[1];
       const message = htmlTitle || raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
       throw new Error(`${fallbackLabel}: ${message || `HTTP ${response.status}`}`);
     }
+
+    if (payload && typeof payload === 'object') {
+      if (payload.ok === undefined && payload.success !== undefined) payload.ok = payload.success;
+      if (payload.success === undefined && payload.ok !== undefined) payload.success = payload.ok;
+    }
+
+    if (!response.ok || payload?.success === false || payload?.ok === false) {
+      throw new Error(payload?.error || payload?.message || `${fallbackLabel}: HTTP ${response.status}`);
+    }
+
+    return payload || { success: true, ok: true };
+  }
+
+  function apiImageFromPayload(payload) {
+    return payload?.image || payload?.data?.image || payload?.data;
+  }
+
+  function apiImagesFromPayload(payload) {
+    return payload?.images || payload?.data?.images || [];
+  }
+
+  function apiPostSaved(payload) {
+    return payload?.success === true || payload?.ok === true;
   }
 
   function formatImageError(imageResult) {
@@ -999,7 +1026,7 @@ export default function CreateContent() {
         }),
       });
       const data = await readApiJson(res, 'AI content generation failed');
-      if (!res.ok || !data.ok) throw new Error(data.error || 'AI generation failed');
+      if (!apiPostSaved(data)) throw new Error(data.error || 'AI generation failed');
 
       const byPlatform = ensureRequestedPlatformPosts(
         normalizePlatformPosts(data, aiStyle, getPostsPerPlatformCount()),
@@ -1033,16 +1060,17 @@ export default function CreateContent() {
           });
           const imgData = await readApiJson(imgRes, 'AI image generation failed');
           setGenStage('finishing');
-          if (imgRes.ok && imgData.ok && imgData.images?.length) {
-            setAiImages(imgData.images);
-            try { localStorage.setItem('sm_draft_images', JSON.stringify(imgData.images)); } catch {}
-            Object.assign(byPlatform, assignImagesAcrossPlatforms(byPlatform, imgData.images));
+          const images = apiImagesFromPayload(imgData);
+          if (apiPostSaved(imgData) && images.length) {
+            setAiImages(images);
+            try { localStorage.setItem('sm_draft_images', JSON.stringify(images)); } catch {}
+            Object.assign(byPlatform, assignImagesAcrossPlatforms(byPlatform, images));
             if (imgData.fallback) {
-              msg = `Generated posts and ${imgData.images.length} fallback real images from ${imageFallbackLabel(imgData)}. Saved to your shared Media Library. ${formatImageError(imgData)}`;
+              msg = `Generated posts and ${images.length} fallback real images from ${imageFallbackLabel(imgData)}. Saved to your shared Media Library. ${formatImageError(imgData)}`;
             } else if (imgData.partial) {
-              msg = `Generated posts and ${imgData.images.length} real images. Saved to your shared Media Library. Some images failed: ${formatImageError(imgData)}`;
+              msg = `Generated posts and ${images.length} real images. Saved to your shared Media Library. Some images failed: ${formatImageError(imgData)}`;
             } else {
-              msg = `Generated posts for ${Object.keys(byPlatform).length} platforms and ${imgData.images.length} images. Saved to your shared Media Library.`;
+              msg = `Generated posts for ${Object.keys(byPlatform).length} platforms and ${images.length} images. Saved to your shared Media Library.`;
             }
           } else {
             setAiImages([]);
@@ -1108,21 +1136,22 @@ export default function CreateContent() {
         }),
       });
       const data = await readApiJson(res, 'AI image generation failed');
-      if (!res.ok || !data.ok || !data.images?.length) {
+      const images = apiImagesFromPayload(data);
+      if (!apiPostSaved(data) || !images.length) {
         setAiImages([]);
         clearDraftImages();
         setNotice(`No images were created. ${formatImageError(data)}`);
         return;
       }
       setGenStage('finishing');
-      setAiImages(data.images);
-      try { localStorage.setItem('sm_draft_images', JSON.stringify(data.images)); } catch {}
-      setPostsByPlatform(prev => assignImagesAcrossPlatforms(prev, data.images));
+      setAiImages(images);
+      try { localStorage.setItem('sm_draft_images', JSON.stringify(images)); } catch {}
+      setPostsByPlatform(prev => assignImagesAcrossPlatforms(prev, images));
       setNotice(data.fallback
-        ? `Generated ${data.images.length} fallback real images from ${imageFallbackLabel(data)}. Saved to your shared Media Library. ${formatImageError(data)}`
+        ? `Generated ${images.length} fallback real images from ${imageFallbackLabel(data)}. Saved to your shared Media Library. ${formatImageError(data)}`
         : data.partial
-          ? `Generated ${data.images.length} real images. Saved to your shared Media Library. Some image requests failed: ${formatImageError(data)}`
-          : `Generated ${data.images.length} images, distributed across all platforms, and saved to your shared Media Library.`);
+          ? `Generated ${images.length} real images. Saved to your shared Media Library. Some image requests failed: ${formatImageError(data)}`
+          : `Generated ${images.length} images, distributed across all platforms, and saved to your shared Media Library.`);
       setGenStage('done');
     } catch (err) {
       setGenStage(null);
@@ -1215,9 +1244,9 @@ export default function CreateContent() {
       body: formData,
     });
 
-    const payload = await response.json().catch(() => ({}));
+    const payload = await readApiJson(response, 'Video upload failed');
     const videoUrl = payload?.data?.[0]?.src || '';
-    if (!response.ok || !videoUrl) {
+    if (!videoUrl) {
       throw new Error(payload?.error || 'Video upload failed.');
     }
 
@@ -1249,10 +1278,11 @@ export default function CreateContent() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ imageUrl: readerResult, description: file.name || 'Uploaded post image' }),
       });
-      const payload = await response.json();
-      if (!response.ok || !payload?.ok || !payload?.image?.url) throw new Error(payload?.error || 'Image upload failed.');
+      const payload = await readApiJson(response, 'Image upload failed');
+      const image = apiImageFromPayload(payload);
+      if (!apiPostSaved(payload) || !image?.url) throw new Error(payload?.error || 'Image upload failed.');
 
-      assignManualImage(target.platform, target.id, payload.image.url);
+      assignManualImage(target.platform, target.id, image.url);
     } catch (error) {
       setNotice(error.message || 'Image upload failed.');
     } finally {
@@ -1353,8 +1383,9 @@ export default function CreateContent() {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ imageUrl: post.image, description: post.content?.slice(0, 120) }),
               });
-              const imgData = await imgRes.json();
-              if (imgData.ok) mediaUrl = imgData.image.url;
+              const imgData = await readApiJson(imgRes, 'Image upload failed');
+              const image = apiImageFromPayload(imgData);
+              if (apiPostSaved(imgData) && image?.url) mediaUrl = image.url;
             } catch (_) { /* image upload failed, continue without image */ }
           } else {
             mediaUrl = post.image;
@@ -1377,8 +1408,8 @@ export default function CreateContent() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: draftBody,
         });
-        const data = await res.json();
-        if (res.ok && data.success) {
+        const data = await readApiJson(res, 'Saving post failed');
+        if (apiPostSaved(data)) {
           ok++;
         } else {
           lastError = data.error || `HTTP ${res.status}`;
@@ -1444,8 +1475,9 @@ export default function CreateContent() {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ imageUrl: post.image, description: post.content?.slice(0, 120) }),
               });
-              const imgData = await imgRes.json();
-              if (imgData.ok) mediaUrl = imgData.image.url;
+              const imgData = await readApiJson(imgRes, 'Image upload failed');
+              const image = apiImageFromPayload(imgData);
+              if (apiPostSaved(imgData) && image?.url) mediaUrl = image.url;
             } catch (_) { /* continue without image */ }
           } else {
             mediaUrl = post.image;
@@ -1468,8 +1500,8 @@ export default function CreateContent() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body,
         });
-        const data = await res.json();
-        if (res.ok && data.success) {
+        const data = await readApiJson(res, 'Scheduling post failed');
+        if (apiPostSaved(data)) {
           ok++;
         } else {
           lastError = data.error || `HTTP ${res.status}`;
@@ -1512,7 +1544,7 @@ export default function CreateContent() {
   const viewApproved    = viewPosts.filter(p => p.approved).length;
   const selPlatforms    = getSelectedPlatforms();
   const totalPostCount  = postsPerPlatformCount;
-  const isError         = notice.toLowerCase().includes('fail') || notice.toLowerCase().includes('error') || notice.toLowerCase().includes('openai');
+  const isError         = notice.toLowerCase().includes('fail') || notice.toLowerCase().includes('error') || notice.toLowerCase().includes('openai') || notice.toLowerCase().includes('unexpected') || notice.toLowerCase().includes('invalid json') || notice.toLowerCase().includes('sign in');
   const isDraftSaved    = notice.toLowerCase().includes('saved') && notice.toLowerCase().includes('draft');
   const activeWeeks     = Array.from({ length: campaignWeeks }, (_, i) => i);
   const previewPost = previewTarget
@@ -1989,12 +2021,14 @@ export default function CreateContent() {
                 if (!window.confirm('This will permanently delete all AI-generated images from your library. Continue?')) return;
                 setAiPurging(true);
                 try {
-                  const r = await fetch('/api/social/purge-ai-images', { method: 'POST' });
-                  const json = await r.json();
-                  if (json.ok) alert(`Cleared ${json.deleted} AI image${json.deleted !== 1 ? 's' : ''} from your library.`);
+                  const { token } = await getSessionData();
+                  if (!token) throw new Error('Sign in to clear AI image cache.');
+                  const r = await fetch('/api/social/purge-ai-images', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                  const json = await readApiJson(r, 'Clear AI image cache failed');
+                  if (apiPostSaved(json)) alert(`Cleared ${json.deleted || json.data?.deleted || 0} AI image${(json.deleted || json.data?.deleted || 0) !== 1 ? 's' : ''} from your library.`);
                   else alert(json.error || 'Failed to clear images.');
                 } catch (e) {
-                  alert('Failed to clear images.');
+                  alert(e.message || 'Failed to clear images.');
                 } finally {
                   setAiPurging(false);
                 }

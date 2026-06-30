@@ -587,14 +587,14 @@ export const config = { maxDuration: 60 };
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, ok: false, error: 'Method not allowed' });
   }
 
   try {
     const { descriptions, style = 'modern', creativeType = 'realistic', textMode = 'headline-supporting', count = 1, imageDirection = '', topic = '', audience = '', brand = '' } = req.body;
 
     if (!descriptions || descriptions.length === 0) {
-      return res.status(400).json({ error: 'Image descriptions are required' });
+      return res.status(400).json({ success: false, ok: false, error: 'Image descriptions are required' });
     }
 
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -607,7 +607,9 @@ async function handler(req, res) {
     if (!openaiKey) {
       const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount), textMode, topic, brand));
       return res.status(200).json({
+        success: true,
         ok: true,
+        data: { images: fallbackImages, generated: fallbackImages.length, requested: batchSize },
         images: fallbackImages,
         generated: fallbackImages.length,
         requested: batchSize,
@@ -667,7 +669,9 @@ async function handler(req, res) {
     if (!images.length) {
       const fallbackImages = await persistReturnedImages(req, await applyPromotionalOverlays(await buildRealFallbackImages(req, descriptions, safeCount), textMode, topic, brand));
       return res.status(200).json({
+        success: true,
         ok: true,
+        data: { images: fallbackImages, generated: fallbackImages.length, requested: batchSize },
         images: fallbackImages,
         generated: fallbackImages.length,
         requested: batchSize,
@@ -692,7 +696,9 @@ async function handler(req, res) {
     const persistedImages = await persistReturnedImages(req, await applyPromotionalOverlays(uniqueImages, textMode, topic, brand));
 
     return res.status(200).json({ 
+      success: true,
       ok: true, 
+      data: { images: persistedImages, generated: persistedImages.length, requested: batchSize },
       images: persistedImages,
       generated: persistedImages.length,
       requested: batchSize,
@@ -704,8 +710,8 @@ async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('API error:', err);
-    return res.status(500).json({ error: err.message || 'Internal server error' });
+    console.error('Social AI image generation error:', err);
+    return res.status(500).json({ success: false, ok: false, error: err.message || 'Internal server error' });
   }
 }
 
