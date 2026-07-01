@@ -13,7 +13,7 @@ import {
 } from "../../../lib/website-builder/mediaAssets";
 import { applyChaiThemePreset, buildStarterChaiData, renderChaiHtml } from "../../../lib/website-builder/chaiStudio";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
+import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, collectVideoHeroMedia, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
 import {
   cacheWebsiteProject,
   createWebsiteProject,
@@ -29,6 +29,57 @@ import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../..
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
+const WEBSITE_BUILDER_MAX_VIDEO_BYTES = 250 * 1024 * 1024;
+
+function waitForPublicVideoUrlToLoad(src, timeoutMs = 15000) {
+  if (typeof document === "undefined") return Promise.resolve();
+  const url = String(src || "").trim();
+  if (!url || /^blob:/i.test(url)) {
+    return Promise.reject(new Error("Video upload did not return a permanent public URL."));
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    return Promise.reject(new Error("Video upload returned a non-public URL. Please try again."));
+  }
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    let settled = false;
+
+    const cleanup = () => {
+      video.oncanplay = null;
+      video.onloadedmetadata = null;
+      video.onerror = null;
+      video.removeAttribute("src");
+      try {
+        video.load();
+      } catch {}
+    };
+
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cleanup();
+      if (error) reject(error);
+      else resolve();
+    };
+
+    const timer = setTimeout(() => {
+      finish(new Error("Video uploaded, but the public video URL did not load in time. Please try again or check storage access."));
+    }, timeoutMs);
+
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    video.onloadedmetadata = () => finish();
+    video.oncanplay = () => finish();
+    video.onerror = () => {
+      finish(new Error("Video uploaded, but the public video URL could not be loaded. Please check the file format or storage permissions."));
+    };
+    video.src = url;
+    video.load();
+  });
+}
 
 function stripHtmlForSaveDebug(value = "") {
   return String(value || "")
@@ -1214,6 +1265,19 @@ export default function VisualBuilderPage() {
     setPublishBusy(true);
 
     try {
+      let projectForPublish = getWebsiteProject(project.id) || project;
+      const savedBeforePublish = await Promise.resolve(previewActionsRef.current?.saveCurrent?.({ saveSource: "publish-preflight" }));
+      if (savedBeforePublish?._saveError) {
+        throw new Error(savedBeforePublish._saveErrorMessage || "Could not save the latest page before publishing.");
+      }
+      projectForPublish = savedBeforePublish || getWebsiteProject(project.id) || projectForPublish;
+      const videoHeroMedia = collectVideoHeroMedia(projectForPublish?.pageBlocks || {});
+      console.log("[website-builder publish] Video Hero media being published", {
+        projectId: projectForPublish?.id || project.id,
+        activePage: activeProjectPageName,
+        videoHeroMedia,
+      });
+
       const response = await fetch("/api/websites/publish", {
         method: "POST",
         headers: {
@@ -1224,7 +1288,7 @@ export default function VisualBuilderPage() {
           slug: normalizedSlug,
           customDomain: normalizeDomain(customDomain),
           project: {
-            ...project,
+            ...projectForPublish,
             brandAssets,
             name: displayName,
             publication: undefined,
@@ -1958,26 +2022,61 @@ export default function VisualBuilderPage() {
     if (!file) return;
 
     try {
-      // Video files must go through the server-side API to bypass Supabase
-      // bucket MIME-type restrictions that block client-side video uploads.
+      // Video bytes go straight to Supabase Storage from the browser; the API
+      // only issues a signed upload URL so Vercel never receives the MP4 body.
       const videoFieldKeys = ["backgroundVideoUrl", "__video_hero_src__"];
       const isVideo = file.type?.startsWith("video/") || videoFieldKeys.includes(String(fieldKey || ""));
       if (isVideo) {
+        if (Number(file.size || 0) > WEBSITE_BUILDER_MAX_VIDEO_BYTES) {
+          throw new Error("That video is too large. Please upload a video up to 250 MB.");
+        }
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token || "";
         if (!token) throw new Error("You must be signed in to upload videos.");
-        const res = await fetch("/api/website-builder/upload-video", {
+        const signedRes = await fetch("/api/website-builder/upload-video", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": file.type || "video/mp4",
-            "X-File-Name": encodeURIComponent(file.name || "upload.mp4"),
-            "X-File-Type": file.type || "video/mp4",
+            "Content-Type": "application/json",
           },
-          body: file,
+          body: JSON.stringify({
+            action: "create-signed-upload",
+            name: file.name || "upload.mp4",
+            type: file.type || "video/mp4",
+            size: file.size || 0,
+          }),
         });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || !json?.src) throw new Error(json?.error || `Video upload failed (HTTP ${res.status})`);
+        const json = await signedRes.json().catch(() => ({}));
+        if (signedRes.status === 413) {
+          throw new Error(json?.error || "That video is too large. Please upload a video up to 250 MB.");
+        }
+        if (!signedRes.ok || !json?.token || !json?.storagePath || !json?.src) {
+          throw new Error(json?.error || `Video upload could not start (HTTP ${signedRes.status})`);
+        }
+
+        const { error: uploadError } = await supabase.storage
+          .from("assets")
+          .uploadToSignedUrl(json.storagePath, json.token, file, {
+            contentType: file.type || "video/mp4",
+          });
+        if (uploadError) throw new Error(uploadError.message || "Video upload failed. Please try again.");
+
+        await waitForPublicVideoUrlToLoad(json.src);
+
+        fetch("/api/website-builder/upload-video", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "complete-signed-upload",
+            storagePath: json.storagePath,
+            name: file.name || "upload.mp4",
+            type: file.type || "video/mp4",
+          }),
+        }).catch(() => {});
+
         const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src };
         const existingVideos = Array.isArray(brandAssets?.videos) ? brandAssets.videos : [];
         const dedupedVideos = existingVideos.filter((video) => video?.src && video.src !== asset.src && video.name !== asset.name);

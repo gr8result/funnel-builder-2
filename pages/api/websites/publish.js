@@ -5,6 +5,7 @@ import {
   buildHostedWebsiteUrl,
   buildWebsitePath,
   buildWebsiteUrl,
+  collectVideoHeroMedia,
   createPublicationPayload,
   getCustomDomainTargetHost,
   getPublishHost,
@@ -61,6 +62,14 @@ async function handler(req, res) {
   }
 
   const publication = createPublicationPayload(project);
+  const videoHeroMediaBeforePublish = collectVideoHeroMedia(project?.pageBlocks || {});
+  const videoHeroMediaForPublish = collectVideoHeroMedia(publication.site_data?.pageBlocks || {});
+  console.log("[website-publish] Video Hero media", {
+    projectId: project?.id || "",
+    slug: publication.slug,
+    before: videoHeroMediaBeforePublish,
+    published: videoHeroMediaForPublish,
+  });
   const requestedCustomDomain = normalizeDomain(req.body?.customDomain);
   const useCustomDomain = !!requestedCustomDomain;
   const requestedSlug = slugifyWebsiteValue(req.body?.slug || publication.slug);

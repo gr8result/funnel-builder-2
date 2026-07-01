@@ -3,6 +3,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { createPage, LEVEL_OPTIONS } from "./takeoffTypes";
+import { runOrientationCandidateScoring } from "./aiDetectionService";
 
 const PDFJS_VERSION = "3.11.174";
 const PDFJS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
@@ -16,6 +17,7 @@ const PLAN_TYPES = [
   { value: "plumbing", label: "Plumbing plan" },
   { value: "other", label: "Other" },
 ];
+const ORIENTATION_CONFIDENCE_THRESHOLD = 0.45;
 
 let pdfJsPromise = null;
 
@@ -241,6 +243,148 @@ async function rotatePage(page, rotationDegrees, source = "manual") {
   };
 }
 
+function getPdfTextRotationAfterAppliedRotation(pdfTextRotationDegrees, appliedRotationDegrees = 0) {
+  const confidence = Number(pdfTextRotationDegrees?.confidence || 0);
+  if (!pdfTextRotationDegrees || confidence < ORIENTATION_CONFIDENCE_THRESHOLD) return 0;
+  return normalizeRotationDegrees((pdfTextRotationDegrees.rotationDegrees || 0) - normalizeRotationDegrees(appliedRotationDegrees));
+}
+
+async function createOrientationCandidates(page, rotations = [0, 90, 180, 270]) {
+  const sourceDataUrl = page?.imageDataUrl || page?.normalisedImageData || page?.normalisedImageUrl || "";
+  const sourceWidth = Number(page?.naturalWidth || page?.originalWidth || 0);
+  const sourceHeight = Number(page?.naturalHeight || page?.originalHeight || 0);
+  const uniqueRotations = rotations
+    .map((rotation) => normalizeRotationDegrees(rotation))
+    .filter((rotation, index, values) => values.indexOf(rotation) === index);
+
+  return Promise.all(uniqueRotations.map(async (rotationDegrees) => {
+    const rotated = await rotateImageDataUrl(sourceDataUrl, sourceWidth, sourceHeight, rotationDegrees);
+    const thumbnailDataUrl = await createImageThumbnailDataUrl(rotated.dataUrl, rotated.width, rotated.height);
+    return {
+      rotationDegrees,
+      imageDataUrl: rotated.dataUrl,
+      thumbnailDataUrl,
+      imageWidth: rotated.width,
+      imageHeight: rotated.height,
+    };
+  }));
+}
+
+function chooseBestOrientationScore(scores = []) {
+  const safeScores = Array.isArray(scores) ? scores : [];
+  return safeScores.slice().sort((a, b) => {
+    const confidenceDiff = Number(b?.confidence || 0) - Number(a?.confidence || 0);
+    if (confidenceDiff) return confidenceDiff;
+    return Number(b?.score || 0) - Number(a?.score || 0);
+  })[0] || null;
+}
+
+function logOrientationScoreTable(fileName, scores = []) {
+  if (typeof console === "undefined" || !Array.isArray(scores) || !scores.length) return;
+  console.info("[EstimateBuilder] Orientation scores", fileName, scores.map((score) => ({
+    rotationDegrees: normalizeRotationDegrees(score?.rotationDegrees),
+    confidence: Number(score?.confidence || 0),
+    score: Number(score?.score || 0),
+    wordCount: Number(score?.wordCount || 0),
+    horizontalWordCount: Number(score?.horizontalWordCount || 0),
+  })));
+}
+
+async function rotateNormalisedPageByDelta(page, rotationDegrees, detectedRotationDegrees, source = "redetect") {
+  const degrees = normalizeRotationDegrees(rotationDegrees);
+  if (!degrees) {
+    return {
+      ...page,
+      detectedRotationDegrees: normalizeRotationDegrees(detectedRotationDegrees ?? page.detectedRotationDegrees ?? 0),
+    };
+  }
+  const rotated = await rotateImageDataUrl(page.imageDataUrl, page.naturalWidth, page.naturalHeight, degrees);
+  const pdfPageRotationDegrees = normalizeRotationDegrees(page.pdfPageRotationDegrees || page.pdfPageRotation || page.pdfRotationDegrees || 0);
+  const nextDetectedRotationDegrees = normalizeRotationDegrees(detectedRotationDegrees ?? (page.detectedRotationDegrees || 0) + degrees);
+  const manualRotationDegrees = normalizeRotationDegrees(page.manualRotationDegrees || page.userRotationDegrees || 0);
+  return {
+    ...page,
+    imageDataUrl: rotated.dataUrl,
+    normalisedImageData: rotated.dataUrl,
+    normalisedImageUrl: rotated.dataUrl,
+    naturalWidth: rotated.width,
+    naturalHeight: rotated.height,
+    detectedRotationDegrees: nextDetectedRotationDegrees,
+    finalRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + nextDetectedRotationDegrees + manualRotationDegrees),
+    planRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + nextDetectedRotationDegrees + manualRotationDegrees),
+    orientationCorrection: {
+      ...(page.orientationCorrection || {}),
+      detectedRotationDegrees: nextDetectedRotationDegrees,
+      source,
+      correctedAt: new Date().toISOString(),
+    },
+  };
+}
+
+function rotateDetectedPageByDelta(page, rotationDegrees, source = "redetect") {
+  const detectedRotationDegrees = normalizeRotationDegrees((page.detectedRotationDegrees || 0) + normalizeRotationDegrees(rotationDegrees));
+  return rotateNormalisedPageByDelta(page, rotationDegrees, detectedRotationDegrees, source);
+}
+
+async function normalisePageToLandscape(page) {
+  let width = Number(page.naturalWidth) || 0;
+  let height = Number(page.naturalHeight) || 0;
+  const pdfPageRotationDegrees = normalizeRotationDegrees(page.pdfPageRotationDegrees || page.pdfPageRotation || page.pdfRotationDegrees || 0);
+  const manualRotationDegrees = normalizeRotationDegrees(page.manualRotationDegrees || page.userRotationDegrees || 0);
+  let imageDataUrl = page.imageDataUrl;
+  let forcedLandscapeRotation = 0;
+
+  if (width && height && height > width) {
+    forcedLandscapeRotation = 90;
+    const rotatedImage = await rotateImageDataUrl(imageDataUrl, width, height, forcedLandscapeRotation);
+    imageDataUrl = rotatedImage.dataUrl;
+    width = rotatedImage.width;
+    height = rotatedImage.height;
+  }
+
+  const textDetectedRotation = getPdfTextRotationAfterAppliedRotation(page.pdfTextRotationDegrees, forcedLandscapeRotation);
+  if (textDetectedRotation) {
+    const textRotatedImage = await rotateImageDataUrl(imageDataUrl, width, height, textDetectedRotation);
+    imageDataUrl = textRotatedImage.dataUrl;
+    width = textRotatedImage.width;
+    height = textRotatedImage.height;
+  }
+
+  const detectedRotationDegrees = normalizeRotationDegrees(forcedLandscapeRotation + textDetectedRotation);
+  const textConfidence = Number(page.pdfTextRotationDegrees?.confidence || 0);
+  const orientationSource = textDetectedRotation ? "pdf-text-layer" : forcedLandscapeRotation ? "landscape-normalise" : "manual-ready";
+  return {
+    ...page,
+    imageDataUrl,
+    normalisedImageData: imageDataUrl,
+    normalisedImageUrl: imageDataUrl,
+    naturalWidth: width,
+    naturalHeight: height,
+    forcedLandscapeRotation,
+    textDetectedRotation,
+    landscapeLocked: true,
+    detectedRotationDegrees,
+    finalRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + detectedRotationDegrees + manualRotationDegrees),
+    planRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + detectedRotationDegrees + manualRotationDegrees),
+    orientationAccepted: true,
+    orientationNeedsReview: false,
+    orientationCorrection: {
+      ...(page.orientationCorrection || {}),
+      forcedLandscapeRotation,
+      textDetectedRotation,
+      detectedRotationDegrees,
+      confidence: textConfidence || 1,
+      reason: textDetectedRotation
+        ? "PDF text layer rotation was applied after landscape normalisation."
+        : forcedLandscapeRotation
+          ? "Portrait render was rotated into landscape."
+          : "Uploaded in landscape. Rotate manually if needed.",
+      source: orientationSource,
+      correctedAt: new Date().toISOString(),
+    },
+  };
+}
+
 function createPlanRecord(file, firstPage, index, jobId = "") {
   const id = `plan-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
   const inferred = inferPlanMeta(file.name, index);
@@ -366,22 +510,7 @@ export default function PDFUploadPanel({
             pg.finalRotationDegrees = rendered.pdfPageRotation || 0;
             pg.planRotationDegrees = rendered.pdfPageRotation || 0;
             setProgress(`Preparing landscape orientation for ${file.name} page ${pageNum}...`);
-            const landscapePage = await forcePlanToLandscape(pg, {
-              fileName: file.name,
-              pageNumber: pageNum,
-            });
-            if (landscapePage.orientationNeedsReview) {
-              createdPages.push(landscapePage);
-              continue;
-            }
-            setProgress(`Detecting text orientation for ${file.name} page ${pageNum}...`);
-            const orientedPage = await autoOrientPage(landscapePage, {
-              fileName: file.name,
-              pageNumber: pageNum,
-              pdfMetadataRotationDegrees: rendered.pdfPageRotation || 0,
-              pdfTextRotationDegrees: rendered.pdfTextRotationDegrees || null,
-            });
-            createdPages.push(orientedPage);
+            createdPages.push(await normalisePageToLandscape(pg));
           }
         } else {
           const rendered = await renderImageToDataUrl(file);
@@ -401,13 +530,7 @@ export default function PDFUploadPanel({
           pg.finalRotationDegrees = 0;
           pg.planRotationDegrees = 0;
           setProgress(`Preparing landscape orientation for ${file.name}...`);
-          const landscapePage = await forcePlanToLandscape(pg, { fileName: file.name, pageNumber: 1 });
-          if (landscapePage.orientationNeedsReview) {
-            createdPages.push(landscapePage);
-          } else {
-            setProgress(`Detecting text orientation for ${file.name}...`);
-            createdPages.push(await autoOrientPage(landscapePage, { fileName: file.name, pageNumber: 1 }));
-          }
+          createdPages.push(await normalisePageToLandscape(pg));
         }
 
         if (!createdPages.length) continue;
@@ -832,10 +955,6 @@ export default function PDFUploadPanel({
               onDelete={() => deletePlan(plan.id)}
               onRotateLeft={() => rotatePlan(plan.id, 270)}
               onRotateRight={() => rotatePlan(plan.id, 90)}
-              onResetRotation={() => resetPlanRotation(plan.id)}
-              onRedetectOrientation={() => redetectPlanOrientation(plan.id)}
-              onAcceptOrientation={() => acceptPlanOrientation(plan.id)}
-              onChooseOrientation={(rotationDegrees) => choosePlanOrientation(plan.id, rotationDegrees)}
               onPageSelect={onSelectPage}
               onPageLevelChange={updatePageLevel}
             />
@@ -848,8 +967,8 @@ export default function PDFUploadPanel({
   );
 }
 
-function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onDelete, onRotateLeft, onRotateRight, onResetRotation, onRedetectOrientation, onAcceptOrientation, onChooseOrientation, onPageSelect, onPageLevelChange }) {
-  const needsOrientationChoice = plan.orientationNeedsReview || (!plan.orientationAccepted && Number(plan.orientationConfidence || 0) <= 0);
+function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onDelete, onRotateLeft, onRotateRight, onPageSelect, onPageLevelChange }) {
+  const scaleSet = Boolean(plan.scale?.accepted || plan.scale?.pixelsPerMetre || plan.scale?.preset);
   return (
     <div style={S.planCard}>
       <div style={S.planHeader}>
@@ -865,26 +984,9 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
       </div>
       <div style={S.planMeta}>
         Uploaded {formatDate(plan.uploadedAt)}
-        <span style={S.rotationBadge}>Auto detected rotation: {normalizeRotationDegrees(plan.detectedRotationDegrees || 0)} deg</span>
-        <span style={S.rotationBadge}>Landscape: {normalizeRotationDegrees(plan.forcedLandscapeRotation || 0)} deg</span>
-        <span style={S.rotationBadge}>Text: {normalizeRotationDegrees(plan.textDetectedRotation || 0)} deg</span>
-        <span style={S.rotationBadge}>Manual correction: {normalizeRotationDegrees(plan.manualRotationDegrees || plan.userRotationDegrees || 0)} deg</span>
-        <span style={S.rotationBadge}>Applied rotation: {normalizeRotationDegrees(plan.finalRotationDegrees || plan.planRotationDegrees || 0)} deg</span>
-        <span style={S.rotationBadge}>Orientation confidence: {Math.round(Number(plan.orientationConfidence || 0) * 100)}%</span>
-        <span style={S.rotationBadge}>Scale: {plan.scale?.preset || plan.detectedScale?.preset || "not set"}</span>
-        <span style={S.rotationSubtle}>PDF {normalizeRotationDegrees(plan.pdfPageRotationDegrees || plan.pdfPageRotation || plan.pdfRotationDegrees || 0)}</span>
-        {plan.orientationAccepted && <span style={S.acceptedBadge}>Accepted</span>}
-        {plan.scale?.accepted && <span style={S.acceptedBadge}>Scale confirmed</span>}
-        {needsOrientationChoice && <span style={S.reviewBadge}>Needs orientation choice</span>}
-        {!plan.scale?.accepted && <span style={S.reviewBadge}>Needs scale</span>}
+        <span style={S.scaleMeta}>Scale: {scaleSet ? "set" : "not set"}</span>
+        {!scaleSet && <span style={S.reviewBadge}>Needs scale</span>}
       </div>
-      {needsOrientationChoice && (
-        <OrientationChoicePanel
-          candidates={plan.orientationCandidates || []}
-          selectedRotation={normalizeRotationDegrees(plan.detectedRotationDegrees || 0)}
-          onChoose={onChooseOrientation}
-        />
-      )}
       <label style={S.fieldLabel}>
         Plan type
         <select style={S.select} value={plan.planType || "floor-plan"} onChange={(event) => onUpdate({ planType: event.target.value })}>
@@ -899,12 +1001,8 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
         <button type="button" style={S.previewButton} onClick={onPreview}>Preview</button>
         <button type="button" style={S.rotateButton} onClick={onRotateLeft}>Rotate left</button>
         <button type="button" style={S.rotateButton} onClick={onRotateRight}>Rotate right</button>
-        <button type="button" style={S.rotateButton} onClick={onRedetectOrientation}>Re-detect Orientation</button>
-        <button type="button" style={needsOrientationChoice ? S.disabledButton : S.rotateButton} onClick={onAcceptOrientation} disabled={needsOrientationChoice}>Accept Orientation</button>
-        <button type="button" style={S.rotateButton} onClick={onResetRotation}>Reset rotation</button>
         <button type="button" style={S.deleteButton} onClick={onDelete}>Delete</button>
       </div>
-      <OrientationDebugTable scores={plan.orientationDebugScores || []} />
       {pages.length > 1 && (
         <div style={S.pageStrip}>
           {pages.map((page) => (
@@ -918,67 +1016,6 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function OrientationChoicePanel({ candidates = [], selectedRotation = 0, onChoose }) {
-  const rotations = candidates.length
-    ? candidates.map((candidate) => normalizeRotationDegrees(candidate.rotationDegrees)).filter((value, index, values) => values.indexOf(value) === index)
-    : [0, 90, 180, 270];
-  return (
-    <div style={S.orientationChoice}>
-      <div style={S.orientationChoiceMessage}>We could not confidently detect orientation. Please choose the upright version.</div>
-      <div style={S.orientationChoiceGrid}>
-        {rotations.map((rotationDegrees) => {
-          const candidate = candidates.find((item) => normalizeRotationDegrees(item.rotationDegrees) === rotationDegrees);
-          return (
-            <button
-              key={rotationDegrees}
-              type="button"
-              style={{
-                ...S.orientationChoiceButton,
-                ...(normalizeRotationDegrees(selectedRotation) === rotationDegrees ? S.orientationChoiceButtonActive : {}),
-              }}
-              onClick={() => onChoose(rotationDegrees)}
-            >
-              {candidate?.thumbnailDataUrl ? (
-                <img src={candidate.thumbnailDataUrl} alt={`${rotationDegrees} degree plan preview`} style={S.orientationChoiceImage} />
-              ) : (
-                <span style={S.orientationChoiceMissing}>Preview unavailable</span>
-              )}
-              <span style={S.orientationChoiceLabel}>{rotationDegrees} deg</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function OrientationDebugTable({ scores = [] }) {
-  if (!scores.length) return null;
-  return (
-    <div style={S.orientationDebug}>
-      <div style={S.orientationDebugTitle}>Orientation Debug</div>
-      <div style={S.orientationDebugGrid}>
-        <span>rotation</span>
-        <span>wordCount</span>
-        <span>confidence</span>
-        <span>keywordHits</span>
-        <span>textAnglePenalty</span>
-        <span>score</span>
-        {scores.map((score) => (
-          <Fragment key={score.rotationDegrees}>
-            <strong>{normalizeRotationDegrees(score.rotationDegrees)}</strong>
-            <span>{Number(score.wordCount || 0)}</span>
-            <span>{Number(score.confidence || 0).toFixed(2)}</span>
-            <span>{Number(score.keywordHits || 0)}</span>
-            <span>{Number(score.textAnglePenalty || 0)}</span>
-            <strong>{Number(score.score || 0).toFixed(1)}</strong>
-          </Fragment>
-        ))}
-      </div>
     </div>
   );
 }
@@ -1051,28 +1088,14 @@ const S = {
   planHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, color: "#0f172a", fontSize: 13, lineHeight: 1.3 },
   includeToggle: { display: "inline-flex", alignItems: "center", gap: 4, color: "#0f766e", fontSize: 12, fontWeight: 900, cursor: "pointer" },
   planMeta: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, color: "#64748b", fontSize: 11 },
-  rotationBadge: { display: "inline-flex", alignItems: "center", border: "1px solid #cbd5e1", borderRadius: 999, padding: "2px 7px", background: "#f8fafc", color: "#334155", fontWeight: 800 },
-  rotationSubtle: { color: "#64748b", fontWeight: 700 },
-  acceptedBadge: { display: "inline-flex", alignItems: "center", border: "1px solid #86efac", borderRadius: 999, padding: "2px 7px", background: "#ecfdf5", color: "#15803d", fontWeight: 900 },
+  scaleMeta: { color: "#334155", fontWeight: 800 },
   reviewBadge: { display: "inline-flex", alignItems: "center", border: "1px solid #fbbf24", borderRadius: 999, padding: "2px 7px", background: "#fffbeb", color: "#92400e", fontWeight: 900 },
-  orientationChoice: { border: "1.5px solid #f59e0b", borderRadius: 9, background: "#fffbeb", padding: 10, display: "grid", gap: 9 },
-  orientationChoiceMessage: { color: "#92400e", fontSize: 12, fontWeight: 900, lineHeight: 1.35 },
-  orientationChoiceGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 },
-  orientationChoiceButton: { border: "1.5px solid #fcd34d", borderRadius: 8, background: "#ffffff", padding: 6, display: "grid", gap: 5, cursor: "pointer", textAlign: "center", color: "#78350f", fontWeight: 900 },
-  orientationChoiceButtonActive: { borderColor: "#0f766e", boxShadow: "0 0 0 2px rgba(15, 118, 110, 0.18)" },
-  orientationChoiceImage: { width: "100%", height: 96, objectFit: "contain", background: "#f8fafc", borderRadius: 5, border: "1px solid #e2e8f0" },
-  orientationChoiceMissing: { minHeight: 96, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: 5, border: "1px solid #e2e8f0", color: "#64748b", fontSize: 11 },
-  orientationChoiceLabel: { fontSize: 12 },
-  orientationDebug: { border: "1px solid #dbe4ef", borderRadius: 8, background: "#f8fafc", padding: 8, display: "grid", gap: 6 },
-  orientationDebugTitle: { fontSize: 11, color: "#334155", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em" },
-  orientationDebugGrid: { display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 4, fontSize: 10, color: "#334155", alignItems: "center" },
   fieldLabel: { display: "grid", gap: 4, color: "#475569", fontSize: 11, fontWeight: 800 },
   select: { width: "100%", border: "1.5px solid #cbd5e1", borderRadius: 6, background: "#f8fafc", color: "#0f172a", padding: "7px 8px", fontSize: 12 },
   input: { width: "100%", boxSizing: "border-box", border: "1.5px solid #cbd5e1", borderRadius: 6, background: "#ffffff", color: "#0f172a", padding: "7px 8px", fontSize: 12 },
   planActions: { display: "flex", flexWrap: "wrap", gap: 6 },
   previewButton: { flex: 1, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   rotateButton: { border: "1px solid #cbd5e1", background: "#f8fafc", color: "#334155", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
-  disabledButton: { border: "1px solid #cbd5e1", background: "#e2e8f0", color: "#94a3b8", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "not-allowed" },
   deleteButton: { border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   pageStrip: { display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid #e2e8f0" },
   thumb: { display: "flex", gap: 8, alignItems: "flex-start", padding: 8, borderRadius: 8, border: "1.5px solid #e2e8f0", background: "#ffffff", cursor: "pointer" },

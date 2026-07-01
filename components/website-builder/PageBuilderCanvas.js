@@ -1779,9 +1779,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   useEffect(() => {
     if (typeof onRegisterPreviewActions !== "function") return undefined;
-    onRegisterPreviewActions({ previewPage: handlePreviewPage, previewSite: handlePreviewSite });
+    const saveCurrent = async (options = {}) => {
+      const committedBlocks = await commitPendingInlineEdits();
+      return Promise.resolve((onForceSave || onSave)?.(committedBlocks, options));
+    };
+    onRegisterPreviewActions({ previewPage: handlePreviewPage, previewSite: handlePreviewSite, saveCurrent });
     return () => onRegisterPreviewActions(null);
-  }, [onRegisterPreviewActions, handlePreviewPage, handlePreviewSite]);
+  }, [onRegisterPreviewActions, handlePreviewPage, handlePreviewSite, onForceSave, onSave]);
 
   const restoreSavedSelection = () => {
     if (typeof window === "undefined") return;

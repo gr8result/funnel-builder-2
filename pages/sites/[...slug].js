@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
-import { buildWebsitePath } from "../../lib/website-builder/publishConfig";
+import { buildWebsitePath, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -347,14 +347,21 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
   // No page-level POST needed here.
 
   const project = publication?.site_data || {};
+  const normalizedPageBlocks = normalizeVideoHeroBlocks(project?.pageBlocks || {});
+  const normalizedGlobalNavBlock = project?.globalNavBlock?.type === "video-hero"
+    ? normalizeVideoHeroBlocks([project.globalNavBlock])[0]
+    : project?.globalNavBlock;
+  const normalizedGlobalFooterBlock = project?.globalFooterBlock?.type === "video-hero"
+    ? normalizeVideoHeroBlocks([project.globalFooterBlock])[0]
+    : project?.globalFooterBlock;
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
   const activePage = pages.find((page) => resolvePublishedPageName(page) === slugifyPage(requested)) || pages[0] || null;
-  const pageBlocks = activePage?.name ? (project?.pageBlocks || {})[activePage.name] || [] : [];
+  const pageBlocks = activePage?.name ? (normalizedPageBlocks || {})[activePage.name] || [] : [];
   const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";
-  const globalNavBlock = project?.globalNavBlock?.type === "nav-bar" ? project.globalNavBlock : null;
-  const globalFooterBlock = project?.globalFooterBlock?.type === "footer" ? project.globalFooterBlock : null;
+  const globalNavBlock = normalizedGlobalNavBlock?.type === "nav-bar" ? normalizedGlobalNavBlock : null;
+  const globalFooterBlock = normalizedGlobalFooterBlock?.type === "footer" ? normalizedGlobalFooterBlock : null;
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const injectFooter = !!globalFooterBlock;
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;

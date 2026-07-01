@@ -117,13 +117,13 @@
         "eyebrow": "",
         "showText": true,
         "subtitle": "",
-        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782866740839-opening-block-video1.mp4",
-        "marginTop": 0,
-        "minHeight": 620,
-        "objectFit": "contain",
+        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782946451657-opening-block-video3.mp4",
+        "marginTop": 130,
+        "minHeight": 1650,
+        "objectFit": "cover",
         "posterSrc": "",
         "textColor": "#ffffff",
-        "heightMode": "full",
+        "heightMode": "fixed",
         "accentColor": "#6366f1",
         "overlayColor": "#000000",
         "paddingBottom": 0,
@@ -1575,30 +1575,29 @@
       }
     },
     {
-      "id": 1782866795293,
+      "id": 1779214456909,
       "type": "text",
       "props": {
-        "text": "Integrate your favourite platforms...",
-        "alignment": "center",
+        "text": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 32px;\">Integrate all of your Social Media Accounts in one Place.&nbsp;</span></span><div><span style=\"font-size: 32px;\">Generate Content and Post to them all Directly from the platform.</span></div>",
         "textSize": "medium",
-        "textFontSize": 48,
-        "fontFamily": "Nunito",
+        "alignment": "center",
+        "minHeight": "222px",
+        "textColor": "#e6eef5",
+        "fontFamily": "system-ui",
         "fontWeight": "400",
-        "minHeight": "120px",
-        "fullWidthBackground": false,
-        "enableParallax": false,
-        "textColor": "#f59e0b",
-        "backgroundColor": "#121c26",
-        "backgroundImage": "",
-        "paddingTop": 0,
-        "paddingBottom": 0,
-        "textLineHeight": 1.35,
-        "verticalAlign": "top",
-        "contentY": 32,
-        "contentHeight": 120,
+        "lineHeight": 1.8,
+        "paddingTop": 48,
+        "textFontSize": 32,
+        "paddingBottom": 48,
         "textAnimation": "fade-in",
+        "enableParallax": false,
+        "textLineHeight": 1.8,
+        "backgroundColor": "#121c26",
+        "backgroundImage": "__WB_PRESERVE_DATA_URL__",
+        "backgroundStyle": "image",
         "baseLayoutWidth": 1500,
-        "hideBorder": true
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "builtin-deco-gradient-orb"
       }
     },
     {
@@ -1629,6 +1628,10 @@
           {
             "text": "YouTube",
             "iconKey": "youtube-file"
+          },
+          {
+            "text": "X",
+            "iconKey": "si-x"
           },
           {
             "text": "WhatsApp",
@@ -1898,13 +1901,13 @@
           "eyebrow": "",
           "showText": true,
           "subtitle": "",
-          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782866740839-opening-block-video1.mp4",
-          "marginTop": 0,
-          "minHeight": 620,
-          "objectFit": "contain",
+          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782946451657-opening-block-video3.mp4",
+          "marginTop": 130,
+          "minHeight": 1650,
+          "objectFit": "cover",
           "posterSrc": "",
           "textColor": "#ffffff",
-          "heightMode": "full",
+          "heightMode": "fixed",
           "accentColor": "#6366f1",
           "overlayColor": "#000000",
           "paddingBottom": 0,
@@ -3356,30 +3359,29 @@
         }
       },
       {
-        "id": 1782866795293,
+        "id": 1779214456909,
         "type": "text",
         "props": {
-          "text": "Integrate your favourite platforms...",
-          "alignment": "center",
+          "text": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 32px;\">Integrate all of your Social Media Accounts in one Place.&nbsp;</span></span><div><span style=\"font-size: 32px;\">Generate Content and Post to them all Directly from the platform.</span></div>",
           "textSize": "medium",
-          "textFontSize": 48,
-          "fontFamily": "Nunito",
+          "alignment": "center",
+          "minHeight": "222px",
+          "textColor": "#e6eef5",
+          "fontFamily": "system-ui",
           "fontWeight": "400",
-          "minHeight": "120px",
-          "fullWidthBackground": false,
-          "enableParallax": false,
-          "textColor": "#f59e0b",
-          "backgroundColor": "#121c26",
-          "backgroundImage": "",
-          "paddingTop": 0,
-          "paddingBottom": 0,
-          "textLineHeight": 1.35,
-          "verticalAlign": "top",
-          "contentY": 32,
-          "contentHeight": 120,
+          "lineHeight": 1.8,
+          "paddingTop": 48,
+          "textFontSize": 32,
+          "paddingBottom": 48,
           "textAnimation": "fade-in",
+          "enableParallax": false,
+          "textLineHeight": 1.8,
+          "backgroundColor": "#121c26",
+          "backgroundImage": "__WB_PRESERVE_DATA_URL__",
+          "backgroundStyle": "image",
           "baseLayoutWidth": 1500,
-          "hideBorder": true
+          "fullWidthBackground": true,
+          "backgroundImageAssetId": "builtin-deco-gradient-orb"
         }
       },
       {
@@ -3410,6 +3412,10 @@
             {
               "text": "YouTube",
               "iconKey": "youtube-file"
+            },
+            {
+              "text": "X",
+              "iconKey": "si-x"
             },
             {
               "text": "WhatsApp",
@@ -3566,6 +3572,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-01T00:52:12.900Z",
+  "savedAt": "2026-07-01T23:04:49.636Z",
   "source": "autosave"
 }

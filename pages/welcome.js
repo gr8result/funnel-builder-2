@@ -23,8 +23,8 @@ export default function Welcome() {
       />
       <div style={overlay} />
       <main style={main}>
-        <h1 style={h1}>Welcome to your Funnel Builder</h1>
-        <p style={p}>Create landing pages, sales flows, emails and more — all in one place.</p>
+        <h1 style={h1}>Welcome to Gr8 Result Digital Solutions, your AI-Powered Business Growth Platform</h1>
+        <p style={p}>Create landing pages, sales flows, emails so much more — all in one place.</p>
         <div style={{display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap'}}>
           <Link href="/login" style={cta}>Sign in / Create account</Link>
           <a href="/p/demo" style={ctaSecondary}>See a demo page</a>

@@ -6480,8 +6480,8 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
 function VideoHeroBlock({ block, editor = false, compact = false, isSelected = false, onChangeBlock, onUploadImage }) {
   const props = block?.props || {};
 
-  const videoSrc     = String(props.videoSrc     || "");
-  const posterSrc    = String(props.posterSrc    || "");
+  const videoSrc     = String(props.videoSrc     || props.videoUrl || props.videoURL || "");
+  const posterSrc    = String(props.posterSrc    || props.posterUrl || props.posterURL || "");
   const overlayOpacity = Number(props.overlayOpacity ?? 0.42);
   const overlayColor = String(props.overlayColor || "#000000");
   const heightMode   = compact ? "fixed" : (props.heightMode || "full");
@@ -6564,14 +6564,20 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   // -- Upload helpers --------------------------------------------------------
   async function handleVideoUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
+    const previousVideoSrc = videoSrc;
     // Show local blob URL immediately so the preview updates before the upload finishes.
     const blobUrl = URL.createObjectURL(file);
     onChangeBlock?.({ ...props, videoSrc: blobUrl });
     try {
       const asset = await Promise.resolve(onUploadImage("__video_hero_src__", file));
       if (asset?.src) onChangeBlock?.({ ...props, videoSrc: asset.src });
-    } catch {
-      // blob URL stays as a local preview if upload fails
+    } catch (error) {
+      onChangeBlock?.({ ...props, videoSrc: previousVideoSrc || "" });
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "Video upload failed. Please try again.");
+      }
+    } finally {
+      URL.revokeObjectURL(blobUrl);
     }
   }
 
