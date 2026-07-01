@@ -64,6 +64,11 @@ function isAutoMaterializedEmailTemplateImage(file) {
   return storagePath.startsWith("assets:") && /\/shared-[a-f0-9]{32,}\./i.test(storagePath) && tags.includes("email-template");
 }
 
+function isVideoFile(file) {
+  return String(file?.type || "").startsWith("video/")
+    || /\.(mp4|webm|mov|m4v)(\?|$)/i.test(String(file?.name || file?.url || file?.storage_path || ""));
+}
+
 export default function Assets() {
   const router = useRouter();
   const pickerMode = String(router.query?.picker || "") === "1";
@@ -73,6 +78,7 @@ export default function Assets() {
   const [files, setFiles] = useState([]);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
   const [deletingName, setDeletingName] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -100,7 +106,7 @@ export default function Assets() {
   useEffect(() => {
     if (!router.isReady) return;
     const nextView = String(router.query?.view || "").toLowerCase();
-    if (nextView === "generic" || nextView === "user" || nextView === "icons") {
+    if (nextView === "generic" || nextView === "user" || nextView === "icons" || nextView === "videos") {
       setLibraryView(nextView);
     }
   }, [router.isReady, router.query?.view]);
@@ -174,11 +180,12 @@ export default function Assets() {
       if (showLoader) setLoading(false);
       return [];
     }
-    setFiles(payload.images || []);
+    const nextFiles = [...(payload.images || []), ...(payload.videos || [])];
+    setFiles(nextFiles);
     setPermissions(payload.permissions || { canManageTemplateImages: false });
-    setSelectedImageIds((prev) => prev.filter((id) => (payload.images || []).some((entry) => getFileSelectionKey(entry) === id)));
+    setSelectedImageIds((prev) => prev.filter((id) => nextFiles.some((entry) => getFileSelectionKey(entry) === id)));
     if (showLoader) setLoading(false);
-    return payload.images || [];
+    return nextFiles;
   }
 
   function safeName(name = "") {
@@ -193,6 +200,24 @@ export default function Assets() {
       contentType: file.type || "application/octet-stream",
     });
     if (error) throw error;
+  }
+
+  async function uploadVideo(file) {
+    if (!file || !session?.access_token) return;
+    const response = await fetch("/api/website-builder/upload-video", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": file.type || "video/mp4",
+        "X-File-Name": encodeURIComponent(file.name || "upload.mp4"),
+        "X-File-Type": file.type || "video/mp4",
+      },
+      body: file,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || "Video upload failed");
+    }
   }
 
   async function onUploadLogo(e) {
@@ -224,6 +249,24 @@ export default function Assets() {
       alert(error.message || "Image upload failed");
     } finally {
       setUploadingImages(false);
+    }
+  }
+
+  async function onUploadWebsiteVideos(e) {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!selected.length || !session) return;
+    setUploadingVideos(true);
+    try {
+      for (const file of selected) {
+        await uploadVideo(file);
+      }
+      await listFiles({ showLoader: false, noCache: true });
+      setLibraryView("videos");
+    } catch (error) {
+      alert(error.message || "Video upload failed");
+    } finally {
+      setUploadingVideos(false);
     }
   }
 
@@ -279,7 +322,7 @@ export default function Assets() {
       selectedImageIds.includes(getFileSelectionKey(file)) && canManageOriginalFile(file)
     );
     if (!selectedFiles.length) return;
-    const ok = confirm(`Delete ${selectedFiles.length} selected image${selectedFiles.length === 1 ? "" : "s"}? This cannot be undone.`);
+    const ok = confirm(`Delete ${selectedFiles.length} selected item${selectedFiles.length === 1 ? "" : "s"}? This cannot be undone.`);
     if (!ok) return;
     setBulkDeleting(true);
     setStatusMessage("");
@@ -311,15 +354,15 @@ export default function Assets() {
     clearSelectedImages();
     await listFiles({ showLoader: false });
     setStatusMessage(failedCount
-      ? `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}. ${failedCount} failed — check console for details.`
-      : `Deleted ${deletedCount} image${deletedCount === 1 ? "" : "s"}.`);
+      ? `Deleted ${deletedCount} item${deletedCount === 1 ? "" : "s"}. ${failedCount} failed — check console for details.`
+      : `Deleted ${deletedCount} item${deletedCount === 1 ? "" : "s"}.`);
     setBulkDeleting(false);
   }
 
   async function deleteFile(file, options = {}) {
     const { skipConfirm = false, refreshAfterDelete = true, successMessage = "" } = options;
     if (!session) return;
-    const name = file?.name || file?.description || 'this image';
+    const name = file?.name || file?.description || (isVideoFile(file) ? 'this video' : 'this image');
     const selectionKey = getFileSelectionKey(file);
     const ok = skipConfirm ? true : confirm(`Delete "${name}"? This cannot be undone.`);
     if (!ok) return;
@@ -609,7 +652,8 @@ export default function Assets() {
         id: file?.id || "",
         src: file?.url || "",
         url: file?.url || "",
-        name: file?.name || file?.description || "Image",
+        name: file?.name || file?.description || (isVideoFile(file) ? "Video" : "Image"),
+        type: file?.type || (isVideoFile(file) ? "video/mp4" : ""),
         description: file?.description || "",
         storage_path: file?.storage_path || "",
         owner_scope: file?.owner_scope || "user",
@@ -629,8 +673,9 @@ export default function Assets() {
   const iconFiles = files.filter((file) => {
     const sp = String(file?.storage_path || "");
     const filename = sp.split("/").pop() || "";
-    return filename.startsWith("icon-") && file?.owner_scope !== "generic";
+    return filename.startsWith("icon-") && file?.owner_scope !== "generic" && !isVideoFile(file);
   });
+  const videoFiles = files.filter((file) => file?.owner_scope !== "generic" && isVideoFile(file));
   const userOwnedFiles = files.filter((file) => {
     const sp = String(file?.storage_path || "");
     const filename = sp.split("/").pop() || "";
@@ -638,29 +683,34 @@ export default function Assets() {
     // and raw email-template: reference entries (undeletable ghosts that re-appear every load).
     if (file?.owner_scope === "generic") return false;
     if (filename.startsWith("icon-")) return false;
+    if (isVideoFile(file)) return false;
     if (isAutoMaterializedEmailTemplateImage(file)) return false;
     if (sp.startsWith("email-template:")) return false;
     return true;
   });
-  const genericFiles = [...files.filter((file) => file?.owner_scope === "generic")].sort((a, b) => {
+  const genericFiles = [...files.filter((file) => file?.owner_scope === "generic" && !isVideoFile(file))].sort((a, b) => {
     const aStored = String(a?.storage_path || "").startsWith("assets:generic/") ? 0 : 1;
     const bStored = String(b?.storage_path || "").startsWith("assets:generic/") ? 0 : 1;
     return aStored - bStored;
   });
   const selectedUserImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file))).length;
   const selectedPromotableImageCount = userOwnedFiles.filter((file) => selectedImageIds.includes(getFileSelectionKey(file)) && canPromoteToGlobalTemplate(file)).length;
-  const activeLibraryItems = libraryView === "generic" ? genericFiles : libraryView === "icons" ? iconFiles : userOwnedFiles;
+  const activeLibraryItems = libraryView === "generic" ? genericFiles : libraryView === "icons" ? iconFiles : libraryView === "videos" ? videoFiles : userOwnedFiles;
   const selectedInCurrentSectionCount = activeLibraryItems.filter((f) => selectedImageIds.includes(getFileSelectionKey(f)) && canManageOriginalFile(f)).length;
-  const activeLibraryTitle = libraryView === "generic" ? "Generic Site Images" : libraryView === "icons" ? "Icon Library" : "Your Images";
+  const activeLibraryTitle = libraryView === "generic" ? "Generic Site Images" : libraryView === "icons" ? "Icon Library" : libraryView === "videos" ? "Your Videos" : "Your Images";
   const activeLibraryDescription = libraryView === "generic"
     ? "These are global starter images for sites and funnels."
     : libraryView === "icons"
     ? "Upload custom icons and graphics for use as background decorations in counter blocks and other elements."
+    : libraryView === "videos"
+    ? "Uploaded website videos are stored in the shared assets bucket and can be reused in video backgrounds."
     : "These are your private uploads and saved edits. Only you can manage them.";
   const activeEmptyText = libraryView === "generic"
     ? "No generic site images are available right now."
     : libraryView === "icons"
     ? "No icons uploaded yet. Upload SVG, PNG, or WebP icon files above."
+    : libraryView === "videos"
+    ? "No videos uploaded yet."
     : "No user-owned images yet.";
 
   function renderFileGrid(items, emptyText, sectionKey) {
@@ -675,6 +725,7 @@ export default function Assets() {
         >
         {items.map((f) => {
           const url = f.url;
+          const isVideo = isVideoFile(f);
           const selectionKey = getFileSelectionKey(f);
           const canManageOriginal = canManageOriginalFile(f);
           const showSelectionControl = (!pickerMode || isDev) && canManageOriginal;
@@ -752,34 +803,42 @@ export default function Assets() {
                 }}
                 onClick={() => {
                   if (pickerMode) return;
+                  if (isVideo) return;
                   setEditingFile({ ...f, canManageOriginal });
                 }}
                 onDoubleClick={() => handlePickerSelect(f)}
-                title={pickerMode ? "Double-click to insert this image" : f.name}
+                title={pickerMode ? `Double-click to insert this ${isVideo ? "video" : "image"}` : f.name}
               >
-                <img
-                  src={url}
-                  alt={f.name}
-                  loading="lazy"
-                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const placeholder = e.currentTarget.parentElement;
-                    if (placeholder && !placeholder.dataset.errored) {
-                      placeholder.dataset.errored = "1";
-                      placeholder.style.flexDirection = "column";
-                      placeholder.style.gap = "8px";
-                      const icon = document.createElement("span");
-                      icon.textContent = "🖼️";
-                      icon.style.cssText = "font-size:32px;opacity:0.3";
-                      const label = document.createElement("span");
-                      label.textContent = "No preview";
-                      label.style.cssText = "font-size:11px;color:#475569;text-align:center";
-                      placeholder.appendChild(icon);
-                      placeholder.appendChild(label);
-                    }
-                  }}
-                />
+                {isVideo ? (
+                  <video
+                    src={url}
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  />
+                ) : (
+                  <img
+                    src={url}
+                    alt={f.name}
+                    loading="lazy"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      const placeholder = e.currentTarget.parentElement;
+                      if (placeholder && !placeholder.dataset.errored) {
+                        placeholder.dataset.errored = "1";
+                        placeholder.style.flexDirection = "column";
+                        placeholder.style.gap = "8px";
+                        const icon = document.createElement("span");
+                        icon.textContent = "No preview";
+                        icon.style.cssText = "font-size:16px;color:#64748b";
+                        placeholder.appendChild(icon);
+                      }
+                    }}
+                  />
+                )}
               </div>
               <div
                 style={{
@@ -811,12 +870,12 @@ export default function Assets() {
                   <button
                     onClick={() => handlePickerSelect(f)}
                     style={{ ...miniBtn, background: "#2563eb", border: "1px solid #3b82f6", color: "#fff" }}
-                    title="Insert this image into the editor"
+                    title={`Insert this ${isVideo ? "video" : "image"} into the editor`}
                   >
                     Insert
                   </button>
                 ) : null}
-                {(!pickerMode || isDev) && canPromoteToGlobalTemplate(f) ? (
+                {(!pickerMode || isDev) && !isVideo && canPromoteToGlobalTemplate(f) ? (
                   <button
                     onClick={() => saveAsGlobalTemplate(f)}
                     style={{ ...miniBtn, background: "#0f766e", border: "none", color: "#fff" }}
@@ -835,7 +894,7 @@ export default function Assets() {
                       border: "1px solid #5b1a1f",
                       color: "#ffd7db",
                     }}
-                    title="Delete this image"
+                    title={`Delete this ${isVideo ? "video" : "image"}`}
                     disabled={deletingName === f.id}
                   >
                     {deletingName === f.id ? "Deleting..." : "Delete"}
@@ -932,7 +991,7 @@ export default function Assets() {
       <div style={{ maxWidth: 1302, margin: "0 auto" }}>
         {pickerMode ? (
           <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: "rgba(37,99,235,0.16)", border: "1px solid rgba(59,130,246,0.35)", color: "#dbeafe", fontSize: 16, fontWeight: 600 }}>
-            Double-click any image to insert it back into the editor.
+            Double-click any media item to insert it back into the editor.
           </div>
         ) : null}
         <p style={{ color: "#94a3b8", marginTop: 0 }}>
@@ -975,6 +1034,13 @@ export default function Assets() {
           </label>
 
           <label style={uploadCard}>
+            <div style={uploadTitle}>Upload Website Videos</div>
+            <div style={uploadHint}>Video backgrounds and website media</div>
+            <input type="file" accept="video/*" multiple onChange={onUploadWebsiteVideos} disabled={uploadingVideos} />
+            <div style={uploadState}>{uploadingVideos ? "Uploading videos..." : "MP4, WebM, MOV"}</div>
+          </label>
+
+          <label style={uploadCard}>
             <div style={uploadTitle}>Upload Icons</div>
             <div style={uploadHint}>SVG or PNG icons for counter blocks &amp; decorations</div>
             <input type="file" accept="image/svg+xml,image/png,image/webp,image/*" multiple onChange={onUploadIcons} disabled={uploadingIcons} />
@@ -1004,6 +1070,7 @@ export default function Assets() {
                   }}
                 >
                   <option value="user">Private Images</option>
+                  <option value="videos">Videos</option>
                   <option value="generic">Generic Images</option>
                   <option value="icons">Icon Library</option>
                 </select>
@@ -1015,7 +1082,7 @@ export default function Assets() {
             </div>
             {(!pickerMode || isDev) && selectedInCurrentSectionCount > 0 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(20,184,166,0.08)", border: "1px solid rgba(45,212,191,0.28)" }}>
-                <span style={{ color: "#99f6e4", fontSize: 16, fontWeight: 600 }}>{selectedInCurrentSectionCount} image{selectedInCurrentSectionCount !== 1 ? "s" : ""} selected</span>
+                <span style={{ color: "#99f6e4", fontSize: 16, fontWeight: 600 }}>{selectedInCurrentSectionCount} item{selectedInCurrentSectionCount !== 1 ? "s" : ""} selected</span>
                 <button
                   type="button"
                   style={{ ...miniBtn, background: "#3a0f12", border: "1px solid #5b1a1f", color: "#ffd7db" }}

@@ -1,0 +1,3571 @@
+{
+  "projectId": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "pageName": "Home",
+  "blocks": [
+    {
+      "id": "30814b2a-f7ca-4ecd-9d1d-c32c2e725892",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "id": "nav-item-0-0-home",
+            "href": "/",
+            "slug": "home",
+            "label": "Home",
+            "children": []
+          },
+          {
+            "id": "nav-item-1-0-features",
+            "href": "#features",
+            "slug": "features",
+            "label": "Features",
+            "children": []
+          },
+          {
+            "id": "nav-item-2-0-crm",
+            "href": "/crm",
+            "slug": "crm",
+            "label": "CRM",
+            "children": []
+          },
+          {
+            "id": "nav-item-3-0-automation",
+            "href": "#automation",
+            "slug": "automation",
+            "label": "Automation",
+            "children": []
+          },
+          {
+            "id": "nav-item-4-0-funnel-builder",
+            "href": "#funnel-builder",
+            "slug": "funnel-builder",
+            "label": "Funnel Builder",
+            "children": []
+          },
+          {
+            "id": "nav-item-5-0-pricing",
+            "href": "/pricing",
+            "slug": "pricing",
+            "label": "Pricing",
+            "children": []
+          },
+          {
+            "id": "nav-item-6-0-about-us",
+            "href": "/about",
+            "slug": "about-us",
+            "label": "About Us",
+            "children": []
+          },
+          {
+            "id": "nav-item-7-0-demo-request",
+            "href": "#demo-request",
+            "slug": "demo-request",
+            "label": "Demo Request",
+            "children": []
+          },
+          {
+            "id": "nav-item-8-0-other-modules",
+            "href": "#other-modules",
+            "slug": "other-modules",
+            "label": "Other Modules",
+            "children": []
+          },
+          {
+            "id": "nav-item-9-0-contact",
+            "href": "/contact",
+            "slug": "contact",
+            "label": "CONtact",
+            "children": []
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Contact",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "sticky-transparent",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#ffffff",
+        "ctaFontSize": 18,
+        "linkFontSize": 18,
+        "brandFontSize": 18,
+        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#00b0f0",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "#ffffff"
+      }
+    },
+    {
+      "id": 1781385365287,
+      "type": "video-hero",
+      "props": {
+        "title": "",
+        "ctaUrl": "#",
+        "ctaText": "",
+        "eyebrow": "",
+        "showText": true,
+        "subtitle": "",
+        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782866740839-opening-block-video1.mp4",
+        "marginTop": 0,
+        "minHeight": 620,
+        "objectFit": "contain",
+        "posterSrc": "",
+        "textColor": "#ffffff",
+        "heightMode": "full",
+        "accentColor": "#6366f1",
+        "overlayColor": "#000000",
+        "paddingBottom": 0,
+        "objectPosition": "top center",
+        "overlayOpacity": 0,
+        "unmuteOnScroll": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "wb_1778363723821_ec25ea",
+      "type": "hero",
+      "props": {
+        "contentX": 31,
+        "contentY": 52,
+        "headline": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>",
+        "alignment": "center",
+        "floatingX": 78,
+        "floatingY": 52,
+        "heroStats": [
+          {
+            "label": "Happy Clients",
+            "value": "500",
+            "suffix": "+"
+          },
+          {
+            "label": "Years Experience",
+            "value": "10",
+            "suffix": "+"
+          },
+          {
+            "label": "Client Satisfaction",
+            "value": "98",
+            "suffix": "%"
+          }
+        ],
+        "minHeight": "1880px",
+        "lineHeight": 1.4,
+        "heroCounter": "6581",
+        "heroVariant": "split",
+        "subheadline": "Add supporting text here",
+        "contentWidth": 540,
+        "contentHeight": 420,
+        "floatingWidth": 360,
+        "headlineBlock": {
+          "content": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>"
+        },
+        "heroHtmlEmbed": "",
+        "textAnimation": "rotate-in-down-right",
+        "backgroundSize": "cover",
+        "enableParallax": true,
+        "floatingHeight": 420,
+        "floatingImages": [
+          {
+            "x": 38,
+            "y": 53,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391364328-Untitled-design-1-.png",
+            "width": 1081,
+            "height": 1608,
+            "assetId": "8c2e6b5d-8851-44b4-b9a4-b4a18ad83113",
+            "rotation": 0,
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 43,
+            "y": 88,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391532551-Mask-group.png",
+            "width": 428,
+            "height": 415,
+            "assetId": "8c5f9164-cd01-45be-a4a5-5e01f1cfeb69",
+            "rotation": 0,
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 36,
+            "y": 96,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391708613-Group-481784.png",
+            "width": 217,
+            "height": 249,
+            "assetId": "3c67cd52-9946-4dd2-a316-c40f2b443c7d",
+            "rotation": 0,
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 11,
+            "y": 34,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+            "width": 280,
+            "height": 320,
+            "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+            "rotation": 0,
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          }
+        ],
+        "pageBackground": "#121c26",
+        "backgroundColor": "#0f172a",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/social-images/35ab846e-0764-498b-b1f8-7d2cf27d85a5/1775506922253.jpeg",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "hideTextOverlay": true,
+        "sectionAnimation": "zoom",
+        "extraTextOverlays": [
+          {
+            "x": 57,
+            "y": 15,
+            "id": "txt-1781391295775",
+            "text": "<div style=\"text-align: left;\"><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">We </span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(255, 192, 0);\">Power Growth </span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">through&nbsp;&nbsp;</span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(192, 0, 0);\">Digital Excellence</span></div>",
+            "color": "#ffffff",
+            "width": 1309,
+            "height": 30,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          },
+          {
+            "x": 73,
+            "y": 51,
+            "id": "txt-1781391409417",
+            "text": "<h1 data-website-inline-editor=\"true\" data-text-prop=\"headline\" style=\"padding: 4px 6px; font-size: 68px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; font-weight: 700; text-align: center; background-color: rgba(15, 23, 42, 0.06); position: relative; z-index: 1; line-height: 1.1; font-family: Verdana; color: rgb(255, 192, 0); text-shadow: rgb(0, 0, 0) 0px 0px 20px, rgb(0, 0, 0) 0px 0px 40px; width: 874.333px; max-width: 100%; outline: rgba(125, 211, 252, 0.5) dashed 1px; word-break: normal; overflow-wrap: break-word; border-radius: 8px;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span></h1>",
+            "color": "#ffffff",
+            "width": 872,
+            "height": 121,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          },
+          {
+            "x": 84,
+            "y": 80,
+            "id": "txt-1781391631508",
+            "text": "<span style=\"font-family: system-ui; font-size: 20px; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">Bring CRM, email, SMS, automations, forms, </span><span style=\"font-size: 20px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; font-family: system-ui; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">scheduling</span><span style=\"font-family: system-ui; font-size: 20px; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span>",
+            "color": "#ffffff",
+            "width": 1002,
+            "height": 59,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          }
+        ],
+        "headingFontFamily": "Verdana",
+        "headlineGlowColor": "#000000",
+        "headlineTextStyle": "glow",
+        "heroInlineCounter": {
+          "x": 84,
+          "y": 89,
+          "label": "Site Visitors...and counting",
+          "width": 667,
+          "height": 169,
+          "enabled": true,
+          "iconType": "star",
+          "labelColor": "#ffffff",
+          "numberColor": "#00b0f0",
+          "startNumber": 28642,
+          "targetNumber": 28645,
+          "numberFontSize": 80,
+          "backgroundColor": "rgba(0,0,0,0.0)"
+        },
+        "backgroundPosition": "center center",
+        "backgroundVideoUrl": "",
+        "textAnimationDelay": 0.2,
+        "textAnimationSpeed": 3.5,
+        "fullWidthBackground": true,
+        "headlineShadowColor": "#000000",
+        "extraCounterOverlays": [],
+        "subheadlineAnimation": "drift-edge-left",
+        "sectionAnimationDelay": 0,
+        "sectionAnimationSpeed": 2.2,
+        "backgroundImageAssetId": "5471318a-5ce1-4b70-9974-cb6e8f674be4",
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 2.2
+      }
+    },
+    {
+      "id": 1778893218774,
+      "type": "trust-badges",
+      "props": {
+        "badges": [
+          {
+            "id": "trust-badge-0",
+            "icon": "🔒",
+            "label": "Secure"
+          },
+          {
+            "id": "trust-badge-1",
+            "icon": "⭐",
+            "label": "Trusted"
+          },
+          {
+            "id": "trust-badge-2",
+            "icon": "🏆",
+            "label": "Tried & Proven"
+          }
+        ],
+        "headline": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ec4899",
+          "content": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+          "fontSize": 18,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.6
+        },
+        "textColor": "#ec4899",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "subheadline": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+        "badgePadding": 18,
+        "textFontSize": 18,
+        "badgeFontSize": 36,
+        "badgeIconSize": 42,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+          "fontSize": 68,
+          "alignment": "center",
+          "fontFamily": "Verdana",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 68,
+        "headlineAlignment": "center",
+        "trustBadgeVariant": "logo-strip",
+        "headlineFontFamily": "Verdana",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "subheadlineFontSize": 18,
+        "badgeBackgroundColor": "#00b0f0",
+        "subheadlineLineHeight": 1.6
+      }
+    },
+    {
+      "id": 1778366596916,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          "Transform your business today!",
+          "Free demo available now.",
+          "Supercharge your workflow!",
+          "All tools in one platform.",
+          "Designed for businesses of all sizes.",
+          "Get started with Gr8 Result!"
+        ],
+        "speed": 80,
+        "fontSize": 120,
+        "alignment": "start",
+        "direction": "left",
+        "textColor": "#92d050",
+        "fontFamily": "Arial",
+        "fontWeight": "400",
+        "lineHeight": 1.5,
+        "paddingTop": 0,
+        "accentColor": "#ffc000",
+        "buttonColor": "#ffffff",
+        "dividerSize": 80,
+        "marginBottom": 0,
+        "textFontSize": 75,
+        "paddingBottom": 30,
+        "textAnimation": "slide-up",
+        "textFillColor": "#00b0f0",
+        "textTransform": "capitalize",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "textStrokeColor": "#ffffff",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "fullWidthBackground": true,
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "sectionAnimationSpeed": 8,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779683947911,
+      "type": "competitor-comparison",
+      "props": {
+        "rows": [
+          {
+            "category": "CRM & PIPELINE MANAGEMENT",
+            "logos": [
+              {
+                "domain": "hubspot.com",
+                "name": "HubSpot"
+              },
+              {
+                "domain": "salesforce.com",
+                "name": "Salesforce"
+              },
+              {
+                "domain": "pipedrive.com",
+                "name": "Pipedrive"
+              }
+            ],
+            "price": 97
+          },
+          {
+            "category": "EMAIL MARKETING",
+            "logos": [
+              {
+                "domain": "mailchimp.com",
+                "name": "Mailchimp"
+              },
+              {
+                "domain": "activecampaign.com",
+                "name": "ActiveCampaign"
+              },
+              {
+                "domain": "klaviyo.com",
+                "name": "Klaviyo"
+              }
+            ],
+            "price": 99
+          },
+          {
+            "category": "FUNNELS & WEBSITE BUILDER",
+            "logos": [
+              {
+                "domain": "clickfunnels.com",
+                "name": "ClickFunnels"
+              },
+              {
+                "domain": "leadpages.com",
+                "name": "Leadpages"
+              },
+              {
+                "domain": "unbounce.com",
+                "name": "Unbounce"
+              }
+            ],
+            "price": 97
+          },
+          {
+            "category": "2-WAY SMS MARKETING",
+            "logos": [
+              {
+                "domain": "twilio.com",
+                "name": "Twilio"
+              },
+              {
+                "domain": "simpletexting.com",
+                "name": "SimpleTexting"
+              },
+              {
+                "domain": "attentivemobile.com",
+                "name": "Attentive"
+              }
+            ],
+            "price": 89
+          },
+          {
+            "category": "BOOKING & APPOINTMENTS",
+            "logos": [
+              {
+                "domain": "calendly.com",
+                "name": "Calendly"
+              },
+              {
+                "domain": "acuityscheduling.com",
+                "name": "Acuity"
+              },
+              {
+                "domain": "squareup.com",
+                "name": "Square"
+              }
+            ],
+            "price": 29
+          },
+          {
+            "category": "WORKFLOW AUTOMATIONS",
+            "logos": [
+              {
+                "domain": "hubspot.com",
+                "name": "HubSpot"
+              },
+              {
+                "domain": "zapier.com",
+                "name": "Zapier"
+              },
+              {
+                "domain": "keap.com",
+                "name": "Keap"
+              }
+            ],
+            "price": 169
+          },
+          {
+            "category": "COURSES / PRODUCTS",
+            "logos": [
+              {
+                "domain": "teachable.com",
+                "name": "Teachable"
+              },
+              {
+                "domain": "kajabi.com",
+                "name": "Kajabi"
+              },
+              {
+                "domain": "thinkific.com",
+                "name": "Thinkific"
+              }
+            ],
+            "price": 99
+          },
+          {
+            "category": "CALL TRACKING",
+            "logos": [
+              {
+                "domain": "callrail.com",
+                "name": "CallRail"
+              },
+              {
+                "domain": "twilio.com",
+                "name": "Twilio"
+              }
+            ],
+            "price": 49
+          },
+          {
+            "category": "REPUTATION MANAGEMENT",
+            "logos": [
+              {
+                "domain": "birdeye.com",
+                "name": "Birdeye"
+              },
+              {
+                "domain": "podium.com",
+                "name": "Podium"
+              },
+              {
+                "domain": "grade.us",
+                "name": "Grade.us"
+              }
+            ],
+            "price": 159
+          },
+          {
+            "category": "TRACKING & ANALYTICS",
+            "logos": [
+              {
+                "domain": "amplitude.com",
+                "name": "Amplitude"
+              },
+              {
+                "domain": "mixpanel.com",
+                "name": "Mixpanel"
+              }
+            ],
+            "price": 299
+          },
+          {
+            "category": "COMMUNITIES",
+            "logos": [
+              {
+                "domain": "skool.com",
+                "name": "Skool"
+              },
+              {
+                "domain": "mightynetworks.com",
+                "name": "Mighty Networks"
+              },
+              {
+                "domain": "circle.so",
+                "name": "Circle"
+              }
+            ],
+            "price": 89
+          },
+          {
+            "category": "DOCUMENT SIGNING",
+            "logos": [
+              {
+                "domain": "docusign.com",
+                "name": "DocuSign"
+              },
+              {
+                "domain": "pandadoc.com",
+                "name": "PandaDoc"
+              }
+            ],
+            "price": 47
+          },
+          {
+            "category": "GHANTT CHARTS JOB BOARDS",
+            "logos": [
+              {
+                "domain": "clickup.com",
+                "name": "ClickUp"
+              },
+              {
+                "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184964941-aha-logo-2x.png",
+                "domain": "",
+                "name": "Aha"
+              }
+            ],
+            "price": 39
+          }
+        ],
+        "title": "What you'd pay elsewhere",
+        "eyebrow": "our All-in-One Platform",
+        "planName": "COMPETITOR ANALYSIS",
+        "subtitle": "We replace every tool below — one platform, one price.",
+        "alignment": "center",
+        "planPrice": 359,
+        "textColor": "#ffffff",
+        "fontFamily": "system-ui",
+        "fontWeight": "700",
+        "lineHeight": 1.04,
+        "planTagline": "Everything above, included",
+        "textFontSize": 40,
+        "textLineHeight": 1.04,
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": 1778380741134,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          "Transform your business today!",
+          "Free demo available now.",
+          "Supercharge your workflow!",
+          "All tools in one platform.",
+          "Designed for businesses of all sizes.",
+          "Get started with Gr8 Result!"
+        ],
+        "speed": 80,
+        "fontSize": 120,
+        "alignment": "start",
+        "direction": "right",
+        "textColor": "#92d050",
+        "fontFamily": "Arial",
+        "fontWeight": "400",
+        "lineHeight": 1.5,
+        "paddingTop": 0,
+        "accentColor": "#ffc000",
+        "buttonColor": "#ffffff",
+        "dividerSize": 80,
+        "marginBottom": 0,
+        "textFontSize": 75,
+        "paddingBottom": 30,
+        "textAnimation": "slide-up",
+        "textFillColor": "#081120",
+        "textTransform": "capitalize",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "textStrokeColor": "#ffffff",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "fullWidthBackground": true,
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "sectionAnimationSpeed": 8,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779059949626,
+      "type": "space",
+      "props": {
+        "height": "40px",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0"
+      }
+    },
+    {
+      "id": 1779056514820,
+      "type": "stats",
+      "props": {
+        "stats": [
+          {
+            "id": "stat-item-0",
+            "label": "Customers",
+            "detail": "Brands and service businesses supported in the last 12 months.",
+            "number": "500+"
+          },
+          {
+            "id": "stat-item-1",
+            "label": "Revenue Generated",
+            "detail": "Attributed pipeline and direct sales driven by optimized funnels.",
+            "number": "$2.8M+"
+          },
+          {
+            "id": "stat-item-2",
+            "label": "Satisfaction",
+            "detail": "Average post-project client rating across delivery and communication.",
+            "number": "98%"
+          }
+        ],
+        "title": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; text-align: start;\"><span style=\"font-size: 36px; color: rgb(255, 192, 0);\">Proven Results You Can Trust</span></span>",
+        "subtitle": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; font-weight: 400; color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Helping brands and service-based businesses attract more customers, generate more revenue, and deliver better client experiences.</span></span>",
+        "alignment": "left",
+        "labelSize": 20,
+        "textColor": "#ffffff",
+        "detailSize": 18,
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "labelColor": "#f97316",
+        "lineHeight": 0.98,
+        "accentColor": "#f59e0b",
+        "borderColor": "rgba(226,232,240,0.92)",
+        "cardStagger": 0.15,
+        "detailColor": "#0f172a",
+        "numberColor": "#ffffff",
+        "statsVariant": "data-ribbon",
+        "textFontSize": 24,
+        "pageBackground": "#121c26",
+        "textLineHeight": 0.98,
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "statsLeftColPct": 21,
+        "sectionTitleColor": "#0ea5e9",
+        "statsCardMinWidth": 200,
+        "cardBackgroundColor": "#2563eb",
+        "sectionSubtitleColor": "#06b6d4"
+      }
+    },
+    {
+      "id": 1779059956747,
+      "type": "space",
+      "props": {
+        "height": "20px",
+        "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+          "fontSize": 52,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 52,
+        "headlineAlignment": "center",
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1
+      }
+    },
+    {
+      "id": 1778894829892,
+      "type": "grid-section",
+      "props": {
+        "items": [
+          {
+            "icon": "",
+            "link": "https://gr8result.com/email-marketing/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+            "title": "Email & SMS Marketing",
+            "content": "",
+            "eyebrow": "Email Marketing and Lead Nurturing through AI powered SMS",
+            "iconName": "email",
+            "imageAlt": "web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/social-media/",
+            "image": "/imported/gr8-services/social-media.jpg",
+            "title": "Social Media",
+            "content": "",
+            "eyebrow": "AI Content Creation & Automated Posting",
+            "iconName": "mobile",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/software/",
+            "image": "/imported/gr8-services/software.png",
+            "title": "CRM Software",
+            "content": "",
+            "eyebrow": "Business Software & Client Management",
+            "iconName": "handshake",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/website-development/",
+            "image": "/imported/gr8-services/websites.jpg",
+            "title": "Website Builder",
+            "content": "",
+            "eyebrow": "Domains, Website Design & Hosting and SEO",
+            "iconName": "web",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/graphic-design/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
+            "title": "Funnel Builder & Lead Capture",
+            "content": "",
+            "eyebrow": "Landing Pages and Sales Tools",
+            "iconName": "",
+            "imageAlt": "web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": "dticon"
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/branding-design/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/affiliate-marketing.svg",
+            "title": "Affiliate Marketplace",
+            "content": "",
+            "eyebrow": "Vendor and Affiliate Marketplace. Digital & Physical",
+            "iconName": "bs-search",
+            "imageAlt": "affiliate marketing",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/seo/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+            "title": "Calendar Booking",
+            "content": "",
+            "eyebrow": "Calendar Booking Module for Support and Coaching",
+            "iconName": "",
+            "imageAlt": "web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": "webexbaseicon"
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/videos/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/community-dark.svg",
+            "title": "Community & Connections",
+            "content": "",
+            "eyebrow": "Personal & Global Community module",
+            "iconName": "",
+            "imageAlt": "community dark",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": "dticon"
+          }
+        ],
+        "title": "Our Platform Modules",
+        "columns": 4,
+        "iconSize": 50,
+        "columnGap": 24,
+        "iconColor": "#0f172a",
+        "textColor": "#0f172a",
+        "borderColor": "rgba(148,163,184,0.22)",
+        "cardStagger": 0.08,
+        "gridVariant": "services",
+        "imageRadius": 18,
+        "columnRadius": 22,
+        "columnShadow": "soft",
+        "blockMaxWidth": 1200,
+        "bodyAnimation": "fade-up",
+        "cardAnimation": "edge-right",
+        "columnPadding": 18,
+        "iconAnimation": "fade-up",
+        "itemAnimation": "edge-right",
+        "imageAnimation": "zoom",
+        "pageBackground": "#121c26",
+        "titleAnimation": "fade-up",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "columnBodyColor": "#475569",
+        "stretchToCanvas": true,
+        "columnTitleColor": "#0f172a",
+        "columnsTopMargin": 18,
+        "sectionAnimation": "edge-right",
+        "columnBorderColor": "rgba(148,163,184,0.18)",
+        "gridItemMinHeight": 0,
+        "cardAnimationSpeed": 1.8,
+        "columnContentAlign": "left",
+        "itemAnimationSpeed": 1.8,
+        "cardBackgroundColor": "#ffffff",
+        "iconBackgroundColor": "#ffffff",
+        "servicesStylePreset": "style-03",
+        "cardAnimationStagger": 0.015,
+        "columnsVerticalAlign": "center",
+        "itemAnimationStagger": 0.015,
+        "columnBackgroundColor": "#ffffff",
+        "sectionAnimationSpeed": 1.2,
+        "surfaceAnimationSpeed": 0.8
+      }
+    },
+    {
+      "id": 1779058697413,
+      "type": "space",
+      "props": {
+        "height": "60px",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0"
+      }
+    },
+    {
+      "id": 1779158148086,
+      "type": "marquee-strip",
+      "props": {
+        "angle": 3,
+        "items": [
+          {
+            "text": "PayPal",
+            "iconKey": "si-paypal"
+          },
+          {
+            "text": "Stripe",
+            "iconKey": "si-stripe"
+          },
+          {
+            "text": "Shopify",
+            "iconKey": "si-shopify"
+          },
+          {
+            "text": "Google Ads",
+            "iconKey": "si-gads"
+          },
+          {
+            "text": "Microsoft",
+            "iconKey": "si-ms"
+          },
+          {
+            "text": "Spotify",
+            "iconKey": "si-spotify"
+          },
+          {
+            "text": "Dropbox",
+            "iconKey": "si-dropbox"
+          },
+          {
+            "text": "Zoom",
+            "iconKey": "si-zoom"
+          }
+        ],
+        "speed": 40,
+        "fontSize": 48,
+        "direction": "left",
+        "fontStyle": "normal",
+        "marginTop": 0,
+        "textColor": "#f8fafc",
+        "fontWeight": "600",
+        "lineHeight": 1.08,
+        "paddingTop": 16,
+        "accentColor": "#7dd3fc",
+        "dividerSize": 48,
+        "dividerText": "*",
+        "itemPaddingX": 14,
+        "marginBottom": 0,
+        "paddingBottom": 150,
+        "textFillColor": "#f8fafc",
+        "textTransform": "uppercase",
+        "textDecoration": "none",
+        "backgroundColor": "#081120",
+        "baseLayoutWidth": 1500,
+        "textStrokeColor": "transparent",
+        "textStrokeWidth": 8,
+        "sectionAnimation": "fade-in",
+        "fullWidthBackground": true,
+        "sectionAnimationDelay": 0.04
+      }
+    },
+    {
+      "id": 1779225980928,
+      "type": "parallax",
+      "props": {
+        "ctaLink": "#",
+        "ctaText": "Book a Free Demo",
+        "eyebrow": "welcome to the",
+        "contentX": 29,
+        "contentY": 43,
+        "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+          "fontSize": 20,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "800",
+          "lineHeight": 1.6
+        },
+        "floatingX": 76,
+        "floatingY": 58,
+        "minHeight": "1300px",
+        "textColor": "#ffc000",
+        "fontFamily": "system-ui",
+        "fontWeight": "800",
+        "lineHeight": 1.4,
+        "buttonColor": "#2563eb",
+        "subheadline": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+        "contentWidth": 763,
+        "textFontSize": 20,
+        "contentHeight": 420,
+        "floatingImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+        "floatingWidth": 220,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "Gr8 Result Digital Solutions<br>Business and Marketing Platform<br>Your ALL-IN-ONE platform for business growth",
+          "fontSize": 52,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "heroStatItems": [
+          {
+            "id": "stat-1779226738677",
+            "label": "",
+            "number": ""
+          }
+        ],
+        "verticalAlign": "center",
+        "enableParallax": true,
+        "floatingHeight": 220,
+        "floatingImages": [
+          {
+            "x": 75,
+            "y": 34,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+            "width": 457,
+            "height": 692,
+            "assetId": "f7952ae7-a280-4073-b1af-59647c43b189",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 68,
+            "y": 73,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416597583-website-development-client-collaboration-gr8result.jpg",
+            "width": 625,
+            "height": 578,
+            "assetId": "e2890a84-8847-46f2-a53d-8be074679d88",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 50,
+            "y": 75,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226408848-beautiful-businesswoman-her-office_329181-13386.avif",
+            "width": 354,
+            "height": 413,
+            "assetId": "be7a9f96-21ec-4f6e-891d-d6bc6bc13e55",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 22,
+            "y": 84,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416651481-banner-bg1.jpg",
+            "width": 661,
+            "height": 614,
+            "assetId": "349f9e1a-0259-4575-8101-5f4c34d42553",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          }
+        ],
+        "textLineHeight": 1.4,
+        "backgroundColor": "#0f172a",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226235962-graphic-designer-creative-workspace-gr8result.jpg",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#ffffff",
+        "headlineFontSize": 52,
+        "extraTextOverlays": [
+          {
+            "x": 77,
+            "y": 97,
+            "id": "txt-1779675952582",
+            "text": "* Savings comparison is based on current monthly platform pricing versus equivalent standalone module pricing. Annual figures are monthly savings multiplied by 12.",
+            "color": "#ffffff",
+            "width": 989,
+            "height": 30,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          }
+        ],
+        "headlineAlignment": "center",
+        "backgroundPosition": "center center",
+        "backgroundVideoUrl": "",
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "fullWidthBackground": true,
+        "subheadlineFontSize": 20,
+        "subheadlineLineHeight": 1.6,
+        "backgroundImageAssetId": "aceff264-c719-450c-a963-d4ac2f8e7bb3"
+      }
+    },
+    {
+      "id": "benefits-grid-001",
+      "type": "grid-section",
+      "props": {
+        "items": [
+          {
+            "icon": "",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1679707860-2cd99574b08ca768371f.jpg",
+            "title": "Eliminate Platform Switching",
+            "content": "Access all your marketing tools in one unified dashboard. No more juggling between multiple platforms and losing productivity.",
+            "eyebrow": "All-in-One Platform",
+            "iconName": "",
+            "imageAlt": "1679707860",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "imageAssetId": "asset:generic/library-1679707860-2cd99574b08ca768371f.jpg",
+            "iconFontFamily": "dticon"
+          },
+          {
+            "icon": "💰",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1563981389-8fb7639e051d8252d771.jpg",
+            "title": "Reduce Subscription Costs",
+            "content": "Replace 5–10 separate subscriptions with one comprehensive platform. Save thousands annually while gaining more capabilities.",
+            "eyebrow": "Save Thousands",
+            "iconName": "",
+            "imageAlt": "1563981389",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "🔄",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-190997736-41e325c95b6b390272dc.png",
+            "title": "Streamline Workflows",
+            "content": "Connect all your marketing activities seamlessly. Data flows automatically between tools, eliminating manual data entry and errors.",
+            "eyebrow": "Automation Made Easy",
+            "iconName": "",
+            "imageAlt": "190997736",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "📈",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1809094467-c4a08735f77dc1b94f18.jpg",
+            "title": "Scale Faster",
+            "content": "Grow your business without platform limitations. Our infrastructure helps you to scale your business from startup to enterprise.  The sky is the limit.",
+            "eyebrow": "Built to Grow",
+            "iconName": "",
+            "imageAlt": "1809094467",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          }
+        ],
+        "title": "<span style=\"font-size: 48px; color: rgb(255, 192, 0);\">Real benefits that impact your bottom line from day one.</span>",
+        "columns": 4,
+        "eyebrow": "Our Platform",
+        "iconSize": 36,
+        "alignment": "left",
+        "bodyBlock": {
+          "color": "#bdbcbf",
+          "content": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+          "fontSize": 18,
+          "alignment": "left",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.6
+        },
+        "columnGap": 24,
+        "iconColor": "",
+        "textColor": "#000000",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.2,
+        "borderColor": "rgba(148,163,184,0.22)",
+        "buttonColor": "#ffffff",
+        "cardStagger": 0.1,
+        "gridVariant": "services",
+        "imageRadius": 16,
+        "subheadline": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+        "cardBodySize": 16,
+        "columnRadius": 22,
+        "columnShadow": "soft",
+        "eyebrowColor": "",
+        "textFontSize": 28,
+        "blockMaxWidth": 1700,
+        "bodyAnimation": "fade-up",
+        "cardAnimation": "zoom",
+        "cardTitleSize": 28,
+        "columnPadding": 22,
+        "iconAnimation": "rotate-in-down-right",
+        "iconBadgeWidth": 90,
+        "imageAnimation": "zoom",
+        "pageBackground": "#121c26",
+        "textLineHeight": 1.2,
+        "titleAnimation": "fade-up",
+        "backgroundColor": "",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "columnBodyColor": "",
+        "eyebrowFontSize": 20,
+        "iconBadgeHeight": 90,
+        "stretchToCanvas": true,
+        "columnTitleColor": "",
+        "columnsTopMargin": 18,
+        "sectionAnimation": "light-speed-in",
+        "columnBorderColor": "#ec4899",
+        "gridItemMinHeight": 0,
+        "headingFontFamily": "Verdana",
+        "sectionTitleColor": "",
+        "columnContentAlign": "left",
+        "headlineFontFamily": "Verdana",
+        "servicesLayoutMode": "grid",
+        "cardBackgroundColor": "",
+        "iconBackgroundColor": "",
+        "servicesColorPreset": "blue",
+        "servicesStylePreset": "style-03",
+        "subheadlineFontSize": 18,
+        "columnsVerticalAlign": "top",
+        "columnBackgroundColor": "",
+        "subheadlineLineHeight": 1.6,
+        "surfaceAnimationSpeed": 0.3,
+        "sectionBackgroundImage": "/imported/gr8-services/software.png"
+      }
+    },
+    {
+      "id": 1778479036680,
+      "type": "space",
+      "props": {
+        "height": "40px",
+        "eyebrow": "Our Specialties",
+        "faqBlock": {
+          "items": [
+            {
+              "heading": "What makes this platform different from other solutions?",
+              "question": "What makes this platform different from other solutions?"
+            }
+          ],
+          "alignment": "left",
+          "fontFamily": "Poppins",
+          "questionColor": "#ffffff",
+          "questionFontSize": 24,
+          "questionFontWeight": "700",
+          "questionLineHeight": 1.4
+        },
+        "headline": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+        "alignment": "left",
+        "bodyBlock": {
+          "color": "#bdbcbf",
+          "content": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+          "fontSize": 18,
+          "alignment": "left",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.6
+        },
+        "textColor": "#000000",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.2,
+        "buttonColor": "#ffffff",
+        "subheadline": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+        "textFontSize": 16,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+          "fontSize": 48,
+          "alignment": "left",
+          "fontFamily": "Montserrat",
+          "fontWeight": "400",
+          "lineHeight": 1.2
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "textLineHeight": 1.2,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 48,
+        "headingFontFamily": "Verdana",
+        "headlineAlignment": "left",
+        "headlineFontFamily": "Montserrat",
+        "headlineFontWeight": "400",
+        "headlineLineHeight": 1.2,
+        "subheadlineFontSize": 18,
+        "subheadlineLineHeight": 1.6
+      }
+    },
+    {
+      "id": "wb_1778363723822_788d70",
+      "type": "stats",
+      "props": {
+        "stats": [
+          {
+            "id": "stat-item-0",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Tools replaced</span>",
+            "detail": "Reduce the patchwork of separate apps your team is switching between all day.",
+            "number": "Up to 9+"
+          },
+          {
+            "id": "stat-item-1",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Typical stack cost</span>",
+            "detail": "What some teams are paying before they consolidate sales, follow-up, and marketing.",
+            "number": "$1,300+/mo"
+          },
+          {
+            "id": "stat-item-2",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Source of truth</span>",
+            "detail": "One platform for leads, conversations, automations, &amp; reporting. Control your contacts for the entire life cycle of the lead.",
+            "number": "ONE"
+          }
+        ],
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 40px;\">Why unified platforms win</span></span>",
+        "subtitle": "<span style=\"color: rgb(255, 255, 255);\">Consolidate software, reduce handoffs, and stop paying $1,300+/mo for overlap.</span>",
+        "alignment": "start",
+        "textColor": "#002060",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "labelColor": "#2563eb",
+        "lineHeight": 0.98,
+        "accentColor": "#f59e0b",
+        "borderColor": "#f97316",
+        "buttonColor": "#ffffff",
+        "statsVariant": "editorial-band",
+        "textFontSize": 48,
+        "textAnimation": "fade-up",
+        "pageBackground": "#121c26",
+        "textLineHeight": 0.98,
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "sectionAnimation": "blur-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "cardBackgroundColor": "#06b6d4",
+        "sectionSubtitleColor": "#f97316",
+        "subheadlineAnimation": "slide-right",
+        "sectionAnimationDelay": 0.16,
+        "sectionAnimationSpeed": 1,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779312402641,
+      "type": "cta-button",
+      "props": {
+        "link": "support@gr8result.com",
+        "note": "No card required",
+        "size": "large",
+        "text": "Book Demo Now!",
+        "style": "stacked-card",
+        "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free Demo of our platform and see how well it can integrate into your business</span></li></ol>",
+        "eyebrow": "GR8 RESULT DIGITAL SOLUTIONS",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.7,
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "linear-gradient(135deg,#facc15,#f59e0b)",
+        "description": "This is not a sales call, it is simply a demonstration of how this platform can help you scale your business to amazing new heights.",
+        "textFontSize": 24,
+        "textAnimation": "slide-left",
+        "textLineHeight": 1.7,
+        "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 62%,#22d3ee)",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "contentMaxWidth": 1200,
+        "textAnimationDelay": 0.1,
+        "textAnimationSpeed": 0.8
+      }
+    },
+    {
+      "id": "wb_1778363723821_0eaac3",
+      "type": "trust-badges",
+      "props": {
+        "badges": [
+          {
+            "id": "trust-badge-0",
+            "icon": "📈",
+            "label": "Pipeline visibility"
+          },
+          {
+            "id": "trust-badge-1",
+            "icon": "✉️",
+            "label": "Email campaigns"
+          },
+          {
+            "id": "trust-badge-2",
+            "icon": "💬",
+            "label": "SMS follow-up"
+          },
+          {
+            "id": "trust-badge-3",
+            "icon": "⚙️",
+            "label": "Built-in automations"
+          },
+          {
+            "id": "trust-badge-4",
+            "icon": "🧾",
+            "label": "Forms and capture"
+          },
+          {
+            "id": "trust-badge-5",
+            "icon": "📊",
+            "label": "Reporting and attribution"
+          },
+          {
+            "id": "trust-badge-6",
+            "icon": "🔄",
+            "label": "Fully functioncional CRM"
+          },
+          {
+            "id": "trust-badge-7",
+            "icon": "🌐",
+            "label": "Website Builder"
+          },
+          {
+            "id": "trust-badge-8",
+            "icon": "👥",
+            "label": "Local & Global Community"
+          },
+          {
+            "id": "trust-badge-9",
+            "icon": "🎯",
+            "label": "Funnel Builder"
+          },
+          {
+            "id": "trust-badge-10",
+            "icon": "🤝",
+            "label": "Xchange Affiliate Marketplace"
+          },
+          {
+            "id": "trust-badge-11",
+            "icon": "📱",
+            "label": "AI Social Media Management"
+          },
+          {
+            "id": "trust-badge-12",
+            "icon": "✍️",
+            "label": "Content Creation"
+          }
+        ],
+        "textColor": "#0f172a",
+        "borderColor": "rgba(125,211,252,0.42)",
+        "buttonColor": "#ffffff",
+        "badgePadding": 18,
+        "badgeFontSize": 24,
+        "badgeIconSize": 30,
+        "textAnimation": "fade-up",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "backgroundImage": "",
+        "backgroundStyle": "image",
+        "buttonTextColor": "#00b0f0",
+        "sectionAnimation": "fade-up",
+        "headingFontFamily": "Verdana",
+        "trustBadgeVariant": "pill-row",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "badgeBackgroundColor": "#00b0f0",
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.12,
+        "sectionAnimationSpeed": 1,
+        "backgroundImageAssetId": "e6fb48ac-b8e6-4f25-aeab-97389b2dcc09",
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1782866795293,
+      "type": "text",
+      "props": {
+        "text": "Integrate your favourite platforms...",
+        "alignment": "center",
+        "textSize": "medium",
+        "textFontSize": 48,
+        "fontFamily": "Nunito",
+        "fontWeight": "400",
+        "minHeight": "120px",
+        "fullWidthBackground": false,
+        "enableParallax": false,
+        "textColor": "#f59e0b",
+        "backgroundColor": "#121c26",
+        "backgroundImage": "",
+        "paddingTop": 0,
+        "paddingBottom": 0,
+        "textLineHeight": 1.35,
+        "verticalAlign": "top",
+        "contentY": 32,
+        "contentHeight": 120,
+        "textAnimation": "fade-in",
+        "baseLayoutWidth": 1500,
+        "hideBorder": true
+      }
+    },
+    {
+      "id": 1779156987087,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          {
+            "text": "Facebook",
+            "iconKey": "facebook-file"
+          },
+          {
+            "text": "Instagram",
+            "iconKey": "instagram-file"
+          },
+          {
+            "text": "Linkedin",
+            "iconKey": "linkedin-file"
+          },
+          {
+            "text": "Pinterest",
+            "iconKey": "pinterest-file"
+          },
+          {
+            "text": "TicTok",
+            "iconKey": "tiktok-file"
+          },
+          {
+            "text": "YouTube",
+            "iconKey": "youtube-file"
+          },
+          {
+            "text": "WhatsApp",
+            "iconKey": "whatsapp-file"
+          },
+          {
+            "text": "Telegram",
+            "iconKey": "telegram-file"
+          },
+          {
+            "text": "Discord",
+            "iconKey": "discord-file"
+          },
+          {
+            "text": "Reddit",
+            "iconKey": "reddit-file"
+          },
+          {
+            "text": "SnapChat",
+            "iconKey": "snapchat-file"
+          },
+          {
+            "text": "Threads",
+            "iconKey": "threads-file"
+          },
+          {
+            "text": "Bluesky",
+            "iconKey": "bluesky-file"
+          },
+          {
+            "text": "Google Business",
+            "iconKey": "googlebusiness-file"
+          },
+          {
+            "text": "Lemon8",
+            "iconKey": "lemon8-file"
+          }
+        ],
+        "speed": 80,
+        "fontSize": 64,
+        "direction": "left",
+        "fontStyle": "normal",
+        "marginTop": 0,
+        "textColor": "#ffffff",
+        "fontWeight": "600",
+        "lineHeight": 1.08,
+        "paddingTop": 16,
+        "accentColor": "#7dd3fc",
+        "dividerSize": 14,
+        "dividerText": "*",
+        "itemPaddingX": 14,
+        "marginBottom": 0,
+        "paddingBottom": 16,
+        "textFillColor": "#ffffff",
+        "textTransform": "none",
+        "textDecoration": "none",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "textStrokeColor": "transparent",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "fullWidthBackground": true,
+        "sectionAnimationDelay": 0.04
+      }
+    },
+    {
+      "id": 1779416282454,
+      "type": "footer",
+      "props": {
+        "logo": "",
+        "brand": "Your Brand",
+        "tagline": "Building something amazing.",
+        "navLinks": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#about",
+            "label": "About"
+          },
+          {
+            "href": "#services",
+            "label": "Services"
+          },
+          {
+            "href": "#contact",
+            "label": "Contact"
+          }
+        ],
+        "linkColor": "#94a3b8",
+        "logoWidth": 48,
+        "textColor": "#e2e8f0",
+        "extraLinks": [
+          {
+            "href": "#blog",
+            "label": "Blog"
+          },
+          {
+            "href": "#privacy",
+            "label": "Privacy Policy"
+          },
+          {
+            "href": "#terms",
+            "label": "Terms"
+          }
+        ],
+        "navHeading": "Navigation",
+        "borderColor": "rgba(148,163,184,0.2)",
+        "contactEmail": "hello@yourbrand.com",
+        "contactPhone": "(555) 010-2026",
+        "extraHeading": "Company",
+        "copyrightText": "© 2025 Your Brand. All rights reserved.",
+        "contactAddress": "Your city, state",
+        "contactHeading": "Contact",
+        "showNewsletter": true,
+        "backgroundColor": "#0f172a",
+        "baseLayoutWidth": 1500,
+        "newsletterHeading": "Stay Updated",
+        "newsletterSubtitle": "Get the latest news delivered to your inbox.",
+        "newsletterActionUrl": "",
+        "newsletterButtonText": "Subscribe",
+        "newsletterButtonColor": "#2563eb",
+        "newsletterSubmitMethod": "post",
+        "newsletterFallbackEmail": "",
+        "newsletterButtonTextColor": "#ffffff"
+      }
+    },
+    {
+      "id": 1781393291494,
+      "type": "cta-button",
+      "props": {
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
+      }
+    }
+  ],
+  "html": "",
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "30814b2a-f7ca-4ecd-9d1d-c32c2e725892",
+        "type": "nav-bar",
+        "props": {
+          "logo": "",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "id": "nav-item-0-0-home",
+              "href": "/",
+              "slug": "home",
+              "label": "Home",
+              "children": []
+            },
+            {
+              "id": "nav-item-1-0-features",
+              "href": "#features",
+              "slug": "features",
+              "label": "Features",
+              "children": []
+            },
+            {
+              "id": "nav-item-2-0-crm",
+              "href": "/crm",
+              "slug": "crm",
+              "label": "CRM",
+              "children": []
+            },
+            {
+              "id": "nav-item-3-0-automation",
+              "href": "#automation",
+              "slug": "automation",
+              "label": "Automation",
+              "children": []
+            },
+            {
+              "id": "nav-item-4-0-funnel-builder",
+              "href": "#funnel-builder",
+              "slug": "funnel-builder",
+              "label": "Funnel Builder",
+              "children": []
+            },
+            {
+              "id": "nav-item-5-0-pricing",
+              "href": "/pricing",
+              "slug": "pricing",
+              "label": "Pricing",
+              "children": []
+            },
+            {
+              "id": "nav-item-6-0-about-us",
+              "href": "/about",
+              "slug": "about-us",
+              "label": "About Us",
+              "children": []
+            },
+            {
+              "id": "nav-item-7-0-demo-request",
+              "href": "#demo-request",
+              "slug": "demo-request",
+              "label": "Demo Request",
+              "children": []
+            },
+            {
+              "id": "nav-item-8-0-other-modules",
+              "href": "#other-modules",
+              "slug": "other-modules",
+              "label": "Other Modules",
+              "children": []
+            },
+            {
+              "id": "nav-item-9-0-contact",
+              "href": "/contact",
+              "slug": "contact",
+              "label": "CONtact",
+              "children": []
+            }
+          ],
+          "ctaLink": "#contact",
+          "ctaText": "Contact",
+          "variant": "boxed-brand",
+          "showLogo": true,
+          "logoWidth": 44,
+          "textColor": "#e2e8f0",
+          "stickyMode": "sticky-transparent",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "buttonColor": "#ffffff",
+          "ctaFontSize": 18,
+          "linkFontSize": 18,
+          "brandFontSize": 18,
+          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+          "pageBackground": "#121c26",
+          "backgroundColor": "#0b1220",
+          "buttonTextColor": "#00b0f0",
+          "linkHoverEffect": "fill",
+          "mobileMenuStyle": "hamburger",
+          "headingFontFamily": "Verdana",
+          "headlineFontFamily": "Verdana",
+          "linkHoverTextColor": "#ffffff",
+          "activeLinkTextColor": "#ffffff",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+          "activeLinkBackgroundColor": "#ffffff"
+        }
+      },
+      {
+        "id": 1781385365287,
+        "type": "video-hero",
+        "props": {
+          "title": "",
+          "ctaUrl": "#",
+          "ctaText": "",
+          "eyebrow": "",
+          "showText": true,
+          "subtitle": "",
+          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782866740839-opening-block-video1.mp4",
+          "marginTop": 0,
+          "minHeight": 620,
+          "objectFit": "contain",
+          "posterSrc": "",
+          "textColor": "#ffffff",
+          "heightMode": "full",
+          "accentColor": "#6366f1",
+          "overlayColor": "#000000",
+          "paddingBottom": 0,
+          "objectPosition": "top center",
+          "overlayOpacity": 0,
+          "unmuteOnScroll": true,
+          "baseLayoutWidth": 1500
+        }
+      },
+      {
+        "id": "wb_1778363723821_ec25ea",
+        "type": "hero",
+        "props": {
+          "contentX": 31,
+          "contentY": 52,
+          "headline": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>",
+          "alignment": "center",
+          "floatingX": 78,
+          "floatingY": 52,
+          "heroStats": [
+            {
+              "label": "Happy Clients",
+              "value": "500",
+              "suffix": "+"
+            },
+            {
+              "label": "Years Experience",
+              "value": "10",
+              "suffix": "+"
+            },
+            {
+              "label": "Client Satisfaction",
+              "value": "98",
+              "suffix": "%"
+            }
+          ],
+          "minHeight": "1880px",
+          "lineHeight": 1.4,
+          "heroCounter": "6581",
+          "heroVariant": "split",
+          "subheadline": "Add supporting text here",
+          "contentWidth": 540,
+          "contentHeight": 420,
+          "floatingWidth": 360,
+          "headlineBlock": {
+            "content": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>"
+          },
+          "heroHtmlEmbed": "",
+          "textAnimation": "rotate-in-down-right",
+          "backgroundSize": "cover",
+          "enableParallax": true,
+          "floatingHeight": 420,
+          "floatingImages": [
+            {
+              "x": 38,
+              "y": 53,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391364328-Untitled-design-1-.png",
+              "width": 1081,
+              "height": 1608,
+              "assetId": "8c2e6b5d-8851-44b4-b9a4-b4a18ad83113",
+              "rotation": 0,
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 43,
+              "y": 88,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391532551-Mask-group.png",
+              "width": 428,
+              "height": 415,
+              "assetId": "8c5f9164-cd01-45be-a4a5-5e01f1cfeb69",
+              "rotation": 0,
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 36,
+              "y": 96,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781391708613-Group-481784.png",
+              "width": 217,
+              "height": 249,
+              "assetId": "3c67cd52-9946-4dd2-a316-c40f2b443c7d",
+              "rotation": 0,
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 11,
+              "y": 34,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+              "width": 280,
+              "height": 320,
+              "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+              "rotation": 0,
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            }
+          ],
+          "pageBackground": "#121c26",
+          "backgroundColor": "#0f172a",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/social-images/35ab846e-0764-498b-b1f8-7d2cf27d85a5/1775506922253.jpeg",
+          "backgroundStyle": "image",
+          "baseLayoutWidth": 1500,
+          "hideTextOverlay": true,
+          "sectionAnimation": "zoom",
+          "extraTextOverlays": [
+            {
+              "x": 57,
+              "y": 15,
+              "id": "txt-1781391295775",
+              "text": "<div style=\"text-align: left;\"><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">We </span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(255, 192, 0);\">Power Growth </span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">through&nbsp;&nbsp;</span><span style=\"background-color: transparent; font-size: 96px; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(192, 0, 0);\">Digital Excellence</span></div>",
+              "color": "#ffffff",
+              "width": 1309,
+              "height": 30,
+              "fontSize": 18,
+              "animation": "fade-in",
+              "textAlign": "left",
+              "background": "transparent",
+              "fontWeight": "600",
+              "animationDelay": 0
+            },
+            {
+              "x": 73,
+              "y": 51,
+              "id": "txt-1781391409417",
+              "text": "<h1 data-website-inline-editor=\"true\" data-text-prop=\"headline\" style=\"padding: 4px 6px; font-size: 68px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; font-weight: 700; text-align: center; background-color: rgba(15, 23, 42, 0.06); position: relative; z-index: 1; line-height: 1.1; font-family: Verdana; color: rgb(255, 192, 0); text-shadow: rgb(0, 0, 0) 0px 0px 20px, rgb(0, 0, 0) 0px 0px 40px; width: 874.333px; max-width: 100%; outline: rgba(125, 211, 252, 0.5) dashed 1px; word-break: normal; overflow-wrap: break-word; border-radius: 8px;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span></h1>",
+              "color": "#ffffff",
+              "width": 872,
+              "height": 121,
+              "fontSize": 18,
+              "animation": "fade-in",
+              "textAlign": "left",
+              "background": "transparent",
+              "fontWeight": "600",
+              "animationDelay": 0
+            },
+            {
+              "x": 84,
+              "y": 80,
+              "id": "txt-1781391631508",
+              "text": "<span style=\"font-family: system-ui; font-size: 20px; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">Bring CRM, email, SMS, automations, forms, </span><span style=\"font-size: 20px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; font-family: system-ui; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">scheduling</span><span style=\"font-family: system-ui; font-size: 20px; text-align: center; background-color: rgba(15, 23, 42, 0.06);\">, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span>",
+              "color": "#ffffff",
+              "width": 1002,
+              "height": 59,
+              "fontSize": 18,
+              "animation": "fade-in",
+              "textAlign": "left",
+              "background": "transparent",
+              "fontWeight": "600",
+              "animationDelay": 0
+            }
+          ],
+          "headingFontFamily": "Verdana",
+          "headlineGlowColor": "#000000",
+          "headlineTextStyle": "glow",
+          "heroInlineCounter": {
+            "x": 84,
+            "y": 89,
+            "label": "Site Visitors...and counting",
+            "width": 667,
+            "height": 169,
+            "enabled": true,
+            "iconType": "star",
+            "labelColor": "#ffffff",
+            "numberColor": "#00b0f0",
+            "startNumber": 28642,
+            "targetNumber": 28645,
+            "numberFontSize": 80,
+            "backgroundColor": "rgba(0,0,0,0.0)"
+          },
+          "backgroundPosition": "center center",
+          "backgroundVideoUrl": "",
+          "textAnimationDelay": 0.2,
+          "textAnimationSpeed": 3.5,
+          "fullWidthBackground": true,
+          "headlineShadowColor": "#000000",
+          "extraCounterOverlays": [],
+          "subheadlineAnimation": "drift-edge-left",
+          "sectionAnimationDelay": 0,
+          "sectionAnimationSpeed": 2.2,
+          "backgroundImageAssetId": "5471318a-5ce1-4b70-9974-cb6e8f674be4",
+          "subheadlineAnimationDelay": 0.16,
+          "subheadlineAnimationSpeed": 2.2
+        }
+      },
+      {
+        "id": 1778893218774,
+        "type": "trust-badges",
+        "props": {
+          "badges": [
+            {
+              "id": "trust-badge-0",
+              "icon": "🔒",
+              "label": "Secure"
+            },
+            {
+              "id": "trust-badge-1",
+              "icon": "⭐",
+              "label": "Trusted"
+            },
+            {
+              "id": "trust-badge-2",
+              "icon": "🏆",
+              "label": "Tried & Proven"
+            }
+          ],
+          "headline": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+          "alignment": "center",
+          "bodyBlock": {
+            "color": "#ec4899",
+            "content": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+            "fontSize": 18,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "600",
+            "lineHeight": 1.6
+          },
+          "textColor": "#ec4899",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "subheadline": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+          "badgePadding": 18,
+          "textFontSize": 18,
+          "badgeFontSize": 36,
+          "badgeIconSize": 42,
+          "headlineBlock": {
+            "color": "#ffc000",
+            "content": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+            "fontSize": 68,
+            "alignment": "center",
+            "fontFamily": "Verdana",
+            "fontWeight": "700",
+            "lineHeight": 1.1
+          },
+          "headlineColor": "#ffc000",
+          "pageBackground": "#121c26",
+          "backgroundColor": "#002060",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "headlineFontSize": 68,
+          "headlineAlignment": "center",
+          "trustBadgeVariant": "logo-strip",
+          "headlineFontFamily": "Verdana",
+          "headlineFontWeight": "700",
+          "headlineLineHeight": 1.1,
+          "subheadlineFontSize": 18,
+          "badgeBackgroundColor": "#00b0f0",
+          "subheadlineLineHeight": 1.6
+        }
+      },
+      {
+        "id": 1778366596916,
+        "type": "marquee-strip",
+        "props": {
+          "items": [
+            "Transform your business today!",
+            "Free demo available now.",
+            "Supercharge your workflow!",
+            "All tools in one platform.",
+            "Designed for businesses of all sizes.",
+            "Get started with Gr8 Result!"
+          ],
+          "speed": 80,
+          "fontSize": 120,
+          "alignment": "start",
+          "direction": "left",
+          "textColor": "#92d050",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.5,
+          "paddingTop": 0,
+          "accentColor": "#ffc000",
+          "buttonColor": "#ffffff",
+          "dividerSize": 80,
+          "marginBottom": 0,
+          "textFontSize": 75,
+          "paddingBottom": 30,
+          "textAnimation": "slide-up",
+          "textFillColor": "#00b0f0",
+          "textTransform": "capitalize",
+          "pageBackground": "#121c26",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "textStrokeColor": "#ffffff",
+          "textStrokeWidth": 3,
+          "sectionAnimation": "fade-in",
+          "headingFontFamily": "Verdana",
+          "headlineFontFamily": "Verdana",
+          "textAnimationDelay": 0.08,
+          "textAnimationSpeed": 0.95,
+          "fullWidthBackground": true,
+          "subheadlineAnimation": "fade-up",
+          "sectionAnimationDelay": 0.04,
+          "sectionAnimationSpeed": 8,
+          "subheadlineAnimationDelay": 0.16,
+          "subheadlineAnimationSpeed": 1.05
+        }
+      },
+      {
+        "id": 1779683947911,
+        "type": "competitor-comparison",
+        "props": {
+          "rows": [
+            {
+              "category": "CRM & PIPELINE MANAGEMENT",
+              "logos": [
+                {
+                  "domain": "hubspot.com",
+                  "name": "HubSpot"
+                },
+                {
+                  "domain": "salesforce.com",
+                  "name": "Salesforce"
+                },
+                {
+                  "domain": "pipedrive.com",
+                  "name": "Pipedrive"
+                }
+              ],
+              "price": 97
+            },
+            {
+              "category": "EMAIL MARKETING",
+              "logos": [
+                {
+                  "domain": "mailchimp.com",
+                  "name": "Mailchimp"
+                },
+                {
+                  "domain": "activecampaign.com",
+                  "name": "ActiveCampaign"
+                },
+                {
+                  "domain": "klaviyo.com",
+                  "name": "Klaviyo"
+                }
+              ],
+              "price": 99
+            },
+            {
+              "category": "FUNNELS & WEBSITE BUILDER",
+              "logos": [
+                {
+                  "domain": "clickfunnels.com",
+                  "name": "ClickFunnels"
+                },
+                {
+                  "domain": "leadpages.com",
+                  "name": "Leadpages"
+                },
+                {
+                  "domain": "unbounce.com",
+                  "name": "Unbounce"
+                }
+              ],
+              "price": 97
+            },
+            {
+              "category": "2-WAY SMS MARKETING",
+              "logos": [
+                {
+                  "domain": "twilio.com",
+                  "name": "Twilio"
+                },
+                {
+                  "domain": "simpletexting.com",
+                  "name": "SimpleTexting"
+                },
+                {
+                  "domain": "attentivemobile.com",
+                  "name": "Attentive"
+                }
+              ],
+              "price": 89
+            },
+            {
+              "category": "BOOKING & APPOINTMENTS",
+              "logos": [
+                {
+                  "domain": "calendly.com",
+                  "name": "Calendly"
+                },
+                {
+                  "domain": "acuityscheduling.com",
+                  "name": "Acuity"
+                },
+                {
+                  "domain": "squareup.com",
+                  "name": "Square"
+                }
+              ],
+              "price": 29
+            },
+            {
+              "category": "WORKFLOW AUTOMATIONS",
+              "logos": [
+                {
+                  "domain": "hubspot.com",
+                  "name": "HubSpot"
+                },
+                {
+                  "domain": "zapier.com",
+                  "name": "Zapier"
+                },
+                {
+                  "domain": "keap.com",
+                  "name": "Keap"
+                }
+              ],
+              "price": 169
+            },
+            {
+              "category": "COURSES / PRODUCTS",
+              "logos": [
+                {
+                  "domain": "teachable.com",
+                  "name": "Teachable"
+                },
+                {
+                  "domain": "kajabi.com",
+                  "name": "Kajabi"
+                },
+                {
+                  "domain": "thinkific.com",
+                  "name": "Thinkific"
+                }
+              ],
+              "price": 99
+            },
+            {
+              "category": "CALL TRACKING",
+              "logos": [
+                {
+                  "domain": "callrail.com",
+                  "name": "CallRail"
+                },
+                {
+                  "domain": "twilio.com",
+                  "name": "Twilio"
+                }
+              ],
+              "price": 49
+            },
+            {
+              "category": "REPUTATION MANAGEMENT",
+              "logos": [
+                {
+                  "domain": "birdeye.com",
+                  "name": "Birdeye"
+                },
+                {
+                  "domain": "podium.com",
+                  "name": "Podium"
+                },
+                {
+                  "domain": "grade.us",
+                  "name": "Grade.us"
+                }
+              ],
+              "price": 159
+            },
+            {
+              "category": "TRACKING & ANALYTICS",
+              "logos": [
+                {
+                  "domain": "amplitude.com",
+                  "name": "Amplitude"
+                },
+                {
+                  "domain": "mixpanel.com",
+                  "name": "Mixpanel"
+                }
+              ],
+              "price": 299
+            },
+            {
+              "category": "COMMUNITIES",
+              "logos": [
+                {
+                  "domain": "skool.com",
+                  "name": "Skool"
+                },
+                {
+                  "domain": "mightynetworks.com",
+                  "name": "Mighty Networks"
+                },
+                {
+                  "domain": "circle.so",
+                  "name": "Circle"
+                }
+              ],
+              "price": 89
+            },
+            {
+              "category": "DOCUMENT SIGNING",
+              "logos": [
+                {
+                  "domain": "docusign.com",
+                  "name": "DocuSign"
+                },
+                {
+                  "domain": "pandadoc.com",
+                  "name": "PandaDoc"
+                }
+              ],
+              "price": 47
+            },
+            {
+              "category": "GHANTT CHARTS JOB BOARDS",
+              "logos": [
+                {
+                  "domain": "clickup.com",
+                  "name": "ClickUp"
+                },
+                {
+                  "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184964941-aha-logo-2x.png",
+                  "domain": "",
+                  "name": "Aha"
+                }
+              ],
+              "price": 39
+            }
+          ],
+          "title": "What you'd pay elsewhere",
+          "eyebrow": "our All-in-One Platform",
+          "planName": "COMPETITOR ANALYSIS",
+          "subtitle": "We replace every tool below — one platform, one price.",
+          "alignment": "center",
+          "planPrice": 359,
+          "textColor": "#ffffff",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.04,
+          "planTagline": "Everything above, included",
+          "textFontSize": 40,
+          "textLineHeight": 1.04,
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500
+        }
+      },
+      {
+        "id": 1778380741134,
+        "type": "marquee-strip",
+        "props": {
+          "items": [
+            "Transform your business today!",
+            "Free demo available now.",
+            "Supercharge your workflow!",
+            "All tools in one platform.",
+            "Designed for businesses of all sizes.",
+            "Get started with Gr8 Result!"
+          ],
+          "speed": 80,
+          "fontSize": 120,
+          "alignment": "start",
+          "direction": "right",
+          "textColor": "#92d050",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.5,
+          "paddingTop": 0,
+          "accentColor": "#ffc000",
+          "buttonColor": "#ffffff",
+          "dividerSize": 80,
+          "marginBottom": 0,
+          "textFontSize": 75,
+          "paddingBottom": 30,
+          "textAnimation": "slide-up",
+          "textFillColor": "#081120",
+          "textTransform": "capitalize",
+          "pageBackground": "#121c26",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "textStrokeColor": "#ffffff",
+          "textStrokeWidth": 3,
+          "sectionAnimation": "fade-in",
+          "headingFontFamily": "Verdana",
+          "headlineFontFamily": "Verdana",
+          "textAnimationDelay": 0.08,
+          "textAnimationSpeed": 0.95,
+          "fullWidthBackground": true,
+          "subheadlineAnimation": "fade-up",
+          "sectionAnimationDelay": 0.04,
+          "sectionAnimationSpeed": 8,
+          "subheadlineAnimationDelay": 0.16,
+          "subheadlineAnimationSpeed": 1.05
+        }
+      },
+      {
+        "id": 1779059949626,
+        "type": "space",
+        "props": {
+          "height": "40px",
+          "pageBackground": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0"
+        }
+      },
+      {
+        "id": 1779056514820,
+        "type": "stats",
+        "props": {
+          "stats": [
+            {
+              "id": "stat-item-0",
+              "label": "Customers",
+              "detail": "Brands and service businesses supported in the last 12 months.",
+              "number": "500+"
+            },
+            {
+              "id": "stat-item-1",
+              "label": "Revenue Generated",
+              "detail": "Attributed pipeline and direct sales driven by optimized funnels.",
+              "number": "$2.8M+"
+            },
+            {
+              "id": "stat-item-2",
+              "label": "Satisfaction",
+              "detail": "Average post-project client rating across delivery and communication.",
+              "number": "98%"
+            }
+          ],
+          "title": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; text-align: start;\"><span style=\"font-size: 36px; color: rgb(255, 192, 0);\">Proven Results You Can Trust</span></span>",
+          "subtitle": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; font-weight: 400; color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Helping brands and service-based businesses attract more customers, generate more revenue, and deliver better client experiences.</span></span>",
+          "alignment": "left",
+          "labelSize": 20,
+          "textColor": "#ffffff",
+          "detailSize": 18,
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "labelColor": "#f97316",
+          "lineHeight": 0.98,
+          "accentColor": "#f59e0b",
+          "borderColor": "rgba(226,232,240,0.92)",
+          "cardStagger": 0.15,
+          "detailColor": "#0f172a",
+          "numberColor": "#ffffff",
+          "statsVariant": "data-ribbon",
+          "textFontSize": 24,
+          "pageBackground": "#121c26",
+          "textLineHeight": 0.98,
+          "backgroundColor": "#002060",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "statsLeftColPct": 21,
+          "sectionTitleColor": "#0ea5e9",
+          "statsCardMinWidth": 200,
+          "cardBackgroundColor": "#2563eb",
+          "sectionSubtitleColor": "#06b6d4"
+        }
+      },
+      {
+        "id": 1779059956747,
+        "type": "space",
+        "props": {
+          "height": "20px",
+          "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+          "headlineBlock": {
+            "color": "#ffc000",
+            "content": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+            "fontSize": 52,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "700",
+            "lineHeight": 1.1
+          },
+          "headlineColor": "#ffc000",
+          "pageBackground": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "headlineFontSize": 52,
+          "headlineAlignment": "center",
+          "headlineFontFamily": "system-ui",
+          "headlineFontWeight": "700",
+          "headlineLineHeight": 1.1
+        }
+      },
+      {
+        "id": 1778894829892,
+        "type": "grid-section",
+        "props": {
+          "items": [
+            {
+              "icon": "",
+              "link": "https://gr8result.com/email-marketing/",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+              "title": "Email & SMS Marketing",
+              "content": "",
+              "eyebrow": "Email Marketing and Lead Nurturing through AI powered SMS",
+              "iconName": "email",
+              "imageAlt": "web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/social-media/",
+              "image": "/imported/gr8-services/social-media.jpg",
+              "title": "Social Media",
+              "content": "",
+              "eyebrow": "AI Content Creation & Automated Posting",
+              "iconName": "mobile",
+              "imageAlt": "Gr8 Result Digital Solutions.",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/software/",
+              "image": "/imported/gr8-services/software.png",
+              "title": "CRM Software",
+              "content": "",
+              "eyebrow": "Business Software & Client Management",
+              "iconName": "handshake",
+              "imageAlt": "Gr8 Result Digital Solutions.",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/website-development/",
+              "image": "/imported/gr8-services/websites.jpg",
+              "title": "Website Builder",
+              "content": "",
+              "eyebrow": "Domains, Website Design & Hosting and SEO",
+              "iconName": "web",
+              "imageAlt": "Gr8 Result Digital Solutions.",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/graphic-design/",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
+              "title": "Funnel Builder & Lead Capture",
+              "content": "",
+              "eyebrow": "Landing Pages and Sales Tools",
+              "iconName": "",
+              "imageAlt": "web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": "dticon"
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/branding-design/",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/affiliate-marketing.svg",
+              "title": "Affiliate Marketplace",
+              "content": "",
+              "eyebrow": "Vendor and Affiliate Marketplace. Digital & Physical",
+              "iconName": "bs-search",
+              "imageAlt": "affiliate marketing",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/seo/",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+              "title": "Calendar Booking",
+              "content": "",
+              "eyebrow": "Calendar Booking Module for Support and Coaching",
+              "iconName": "",
+              "imageAlt": "web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": "webexbaseicon"
+            },
+            {
+              "icon": "",
+              "link": "https://gr8result.com/videos/",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/community-dark.svg",
+              "title": "Community & Connections",
+              "content": "",
+              "eyebrow": "Personal & Global Community module",
+              "iconName": "",
+              "imageAlt": "community dark",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 150,
+              "iconFontFamily": "dticon"
+            }
+          ],
+          "title": "Our Platform Modules",
+          "columns": 4,
+          "iconSize": 50,
+          "columnGap": 24,
+          "iconColor": "#0f172a",
+          "textColor": "#0f172a",
+          "borderColor": "rgba(148,163,184,0.22)",
+          "cardStagger": 0.08,
+          "gridVariant": "services",
+          "imageRadius": 18,
+          "columnRadius": 22,
+          "columnShadow": "soft",
+          "blockMaxWidth": 1200,
+          "bodyAnimation": "fade-up",
+          "cardAnimation": "edge-right",
+          "columnPadding": 18,
+          "iconAnimation": "fade-up",
+          "itemAnimation": "edge-right",
+          "imageAnimation": "zoom",
+          "pageBackground": "#121c26",
+          "titleAnimation": "fade-up",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "columnBodyColor": "#475569",
+          "stretchToCanvas": true,
+          "columnTitleColor": "#0f172a",
+          "columnsTopMargin": 18,
+          "sectionAnimation": "edge-right",
+          "columnBorderColor": "rgba(148,163,184,0.18)",
+          "gridItemMinHeight": 0,
+          "cardAnimationSpeed": 1.8,
+          "columnContentAlign": "left",
+          "itemAnimationSpeed": 1.8,
+          "cardBackgroundColor": "#ffffff",
+          "iconBackgroundColor": "#ffffff",
+          "servicesStylePreset": "style-03",
+          "cardAnimationStagger": 0.015,
+          "columnsVerticalAlign": "center",
+          "itemAnimationStagger": 0.015,
+          "columnBackgroundColor": "#ffffff",
+          "sectionAnimationSpeed": 1.2,
+          "surfaceAnimationSpeed": 0.8
+        }
+      },
+      {
+        "id": 1779058697413,
+        "type": "space",
+        "props": {
+          "height": "60px",
+          "pageBackground": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0"
+        }
+      },
+      {
+        "id": 1779158148086,
+        "type": "marquee-strip",
+        "props": {
+          "angle": 3,
+          "items": [
+            {
+              "text": "PayPal",
+              "iconKey": "si-paypal"
+            },
+            {
+              "text": "Stripe",
+              "iconKey": "si-stripe"
+            },
+            {
+              "text": "Shopify",
+              "iconKey": "si-shopify"
+            },
+            {
+              "text": "Google Ads",
+              "iconKey": "si-gads"
+            },
+            {
+              "text": "Microsoft",
+              "iconKey": "si-ms"
+            },
+            {
+              "text": "Spotify",
+              "iconKey": "si-spotify"
+            },
+            {
+              "text": "Dropbox",
+              "iconKey": "si-dropbox"
+            },
+            {
+              "text": "Zoom",
+              "iconKey": "si-zoom"
+            }
+          ],
+          "speed": 40,
+          "fontSize": 48,
+          "direction": "left",
+          "fontStyle": "normal",
+          "marginTop": 0,
+          "textColor": "#f8fafc",
+          "fontWeight": "600",
+          "lineHeight": 1.08,
+          "paddingTop": 16,
+          "accentColor": "#7dd3fc",
+          "dividerSize": 48,
+          "dividerText": "*",
+          "itemPaddingX": 14,
+          "marginBottom": 0,
+          "paddingBottom": 150,
+          "textFillColor": "#f8fafc",
+          "textTransform": "uppercase",
+          "textDecoration": "none",
+          "backgroundColor": "#081120",
+          "baseLayoutWidth": 1500,
+          "textStrokeColor": "transparent",
+          "textStrokeWidth": 8,
+          "sectionAnimation": "fade-in",
+          "fullWidthBackground": true,
+          "sectionAnimationDelay": 0.04
+        }
+      },
+      {
+        "id": 1779225980928,
+        "type": "parallax",
+        "props": {
+          "ctaLink": "#",
+          "ctaText": "Book a Free Demo",
+          "eyebrow": "welcome to the",
+          "contentX": 29,
+          "contentY": 43,
+          "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+          "alignment": "center",
+          "bodyBlock": {
+            "color": "#ffc000",
+            "content": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+            "fontSize": 20,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "800",
+            "lineHeight": 1.6
+          },
+          "floatingX": 76,
+          "floatingY": 58,
+          "minHeight": "1300px",
+          "textColor": "#ffc000",
+          "fontFamily": "system-ui",
+          "fontWeight": "800",
+          "lineHeight": 1.4,
+          "buttonColor": "#2563eb",
+          "subheadline": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+          "contentWidth": 763,
+          "textFontSize": 20,
+          "contentHeight": 420,
+          "floatingImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+          "floatingWidth": 220,
+          "headlineBlock": {
+            "color": "#ffc000",
+            "content": "Gr8 Result Digital Solutions<br>Business and Marketing Platform<br>Your ALL-IN-ONE platform for business growth",
+            "fontSize": 52,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "700",
+            "lineHeight": 1.1
+          },
+          "headlineColor": "#ffc000",
+          "heroStatItems": [
+            {
+              "id": "stat-1779226738677",
+              "label": "",
+              "number": ""
+            }
+          ],
+          "verticalAlign": "center",
+          "enableParallax": true,
+          "floatingHeight": 220,
+          "floatingImages": [
+            {
+              "x": 75,
+              "y": 34,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+              "width": 457,
+              "height": 692,
+              "assetId": "f7952ae7-a280-4073-b1af-59647c43b189",
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 68,
+              "y": 73,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416597583-website-development-client-collaboration-gr8result.jpg",
+              "width": 625,
+              "height": 578,
+              "assetId": "e2890a84-8847-46f2-a53d-8be074679d88",
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 50,
+              "y": 75,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226408848-beautiful-businesswoman-her-office_329181-13386.avif",
+              "width": 354,
+              "height": 413,
+              "assetId": "be7a9f96-21ec-4f6e-891d-d6bc6bc13e55",
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            },
+            {
+              "x": 22,
+              "y": 84,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416651481-banner-bg1.jpg",
+              "width": 661,
+              "height": 614,
+              "assetId": "349f9e1a-0259-4575-8101-5f4c34d42553",
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            }
+          ],
+          "textLineHeight": 1.4,
+          "backgroundColor": "#0f172a",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226235962-graphic-designer-creative-workspace-gr8result.jpg",
+          "backgroundStyle": "image",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#ffffff",
+          "headlineFontSize": 52,
+          "extraTextOverlays": [
+            {
+              "x": 77,
+              "y": 97,
+              "id": "txt-1779675952582",
+              "text": "* Savings comparison is based on current monthly platform pricing versus equivalent standalone module pricing. Annual figures are monthly savings multiplied by 12.",
+              "color": "#ffffff",
+              "width": 989,
+              "height": 30,
+              "fontSize": 18,
+              "animation": "fade-in",
+              "textAlign": "left",
+              "background": "transparent",
+              "fontWeight": "600",
+              "animationDelay": 0
+            }
+          ],
+          "headlineAlignment": "center",
+          "backgroundPosition": "center center",
+          "backgroundVideoUrl": "",
+          "headlineFontFamily": "system-ui",
+          "headlineFontWeight": "700",
+          "headlineLineHeight": 1.1,
+          "fullWidthBackground": true,
+          "subheadlineFontSize": 20,
+          "subheadlineLineHeight": 1.6,
+          "backgroundImageAssetId": "aceff264-c719-450c-a963-d4ac2f8e7bb3"
+        }
+      },
+      {
+        "id": "benefits-grid-001",
+        "type": "grid-section",
+        "props": {
+          "items": [
+            {
+              "icon": "",
+              "link": "",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1679707860-2cd99574b08ca768371f.jpg",
+              "title": "Eliminate Platform Switching",
+              "content": "Access all your marketing tools in one unified dashboard. No more juggling between multiple platforms and losing productivity.",
+              "eyebrow": "All-in-One Platform",
+              "iconName": "",
+              "imageAlt": "1679707860",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 0,
+              "imageAssetId": "asset:generic/library-1679707860-2cd99574b08ca768371f.jpg",
+              "iconFontFamily": "dticon"
+            },
+            {
+              "icon": "💰",
+              "link": "",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1563981389-8fb7639e051d8252d771.jpg",
+              "title": "Reduce Subscription Costs",
+              "content": "Replace 5–10 separate subscriptions with one comprehensive platform. Save thousands annually while gaining more capabilities.",
+              "eyebrow": "Save Thousands",
+              "iconName": "",
+              "imageAlt": "1563981389",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 0,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "🔄",
+              "link": "",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-190997736-41e325c95b6b390272dc.png",
+              "title": "Streamline Workflows",
+              "content": "Connect all your marketing activities seamlessly. Data flows automatically between tools, eliminating manual data entry and errors.",
+              "eyebrow": "Automation Made Easy",
+              "iconName": "",
+              "imageAlt": "190997736",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 0,
+              "iconFontFamily": ""
+            },
+            {
+              "icon": "📈",
+              "link": "",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1809094467-c4a08735f77dc1b94f18.jpg",
+              "title": "Scale Faster",
+              "content": "Grow your business without platform limitations. Our infrastructure helps you to scale your business from startup to enterprise.  The sky is the limit.",
+              "eyebrow": "Built to Grow",
+              "iconName": "",
+              "imageAlt": "1809094467",
+              "iconGlyph": "",
+              "iconImage": "",
+              "iconAssetId": "",
+              "imageHeight": 0,
+              "iconFontFamily": ""
+            }
+          ],
+          "title": "<span style=\"font-size: 48px; color: rgb(255, 192, 0);\">Real benefits that impact your bottom line from day one.</span>",
+          "columns": 4,
+          "eyebrow": "Our Platform",
+          "iconSize": 36,
+          "alignment": "left",
+          "bodyBlock": {
+            "color": "#bdbcbf",
+            "content": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+            "fontSize": 18,
+            "alignment": "left",
+            "fontFamily": "Arial",
+            "fontWeight": "400",
+            "lineHeight": 1.6
+          },
+          "columnGap": 24,
+          "iconColor": "",
+          "textColor": "#000000",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.2,
+          "borderColor": "rgba(148,163,184,0.22)",
+          "buttonColor": "#ffffff",
+          "cardStagger": 0.1,
+          "gridVariant": "services",
+          "imageRadius": 16,
+          "subheadline": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+          "cardBodySize": 16,
+          "columnRadius": 22,
+          "columnShadow": "soft",
+          "eyebrowColor": "",
+          "textFontSize": 28,
+          "blockMaxWidth": 1700,
+          "bodyAnimation": "fade-up",
+          "cardAnimation": "zoom",
+          "cardTitleSize": 28,
+          "columnPadding": 22,
+          "iconAnimation": "rotate-in-down-right",
+          "iconBadgeWidth": 90,
+          "imageAnimation": "zoom",
+          "pageBackground": "#121c26",
+          "textLineHeight": 1.2,
+          "titleAnimation": "fade-up",
+          "backgroundColor": "",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "columnBodyColor": "",
+          "eyebrowFontSize": 20,
+          "iconBadgeHeight": 90,
+          "stretchToCanvas": true,
+          "columnTitleColor": "",
+          "columnsTopMargin": 18,
+          "sectionAnimation": "light-speed-in",
+          "columnBorderColor": "#ec4899",
+          "gridItemMinHeight": 0,
+          "headingFontFamily": "Verdana",
+          "sectionTitleColor": "",
+          "columnContentAlign": "left",
+          "headlineFontFamily": "Verdana",
+          "servicesLayoutMode": "grid",
+          "cardBackgroundColor": "",
+          "iconBackgroundColor": "",
+          "servicesColorPreset": "blue",
+          "servicesStylePreset": "style-03",
+          "subheadlineFontSize": 18,
+          "columnsVerticalAlign": "top",
+          "columnBackgroundColor": "",
+          "subheadlineLineHeight": 1.6,
+          "surfaceAnimationSpeed": 0.3,
+          "sectionBackgroundImage": "/imported/gr8-services/software.png"
+        }
+      },
+      {
+        "id": 1778479036680,
+        "type": "space",
+        "props": {
+          "height": "40px",
+          "eyebrow": "Our Specialties",
+          "faqBlock": {
+            "items": [
+              {
+                "heading": "What makes this platform different from other solutions?",
+                "question": "What makes this platform different from other solutions?"
+              }
+            ],
+            "alignment": "left",
+            "fontFamily": "Poppins",
+            "questionColor": "#ffffff",
+            "questionFontSize": 24,
+            "questionFontWeight": "700",
+            "questionLineHeight": 1.4
+          },
+          "headline": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+          "alignment": "left",
+          "bodyBlock": {
+            "color": "#bdbcbf",
+            "content": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+            "fontSize": 18,
+            "alignment": "left",
+            "fontFamily": "Arial",
+            "fontWeight": "400",
+            "lineHeight": 1.6
+          },
+          "textColor": "#000000",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.2,
+          "buttonColor": "#ffffff",
+          "subheadline": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+          "textFontSize": 16,
+          "headlineBlock": {
+            "color": "#ffc000",
+            "content": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+            "fontSize": 48,
+            "alignment": "left",
+            "fontFamily": "Montserrat",
+            "fontWeight": "400",
+            "lineHeight": 1.2
+          },
+          "headlineColor": "#ffc000",
+          "pageBackground": "#121c26",
+          "textLineHeight": 1.2,
+          "buttonTextColor": "#00b0f0",
+          "headlineFontSize": 48,
+          "headingFontFamily": "Verdana",
+          "headlineAlignment": "left",
+          "headlineFontFamily": "Montserrat",
+          "headlineFontWeight": "400",
+          "headlineLineHeight": 1.2,
+          "subheadlineFontSize": 18,
+          "subheadlineLineHeight": 1.6
+        }
+      },
+      {
+        "id": "wb_1778363723822_788d70",
+        "type": "stats",
+        "props": {
+          "stats": [
+            {
+              "id": "stat-item-0",
+              "label": "<span style=\"color: rgb(0, 112, 192);\">Tools replaced</span>",
+              "detail": "Reduce the patchwork of separate apps your team is switching between all day.",
+              "number": "Up to 9+"
+            },
+            {
+              "id": "stat-item-1",
+              "label": "<span style=\"color: rgb(0, 112, 192);\">Typical stack cost</span>",
+              "detail": "What some teams are paying before they consolidate sales, follow-up, and marketing.",
+              "number": "$1,300+/mo"
+            },
+            {
+              "id": "stat-item-2",
+              "label": "<span style=\"color: rgb(0, 112, 192);\">Source of truth</span>",
+              "detail": "One platform for leads, conversations, automations, &amp; reporting. Control your contacts for the entire life cycle of the lead.",
+              "number": "ONE"
+            }
+          ],
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 40px;\">Why unified platforms win</span></span>",
+          "subtitle": "<span style=\"color: rgb(255, 255, 255);\">Consolidate software, reduce handoffs, and stop paying $1,300+/mo for overlap.</span>",
+          "alignment": "start",
+          "textColor": "#002060",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "labelColor": "#2563eb",
+          "lineHeight": 0.98,
+          "accentColor": "#f59e0b",
+          "borderColor": "#f97316",
+          "buttonColor": "#ffffff",
+          "statsVariant": "editorial-band",
+          "textFontSize": 48,
+          "textAnimation": "fade-up",
+          "pageBackground": "#121c26",
+          "textLineHeight": 0.98,
+          "backgroundColor": "#002060",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#00b0f0",
+          "sectionAnimation": "blur-in",
+          "headingFontFamily": "Verdana",
+          "headlineFontFamily": "Verdana",
+          "textAnimationDelay": 0.08,
+          "textAnimationSpeed": 0.95,
+          "cardBackgroundColor": "#06b6d4",
+          "sectionSubtitleColor": "#f97316",
+          "subheadlineAnimation": "slide-right",
+          "sectionAnimationDelay": 0.16,
+          "sectionAnimationSpeed": 1,
+          "subheadlineAnimationDelay": 0.16,
+          "subheadlineAnimationSpeed": 1.05
+        }
+      },
+      {
+        "id": 1779312402641,
+        "type": "cta-button",
+        "props": {
+          "link": "support@gr8result.com",
+          "note": "No card required",
+          "size": "large",
+          "text": "Book Demo Now!",
+          "style": "stacked-card",
+          "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free Demo of our platform and see how well it can integrate into your business</span></li></ol>",
+          "eyebrow": "GR8 RESULT DIGITAL SOLUTIONS",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.7,
+          "borderColor": "rgba(255,255,255,0.18)",
+          "buttonColor": "linear-gradient(135deg,#facc15,#f59e0b)",
+          "description": "This is not a sales call, it is simply a demonstration of how this platform can help you scale your business to amazing new heights.",
+          "textFontSize": 24,
+          "textAnimation": "slide-left",
+          "textLineHeight": 1.7,
+          "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 62%,#22d3ee)",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "contentMaxWidth": 1200,
+          "textAnimationDelay": 0.1,
+          "textAnimationSpeed": 0.8
+        }
+      },
+      {
+        "id": "wb_1778363723821_0eaac3",
+        "type": "trust-badges",
+        "props": {
+          "badges": [
+            {
+              "id": "trust-badge-0",
+              "icon": "📈",
+              "label": "Pipeline visibility"
+            },
+            {
+              "id": "trust-badge-1",
+              "icon": "✉️",
+              "label": "Email campaigns"
+            },
+            {
+              "id": "trust-badge-2",
+              "icon": "💬",
+              "label": "SMS follow-up"
+            },
+            {
+              "id": "trust-badge-3",
+              "icon": "⚙️",
+              "label": "Built-in automations"
+            },
+            {
+              "id": "trust-badge-4",
+              "icon": "🧾",
+              "label": "Forms and capture"
+            },
+            {
+              "id": "trust-badge-5",
+              "icon": "📊",
+              "label": "Reporting and attribution"
+            },
+            {
+              "id": "trust-badge-6",
+              "icon": "🔄",
+              "label": "Fully functioncional CRM"
+            },
+            {
+              "id": "trust-badge-7",
+              "icon": "🌐",
+              "label": "Website Builder"
+            },
+            {
+              "id": "trust-badge-8",
+              "icon": "👥",
+              "label": "Local & Global Community"
+            },
+            {
+              "id": "trust-badge-9",
+              "icon": "🎯",
+              "label": "Funnel Builder"
+            },
+            {
+              "id": "trust-badge-10",
+              "icon": "🤝",
+              "label": "Xchange Affiliate Marketplace"
+            },
+            {
+              "id": "trust-badge-11",
+              "icon": "📱",
+              "label": "AI Social Media Management"
+            },
+            {
+              "id": "trust-badge-12",
+              "icon": "✍️",
+              "label": "Content Creation"
+            }
+          ],
+          "textColor": "#0f172a",
+          "borderColor": "rgba(125,211,252,0.42)",
+          "buttonColor": "#ffffff",
+          "badgePadding": 18,
+          "badgeFontSize": 24,
+          "badgeIconSize": 30,
+          "textAnimation": "fade-up",
+          "pageBackground": "#121c26",
+          "backgroundColor": "#121c26",
+          "backgroundImage": "",
+          "backgroundStyle": "image",
+          "buttonTextColor": "#00b0f0",
+          "sectionAnimation": "fade-up",
+          "headingFontFamily": "Verdana",
+          "trustBadgeVariant": "pill-row",
+          "headlineFontFamily": "Verdana",
+          "textAnimationDelay": 0.08,
+          "textAnimationSpeed": 0.95,
+          "badgeBackgroundColor": "#00b0f0",
+          "subheadlineAnimation": "fade-up",
+          "sectionAnimationDelay": 0.12,
+          "sectionAnimationSpeed": 1,
+          "backgroundImageAssetId": "e6fb48ac-b8e6-4f25-aeab-97389b2dcc09",
+          "subheadlineAnimationDelay": 0.16,
+          "subheadlineAnimationSpeed": 1.05
+        }
+      },
+      {
+        "id": 1782866795293,
+        "type": "text",
+        "props": {
+          "text": "Integrate your favourite platforms...",
+          "alignment": "center",
+          "textSize": "medium",
+          "textFontSize": 48,
+          "fontFamily": "Nunito",
+          "fontWeight": "400",
+          "minHeight": "120px",
+          "fullWidthBackground": false,
+          "enableParallax": false,
+          "textColor": "#f59e0b",
+          "backgroundColor": "#121c26",
+          "backgroundImage": "",
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "textLineHeight": 1.35,
+          "verticalAlign": "top",
+          "contentY": 32,
+          "contentHeight": 120,
+          "textAnimation": "fade-in",
+          "baseLayoutWidth": 1500,
+          "hideBorder": true
+        }
+      },
+      {
+        "id": 1779156987087,
+        "type": "marquee-strip",
+        "props": {
+          "items": [
+            {
+              "text": "Facebook",
+              "iconKey": "facebook-file"
+            },
+            {
+              "text": "Instagram",
+              "iconKey": "instagram-file"
+            },
+            {
+              "text": "Linkedin",
+              "iconKey": "linkedin-file"
+            },
+            {
+              "text": "Pinterest",
+              "iconKey": "pinterest-file"
+            },
+            {
+              "text": "TicTok",
+              "iconKey": "tiktok-file"
+            },
+            {
+              "text": "YouTube",
+              "iconKey": "youtube-file"
+            },
+            {
+              "text": "WhatsApp",
+              "iconKey": "whatsapp-file"
+            },
+            {
+              "text": "Telegram",
+              "iconKey": "telegram-file"
+            },
+            {
+              "text": "Discord",
+              "iconKey": "discord-file"
+            },
+            {
+              "text": "Reddit",
+              "iconKey": "reddit-file"
+            },
+            {
+              "text": "SnapChat",
+              "iconKey": "snapchat-file"
+            },
+            {
+              "text": "Threads",
+              "iconKey": "threads-file"
+            },
+            {
+              "text": "Bluesky",
+              "iconKey": "bluesky-file"
+            },
+            {
+              "text": "Google Business",
+              "iconKey": "googlebusiness-file"
+            },
+            {
+              "text": "Lemon8",
+              "iconKey": "lemon8-file"
+            }
+          ],
+          "speed": 80,
+          "fontSize": 64,
+          "direction": "left",
+          "fontStyle": "normal",
+          "marginTop": 0,
+          "textColor": "#ffffff",
+          "fontWeight": "600",
+          "lineHeight": 1.08,
+          "paddingTop": 16,
+          "accentColor": "#7dd3fc",
+          "dividerSize": 14,
+          "dividerText": "*",
+          "itemPaddingX": 14,
+          "marginBottom": 0,
+          "paddingBottom": 16,
+          "textFillColor": "#ffffff",
+          "textTransform": "none",
+          "textDecoration": "none",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "textStrokeColor": "transparent",
+          "textStrokeWidth": 3,
+          "sectionAnimation": "fade-in",
+          "fullWidthBackground": true,
+          "sectionAnimationDelay": 0.04
+        }
+      },
+      {
+        "id": 1779416282454,
+        "type": "footer",
+        "props": {
+          "logo": "",
+          "brand": "Your Brand",
+          "tagline": "Building something amazing.",
+          "navLinks": [
+            {
+              "href": "#home",
+              "label": "Home"
+            },
+            {
+              "href": "#about",
+              "label": "About"
+            },
+            {
+              "href": "#services",
+              "label": "Services"
+            },
+            {
+              "href": "#contact",
+              "label": "Contact"
+            }
+          ],
+          "linkColor": "#94a3b8",
+          "logoWidth": 48,
+          "textColor": "#e2e8f0",
+          "extraLinks": [
+            {
+              "href": "#blog",
+              "label": "Blog"
+            },
+            {
+              "href": "#privacy",
+              "label": "Privacy Policy"
+            },
+            {
+              "href": "#terms",
+              "label": "Terms"
+            }
+          ],
+          "navHeading": "Navigation",
+          "borderColor": "rgba(148,163,184,0.2)",
+          "contactEmail": "hello@yourbrand.com",
+          "contactPhone": "(555) 010-2026",
+          "extraHeading": "Company",
+          "copyrightText": "© 2025 Your Brand. All rights reserved.",
+          "contactAddress": "Your city, state",
+          "contactHeading": "Contact",
+          "showNewsletter": true,
+          "backgroundColor": "#0f172a",
+          "baseLayoutWidth": 1500,
+          "newsletterHeading": "Stay Updated",
+          "newsletterSubtitle": "Get the latest news delivered to your inbox.",
+          "newsletterActionUrl": "",
+          "newsletterButtonText": "Subscribe",
+          "newsletterButtonColor": "#2563eb",
+          "newsletterSubmitMethod": "post",
+          "newsletterFallbackEmail": "",
+          "newsletterButtonTextColor": "#ffffff"
+        }
+      },
+      {
+        "id": 1781393291494,
+        "type": "cta-button",
+        "props": {
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "size": "large",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "style": "stacked-card",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "eyebrow": "<br>",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "buttonColor": "#00b0f0",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "fullWidthBackground": true
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "savedAt": "2026-07-01T00:52:12.900Z",
+  "source": "autosave"
+}

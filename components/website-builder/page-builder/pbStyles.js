@@ -386,6 +386,8 @@ const styles = {
     height: "100%",
     alignItems: "stretch",
     justifyContent: "stretch",
+    position: "relative",
+    isolation: "isolate",
   },
   workspaceNarrow: {
     gridTemplateColumns: "1fr",
@@ -398,6 +400,7 @@ const styles = {
     position: "sticky",
     top: 0,
     alignSelf: "start",
+    zIndex: 30,
   },
   library: {
     background: "#111827",
@@ -498,6 +501,9 @@ const styles = {
     overflowY: "auto",
     overflowX: "hidden",
     position: "relative",
+    zIndex: 1,
+    isolation: "isolate",
+    contain: "paint",
     minWidth: 0,
     width: "100%",
     minHeight: 0,
@@ -506,8 +512,11 @@ const styles = {
   canvasViewport: {
     width: "100%",
     minWidth: 0,
-    overflow: "hidden",
+    overflow: "visible",
     position: "relative",
+    isolation: "isolate",
+    contain: "layout style",
+    transform: "translateZ(0)",
     minHeight: "60vh",
   },
   sidePanelShell: {
@@ -518,6 +527,7 @@ const styles = {
     position: "sticky",
     top: 0,
     alignSelf: "start",
+    zIndex: 30,
   },
   canvasGridBg: {
     backgroundImage: "linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px)",
@@ -580,6 +590,26 @@ const styles = {
   globalBlockPreviewSurface: {
     overflow: "visible",
   },
+  blockPreviewError: {
+    display: "grid",
+    gap: 6,
+    minHeight: 140,
+    alignContent: "center",
+    padding: 24,
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+    color: "#7c2d12",
+    fontSize: 14,
+    lineHeight: 1.4,
+  },
+  blockPreviewErrorTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+  },
+  blockPreviewErrorText: {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    overflowWrap: "anywhere",
+  },
   globalBlockBannerHint: {
     marginLeft: "auto",
     fontSize: 16,
@@ -589,7 +619,7 @@ const styles = {
   },
   canvasBlock: {
     background: "transparent",
-    border: "1px solid transparent",
+    border: "0 solid transparent",
     borderRadius: 0,
     padding: 0,
     cursor: "default",
@@ -913,17 +943,18 @@ const styles = {
     color: "#0f172a",
   },
   dropZone: {
-    height: 14,
+    height: 0,
     display: "grid",
     alignItems: "center",
+    overflow: "visible",
   },
   dropZoneActive: {
     height: 20,
   },
   dropLine: {
-    height: 2,
+    height: 0,
     borderRadius: 99,
-    background: "rgba(45,108,223,0.25)",
+    background: "transparent",
     transition: "all 0.15s ease",
   },
   dropLineActive: {
@@ -1452,11 +1483,20 @@ const styles = {
     paddingRight: 4,
     alignContent: "start",
   },
+  modalSectionTitle: {
+    gridColumn: "1 / -1",
+    color: "#cbd5e1",
+    fontSize: 13,
+    fontWeight: 800,
+    letterSpacing: 0,
+    textTransform: "uppercase",
+    marginTop: 4,
+  },
   modalAssetCard: {
     display: "grid",
     gap: 8,
     padding: 10,
-    borderRadius: 14,
+    borderRadius: 8,
     border: "1px solid #24334d",
     background: "#101827",
     cursor: "pointer",
@@ -1470,7 +1510,7 @@ const styles = {
     width: "100%",
     aspectRatio: "1 / 1",
     objectFit: "cover",
-    borderRadius: 10,
+    borderRadius: 8,
     background: "#0d1522",
     display: "block",
   },

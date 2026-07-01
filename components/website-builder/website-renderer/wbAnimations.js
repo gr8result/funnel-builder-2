@@ -543,6 +543,26 @@ function pickDefaultAvatarSrc(assets) {
 function resolvePublishedNavHref(link, navigationContext) {
   const href = String(link?.href || "").trim();
   if (!href) return "#";
+  const canonicalRoutes = {
+    home: "/",
+    "about-us": "/about",
+    about: "/about",
+    modules: "/modules",
+    "contact-us": "/contact",
+    contact: "/contact",
+    email: "/email",
+    pricing: "/pricing",
+    crm: "/crm",
+    sms: "/sms",
+    funnels: "/funnels",
+  };
+  if (href.startsWith("#")) {
+    const anchorKey = slugifyText(href.slice(1));
+    if (canonicalRoutes[anchorKey]) return canonicalRoutes[anchorKey];
+  }
+  if (/^https?:\/\/localhost(?::\d+)?/i.test(href)) {
+    return href.replace(/^https?:\/\/localhost(?::\d+)?/i, "") || "/";
+  }
   if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
 
   const pageMap = navigationContext?.pageMap || {};
@@ -551,7 +571,8 @@ function resolvePublishedNavHref(link, navigationContext) {
   const publishedHref = pageMap[normalizedHref];
 
   if (publishedHref) {
-    return `${basePath}${publishedHref}`;
+    if (/^(https?:|mailto:|tel:|#|\/|\?)/i.test(publishedHref)) return publishedHref;
+    return basePath ? `${basePath}/${String(publishedHref).replace(/^\//, "")}` : publishedHref;
   }
 
   return href;
@@ -601,9 +622,13 @@ function resolveParallaxSpeed(...values) {
 function heroBackground(props) {
   if (props.backgroundStyle === "image" && props.backgroundImage) {
     const baseColor = resolveHeroBaseColor(props);
+    const explicitOverlay = String(props.backgroundOverlay || props.backgroundOverlayColor || "").trim();
+    const overlayImage = explicitOverlay && explicitOverlay !== "transparent"
+      ? `linear-gradient(135deg, ${explicitOverlay}, ${explicitOverlay}), `
+      : "";
     return {
       backgroundColor: baseColor,
-      backgroundImage: `linear-gradient(135deg, ${colorWithAlpha(baseColor, 0.28)}, ${colorWithAlpha(baseColor, 0.58)}), url(${props.backgroundImage})`,
+      backgroundImage: `${overlayImage}url(${props.backgroundImage})`,
       backgroundSize: props.backgroundSize || "cover",
       backgroundPosition: props.backgroundPosition || "center center",
       backgroundRepeat: props.backgroundRepeat || "no-repeat",

@@ -32,7 +32,7 @@ export default function SocialCampaigns() {
       const res = await fetch("/api/social/get-campaigns", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || "Failed to load campaigns");
       setCampaigns(json.campaigns || []);
     } catch (err) {
@@ -54,7 +54,7 @@ export default function SocialCampaigns() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newName.trim(), description: newDesc.trim() }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || "Failed to create campaign");
       setNewName("");
       setNewDesc("");
@@ -77,7 +77,7 @@ export default function SocialCampaigns() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || "Failed to delete");
       setNotice(`Campaign "${name}" deleted.`);
       await loadCampaigns();

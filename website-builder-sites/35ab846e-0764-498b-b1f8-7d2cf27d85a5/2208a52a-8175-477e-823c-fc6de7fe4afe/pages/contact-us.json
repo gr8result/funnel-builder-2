@@ -1,0 +1,743 @@
+{
+  "id": "contact-us",
+  "name": "Contact Us",
+  "slug": "contact-us",
+  "seo": {},
+  "sections": [],
+  "widgets": [],
+  "styles": {},
+  "assets": [],
+  "objective": "Build the Contact Us page.",
+  "blocks": [
+    {
+      "id": "f5940940-5db3-422e-9e2f-821727f6ded7",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us"
+          },
+          {
+            "href": "#contact",
+            "label": "CONtact"
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Contact",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "sticky-transparent",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#0ea5e9",
+        "ctaFontSize": 16,
+        "linkFontSize": 16,
+        "brandFontSize": 20,
+        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#ffffff",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+        "baseLayoutWidth": 1600
+      }
+    },
+    {
+      "id": 1781469821488,
+      "type": "text",
+      "props": {
+        "text": "<div style=\"font-size: 84px; color: rgb(255, 192, 0);; text-align: center; font-size: 84px;\"><span style=\"font-weight: 600;\">Contact Us!</span></div>",
+        "alignment": "left",
+        "textSize": "medium",
+        "textFontSize": 84,
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "minHeight": "202px",
+        "fullWidthBackground": true,
+        "enableParallax": false,
+        "textColor": "#e6eef5",
+        "backgroundColor": "#111827",
+        "backgroundImage": "",
+        "paddingTop": 250,
+        "paddingBottom": 100,
+        "textLineHeight": 1.35,
+        "verticalAlign": "top",
+        "contentY": 32,
+        "contentHeight": 120,
+        "textAnimation": "fade-in",
+        "baseLayoutWidth": 1600,
+        "hideBorder": true,
+        "bodyFontSize": 84,
+        "subheadlineFontSize": 84
+      }
+    },
+    {
+      "id": 1781469620870,
+      "type": "columns-2",
+      "props": {
+        "title": "",
+        "leftTitle": "",
+        "leftContent": "",
+        "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780435914199-4.png",
+        "rightTitle": "<span style=\"font-size: 64px;\">Get in Touch</span>",
+        "rightContent": "<div style=\"text-align: justify;\"><span style=\"font-size: 24px;\">Have questions or want to learn more about our platform? We'd love to hear from you. Get in touch with our team today and discover how we can help streamline your business, improve productivity, and support your growth.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\">Whether you're exploring our platform for the first time, need assistance with your account, or are experiencing a technical issue, our team is here to help. We understand that your business relies on reliable systems and prompt support, so we're committed to providing fast, friendly, and practical assistance whenever you need it. Simply reach out and let us know how we can help.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div>",
+        "rightImage": "",
+        "ratio": "50-50",
+        "backgroundColor": "transparent",
+        "cardBackgroundColor": "#f8fafc",
+        "textColor": "#0f172a",
+        "borderColor": "#dbeafe",
+        "leftColumnBlock": null,
+        "rightColumnBlock": null,
+        "baseLayoutWidth": 1600,
+        "leftColumnContentType": "text",
+        "leftImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780435914199-4.png",
+        "leftImageHeight": 898,
+        "headlineFontSize": 64,
+        "headingFontSize": 64,
+        "textFontSize": 24,
+        "bodyFontSize": 24,
+        "columnsVerticalAlign": "center"
+      }
+    },
+    {
+      "id": 1781470726200,
+      "type": "split-block",
+      "props": {
+        "splitColorPreset": "blue",
+        "eyebrow": "How Can We Help?",
+        "headline": "<span style=\"font-size: 56px; color: rgb(0, 176, 240);\"><h2 style=\"text-align: left; padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; letter-spacing: normal; line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-family: &quot;Space Grotesk&quot;; font-size: 56px;\"><span><span><span><span style=\"font-size: 56px;\"><span style=\"font-size: 48px;\">Just Before You Contact Us.</span></span></span></span></span></h2></span>",
+        "subheadline": "<span style=\"font-size: 20px;\">Before you call us, take a moment to browse our frequently asked questions below. We've compiled answers to some of the most common questions about our platform, pricing, features, and support services. You may find the information you need straight away, saving you time and helping you get started faster.</span>",
+        "headlineBlock": {
+          "content": "<span style=\"font-size: 56px; color: rgb(0, 176, 240);\"><h2 style=\"text-align: left; padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; letter-spacing: normal; line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-family: &quot;Space Grotesk&quot;; font-size: 56px;\"><span><span><span><span style=\"font-size: 56px;\"><span style=\"font-size: 48px;\">Just Before You Contact Us.</span></span></span></span></span></h2></span>",
+          "animation": "fade-up",
+          "animationDelay": 0,
+          "animationSpeed": 0.8,
+          "fontFamily": "Poppins, sans-serif",
+          "fontWeight": "400",
+          "fontSize": 48,
+          "lineHeight": 1.2,
+          "color": "#61ce70",
+          "alignment": "left"
+        },
+        "bodyBlock": {
+          "content": "<span style=\"font-size: 20px;\">Before you call us, take a moment to browse our frequently asked questions below. We've compiled answers to some of the most common questions about our platform, pricing, features, and support services. You may find the information you need straight away, saving you time and helping you get started faster.</span>",
+          "animation": "fade-in",
+          "animationDelay": 0.12,
+          "animationSpeed": 0.9,
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "fontSize": 18,
+          "lineHeight": 1.6,
+          "color": "#bdbcbf",
+          "alignment": "left"
+        },
+        "splitLayout": "50-50",
+        "fullWidthBackground": true,
+        "enableParallax": true,
+        "backgroundStyle": "image",
+        "backgroundColor": "#000000",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+        "backgroundPosition": "top center",
+        "backgroundSize": "contain",
+        "backgroundRepeat": "no-repeat",
+        "parallaxStrength": 0.78,
+        "minHeight": "1040px",
+        "contentPanelBackgroundColor": "transparent",
+        "sectionBackgroundColor": "#000000",
+        "headlineColor": "#7dd3fc",
+        "eyebrowColor": "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+        "textColor": "#bdbcbf",
+        "faqMaxWidth": 323,
+        "faqStartCollapsed": false,
+        "faqAllowMultipleOpen": false,
+        "itemBackgroundColor": "transparent",
+        "itemBorderColor": "rgba(0, 66, 96, 0.39)",
+        "arrowBackgroundColor": "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+        "chevronColor": "#ffffff",
+        "faqVariant": "source-split",
+        "faqAnimation": "fade-up",
+        "faqAnimationDelay": 0.18,
+        "faqAnimationSpeed": 0.9,
+        "faqPanelBackgroundColor": "rgba(3, 18, 28, 0.26)",
+        "faqBlock": {
+          "faqVariant": "source-split",
+          "faqStartCollapsed": true,
+          "faqAllowMultipleOpen": false,
+          "sectionAnimation": "fade-up",
+          "sectionAnimationDelay": 0.12,
+          "sectionAnimationSpeed": 0.9,
+          "faqAnimation": "fade-up",
+          "faqAnimationDelay": 0.18,
+          "faqAnimationSpeed": 0.9,
+          "faqPanelBackgroundColor": "rgba(3, 18, 28, 0.26)",
+          "itemBackgroundColor": "transparent",
+          "itemBorderColor": "rgba(0, 66, 96, 0.39)",
+          "arrowBackgroundColor": "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+          "chevronColor": "#ffffff",
+          "questionColor": "#ffffff",
+          "questionFontWeight": "700",
+          "questionFontSize": 24,
+          "questionLineHeight": 1.4,
+          "answerColor": "#bdbcbf",
+          "answerFontSize": 20,
+          "answerLineHeight": 1.6,
+          "faqMaxWidth": 650,
+          "items": [
+            {
+              "id": "split-faq-1",
+              "question": "Can I book a demo of the platform?",
+              "answer": "Absolutely. Contact us to arrange a personalised demonstration and see how the platform can benefit your business.",
+              "heading": "Can I book a demo of the platform?",
+              "content": "Absolutely. Contact us to arrange a personalised demonstration and see how the platform can benefit your business."
+            },
+            {
+              "id": "split-faq-2",
+              "question": "Do I need to purchase the entire platform?",
+              "answer": "No. You can choose a complete plan or select only the modules your business needs.",
+              "heading": "Do I need to purchase the entire platform?",
+              "content": "No. You can choose a complete plan or select only the modules your business needs."
+            },
+            {
+              "id": "split-faq-3",
+              "question": "Is there a setup fee?",
+              "answer": "No. Most plans can be activated immediately with no upfront setup costs.",
+              "heading": "Is there a setup fee?",
+              "content": "No. Most plans can be activated immediately with no upfront setup costs."
+            },
+            {
+              "id": "faq-item-1781471296985-3",
+              "question": "Can I upgrade or downgrade my plan later?",
+              "answer": "Yes. You can add modules, users, and additional features as your business grows.",
+              "heading": "Can I upgrade or downgrade my plan later?",
+              "content": "Yes. You can add modules, users, and additional features as your business grows."
+            },
+            {
+              "id": "faq-item-1781471349714-4",
+              "question": "Do you offer Australian-based support?",
+              "answer": "Yes. Our entire friendly support team are all Australian based. Our support team are here to assist whenever you need help.",
+              "heading": "Do you offer Australian-based support?",
+              "content": "Yes. Our entire friendly support team are all Australian based. Our support team are here to assist whenever you need help."
+            },
+            {
+              "id": "faq-item-1781471461506-5",
+              "question": "Can the platform integrate with other software?",
+              "answer": "Yes. We support a growing range of integrations and can discuss your specific requirements.",
+              "heading": "Can the platform integrate with other software?",
+              "content": "Yes. We support a growing range of integrations and can discuss your specific requirements."
+            }
+          ]
+        },
+        "questionColor": "#ffffff",
+        "questionFontWeight": "700",
+        "questionFontSize": 24,
+        "answerColor": "#bdbcbf",
+        "answerFontSize": 18,
+        "headlineFontFamily": "Space Grotesk",
+        "headlineFontWeight": "400",
+        "headlineFontSize": 56,
+        "subheadlineFontSize": 20,
+        "items": [
+          {
+            "id": "split-faq-1",
+            "question": "Question one?",
+            "answer": "Answer to question one goes here.",
+            "heading": "Question one?",
+            "content": "Answer to question one goes here."
+          },
+          {
+            "id": "split-faq-2",
+            "question": "Question two?",
+            "answer": "Answer to question two goes here.",
+            "heading": "Question two?",
+            "content": "Answer to question two goes here."
+          },
+          {
+            "id": "split-faq-3",
+            "question": "Question three?",
+            "answer": "Answer to question three goes here.",
+            "heading": "Question three?",
+            "content": "Answer to question three goes here."
+          }
+        ],
+        "baseLayoutWidth": 1600,
+        "backgroundImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+        "headingFontFamily": "Space Grotesk",
+        "headingFontSize": 56,
+        "textFontSize": 20,
+        "bodyFontSize": 20
+      }
+    },
+    {
+      "id": "contact-form-pf1yr3j",
+      "type": "contact-form",
+      "props": {
+        "title": "<span style=\"font-size: 40px;\">Lets Chat!</span>",
+        "fields": [
+          {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true,
+            "placeholder": "Your name"
+          },
+          {
+            "name": "email",
+            "label": "Email&nbsp;",
+            "type": "email",
+            "required": true,
+            "placeholder": "Email&nbsp;"
+          },
+          {
+            "name": "phone",
+            "label": "Best Phone Number",
+            "type": "tel",
+            "required": true,
+            "placeholder": "+61 412 123 456"
+          },
+          {
+            "name": "best-time",
+            "label": "Best Time to Call",
+            "type": "text",
+            "required": true,
+            "placeholder": "Tomorrow afternoon"
+          },
+          {
+            "name": "topic",
+            "label": "What Would You Like to Discuss?",
+            "type": "textarea",
+            "required": false,
+            "placeholder": "A short summary"
+          }
+        ],
+        "mediaAlt": "Contact form image",
+        "subtitle": "<span style=\"font-size: 24px;\">Tell us how we can assist, and our friendly Australian team will be in touch as soon as possible. Your success is our priority, and we're here to help with any questions, support requests, or business needs. Let us know how Gr8 Result Digital Solutions can help you achieve better results.</span>",
+        "textColor": "#0f172a",
+        "bookingUrl": "",
+        "mediaImage": "",
+        "submitText": "Send Enquiry",
+        "formVariant": "minimal-soft",
+        "formMaxWidth": 760,
+        "submitAction": "calendar-booking",
+        "mediaPosition": "none",
+        "inputTextColor": "#0f172a",
+        "backgroundColor": "#ffffff",
+        "buttonTextColor": "#0f172a",
+        "sectionGradient": "linear-gradient(180deg,#ffffff,#f8fafc)",
+        "subtleTextColor": "#0f172a",
+        "inputBorderColor": "#cbd5e1",
+        "cardBackgroundColor": "#06b6d4",
+        "inputBackgroundColor": "#ffffff",
+        "buttonBackgroundColor": "#f97316",
+        "baseLayoutWidth": 1600,
+        "headlineFontSize": 40,
+        "headingFontSize": 40
+      }
+    },
+    {
+      "id": 1781469750270,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1600
+      }
+    }
+  ],
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "f5940940-5db3-422e-9e2f-821727f6ded7",
+        "type": "nav-bar",
+        "props": {
+          "logo": "",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home"
+            },
+            {
+              "href": "#about-us",
+              "label": "About Us"
+            },
+            {
+              "href": "#contact",
+              "label": "CONtact"
+            }
+          ],
+          "ctaLink": "#contact",
+          "ctaText": "Contact",
+          "variant": "boxed-brand",
+          "showLogo": true,
+          "logoWidth": 44,
+          "textColor": "#e2e8f0",
+          "stickyMode": "sticky-transparent",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "buttonColor": "#0ea5e9",
+          "ctaFontSize": 16,
+          "linkFontSize": 16,
+          "brandFontSize": 20,
+          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+          "backgroundColor": "#0b1220",
+          "buttonTextColor": "#ffffff",
+          "linkHoverEffect": "fill",
+          "mobileMenuStyle": "hamburger",
+          "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
+          "linkHoverTextColor": "#ffffff",
+          "activeLinkTextColor": "#ffffff",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)",
+          "baseLayoutWidth": 1600
+        }
+      },
+      {
+        "id": 1781469821488,
+        "type": "text",
+        "props": {
+          "text": "<div style=\"font-size: 84px; color: rgb(255, 192, 0);; text-align: center; font-size: 84px;\"><span style=\"font-weight: 600;\">Contact Us!</span></div>",
+          "alignment": "left",
+          "textSize": "medium",
+          "textFontSize": 84,
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "minHeight": "202px",
+          "fullWidthBackground": true,
+          "enableParallax": false,
+          "textColor": "#e6eef5",
+          "backgroundColor": "#111827",
+          "backgroundImage": "",
+          "paddingTop": 250,
+          "paddingBottom": 100,
+          "textLineHeight": 1.35,
+          "verticalAlign": "top",
+          "contentY": 32,
+          "contentHeight": 120,
+          "textAnimation": "fade-in",
+          "baseLayoutWidth": 1600,
+          "hideBorder": true,
+          "bodyFontSize": 84,
+          "subheadlineFontSize": 84
+        }
+      },
+      {
+        "id": 1781469620870,
+        "type": "columns-2",
+        "props": {
+          "title": "",
+          "leftTitle": "",
+          "leftContent": "",
+          "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780435914199-4.png",
+          "rightTitle": "<span style=\"font-size: 64px;\">Get in Touch</span>",
+          "rightContent": "<div style=\"text-align: justify;\"><span style=\"font-size: 24px;\">Have questions or want to learn more about our platform? We'd love to hear from you. Get in touch with our team today and discover how we can help streamline your business, improve productivity, and support your growth.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\">Whether you're exploring our platform for the first time, need assistance with your account, or are experiencing a technical issue, our team is here to help. We understand that your business relies on reliable systems and prompt support, so we're committed to providing fast, friendly, and practical assistance whenever you need it. Simply reach out and let us know how we can help.</span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div><div style=\"text-align: justify;\"><span style=\"font-size: 24px;\"><br></span></div>",
+          "rightImage": "",
+          "ratio": "50-50",
+          "backgroundColor": "transparent",
+          "cardBackgroundColor": "#f8fafc",
+          "textColor": "#0f172a",
+          "borderColor": "#dbeafe",
+          "leftColumnBlock": null,
+          "rightColumnBlock": null,
+          "baseLayoutWidth": 1600,
+          "leftColumnContentType": "text",
+          "leftImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780435914199-4.png",
+          "leftImageHeight": 898,
+          "headlineFontSize": 64,
+          "headingFontSize": 64,
+          "textFontSize": 24,
+          "bodyFontSize": 24,
+          "columnsVerticalAlign": "center"
+        }
+      },
+      {
+        "id": 1781470726200,
+        "type": "split-block",
+        "props": {
+          "splitColorPreset": "blue",
+          "eyebrow": "How Can We Help?",
+          "headline": "<span style=\"font-size: 56px; color: rgb(0, 176, 240);\"><h2 style=\"text-align: left; padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; letter-spacing: normal; line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-family: &quot;Space Grotesk&quot;; font-size: 56px;\"><span><span><span><span style=\"font-size: 56px;\"><span style=\"font-size: 48px;\">Just Before You Contact Us.</span></span></span></span></span></h2></span>",
+          "subheadline": "<span style=\"font-size: 20px;\">Before you call us, take a moment to browse our frequently asked questions below. We've compiled answers to some of the most common questions about our platform, pricing, features, and support services. You may find the information you need straight away, saving you time and helping you get started faster.</span>",
+          "headlineBlock": {
+            "content": "<span style=\"font-size: 56px; color: rgb(0, 176, 240);\"><h2 style=\"text-align: left; padding: 4px 6px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; letter-spacing: normal; line-height: 1.15; outline: rgba(14, 165, 233, 0.35) dashed 1px; border-radius: 8px; font-family: &quot;Space Grotesk&quot;; font-size: 56px;\"><span><span><span><span style=\"font-size: 56px;\"><span style=\"font-size: 48px;\">Just Before You Contact Us.</span></span></span></span></span></h2></span>",
+            "animation": "fade-up",
+            "animationDelay": 0,
+            "animationSpeed": 0.8,
+            "fontFamily": "Poppins, sans-serif",
+            "fontWeight": "400",
+            "fontSize": 48,
+            "lineHeight": 1.2,
+            "color": "#61ce70",
+            "alignment": "left"
+          },
+          "bodyBlock": {
+            "content": "<span style=\"font-size: 20px;\">Before you call us, take a moment to browse our frequently asked questions below. We've compiled answers to some of the most common questions about our platform, pricing, features, and support services. You may find the information you need straight away, saving you time and helping you get started faster.</span>",
+            "animation": "fade-in",
+            "animationDelay": 0.12,
+            "animationSpeed": 0.9,
+            "fontFamily": "Arial",
+            "fontWeight": "400",
+            "fontSize": 18,
+            "lineHeight": 1.6,
+            "color": "#bdbcbf",
+            "alignment": "left"
+          },
+          "splitLayout": "50-50",
+          "fullWidthBackground": true,
+          "enableParallax": true,
+          "backgroundStyle": "image",
+          "backgroundColor": "#000000",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+          "backgroundPosition": "top center",
+          "backgroundSize": "contain",
+          "backgroundRepeat": "no-repeat",
+          "parallaxStrength": 0.78,
+          "minHeight": "1040px",
+          "contentPanelBackgroundColor": "transparent",
+          "sectionBackgroundColor": "#000000",
+          "headlineColor": "#7dd3fc",
+          "eyebrowColor": "linear-gradient(90deg, #0ea5e9 0%, #8b5cf6 100%)",
+          "textColor": "#bdbcbf",
+          "faqMaxWidth": 323,
+          "faqStartCollapsed": false,
+          "faqAllowMultipleOpen": false,
+          "itemBackgroundColor": "transparent",
+          "itemBorderColor": "rgba(0, 66, 96, 0.39)",
+          "arrowBackgroundColor": "linear-gradient(135deg, #0c8ce9 0%, #6c5ce7 50%, #38bdf8 100%)",
+          "chevronColor": "#ffffff",
+          "faqVariant": "source-split",
+          "faqAnimation": "fade-up",
+          "faqAnimationDelay": 0.18,
+          "faqAnimationSpeed": 0.9,
+          "faqPanelBackgroundColor": "rgba(3, 18, 28, 0.26)",
+          "faqBlock": {
+            "faqVariant": "source-split",
+            "faqStartCollapsed": true,
+            "faqAllowMultipleOpen": false,
+            "sectionAnimation": "fade-up",
+            "sectionAnimationDelay": 0.12,
+            "sectionAnimationSpeed": 0.9,
+            "faqAnimation": "fade-up",
+            "faqAnimationDelay": 0.18,
+            "faqAnimationSpeed": 0.9,
+            "faqPanelBackgroundColor": "rgba(3, 18, 28, 0.26)",
+            "itemBackgroundColor": "transparent",
+            "itemBorderColor": "rgba(0, 66, 96, 0.39)",
+            "arrowBackgroundColor": "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)",
+            "chevronColor": "#ffffff",
+            "questionColor": "#ffffff",
+            "questionFontWeight": "700",
+            "questionFontSize": 24,
+            "questionLineHeight": 1.4,
+            "answerColor": "#bdbcbf",
+            "answerFontSize": 20,
+            "answerLineHeight": 1.6,
+            "faqMaxWidth": 650,
+            "items": [
+              {
+                "id": "split-faq-1",
+                "question": "Can I book a demo of the platform?",
+                "answer": "Absolutely. Contact us to arrange a personalised demonstration and see how the platform can benefit your business.",
+                "heading": "Can I book a demo of the platform?",
+                "content": "Absolutely. Contact us to arrange a personalised demonstration and see how the platform can benefit your business."
+              },
+              {
+                "id": "split-faq-2",
+                "question": "Do I need to purchase the entire platform?",
+                "answer": "No. You can choose a complete plan or select only the modules your business needs.",
+                "heading": "Do I need to purchase the entire platform?",
+                "content": "No. You can choose a complete plan or select only the modules your business needs."
+              },
+              {
+                "id": "split-faq-3",
+                "question": "Is there a setup fee?",
+                "answer": "No. Most plans can be activated immediately with no upfront setup costs.",
+                "heading": "Is there a setup fee?",
+                "content": "No. Most plans can be activated immediately with no upfront setup costs."
+              },
+              {
+                "id": "faq-item-1781471296985-3",
+                "question": "Can I upgrade or downgrade my plan later?",
+                "answer": "Yes. You can add modules, users, and additional features as your business grows.",
+                "heading": "Can I upgrade or downgrade my plan later?",
+                "content": "Yes. You can add modules, users, and additional features as your business grows."
+              },
+              {
+                "id": "faq-item-1781471349714-4",
+                "question": "Do you offer Australian-based support?",
+                "answer": "Yes. Our entire friendly support team are all Australian based. Our support team are here to assist whenever you need help.",
+                "heading": "Do you offer Australian-based support?",
+                "content": "Yes. Our entire friendly support team are all Australian based. Our support team are here to assist whenever you need help."
+              },
+              {
+                "id": "faq-item-1781471461506-5",
+                "question": "Can the platform integrate with other software?",
+                "answer": "Yes. We support a growing range of integrations and can discuss your specific requirements.",
+                "heading": "Can the platform integrate with other software?",
+                "content": "Yes. We support a growing range of integrations and can discuss your specific requirements."
+              }
+            ]
+          },
+          "questionColor": "#ffffff",
+          "questionFontWeight": "700",
+          "questionFontSize": 24,
+          "answerColor": "#bdbcbf",
+          "answerFontSize": 18,
+          "headlineFontFamily": "Space Grotesk",
+          "headlineFontWeight": "400",
+          "headlineFontSize": 56,
+          "subheadlineFontSize": 20,
+          "items": [
+            {
+              "id": "split-faq-1",
+              "question": "Question one?",
+              "answer": "Answer to question one goes here.",
+              "heading": "Question one?",
+              "content": "Answer to question one goes here."
+            },
+            {
+              "id": "split-faq-2",
+              "question": "Question two?",
+              "answer": "Answer to question two goes here.",
+              "heading": "Question two?",
+              "content": "Answer to question two goes here."
+            },
+            {
+              "id": "split-faq-3",
+              "question": "Question three?",
+              "answer": "Answer to question three goes here.",
+              "heading": "Question three?",
+              "content": "Answer to question three goes here."
+            }
+          ],
+          "baseLayoutWidth": 1600,
+          "backgroundImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+          "headingFontFamily": "Space Grotesk",
+          "headingFontSize": 56,
+          "textFontSize": 20,
+          "bodyFontSize": 20
+        }
+      },
+      {
+        "id": "contact-form-pf1yr3j",
+        "type": "contact-form",
+        "props": {
+          "title": "<span style=\"font-size: 40px;\">Lets Chat!</span>",
+          "fields": [
+            {
+              "name": "name",
+              "label": "Name",
+              "type": "text",
+              "required": true,
+              "placeholder": "Your name"
+            },
+            {
+              "name": "email",
+              "label": "Email&nbsp;",
+              "type": "email",
+              "required": true,
+              "placeholder": "Email&nbsp;"
+            },
+            {
+              "name": "phone",
+              "label": "Best Phone Number",
+              "type": "tel",
+              "required": true,
+              "placeholder": "+61 412 123 456"
+            },
+            {
+              "name": "best-time",
+              "label": "Best Time to Call",
+              "type": "text",
+              "required": true,
+              "placeholder": "Tomorrow afternoon"
+            },
+            {
+              "name": "topic",
+              "label": "What Would You Like to Discuss?",
+              "type": "textarea",
+              "required": false,
+              "placeholder": "A short summary"
+            }
+          ],
+          "mediaAlt": "Contact form image",
+          "subtitle": "<span style=\"font-size: 24px;\">Tell us how we can assist, and our friendly Australian team will be in touch as soon as possible. Your success is our priority, and we're here to help with any questions, support requests, or business needs. Let us know how Gr8 Result Digital Solutions can help you achieve better results.</span>",
+          "textColor": "#0f172a",
+          "bookingUrl": "",
+          "mediaImage": "",
+          "submitText": "Send Enquiry",
+          "formVariant": "minimal-soft",
+          "formMaxWidth": 760,
+          "submitAction": "calendar-booking",
+          "mediaPosition": "none",
+          "inputTextColor": "#0f172a",
+          "backgroundColor": "#ffffff",
+          "buttonTextColor": "#0f172a",
+          "sectionGradient": "linear-gradient(180deg,#ffffff,#f8fafc)",
+          "subtleTextColor": "#0f172a",
+          "inputBorderColor": "#cbd5e1",
+          "cardBackgroundColor": "#06b6d4",
+          "inputBackgroundColor": "#ffffff",
+          "buttonBackgroundColor": "#f97316",
+          "baseLayoutWidth": 1600,
+          "headlineFontSize": 40,
+          "headingFontSize": 40
+        }
+      },
+      {
+        "id": 1781469750270,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1600
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "html": "",
+  "updatedAt": "2026-06-20T21:43:44.541Z"
+}

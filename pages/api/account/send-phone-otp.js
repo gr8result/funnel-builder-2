@@ -43,7 +43,7 @@ async function handler(req, res) {
     await supabaseAdmin
       .from("accounts")
       .update({ phone_otp_pending: JSON.stringify({ code, phone: normalized || phone.trim(), expiresAt }) })
-      .eq("id", userId);
+      .eq("user_id", userId);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

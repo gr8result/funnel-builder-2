@@ -1,0 +1,1421 @@
+{
+  "projectId": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "pageName": "Website Builder",
+  "blocks": [
+    {
+      "id": "wb-nav-website-builder",
+      "type": "nav-bar",
+      "props": {
+        "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "id": "nav-modules-website-builder",
+            "href": "#modules",
+            "label": "Modules",
+            "children": [
+              {
+                "id": "nav-child-email",
+                "href": "#email",
+                "label": "Email Marketing"
+              },
+              {
+                "id": "nav-child-sms",
+                "href": "#sms",
+                "label": "SMS Marketing"
+              },
+              {
+                "id": "nav-child-crm",
+                "href": "#crm",
+                "label": "CRM Management"
+              },
+              {
+                "id": "nav-child-funnels",
+                "href": "#funnels",
+                "label": "Funnels"
+              },
+              {
+                "id": "nav-child-website-builder",
+                "href": "#website-builder",
+                "label": "Website Builder"
+              }
+            ]
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us"
+          },
+          {
+            "href": "#pricing",
+            "label": "Pricing"
+          },
+          {
+            "href": "#contact-us",
+            "label": "Contact Us"
+          }
+        ],
+        "ctaLink": "#contact-us",
+        "ctaText": "Build My Website",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 150,
+        "textColor": "#06b6d4",
+        "stickyMode": "normal",
+        "buttonColor": "#22c55e",
+        "backgroundColor": "#121c26",
+        "buttonTextColor": "#052e16",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "wb-template-showcase-hero",
+      "type": "template-showcase",
+      "props": {
+        "speed": 32,
+        "stats": [
+          {
+            "label": "ready templates",
+            "value": "80+"
+          },
+          {
+            "label": "copy and layout",
+            "value": "AI"
+          },
+          {
+            "label": "leads flow in",
+            "value": "CRM"
+          }
+        ],
+        "ctaLink": "#contact-us",
+        "ctaText": "Build My Website",
+        "eyebrow": "AI Website Builder",
+        "headline": "Websites that look custom before you touch a pixel",
+        "minHeight": "760px",
+        "templates": [
+          {
+            "id": "tpl-electrician",
+            "cta": "Quote-ready",
+            "image": "wires",
+            "title": "Electrician",
+            "palette": "#fbbf24",
+            "category": "Trades"
+          },
+          {
+            "id": "tpl-fitness",
+            "cta": "Class-ready",
+            "image": "fitness",
+            "title": "Fitness Studio",
+            "palette": "#22c55e",
+            "category": "Bookings"
+          },
+          {
+            "id": "tpl-beauty",
+            "cta": "Book online",
+            "image": "beauty",
+            "title": "Beauty Clinic",
+            "palette": "#ec4899",
+            "category": "Services"
+          },
+          {
+            "id": "tpl-realestate",
+            "cta": "Lead capture",
+            "image": "property",
+            "title": "Real Estate",
+            "palette": "#38bdf8",
+            "category": "Listings"
+          },
+          {
+            "id": "tpl-restaurant",
+            "cta": "Reserve now",
+            "image": "food",
+            "title": "Restaurant",
+            "palette": "#f97316",
+            "category": "Hospitality"
+          },
+          {
+            "id": "tpl-accountant",
+            "cta": "Consultation",
+            "image": "finance",
+            "title": "Accountant",
+            "palette": "#6366f1",
+            "category": "Professional"
+          },
+          {
+            "id": "tpl-solar",
+            "cta": "Savings check",
+            "image": "solar",
+            "title": "Solar Installer",
+            "palette": "#84cc16",
+            "category": "Energy"
+          },
+          {
+            "id": "tpl-store",
+            "cta": "Shop now",
+            "image": "store",
+            "title": "Online Store",
+            "palette": "#14b8a6",
+            "category": "Ecommerce"
+          }
+        ],
+        "textColor": "#ffc000",
+        "accentColor": "#00d5ff",
+        "subheadline": "Start with a high-converting industry website template, let AI write the first draft, then edit every page, image, form, animation and call-to-action inside the Gr8 Result drag-and-drop website builder.",
+        "mutedTextColor": "#ffffff",
+        "backgroundColor": "#070a12",
+        "showDeviceFocus": true,
+        "secondaryCtaLink": "#templates",
+        "secondaryCtaText": "Explore Templates",
+        "secondaryAccentColor": "#a855f7"
+      }
+    },
+    {
+      "id": "wb-wave-marquee",
+      "type": "wave-marquee",
+      "props": {
+        "text": "AI COPY - INDUSTRY TEMPLATES - DRAG AND DROP - CRM CAPTURE - BOOKINGS - FUNNELS - SMS FOLLOW UP - SEO READY",
+        "angle": 6,
+        "speed": 13,
+        "height": 400,
+        "fontSize": 18,
+        "amplitude": 125,
+        "textColor": "#facc15",
+        "accentColor": "#00d5ff",
+        "backgroundColor": "#101926",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "wb-no-code-image",
+      "type": "image",
+      "props": {
+        "alt": "No coding required AI website builder with drag and drop website editing",
+        "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+        "width": "100%",
+        "height": "auto",
+        "caption": "",
+        "objectFit": "contain",
+        "autoHeight": true,
+        "imageStyle": "bleed",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "wb-intro-text",
+      "type": "text",
+      "props": {
+        "text": "<h2 style=\"font-size: 48px;; color: rgb(255, 192, 0);\">Not another flat website builder. A launch system.</h2><p>Your website should not sit there looking pretty while leads leak away. The Gr8 Result AI Website Builder connects design, SEO copy, service pages, forms, bookings, CRM, email marketing, SMS marketing and automation into one build flow.</p><p>Use AI to create the first version, choose the industry direction, then refine every section with visual controls. The result is a fast, mobile-friendly, no-code business website that looks sharp, explains the offer clearly, ranks for relevant search terms, captures leads properly and plugs directly into the rest of your business system.</p>",
+        "alignment": "center",
+        "minHeight": "360px",
+        "textColor": "#e5f7ff",
+        "textFontSize": 21,
+        "textLineHeight": 1.55,
+        "backgroundColor": "#101926",
+        "sectionAnimation": "fade-up",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "wb-core-features",
+      "type": "feature-list",
+      "props": {
+        "items": [
+          {
+            "id": "wb-feature-ai",
+            "body": "<span style=\"font-size: 18px;\"><span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Generate page structure, headlines, service copy, FAQs, meta descriptions and CTA direction from a business prompt.</span></span></span>",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+            "title": "<span style=\"font-size: 28px;\"><span style=\"text-align: center;\"><span style=\"font-size: 28px;\">AI first draft</span></span></span>",
+            "textBlocks": [
+              {
+                "id": "wb-ai-label",
+                "text": "AI BUILDER",
+                "type": "label",
+                "style": {}
+              },
+              {
+                "id": "wb-ai-head",
+                "text": "<span style=\"font-size: 28px;\"><span style=\"text-align: center;\"><span style=\"font-size: 28px;\">AI first draft</span></span></span>",
+                "type": "headline",
+                "style": {
+                  "fontSize": "28px",
+                  "textAlign": "center"
+                }
+              },
+              {
+                "id": "wb-ai-body",
+                "text": "<span style=\"font-size: 18px;\"><span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Generate page structure, headlines, service copy, FAQs, meta descriptions and CTA direction from a business prompt.</span></span></span>",
+                "type": "text",
+                "style": {
+                  "fontSize": "18px",
+                  "textAlign": "center"
+                }
+              }
+            ]
+          },
+          {
+            "id": "wb-feature-convert",
+            "body": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Add hero sections, proof strips, scroll stacks, comparison sections, pricing, FAQs, forms and booking CTAs.</span></span>",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "title": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Conversion blocks</span></span>",
+            "textBlocks": [
+              {
+                "id": "wb-convert-label",
+                "text": "DESIGN SYSTEM",
+                "type": "label",
+                "style": {}
+              },
+              {
+                "id": "wb-convert-head",
+                "text": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Conversion blocks</span></span>",
+                "type": "headline",
+                "style": {
+                  "textAlign": "center"
+                }
+              },
+              {
+                "id": "wb-convert-body",
+                "text": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Add hero sections, proof strips, scroll stacks, comparison sections, pricing, FAQs, forms and booking CTAs.</span></span>",
+                "type": "text",
+                "style": {
+                  "textAlign": "center"
+                }
+              }
+            ]
+          },
+          {
+            "id": "wb-feature-followup",
+            "body": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Every enquiry can flow into CRM, trigger email and SMS follow-up, and keep the sales process moving.</span></span>",
+            "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+            "title": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Lead capture built in</span></span>",
+            "textBlocks": [
+              {
+                "id": "wb-follow-label",
+                "text": "AUTOMATION",
+                "type": "label",
+                "style": {}
+              },
+              {
+                "id": "wb-follow-head",
+                "text": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Lead capture built in</span></span>",
+                "type": "headline",
+                "style": {
+                  "textAlign": "center"
+                }
+              },
+              {
+                "id": "wb-follow-body",
+                "text": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Every enquiry can flow into CRM, trigger email and SMS follow-up, and keep the sales process moving.</span></span>",
+                "type": "text",
+                "style": {
+                  "textAlign": "center"
+                }
+              }
+            ]
+          }
+        ],
+        "title": "<span style=\"text-align: center;\"><span style=\"font-size: 40px;\">Everything a modern business website needs</span></span>",
+        "layout": "grid",
+        "alignment": "center",
+        "textAlign": "center",
+        "textColor": "#0f172a",
+        "borderColor": "#dbeafe",
+        "contentAlign": "center",
+        "headingAlign": "center",
+        "headlineAlign": "center",
+        "featureVariant": "cards",
+        "backgroundColor": "#f8fafc",
+        "baseLayoutWidth": 1500,
+        "featureCardWidth": 330,
+        "headlineAlignment": "center",
+        "fullWidthBackground": true,
+        "itemBackgroundColor": "#ffffff"
+      }
+    },
+    {
+      "id": "wb-scroll-stack",
+      "type": "scroll-stack",
+      "props": {
+        "title": "From idea to live website",
+        "panels": [
+          {
+            "id": "wb-step-1",
+            "body": "Describe the business, services, customers, tone and goals. The builder turns that into a page plan with the right sections and calls-to-action.",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+            "eyebrow": "Step 01",
+            "heading": "Tell AI what the business does",
+            "showCta": false,
+            "imageAlt": "No code AI website builder planning and editing interface",
+            "imageStyle": "bleed",
+            "accentColor": "#5eead4",
+            "backgroundColor": "#0f766e"
+          },
+          {
+            "id": "wb-step-2",
+            "body": "Start from layouts for trades, clinics, restaurants, professional services, ecommerce, fitness, property, finance and more.",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "eyebrow": "Step 02",
+            "heading": "Choose the industry direction",
+            "showCta": false,
+            "imageAlt": "AI website builder preview on desktop and mobile",
+            "imageStyle": "bleed",
+            "accentColor": "#93c5fd",
+            "backgroundColor": "#2563eb"
+          },
+          {
+            "id": "wb-step-3",
+            "body": "Swap images, rewrite copy, move sections, add forms, connect CRM, activate bookings, publish and keep improving from one platform.",
+            "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1400&q=80",
+            "eyebrow": "Step 03",
+            "heading": "Edit visually and connect the business system",
+            "showCta": false,
+            "imageAlt": "Team editing a website",
+            "imageStyle": "bleed",
+            "accentColor": "#c4b5fd",
+            "backgroundColor": "#7c3aed"
+          }
+        ],
+        "textColor": "#ffffff",
+        "cardRadius": 0,
+        "peekHeight": 94,
+        "backgroundColor": "#07111f",
+        "contentTopPadding": 82,
+        "hideHeaderDivider": true,
+        "fullWidthBackground": true,
+        "contentVerticalAlign": "top"
+      }
+    },
+    {
+      "id": "templates",
+      "type": "hover-cards",
+      "props": {
+        "cards": [
+          {
+            "id": "hc-trades",
+            "link": "#contact-us",
+            "image": "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=900&q=80",
+            "title": "Trades & Home Services",
+            "description": "Quote-ready pages with emergency CTAs, service areas, reviews and job galleries."
+          },
+          {
+            "id": "hc-clinic",
+            "link": "#contact-us",
+            "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=900&q=80",
+            "title": "Clinics & Wellness",
+            "description": "Service menus, bookings, practitioner trust, testimonials and treatment explanations."
+          },
+          {
+            "id": "hc-food",
+            "link": "#contact-us",
+            "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
+            "title": "Restaurants & Venues",
+            "description": "Menus, atmosphere, reservations, private events and local search pages."
+          },
+          {
+            "id": "hc-pro",
+            "link": "#contact-us",
+            "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80",
+            "title": "Professional Services",
+            "description": "Authority-led pages for consultants, accountants, brokers, lawyers and agencies."
+          },
+          {
+            "id": "hc-ecom",
+            "link": "#contact-us",
+            "image": "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=900&q=80",
+            "title": "Ecommerce",
+            "description": "Collection-led storefronts with product trust, offers, cart paths and follow-up."
+          }
+        ],
+        "cardColor": "#101827",
+        "fullWidth": true,
+        "buttonText": "Use this style",
+        "cardHeight": 360,
+        "cardRadius": 8,
+        "paddingTop": 84,
+        "buttonColor": "#00d5ff",
+        "overlayColor": "rgba(2,6,23,0.88)",
+        "sectionTitle": "Templates for real businesses, not generic filler",
+        "visibleCards": 4,
+        "paddingBottom": 90,
+        "continuousLoop": true,
+        "backgroundColor": "#0a0f1c",
+        "buttonTextColor": "#03111f",
+        "continuousSpeed": 38,
+        "sectionTitleColor": "#ffffff"
+      }
+    },
+    {
+      "id": "wb-ai-accordion",
+      "type": "side-scroll-accordion",
+      "props": {
+        "items": [
+          {
+            "id": "ai-1",
+            "body": "A business website needs more than a home page. Build service pages, local landing pages, FAQs, metadata and internal links around the terms customers actually search for.",
+            "tags": [
+              "AI website builder",
+              "SEO pages",
+              "local search"
+            ],
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+            "title": "Search-ready website pages",
+            "eyebrow": "SEO foundations"
+          },
+          {
+            "id": "ai-2",
+            "body": "Change images, buttons, layouts, spacing, forms, colours and page sections without touching code. The builder is made for fast business edits after launch.",
+            "tags": [
+              "no coding",
+              "drag and drop",
+              "mobile friendly"
+            ],
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "title": "Drag, drop, customise and publish",
+            "eyebrow": "No-code editing"
+          },
+          {
+            "id": "ai-3",
+            "body": "Quote forms, booking buttons and contact CTAs should send leads into CRM, start follow-up, notify the team and keep every enquiry visible.",
+            "tags": [
+              "CRM capture",
+              "booking forms",
+              "sales follow-up"
+            ],
+            "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+            "title": "Forms that feed the CRM",
+            "eyebrow": "Lead conversion"
+          },
+          {
+            "id": "ai-4",
+            "body": "Trades need quote urgency, clinics need trust, restaurants need atmosphere, property teams need listings, and ecommerce brands need product pathways.",
+            "tags": [
+              "industry templates",
+              "business websites",
+              "conversion copy"
+            ],
+            "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+            "title": "Built around the business type",
+            "eyebrow": "Industry templates"
+          },
+          {
+            "id": "ai-5",
+            "body": "Your website can connect with email marketing, SMS marketing, sales funnels, booking calendars, CRM pipelines and business automation from one Gr8 Result account.",
+            "tags": [
+              "automation",
+              "email marketing",
+              "SMS follow-up"
+            ],
+            "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+            "title": "The site connects to the whole platform",
+            "eyebrow": "Automation-ready"
+          }
+        ],
+        "speed": 48,
+        "title": "Every panel covers a real website requirement",
+        "eyebrow": "Side-scroll website system",
+        "subtitle": "This section moves right-to-left across the page and gives the visitor complete, SEO-relevant reasons to choose a professional AI website builder instead of a blank template.",
+        "cardWidth": 451,
+        "textColor": "#ffffff",
+        "autoScroll": true,
+        "cardHeight": 560,
+        "accentColor": "#00d5ff",
+        "mutedTextColor": "#b8c2d8",
+        "backgroundColor": "#07111f",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500,
+        "panels": [
+          {
+            "id": "ai-1",
+            "eyebrow": "SEO foundations",
+            "eyebrowDot": true,
+            "heading": "Search-ready website pages",
+            "body": "A business website needs more than a home page. Build service pages, local landing pages, FAQs, metadata and internal links around the terms customers actually search for.",
+            "showCta": false,
+            "ctaText": "Learn More",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "buttonFullWidth": false,
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+            "imageAlt": "Search-ready website pages",
+            "imageStyle": "bleed",
+            "imageCardBg": "#00d5ff",
+            "imagePosition": "right",
+            "backgroundColor": "#0f172a",
+            "textColor": "#ffffff",
+            "accentColor": "#00d5ff"
+          },
+          {
+            "id": "ai-2",
+            "eyebrow": "No-code editing",
+            "eyebrowDot": true,
+            "heading": "Drag, drop, customise and publish",
+            "body": "Change images, buttons, layouts, spacing, forms, colours and page sections without touching code. The builder is made for fast business edits after launch.",
+            "showCta": false,
+            "ctaText": "Learn More",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "buttonFullWidth": false,
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "imageAlt": "Drag, drop, customise and publish",
+            "imageStyle": "bleed",
+            "imageCardBg": "#00d5ff",
+            "imagePosition": "left",
+            "backgroundColor": "#0f172a",
+            "textColor": "#ffffff",
+            "accentColor": "#00d5ff"
+          },
+          {
+            "id": "ai-3",
+            "eyebrow": "Lead conversion",
+            "eyebrowDot": true,
+            "heading": "Forms that feed the CRM",
+            "body": "Quote forms, booking buttons and contact CTAs should send leads into CRM, start follow-up, notify the team and keep every enquiry visible.",
+            "showCta": false,
+            "ctaText": "Learn More",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "buttonFullWidth": false,
+            "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+            "imageAlt": "Forms that feed the CRM",
+            "imageStyle": "bleed",
+            "imageCardBg": "#00d5ff",
+            "imagePosition": "right",
+            "backgroundColor": "#0f172a",
+            "textColor": "#ffffff",
+            "accentColor": "#00d5ff"
+          },
+          {
+            "id": "ai-4",
+            "eyebrow": "Industry templates",
+            "eyebrowDot": true,
+            "heading": "Built around the business type",
+            "body": "Trades need quote urgency, clinics need trust, restaurants need atmosphere, property teams need listings, and ecommerce brands need product pathways.",
+            "showCta": false,
+            "ctaText": "Learn More",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "buttonFullWidth": false,
+            "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+            "imageAlt": "Built around the business type",
+            "imageStyle": "bleed",
+            "imageCardBg": "#00d5ff",
+            "imagePosition": "left",
+            "backgroundColor": "#0f172a",
+            "textColor": "#ffffff",
+            "accentColor": "#00d5ff"
+          },
+          {
+            "id": "ai-5",
+            "eyebrow": "Automation-ready",
+            "eyebrowDot": true,
+            "heading": "The site connects to the whole platform",
+            "body": "Your website can connect with email marketing, SMS marketing, sales funnels, booking calendars, CRM pipelines and business automation from one Gr8 Result account.",
+            "showCta": false,
+            "ctaText": "Learn More",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "buttonFullWidth": false,
+            "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+            "imageAlt": "The site connects to the whole platform",
+            "imageStyle": "bleed",
+            "imageCardBg": "#00d5ff",
+            "imagePosition": "right",
+            "backgroundColor": "#0f172a",
+            "textColor": "#ffffff",
+            "accentColor": "#00d5ff"
+          }
+        ],
+        "stackMode": "side",
+        "peekWidth": 78,
+        "cardRadius": 18
+      }
+    },
+    {
+      "id": "wb-proof-stats",
+      "type": "stats",
+      "props": {
+        "stats": [
+          {
+            "id": "stat-item-0",
+            "number": "1",
+            "label": "All-In-One Platform",
+            "detail": "Build websites, funnels, landing pages, CRM, bookings, email and automation inside one workspace.",
+            "cardAnimation": ""
+          },
+          {
+            "id": "stat-item-1",
+            "number": "24/7",
+            "label": "Lead Capture &amp; Follow-Up",
+            "detail": "Capture enquiries around the clock and keep prospects moving with automated follow-up.",
+            "cardAnimation": ""
+          },
+          {
+            "id": "stat-item-2",
+            "number": "0",
+            "label": "Code Needed",
+            "detail": "Update pages, forms, content and campaigns without waiting on a developer.",
+            "cardAnimation": ""
+          },
+          {
+            "id": "stat-item-3",
+            "number": "100%",
+            "label": "Owned Inside Gr8 Result",
+            "detail": "Keep your website, marketing tools, leads and business systems together in Gr8 Result.",
+            "cardAnimation": ""
+          }
+        ],
+        "title": "<span style=\"font-size: 28px; color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\">A website should be the start of the sales system</span></span>",
+        "eyebrow": "Why it matters",
+        "subtitle": "<span style=\"font-size: 16px; color: rgb(255, 255, 255);\">Built to help you launch faster, capture more leads, and manage follow-up from one connected platform.</span>",
+        "textColor": "#0f172a",
+        "accentColor": "#8b5cf6",
+        "borderColor": "#10b981",
+        "statsVariant": "editorial-band",
+        "backgroundColor": "#101926",
+        "baseLayoutWidth": 1500,
+        "sectionTitleColor": "#0ea5e9",
+        "cardBackgroundColor": "#06b6d4",
+        "fullWidthBackground": true,
+        "sectionSubtitleColor": "#84cc16",
+        "statsHeaderWidth": 1131
+      }
+    },
+    {
+      "id": 1782273252213,
+      "type": "cta-button",
+      "props": {
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
+      }
+    }
+  ],
+  "html": "",
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "wb-nav-website-builder",
+        "type": "nav-bar",
+        "props": {
+          "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home"
+            },
+            {
+              "id": "nav-modules-website-builder",
+              "href": "#modules",
+              "label": "Modules",
+              "children": [
+                {
+                  "id": "nav-child-email",
+                  "href": "#email",
+                  "label": "Email Marketing"
+                },
+                {
+                  "id": "nav-child-sms",
+                  "href": "#sms",
+                  "label": "SMS Marketing"
+                },
+                {
+                  "id": "nav-child-crm",
+                  "href": "#crm",
+                  "label": "CRM Management"
+                },
+                {
+                  "id": "nav-child-funnels",
+                  "href": "#funnels",
+                  "label": "Funnels"
+                },
+                {
+                  "id": "nav-child-website-builder",
+                  "href": "#website-builder",
+                  "label": "Website Builder"
+                }
+              ]
+            },
+            {
+              "href": "#about-us",
+              "label": "About Us"
+            },
+            {
+              "href": "#pricing",
+              "label": "Pricing"
+            },
+            {
+              "href": "#contact-us",
+              "label": "Contact Us"
+            }
+          ],
+          "ctaLink": "#contact-us",
+          "ctaText": "Build My Website",
+          "variant": "boxed-brand",
+          "showLogo": true,
+          "logoWidth": 150,
+          "textColor": "#06b6d4",
+          "stickyMode": "normal",
+          "buttonColor": "#22c55e",
+          "backgroundColor": "#121c26",
+          "buttonTextColor": "#052e16",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "wb-template-showcase-hero",
+        "type": "template-showcase",
+        "props": {
+          "speed": 32,
+          "stats": [
+            {
+              "label": "ready templates",
+              "value": "80+"
+            },
+            {
+              "label": "copy and layout",
+              "value": "AI"
+            },
+            {
+              "label": "leads flow in",
+              "value": "CRM"
+            }
+          ],
+          "ctaLink": "#contact-us",
+          "ctaText": "Build My Website",
+          "eyebrow": "AI Website Builder",
+          "headline": "Websites that look custom before you touch a pixel",
+          "minHeight": "760px",
+          "templates": [
+            {
+              "id": "tpl-electrician",
+              "cta": "Quote-ready",
+              "image": "wires",
+              "title": "Electrician",
+              "palette": "#fbbf24",
+              "category": "Trades"
+            },
+            {
+              "id": "tpl-fitness",
+              "cta": "Class-ready",
+              "image": "fitness",
+              "title": "Fitness Studio",
+              "palette": "#22c55e",
+              "category": "Bookings"
+            },
+            {
+              "id": "tpl-beauty",
+              "cta": "Book online",
+              "image": "beauty",
+              "title": "Beauty Clinic",
+              "palette": "#ec4899",
+              "category": "Services"
+            },
+            {
+              "id": "tpl-realestate",
+              "cta": "Lead capture",
+              "image": "property",
+              "title": "Real Estate",
+              "palette": "#38bdf8",
+              "category": "Listings"
+            },
+            {
+              "id": "tpl-restaurant",
+              "cta": "Reserve now",
+              "image": "food",
+              "title": "Restaurant",
+              "palette": "#f97316",
+              "category": "Hospitality"
+            },
+            {
+              "id": "tpl-accountant",
+              "cta": "Consultation",
+              "image": "finance",
+              "title": "Accountant",
+              "palette": "#6366f1",
+              "category": "Professional"
+            },
+            {
+              "id": "tpl-solar",
+              "cta": "Savings check",
+              "image": "solar",
+              "title": "Solar Installer",
+              "palette": "#84cc16",
+              "category": "Energy"
+            },
+            {
+              "id": "tpl-store",
+              "cta": "Shop now",
+              "image": "store",
+              "title": "Online Store",
+              "palette": "#14b8a6",
+              "category": "Ecommerce"
+            }
+          ],
+          "textColor": "#ffc000",
+          "accentColor": "#00d5ff",
+          "subheadline": "Start with a high-converting industry website template, let AI write the first draft, then edit every page, image, form, animation and call-to-action inside the Gr8 Result drag-and-drop website builder.",
+          "mutedTextColor": "#ffffff",
+          "backgroundColor": "#070a12",
+          "showDeviceFocus": true,
+          "secondaryCtaLink": "#templates",
+          "secondaryCtaText": "Explore Templates",
+          "secondaryAccentColor": "#a855f7"
+        }
+      },
+      {
+        "id": "wb-wave-marquee",
+        "type": "wave-marquee",
+        "props": {
+          "text": "AI COPY - INDUSTRY TEMPLATES - DRAG AND DROP - CRM CAPTURE - BOOKINGS - FUNNELS - SMS FOLLOW UP - SEO READY",
+          "angle": 6,
+          "speed": 13,
+          "height": 400,
+          "fontSize": 18,
+          "amplitude": 125,
+          "textColor": "#facc15",
+          "accentColor": "#00d5ff",
+          "backgroundColor": "#101926",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "wb-no-code-image",
+        "type": "image",
+        "props": {
+          "alt": "No coding required AI website builder with drag and drop website editing",
+          "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+          "width": "100%",
+          "height": "auto",
+          "caption": "",
+          "objectFit": "contain",
+          "autoHeight": true,
+          "imageStyle": "bleed",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "wb-intro-text",
+        "type": "text",
+        "props": {
+          "text": "<h2 style=\"font-size: 48px;; color: rgb(255, 192, 0);\">Not another flat website builder. A launch system.</h2><p>Your website should not sit there looking pretty while leads leak away. The Gr8 Result AI Website Builder connects design, SEO copy, service pages, forms, bookings, CRM, email marketing, SMS marketing and automation into one build flow.</p><p>Use AI to create the first version, choose the industry direction, then refine every section with visual controls. The result is a fast, mobile-friendly, no-code business website that looks sharp, explains the offer clearly, ranks for relevant search terms, captures leads properly and plugs directly into the rest of your business system.</p>",
+          "alignment": "center",
+          "minHeight": "360px",
+          "textColor": "#e5f7ff",
+          "textFontSize": 21,
+          "textLineHeight": 1.55,
+          "backgroundColor": "#101926",
+          "sectionAnimation": "fade-up",
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": "wb-core-features",
+        "type": "feature-list",
+        "props": {
+          "items": [
+            {
+              "id": "wb-feature-ai",
+              "body": "<span style=\"font-size: 18px;\"><span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Generate page structure, headlines, service copy, FAQs, meta descriptions and CTA direction from a business prompt.</span></span></span>",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+              "title": "<span style=\"font-size: 28px;\"><span style=\"text-align: center;\"><span style=\"font-size: 28px;\">AI first draft</span></span></span>",
+              "textBlocks": [
+                {
+                  "id": "wb-ai-label",
+                  "text": "AI BUILDER",
+                  "type": "label",
+                  "style": {}
+                },
+                {
+                  "id": "wb-ai-head",
+                  "text": "<span style=\"font-size: 28px;\"><span style=\"text-align: center;\"><span style=\"font-size: 28px;\">AI first draft</span></span></span>",
+                  "type": "headline",
+                  "style": {
+                    "fontSize": "28px",
+                    "textAlign": "center"
+                  }
+                },
+                {
+                  "id": "wb-ai-body",
+                  "text": "<span style=\"font-size: 18px;\"><span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Generate page structure, headlines, service copy, FAQs, meta descriptions and CTA direction from a business prompt.</span></span></span>",
+                  "type": "text",
+                  "style": {
+                    "fontSize": "18px",
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "wb-feature-convert",
+              "body": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Add hero sections, proof strips, scroll stacks, comparison sections, pricing, FAQs, forms and booking CTAs.</span></span>",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "title": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Conversion blocks</span></span>",
+              "textBlocks": [
+                {
+                  "id": "wb-convert-label",
+                  "text": "DESIGN SYSTEM",
+                  "type": "label",
+                  "style": {}
+                },
+                {
+                  "id": "wb-convert-head",
+                  "text": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Conversion blocks</span></span>",
+                  "type": "headline",
+                  "style": {
+                    "textAlign": "center"
+                  }
+                },
+                {
+                  "id": "wb-convert-body",
+                  "text": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Add hero sections, proof strips, scroll stacks, comparison sections, pricing, FAQs, forms and booking CTAs.</span></span>",
+                  "type": "text",
+                  "style": {
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "wb-feature-followup",
+              "body": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Every enquiry can flow into CRM, trigger email and SMS follow-up, and keep the sales process moving.</span></span>",
+              "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+              "title": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Lead capture built in</span></span>",
+              "textBlocks": [
+                {
+                  "id": "wb-follow-label",
+                  "text": "AUTOMATION",
+                  "type": "label",
+                  "style": {}
+                },
+                {
+                  "id": "wb-follow-head",
+                  "text": "<span style=\"text-align: center;\"><span style=\"font-size: 28px;\">Lead capture built in</span></span>",
+                  "type": "headline",
+                  "style": {
+                    "textAlign": "center"
+                  }
+                },
+                {
+                  "id": "wb-follow-body",
+                  "text": "<span style=\"text-align: center;\"><span style=\"font-size: 18px;\">Every enquiry can flow into CRM, trigger email and SMS follow-up, and keep the sales process moving.</span></span>",
+                  "type": "text",
+                  "style": {
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            }
+          ],
+          "title": "<span style=\"text-align: center;\"><span style=\"font-size: 40px;\">Everything a modern business website needs</span></span>",
+          "layout": "grid",
+          "alignment": "center",
+          "textAlign": "center",
+          "textColor": "#0f172a",
+          "borderColor": "#dbeafe",
+          "contentAlign": "center",
+          "headingAlign": "center",
+          "headlineAlign": "center",
+          "featureVariant": "cards",
+          "backgroundColor": "#f8fafc",
+          "baseLayoutWidth": 1500,
+          "featureCardWidth": 330,
+          "headlineAlignment": "center",
+          "fullWidthBackground": true,
+          "itemBackgroundColor": "#ffffff"
+        }
+      },
+      {
+        "id": "wb-scroll-stack",
+        "type": "scroll-stack",
+        "props": {
+          "title": "From idea to live website",
+          "panels": [
+            {
+              "id": "wb-step-1",
+              "body": "Describe the business, services, customers, tone and goals. The builder turns that into a page plan with the right sections and calls-to-action.",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+              "eyebrow": "Step 01",
+              "heading": "Tell AI what the business does",
+              "showCta": false,
+              "imageAlt": "No code AI website builder planning and editing interface",
+              "imageStyle": "bleed",
+              "accentColor": "#5eead4",
+              "backgroundColor": "#0f766e"
+            },
+            {
+              "id": "wb-step-2",
+              "body": "Start from layouts for trades, clinics, restaurants, professional services, ecommerce, fitness, property, finance and more.",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "eyebrow": "Step 02",
+              "heading": "Choose the industry direction",
+              "showCta": false,
+              "imageAlt": "AI website builder preview on desktop and mobile",
+              "imageStyle": "bleed",
+              "accentColor": "#93c5fd",
+              "backgroundColor": "#2563eb"
+            },
+            {
+              "id": "wb-step-3",
+              "body": "Swap images, rewrite copy, move sections, add forms, connect CRM, activate bookings, publish and keep improving from one platform.",
+              "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1400&q=80",
+              "eyebrow": "Step 03",
+              "heading": "Edit visually and connect the business system",
+              "showCta": false,
+              "imageAlt": "Team editing a website",
+              "imageStyle": "bleed",
+              "accentColor": "#c4b5fd",
+              "backgroundColor": "#7c3aed"
+            }
+          ],
+          "textColor": "#ffffff",
+          "cardRadius": 0,
+          "peekHeight": 94,
+          "backgroundColor": "#07111f",
+          "contentTopPadding": 82,
+          "hideHeaderDivider": true,
+          "fullWidthBackground": true,
+          "contentVerticalAlign": "top"
+        }
+      },
+      {
+        "id": "templates",
+        "type": "hover-cards",
+        "props": {
+          "cards": [
+            {
+              "id": "hc-trades",
+              "link": "#contact-us",
+              "image": "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=900&q=80",
+              "title": "Trades & Home Services",
+              "description": "Quote-ready pages with emergency CTAs, service areas, reviews and job galleries."
+            },
+            {
+              "id": "hc-clinic",
+              "link": "#contact-us",
+              "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=900&q=80",
+              "title": "Clinics & Wellness",
+              "description": "Service menus, bookings, practitioner trust, testimonials and treatment explanations."
+            },
+            {
+              "id": "hc-food",
+              "link": "#contact-us",
+              "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
+              "title": "Restaurants & Venues",
+              "description": "Menus, atmosphere, reservations, private events and local search pages."
+            },
+            {
+              "id": "hc-pro",
+              "link": "#contact-us",
+              "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80",
+              "title": "Professional Services",
+              "description": "Authority-led pages for consultants, accountants, brokers, lawyers and agencies."
+            },
+            {
+              "id": "hc-ecom",
+              "link": "#contact-us",
+              "image": "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=900&q=80",
+              "title": "Ecommerce",
+              "description": "Collection-led storefronts with product trust, offers, cart paths and follow-up."
+            }
+          ],
+          "cardColor": "#101827",
+          "fullWidth": true,
+          "buttonText": "Use this style",
+          "cardHeight": 360,
+          "cardRadius": 8,
+          "paddingTop": 84,
+          "buttonColor": "#00d5ff",
+          "overlayColor": "rgba(2,6,23,0.88)",
+          "sectionTitle": "Templates for real businesses, not generic filler",
+          "visibleCards": 4,
+          "paddingBottom": 90,
+          "continuousLoop": true,
+          "backgroundColor": "#0a0f1c",
+          "buttonTextColor": "#03111f",
+          "continuousSpeed": 38,
+          "sectionTitleColor": "#ffffff"
+        }
+      },
+      {
+        "id": "wb-ai-accordion",
+        "type": "side-scroll-accordion",
+        "props": {
+          "items": [
+            {
+              "id": "ai-1",
+              "body": "A business website needs more than a home page. Build service pages, local landing pages, FAQs, metadata and internal links around the terms customers actually search for.",
+              "tags": [
+                "AI website builder",
+                "SEO pages",
+                "local search"
+              ],
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+              "title": "Search-ready website pages",
+              "eyebrow": "SEO foundations"
+            },
+            {
+              "id": "ai-2",
+              "body": "Change images, buttons, layouts, spacing, forms, colours and page sections without touching code. The builder is made for fast business edits after launch.",
+              "tags": [
+                "no coding",
+                "drag and drop",
+                "mobile friendly"
+              ],
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "title": "Drag, drop, customise and publish",
+              "eyebrow": "No-code editing"
+            },
+            {
+              "id": "ai-3",
+              "body": "Quote forms, booking buttons and contact CTAs should send leads into CRM, start follow-up, notify the team and keep every enquiry visible.",
+              "tags": [
+                "CRM capture",
+                "booking forms",
+                "sales follow-up"
+              ],
+              "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+              "title": "Forms that feed the CRM",
+              "eyebrow": "Lead conversion"
+            },
+            {
+              "id": "ai-4",
+              "body": "Trades need quote urgency, clinics need trust, restaurants need atmosphere, property teams need listings, and ecommerce brands need product pathways.",
+              "tags": [
+                "industry templates",
+                "business websites",
+                "conversion copy"
+              ],
+              "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+              "title": "Built around the business type",
+              "eyebrow": "Industry templates"
+            },
+            {
+              "id": "ai-5",
+              "body": "Your website can connect with email marketing, SMS marketing, sales funnels, booking calendars, CRM pipelines and business automation from one Gr8 Result account.",
+              "tags": [
+                "automation",
+                "email marketing",
+                "SMS follow-up"
+              ],
+              "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+              "title": "The site connects to the whole platform",
+              "eyebrow": "Automation-ready"
+            }
+          ],
+          "speed": 48,
+          "title": "Every panel covers a real website requirement",
+          "eyebrow": "Side-scroll website system",
+          "subtitle": "This section moves right-to-left across the page and gives the visitor complete, SEO-relevant reasons to choose a professional AI website builder instead of a blank template.",
+          "cardWidth": 451,
+          "textColor": "#ffffff",
+          "autoScroll": true,
+          "cardHeight": 560,
+          "accentColor": "#00d5ff",
+          "mutedTextColor": "#b8c2d8",
+          "backgroundColor": "#07111f",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500,
+          "panels": [
+            {
+              "id": "ai-1",
+              "eyebrow": "SEO foundations",
+              "eyebrowDot": true,
+              "heading": "Search-ready website pages",
+              "body": "A business website needs more than a home page. Build service pages, local landing pages, FAQs, metadata and internal links around the terms customers actually search for.",
+              "showCta": false,
+              "ctaText": "Learn More",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "pill",
+              "buttonFullWidth": false,
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+              "imageAlt": "Search-ready website pages",
+              "imageStyle": "bleed",
+              "imageCardBg": "#00d5ff",
+              "imagePosition": "right",
+              "backgroundColor": "#0f172a",
+              "textColor": "#ffffff",
+              "accentColor": "#00d5ff"
+            },
+            {
+              "id": "ai-2",
+              "eyebrow": "No-code editing",
+              "eyebrowDot": true,
+              "heading": "Drag, drop, customise and publish",
+              "body": "Change images, buttons, layouts, spacing, forms, colours and page sections without touching code. The builder is made for fast business edits after launch.",
+              "showCta": false,
+              "ctaText": "Learn More",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "pill",
+              "buttonFullWidth": false,
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "imageAlt": "Drag, drop, customise and publish",
+              "imageStyle": "bleed",
+              "imageCardBg": "#00d5ff",
+              "imagePosition": "left",
+              "backgroundColor": "#0f172a",
+              "textColor": "#ffffff",
+              "accentColor": "#00d5ff"
+            },
+            {
+              "id": "ai-3",
+              "eyebrow": "Lead conversion",
+              "eyebrowDot": true,
+              "heading": "Forms that feed the CRM",
+              "body": "Quote forms, booking buttons and contact CTAs should send leads into CRM, start follow-up, notify the team and keep every enquiry visible.",
+              "showCta": false,
+              "ctaText": "Learn More",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "pill",
+              "buttonFullWidth": false,
+              "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+              "imageAlt": "Forms that feed the CRM",
+              "imageStyle": "bleed",
+              "imageCardBg": "#00d5ff",
+              "imagePosition": "right",
+              "backgroundColor": "#0f172a",
+              "textColor": "#ffffff",
+              "accentColor": "#00d5ff"
+            },
+            {
+              "id": "ai-4",
+              "eyebrow": "Industry templates",
+              "eyebrowDot": true,
+              "heading": "Built around the business type",
+              "body": "Trades need quote urgency, clinics need trust, restaurants need atmosphere, property teams need listings, and ecommerce brands need product pathways.",
+              "showCta": false,
+              "ctaText": "Learn More",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "pill",
+              "buttonFullWidth": false,
+              "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+              "imageAlt": "Built around the business type",
+              "imageStyle": "bleed",
+              "imageCardBg": "#00d5ff",
+              "imagePosition": "left",
+              "backgroundColor": "#0f172a",
+              "textColor": "#ffffff",
+              "accentColor": "#00d5ff"
+            },
+            {
+              "id": "ai-5",
+              "eyebrow": "Automation-ready",
+              "eyebrowDot": true,
+              "heading": "The site connects to the whole platform",
+              "body": "Your website can connect with email marketing, SMS marketing, sales funnels, booking calendars, CRM pipelines and business automation from one Gr8 Result account.",
+              "showCta": false,
+              "ctaText": "Learn More",
+              "ctaUrl": "#contact-us",
+              "ctaStyle": "pill",
+              "buttonFullWidth": false,
+              "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+              "imageAlt": "The site connects to the whole platform",
+              "imageStyle": "bleed",
+              "imageCardBg": "#00d5ff",
+              "imagePosition": "right",
+              "backgroundColor": "#0f172a",
+              "textColor": "#ffffff",
+              "accentColor": "#00d5ff"
+            }
+          ],
+          "stackMode": "side",
+          "peekWidth": 78,
+          "cardRadius": 18
+        }
+      },
+      {
+        "id": "wb-proof-stats",
+        "type": "stats",
+        "props": {
+          "stats": [
+            {
+              "id": "stat-item-0",
+              "number": "1",
+              "label": "All-In-One Platform",
+              "detail": "Build websites, funnels, landing pages, CRM, bookings, email and automation inside one workspace.",
+              "cardAnimation": ""
+            },
+            {
+              "id": "stat-item-1",
+              "number": "24/7",
+              "label": "Lead Capture &amp; Follow-Up",
+              "detail": "Capture enquiries around the clock and keep prospects moving with automated follow-up.",
+              "cardAnimation": ""
+            },
+            {
+              "id": "stat-item-2",
+              "number": "0",
+              "label": "Code Needed",
+              "detail": "Update pages, forms, content and campaigns without waiting on a developer.",
+              "cardAnimation": ""
+            },
+            {
+              "id": "stat-item-3",
+              "number": "100%",
+              "label": "Owned Inside Gr8 Result",
+              "detail": "Keep your website, marketing tools, leads and business systems together in Gr8 Result.",
+              "cardAnimation": ""
+            }
+          ],
+          "title": "<span style=\"font-size: 28px; color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\">A website should be the start of the sales system</span></span>",
+          "eyebrow": "Why it matters",
+          "subtitle": "<span style=\"font-size: 16px; color: rgb(255, 255, 255);\">Built to help you launch faster, capture more leads, and manage follow-up from one connected platform.</span>",
+          "textColor": "#0f172a",
+          "accentColor": "#8b5cf6",
+          "borderColor": "#10b981",
+          "statsVariant": "editorial-band",
+          "backgroundColor": "#101926",
+          "baseLayoutWidth": 1500,
+          "sectionTitleColor": "#0ea5e9",
+          "cardBackgroundColor": "#06b6d4",
+          "fullWidthBackground": true,
+          "sectionSubtitleColor": "#84cc16",
+          "statsHeaderWidth": 1131
+        }
+      },
+      {
+        "id": 1782273252213,
+        "type": "cta-button",
+        "props": {
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "size": "large",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "style": "stacked-card",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "eyebrow": "<br>",
+          "alignment": "center",
+          "textColor": "#ffffff",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "buttonColor": "#00b0f0",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "fullWidthBackground": true
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "savedAt": "2026-06-24T23:54:42.575Z",
+  "source": "autosave"
+}

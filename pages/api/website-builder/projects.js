@@ -1,7 +1,14 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
-import { getLimit } from "../../../lib/featureGates";
+import { getWebsiteLimitForResolvedPlan, getUserPlan } from "../../../lib/planResolver";
 import { COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
+import {
+  deleteSplitWebsiteProject,
+  listSplitWebsiteProjects,
+  loadFullSplitWebsiteProject,
+  migrateWebsiteProjectToSplitStorage,
+  saveSplitWebsiteProject,
+} from "../../../lib/website-builder/supabaseSiteStorage";
 
 const TABLE_NAME = "published_websites";
 
@@ -193,6 +200,31 @@ function mapProjectRow(row) {
   };
 }
 
+function compactProjectForDb(project) {
+  if (!project || typeof project !== "object") return {};
+  const { pageBlocks: _pageBlocks, pagesContent: _pagesContent, chaiData: _chaiData, brandAssets: _brandAssets, ...site } = project;
+  return {
+    ...site,
+    __splitStorage: true,
+    storageVersion: 2,
+  };
+}
+
+function pageNameFromValue(value) {
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text && text !== "[object Object]" ? text : "";
+  }
+  if (value && typeof value === "object") {
+    return pageNameFromValue(value.name || value.title || value.slug || "");
+  }
+  return "";
+}
+
+function isMissingSplitPageError(error) {
+  return error?.code === "WEBSITE_PAGE_FILE_MISSING";
+}
+
 async function requireUserId(req, res) {
   const token = getBearerToken(req);
   if (!token) {
@@ -215,6 +247,7 @@ async function handler(req, res) {
 
   if (req.method === "GET") {
     const projectId = String(req.query?.projectId || "").trim();
+    const requestedPage = pageNameFromValue(req.query?.page || "");
     const draftProjectId = projectId ? toDraftProjectId(projectId) : "";
 
     const baseSelect = supabaseAdmin
@@ -224,6 +257,18 @@ async function handler(req, res) {
       .order("updated_at", { ascending: false });
 
     if (projectId) {
+      try {
+        const splitProject = await loadFullSplitWebsiteProject(userId, projectId);
+        if (splitProject) {
+          return res.status(200).json({ ok: true, project: splitProject });
+        }
+      } catch (error) {
+        if (isMissingSplitPageError(error)) {
+          return res.status(409).json({ ok: false, error: error.message, code: error.code, pageName: error.pageName });
+        }
+        throw error;
+      }
+
       // Try draft-prefixed row first, then fall back to the raw project_id (published sites)
       const draftResult = await baseSelect
         .eq("project_id", draftProjectId)
@@ -238,7 +283,9 @@ async function handler(req, res) {
       }
 
       if (draftResult.data) {
-        return res.status(200).json({ ok: true, project: mapProjectRow(draftResult.data) });
+        const mapped = mapProjectRow(draftResult.data);
+        const migrated = await migrateWebsiteProjectToSplitStorage(userId, mapped, { pageName: requestedPage });
+        return res.status(200).json({ ok: true, project: migrated || mapped });
       }
 
       // Fall back: look up by the raw (non-draft-prefixed) project_id for published sites
@@ -254,7 +301,9 @@ async function handler(req, res) {
         return res.status(500).json({ ok: false, error: toErrorMessage(publishedResult.error, "Could not load website project") });
       }
 
-      return res.status(200).json({ ok: true, project: mapProjectRow(publishedResult.data) });
+      const mapped = mapProjectRow(publishedResult.data);
+      const migrated = mapped ? await migrateWebsiteProjectToSplitStorage(userId, mapped, { pageName: requestedPage }) : null;
+      return res.status(200).json({ ok: true, project: migrated || mapped });
     }
 
     // List all projects — include both drafts and published sites
@@ -267,15 +316,35 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not load website projects") });
     }
 
-    // Deduplicate: when a draft: row and a published row share the same effective id,
-    // always prefer the published (non-draft) row — it is the authoritative source.
-    // Only fall back to a draft row when no published row exists for that id.
+    // Deduplicate by effective project id. In-progress builder saves are written
+    // to draft/split storage, so newer draft content must beat older published
+    // or compact rows when the dashboard lists/open projects.
+    const preferProjectEntry = (existing, incoming) => {
+      if (!existing) return incoming;
+      const existingTs = Date.parse(existing.mapped?.updatedAt || existing.mapped?.createdAt || 0) || 0;
+      const incomingTs = Date.parse(incoming.mapped?.updatedAt || incoming.mapped?.createdAt || 0) || 0;
+      if (incomingTs !== existingTs) return incomingTs > existingTs ? incoming : existing;
+
+      const existingSplit = existing.source === "split" || !!existing.mapped?.__splitStorage || Number(existing.mapped?.storageVersion || 0) >= 2;
+      const incomingSplit = incoming.source === "split" || !!incoming.mapped?.__splitStorage || Number(incoming.mapped?.storageVersion || 0) >= 2;
+      if (incomingSplit !== existingSplit) return incomingSplit ? incoming : existing;
+
+      if (incoming.isDraft !== existing.isDraft) return incoming.isDraft ? incoming : existing;
+      return existing;
+    };
+
     const seen = new Map();
+    for (const splitProject of await listSplitWebsiteProjects(userId)) {
+      if (!splitProject?.id) continue;
+      const key = String(splitProject.id);
+      seen.set(key, preferProjectEntry(seen.get(key), { mapped: splitProject, isDraft: true, source: "split" }));
+    }
     for (const row of Array.isArray(result.data) ? result.data : []) {
       const mapped = mapProjectRow(row);
       if (!mapped?.id) continue;
       const isDraft = String(row.project_id || "").startsWith("draft:");
-      const existing = seen.get(mapped.id);
+      seen.set(mapped.id, preferProjectEntry(seen.get(mapped.id), { mapped, isDraft, source: isDraft ? "draft-row" : "published-row" }));
+      const existing = { isDraft, mapped: { updatedAt: "9999-12-31T23:59:59.999Z" } };
       if (!existing) {
         seen.set(mapped.id, { mapped, isDraft });
       } else if (existing.isDraft && !isDraft) {
@@ -306,6 +375,9 @@ async function handler(req, res) {
     }
 
     const draftProjectId = toDraftProjectId(projectId);
+    const requestedPage = pageNameFromValue(req.body?.pageName || req.query?.page || "");
+    const siteOnly = req.body?.siteOnly === true;
+    const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
     const now = new Date().toISOString();
     const nextProject = syncPlatformPricingPage({
@@ -314,6 +386,13 @@ async function handler(req, res) {
       createdAt: project?.createdAt || now,
       updatedAt: now,
     });
+
+    let splitProject = null;
+    try {
+      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource });
+    } catch (storageError) {
+      return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
+    }
 
     const existing = await supabaseAdmin
       .from(TABLE_NAME)
@@ -332,7 +411,7 @@ async function handler(req, res) {
 
     // Preserve any blocks marked _pinned:true that exist in the DB but are missing from the incoming payload.
     // This prevents auto-saves from the visual builder from removing manually-pinned blocks.
-    if (existing.data?.site_data?.pageBlocks && nextProject.pageBlocks) {
+    if (!requestedPage && existing.data?.site_data?.pageBlocks && nextProject.pageBlocks) {
       const dbPageBlocks = existing.data.site_data.pageBlocks;
       for (const [pageName, dbBlocks] of Object.entries(dbPageBlocks)) {
         if (!Array.isArray(dbBlocks)) continue;
@@ -358,7 +437,7 @@ async function handler(req, res) {
       published: false,
       published_at: null,
       site_data: {
-        ...nextProject,
+        ...compactProjectForDb(splitProject || nextProject),
         __draftSync: true,
       },
     };
@@ -372,16 +451,9 @@ async function handler(req, res) {
         .maybeSingle()
       : await (async () => {
           // ── QUOTA CHECK on new project insert ─────────────────────────────
-          const { data: wsRow } = await supabaseAdmin
-            .from("workspaces")
-            .select("plan")
-            .eq("owner_id", userId)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          const plan = wsRow?.plan || "starter";
-          const websiteLimit = getLimit(plan, "websites");
+          const resolvedPlan = await getUserPlan(supabaseAdmin, userId);
+          const { plan } = resolvedPlan;
+          const websiteLimit = getWebsiteLimitForResolvedPlan(resolvedPlan).limit;
 
           if (websiteLimit !== null) {
             const { data: existingRows } = await supabaseAdmin
@@ -423,7 +495,7 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not save website draft") });
     }
 
-    return res.status(200).json({ ok: true, project: mapProjectRow(result.data) });
+    return res.status(200).json({ ok: true, project: splitProject || mapProjectRow(result.data) });
   }
 
   if (req.method === "PATCH") {
@@ -454,6 +526,11 @@ async function handler(req, res) {
     for (const row of matchingRows) {
       const nextSiteData = { ...(row.site_data && typeof row.site_data === "object" ? row.site_data : {}), name: newName };
       await supabaseAdmin.from(TABLE_NAME).update({ name: newName, site_data: nextSiteData, updated_at: now }).eq("id", row.id);
+      const splitId = String(row.project_id || "").replace(/^draft:/, "");
+      const splitProject = await loadFullSplitWebsiteProject(userId, splitId);
+      if (splitProject) {
+        await saveSplitWebsiteProject(userId, { ...splitProject, name: newName, updatedAt: now }, { siteOnly: true, backupSource: "rename" });
+      }
     }
 
     return res.status(200).json({ ok: true });
@@ -474,6 +551,8 @@ async function handler(req, res) {
       .eq("user_id", userId)
       .or(`project_id.eq.${draftProjectId},project_id.eq.${projectId}`)
       .neq("published", true);
+
+    await deleteSplitWebsiteProject(userId, projectId);
 
     if (result.error) {
       if (isMissingDraftProjectsTable(result.error)) {

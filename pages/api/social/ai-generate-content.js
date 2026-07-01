@@ -730,7 +730,6 @@ function buildPromptForPlatform({
   return `Generate EXACTLY ${count} ${p.toUpperCase()} posts about: "${topic}".
 
 IMPORTANT: Use Australian English spelling throughout. Examples: colour (not color), behaviour (not behavior), organise (not organize), realise (not realize), centre (not center), analyse (not analyse), apologise (not apologize), programme (not program), travelling (not traveling), licence (noun), practice (noun) / practise (verb).
-import { withAuth } from "../../../lib/withWorkspace";
 
 Tone/style: ${style}
 

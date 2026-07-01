@@ -17,7 +17,7 @@ function SiteLoader() {
       <main style={{ minHeight:"100vh", display:"grid", placeItems:"center", background:"#05070f", fontFamily:"system-ui,sans-serif" }}>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
           <div style={{ fontSize:16, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(255,255,255,.28)", fontWeight:600 }}>
-            🌐&nbsp; GR8 Website Studio
+            ??&nbsp; GR8 Website Studio
           </div>
           <div style={{ position:"relative", width:108, height:108, display:"grid", placeItems:"center" }}>
             <div style={{ position:"absolute", width:76, height:76, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,165,233,.26) 0%,transparent 72%)", animation:"sl-pulse 2.6s ease-in-out infinite" }} />
@@ -49,14 +49,12 @@ function SiteLoader() {
   );
 }
 import {
-  cacheWebsiteProject,
   getWebsiteBuilderAssets,
   getWebsiteProject,
   restoreWebsiteProjectFromBackup,
-  updateWebsiteProject,
 } from "../../../../../lib/website-builder/projectStore";
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
-import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../../../lib/website-builder/remoteProjects";
+import { fetchWebsiteProjectFromServer } from "../../../../../lib/website-builder/remoteProjects";
 import { supabase } from "../../../../../lib/supabaseClient";
 
 const WebsitePreviewSurface = dynamic(() => import("../../../../../components/website-builder/WebsitePreviewSurface"), {
@@ -64,12 +62,21 @@ const WebsitePreviewSurface = dynamic(() => import("../../../../../components/we
   loading: () => <SiteLoader />,
 });
 
+const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
+
 function slugify(v) {
   return String(v || "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function resolveProjectPageName(project, pageKey = "") {
+  const requested = slugify(pageKey || project?.pages?.[0]?.name || "Home");
+  return (Array.isArray(project?.pages) ? project.pages : []).find((entry) => (
+    slugify(entry?.name) === requested || slugify(entry?.slug) === requested
+  ))?.name || "";
 }
 
 function pickLayoutWidth(blocks, fallback = 1500) {
@@ -86,6 +93,72 @@ function pickPageBackground(blocks, fallback = "#ffffff") {
     if (value) return value;
   }
   return fallback;
+}
+
+function readPreviewSnapshot(projectId, token) {
+  if (typeof window === "undefined" || !projectId || !token) return null;
+  try {
+    const raw = window.localStorage.getItem(`${PREVIEW_SNAPSHOT_STORAGE_PREFIX}${projectId}:${token}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.project && typeof parsed.project === "object" ? parsed.project : null;
+  } catch (error) {
+    console.warn("Could not read website preview snapshot", error);
+    return null;
+  }
+}
+
+async function readApiJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { ok: false, error: `Preview request returned non-JSON response (HTTP ${response.status})` };
+  }
+}
+
+async function fetchEmergencyPageDraft(projectId, pageName) {
+  if (!projectId || !pageName) return null;
+  try {
+    const response = await fetch(`/api/website-builder/emergency-page-draft?projectId=${encodeURIComponent(projectId)}&pageName=${encodeURIComponent(pageName)}`, {
+      cache: "no-store",
+    });
+    const payload = await readApiJson(response);
+    if (!response.ok || !payload?.ok) return null;
+    return payload.draft || null;
+  } catch (error) {
+    console.warn("Could not load emergency preview draft", error);
+    return null;
+  }
+}
+
+function applyEmergencyDraftToProject(project, pageName, draft) {
+  if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
+  return {
+    ...project,
+    pages: Array.isArray(project.pages) && project.pages.length ? project.pages : [{ name: pageName }],
+    updatedAt: draft.savedAt || project.updatedAt || new Date().toISOString(),
+    pageBlocks: {
+      ...(project.pageBlocks || {}),
+      [pageName]: draft.blocks,
+    },
+    pagesContent: {
+      ...(project.pagesContent || {}),
+      [pageName]: draft.html || project?.pagesContent?.[pageName] || "",
+    },
+    chaiData: {
+      ...(project.chaiData || {}),
+      [pageName]: draft.chaiData && typeof draft.chaiData === "object"
+        ? draft.chaiData
+        : { ...(project?.chaiData?.[pageName] || {}), blocks: draft.blocks },
+    },
+  };
+}
+
+function cachePreviewProjectSafely(project, options = {}) {
+  void options;
+  return project || null;
 }
 
 function isLegacyAiStarterProject(project) {
@@ -105,7 +178,7 @@ function isLegacyAiStarterProject(project) {
 
 export default function ProjectPreviewPage() {
   const router = useRouter();
-  const { id, page, viewport } = router.query;
+  const { id, page, viewport, previewToken, emergencyDraft } = router.query;
 
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
@@ -179,15 +252,47 @@ export default function ProjectPreviewPage() {
     let cancelled = false;
 
     const loadPreviewProject = async () => {
-      // Step 1: Try localStorage first — this is always the freshest copy because
-      // handlePreviewPage in the builder tab calls forceSaveBlockPage (which writes
-      // to localStorage synchronously) BEFORE navigating this tab to the preview URL.
-      let nextProject = refreshPreviewState(id);
+      const snapshotProject = readPreviewSnapshot(id, previewToken);
+      let nextProject = snapshotProject || null;
+      if (snapshotProject && !cancelled) {
+        nextProject = snapshotProject;
+        syncStateIfChanged(snapshotProject, getWebsiteBuilderAssets());
+        setLoadingDone(true);
+      }
+
+      // Token previews are one-off snapshots opened directly from the builder.
+      // Normal/reloaded previews must render the saved split file from the server,
+      // not stale browser storage.
+      if (!nextProject && previewToken) {
+        nextProject = refreshPreviewState(id);
+      }
+
+      if (String(emergencyDraft || "") === "1") {
+        const baseProject = nextProject || getWebsiteProject(id) || {
+          id,
+          name: "Website Preview",
+          pages: [{ name: String(page || "Home") }],
+          pageBlocks: {},
+          pagesContent: {},
+          chaiData: {},
+        };
+        const draftPageName = resolveProjectPageName(baseProject, page || "") || String(page || "Home");
+        const emergency = await fetchEmergencyPageDraft(id, draftPageName);
+        if (emergency && !cancelled) {
+          nextProject = applyEmergencyDraftToProject(baseProject, emergency.pageName || draftPageName, emergency);
+          syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
+          setLoadingDone(true);
+        }
+      }
 
       if (nextProject && !cancelled) {
         // Project is in localStorage — show it immediately. The server fetch below
         // will run in the background and silently refresh if it finds a newer copy.
         setLoadingDone(true);
+      }
+
+      if (previewToken && nextProject) {
+        return;
       }
 
       // Step 2: Fetch from server to pick up any published/server-only state.
@@ -200,21 +305,49 @@ export default function ProjectPreviewPage() {
       // sufficient in that case — prefer local blocks explicitly.
       if (session?.access_token) {
         try {
-          const remoteProject = await fetchWebsiteProjectFromServer(session, id);
+          const remoteProject = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
           if (remoteProject && !cancelled) {
+            if (!previewToken && String(emergencyDraft || "") !== "1") {
+              nextProject = remoteProject;
+              syncStateIfChanged(remoteProject, getWebsiteBuilderAssets());
+              setLoadingDone(true);
+              return;
+            }
             // Re-read local now that the async fetch has returned — another tab
             // or a queued sync may have updated localStorage since Step 1.
-            const localNow = getWebsiteProject(id);
+            const localNow = nextProject || getWebsiteProject(id);
+            const localUpdatedAt = Date.parse(localNow?.updatedAt || localNow?.createdAt || 0) || 0;
+            const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
+            const remotePageName = resolveProjectPageName(remoteProject, page || "");
+            const localPageName = resolveProjectPageName(localNow, page || "") || remotePageName;
+            const remotePageBlocks = remotePageName ? remoteProject?.pageBlocks?.[remotePageName] : null;
             const hasLocalBlocks = localNow && Object.keys(localNow.pageBlocks || {}).length > 0;
+            const shouldPreferRemoteRequestedPage = Array.isArray(remotePageBlocks)
+              && (!previewToken || remoteUpdatedAt > localUpdatedAt);
             // Merge: keep server-side metadata (publish status, custom domain,
-            // pinned blocks, etc.) but always prefer local page content.
+            // pinned blocks, etc.) while preserving genuinely newer local page content.
             const mergedForCache = hasLocalBlocks ? {
               ...remoteProject,
-              pageBlocks: localNow.pageBlocks,
+              pageBlocks: {
+                ...(localNow.pageBlocks || {}),
+                ...(shouldPreferRemoteRequestedPage && localPageName ? { [localPageName]: remotePageBlocks } : {}),
+              },
+              pagesContent: {
+                ...(localNow.pagesContent || {}),
+                ...(shouldPreferRemoteRequestedPage && localPageName
+                  ? { [localPageName]: remoteProject?.pagesContent?.[remotePageName] || "" }
+                  : {}),
+              },
+              chaiData: {
+                ...(localNow.chaiData || {}),
+                ...(shouldPreferRemoteRequestedPage && localPageName && remoteProject?.chaiData?.[remotePageName]
+                  ? { [localPageName]: remoteProject.chaiData[remotePageName] }
+                  : {}),
+              },
               ...("globalNavBlock" in Object(localNow) ? { globalNavBlock: localNow.globalNavBlock } : {}),
               ...("globalFooterBlock" in Object(localNow) ? { globalFooterBlock: localNow.globalFooterBlock } : {}),
             } : remoteProject;
-            const cached = cacheWebsiteProject(mergedForCache, { onlyIfNewer: false });
+            const cached = cachePreviewProjectSafely(mergedForCache, { onlyIfNewer: false });
             // Only update nextProject if cacheWebsiteProject returned something —
             // never overwrite a good local project with a null result.
             if (cached) {
@@ -250,7 +383,7 @@ export default function ProjectPreviewPage() {
             // Fallback: backup storage (written before server overwrites)
             const backup = restoreWebsiteProjectFromBackup(id);
             if (backup) {
-              const cached = cacheWebsiteProject(backup, { onlyIfNewer: false });
+              const cached = cachePreviewProjectSafely(backup, { onlyIfNewer: false });
               if (cached) {
                 nextProject = cached;
                 syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
@@ -260,9 +393,9 @@ export default function ProjectPreviewPage() {
 
             // Re-try server fetch
             try {
-              const retryRemote = await fetchWebsiteProjectFromServer(session, id);
+              const retryRemote = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
               if (retryRemote && !cancelled) {
-                const cached = cacheWebsiteProject(retryRemote, { onlyIfNewer: false });
+                const cached = cachePreviewProjectSafely(retryRemote, { onlyIfNewer: false });
                 if (cached) {
                   nextProject = cached;
                   syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
@@ -287,12 +420,14 @@ export default function ProjectPreviewPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, authReady, session?.access_token, retryCount]);
+  }, [id, authReady, session?.access_token, retryCount, previewToken, page, emergencyDraft]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
+    const hasPreviewSnapshot = !!previewToken;
 
     const syncFromStorage = () => {
+      if (hasPreviewSnapshot) return;
       refreshPreviewState(id);
     };
 
@@ -314,7 +449,7 @@ export default function ProjectPreviewPage() {
       window.removeEventListener("focus", syncFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [id]);
+  }, [id, previewToken]);
 
   useEffect(() => {
     if (!session?.user?.id) return undefined;
@@ -344,66 +479,9 @@ export default function ProjectPreviewPage() {
 
   useEffect(() => {
     if (!project?.id || !isLegacyAiStarterProject(project)) return undefined;
-
-    let cancelled = false;
-
-    const upgradeLegacyAiProject = async () => {
-      try {
-        const response = await fetch("/api/website/generate-site-content", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            brief: project?.brief || {},
-            pages: Array.isArray(project?.pages) ? project.pages : [],
-            buildType: project?.buildType || "website",
-            templateSlug: project?.templateSlug || "",
-          }),
-        });
-
-        const payload = await response.json();
-        if (!response.ok || !payload?.ok) {
-          throw new Error(payload?.error || "Could not refresh AI website content");
-        }
-
-        const updated = updateWebsiteProject(project.id, {
-          name: payload.name || project.name,
-          brief: {
-            ...(project?.brief || {}),
-            aiStarterVersion: "production-v2",
-          },
-          pageBlocks: payload.pageBlocks || {},
-          pagesContent: payload.pagesContent || {},
-          globalNavBlock: payload.globalNavBlock || null,
-          globalFooterBlock: payload.globalFooterBlock || null,
-          status: "saved",
-        });
-
-        if (!cancelled && updated) {
-          const latestProject = getWebsiteProject(project.id) || updated;
-          setProject(latestProject);
-          if (session?.access_token) {
-            try {
-              const syncedProject = await saveWebsiteProjectToServer(session, latestProject);
-              if (syncedProject) {
-                const cachedProject = cacheWebsiteProject(syncedProject, { onlyIfNewer: false });
-                setProject(cachedProject || latestProject);
-              }
-            } catch (error) {
-              console.warn("Could not sync upgraded preview draft to the server", error);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Could not upgrade legacy AI preview project", error);
-      }
-    };
-
-    upgradeLegacyAiProject();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [project]);
+    console.warn("Preview is read-only; skipped legacy AI project upgrade.");
+    return undefined;
+  }, [project?.id]);
 
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
@@ -434,8 +512,8 @@ export default function ProjectPreviewPage() {
   const pageBlocks = active?.name ? (project?.pageBlocks || {})[active.name] || [] : [];
   const pageContent = active?.name ? (project?.pagesContent || {})[active.name] || "" : "";
 
-  const globalNavBlock = project?.globalNavBlock || null;
-  const globalFooterBlock = project?.globalFooterBlock || null;
+  const globalNavBlock = project?.globalNavBlock?.type === "nav-bar" ? project.globalNavBlock : null;
+  const globalFooterBlock = project?.globalFooterBlock?.type === "footer" ? project.globalFooterBlock : null;
 
   // Only inject global nav if this page doesn't already contain that exact block (by id)
   const injectNav = globalNavBlock && !pageBlocks.some((b) => b.id && b.id === globalNavBlock.id);
@@ -471,7 +549,7 @@ export default function ProjectPreviewPage() {
     return (
       <main style={styles.page("#0f172a")}>
         <div style={{ ...styles.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, textAlign: "center" }}>
-          <div style={{ fontSize: 48, lineHeight: 1 }}>🔍</div>
+          <div style={{ fontSize: 48, lineHeight: 1 }}>??</div>
           <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>Project not found</h1>
           <p style={{ color: "#94a3b8", fontSize: 16, margin: 0, maxWidth: 380, lineHeight: 1.6 }}>
             This project could not be loaded. It may have been deleted, or there may be a temporary connection issue.

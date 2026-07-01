@@ -1,0 +1,1849 @@
+{
+  "id": "home",
+  "name": "Home",
+  "slug": "home",
+  "seo": {},
+  "sections": [],
+  "widgets": [],
+  "styles": {},
+  "assets": [],
+  "objective": "Present the offer and move visitors into a demo request.",
+  "blocks": [
+    {
+      "id": "30814b2a-f7ca-4ecd-9d1d-c32c2e725892",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#features",
+            "label": "Features"
+          },
+          {
+            "href": "#crm",
+            "label": "CRM"
+          },
+          {
+            "href": "#automation",
+            "label": "Automation"
+          },
+          {
+            "href": "#funnel-builder",
+            "label": "Funnel Builder"
+          },
+          {
+            "href": "#pricing",
+            "label": "Pricing"
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us"
+          },
+          {
+            "href": "#demo-request",
+            "label": "Demo Request"
+          },
+          {
+            "href": "#other-modules",
+            "label": "Other Modules"
+          },
+          {
+            "href": "#contact",
+            "label": "CONtact"
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Contact",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "sticky-transparent",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#ffffff",
+        "ctaFontSize": 18,
+        "linkFontSize": 18,
+        "brandFontSize": 18,
+        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#00b0f0",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "#ffffff"
+      }
+    },
+    {
+      "id": 1780094509677,
+      "type": "video-hero",
+      "props": {
+        "title": "",
+        "ctaUrl": "#",
+        "ctaText": "",
+        "eyebrow": "",
+        "showText": false,
+        "subtitle": "",
+        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780269844695-opening-block-video.mp4",
+        "marginTop": 100,
+        "minHeight": 620,
+        "objectFit": "contain",
+        "posterSrc": "",
+        "textColor": "#ffffff",
+        "heightMode": "full",
+        "paddingTop": 350,
+        "accentColor": "#6366f1",
+        "overlayColor": "#000000",
+        "paddingBottom": 0,
+        "objectPosition": "center center",
+        "overlayOpacity": 0,
+        "unmuteOnScroll": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "wb_1778363723821_ec25ea",
+      "type": "hero",
+      "props": {
+        "ctaLink": "#contact",
+        "ctaText": "",
+        "eyebrow": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 20px;\"><span style=\"font-size: 24px;\"><span style=\"font-size: 20px;\">LETS DO BUSINESS TOGETHER!</span></span></span></span>",
+        "contentX": 68,
+        "contentY": 50,
+        "headline": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current tools and we save you over&nbsp;</span><span style=\"font-size: 84px;\">$12,000 per year.</span></div>",
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ec4899",
+          "content": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+          "fontSize": 18,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.6
+        },
+        "floatingX": 21,
+        "floatingY": 46,
+        "heroStats": [
+          {
+            "label": "Happy Clients",
+            "value": "500",
+            "suffix": "+"
+          },
+          {
+            "label": "Years Experience",
+            "value": "10",
+            "suffix": "+"
+          },
+          {
+            "label": "Client Satisfaction",
+            "value": "98",
+            "suffix": "%"
+          }
+        ],
+        "minHeight": "1850px",
+        "textColor": "#ec4899",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.4,
+        "buttonColor": "#ffffff",
+        "heroCounter": "6581",
+        "heroVariant": "split",
+        "subheadline": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+        "contentWidth": 913,
+        "ctaAnimation": "light-speed-in",
+        "textFontSize": 18,
+        "contentHeight": 420,
+        "floatingImage": "",
+        "floatingWidth": 461,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current tools and we save you almost </span><span style=\"font-size: 84px;\">$10,000 per year.</span></div>",
+          "fontSize": 68,
+          "alignment": "center",
+          "fontFamily": "Verdana",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "heroHtmlEmbed": "",
+        "textAnimation": "rotate-in-down-right",
+        "verticalAlign": "top",
+        "backgroundSize": "cover",
+        "enableParallax": true,
+        "floatingHeight": 366,
+        "floatingImages": [
+          {
+            "x": 29,
+            "y": 49,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779485243871-Untitled-design-1-.png",
+            "width": 1006,
+            "height": 893,
+            "assetId": "5ed6d2f8-5e9a-4b6e-924c-a3abbd795b7c",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 9,
+            "y": 30,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779485308395-logo-1776030030268-gr8-result-logo-transparant-background.png",
+            "width": 280,
+            "height": 320,
+            "assetId": "0b5f3b21-6bf7-4ee6-840f-1b04fbd45c84",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 31,
+            "y": 81,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779485351374-Mask-group.png",
+            "width": 511,
+            "height": 457,
+            "assetId": "a858e286-9d80-4946-9c10-e818801e10e0",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 24,
+            "y": 91,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779485365763-Group-481784.png",
+            "width": 237,
+            "height": 271,
+            "assetId": "46ded357-f22c-47b6-88ca-38288194b624",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          }
+        ],
+        "pageBackground": "#121c26",
+        "textLineHeight": 1.4,
+        "backgroundColor": "#0f172a",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/social-images/35ab846e-0764-498b-b1f8-7d2cf27d85a5/1775506922253.jpeg",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "hideTextOverlay": false,
+        "headlineFontSize": 68,
+        "sectionAnimation": "zoom",
+        "contentBackground": "transparent",
+        "ctaAnimationDelay": 2.5,
+        "ctaAnimationSpeed": 5,
+        "extraTextOverlays": [
+          {
+            "x": 52,
+            "y": 16,
+            "id": "txt-1778706109604",
+            "text": "<span style=\"font-size: 96px; color: rgb(255, 255, 255);\">We </span><span style=\"font-size: 96px; color: rgb(255, 192, 0);\">Power Growth</span><span style=\"font-size: 96px; color: rgb(0, 0, 0);\">&nbsp;</span><span style=\"font-size: 96px; color: rgb(255, 255, 255);\">through&nbsp; </span><span style=\"color: rgb(192, 0, 0); font-size: 96px;\">&nbsp;</span><span style=\"font-size: 96px; color: rgb(192, 0, 0);\">Digital Excellence</span>",
+            "color": "#ffffff",
+            "width": 1317,
+            "height": 305,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          }
+        ],
+        "headingFontFamily": "Verdana",
+        "headlineAlignment": "center",
+        "headlineGlowColor": "#000000",
+        "headlineTextStyle": "glow",
+        "heroInlineCounter": {
+          "x": 74,
+          "y": 84,
+          "label": "Site Visitors...and counting",
+          "width": 667,
+          "height": 169,
+          "enabled": true,
+          "iconType": "star",
+          "labelColor": "#ffffff",
+          "numberColor": "#00b0f0",
+          "startNumber": 28642,
+          "targetNumber": 28645,
+          "numberFontSize": 80,
+          "backgroundColor": "rgba(0,0,0,0.0)"
+        },
+        "backgroundPosition": "center center",
+        "backgroundVideoUrl": "/opening-block-video.mp4",
+        "headlineFontFamily": "Verdana",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "textAnimationDelay": 0.2,
+        "textAnimationSpeed": 3.5,
+        "fullWidthBackground": true,
+        "headlineShadowColor": "#000000",
+        "subheadlineFontSize": 18,
+        "extraCounterOverlays": [],
+        "floatingImageAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779401575715-logo-1776030030268-gr8-result-logo-transparant-background.png",
+        "subheadlineAnimation": "drift-edge-left",
+        "imageOverlayAnimation": "drift-edge-right",
+        "sectionAnimationDelay": 0,
+        "sectionAnimationSpeed": 2.2,
+        "subheadlineLineHeight": 1.6,
+        "backgroundImageAssetId": "5471318a-5ce1-4b70-9974-cb6e8f674be4",
+        "contentOverlayAnimation": "edge-right",
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 2.2,
+        "imageOverlayAnimationDelay": 2,
+        "imageOverlayAnimationSpeed": 8,
+        "contentOverlayAnimationDelay": 0.1,
+        "contentOverlayAnimationSpeed": 5
+      }
+    },
+    {
+      "id": 1778893218774,
+      "type": "trust-badges",
+      "props": {
+        "badges": [
+          {
+            "id": "trust-badge-0",
+            "icon": "🔒",
+            "label": "Secure"
+          },
+          {
+            "id": "trust-badge-1",
+            "icon": "⭐",
+            "label": "Trusted"
+          },
+          {
+            "id": "trust-badge-2",
+            "icon": "🏆",
+            "label": "Tried & Proven"
+          }
+        ],
+        "headline": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ec4899",
+          "content": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+          "fontSize": 18,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "600",
+          "lineHeight": 1.6
+        },
+        "textColor": "#ec4899",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "subheadline": "<span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span>",
+        "badgePadding": 18,
+        "textFontSize": 18,
+        "badgeFontSize": 36,
+        "badgeIconSize": 42,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current disconnected tools that are hindering your abilty to scale.</span> </div>",
+          "fontSize": 68,
+          "alignment": "center",
+          "fontFamily": "Verdana",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 68,
+        "headlineAlignment": "center",
+        "trustBadgeVariant": "logo-strip",
+        "headlineFontFamily": "Verdana",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "subheadlineFontSize": 18,
+        "badgeBackgroundColor": "#00b0f0",
+        "subheadlineLineHeight": 1.6
+      }
+    },
+    {
+      "id": 1778366596916,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          "Transform your business today!",
+          "Free demo available now.",
+          "Supercharge your workflow!",
+          "All tools in one platform.",
+          "Designed for businesses of all sizes.",
+          "Get started with Gr8 Result!"
+        ],
+        "speed": 80,
+        "fontSize": 120,
+        "alignment": "start",
+        "direction": "left",
+        "textColor": "#92d050",
+        "fontFamily": "Arial",
+        "fontWeight": "400",
+        "lineHeight": 1.5,
+        "paddingTop": 0,
+        "accentColor": "#ffc000",
+        "buttonColor": "#ffffff",
+        "dividerSize": 120,
+        "dividerText": "*",
+        "marginBottom": 0,
+        "textFontSize": 75,
+        "paddingBottom": 30,
+        "textAnimation": "slide-up",
+        "textFillColor": "#00b0f0",
+        "textTransform": "capitalize",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "textStrokeColor": "#ffffff",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "fullWidthBackground": true,
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "sectionAnimationSpeed": 8,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1780096931997,
+      "type": "columns-2",
+      "props": {
+        "ratio": "50-50",
+        "title": "",
+        "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780032551049-14-day-free-trial.png",
+        "leftTitle": "<span style=\"font-size: 46px;\"><span><span><span style=\"color: rgb(255, 192, 0);\"><span><span><span style=\"font-size: 46px;\">Look how much you can save!</span></span></span></span></span></span></span>",
+        "textColor": "#0f172a",
+        "rightImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780181299088-monday-logo-png_seeklogo-394605.png",
+        "rightTitle": "",
+        "borderColor": "#dbeafe",
+        "leftContent": "<div style=\"text-align: center;\"><span style=\"font-size: 28px; color: rgb(255, 192, 0);\">Take Your Time — We've Got You Covered</span></div><span style=\"line-height: 1.2;\"><div style=\"text-align: center;\"><span style=\"color: rgb(255, 255, 255);\"><br></span></div><span style=\"font-size: 28px;\"><div style=\"text-align: center;\"><span style=\"font-size: 24px; color: rgb(255, 255, 255);\">We know that setting up a new business platform takes time. That's why every new subscriber receives a 14-day free trial, allowing you to get everything configured, customised, and running smoothly before your subscription begins. No pressure, no rushing — just plenty of time to get your business set up for success.<br><br>Our support team is always available to assist with your onboarding and setup if you need help.&nbsp;</span></div></span></span>",
+        "rightContent": "",
+        "backgroundColor": "transparent",
+        "baseLayoutWidth": 1500,
+        "leftColumnBlock": null,
+        "leftColumnOrder": [
+          "title",
+          "image",
+          "content"
+        ],
+        "leftImageHeight": 705,
+        "columnsTopMargin": 0,
+        "leftColumnRadius": 0,
+        "leftImageAssetId": "",
+        "rightColumnBlock": {
+          "id": 1779683947911,
+          "type": "competitor-comparison",
+          "props": {
+            "rows": [
+              {
+                "logos": [
+                  {
+                    "name": "HubSpot",
+                    "domain": "hubspot.com"
+                  },
+                  {
+                    "name": "Salesforce",
+                    "domain": "salesforce.com"
+                  },
+                  {
+                    "name": "Pipedrive",
+                    "domain": "pipedrive.com"
+                  }
+                ],
+                "price": 97,
+                "category": "CRM & PIPELINE MANAGEMENT"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Mailchimp",
+                    "domain": "mailchimp.com"
+                  },
+                  {
+                    "name": "ActiveCampaign",
+                    "domain": "activecampaign.com"
+                  },
+                  {
+                    "name": "Klaviyo",
+                    "domain": "klaviyo.com"
+                  }
+                ],
+                "price": 99,
+                "category": "EMAIL MARKETING"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "ClickFunnels",
+                    "domain": "clickfunnels.com"
+                  },
+                  {
+                    "name": "Leadpages",
+                    "domain": "leadpages.com"
+                  },
+                  {
+                    "name": "Unbounce",
+                    "domain": "unbounce.com"
+                  }
+                ],
+                "price": 97,
+                "category": "FUNNELS & WEBSITE BUILDER"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Twilio",
+                    "domain": "twilio.com"
+                  },
+                  {
+                    "name": "SimpleTexting",
+                    "domain": "simpletexting.com"
+                  },
+                  {
+                    "name": "Attentive",
+                    "domain": "attentivemobile.com"
+                  }
+                ],
+                "price": 89,
+                "category": "2-WAY SMS MARKETING"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Calendly",
+                    "domain": "calendly.com"
+                  },
+                  {
+                    "name": "Acuity",
+                    "domain": "acuityscheduling.com"
+                  },
+                  {
+                    "name": "Square",
+                    "domain": "squareup.com"
+                  }
+                ],
+                "price": 29,
+                "category": "BOOKING & APPOINTMENTS"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "HubSpot",
+                    "domain": "hubspot.com"
+                  },
+                  {
+                    "name": "Zapier",
+                    "domain": "zapier.com"
+                  },
+                  {
+                    "name": "Keap",
+                    "domain": "keap.com"
+                  }
+                ],
+                "price": 169,
+                "category": "WORKFLOW AUTOMATIONS"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Teachable",
+                    "domain": "teachable.com"
+                  },
+                  {
+                    "name": "Kajabi",
+                    "domain": "kajabi.com"
+                  },
+                  {
+                    "name": "Thinkific",
+                    "domain": "thinkific.com"
+                  }
+                ],
+                "price": 99,
+                "category": "COURSES / PRODUCTS"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "CallRail",
+                    "domain": "callrail.com"
+                  },
+                  {
+                    "name": "Twilio",
+                    "domain": "twilio.com"
+                  }
+                ],
+                "price": 49,
+                "category": "CALL TRACKING"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Birdeye",
+                    "domain": "birdeye.com"
+                  },
+                  {
+                    "name": "Podium",
+                    "domain": "podium.com"
+                  },
+                  {
+                    "name": "Grade.us",
+                    "domain": "grade.us"
+                  }
+                ],
+                "price": 159,
+                "category": "REPUTATION MANAGEMENT"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Amplitude",
+                    "domain": "amplitude.com"
+                  },
+                  {
+                    "name": "Mixpanel",
+                    "domain": "mixpanel.com"
+                  }
+                ],
+                "price": 299,
+                "category": "TRACKING & ANALYTICS"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "Skool",
+                    "domain": "skool.com"
+                  },
+                  {
+                    "name": "Mighty Networks",
+                    "domain": "mightynetworks.com"
+                  },
+                  {
+                    "name": "Circle",
+                    "domain": "circle.so"
+                  }
+                ],
+                "price": 89,
+                "category": "COMMUNITIES"
+              },
+              {
+                "logos": [
+                  {
+                    "name": "DocuSign",
+                    "domain": "docusign.com"
+                  },
+                  {
+                    "name": "PandaDoc",
+                    "domain": "pandadoc.com"
+                  }
+                ],
+                "price": 47,
+                "category": "DOCUMENT SIGNING"
+              },
+              {
+                "logos": [
+                  {
+                    "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184958398-monday-logo-png_seeklogo-394605.png",
+                    "name": "Monday",
+                    "domain": ""
+                  },
+                  {
+                    "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780184964941-aha-logo-2x.png",
+                    "name": "Aha",
+                    "domain": ""
+                  }
+                ],
+                "price": 39,
+                "category": "GHANTT CHARTS JOB BOARDS"
+              }
+            ],
+            "title": "What you'd pay elsewhere",
+            "eyebrow": "our All-in-One Platform",
+            "planName": "COMPETITOR ANALYSIS",
+            "subtitle": "We replace every tool below — one platform, one price.",
+            "alignment": "center",
+            "planPrice": 359,
+            "textColor": "#ffffff",
+            "fontFamily": "system-ui",
+            "fontWeight": "700",
+            "lineHeight": 1.04,
+            "planTagline": "Everything above, included",
+            "textFontSize": 40,
+            "textLineHeight": 1.04,
+            "backgroundColor": "#121c26",
+            "baseLayoutWidth": 1500
+          }
+        },
+        "leftColumnPadding": 18,
+        "rightImageAssetId": "63137b67-7357-4bfa-ac43-a34e4ab4dcb8",
+        "cardBackgroundColor": "#f8fafc",
+        "leftColumnBodyColor": "#334155",
+        "columnsVerticalAlign": "top",
+        "leftColumnContentType": "text",
+        "leftColumnExtraImages": [
+          {
+            "gap": 0,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780033879801-Untitled-design-2-.png",
+            "height": 900
+          }
+        ],
+        "rightColumnContentType": "block",
+        "leftColumnBackgroundColor": "#202e4e"
+      }
+    },
+    {
+      "id": 1778380741134,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          "Transform your business today!",
+          "Free demo available now.",
+          "Supercharge your workflow!",
+          "All tools in one platform.",
+          "Designed for businesses of all sizes.",
+          "Get started with Gr8 Result!"
+        ],
+        "speed": 80,
+        "fontSize": 120,
+        "alignment": "start",
+        "direction": "right",
+        "textColor": "#92d050",
+        "fontFamily": "Arial",
+        "fontWeight": "400",
+        "lineHeight": 1.5,
+        "paddingTop": 0,
+        "accentColor": "#ffc000",
+        "buttonColor": "#ffffff",
+        "dividerSize": 200,
+        "dividerText": "~",
+        "marginBottom": 0,
+        "textFontSize": 75,
+        "paddingBottom": 30,
+        "textAnimation": "slide-up",
+        "textFillColor": "#081120",
+        "textTransform": "capitalize",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "textStrokeColor": "#ffffff",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "fullWidthBackground": true,
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "sectionAnimationSpeed": 8,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779059949626,
+      "type": "space",
+      "props": {
+        "height": "40px",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0"
+      }
+    },
+    {
+      "id": 1779056514820,
+      "type": "stats",
+      "props": {
+        "stats": [
+          {
+            "id": "stat-item-0",
+            "label": "Customers",
+            "detail": "Brands and service businesses supported in the last 12 months.",
+            "number": "500+"
+          },
+          {
+            "id": "stat-item-1",
+            "label": "Revenue Generated",
+            "detail": "Attributed pipeline and direct sales driven by optimized funnels.",
+            "number": "$2.8M+"
+          },
+          {
+            "id": "stat-item-2",
+            "label": "Satisfaction",
+            "detail": "Average post-project client rating across delivery and communication.",
+            "number": "98%"
+          }
+        ],
+        "title": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; text-align: start;\"><span style=\"font-size: 36px; color: rgb(255, 192, 0);\">Proven Results You Can Trust</span></span>",
+        "subtitle": "<span style=\"font-family: &quot;Mona Sans VF&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;Noto Sans&quot;, Helvetica, Arial, sans-serif, &quot;Apple Color Emoji&quot;, &quot;Segoe UI Emoji&quot;; font-weight: 400; color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Helping brands and service-based businesses attract more customers, generate more revenue, and deliver better client experiences.</span></span>",
+        "alignment": "left",
+        "labelSize": 20,
+        "textColor": "#ffffff",
+        "detailSize": 18,
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "labelColor": "#f97316",
+        "lineHeight": 0.98,
+        "accentColor": "#f59e0b",
+        "borderColor": "rgba(226,232,240,0.92)",
+        "cardStagger": 0.15,
+        "detailColor": "#0f172a",
+        "numberColor": "#ffffff",
+        "statsVariant": "data-ribbon",
+        "textFontSize": 24,
+        "pageBackground": "#121c26",
+        "textLineHeight": 0.98,
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "statsLeftColPct": 21,
+        "sectionTitleColor": "#0ea5e9",
+        "statsCardMinWidth": 200,
+        "cardBackgroundColor": "#2563eb",
+        "sectionSubtitleColor": "#06b6d4"
+      }
+    },
+    {
+      "id": 1779059956747,
+      "type": "space",
+      "props": {
+        "height": "20px",
+        "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+          "fontSize": 52,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 52,
+        "headlineAlignment": "center",
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1
+      }
+    },
+    {
+      "id": 1778894829892,
+      "type": "grid-section",
+      "props": {
+        "items": [
+          {
+            "icon": "",
+            "link": "https://gr8result.com/email-marketing/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+            "title": "Email & SMS Marketing",
+            "content": "",
+            "eyebrow": "Email Marketing and Lead Nurturing through AI powered SMS",
+            "iconName": "email",
+            "imageAlt": "web-1779254187290-ChatGPT-Image-May-20--2026--03_08_59-PM.png",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/social-media/",
+            "image": "/imported/gr8-services/social-media.jpg",
+            "title": "Social Media",
+            "content": "",
+            "eyebrow": "AI Content Creation & Automated Posting",
+            "iconName": "mobile",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/software/",
+            "image": "/imported/gr8-services/software.png",
+            "title": "CRM Software",
+            "content": "",
+            "eyebrow": "Business Software & Client Management",
+            "iconName": "handshake",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/website-development/",
+            "image": "/imported/gr8-services/websites.jpg",
+            "title": "Website Builder",
+            "content": "",
+            "eyebrow": "Domains, Website Design & Hosting and SEO",
+            "iconName": "web",
+            "imageAlt": "Gr8 Result Digital Solutions.",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/graphic-design/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-2064204950-16eb13d3db53c980546f.png",
+            "title": "Funnel Builder & Lead Capture",
+            "content": "",
+            "eyebrow": "Landing Pages and Sales Tools",
+            "iconName": "",
+            "imageAlt": "2064204950",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "imageAssetId": "asset:generic/library-2064204950-16eb13d3db53c980546f.png",
+            "iconFontFamily": "dticon"
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/branding-design/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/affiliate-marketing.svg",
+            "title": "Affiliate Marketplace",
+            "content": "",
+            "eyebrow": "Vendor and Affiliate Marketplace. Digital & Physical",
+            "iconName": "bs-search",
+            "imageAlt": "affiliate marketing",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/seo/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+            "title": "Calendar Booking",
+            "content": "",
+            "eyebrow": "Calendar Booking Module for Support and Coaching",
+            "iconName": "",
+            "imageAlt": "web-1779254201959-ChatGPT-Image-May-20--2026--02_41_10-PM.png",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": "webexbaseicon"
+          },
+          {
+            "icon": "",
+            "link": "https://gr8result.com/videos/",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/community-dark.svg",
+            "title": "Community & Connections",
+            "content": "",
+            "eyebrow": "Personal & Global Community module",
+            "iconName": "",
+            "imageAlt": "community dark",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 150,
+            "iconFontFamily": "dticon"
+          }
+        ],
+        "title": "<span style=\"font-size: 36px;\">Our Platform Modules</span>",
+        "columns": 4,
+        "iconSize": 50,
+        "columnGap": 24,
+        "iconColor": "#0f172a",
+        "textColor": "#0f172a",
+        "borderColor": "rgba(148,163,184,0.22)",
+        "cardStagger": 0.08,
+        "gridVariant": "services",
+        "imageRadius": 18,
+        "columnRadius": 22,
+        "columnShadow": "soft",
+        "blockMaxWidth": 1200,
+        "bodyAnimation": "fade-up",
+        "cardAnimation": "edge-right",
+        "columnPadding": 18,
+        "iconAnimation": "fade-up",
+        "itemAnimation": "edge-right",
+        "imageAnimation": "zoom",
+        "pageBackground": "#121c26",
+        "titleAnimation": "fade-up",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "columnBodyColor": "#475569",
+        "stretchToCanvas": true,
+        "columnTitleColor": "#0f172a",
+        "columnsTopMargin": 18,
+        "sectionAnimation": "edge-right",
+        "columnBorderColor": "rgba(148,163,184,0.18)",
+        "gridItemMinHeight": 0,
+        "cardAnimationSpeed": 1.8,
+        "columnContentAlign": "left",
+        "itemAnimationSpeed": 1.8,
+        "cardBackgroundColor": "#ffffff",
+        "iconBackgroundColor": "#ffffff",
+        "servicesStylePreset": "style-03",
+        "cardAnimationStagger": 0.015,
+        "columnsVerticalAlign": "center",
+        "itemAnimationStagger": 0.015,
+        "columnBackgroundColor": "#ffffff",
+        "sectionAnimationSpeed": 1.2,
+        "surfaceAnimationSpeed": 0.8
+      }
+    },
+    {
+      "id": 1779058697413,
+      "type": "space",
+      "props": {
+        "height": "60px",
+        "pageBackground": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0"
+      }
+    },
+    {
+      "id": 1779158148086,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          {
+            "text": "PayPal",
+            "iconKey": "si-paypal"
+          },
+          {
+            "text": "Stripe",
+            "iconKey": "si-stripe"
+          },
+          {
+            "text": "Shopify",
+            "iconKey": "si-shopify"
+          },
+          {
+            "text": "Google Ads",
+            "iconKey": "si-gads"
+          },
+          {
+            "text": "Microsoft",
+            "iconKey": "si-ms"
+          },
+          {
+            "text": "Spotify",
+            "iconKey": "si-spotify"
+          },
+          {
+            "text": "Dropbox",
+            "iconKey": "si-dropbox"
+          },
+          {
+            "text": "Zoom",
+            "iconKey": "si-zoom"
+          }
+        ],
+        "speed": 40,
+        "fontSize": 48,
+        "direction": "left",
+        "fontStyle": "normal",
+        "marginTop": 0,
+        "textColor": "#f8fafc",
+        "fontWeight": "600",
+        "lineHeight": 1.08,
+        "paddingTop": 16,
+        "accentColor": "#7dd3fc",
+        "dividerSize": 48,
+        "dividerText": "*",
+        "itemPaddingX": 14,
+        "marginBottom": 0,
+        "paddingBottom": 16,
+        "textFillColor": "#f8fafc",
+        "textTransform": "uppercase",
+        "textDecoration": "none",
+        "backgroundColor": "#081120",
+        "baseLayoutWidth": 1500,
+        "textStrokeColor": "transparent",
+        "textStrokeWidth": 8,
+        "sectionAnimation": "fade-in",
+        "fullWidthBackground": true,
+        "sectionAnimationDelay": 0.04
+      }
+    },
+    {
+      "id": 1779225980928,
+      "type": "parallax",
+      "props": {
+        "ctaLink": "#",
+        "ctaText": "Book a Free Demo",
+        "eyebrow": "welcome to the",
+        "contentX": 29,
+        "contentY": 43,
+        "headline": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+          "fontSize": 20,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "800",
+          "lineHeight": 1.6
+        },
+        "floatingX": 76,
+        "floatingY": 58,
+        "minHeight": "1300px",
+        "textColor": "#ffc000",
+        "fontFamily": "system-ui",
+        "fontWeight": "800",
+        "lineHeight": 1.4,
+        "buttonColor": "#2563eb",
+        "subheadline": "<span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span>",
+        "contentWidth": 763,
+        "textFontSize": 20,
+        "contentHeight": 420,
+        "floatingImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+        "floatingWidth": 220,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.",
+          "fontSize": 52,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "heroStatItems": [
+          {
+            "id": "stat-1779226738677",
+            "label": "",
+            "number": ""
+          }
+        ],
+        "verticalAlign": "center",
+        "enableParallax": true,
+        "floatingHeight": 220,
+        "floatingImages": [
+          {
+            "x": 75,
+            "y": 34,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg",
+            "width": 457,
+            "height": 692,
+            "assetId": "f7952ae7-a280-4073-b1af-59647c43b189",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 68,
+            "y": 73,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416597583-website-development-client-collaboration-gr8result.jpg",
+            "width": 625,
+            "height": 578,
+            "assetId": "e2890a84-8847-46f2-a53d-8be074679d88",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 50,
+            "y": 75,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226408848-beautiful-businesswoman-her-office_329181-13386.avif",
+            "width": 354,
+            "height": 413,
+            "assetId": "be7a9f96-21ec-4f6e-891d-d6bc6bc13e55",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          },
+          {
+            "x": 22,
+            "y": 84,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779416651481-banner-bg1.jpg",
+            "width": 661,
+            "height": 614,
+            "assetId": "349f9e1a-0259-4575-8101-5f4c34d42553",
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          }
+        ],
+        "textLineHeight": 1.4,
+        "backgroundColor": "#0f172a",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226235962-graphic-designer-creative-workspace-gr8result.jpg",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#ffffff",
+        "headlineFontSize": 52,
+        "extraTextOverlays": [
+          {
+            "x": 77,
+            "y": 97,
+            "id": "txt-1779675952582",
+            "text": "* Savings is achievable. It is based based on Enterprise Plans Annual Payment",
+            "color": "#ffffff",
+            "width": 989,
+            "height": 30,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          },
+          {
+            "x": 22,
+            "y": 55,
+            "id": "txt-1780517324477",
+            "text": "<h1 data-website-inline-editor=\"true\" data-text-prop=\"headline\" style=\"padding: 4px 6px; font-size: 52px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; font-weight: 700; text-align: center; background-color: rgba(15, 23, 42, 0.08); position: relative; z-index: 1; line-height: 1.1; font-family: system-ui; color: rgb(255, 192, 0); width: 723.984px; max-width: 100%; outline: rgba(125, 211, 252, 0.5) dashed 1px; word-break: normal; overflow-wrap: break-word; border-radius: 8px;\">Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.</h1>",
+            "color": "#ffffff",
+            "width": 810,
+            "height": 30,
+            "fontSize": 18,
+            "animation": "fade-in",
+            "textAlign": "left",
+            "background": "transparent",
+            "fontWeight": "600",
+            "animationDelay": 0
+          }
+        ],
+        "headlineAlignment": "center",
+        "backgroundPosition": "center center",
+        "backgroundVideoUrl": "",
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "fullWidthBackground": true,
+        "subheadlineFontSize": 20,
+        "subheadlineLineHeight": 1.6,
+        "backgroundImageAssetId": "aceff264-c719-450c-a963-d4ac2f8e7bb3"
+      }
+    },
+    {
+      "id": "benefits-grid-001",
+      "type": "grid-section",
+      "props": {
+        "items": [
+          {
+            "icon": "",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1679707860-2cd99574b08ca768371f.jpg",
+            "title": "Eliminate Platform Switching",
+            "content": "Access all your marketing tools in one unified dashboard. No more juggling between multiple platforms and losing productivity.",
+            "eyebrow": "All-in-One Platform",
+            "iconName": "",
+            "imageAlt": "1679707860",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "imageAssetId": "asset:generic/library-1679707860-2cd99574b08ca768371f.jpg",
+            "iconFontFamily": "dticon"
+          },
+          {
+            "icon": "💰",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1563981389-8fb7639e051d8252d771.jpg",
+            "title": "Reduce Subscription Costs",
+            "content": "Replace 5–10 separate subscriptions with one comprehensive platform. Save thousands annually while gaining more capabilities.",
+            "eyebrow": "Save Thousands",
+            "iconName": "",
+            "imageAlt": "1563981389",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "🔄",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-190997736-41e325c95b6b390272dc.png",
+            "title": "Streamline Workflows",
+            "content": "Connect all your marketing activities seamlessly. Data flows automatically between tools, eliminating manual data entry and errors.",
+            "eyebrow": "Automation Made Easy",
+            "iconName": "",
+            "imageAlt": "190997736",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          },
+          {
+            "icon": "📈",
+            "link": "",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-1809094467-c4a08735f77dc1b94f18.jpg",
+            "title": "Scale Faster",
+            "content": "Grow your business without platform limitations. Our infrastructure helps you to scale your business from startup to enterprise.  The sky is the limit.",
+            "eyebrow": "Built to Grow",
+            "iconName": "",
+            "imageAlt": "1809094467",
+            "iconGlyph": "",
+            "iconImage": "",
+            "iconAssetId": "",
+            "imageHeight": 0,
+            "iconFontFamily": ""
+          }
+        ],
+        "title": "<span style=\"font-size: 48px; color: rgb(255, 192, 0);\">Real benefits that impact your bottom line from day one.</span>",
+        "columns": 4,
+        "eyebrow": "Our Platform",
+        "iconSize": 36,
+        "alignment": "left",
+        "bodyBlock": {
+          "color": "#bdbcbf",
+          "content": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+          "fontSize": 18,
+          "alignment": "left",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.6
+        },
+        "columnGap": 24,
+        "iconColor": "",
+        "textColor": "#000000",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.2,
+        "borderColor": "rgba(148,163,184,0.22)",
+        "buttonColor": "#ffffff",
+        "cardStagger": 0.1,
+        "gridVariant": "services",
+        "imageRadius": 16,
+        "subheadline": "This platform wasn’t created in a boardroom — it was built from real business experience. We designed it for ourselves first, solving the everyday challenges of growth, automation, and customer management. Today, it empowers businesses around the world with the same tools, systems, and efficiencies that transformed our own operations.",
+        "cardBodySize": 16,
+        "columnRadius": 22,
+        "columnShadow": "soft",
+        "eyebrowColor": "",
+        "textFontSize": 28,
+        "blockMaxWidth": 1700,
+        "bodyAnimation": "fade-up",
+        "cardAnimation": "zoom",
+        "cardTitleSize": 28,
+        "columnPadding": 22,
+        "iconAnimation": "rotate-in-down-right",
+        "iconBadgeWidth": 90,
+        "imageAnimation": "zoom",
+        "pageBackground": "#121c26",
+        "textLineHeight": 1.2,
+        "titleAnimation": "fade-up",
+        "backgroundColor": "",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "columnBodyColor": "",
+        "eyebrowFontSize": 20,
+        "iconBadgeHeight": 90,
+        "stretchToCanvas": true,
+        "columnTitleColor": "",
+        "columnsTopMargin": 18,
+        "sectionAnimation": "light-speed-in",
+        "columnBorderColor": "#ec4899",
+        "gridItemMinHeight": 0,
+        "headingFontFamily": "Verdana",
+        "sectionTitleColor": "",
+        "columnContentAlign": "left",
+        "headlineFontFamily": "Verdana",
+        "servicesLayoutMode": "grid",
+        "cardBackgroundColor": "",
+        "iconBackgroundColor": "",
+        "servicesColorPreset": "blue",
+        "servicesStylePreset": "style-03",
+        "subheadlineFontSize": 18,
+        "columnsVerticalAlign": "top",
+        "columnBackgroundColor": "",
+        "subheadlineLineHeight": 1.6,
+        "surfaceAnimationSpeed": 0.3,
+        "sectionBackgroundImage": "/imported/gr8-services/software.png"
+      }
+    },
+    {
+      "id": 1778479036680,
+      "type": "space",
+      "props": {
+        "height": "40px",
+        "eyebrow": "Our Specialties",
+        "faqBlock": {
+          "items": [
+            {
+              "heading": "What makes this platform different from other solutions?",
+              "question": "What makes this platform different from other solutions?"
+            }
+          ],
+          "alignment": "left",
+          "fontFamily": "Poppins",
+          "questionColor": "#ffffff",
+          "questionFontSize": 24,
+          "questionFontWeight": "700",
+          "questionLineHeight": 1.4
+        },
+        "headline": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+        "alignment": "left",
+        "bodyBlock": {
+          "color": "#bdbcbf",
+          "content": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+          "fontSize": 18,
+          "alignment": "left",
+          "fontFamily": "Arial",
+          "fontWeight": "400",
+          "lineHeight": 1.6
+        },
+        "textColor": "#000000",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.2,
+        "buttonColor": "#ffffff",
+        "subheadline": "Add a short description about what makes your business stand out. Edit this text to share your unique value proposition.",
+        "textFontSize": 16,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "<span style=\"font-family: Verdana;\"><span style=\"font-size: 48px;\">Why Choose Us?</span></span>",
+          "fontSize": 48,
+          "alignment": "left",
+          "fontFamily": "Montserrat",
+          "fontWeight": "400",
+          "lineHeight": 1.2
+        },
+        "headlineColor": "#ffc000",
+        "pageBackground": "#121c26",
+        "textLineHeight": 1.2,
+        "buttonTextColor": "#00b0f0",
+        "headlineFontSize": 48,
+        "headingFontFamily": "Verdana",
+        "headlineAlignment": "left",
+        "headlineFontFamily": "Montserrat",
+        "headlineFontWeight": "400",
+        "headlineLineHeight": 1.2,
+        "subheadlineFontSize": 18,
+        "subheadlineLineHeight": 1.6
+      }
+    },
+    {
+      "id": "wb_1778363723822_788d70",
+      "type": "stats",
+      "props": {
+        "stats": [
+          {
+            "id": "stat-item-0",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Tools replaced</span>",
+            "detail": "Reduce the patchwork of separate apps your team is switching between all day.",
+            "number": "Up to 9+"
+          },
+          {
+            "id": "stat-item-1",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Typical stack cost</span>",
+            "detail": "What some teams are paying before they consolidate sales, follow-up, and marketing.",
+            "number": "$1,300+/mo"
+          },
+          {
+            "id": "stat-item-2",
+            "label": "<span style=\"color: rgb(0, 112, 192);\">Source of truth</span>",
+            "detail": "One platform for leads, conversations, automations, &amp; reporting. Control your contacts for the entire life cycle of the lead.",
+            "number": "ONE"
+          }
+        ],
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 40px;\">Why unified platforms win</span></span>",
+        "subtitle": "<span style=\"color: rgb(255, 255, 255);\">Consolidate software, reduce handoffs, and stop paying $1,300+/mo for overlap.</span>",
+        "alignment": "start",
+        "textColor": "#002060",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "labelColor": "#2563eb",
+        "lineHeight": 0.98,
+        "accentColor": "#f59e0b",
+        "borderColor": "#f97316",
+        "buttonColor": "#ffffff",
+        "statsVariant": "editorial-band",
+        "textFontSize": 48,
+        "textAnimation": "fade-up",
+        "pageBackground": "#121c26",
+        "textLineHeight": 0.98,
+        "backgroundColor": "#002060",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#00b0f0",
+        "sectionAnimation": "blur-in",
+        "headingFontFamily": "Verdana",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "cardBackgroundColor": "#06b6d4",
+        "sectionSubtitleColor": "#f97316",
+        "subheadlineAnimation": "slide-right",
+        "sectionAnimationDelay": 0.16,
+        "sectionAnimationSpeed": 1,
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779312402641,
+      "type": "cta-button",
+      "props": {
+        "link": "support@gr8result.com",
+        "note": "No card required",
+        "size": "large",
+        "text": "Book Demo Now!",
+        "style": "stacked-card",
+        "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free <span style=\"font-weight: bold;\"><span style=\"font-size: 72px; color: rgb(236, 72, 153);\">Demo&nbsp;</span></span>of our platform and see how well it can integrate into your business</span></li></ol>",
+        "eyebrow": "GR8 RESULT DIGITAL SOLUTIONS",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "fontFamily": "system-ui",
+        "fontWeight": "600",
+        "lineHeight": 1.7,
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "linear-gradient(135deg,#facc15,#f59e0b)",
+        "description": "This is not a sales call, it is simply a demonstration of how this platform can help you scale your business to amazing new heights.",
+        "textFontSize": 24,
+        "textAnimation": "slide-left",
+        "textLineHeight": 1.7,
+        "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 62%,#22d3ee)",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "contentMaxWidth": 1200,
+        "textAnimationDelay": 0.1,
+        "textAnimationSpeed": 0.8
+      }
+    },
+    {
+      "id": "wb_1778363723821_0eaac3",
+      "type": "trust-badges",
+      "props": {
+        "badges": [
+          {
+            "id": "trust-badge-0",
+            "icon": "📈",
+            "label": "Pipeline visibility"
+          },
+          {
+            "id": "trust-badge-1",
+            "icon": "✉️",
+            "label": "Email campaigns"
+          },
+          {
+            "id": "trust-badge-2",
+            "icon": "💬",
+            "label": "SMS follow-up"
+          },
+          {
+            "id": "trust-badge-3",
+            "icon": "⚙️",
+            "label": "Built-in automations"
+          },
+          {
+            "id": "trust-badge-4",
+            "icon": "🧾",
+            "label": "Forms and capture"
+          },
+          {
+            "id": "trust-badge-5",
+            "icon": "📊",
+            "label": "Reporting and attribution"
+          },
+          {
+            "id": "trust-badge-6",
+            "icon": "🔄",
+            "label": "Fully functioncional CRM"
+          },
+          {
+            "id": "trust-badge-7",
+            "icon": "🌐",
+            "label": "Website Builder"
+          },
+          {
+            "id": "trust-badge-8",
+            "icon": "👥",
+            "label": "Local & Global Community"
+          },
+          {
+            "id": "trust-badge-9",
+            "icon": "🎯",
+            "label": "Funnel Builder"
+          },
+          {
+            "id": "trust-badge-10",
+            "icon": "🤝",
+            "label": "Xchange Affiliate Marketplace"
+          },
+          {
+            "id": "trust-badge-11",
+            "icon": "📱",
+            "label": "AI Social Media Management"
+          },
+          {
+            "id": "trust-badge-12",
+            "icon": "✍️",
+            "label": "Content Creation"
+          }
+        ],
+        "textColor": "#0f172a",
+        "borderColor": "rgba(125,211,252,0.42)",
+        "buttonColor": "#ffffff",
+        "badgePadding": 18,
+        "badgeFontSize": 24,
+        "badgeIconSize": 30,
+        "textAnimation": "fade-up",
+        "pageBackground": "#121c26",
+        "backgroundColor": "#121c26",
+        "backgroundImage": "",
+        "backgroundStyle": "image",
+        "buttonTextColor": "#00b0f0",
+        "sectionAnimation": "fade-up",
+        "headingFontFamily": "Verdana",
+        "trustBadgeVariant": "pill-row",
+        "headlineFontFamily": "Verdana",
+        "textAnimationDelay": 0.08,
+        "textAnimationSpeed": 0.95,
+        "badgeBackgroundColor": "#00b0f0",
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimationDelay": 0.12,
+        "sectionAnimationSpeed": 1,
+        "backgroundImageAssetId": "e6fb48ac-b8e6-4f25-aeab-97389b2dcc09",
+        "subheadlineAnimationDelay": 0.16,
+        "subheadlineAnimationSpeed": 1.05
+      }
+    },
+    {
+      "id": 1779214456909,
+      "type": "text",
+      "props": {
+        "text": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 32px;\">Integrate all of your Social Media Accounts in one Place.&nbsp;</span></span><div><span style=\"font-size: 32px;\">Generate Content and Post to them all Directly from the platform.</span></div>",
+        "textSize": "medium",
+        "alignment": "center",
+        "minHeight": "222px",
+        "textColor": "#e6eef5",
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "lineHeight": 1.8,
+        "paddingTop": 48,
+        "textFontSize": 32,
+        "paddingBottom": 48,
+        "textAnimation": "fade-in",
+        "enableParallax": false,
+        "textLineHeight": 1.8,
+        "backgroundColor": "#121c26",
+        "backgroundImage": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%22800%22%20viewBox%3D%220%200%201200%20800%22%3E%3Cdefs%3E%3CradialGradient%20id%3D%22g%22%20cx%3D%2250%25%22%20cy%3D%2250%25%22%20r%3D%2250%25%22%3E%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%237dd3fc%22%20stop-opacity%3D%220.95%22%2F%3E%3Cstop%20offset%3D%2258%25%22%20stop-color%3D%22%2338bdf8%22%20stop-opacity%3D%220.42%22%2F%3E%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23ffffff%22%20stop-opacity%3D%220%22%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%221200%22%20height%3D%22800%22%20fill%3D%22%230f172a%22%2F%3E%3Ccircle%20cx%3D%22820%22%20cy%3D%22340%22%20r%3D%22310%22%20fill%3D%22url(%23g)%22%2F%3E%3Ccircle%20cx%3D%22310%22%20cy%3D%22540%22%20r%3D%22180%22%20fill%3D%22%2338bdf8%22%20opacity%3D%220.12%22%2F%3E%3C%2Fsvg%3E",
+        "backgroundStyle": "image",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "builtin-deco-gradient-orb"
+      }
+    },
+    {
+      "id": 1779156987087,
+      "type": "marquee-strip",
+      "props": {
+        "items": [
+          {
+            "text": "Facebook",
+            "iconKey": "facebook-file"
+          },
+          {
+            "text": "Instagram",
+            "iconKey": "instagram-file"
+          },
+          {
+            "text": "Linkedin",
+            "iconKey": "linkedin-file"
+          },
+          {
+            "text": "Pinterest",
+            "iconKey": "pinterest-file"
+          },
+          {
+            "text": "TicTok",
+            "iconKey": "tiktok-file"
+          },
+          {
+            "text": "YouTube",
+            "iconKey": "youtube-file"
+          },
+          {
+            "text": "X",
+            "iconKey": "si-x"
+          },
+          {
+            "text": "WhatsApp",
+            "iconKey": "whatsapp-file"
+          },
+          {
+            "text": "Telegram",
+            "iconKey": "telegram-file"
+          },
+          {
+            "text": "Discord",
+            "iconKey": "discord-file"
+          },
+          {
+            "text": "Reddit",
+            "iconKey": "reddit-file"
+          },
+          {
+            "text": "SnapChat",
+            "iconKey": "snapchat-file"
+          },
+          {
+            "text": "Threads",
+            "iconKey": "threads-file"
+          },
+          {
+            "text": "Bluesky",
+            "iconKey": "bluesky-file"
+          },
+          {
+            "text": "Google Business",
+            "iconKey": "googlebusiness-file"
+          },
+          {
+            "text": "Lemon8",
+            "iconKey": "lemon8-file"
+          }
+        ],
+        "speed": 80,
+        "fontSize": 64,
+        "direction": "left",
+        "fontStyle": "normal",
+        "marginTop": 0,
+        "textColor": "#ffffff",
+        "fontWeight": "600",
+        "lineHeight": 1.08,
+        "paddingTop": 16,
+        "accentColor": "#7dd3fc",
+        "dividerSize": 14,
+        "dividerText": "*",
+        "itemPaddingX": 14,
+        "marginBottom": 0,
+        "paddingBottom": 16,
+        "textFillColor": "#ffffff",
+        "textTransform": "none",
+        "textDecoration": "none",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "textStrokeColor": "transparent",
+        "textStrokeWidth": 3,
+        "sectionAnimation": "fade-in",
+        "fullWidthBackground": true,
+        "sectionAnimationDelay": 0.04
+      }
+    },
+    {
+      "id": 1779416282454,
+      "type": "footer",
+      "props": {
+        "logo": "",
+        "brand": "Your Brand",
+        "tagline": "Building something amazing.",
+        "navLinks": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#about",
+            "label": "About"
+          },
+          {
+            "href": "#services",
+            "label": "Services"
+          },
+          {
+            "href": "#contact",
+            "label": "Contact"
+          }
+        ],
+        "linkColor": "#94a3b8",
+        "logoWidth": 48,
+        "textColor": "#e2e8f0",
+        "extraLinks": [
+          {
+            "href": "#blog",
+            "label": "Blog"
+          },
+          {
+            "href": "#privacy",
+            "label": "Privacy Policy"
+          },
+          {
+            "href": "#terms",
+            "label": "Terms"
+          }
+        ],
+        "navHeading": "Navigation",
+        "borderColor": "rgba(148,163,184,0.2)",
+        "contactEmail": "hello@yourbrand.com",
+        "contactPhone": "(555) 010-2026",
+        "extraHeading": "Company",
+        "copyrightText": "© 2025 Your Brand. All rights reserved.",
+        "contactAddress": "Your city, state",
+        "contactHeading": "Contact",
+        "showNewsletter": true,
+        "backgroundColor": "#0f172a",
+        "baseLayoutWidth": 1500,
+        "newsletterHeading": "Stay Updated",
+        "newsletterSubtitle": "Get the latest news delivered to your inbox.",
+        "newsletterActionUrl": "",
+        "newsletterButtonText": "Subscribe",
+        "newsletterButtonColor": "#2563eb",
+        "newsletterSubmitMethod": "post",
+        "newsletterFallbackEmail": "",
+        "newsletterButtonTextColor": "#ffffff"
+      }
+    },
+    {
+      "id": 1780097529166,
+      "type": "divider",
+      "props": {
+        "color": "#ffc000",
+        "style": "split-banner",
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": 1780431649080,
+      "type": "cta-button",
+      "props": {
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Clich Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
+      }
+    }
+  ],
+  "chaiData": null,
+  "html": "<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <title>Home</title>\n  </head>\n  <body style=\"margin:0;background:#ffffff;font-family:'Manrope','Avenir Next','Segoe UI',sans-serif;\">\n    <header style=\"background:#0b1220;color:#e2e8f0;border-bottom:1px solid rgba(148,163,184,0.2);\">\n        <div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;padding-top:18px;padding-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;\">\n          <strong style=\"font-size:20px;\">Gr8 Result Digital Solutions</strong>\n          <nav style=\"display:flex;align-items:center;gap:14px;flex-wrap:wrap;\"><a href=\"#home\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Home</a><span style='width:14px;display:inline-block;'></span><a href=\"#features\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Features</a><span style='width:14px;display:inline-block;'></span><a href=\"#crm\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">CRM</a><span style='width:14px;display:inline-block;'></span><a href=\"#automation\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Automation</a><span style='width:14px;display:inline-block;'></span><a href=\"#funnel-builder\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Funnel Builder</a><span style='width:14px;display:inline-block;'></span><a href=\"#pricing\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Pricing</a><span style='width:14px;display:inline-block;'></span><a href=\"#about-us\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">About Us</a><span style='width:14px;display:inline-block;'></span><a href=\"#demo-request\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Demo Request</a><span style='width:14px;display:inline-block;'></span><a href=\"#other-modules\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">Other Modules</a><span style='width:14px;display:inline-block;'></span><a href=\"#contact\" style=\"color:#e2e8f0;text-decoration:none;font-weight:600;\">CONtact</a></nav>\n          <a href=\"#contact\" style=\"background:#ffffff;color:#00b0f0;padding:10px 16px;border-radius:999px;text-decoration:none;font-weight:700;\">Contact</a>\n        </div>\n      </header>\n<section style=\"position:relative;overflow:hidden;padding:88px 20px;min-height:1850px;background:linear-gradient(rgba(15,23,42,0.45), rgba(15,23,42,0.22)), url('https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/social-images/35ab846e-0764-498b-b1f8-7d2cf27d85a5/1775506922253.jpeg') center/cover no-repeat;color:#ffc000;text-align:center;\">\n        \n        <div style=\"position:relative;z-index:1;max-width:913px;margin:0 auto;overflow:hidden;\">\n          <h1 style=\"margin:0 0 16px;font-size:68px;line-height:1.08;word-break:break-word;overflow-wrap:anywhere;\"><span style=\"font-size: 84px; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px;\">Business &amp; Marketing Platform</span><div><span style=\"font-size: 84px; color: rgb(0, 176, 80);\"> replaces ALL your current tools and we save you over&nbsp;</span><span style=\"font-size: 84px;\">$12,000 per year.</span></div></h1>\n          <div style=\"font-size:18px;line-height:1.7;color:#ec4899;word-break:break-word;overflow-wrap:anywhere;\"><span style=\"color: rgb(255, 255, 255);\"><span style=\"font-size: 20px;\">Bring CRM, email, SMS, automations, forms, <span style=\"font-size: 20px;\">scheduling</span>, and reporting into one platform. Stop paying $1,300+/mo for a fragmented stack and give your team one system built to move deals faster.</span></span></div>\n          <a href=\"#contact\" style=\"display:inline-block;margin-top:18px;background:#ffffff;color:#00b0f0;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700;\">Get Started</a>\n        </div>\n      </section>\n<section style=\"background:transparent;color:#0f172a;\"><div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;\"><div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;\"><div style=\"padding:18px;border-radius:18px;background:#f8fafc;border:1px solid #dbeafe;\"><img src=\"https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780032551049-14-day-free-trial.png\" alt=\"Left\" style=\"width:100%;border-radius:14px;object-fit:cover;margin:0 0 12px;\" /><h3 style=\"margin:0 0 8px;\"><span style=\"font-size: 46px;\"><span><span><span style=\"color: rgb(255, 192, 0);\"><span><span><span style=\"font-size: 46px;\">Look how much you can save!</span></span></span></span></span></span></span></h3><div><div style=\"text-align: center;\"><span style=\"font-size: 28px; color: rgb(255, 192, 0);\">Take Your Time — We've Got You Covered</span></div><span style=\"line-height: 1.2;\"><div style=\"text-align: center;\"><span style=\"color: rgb(255, 255, 255);\"><br></span></div><span style=\"font-size: 28px;\"><div style=\"text-align: center;\"><span style=\"font-size: 24px; color: rgb(255, 255, 255);\">We know that setting up a new business platform takes time. That's why every new subscriber receives a 14-day free trial, allowing you to get everything configured, customised, and running smoothly before your subscription begins. No pressure, no rushing — just plenty of time to get your business set up for success.<br><br>Our support team is always available to assist with your onboarding and setup if you need help.&nbsp;</span></div></span></span></div></div><div style=\"padding:18px;border-radius:18px;background:#f8fafc;border:1px solid #dbeafe;\"><img src=\"https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780181299088-monday-logo-png_seeklogo-394605.png\" alt=\"Right\" style=\"width:100%;border-radius:14px;object-fit:cover;margin:0 0 12px;\" /><h3 style=\"margin:0 0 8px;\">Right Column</h3><div></div></div></div></div></section>\n<div style=\"height:40px;width:100%;max-width:1500px;margin:0 auto;box-sizing:border-box;background:transparent;\"></div>\n<section style=\"background:#ffffff;\"><div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;\"><div style=\"display:flex;gap:14px;flex-wrap:wrap;\"></div></div></section>\n<div style=\"height:20px;width:100%;max-width:1500px;margin:0 auto;box-sizing:border-box;background:transparent;\"></div>\n<div style=\"height:60px;width:100%;max-width:1500px;margin:0 auto;box-sizing:border-box;background:transparent;\"></div>\n<section style=\"position:relative;overflow:hidden;padding:88px 20px;min-height:1300px;background:linear-gradient(rgba(15,23,42,0.45), rgba(15,23,42,0.22)), url('https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226235962-graphic-designer-creative-workspace-gr8result.jpg') center/cover no-repeat;color:#ffc000;text-align:center;\">\n        <img src=\"https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779226797828-remote-work-creative-agency-lifestyle-gr8result.jpg\" alt=\"Overlay image\" style=\"position:absolute;left:76%;top:58%;transform:translate(-50%,-50%);width:220px;height:220px;object-fit:cover;border-radius:18px;box-shadow:0 24px 48px rgba(15,23,42,0.28);\" />\n        <div style=\"position:relative;z-index:1;max-width:763px;margin:0 auto;overflow:hidden;\">\n          <h1 style=\"margin:0 0 16px;font-size:52px;line-height:1.08;word-break:break-word;overflow-wrap:anywhere;\">Gr8 Result Digital Solutions Business and Marketing Platform Your ALL-IN-ONE platform. Save up to $10,000* every year.</h1>\n          <div style=\"font-size:20px;line-height:1.7;color:#ffc000;word-break:break-word;overflow-wrap:anywhere;\"><span style=\"color: rgb(0, 176, 240);\"><span style=\"font-size: 24px;\">Code Hard or Code Home</span></span></div>\n          <a href=\"#\" style=\"display:inline-block;margin-top:18px;background:#2563eb;color:#ffffff;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:700;\">Book a Free Demo</a>\n        </div>\n      </section>\n<div style=\"height:40px;width:100%;max-width:1120px;margin:0 auto;box-sizing:border-box;background:transparent;\"></div>\n<section style=\"background:#ffffff;\"><div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;\"><div style=\"display:flex;gap:14px;flex-wrap:wrap;\"></div></div></section>\n<section style=\"background:#ffffff;\"><div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;;text-align:center;\"><a href=\"support@gr8result.com\" style=\"display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700;\">Book Demo Now!</a></div></section>\n<section style=\"background:#121c26;color:#e6eef5;\">\n        <div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;\"><span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 32px;\">Integrate all of your Social Media Accounts in one Place.&nbsp;</span></span><div><span style=\"font-size: 32px;\">Generate Content and Post to them all Directly from the platform.</span></div></div>\n      </section>\n<section style=\"background:transparent;padding:24px 32px 24px;box-sizing:border-box;width:100%;max-width:1500px;margin-left:auto;margin-right:auto;\"><div style=\"width:100%;max-width:1500px;margin:0 auto;display:flex;justify-content:center;box-sizing:border-box;\"><span style=\"display:block;width:100%;max-width:100%;min-width:24px;box-sizing:border-box;border-top:1px solid #ffc000;\"></span></div></section>\n<section style=\"background:#ffffff;\"><div style=\"max-width:1120px;margin:0 auto;padding:56px 20px;;text-align:center;\"><a href=\"https://gr8result.digital/login.\" style=\"display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700;\">&lt;span style=&quot;font-size: 24px;&quot;&gt;&lt;span style=&quot;font-weight: bold;&quot;&gt;&lt;span style=&quot;font-size: 24px;&quot;&gt;Clich Here To Start Your 14 Day Free Trial&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;</a></div></section>\n  </body>\n</html>",
+  "updatedAt": "2026-06-05T07:19:51.344Z"
+}

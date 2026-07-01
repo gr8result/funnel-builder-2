@@ -5,6 +5,7 @@ import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { supabase } from '../../../utils/supabase-client';
 import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
+import { apiFetch } from '../../../lib/social/apiUtils';
 
 const PLATFORM_OPTIONS = [
   { key: 'facebook',  label: 'Facebook',   icon: '📘' },
@@ -258,7 +259,7 @@ export default function ReviewPosts() {
     try {
       const token = await getToken();
       const res   = await fetch('/api/social/list-images', { headers: { Authorization: `Bearer ${token}` } });
-      const json  = await res.json();
+      const json  = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (json.ok) setLibrary(json.images || []);
     } catch {}
     finally { setLibLoading(false); }
@@ -314,7 +315,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ imageUrl: dataUrl, description: 'Cropped post image' }),
       });
-      const uploadJson = await uploadRes.json();
+      const uploadJson = await uploadRes.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!uploadJson.ok) throw new Error(uploadJson.error || 'Upload failed');
       const mediaUrl = uploadJson.image.url;
       // Save to post
@@ -323,7 +324,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId: cropPostId, mediaUrl }),
       });
-      const patchJson = await patchRes.json();
+      const patchJson = await patchRes.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!patchJson.ok) throw new Error(patchJson.error || 'Save failed');
       setPosts(prev => prev.map(p => p.postId === cropPostId ? { ...p, mediaUrl } : p));
       setNotice('Image updated.');
@@ -344,7 +345,7 @@ export default function ReviewPosts() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ imageUrl: cropSrc, description: 'Post image' }),
         });
-        const uploadJson = await uploadRes.json();
+        const uploadJson = await uploadRes.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
         if (!uploadJson.ok) throw new Error(uploadJson.error || 'Upload failed');
         mediaUrl = uploadJson.image.url;
       }
@@ -353,7 +354,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId: cropPostId, mediaUrl }),
       });
-      const patchJson = await patchRes.json();
+      const patchJson = await patchRes.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!patchJson.ok) throw new Error(patchJson.error || 'Save failed');
       setPosts(prev => prev.map(p => p.postId === cropPostId ? { ...p, mediaUrl } : p));
       setNotice('Image updated.');
@@ -430,7 +431,7 @@ export default function ReviewPosts() {
       const token = await getToken();
       if (!token) { setNotice('Sign in to view posts.'); setLoading(false); return; }
       const res  = await fetch('/api/social/calendar-board', { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Failed to load posts');
       setPosts(json.cards || []);
     } catch (err) { setNotice(err.message); }
@@ -447,7 +448,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content: newContent.trim(), platform: newPlatform, mediaUrl: null, scheduledFor: null }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!res.ok || !json.success) throw new Error(json.error || 'Save failed');
       setNewContent('');
       setShowCreate(false);
@@ -472,7 +473,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Save failed');
       setPosts(prev => prev.map(p => p.postId === postId
         ? { ...p, ...(content !== undefined ? { content } : {}), ...(platform !== undefined ? { platform, status: 'scheduled' } : {}) }
@@ -493,7 +494,7 @@ export default function ReviewPosts() {
       const res  = await fetch(`/api/social/delete-post?id=${encodeURIComponent(postId)}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Delete failed');
       setPosts(prev => prev.filter(p => p.postId !== postId));
       setNotice('Post deleted.');
@@ -529,7 +530,7 @@ export default function ReviewPosts() {
         const res  = await fetch(`/api/social/delete-post?id=${encodeURIComponent(postId)}`, {
           method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
         });
-        const json = await res.json();
+        const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
         if (!json.ok) failed++;
         else setPosts(prev => prev.filter(p => p.postId !== postId));
       } catch { failed++; }
@@ -572,7 +573,7 @@ export default function ReviewPosts() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ postId, scheduledFor: iso }),
         });
-        const json = await res.json();
+        const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
         if (json.ok) {
           scheduledIds.push(postId);
         } else { failed++; }
@@ -634,7 +635,7 @@ export default function ReviewPosts() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ postId: item.post.postId, scheduledFor: iso }),
         });
-        const json = await res.json();
+        const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
         if (!json.ok) {
           failed++;
           continue;
@@ -674,7 +675,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId, scheduledFor: iso }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error);
       setPosts(prev => prev.map(p => p.postId === postId ? { ...p, scheduledFor: iso, status: 'scheduled' } : p));
       setPostSchedule(prev => { const n = { ...prev }; delete n[postId]; return n; });
@@ -695,7 +696,7 @@ export default function ReviewPosts() {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ postId, scheduledFor: iso }),
           });
-          const json = await res.json();
+          const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
           if (json.ok) setPosts(prev => prev.map(p => p.postId === postId ? { ...p, scheduledFor: iso, status: 'scheduled' } : p));
         } catch {}
       }));
@@ -713,7 +714,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Publish failed');
       const nextStatus = json.postStatus || 'published';
       setPosts(prev => prev.map(p => p.postId === postId ? { ...p, status: nextStatus } : p));
@@ -734,7 +735,7 @@ export default function ReviewPosts() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ redirectPath: '/modules/social_media/connect-complete?platform=tiktok' }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!res.ok || !json.authUrl) throw new Error(json.error || 'Could not start TikTok reconnect.');
 
       const popup = window.open(json.authUrl, 'oauth-popup', 'width=640,height=720,top=80,left=200,resizable=yes,scrollbars=yes');

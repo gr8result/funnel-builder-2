@@ -2,6 +2,7 @@
 import Stripe from "stripe";
 import { priceToSlugMap } from "../../../services/modules";
 import { createClient } from "@supabase/supabase-js";
+import { normalizePlanId } from "../../../lib/planResolver";
 
 export const config = { api: { bodyParser: false } };
 
@@ -200,18 +201,25 @@ export default async function handler(req, res) {
         // ✅ Write base plan to subscriptions table
         const basePlan = session.metadata?.plan || null;
         if (basePlan) {
+          const normalizedBasePlan = normalizePlanId(basePlan);
+          if (normalizedBasePlan) {
+            await supabaseAdmin
+              .from("workspaces")
+              .update({ plan: normalizedBasePlan, updated_at: new Date().toISOString() })
+              .eq("owner_id", userId);
+          }
+
           await supabaseAdmin
             .from("subscriptions")
             .upsert(
               {
                 account_id: userId,
-                plan_id: basePlan,
+                plan_id: normalizedBasePlan || basePlan,
                 status: "active",
                 stripe_customer_id: customerId,
                 stripe_subscription_id: subscriptionId,
                 current_period_start: new Date().toISOString(),
                 current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                updated_at: new Date().toISOString(),
               },
               { onConflict: "account_id" }
             );

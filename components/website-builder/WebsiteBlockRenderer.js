@@ -1,5 +1,7 @@
-﻿import React from "react";
+import React from "react";
+import WbRichTextEditor from "../text-editor/WbRichTextEditor";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
+import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { renderGridLibraryIcon } from "./gridIconLibrary";
 import {
@@ -51,6 +53,97 @@ import {
 
 // Re-export animation utilities consumed by PageBuilderCanvas
 export { websiteBlockKeyframes, getAnimationStyle } from "./website-renderer/wbAnimations";
+
+const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+function getHeroVideoDebugState(video) {
+  if (!video) return {};
+  return {
+    currentTime: Number.isFinite(video.currentTime) ? Number(video.currentTime.toFixed(3)) : null,
+    duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : null,
+    paused: video.paused,
+    ended: video.ended,
+    muted: video.muted,
+    loop: video.loop,
+    autoplay: video.autoplay,
+    playsInline: video.playsInline,
+    preload: video.preload,
+    readyState: video.readyState,
+    networkState: video.networkState,
+    currentSrc: video.currentSrc || "",
+    error: video.error ? { code: video.error.code, message: video.error.message } : null,
+  };
+}
+
+function logHeroVideoDebug(label, eventName, video, extra = {}) {
+  if (!shouldLogHeroVideoDebug()) return;
+  console.info(`[HeroVideoDebug] ${label}: ${eventName}`, {
+    ...getHeroVideoDebugState(video),
+    ...extra,
+  });
+}
+
+function HeroBackgroundVideo({ src, style, blockId }) {
+  const videoRef = React.useRef(null);
+  const debugLabel = `hero-background ${blockId || "unknown"}`;
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    logHeroVideoDebug(debugLabel, "Hero component mounted", video, { src });
+    return () => logHeroVideoDebug(debugLabel, "Hero component unmounted", video, { src });
+  }, [debugLabel, src]);
+
+  React.useEffect(() => {
+    logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { src });
+  }, [debugLabel, src]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      autoPlay
+      muted
+      playsInline
+      preload="auto"
+      onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+      onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+      onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+      onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+      onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+      onError={(event) => logHeroVideoDebug(debugLabel, "Video error", event.currentTarget)}
+      style={style}
+    />
+  );
+}
+
+function sanitizeFeatureTextHtml(value, style = {}, fallback = "") {
+  let html = asRichHtml(value || fallback || "");
+  for (let i = 0; i < 8; i += 1) {
+    const next = html
+      .replace(/<p\b[^>]*>\s*(?:<strong\b[^>]*>\s*<\/strong>\s*)?(?:<br\s*\/?>)?\s*<\/p>/gi, "")
+      .replace(/<span\b[^>]*>\s*<\/span>/gi, "")
+      .replace(/^(?:\s|<br\s*\/?>)+|(?:\s|<br\s*\/?>)+$/gi, "");
+    if (next === html) break;
+    html = next;
+  }
+  html = html
+    .replace(/<p\b([^>]*)>/gi, "<span$1>")
+    .replace(/<\/p>/gi, "</span>")
+    .replace(/<div\b([^>]*)>/gi, "<span$1>")
+    .replace(/<\/div>/gi, "</span>");
+
+  const fontWeight = Number.parseInt(String(style?.fontWeight || ""), 10);
+  if (Number.isFinite(fontWeight) && fontWeight < 600) {
+    html = html.replace(/<\/?(?:strong|b)\b[^>]*>/gi, "");
+  }
+  if (String(style?.fontStyle || "") === "normal") {
+    html = html.replace(/<\/?(?:em|i)\b[^>]*>/gi, "");
+  }
+  if (String(style?.textDecoration || "") === "none") {
+    html = html.replace(/<\/?u\b[^>]*>/gi, "");
+  }
+  return html;
+}
 
 /**
  * Wraps block text content with a drag-to-resize right-edge handle in editor mode.
@@ -156,6 +249,11 @@ const textSectionRichTextStyles = `
 .wb-text-block :where(p,li,blockquote){line-height:var(--wb-text-line-height, 1.35);}
 .wb-text-block :where(p){margin-bottom:0.25em;}
 .wb-text-block :where(p:last-child,h1:last-child,h2:last-child,h3:last-child,h4:last-child,h5:last-child,h6:last-child,ul:last-child,ol:last-child,blockquote:last-child){margin-bottom:0;}
+.wb-text-block ul{list-style-type:disc;padding-left:1.5em;margin-bottom:0.5em;}
+.wb-text-block ol{list-style-type:decimal;padding-left:1.5em;margin-bottom:0.5em;}
+.wb-text-block li{margin-bottom:0.2em;}
+.wb-text-block blockquote{border-left:3px solid rgba(255,255,255,0.3);padding-left:1em;margin-left:0;font-style:italic;opacity:0.85;}
+.wb-text-block a{color:inherit;text-decoration:underline;}
 `;
 
 /**
@@ -245,7 +343,7 @@ function easeInCubic(t) { return t * t * t; }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 
 /**
- * Monday.com-style sticky scroll-driven hero layer.
+ * Sticky scroll-driven hero layer.
  *
  * The section is wrapped in a 360vh tall container and set to position:sticky;
  * top:0; height:100vh. Scroll progress through that 360vh drives 3 phases:
@@ -427,6 +525,359 @@ function OrbitCardsLayer({ orbitCards }) {
   );
 }
 
+function normalizeTemplateShowcaseItems(items) {
+  const fallback = [
+    { title: "Electrician", category: "Trades", palette: "#fbbf24", image: "wires", cta: "Quote-ready" },
+    { title: "Fitness Studio", category: "Bookings", palette: "#22c55e", image: "fitness", cta: "Class-ready" },
+    { title: "Beauty Clinic", category: "Services", palette: "#ec4899", image: "beauty", cta: "Book online" },
+    { title: "Real Estate", category: "Listings", palette: "#38bdf8", image: "property", cta: "Lead capture" },
+    { title: "Restaurant", category: "Hospitality", palette: "#f97316", image: "food", cta: "Reserve now" },
+    { title: "Accountant", category: "Professional", palette: "#6366f1", image: "finance", cta: "Consultation" },
+  ];
+  const source = Array.isArray(items) && items.length ? items : fallback;
+  return source.map((item, index) => ({
+    id: item?.id || `template-card-${index}`,
+    title: String(item?.title || `Template ${index + 1}`),
+    category: String(item?.category || "Website"),
+    palette: String(item?.palette || item?.accent || "#24d3ee"),
+    image: String(item?.image || "default"),
+    cta: String(item?.cta || "View design"),
+  }));
+}
+
+function TemplateMiniSiteCard({ item, compact = false, phone = false }) {
+  const accent = item.palette || "#24d3ee";
+  const bg = item.image === "food"
+    ? `linear-gradient(135deg, ${colorWithAlpha(accent, 0.78)}, #1f1308 70%)`
+    : item.image === "property"
+      ? `linear-gradient(135deg, #e0f2fe, ${colorWithAlpha(accent, 0.72)})`
+      : item.image === "beauty"
+        ? `linear-gradient(135deg, #fdf2f8, ${colorWithAlpha(accent, 0.66)})`
+        : `linear-gradient(135deg, ${colorWithAlpha(accent, 0.82)}, #101827 78%)`;
+  const width = phone ? (compact ? 94 : 126) : (compact ? 210 : 286);
+  const height = phone ? (compact ? 150 : 196) : (compact ? 132 : 178);
+  const radius = phone ? 20 : 14;
+
+  return (
+    <div style={{
+      flex: `0 0 ${width}px`,
+      width,
+      height,
+      borderRadius: radius,
+      overflow: "hidden",
+      background: "#ffffff",
+      border: "1px solid rgba(226,232,240,0.9)",
+      boxShadow: phone ? "0 18px 42px rgba(2,6,23,0.26)" : "0 24px 60px rgba(2,6,23,0.22)",
+      position: "relative",
+    }}>
+      <div style={{ height: phone ? 16 : 22, display: "flex", alignItems: "center", gap: 4, padding: phone ? "0 9px" : "0 12px", background: "#0f172a" }}>
+        {[0, 1, 2].map((dot) => <span key={dot} style={{ width: phone ? 3 : 5, height: phone ? 3 : 5, borderRadius: 999, background: dot === 0 ? accent : "rgba(255,255,255,0.38)" }} />)}
+      </div>
+      <div style={{ height: phone ? 58 : 78, background: bg, position: "relative", padding: phone ? 9 : 14, boxSizing: "border-box" }}>
+        <div style={{ width: "54%", height: phone ? 7 : 10, borderRadius: 999, background: "#ffffff", opacity: 0.94, marginBottom: phone ? 6 : 9 }} />
+        <div style={{ width: "36%", height: phone ? 5 : 7, borderRadius: 999, background: colorWithAlpha("#ffffff", 0.72), marginBottom: phone ? 8 : 12 }} />
+        <div style={{ width: phone ? 38 : 62, height: phone ? 12 : 18, borderRadius: 999, background: "#ffffff", color: "#0f172a", fontSize: phone ? 5 : 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{item.cta}</div>
+        <div style={{ position: "absolute", right: phone ? 8 : 15, bottom: phone ? -16 : -22, width: phone ? 42 : 74, height: phone ? 42 : 74, borderRadius: phone ? 14 : 18, background: colorWithAlpha("#ffffff", 0.24), border: "1px solid rgba(255,255,255,0.42)" }} />
+      </div>
+      <div style={{ padding: phone ? "10px 9px" : "14px 16px", display: "grid", gap: phone ? 6 : 9 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+          <div style={{ color: "#0f172a", fontSize: phone ? 8 : 13, fontWeight: 900, lineHeight: 1.15 }}>{item.title}</div>
+          <span style={{ color: accent, fontSize: phone ? 5 : 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>{item.category}</span>
+        </div>
+        {[92, 76, 58].map((pct, index) => (
+          <div key={index} style={{ width: `${pct}%`, height: phone ? 4 : 7, borderRadius: 999, background: index === 0 ? colorWithAlpha(accent, 0.22) : "#e2e8f0" }} />
+        ))}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: phone ? 4 : 8, marginTop: phone ? 2 : 5 }}>
+          {[0, 1, 2].map((box) => <div key={box} style={{ height: phone ? 15 : 26, borderRadius: phone ? 5 : 8, background: box === 1 ? colorWithAlpha(accent, 0.22) : "#f1f5f9" }} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TemplateShowcaseBlock({ props, compact = false, editor = false, navigationContext = null }) {
+  const items = normalizeTemplateShowcaseItems(props.templates);
+  const loopItems = [...items, ...items, ...items];
+  const bg = props.backgroundColor || "#080b14";
+  const textColor = props.textColor || "#f8fafc";
+  const muted = props.mutedTextColor || "#b8c2d8";
+  const accent = props.accentColor || "#24d3ee";
+  const accent2 = props.secondaryAccentColor || "#8b5cf6";
+  const speed = Math.max(12, Math.min(90, Number(props.speed || 34)));
+  const direction = props.reverse ? "reverse" : "normal";
+  const stats = Array.isArray(props.stats) && props.stats.length ? props.stats : [
+    { value: "80+", label: "industry layouts" },
+    { value: "5 min", label: "AI first draft" },
+    { value: "100%", label: "editable sections" },
+  ];
+  const mainItem = items[0] || {};
+  const phoneItem = items[2] || mainItem;
+
+  return (
+    <section style={{ ...fullWidthStyle({ fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), background: bg, color: textColor, minHeight: compact ? "640px" : (props.minHeight || "720px"), position: "relative", overflow: "hidden" }}>
+      <style>{`
+        @keyframes templateShowcaseSlide { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
+        @keyframes templateShowcaseFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+      `}</style>
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 18% 18%, ${colorWithAlpha(accent, 0.22)}, transparent 28%), radial-gradient(circle at 82% 12%, ${colorWithAlpha(accent2, 0.2)}, transparent 30%), linear-gradient(180deg, rgba(8,11,20,0) 0%, ${bg} 96%)`, pointerEvents: "none" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: compact ? "220px -120px auto -120px" : "160px -160px auto -160px", height: compact ? 340 : 430, opacity: 0.54, transform: "rotate(-3deg)", display: "grid", alignContent: "center", gap: compact ? 18 : 26, pointerEvents: "none" }}>
+        {[0, 1, 2].map((row) => (
+          <div key={row} style={{ display: "flex", gap: compact ? 14 : 22, width: "max-content", animation: `templateShowcaseSlide ${speed + row * 6}s linear infinite`, animationDirection: row % 2 ? (props.reverse ? "normal" : "reverse") : direction }}>
+            {loopItems.slice(row, row + items.length * 3).map((item, index) => <TemplateMiniSiteCard key={`${row}-${item.id}-${index}`} item={item} compact={compact} phone={row === 1 && index % 4 === 0} />)}
+          </div>
+        ))}
+      </div>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: 1240, margin: "0 auto", padding: compact ? "70px 22px 58px" : "104px 42px 84px", display: "grid", gridTemplateColumns: compact ? "1fr" : "0.92fr 1.08fr", gap: compact ? 34 : 52, alignItems: "center" }}>
+        <div style={{ display: "grid", gap: compact ? 18 : 24 }}>
+          <span style={{ justifySelf: "start", border: `1px solid ${colorWithAlpha(accent, 0.36)}`, background: colorWithAlpha(accent, 0.12), color: accent, borderRadius: 999, padding: "8px 14px", fontSize: compact ? 12 : 13, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase" }}>{props.eyebrow || "AI Website Builder"}</span>
+          <h1 style={{ margin: 0, color: textColor, fontSize: compact ? 42 : 76, lineHeight: 0.96, fontWeight: 900, maxWidth: 760 }}>{props.headline || "Launch a site that already feels custom"}</h1>
+          <p style={{ margin: 0, color: muted, fontSize: compact ? 18 : 21, lineHeight: 1.58, maxWidth: 650 }}>{props.subheadline || "Pick a proven layout, let AI shape the copy, then customise every section."}</p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            {props.ctaText ? <a href={editor ? undefined : resolvePublishedNavHref({ href: props.ctaLink || "#contact-us" }, navigationContext)} style={{ textDecoration: "none", color: "#04111a", background: `linear-gradient(135deg, ${accent}, #7df9a1)`, minHeight: 50, padding: "0 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, boxShadow: `0 18px 44px ${colorWithAlpha(accent, 0.3)}` }}>{props.ctaText}</a> : null}
+            {props.secondaryCtaText ? <a href={editor ? undefined : resolvePublishedNavHref({ href: props.secondaryCtaLink || "#templates" }, navigationContext)} style={{ textDecoration: "none", color: textColor, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", minHeight: 50, padding: "0 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>{props.secondaryCtaText}</a> : null}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr 1fr" : "repeat(3, minmax(0, 1fr))", gap: 12, maxWidth: 620 }}>
+            {stats.slice(0, 4).map((stat, index) => (
+              <div key={index} style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", borderRadius: 16, padding: compact ? "14px 15px" : "17px 18px", backdropFilter: "blur(12px)" }}>
+                <div style={{ color: index % 2 ? accent2 : accent, fontSize: compact ? 24 : 31, fontWeight: 900, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ color: muted, fontSize: 13, fontWeight: 700, marginTop: 7, textTransform: "uppercase", letterSpacing: "0.08em" }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {props.showDeviceFocus !== false ? (
+          <div style={{ position: "relative", minHeight: compact ? 420 : 560, animation: editor ? "none" : "templateShowcaseFloat 7s ease-in-out infinite" }}>
+            <div style={{ position: "absolute", inset: compact ? "36px 2% auto 2%" : "42px 2% auto 0", height: compact ? 286 : 380, borderRadius: compact ? 24 : 34, background: "#111827", padding: compact ? 10 : 14, boxShadow: "0 38px 110px rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.16)" }}>
+              <TemplateMiniSiteCard item={mainItem} compact={false} phone={false} />
+              <div style={{ position: "absolute", left: "8%", right: "8%", bottom: -18, height: 18, borderRadius: "0 0 32px 32px", background: "linear-gradient(180deg,#94a3b8,#475569)" }} />
+            </div>
+            <div style={{ position: "absolute", right: compact ? 12 : 34, top: compact ? 170 : 222, width: compact ? 126 : 154, borderRadius: 30, background: "#020617", padding: 9, boxShadow: "0 24px 70px rgba(0,0,0,0.48)", border: "1px solid rgba(255,255,255,0.18)" }}>
+              <TemplateMiniSiteCard item={phoneItem} compact={compact} phone />
+            </div>
+            <div style={{ position: "absolute", left: compact ? 0 : 14, bottom: compact ? 16 : 28, maxWidth: compact ? 310 : 390, border: `1px solid ${colorWithAlpha(accent, 0.32)}`, background: "rgba(3,7,18,0.82)", borderRadius: 22, padding: compact ? 16 : 20, boxShadow: "0 28px 80px rgba(0,0,0,0.36)", backdropFilter: "blur(16px)" }}>
+              <div style={{ color: accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 9 }}>AI build prompt</div>
+              <div style={{ color: textColor, fontSize: compact ? 16 : 18, lineHeight: 1.45, fontWeight: 800 }}>Build a conversion-focused website for a local service business with online bookings, CRM capture, SMS follow-up and SEO-ready pages.</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                {["copy", "layout", "images", "forms"].map((chip) => <span key={chip} style={{ color: muted, border: "1px solid rgba(255,255,255,0.14)", borderRadius: 999, padding: "6px 9px", fontSize: 12, fontWeight: 800 }}>{chip}</span>)}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function normalizeSideScrollItems(items) {
+  const fallback = [
+    {
+      eyebrow: "SEO foundations",
+      title: "Search-ready pages",
+      body: "Build service pages, location copy, FAQs, metadata and internal links around the terms real buyers search for.",
+      image: "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+      tags: ["SEO", "service pages", "local search"],
+    },
+    {
+      eyebrow: "No code editing",
+      title: "Drag, drop and publish",
+      body: "Use visual controls for sections, images, buttons, forms, spacing and mobile layouts without touching code.",
+      image: "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+      tags: ["drag and drop", "mobile", "publish"],
+    },
+    {
+      eyebrow: "Lead conversion",
+      title: "Forms connected to CRM",
+      body: "Turn visitors into contacts, quote requests, booking enquiries and follow-up automations inside Gr8 Result.",
+      image: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+      tags: ["CRM", "bookings", "automation"],
+    },
+  ];
+  const source = Array.isArray(items) && items.length ? items : fallback;
+  return source.map((item, index) => ({
+    id: item?.id || `side-scroll-${index}`,
+    eyebrow: String(item?.eyebrow || item?.kicker || `Step ${index + 1}`),
+    title: String(item?.title || item?.heading || `Panel ${index + 1}`),
+    body: String(item?.body || item?.content || item?.text || ""),
+    image: String(item?.image || item?.src || ""),
+    ctaText: String(item?.ctaText || item?.buttonText || ""),
+    ctaUrl: String(item?.ctaUrl || item?.buttonUrl || item?.link || ""),
+    backgroundColor: String(item?.backgroundColor || ""),
+    accentColor: String(item?.accentColor || ""),
+    tags: Array.isArray(item?.tags) ? item.tags.map((tag) => String(tag || "")).filter(Boolean) : [],
+  }));
+}
+
+function SideScrollAccordionBlock({ props, compact = false, editor = false, onChangeBlock, onUploadImage }) {
+  const items = normalizeSideScrollItems(props.items);
+  const displayMode = String(props.displayMode || props.mode || "side-stack").toLowerCase();
+  if (displayMode !== "marquee") {
+    const panels = items.map((item, index) => ({
+      id: item.id || `side-stack-${index}`,
+      eyebrow: item.eyebrow,
+      eyebrowDot: true,
+      heading: item.title,
+      body: item.body,
+      showCta: props.showButtons === true || props.showCta === true || !!item.ctaText,
+      ctaText: item.ctaText || props.buttonText || "Learn More",
+      ctaUrl: item.ctaUrl || props.buttonUrl || "#contact-us",
+      ctaStyle: props.buttonStyle || "pill",
+      buttonFullWidth: props.buttonFullWidth === true,
+      image: item.image,
+      imageAlt: item.title,
+      imageStyle: props.imageStyle || "bleed",
+      imagePosition: index % 2 === 0 ? "right" : "left",
+      backgroundColor: item.backgroundColor || props.panelBackgroundColor || "#0f172a",
+      textColor: props.textColor || "#ffffff",
+      accentColor: item.accentColor || props.accentColor || "#00d5ff",
+    }));
+
+    return (
+      <ScrollStackBlock
+        compact={compact}
+        editor={editor}
+        onChangeBlock={onChangeBlock}
+        onUploadImage={onUploadImage}
+        props={{
+          ...props,
+          panels,
+          stackMode: "side",
+          peekWidth: props.peekWidth || props.cardPeekWidth || 78,
+          cardRadius: props.cardRadius ?? 18,
+          backgroundColor: props.backgroundColor || "#07111f",
+        }}
+      />
+    );
+  }
+
+  const bg = props.backgroundColor || "#07111f";
+  const textColor = props.textColor || "#ffffff";
+  const muted = props.mutedTextColor || "#b8c2d8";
+  const accent = props.accentColor || "#00d5ff";
+  const cardWidth = compact ? Math.min(330, Number(props.cardWidth || 410)) : Math.max(320, Math.min(560, Number(props.cardWidth || 410)));
+  const cardHeight = compact ? Math.max(420, Number(props.cardHeight || 520) - 80) : Math.max(420, Math.min(720, Number(props.cardHeight || 520)));
+  const speed = Math.max(18, Math.min(120, Number(props.speed || 42)));
+  const shouldAutoScroll = props.autoScroll !== false && !editor && items.length > 2;
+  const trackItems = shouldAutoScroll ? [...items, ...items] : items;
+
+  return (
+    <section style={{ ...fullWidthStyle({ fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), background: bg, color: textColor, overflow: "hidden", position: "relative" }}>
+      <style>{`
+        @keyframes sideAccordionMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .side-scroll-accordion-track:hover { animation-play-state: paused; }
+      `}</style>
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 16% 10%, ${colorWithAlpha(accent, 0.18)}, transparent 26%), linear-gradient(180deg, ${colorWithAlpha("#ffffff", 0.03)}, transparent 42%)`, pointerEvents: "none" }} />
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 1240, margin: "0 auto", padding: compact ? "58px 20px" : "90px 36px 96px" }}>
+        <div style={{ maxWidth: 760, marginBottom: compact ? 28 : 42 }}>
+          {props.eyebrow ? <div style={{ color: accent, fontSize: 13, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 12 }}>{props.eyebrow}</div> : null}
+          <h2 style={{ margin: 0, fontSize: compact ? 34 : 58, lineHeight: 1, fontWeight: 900, color: textColor }}>{props.title || "What your website needs to do"}</h2>
+          {props.subtitle ? <p style={{ margin: "18px 0 0", color: muted, fontSize: compact ? 17 : 20, lineHeight: 1.58 }}>{props.subtitle}</p> : null}
+        </div>
+        <div style={{ overflowX: shouldAutoScroll ? "hidden" : "auto", paddingBottom: 8 }}>
+          <div
+            className="side-scroll-accordion-track"
+            style={{
+              display: "flex",
+              gap: compact ? 16 : 22,
+              width: shouldAutoScroll ? "max-content" : undefined,
+              animation: shouldAutoScroll ? `sideAccordionMarquee ${speed}s linear infinite` : "none",
+              paddingRight: compact ? 16 : 22,
+            }}
+          >
+            {trackItems.map((item, index) => (
+              <article key={`${item.id}-${index}`} style={{
+                flex: `0 0 ${cardWidth}px`,
+                width: cardWidth,
+                minHeight: cardHeight,
+                borderRadius: 18,
+                overflow: "hidden",
+                background: "#0f172a",
+                border: `1px solid ${colorWithAlpha(accent, 0.24)}`,
+                boxShadow: "0 28px 72px rgba(0,0,0,0.34)",
+                display: "grid",
+                gridTemplateRows: "minmax(210px, 46%) 1fr",
+              }}>
+                <div style={{ position: "relative", minHeight: 210, background: colorWithAlpha(accent, 0.16) }}>
+                  {item.image ? <img src={item.image} alt={item.title} style={{ width: "100%", height: "100%", minHeight: 230, objectFit: "cover", display: "block" }} /> : null}
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(2,6,23,0.05), rgba(2,6,23,0.72))" }} />
+                  <span style={{ position: "absolute", left: 18, bottom: 16, color: "#03111f", background: accent, borderRadius: 999, padding: "7px 11px", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>{item.eyebrow}</span>
+                </div>
+                <div style={{ padding: compact ? 20 : 24, display: "grid", alignContent: "start", gap: 14 }}>
+                  <h3 style={{ margin: 0, color: textColor, fontSize: compact ? 24 : 30, lineHeight: 1.05, fontWeight: 900 }}>{item.title}</h3>
+                  <p style={{ margin: 0, color: muted, fontSize: compact ? 16 : 17, lineHeight: 1.58 }}>{item.body}</p>
+                  {item.tags.length ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                      {item.tags.slice(0, 5).map((tag) => (
+                        <span key={tag} style={{ border: "1px solid rgba(255,255,255,0.14)", color: colorWithAlpha(textColor, 0.88), borderRadius: 999, padding: "6px 9px", fontSize: 12, fontWeight: 800 }}>{tag}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {props.showButtons === true ? (
+                    <a
+                      href={props.buttonUrl || "#contact-us"}
+                      onClick={(event) => editor && event.preventDefault()}
+                      style={{
+                        display: "inline-flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: props.buttonFullWidth === true ? "100%" : "fit-content",
+                        marginTop: 6,
+                        borderRadius: 999,
+                        padding: "12px 18px",
+                        background: accent,
+                        color: "#03111f",
+                        textDecoration: "none",
+                        fontSize: 14,
+                        fontWeight: 900,
+                      }}
+                    >
+                      {props.buttonText || "Learn More"}
+                    </a>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── WbTextEditableContent ──────────────────────────────────────────────────────
+// Wraps WbRichTextEditor for the "text" block type.  Defined as a real React
+// component (capital letter) so it can use hooks internally via WbRichTextEditor.
+// Only rendered in editor mode; the read-only path uses a plain div.
+
+function WbTextEditableContent({ props, onChangeBlock, compact }) {
+  const textLineHeight = Math.max(
+    0.8,
+    Math.min(3, Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35) || 1.35)
+  );
+
+  return (
+    <WbRichTextEditor
+      html={cleanTextSectionHtml(props.text)}
+      onChange={(html) => {
+        if (typeof onChangeBlock === "function") {
+          onChangeBlock({ ...props, text: cleanInlineEditorHtml(html) });
+        }
+      }}
+      blockStyle={{
+        margin: 0,
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        "--wb-text-line-height": textLineHeight,
+        fontSize: Math.max(12, Number(props.textFontSize || 18)),
+        lineHeight: textLineHeight,
+        textAlign: props.alignment || "left",
+        ...bodyTypography(props),
+      }}
+      placeholder="Click to edit text…"
+    />
+  );
+}
+
 export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
   const rawProps = block?.props || {};
   // When a global canvas width (layoutWidth) is provided, enforce it as the content container's
@@ -448,7 +899,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
   const logoSrc = resolveAssetField(props, "logo", assets);
   const defaultAvatarSrc = pickDefaultAvatarSrc(assets);
   const brandLogoSrc = logoSrc || assets?.logo?.src || "";
-  const floatingImageSrc = resolveAssetField(props, "floatingImage", assets);
 
   switch (block?.type) {
     case "nav-bar":
@@ -464,6 +914,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroVariant = heroVariantStyles(props, compact);
       const heroLayout = heroLayoutDefaults(props.heroVariant || "spotlight", compact);
       const heroLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, compact ? 2 : 4) : [];
+      const heroOverlayLibraryImages = Array.isArray(assets?.images) ? assets.images.slice(0, 12) : [];
+      const openHeroMediaLibrary = (fieldKey) => openSharedMediaPicker({
+        onPick: (asset) => {
+          if (!asset?.src) return;
+          onSelectAsset?.(fieldKey, asset);
+        },
+      });
       const showHeroMediaControls = !!editor;
       const isVideoHero = props.backgroundStyle === "video" && !!props.backgroundVideoUrl;
       const heroBg = isVideoHero
@@ -471,33 +928,32 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         : heroBackground({ ...props, backgroundImage: heroBackgroundImage });
       const heroStaticStyle = asStyleObject(heroBg);
       const heroParallaxEnabled = ["hero", "parallax"].includes(block?.type) && !!props.enableParallax && !!heroBackgroundImage && !isVideoHero;
+      const heroRequestedBackgroundSize = props.backgroundSize || props.imageFit || props.objectFit || heroStaticStyle.backgroundSize || "cover";
+      const heroBackgroundSize = String(heroRequestedBackgroundSize || "cover");
+      const heroUsesFixedSafeBackground = /^cover$/i.test(heroBackgroundSize.trim());
       // Use CSS background-attachment:fixed so the background image stays completely still
       // while the section content and floating overlays scroll past it.
-      const isFixedBgParallax = heroParallaxEnabled;
+      // CSS fixed backgrounds size against the browser viewport, not the section.
+      // For contain/custom fits, render as a normal section background so builder and preview match.
+      const isFixedBgParallax = heroParallaxEnabled && heroUsesFixedSafeBackground;
       const heroParallaxBaseColor = heroParallaxEnabled ? resolveHeroBaseColor(props) : null;
-      const sectionBgStyle = heroParallaxEnabled
+      const heroContainedBackgroundStyle = !heroUsesFixedSafeBackground && heroBackgroundImage
+        ? {
+            backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a",
+          }
+        : null;
+      const sectionBgStyle = isFixedBgParallax
         ? { backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a" }
-        : heroStaticStyle;
-      const parallaxStaticOverlay = heroParallaxEnabled && heroParallaxBaseColor
-        ? `linear-gradient(135deg, ${colorWithAlpha(heroParallaxBaseColor, 0.28)}, ${colorWithAlpha(heroParallaxBaseColor, 0.52)})`
+        : (heroContainedBackgroundStyle || heroStaticStyle);
+      const explicitHeroOverlay = String(props.backgroundOverlay || props.backgroundOverlayColor || "").trim();
+      const parallaxStaticOverlay = isFixedBgParallax && explicitHeroOverlay && explicitHeroOverlay !== "transparent"
+        ? `linear-gradient(135deg, ${explicitHeroOverlay}, ${explicitHeroOverlay})`
         : null;
       const heroOverlayEnabled = !compact;
-      const hasFloatingHeroImage = !!floatingImageSrc;
-      // Build floatingImages array (supports multiple overlay images)
-      const rawFloatingImages = Array.isArray(props.floatingImages) && props.floatingImages.length > 0
-        ? props.floatingImages
-        : (floatingImageSrc ? [{
-            src: floatingImageSrc,
-            assetId: props.floatingImageAssetId || "",
-            x: props.floatingX,
-            y: props.floatingY,
-            width: props.floatingWidth,
-            height: props.floatingHeight,
-            animation: props.imageOverlayAnimation,
-            animationDelay: props.imageOverlayAnimationDelay,
-            animationSpeed: props.imageOverlayAnimationSpeed,
-          }] : []);
-      const heroOverlayVisualSrc = rawFloatingImages[0]?.src || brandLogoSrc;
+      // Only render explicitly added overlay images. Legacy/default floatingImage
+      // props should not create a foreground overlay block automatically.
+      const rawFloatingImages = Array.isArray(props.floatingImages) ? props.floatingImages : [];
+      const hasFloatingHeroImage = rawFloatingImages.some((item) => String(item?.src || "").trim());
       const heroOverlayImageFit = "contain";
       const heroImageOverlayAnimation = String(props.imageOverlayAnimation || "sweep-left");
       const heroImageOverlayDelay = Number(props.imageOverlayAnimationDelay ?? 0.08) || 0.08;
@@ -508,6 +964,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroCtaAnimation = String(props.ctaAnimation || "fade-up");
       const heroCtaDelay = Number(props.ctaAnimationDelay ?? 0.18) || 0.18;
       const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
+      const rawHeroMarginTop = Math.max(0, Number(props.marginTop || 0));
+      const heroMarginTop = editor ? Math.min(rawHeroMarginTop, 24) : rawHeroMarginTop;
       const headingColor = props.headlineColor || "#ffffff";
       const headingFamily = props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
       const headingWeight = props.headlineFontWeight || "700";
@@ -578,6 +1036,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             borderRadius: compact ? 12 : (useFullBleedHero ? 0 : 20),
             ...heroFullWidth,
             ...heroVariant.shell,
+            marginTop: heroMarginTop ? `${heroMarginTop}px` : undefined,
             minHeight: isOrbitScroll ? undefined : (compact ? 180 : props.minHeight || "400px"),
             ...sectionBgStyle,
             padding: compact ? "40px 24px" : "80px 48px",
@@ -591,10 +1050,29 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 inset: 0,
                 zIndex: 0,
                 backgroundImage: `url(${heroBackgroundImage})`,
-                backgroundSize: props.backgroundSize || heroStaticStyle.backgroundSize || "cover",
+                backgroundSize: heroBackgroundSize,
                 backgroundPosition: props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center",
                 backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
                 backgroundAttachment: "fixed",
+                pointerEvents: "none",
+              }}
+            />
+          ) : null}
+          {heroContainedBackgroundStyle ? (
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: "50%",
+                width: `min(100%, ${heroContentMaxWidth}px)`,
+                transform: "translateX(-50%)",
+                zIndex: 0,
+                backgroundImage: `url(${heroBackgroundImage})`,
+                backgroundSize: heroBackgroundSize,
+                backgroundPosition: props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center",
+                backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
                 pointerEvents: "none",
               }}
             />
@@ -610,12 +1088,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
           {isVideoHero ? (
             <>
-              <video
+              <HeroBackgroundVideo
                 src={props.backgroundVideoUrl}
-                autoPlay
-                muted
-                loop
-                playsInline
+                blockId={block?.id}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
               />
               {props.videoOverlayColor && props.videoOverlayColor !== "transparent" ? (
@@ -720,6 +1195,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         }}
                       />
                     </label>
+                    <button
+                      type="button"
+                      style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49" }}
+                      onClick={() => openHeroMediaLibrary("backgroundImage")}
+                    >
+                      Open Media Library
+                    </button>
                     {heroLibraryImages.map((image) => (
                       <button
                         key={`hero-library-${image.id || image.src}`}
@@ -768,6 +1250,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       }}
                     />
                   </label>
+                  <button
+                    type="button"
+                    style={{ ...sharedStyles.editorChip, background: "#7dd3fc", color: "#082f49" }}
+                    onClick={() => openHeroMediaLibrary("backgroundImage")}
+                  >
+                    Open Media Library
+                  </button>
                   {heroLibraryImages.map((image) => (
                     <button
                       key={`hero-library-inline-${image.id || image.src}`}
@@ -818,7 +1307,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 </button>
               ) : null}
               <label style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer" }} title="Add image or GIF overlay — freely draggable">
-                + Image / GIF
+                Upload Image / GIF
                 <input
                   type="file"
                   accept="image/*,image/gif,image/webp,image/apng"
@@ -842,6 +1331,60 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   }}
                 />
               </label>
+              <button
+                type="button"
+                onClick={() => openHeroMediaLibrary("__addFloatingImage")}
+                style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827" }}
+                title="Open the full media library"
+              >
+                Open Media Library
+              </button>
+              <details style={{ position: "relative" }}>
+                <summary
+                  style={{ ...sharedStyles.editorChip, background: "#f59e0b", color: "#111827", cursor: "pointer", listStyle: "none" }}
+                  title="Quick picks from recent media"
+                >
+                  Recent Images
+                </summary>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    zIndex: 30,
+                    width: compact ? 236 : 292,
+                    maxHeight: 280,
+                    overflow: "auto",
+                    padding: 10,
+                    borderRadius: 12,
+                    border: "1px solid rgba(148,163,184,0.35)",
+                    background: "rgba(15,23,42,0.96)",
+                    boxShadow: "0 18px 42px rgba(15,23,42,0.45)",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: 8,
+                  }}
+                >
+                  {heroOverlayLibraryImages.length ? heroOverlayLibraryImages.map((image) => (
+                    <button
+                      key={`hero-overlay-library-${image.id || image.src}`}
+                      type="button"
+                      onClick={(event) => {
+                        event.currentTarget.closest("details")?.removeAttribute("open");
+                        onSelectAsset?.("__addFloatingImage", image);
+                      }}
+                      style={{ aspectRatio: "1 / 1", padding: 0, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(226,232,240,0.24)", cursor: "pointer", background: "#0f172a" }}
+                      title={image.name || "Add library image overlay"}
+                    >
+                      <img src={image.src} alt={image.name || "Library image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </button>
+                  )) : (
+                    <div style={{ gridColumn: "1 / -1", color: "#cbd5e1", fontSize: 12, lineHeight: 1.4, padding: 4 }}>
+                      No library images yet.
+                    </div>
+                  )}
+                </div>
+              </details>
               <button
                 type="button"
                 onClick={() => {
@@ -868,66 +1411,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           ) : null}
           <div data-overlay-bounds="true" style={heroContentBounds}>
             <div style={heroContentBoundsInner}>
-              {!heroOverlayVisualSrc && showHeroMediaControls && !compact ? (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${Number(heroOverlayProps.floatingX)}%`,
-                    top: `${Number(heroOverlayProps.floatingY)}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: `${Math.max(120, Number(heroOverlayProps.floatingWidth))}px`,
-                    height: `${Math.max(120, Number(heroOverlayProps.floatingHeight))}px`,
-                    zIndex: 2,
-                    borderRadius: 18,
-                    border: "2px dashed rgba(251,191,36,0.95)",
-                    background: "rgba(15,23,42,0.30)",
-                    display: "grid",
-                    placeItems: "center",
-                    padding: 14,
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <div style={{ textAlign: "center", color: "#fff", display: "grid", gap: 8 }}>
-                    <strong>Foreground overlay image</strong>
-                    <label style={{ ...sharedStyles.editorChip, display: "inline-flex", justifyContent: "center", background: "#f59e0b", color: "#111827", cursor: "pointer" }}>
-                      Upload Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = "";
-                          if (!file) return;
-                          Promise.resolve(onUploadImage?.("__addFloatingImage", file)).then((asset) => {
-                            if (!asset?.src) return;
-                            const nextImages = [{ src: asset.src, assetId: asset.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 }];
-                            onChangeBlock?.({ ...props, floatingImages: nextImages });
-                          });
-                        }}
-                      />
-                    </label>
-                    {heroLibraryImages.length ? (
-                      <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                        {heroLibraryImages.map((image) => (
-                          <button
-                            key={`overlay-empty-library-${image.id || image.src}`}
-                            type="button"
-                            onClick={() => {
-                              const item = { src: image.src || "", assetId: image.id || "", x: heroOverlayProps.floatingX, y: heroOverlayProps.floatingY, width: heroOverlayProps.floatingWidth, height: heroOverlayProps.floatingHeight, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 };
-                              onChangeBlock?.({ ...props, floatingImages: [item] });
-                            }}
-                            style={{ width: 46, height: 46, padding: 0, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.24)", background: "#0f172a", cursor: "pointer" }}
-                            title={image.name || "Use library image"}
-                          >
-                            <img src={image.src} alt={image.name || "Library image"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
               {/* ── Orbit feature cards are rendered AFTER the avatar (z=3 > avatar z=2) ── */}
               {rawFloatingImages.length === 0 ? null : rawFloatingImages.map((imgItem, imgIdx) => {
                 const imgSrc = imgItem.src || "";
@@ -1009,7 +1492,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
                   {/* eslint-disable-next-line no-unused-vars */}
                   <div style={(() => { const { maxWidth: _mw, ...variantContent } = heroVariant.content || {}; return { display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...variantContent }; })()}>
-                  {(editor || !!stripPlaceholder(props.eyebrow)) ? (
+                  {!!stripPlaceholder(props.eyebrow) ? (
                     <p
                       data-website-inline-editor="true"
                       data-text-prop="eyebrow"
@@ -1038,7 +1521,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                         padding: editor ? "4px 6px" : 0,
                         borderRadius: 8,
                       }}
-                      dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.eyebrow) || (editor ? "Section label" : "")) }}
+                      dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.eyebrow) || "") }}
                     />
                   ) : null}
                   <h1
@@ -1327,7 +1810,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             paddingRight: sectionPad.replace(/\s.*/, ""),
             ...(heroBackgroundImage && !textOverlayEnabled
               ? {
-                  backgroundImage: `linear-gradient(rgba(7,17,29,0.35), rgba(7,17,29,0.35)), url(${heroBackgroundImage})`,
+                  backgroundImage: `url(${heroBackgroundImage})`,
                   backgroundPosition: props.backgroundPosition || "center center",
                   backgroundSize: props.backgroundSize || "cover",
                   backgroundRepeat: props.backgroundRepeat || "no-repeat",
@@ -1345,15 +1828,15 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           {textOverlayEnabled ? (
             <>
               <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, ...textFixedBgStyle, pointerEvents: "none" }} />
-              <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: "linear-gradient(rgba(7,17,29,0.35), rgba(7,17,29,0.35))", pointerEvents: "none" }} />
+              {props.backgroundOverlayColor ? (
+                <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: props.backgroundOverlayColor, pointerEvents: "none" }} />
+              ) : null}
             </>
           ) : null}
           <style>{textSectionRichTextStyles}</style>
           <div style={{ ...sectionContentStyle(props, compact), position: "relative", zIndex: textOverlayEnabled ? 3 : undefined }}>
             {editor ? (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
-                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.max(14, Number(props.textFontSize || 18) - 2) })} style={sharedStyles.editorChip}>A−</button>
-                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.min(72, Number(props.textFontSize || 18) + 2) })} style={sharedStyles.editorChip}>A+</button>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6, gap: 6 }}>
                 <button type="button" onClick={() => onChangeBlock?.({ ...props, hideBorder: !props.hideBorder })} style={{ ...sharedStyles.editorChip, ...(props.hideBorder ? { background: "#64748b", color: "#fff" } : {}) }} title="Toggle section border">{props.hideBorder ? "Border Off" : "Border On"}</button>
               </div>
             ) : null}
@@ -1380,22 +1863,19 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 align={props.alignment || "left"}
                 onResize={(w) => onChangeBlock?.({ ...props, textContentWidth: w })}
               >
-                <div
-                  className="wb-text-block"
-                  data-website-inline-editor="true"
-                  data-text-prop="text"
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onBlur={(event) => {
-                    if (shouldSkipToolbarBlur(event)) return;
-                    if (!editor || typeof onChangeBlock !== "function") return;
-                    onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                  }}
-                  style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
-                  dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
-                />
+                {editor ? (
+                  <WbTextEditableContent
+                    props={props}
+                    onChangeBlock={onChangeBlock}
+                    compact={compact}
+                  />
+                ) : (
+                  <div
+                    className="wb-text-block"
+                    style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) }}
+                    dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
+                  />
+                )}
               </TextColumnResizer>
             </div>
           </div>
@@ -1409,7 +1889,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const ctaVariant = ctaButtonVariantStyles(props, compact);
       const ctaWidthProps = { ...props, fullWidthBackground: props.fullWidthBackground === true };
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={ctaVariant.content}>
             {(editor || !!stripPlaceholder(props.eyebrow)) ? (
@@ -1518,9 +1998,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "feature-list":
       const featureVariant = featureVariantStyles(props);
+      const featureTitleAlign = ["left", "center", "right", "justify"].includes(String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment || ""))
+        ? String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment)
+        : "left";
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
+          <style>{`.wb-feature-card-body p,.wb-feature-card-body div{margin-top:0!important;margin-bottom:0!important}.wb-feature-card-body{align-content:start!important;justify-content:flex-start!important}`}</style>
           <h2
             data-website-inline-editor="true"
             data-text-prop="title"
@@ -1533,6 +2017,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             style={{
               ...sharedStyles.sectionTitle(compact),
               color: props.textColor || "#0f172a",
+              textAlign: featureTitleAlign,
               outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
               borderRadius: 8,
               padding: editor ? "4px 6px" : 0,
@@ -1542,65 +2027,125 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <div style={{ ...sharedStyles.featureList(props.layout, compact, props.featureCardWidth), ...featureVariant.list }}>
             {asArray(props.items).map((rawItem, idx) => {
               const item = normalizeFeatureItem(rawItem, idx);
+              const itemTextBlocks = Array.isArray(item.textBlocks) && item.textBlocks.length
+                ? item.textBlocks
+                : [
+                    { id: `feature-${idx}-headline`, type: "headline", text: item.title },
+                    ...(item.body ? [{ id: `feature-${idx}-text`, type: "text", text: item.body }] : []),
+                  ];
               const itemImage = item.image || `https://placehold.co/960x720/e2e8f0/0f172a?text=${encodeURIComponent(item.title || `Feature ${idx + 1}`)}`;
-              const patchFeatureItem = (patch) => {
+              const patchFeatureTextBlock = (textIndex, patch) => {
                 if (!editor || typeof onChangeBlock !== "function") return;
-                const nextItems = asArray(props.items).map((entry, entryIdx) => (
-                  entryIdx === idx ? { ...normalizeFeatureItem(entry, entryIdx), ...patch } : entry
-                ));
+                const nextItems = asArray(props.items).map((entry, entryIdx) => {
+                  if (entryIdx !== idx) return entry;
+                  const normalizedEntry = normalizeFeatureItem(entry, entryIdx);
+                  const baseTextBlocks = Array.isArray(normalizedEntry.textBlocks) && normalizedEntry.textBlocks.length
+                    ? normalizedEntry.textBlocks
+                    : [
+                        { id: `feature-${entryIdx}-headline`, type: "headline", text: normalizedEntry.title },
+                        ...(normalizedEntry.body ? [{ id: `feature-${entryIdx}-text`, type: "text", text: normalizedEntry.body }] : []),
+                      ];
+                  const nextTextBlocks = baseTextBlocks.map((textBlock, currentTextIndex) => (
+                    currentTextIndex === textIndex ? { ...textBlock, ...patch } : textBlock
+                  ));
+                  const nextHeadline = nextTextBlocks.find((textBlock) => textBlock.type === "headline")?.text || normalizedEntry.title;
+                  const nextBody = nextTextBlocks.filter((textBlock) => textBlock.type === "text").map((textBlock) => textBlock.text || "").join("\n\n");
+                  return {
+                    ...entry,
+                    title: nextHeadline,
+                    body: nextBody,
+                    textBlocks: nextTextBlocks,
+                  };
+                });
                 onChangeBlock({ ...props, items: nextItems });
               };
 
               return (
-                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
+                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, alignItems: "stretch", background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
                   <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
                     <img src={itemImage} alt={item.title || `Feature ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
                   </div>
-                  <div style={{ minWidth: 0, ...featureVariant.body }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <span style={{ ...sharedStyles.featureCheck, ...(featureVariant.marker || {}) }}>{getListMarker(props.bulletStyle, idx)}</span>
-                      <h3
-                        data-website-inline-editor="true"
-                        data-text-prop={`items.${idx}.title`}
-                        contentEditable={editor}
-                        suppressContentEditableWarning
-                        onBlur={(event) => patchFeatureItem({ title: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                        style={{
-                          margin: 0,
-                          outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-                          borderRadius: 8,
-                          padding: editor ? "4px 6px" : 0,
-                          flex: "1 1 0%",
-                          minWidth: 0,
-                          wordBreak: "break-word",
-                          overflowWrap: "anywhere",
-                          boxSizing: "border-box",
-                          color: featureVariant.title?.color || props.textColor || "#0f172a",
-                          ...featureVariant.title,
-                        }}
-                        dangerouslySetInnerHTML={{ __html: asRichHtml(item.title) }}
-                      />
-                    </div>
-                    <p
-                      data-website-inline-editor="true"
-                      data-text-prop={`items.${idx}.body`}
-                      contentEditable={editor}
-                      suppressContentEditableWarning
-                      onBlur={(event) => patchFeatureItem({ body: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                      style={{
-                        margin: 0,
-                        outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-                        borderRadius: 8,
-                        padding: editor ? "4px 6px" : 0,
-                        minWidth: 0,
-                        wordBreak: "break-word",
-                        overflowWrap: "anywhere",
-                        boxSizing: "border-box",
-                        color: featureVariant.copy?.color || colorWithAlpha(props.textColor || "#0f172a", 0.78),
-                        ...featureVariant.copy,
-                      }}
-                      dangerouslySetInnerHTML={{ __html: asRichHtml(item.body || (editor ? "Add a short supporting sentence" : "")) }}
-                    />
+                  <div style={{ ...featureVariant.body, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", alignContent: "start", alignSelf: "stretch" }}>
+                    {itemTextBlocks.map((textBlock, textIndex) => {
+                      const textBlockStyle = textBlock?.style && typeof textBlock.style === "object" ? textBlock.style : {};
+                      if (textBlock?.type === "label") {
+                        return (
+                          <div
+                            key={textBlock.id || `${idx}-label-${textIndex}`}
+                            data-website-inline-editor="true"
+                            data-text-prop={`items.${idx}.textBlocks.${textIndex}.text`}
+                            contentEditable={editor}
+                            suppressContentEditableWarning
+                            onBlur={(event) => patchFeatureTextBlock(textIndex, { text: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                            style={{
+                              margin: 0,
+                              outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                              borderRadius: 8,
+                              padding: editor ? "4px 6px" : 0,
+                              minWidth: 0,
+                              wordBreak: "break-word",
+                              overflowWrap: "anywhere",
+                              boxSizing: "border-box",
+                              fontSize: compact ? 11 : 12,
+                              fontWeight: 700,
+                              letterSpacing: 0,
+                              textTransform: "uppercase",
+                              color: featureVariant.title?.color || props.textColor || "#0f172a",
+                              ...textBlockStyle,
+                            }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeFeatureTextHtml(textBlock.text || "", textBlockStyle) }}
+                          />
+                        );
+                      }
+                      return textBlock?.type === "headline" ? (
+                        <h3
+                          key={textBlock.id || `${idx}-headline-${textIndex}`}
+                          data-website-inline-editor="true"
+                          data-text-prop={`items.${idx}.textBlocks.${textIndex}.text`}
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => patchFeatureTextBlock(textIndex, { text: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                          style={{
+                            margin: 0,
+                            outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                            borderRadius: 8,
+                            padding: editor ? "4px 6px" : 0,
+                            minWidth: 0,
+                            wordBreak: "break-word",
+                            overflowWrap: "anywhere",
+                            boxSizing: "border-box",
+                            color: featureVariant.title?.color || props.textColor || "#0f172a",
+                            ...featureVariant.title,
+                            ...textBlockStyle,
+                          }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeFeatureTextHtml(textBlock.text, textBlockStyle, item.title || `Feature ${idx + 1}`) }}
+                        />
+                      ) : (
+                        <p
+                          key={textBlock.id || `${idx}-text-${textIndex}`}
+                          className="wb-feature-card-body"
+                          data-website-inline-editor="true"
+                          data-text-prop={`items.${idx}.textBlocks.${textIndex}.text`}
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(event) => patchFeatureTextBlock(textIndex, { text: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
+                          style={{
+                            margin: 0,
+                            outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
+                            borderRadius: 8,
+                            padding: editor ? "4px 6px" : 0,
+                            minWidth: 0,
+                            wordBreak: "break-word",
+                            overflowWrap: "anywhere",
+                            boxSizing: "border-box",
+                            color: featureVariant.copy?.color || colorWithAlpha(props.textColor || "#0f172a", 0.78),
+                            ...featureVariant.copy,
+                            ...textBlockStyle,
+                          }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeFeatureTextHtml(textBlock.text || "", textBlockStyle) }}
+                        />
+                      );
+                    })}
                   </div>
                 </ScrollReveal>
               );
@@ -1617,6 +2162,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const starAccent = variantSty.starColor || "#f59e0b";
       const isSpotlight = testimonialVariant === "spotlight";
       const isWall = testimonialVariant === "wall";
+      const testimonialTitleAlign = ["left", "center", "right", "justify"].includes(String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment || ""))
+        ? String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment)
+        : (isSpotlight ? "center" : undefined);
 
       const patchTestimonial = (idx, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
@@ -1674,7 +2222,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             />
             <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined }}>
               {avatarSrcItem
-                ? <img src={avatarSrcItem} alt={item.author || ""} style={asStyleObject(sharedStyles.avatar)} />
+                ? <img src={avatarSrcItem} alt={item.author || ""} style={{ ...asStyleObject(sharedStyles.avatar), objectFit: "cover", objectPosition: item.avatarObjectPosition || "center center", flexShrink: 0, display: "block" }} />
                 : editor
                   ? <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
                   : null}
@@ -1730,6 +2278,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <div style={{ ...sectionContentStyle(props, compact), minWidth: 0, boxSizing: "border-box" }}>
           {(props.title || editor) ? (
             <h2
+              data-website-inline-editor="true"
+              data-text-prop="title"
               contentEditable={editor}
               suppressContentEditableWarning
               onBlur={(event) => {
@@ -1739,7 +2289,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               style={{
                 ...sharedStyles.sectionTitle(compact),
                 color: props.headlineColor || (isSpotlight ? "#f1f5f9" : "#0f172a"),
-                textAlign: isSpotlight ? "center" : undefined,
+                textAlign: testimonialTitleAlign,
                 outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
                 borderRadius: 8,
                 padding: editor ? "4px 6px" : 0,
@@ -1763,6 +2313,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "pricing-table":
       const pricingVariant = pricingVariantStyles(props);
       const plans = asArray(props.plans).map((plan, idx) => normalizePricingPlan(plan, idx));
+      const pricingImageHotspots = asArray(props.pricingImageHotspots);
       const patchPlan = (planIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         const normalizedPatch = {
@@ -1808,6 +2359,68 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         });
         onChangeBlock({ ...props, plans: nextPlans });
       };
+
+      if (props.pricingImageUrl) {
+        const imageMaxWidth = Math.max(240, Number(props.pricingImageMaxWidth || 980) || 980);
+        const imageFit = props.pricingImageFit || "contain";
+        return (
+          <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor) }}>
+            <div style={sectionContentStyle(props, compact)}>
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="title"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, title: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+                }}
+                style={{ ...sharedStyles.sectionTitle(compact), color: pricingVariant.sectionTitleColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Pricing" : "")) }}
+              />
+              <div style={{ position: "relative", width: "100%", maxWidth: imageMaxWidth, margin: "0 auto", overflow: "hidden", borderRadius: Number(props.pricingImageRadius || 12) || 12 }}>
+                <img
+                  src={props.pricingImageUrl}
+                  alt={props.pricingImageAlt || "Pricing options"}
+                  style={{ display: "block", width: "100%", height: imageFit === "cover" ? Number(props.pricingImageHeight || 0) || "auto" : "auto", objectFit: imageFit }}
+                />
+                {pricingImageHotspots.map((spot, spotIndex) => {
+                  const href = String(spot?.href || "").trim();
+                  const label = spot?.label || `Pricing link ${spotIndex + 1}`;
+                  const rectStyle = {
+                    position: "absolute",
+                    left: `${Number(spot?.x ?? 0)}%`,
+                    top: `${Number(spot?.y ?? 0)}%`,
+                    width: `${Number(spot?.width ?? 20)}%`,
+                    height: `${Number(spot?.height ?? 8)}%`,
+                    borderRadius: 8,
+                    outline: editor ? "2px dashed rgba(14,165,233,0.85)" : "none",
+                    background: editor ? "rgba(14,165,233,0.12)" : "transparent",
+                    color: "transparent",
+                    overflow: "hidden",
+                    cursor: href && !editor ? "pointer" : "default",
+                  };
+                  if (!href || editor) {
+                    return <span key={spot?.id || `pricing-hotspot-${spotIndex}`} title={label} style={rectStyle} />;
+                  }
+                  return (
+                    <a
+                      key={spot?.id || `pricing-hotspot-${spotIndex}`}
+                      href={href}
+                      aria-label={label}
+                      target={spot?.newTab ? "_blank" : undefined}
+                      rel={spot?.newTab ? "noopener noreferrer" : undefined}
+                      style={rectStyle}
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          </ScrollReveal>
+        );
+      }
 
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor) }}>
@@ -1871,6 +2484,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     ...(props.ctaBackgroundColor ? { background: props.ctaBackgroundColor } : {}),
                     ...((plan.ctaTextColor || props.ctaTextColor) ? { color: plan.ctaTextColor || props.ctaTextColor } : {}),
                   };
+                  const planSlug = slugifyText(plan.id || plan.name || `plan-${idx + 1}`);
+                  const planCtaUrl = plan.ctaUrl || `/create-account?plan=${encodeURIComponent(planSlug)}`;
                   return (
                     <>
                 {plan.badge && (
@@ -1967,9 +2582,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     }) : <p style={{ ...sharedStyles.planExtraHint, color: pricingTone?.subtle || undefined }}>No extras listed yet.</p>}
                   </div>
                 </div>
-                {!editor && plan.ctaUrl ? (
+                {!editor ? (
                   <a
-                    href={plan.ctaUrl}
+                    href={planCtaUrl}
                     style={{ ...sharedStyles.planCta(!!plan.highlighted), ...ctaStyle, display: "block", textDecoration: "none", textAlign: "center" }}
                     dangerouslySetInnerHTML={{ __html: asRichHtml(plan.cta || "Get Started") }}
                   />
@@ -2751,6 +3366,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "feature-accordion":
       return <FeatureAccordionBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+    case "side-scroll-accordion":
+      return <SideScrollAccordionBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
     case "scroll-stack":
       return <ScrollStackBlock props={props} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
 
@@ -2810,7 +3427,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 onChangeBlock({ ...props, subtitle: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
               }}
               style={{ ...sharedStyles.sectionSub, ...bodyTypography(props), color: statsVariant.sectionSubtitleColor || props.textColor || undefined, fontSize: compact ? Math.max(12, Number(props.sectionSubtitleSize || 16)) : Math.max(12, Number(props.sectionSubtitleSize || 16)), opacity: props.subtitle ? 0.88 : 0.72, marginTop: 12, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "Add a short supporting line for the stats section.") }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(props.subtitle || "") }}
             />
           ) : null}
         </div>
@@ -2838,8 +3455,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         const labelAnimationStyle = editor ? {} : getAnimationStyle(statsLabelAnimation, baseDelay + 0.08, statsSurfaceSpeed);
         const detailAnimationStyle = editor ? {} : getAnimationStyle(statsDetailAnimation, baseDelay + 0.12, statsSurfaceSpeed);
         return (
-          <ScrollReveal key={`${stat.id}-${idx}`} animationName={thisCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}) }}>
-            <div style={statsVariant.card(idx)}>
+          <ScrollReveal key={`${stat.id}-${idx}`} animationName={thisCardAnimation} delay={baseDelay} speed={statsSurfaceSpeed} disabled={editor} style={{ ...(statsVariant.cardWrap ? statsVariant.cardWrap(idx) : {}), height: props.equalCardHeights === false ? undefined : "100%" }}>
+            <div style={asStyleObject({
+              ...statsVariant.card(idx),
+              minHeight: props.equalCardHeights === false ? statsVariant.card(idx)?.minHeight : (props.statsCardHeight || statsVariant.card(idx)?.minHeight || (compact ? 210 : 240)),
+              height: props.equalCardHeights === false ? statsVariant.card(idx)?.height : "100%",
+              boxSizing: "border-box",
+            })}>
               {statsVariant.accentBar ? <span aria-hidden="true" style={asStyleObject(statsVariant.accentBar)} /> : null}
               <p
                 data-website-inline-editor="true"
@@ -2867,7 +3489,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   suppressContentEditableWarning
                   onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
                   style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Add a short line of context.") }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "") }}
                 />
               ) : null}
             </div>
@@ -3239,7 +3861,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const trustBadgeBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
       const trustBadgeSty = trustBadgeVariantStyles(props, compact, trustBadgeBackgroundImage);
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={asStyleObject(trustBadgeSty.row)}>
             {asArray(props.badges).map((badge, idx) => (
@@ -3266,6 +3888,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const marqueeLineHeight = Math.max(1, Number(props.lineHeight) || 1.08);
       const marqueeMarginTop = Math.max(0, Number(props.marginTop ?? 0));
       const marqueeMarginBottom = Math.max(0, Number(props.marginBottom ?? 0));
+      const marqueeAngle = Math.max(-45, Math.min(45, Number(props.angle ?? props.rotation ?? 0) || 0));
+      const hasMarqueeAngle = Math.abs(marqueeAngle) > 0.1;
+      const angledOuterPad = hasMarqueeAngle ? Math.ceil(Math.abs(marqueeAngle) * (compact ? 2.4 : 3.2)) : 0;
       const bg = props.backgroundColor || "#081120";
       const text = props.textColor || "#f8fafc";
       const fill = props.textFillColor || text;
@@ -3286,14 +3911,16 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ...sectionAnimationStyle,
             position: "relative",
             display: "block",
-            background: bg,
+            background: hasMarqueeAngle ? "transparent" : bg,
             color: text,
-            overflow: "hidden",
+            overflow: hasMarqueeAngle ? "visible" : "hidden",
             fontSize: `${marqueeFontSize}px`,
+            border: "none",
             borderTop: "none",
             borderBottom: "none",
+            outline: "none",
             borderRadius: 0,
-            padding: `${stripPaddingTop}px 0 ${stripPaddingBottom}px`,
+            padding: hasMarqueeAngle ? `${angledOuterPad}px 0` : `${stripPaddingTop}px 0 ${stripPaddingBottom}px`,
             marginTop: marqueeMarginTop,
             marginBottom: marqueeMarginBottom,
             boxShadow: "none",
@@ -3306,7 +3933,22 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               <button type="button" onClick={() => onChangeBlock?.({ ...props, fontSize: Math.min(40, Number(props.fontSize || 12) + 1) })} style={sharedStyles.editorChip}>A+</button>
             </div>
           ) : null}
-          <div style={{ width: "100%", overflow: "hidden" }}>
+          <div
+            style={{
+              width: hasMarqueeAngle ? "120%" : "100%",
+              marginLeft: hasMarqueeAngle ? "-10%" : 0,
+              overflow: "hidden",
+              background: bg,
+              color: text,
+              padding: hasMarqueeAngle ? `${stripPaddingTop}px 0 ${stripPaddingBottom}px` : 0,
+              transform: hasMarqueeAngle ? `rotate(${marqueeAngle}deg)` : undefined,
+              transformOrigin: "center center",
+              boxSizing: "border-box",
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+            }}
+          >
             <div
               data-marquee-track="true"
               style={{
@@ -3413,6 +4055,123 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    case "wave-marquee": {
+      const waveNumber = (value, fallback) => {
+        const parsed = Number.parseFloat(String(value ?? ""));
+        return Number.isFinite(parsed) ? parsed : fallback;
+      };
+      const waveText = String(props.text || "FULL SERVICE MARKETING AGENCY").trim() || "FULL SERVICE MARKETING AGENCY";
+      const separator = String(props.separator ?? " * ");
+      const repeatCount = Math.max(2, Math.min(10, waveNumber(props.repeatCount, 4)));
+      const speed = Math.max(8, Math.min(120, waveNumber(props.speed, 22)));
+      const waveHeight = Math.max(90, Math.min(420, waveNumber(props.height, 190)));
+      const amplitude = Math.max(0, Math.min(waveHeight / 2 - 10, waveNumber(props.amplitude, 42)));
+      const segmentWidth = Math.max(360, Math.min(1800, waveNumber(props.wavelength, 640)));
+      const midY = Math.round(waveHeight / 2);
+      const pathSegmentCount = Math.max(4, Math.ceil(2800 / segmentWidth) + 2);
+      const pathWidth = segmentWidth * pathSegmentCount;
+      const wavePath = Array.from({ length: pathSegmentCount }, (_, segmentIndex) => {
+        const x = segmentIndex * segmentWidth;
+        const command = segmentIndex === 0 ? `M ${x} ${midY}` : "";
+        return `${command} C ${x + segmentWidth * 0.2} ${midY - amplitude}, ${x + segmentWidth * 0.3} ${midY - amplitude}, ${x + segmentWidth * 0.5} ${midY} C ${x + segmentWidth * 0.7} ${midY + amplitude}, ${x + segmentWidth * 0.8} ${midY + amplitude}, ${x + segmentWidth} ${midY}`;
+      }).join(" ");
+      const phrase = Array.from({ length: repeatCount * pathSegmentCount * 2 }, () => waveText).join(separator);
+      const safeIdBase = String(block?.id || props.id || "wave-marquee").replace(/[^a-zA-Z0-9_-]/g, "");
+      const pathId = `${safeIdBase || "wave-marquee"}-flow-path`;
+      const color = props.textColor || "#00a99d";
+      const backgroundColor = props.backgroundColor || "#000000";
+      const fontSize = Math.max(10, Math.min(96, waveNumber(props.fontSize, 22)));
+      const fontWeight = String(props.fontWeight || "900");
+      const letterSpacing = Math.max(0, Math.min(12, waveNumber(props.letterSpacing, 2.6)));
+      const direction = String(props.direction || "left");
+      const textOffsetFrom = direction === "right" ? -segmentWidth : 0;
+      const textOffsetTo = direction === "right" ? 0 : -segmentWidth;
+      const angle = Math.max(-20, Math.min(20, waveNumber(props.angle, 0)));
+      const textTransform = String(props.textTransform || "uppercase");
+
+      return (
+        <section
+          style={{
+            ...fullWidthStyle(props, compact, editor),
+            ...sectionAnimationStyle,
+            position: "relative",
+            overflow: "hidden",
+            height: waveHeight,
+            minHeight: waveHeight,
+            background: backgroundColor,
+            color,
+            display: "flex",
+            alignItems: "center",
+            boxSizing: "border-box",
+            isolation: "isolate",
+            border: "none",
+            borderTop: "none",
+            borderBottom: "none",
+            outline: "none",
+            boxShadow: "none",
+          }}
+        >
+          {editor ? (
+            <div style={{ position: "absolute", top: 8, right: 12, zIndex: 3, display: "flex", gap: 6 }}>
+              <button type="button" onClick={() => onChangeBlock?.({ ...props, fontSize: Math.max(10, fontSize - 1) })} style={sharedStyles.editorChip}>A-</button>
+              <button type="button" onClick={() => onChangeBlock?.({ ...props, fontSize: Math.min(96, fontSize + 1) })} style={sharedStyles.editorChip}>A+</button>
+            </div>
+          ) : null}
+          <div
+            style={{
+              width: "115%",
+              marginLeft: "-7.5%",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${pathWidth}px`,
+                height: waveHeight,
+                position: "relative",
+                left: "50%",
+                transform: `translateX(-50%)${angle ? ` rotate(${angle}deg)` : ""}`,
+                transformOrigin: "center center",
+              }}
+            >
+              <svg
+                width={pathWidth}
+                height={waveHeight}
+                viewBox={`0 0 ${pathWidth} ${waveHeight}`}
+                aria-hidden="true"
+                focusable="false"
+                style={{ display: "block", width: `${pathWidth}px`, height: `${waveHeight}px`, overflow: "visible" }}
+              >
+                <defs>
+                  <path id={pathId} d={wavePath} />
+                </defs>
+                <text
+                  fill={color}
+                  fontSize={compact ? Math.max(10, fontSize - 4) : fontSize}
+                  fontWeight={fontWeight}
+                  fontFamily={props.fontFamily || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"}
+                  letterSpacing={letterSpacing}
+                  textTransform={textTransform}
+                  dominantBaseline="middle"
+                >
+                  <textPath href={`#${pathId}`} startOffset={textOffsetFrom}>
+                    <animate
+                      attributeName="startOffset"
+                      from={textOffsetFrom}
+                      to={textOffsetTo}
+                      dur={`${speed}s`}
+                      repeatCount="indefinite"
+                    />
+                    {phrase}
+                  </textPath>
+                </text>
+              </svg>
             </div>
           </div>
         </section>
@@ -3686,6 +4445,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "hover-cards":
       return <HoverCardsBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} navigationContext={navigationContext} />;
+
+    case "template-showcase":
+      return <TemplateShowcaseBlock props={props} compact={compact} editor={editor} navigationContext={navigationContext} />;
 
     case "framer-animated-portfolio":
       return <FramerPortfolioBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} />;

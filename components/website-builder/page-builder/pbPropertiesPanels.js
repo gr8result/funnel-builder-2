@@ -73,24 +73,143 @@ function NavbarPresetPicker({ value, onApply }) {
   );
 }
 
-function NavbarLinksEditor({ links, onChange }) {
-  const safeLinks = Array.isArray(links) ? links : [];
+const CANONICAL_MENU_URLS = {
+  home: "/",
+  "about-us": "/about",
+  about: "/about",
+  modules: "/modules",
+  "contact-us": "/contact",
+  contact: "/contact",
+  email: "/email",
+  pricing: "/pricing",
+  crm: "/crm",
+  sms: "/sms",
+  funnels: "/funnels",
+};
+
+function slugifyNavValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function normalizeNavHref(href, label = "", pageSlug = "") {
+  const raw = String(href || "").trim();
+  if (/^localhost/i.test(raw) || /^https?:\/\/localhost/i.test(raw)) {
+    const path = raw.replace(/^https?:\/\/localhost(?::\d+)?/i, "");
+    return normalizeNavHref(path || "/", label, pageSlug);
+  }
+  if (/^(mailto:|tel:)/i.test(raw)) return raw;
+  if (raw.startsWith("#")) {
+    const anchorSlug = slugifyNavValue(raw.slice(1));
+    return CANONICAL_MENU_URLS[anchorSlug] || raw;
+  }
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const slug = slugifyNavValue(pageSlug || label || raw.replace(/^\//, ""));
+  if (CANONICAL_MENU_URLS[slug]) return CANONICAL_MENU_URLS[slug];
+  if (!raw) return slug ? `/${slug}` : "";
+  if (raw === "/") return "/";
+  return raw.startsWith("/") ? raw : `/${slugifyNavValue(raw) || raw}`;
+}
+
+function normalizeNavMenuItems(links, { removeDuplicates = false } = {}) {
+  const seenIds = new Set();
+  const seenKeys = new Set();
+  const duplicates = [];
+
+  const normalizeItem = (item, index, childIndex = null) => {
+    const label = String(item?.label || "").trim();
+    const pageId = String(item?.pageId || item?.page_id || "").trim();
+    const pageSlug = slugifyNavValue(item?.slug || item?.pageSlug || label || item?.href || "");
+    const href = normalizeNavHref(item?.href, label, pageSlug);
+    if (!label && !href) return null;
+
+    const baseId = String(item?.id || "").trim();
+    const id = baseId && !seenIds.has(baseId)
+      ? baseId
+      : `nav-${childIndex === null ? "item" : "child"}-${Date.now()}-${index}-${childIndex ?? 0}`;
+    seenIds.add(id);
+
+    const duplicateKey = [pageId || "", pageSlug || slugifyNavValue(href), slugifyNavValue(label)].join("|");
+    const isDuplicate = seenKeys.has(duplicateKey);
+    if (isDuplicate) duplicates.push({ label: label || href, href });
+    if (removeDuplicates && isDuplicate) return null;
+    seenKeys.add(duplicateKey);
+
+    const children = (Array.isArray(item?.children) ? item.children : [])
+      .map((child, idx) => normalizeItem(child, idx, idx))
+      .filter(Boolean)
+      .map((child) => ({ ...child, href: child.href || "/" }));
+
+    return {
+      ...item,
+      id,
+      label: label || "Link",
+      href: href || "/",
+      ...(pageId ? { pageId } : {}),
+      ...(pageSlug ? { slug: pageSlug } : {}),
+      ...(children.length ? { children } : { children: [] }),
+    };
+  };
+
+  const normalized = (Array.isArray(links) ? links : []).map((item, index) => normalizeItem(item, index)).filter(Boolean);
+  return { links: normalized, duplicates };
+}
+
+function buildNavLinkFromPage(page) {
+  const label = String(page?.name || page?.title || "").trim() || "Page";
+  const slug = slugifyNavValue(page?.slug || label);
+  return {
+    id: `nav-page-${slug || Date.now()}`,
+    pageId: String(page?.id || slug || ""),
+    slug,
+    label,
+    href: normalizeNavHref("", label, slug),
+    children: [],
+  };
+}
+
+function NavbarLinksEditor({ links, onChange, pages = [] }) {
+  const { links: safeLinks, duplicates } = normalizeNavMenuItems(links);
+  const duplicatePageSlugs = useMemo(() => {
+    const counts = new Map();
+    (Array.isArray(pages) ? pages : []).forEach((page) => {
+      const slug = slugifyNavValue(page?.slug || page?.name || "");
+      if (!slug) return;
+      counts.set(slug, (counts.get(slug) || 0) + 1);
+    });
+    return Array.from(counts.entries()).filter(([, count]) => count > 1).map(([slug]) => slug);
+  }, [pages]);
   const makeLinkId = () => `nav-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const makeChildLinkId = () => `nav-child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const emitChange = (nextLinks, options = {}) => {
+    onChange(normalizeNavMenuItems(nextLinks, options).links);
+  };
 
   function updateLink(idx, patch) {
     const next = safeLinks.map((item, currentIdx) => (
       currentIdx === idx ? { ...item, ...patch } : item
     ));
-    onChange(next);
+    emitChange(next);
   }
 
   function removeLink(idx) {
-    onChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
+    emitChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
   }
 
   function addLink() {
-    onChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "#" }]);
+    emitChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "/" }]);
+  }
+
+  function addPageLink(page) {
+    emitChange([...safeLinks, buildNavLinkFromPage(page)]);
+  }
+
+  function removeDuplicateLinks() {
+    emitChange(safeLinks, { removeDuplicates: true });
   }
 
   function moveLink(idx, direction) {
@@ -99,7 +218,7 @@ function NavbarLinksEditor({ links, onChange }) {
     const next = [...safeLinks];
     const [moved] = next.splice(idx, 1);
     next.splice(nextIndex, 0, moved);
-    onChange(next);
+    emitChange(next);
   }
 
   function updateChildLink(parentIdx, childIdx, patch) {
@@ -113,7 +232,7 @@ function NavbarLinksEditor({ links, onChange }) {
         )),
       };
     });
-    onChange(next);
+    emitChange(next);
   }
 
   function removeChildLink(parentIdx, childIdx) {
@@ -124,7 +243,7 @@ function NavbarLinksEditor({ links, onChange }) {
         children: (Array.isArray(item.children) ? item.children : []).filter((_, currentChildIdx) => currentChildIdx !== childIdx),
       };
     });
-    onChange(next);
+    emitChange(next);
   }
 
   function nestUnder(fromIdx, parentIdx) {
@@ -140,11 +259,30 @@ function NavbarLinksEditor({ links, onChange }) {
         if (currentIdx !== adjustedParentIdx) return item;
         return { ...item, children: [...(Array.isArray(item.children) ? item.children : []), asChild] };
       });
-    onChange(next);
+    emitChange(next);
   }
 
   return (
     <div style={styles.stackSm}>
+      {duplicatePageSlugs.length ? (
+        <div style={{ color: "#fbbf24", fontSize: 14, lineHeight: 1.45 }}>
+          Warning: duplicate page slugs found: {duplicatePageSlugs.join(", ")}
+        </div>
+      ) : null}
+      {duplicates.length ? (
+        <button type="button" style={{ ...styles.secondaryBtn, borderColor: "#f59e0b", color: "#fbbf24" }} onClick={removeDuplicateLinks}>
+          Remove Duplicate Menu Items
+        </button>
+      ) : null}
+      {Array.isArray(pages) && pages.length ? (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {pages.map((page) => (
+            <button key={page?.id || page?.slug || page?.name} type="button" style={styles.assetChip} onClick={() => addPageLink(page)}>
+              + {page?.name || page?.slug || "Page"}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {safeLinks.map((item, idx) => (
         <div key={item?.id || `link-${idx}`} style={styles.linkRowCard}>
           <div style={styles.linkRowHeader}>
@@ -167,7 +305,7 @@ function NavbarLinksEditor({ links, onChange }) {
           <input
             type="text"
             value={item?.href || ""}
-            onChange={(e) => updateLink(idx, { href: e.target.value })}
+            onChange={(e) => updateLink(idx, { href: normalizeNavHref(e.target.value, item?.label, item?.slug) })}
             style={styles.propertyInput}
             placeholder="#section or /page"
           />
@@ -214,7 +352,7 @@ function NavbarLinksEditor({ links, onChange }) {
                 <input
                   type="text"
                   value={child?.href || ""}
-                  onChange={(e) => updateChildLink(idx, childIdx, { href: e.target.value })}
+                  onChange={(e) => updateChildLink(idx, childIdx, { href: normalizeNavHref(e.target.value, child?.label, child?.slug) })}
                   style={styles.propertyInput}
                   placeholder="Dropdown href"
                 />
@@ -233,10 +371,25 @@ function NavbarLinksEditor({ links, onChange }) {
 
 function normalizeFeatureListItem(item, index) {
   if (item && typeof item === "object" && !Array.isArray(item)) {
+    const rawTextBlocks = Array.isArray(item.textBlocks) && item.textBlocks.length
+      ? item.textBlocks
+      : [
+          { id: `feature-${index}-headline`, type: "headline", text: item.title || item.label || item.text || `Feature ${index + 1}` },
+          ...(item.body || item.description || item.copy ? [{ id: `feature-${index}-text`, type: "text", text: item.body || item.description || item.copy }] : []),
+        ];
+    const textBlocks = rawTextBlocks.map((block, blockIndex) => ({
+      id: block?.id || `feature-${index}-text-${blockIndex}`,
+      type: block?.type === "headline" ? "headline" : block?.type === "label" ? "label" : "text",
+      text: String(block?.text || ""),
+      style: block?.style && typeof block.style === "object" ? { ...block.style } : {},
+    })).filter((block) => block.text.trim() || block.type === "headline" || block.type === "label");
+    const headline = textBlocks.find((block) => block.type === "headline")?.text || item.title || item.label || item.text || `Feature ${index + 1}`;
+    const body = textBlocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n") || item.body || item.description || item.copy || "";
     return {
       id: item.id || `feature-item-${index}`,
-      title: String(item.title || item.label || item.text || `Feature ${index + 1}`),
-      body: String(item.body || item.description || item.copy || ""),
+      title: String(headline),
+      body: String(body),
+      textBlocks,
       image: String(item.image || item.src || ""),
       imageX: Number.isFinite(Number(item.imageX)) ? Math.max(0, Math.min(100, Number(item.imageX))) : 50,
       imageY: Number.isFinite(Number(item.imageY)) ? Math.max(0, Math.min(100, Number(item.imageY))) : 50,
@@ -247,6 +400,7 @@ function normalizeFeatureListItem(item, index) {
     id: `feature-item-${index}`,
     title: String(item || `Feature ${index + 1}`),
     body: "",
+    textBlocks: [{ id: `feature-${index}-headline`, type: "headline", text: String(item || `Feature ${index + 1}`) }],
     image: "",
     imageX: 50,
     imageY: 50,
@@ -372,12 +526,13 @@ function buildEditableTeamRows(members, rowSizes) {
 }
 
 function normalizeStatItem(item, index) {
+  const defaultDetail = "Shows visitors a clear proof point tied to faster launches, stronger lead capture and better follow-up.";
   if (item && typeof item === "object" && !Array.isArray(item)) {
     return {
       id: item.id || `stat-item-${index}`,
       number: String(item.number || item.value || `0${index + 1}`),
       label: String(item.label || item.title || `Metric ${index + 1}`),
-      detail: String(item.detail || item.description || "Add a short line of context."),
+      detail: String(item.detail || item.description || defaultDetail),
       cardAnimation: item.cardAnimation != null ? String(item.cardAnimation) : "",
     };
   }
@@ -386,7 +541,7 @@ function normalizeStatItem(item, index) {
     id: `stat-item-${index}`,
     number: String(item || `0${index + 1}`),
     label: `Metric ${index + 1}`,
-    detail: "Add a short line of context.",
+    detail: defaultDetail,
     cardAnimation: "",
   };
 }
@@ -416,7 +571,7 @@ function StatsItemsEditor({ stats, onChange }) {
         id: `stat-item-${Date.now()}-${safeStats.length}`,
         number: `${(safeStats.length + 1) * 10}+`,
         label: `Metric ${safeStats.length + 1}`,
-        detail: "Add a short line of context.",
+        detail: "Use this space to explain the business result behind the number, such as time saved, leads captured or pages launched.",
       },
     ]);
   }
@@ -466,7 +621,7 @@ function StatsItemsEditor({ stats, onChange }) {
               value={stat.detail || ""}
               onChange={(event) => updateStat(index, { detail: event.target.value })}
               style={{ ...styles.propertyInput, minHeight: 88 }}
-              placeholder="Add a short line of context."
+              placeholder="Explain the business result behind this number."
             />
             <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Card Animation</label>
             <select
@@ -919,7 +1074,7 @@ function TrustBadgesPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-function TestimonialItemsEditor({ items, onChange, brandAssets }) {
+function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, blockIndex }) {
   const safeItems = (Array.isArray(items) && items.length)
     ? items.map(normalizeTestimonialItemForEditor)
     : [normalizeTestimonialItemForEditor({}, 0)];
@@ -978,15 +1133,23 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
                   const file = event.target.files?.[0];
                   event.target.value = "";
                   if (!file) return;
-                  const asset = await createStoredAsset(file);
-                  updateItem(index, { avatarUrl: asset.src, avatarAssetId: asset.id || "" });
+                  const asset = typeof onUploadImage === "function"
+                    ? await onUploadImage(blockIndex, `__testimonial_avatar_${index}__`, file)
+                    : await createStoredAsset(file);
+                  if (asset?.src) {
+                    updateItem(index, {
+                      avatarUrl: asset.src,
+                      avatar: asset.src,
+                      avatarAssetId: asset.id || "",
+                    });
+                  }
                 }}
               />
             </label>
             <button
               type="button"
               style={styles.secondaryBtn}
-              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatarAssetId: asset.id || "" }))}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatar: asset.src || "", avatarAssetId: asset.id || "" }))}
             >
               Choose From Library
             </button>
@@ -995,7 +1158,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
                 key={`tav-${index}-${image.id || image.src}`}
                 type="button"
                 style={styles.assetThumbBtn}
-                onClick={() => updateItem(index, { avatarUrl: image.src, avatarAssetId: image.id || "" })}
+                onClick={() => updateItem(index, { avatarUrl: image.src, avatar: image.src, avatarAssetId: image.id || "" })}
                 title={image.name}
               >
                 <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
@@ -1003,7 +1166,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
             ))}
           </div>
           {item.avatarUrl ? (
-            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatarAssetId: "" })}>Remove Avatar</button>
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatar: "", avatarAssetId: "" })}>Remove Avatar</button>
           ) : null}
         </div>
       ))}
@@ -1012,7 +1175,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets }) {
   );
 }
 
-function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
+function TestimonialPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
 
@@ -1056,6 +1219,8 @@ function TestimonialPropertiesPanel({ block, index, onChange, brandAssets }) {
             items={props.items}
             onChange={(items) => update({ items })}
             brandAssets={brandAssets}
+            onUploadImage={onUploadImage}
+            blockIndex={index}
           />
         </div>
         <div style={styles.sectionCard}>
@@ -1405,8 +1570,9 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
 function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const defaultLineHeight = 1.35;
   const updateLineHeight = (value) => {
-    const nextLineHeight = normalizeLineHeightValue(value, Number(props.textLineHeight || props.lineHeight || 1.35));
+    const nextLineHeight = normalizeLineHeightValue(value, Number(props.textLineHeight || props.lineHeight || defaultLineHeight));
     update({
       textLineHeight: nextLineHeight,
       bodyLineHeight: nextLineHeight,
@@ -1414,6 +1580,23 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
       text: stripInlineCssPropertyFromHtml(props.text, "line-height"),
     });
   };
+  const resetLineHeight = () => {
+    update({
+      textLineHeight: defaultLineHeight,
+      bodyLineHeight: defaultLineHeight,
+      lineHeight: defaultLineHeight,
+      text: stripInlineCssPropertyFromHtml(props.text, "line-height"),
+    });
+  };
+  const stripInlineTextBackgrounds = (html) => (
+    stripInlineCssPropertyFromHtml(
+      stripInlineCssPropertyFromHtml(
+        stripInlineCssPropertyFromHtml(html, "background-color"),
+        "background"
+      ),
+      "background-image"
+    )
+  );
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
   const [heightDraft, setHeightDraft] = useState(String(parsePixelValue(props.minHeight, 160)));
 
@@ -1506,12 +1689,43 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
             <CompactColorField label="Background" value={props.backgroundColor || "#111827"} fallback="#111827" onChange={(value) => update({ backgroundColor: value })} />
             <CompactColorField label="Text" value={props.textColor || "#e6eef5"} fallback="#e6eef5" onChange={(value) => update({ textColor: value })} />
           </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.stripInlineTextBackgrounds !== false}
+              onChange={(e) => update({ stripInlineTextBackgrounds: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Remove inline text backgrounds
+          </label>
+          <button
+            type="button"
+            style={{ ...styles.secondaryBtn, marginTop: 8 }}
+            onClick={() => update({ text: stripInlineTextBackgrounds(props.text), stripInlineTextBackgrounds: true })}
+          >
+            Clear Text Highlights
+          </button>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Typography</label>
+          {/* Block-level font family */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ ...styles.propertyLabel, fontSize: 13, marginBottom: 4, display: "block" }}>Block font family</label>
+            <select
+              value={props.fontFamily || ""}
+              onChange={(e) => update({ fontFamily: e.target.value || undefined })}
+              style={{ ...styles.propertyInput, width: "100%" }}
+            >
+              <option value="">— inherit from theme —</option>
+              {["Manrope","Inter","Poppins","Montserrat","Raleway","Lato","Open Sans","Roboto","Outfit","DM Sans","Work Sans","Nunito","Playfair Display","Merriweather","Lora","Oswald","Bebas Neue","Dancing Script","Pacifico"].map(f => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          {/* Block-level font size + line height */}
           <div style={styles.colorGrid}>
-            <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
-            <NumberField label="Line spacing" value={Number(props.textLineHeight || props.lineHeight || 1.35)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
+            <NumberField label="Base size (px)" value={Number(props.textFontSize || 18)} min={12} max={120} onChange={(value) => update({ textFontSize: value })} />
+            <NumberField label="Line height" value={Number(props.textLineHeight || props.lineHeight || defaultLineHeight)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {[1.1, 1.25, 1.35, 1.5, 1.7, 2].map((value) => (
@@ -1524,6 +1738,48 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
                 {value}
               </button>
             ))}
+            <button
+              type="button"
+              style={{ ...styles.secondaryBtn, padding: "6px 9px", minHeight: 0, background: "rgba(14,165,233,0.12)", borderColor: "rgba(14,165,233,0.35)" }}
+              onClick={resetLineHeight}
+            >
+              Reset
+            </button>
+          </div>
+          {/* Block-level default alignment */}
+          <div style={{ marginTop: 12 }}>
+            <label style={{ ...styles.propertyLabel, fontSize: 13, marginBottom: 6, display: "block" }}>Default alignment</label>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[
+                { value: "left",    icon: "⬅", label: "Left"    },
+                { value: "center",  icon: "↔", label: "Centre"  },
+                { value: "right",   icon: "➡", label: "Right"   },
+                { value: "justify", icon: "☰", label: "Justify" },
+              ].map(({ value, icon, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  title={label}
+                  onClick={() => update({ alignment: value })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    flex: 1,
+                    padding: "5px 0",
+                    minHeight: 0,
+                    background: (props.alignment || "left") === value
+                      ? "rgba(14,165,233,0.22)" : undefined,
+                    borderColor: (props.alignment || "left") === value
+                      ? "rgba(14,165,233,0.6)" : undefined,
+                    color: (props.alignment || "left") === value ? "#38bdf8" : undefined,
+                  }}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+              The inline toolbar can override alignment per-paragraph.
+            </p>
           </div>
         </div>
         <div style={styles.sectionCard}>
@@ -1947,7 +2203,7 @@ function ensureGalleryImagesCount(images, count) {
   return nextImages;
 }
 
-function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
+function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor, onUploadImage, blockIndex }) {
   const safeItems = Array.isArray(items) ? items : [];
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
 
@@ -1964,12 +2220,51 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
   function addItem() {
     onChange([...safeItems, {
       id: `feature-item-${Date.now()}-${safeItems.length}`,
-      title: `List item ${safeItems.length + 1}`,
-      body: "Add a short supporting sentence.",
+      title: `Card ${safeItems.length + 1}`,
+      body: "Add supporting text.",
+      textBlocks: [
+        { id: `headline-${Date.now()}`, type: "headline", text: `Card ${safeItems.length + 1}` },
+        { id: `text-${Date.now()}`, type: "text", text: "Add supporting text." },
+      ],
       image: `https://placehold.co/960x720/e2e8f0/0f172a?text=${encodeURIComponent(`Item ${safeItems.length + 1}`)}`,
       imageX: 50,
       imageY: 50,
     }]);
+  }
+
+  function syncLegacyTextFields(textBlocks) {
+    const headline = textBlocks.find((block) => block.type === "headline")?.text || "";
+    const body = textBlocks.filter((block) => block.type === "text").map((block) => block.text).join("\n\n");
+    return { title: headline, body };
+  }
+
+  function updateTextBlock(itemIndex, blockIndex, patch) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const textBlocks = item.textBlocks.map((block, currentIndex) => (
+      currentIndex === blockIndex ? { ...block, ...patch } : block
+    ));
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
+  }
+
+  function removeTextBlock(itemIndex, blockIndex) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const textBlocks = item.textBlocks.filter((_, currentIndex) => currentIndex !== blockIndex);
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
+  }
+
+  function addTextBlock(itemIndex, type) {
+    const item = normalizeFeatureListItem(safeItems[itemIndex], itemIndex);
+    const text = type === "headline" ? "New headline" : type === "label" ? "New label" : "New text block";
+    const textBlocks = [
+      ...item.textBlocks,
+      {
+        id: `feature-text-${Date.now()}-${item.textBlocks.length}`,
+        type,
+        text,
+        style: {},
+      },
+    ];
+    updateItem(itemIndex, { textBlocks, ...syncLegacyTextFields(textBlocks) });
   }
 
   return (
@@ -1979,12 +2274,10 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
         return (
         <div key={`${index}-${item.id}`} style={styles.linkRowCard}>
           <div style={styles.linkRowHeader}>
-            <span style={styles.linkRowTitle}>Item {index + 1}</span>
+            <span style={styles.linkRowTitle}>Card {index + 1}</span>
             <button type="button" style={styles.linkRowDelete} onClick={() => removeItem(index)}>Remove</button>
           </div>
-          <p style={{ margin: 0, color: "#475569", fontSize: 16 }}>
-            Edit the item title and copy directly on the page. Use SVG icons or normal images here.
-          </p>
+          <label style={{ ...styles.propertyLabel, marginTop: 8, display: "block" }}>Card Image</label>
           <input
             type="text"
             value={item.image}
@@ -2003,15 +2296,25 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
                   const file = event.target.files?.[0];
                   event.target.value = "";
                   if (!file) return;
-                  const asset = await createStoredAsset(file);
-                  updateItem(index, { image: asset.src });
+                  const asset = typeof onUploadImage === "function"
+                    ? await onUploadImage(blockIndex, `items.${index}.image`, file)
+                    : await createStoredAsset(file);
+                  updateItem(index, {
+                    image: asset?.src || "",
+                    imageAssetId: asset?.id || "",
+                    imageAlt: htmlToPlainText(asset?.name || item.imageAlt || ""),
+                  });
                 }}
               />
             </label>
             <button
               type="button"
               style={styles.secondaryBtn}
-              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { image: asset.src || "" }))}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, {
+                image: asset.src || "",
+                imageAssetId: asset.id || "",
+                imageAlt: htmlToPlainText(asset.name || item.imageAlt || ""),
+              }))}
             >
               Choose From Library
             </button>
@@ -2020,7 +2323,11 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
                 key={`feature-item-${index}-${image.id || image.src}`}
                 type="button"
                 style={styles.assetThumbBtn}
-                onClick={() => updateItem(index, { image: image.src || "" })}
+                onClick={() => updateItem(index, {
+                  image: image.src || "",
+                  imageAssetId: image.id || "",
+                  imageAlt: htmlToPlainText(image.name || item.imageAlt || ""),
+                })}
                 title={image.name}
               >
                 <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
@@ -2034,14 +2341,59 @@ function ListItemsEditor({ items, onChange, brandAssets, onOpenImageEditor }) {
             onChange={(patch) => updateItem(index, patch)}
             onEditImage={() => onOpenImageEditor?.(index, "image", item.image)}
           />
+          <div style={{ ...styles.stackSm, marginTop: 12 }}>
+            <div style={styles.linkRowHeader}>
+              <span style={styles.linkRowTitle}>Card Text Blocks</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "label")}>+ Label</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "headline")}>+ Headline</button>
+                <button type="button" style={styles.secondaryBtn} onClick={() => addTextBlock(index, "text")}>+ Text Block</button>
+              </div>
+            </div>
+            {item.textBlocks.map((textBlock, blockIndex) => (
+              <div key={textBlock.id || `${index}-text-${blockIndex}`} style={{ ...styles.sectionCard, padding: 10 }}>
+                <div style={styles.linkRowHeader}>
+                  <select
+                    value={textBlock.type}
+                    onChange={(event) => {
+                      const nextType = event.target.value === "headline" ? "headline" : event.target.value === "label" ? "label" : "text";
+                      updateTextBlock(index, blockIndex, { type: nextType });
+                    }}
+                    style={{ ...styles.propertyInput, maxWidth: 150 }}
+                  >
+                    <option value="label">Label</option>
+                    <option value="headline">Headline</option>
+                    <option value="text">Text block</option>
+                  </select>
+                  <button type="button" style={styles.linkRowDelete} onClick={() => removeTextBlock(index, blockIndex)}>Remove</button>
+                </div>
+                {textBlock.type === "headline" || textBlock.type === "label" ? (
+                  <input
+                    type="text"
+                    value={textBlock.text}
+                    onChange={(event) => updateTextBlock(index, blockIndex, { text: event.target.value })}
+                    style={{ ...styles.propertyInput, marginTop: 8, fontWeight: textBlock.type === "headline" ? 700 : 600 }}
+                    placeholder={textBlock.type === "label" ? "Label text" : "Headline text"}
+                  />
+                ) : (
+                  <textarea
+                    value={textBlock.text}
+                    onChange={(event) => updateTextBlock(index, blockIndex, { text: event.target.value })}
+                    style={{ ...styles.propertyInput, minHeight: 88, marginTop: 8, resize: "vertical" }}
+                    placeholder="Text block"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       );})}
-      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Item</button>
+      <button type="button" style={styles.secondaryBtn} onClick={addItem}>+ Add Card</button>
     </div>
   );
 }
 
-function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor }) {
+function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpenImageEditor, onUploadImage }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
   const [activeTab, setActiveTab] = useState("content");
@@ -2100,10 +2452,29 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
       </div>
       <div style={styles.propertyGrid}>
         {activeTab === "content" ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>List Items / Icons</label>
-            <ListItemsEditor items={props.items} onChange={(items) => update({ items })} brandAssets={brandAssets} onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)} />
-          </div>
+          <>
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Section Headline</label>
+              <input
+                type="text"
+                value={htmlToPlainText(props.title || "")}
+                onChange={(event) => update({ title: event.target.value })}
+                style={styles.propertyInput}
+                placeholder="Section headline"
+              />
+            </div>
+            <div style={styles.sectionCard}>
+              <label style={styles.propertyLabel}>Cards</label>
+              <ListItemsEditor
+                items={props.items}
+                onChange={(items) => update({ items })}
+                brandAssets={brandAssets}
+                blockIndex={index}
+                onUploadImage={onUploadImage}
+                onOpenImageEditor={(itemIndex, imageKey, src) => onOpenImageEditor?.(index, "items", itemIndex, imageKey, src)}
+              />
+            </div>
+          </>
         ) : null}
         {activeTab === "style" ? (
           <div style={styles.sectionCard}>
@@ -2113,6 +2484,16 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
                 <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
               ))}
             </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Background Width</label>
+            <label style={styles.inlineToggle}>
+              <input
+                type="checkbox"
+                checked={props.fullWidthBackground === true}
+                onChange={(e) => update({ fullWidthBackground: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Full width background
+            </label>
             <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
               Card Width: {Math.round(displayCardWidth)}px
             </label>
@@ -2154,6 +2535,13 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
         {activeTab === "colours" ? (
           <>
             <ColorSelector label="Section Background" value={props.backgroundColor || "#ffffff"} fallback="#ffffff" allowTransparent onChange={(v) => update({ backgroundColor: v })} />
+            <input
+              type="text"
+              value={String(props.backgroundColor || "")}
+              onChange={(e) => update({ backgroundColor: e.target.value })}
+              style={styles.propertyInput}
+              placeholder="Section background or CSS gradient"
+            />
             <ColorSelector label="Item Background" value={props.itemBackgroundColor || "#eff6ff"} fallback="#eff6ff" allowTransparent onChange={(v) => update({ itemBackgroundColor: v })} />
             <ColorSelector label="Text" value={props.textColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ textColor: v })} />
             <ColorSelector label="Accent / Icon" value={props.accentColor || "#2563eb"} fallback="#2563eb" onChange={(v) => update({ accentColor: v })} />
@@ -2338,12 +2726,13 @@ function ImageGalleryPropertiesPanel({ block, index, onChange, brandAssets, onOp
   );
 }
 
-function PricingTablePropertiesPanel({ block, index, onChange }) {
+function PricingTablePropertiesPanel({ block, index, onChange, onUploadImage }) {
   const props = block?.props || {};
   const plans = normalizePricingPlans(props.plans);
   const replace = (nextProps) => onChange(index, nextProps);
   const update = (patch) => replace({ ...props, ...patch });
   const [activeTab, setActiveTab] = useState("content");
+  const hotspots = Array.isArray(props.pricingImageHotspots) ? props.pricingImageHotspots : [];
   const pricingSectionShells = [
     { background: "linear-gradient(180deg,#10243e,#153255)", borderColor: "#2f6fca" },
     { background: "linear-gradient(180deg,#12372d,#184a3c)", borderColor: "#2da66d" },
@@ -2452,6 +2841,33 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
       plans: normalizePricingPlans(defaults.plans),
     });
   };
+  const updateHotspot = (hotspotIndex, patch) => {
+    update({
+      pricingImageHotspots: hotspots.map((spot, currentIndex) => (
+        currentIndex === hotspotIndex ? { ...spot, ...patch } : spot
+      )),
+    });
+  };
+  const addHotspot = () => {
+    update({
+      pricingImageHotspots: [
+        ...hotspots,
+        {
+          id: `pricing-hotspot-${Date.now()}`,
+          label: `Button ${hotspots.length + 1}`,
+          href: "",
+          x: 8,
+          y: 72,
+          width: 20,
+          height: 10,
+          newTab: false,
+        },
+      ],
+    });
+  };
+  const removeHotspot = (hotspotIndex) => {
+    update({ pricingImageHotspots: hotspots.filter((_, currentIndex) => currentIndex !== hotspotIndex) });
+  };
 
   return (
     <div style={styles.properties}>
@@ -2462,6 +2878,7 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
       <div style={styles.tabRow}>
         {[
           { id: "content", label: "Content" },
+          { id: "image", label: "Image & Links" },
           { id: "style", label: "Style" },
           { id: "colours", label: "Colours" },
           { id: "motion", label: "Motion" },
@@ -2562,6 +2979,118 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
                 ))}
               </div>
               <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={addPlan}>+ Add Plan</button>
+            </div>
+          </>
+        ) : null}
+        {activeTab === "image" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[1] }}>
+              <label style={styles.propertyLabel}>Pricing Image</label>
+              <label style={styles.assetUploadCta}>
+                Upload Pricing Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={styles.hiddenInput}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    const asset = await Promise.resolve(onUploadImage?.(index, "pricingImageUrl", file));
+                    if (asset?.src) update({ pricingImageUrl: asset.src, pricingImageAlt: asset.name || props.pricingImageAlt || "Pricing options" });
+                  }}
+                />
+              </label>
+              <input
+                type="text"
+                value={String(props.pricingImageUrl || "")}
+                onChange={(event) => update({ pricingImageUrl: event.target.value })}
+                style={{ ...styles.propertyInput, marginTop: 10 }}
+                placeholder="Or paste image URL"
+              />
+              <input
+                type="text"
+                value={String(props.pricingImageAlt || "")}
+                onChange={(event) => update({ pricingImageAlt: event.target.value })}
+                style={{ ...styles.propertyInput, marginTop: 8 }}
+                placeholder="Image alt text"
+              />
+              <div style={{ marginTop: 10 }}>
+                <NumberField label="Image Max Width" value={Number(props.pricingImageMaxWidth || 980)} min={240} max={1320} onChange={(value) => update({ pricingImageMaxWidth: value })} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <div>
+                  <label style={styles.propertyLabel}>Image Fit</label>
+                  <select value={String(props.pricingImageFit || "contain")} onChange={(event) => update({ pricingImageFit: event.target.value })} style={styles.propertyInput}>
+                    <option value="contain">Contain</option>
+                    <option value="cover">Cover</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={styles.propertyLabel}>Corner Radius</label>
+                  <input
+                    type="number"
+                    value={Number(props.pricingImageRadius || 12)}
+                    onChange={(event) => update({ pricingImageRadius: Number(event.target.value) || 0 })}
+                    style={styles.propertyInput}
+                    min={0}
+                    max={48}
+                  />
+                </div>
+              </div>
+              {props.pricingImageUrl ? (
+                <div style={{ marginTop: 12, border: "1px solid rgba(148,163,184,0.35)", borderRadius: 10, overflow: "hidden", background: "#020617" }}>
+                  <img src={props.pricingImageUrl} alt="" style={{ display: "block", width: "100%", maxHeight: 240, objectFit: "contain" }} />
+                </div>
+              ) : null}
+              {props.pricingImageUrl ? (
+                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, color: "#fca5a5" }} onClick={() => update({ pricingImageUrl: "" })}>Remove Pricing Image</button>
+              ) : null}
+            </div>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
+              <div style={styles.linkRowHeader}>
+                <label style={styles.propertyLabel}>Clickable Link Areas</label>
+                <button type="button" style={styles.secondaryBtn} onClick={addHotspot}>+ Add Link Area</button>
+              </div>
+              <p style={{ margin: "0 0 10px", color: "#cbd5e1", fontSize: 14, lineHeight: 1.45 }}>
+                Positions are percentages of the image: X/Y place the top-left corner, W/H control the clickable area size.
+              </p>
+              <div style={styles.propertyGrid}>
+                {hotspots.map((spot, hotspotIndex) => (
+                  <div key={spot.id || `pricing-hotspot-edit-${hotspotIndex}`} style={{ ...styles.linkRowCard, ...planEditorShells[hotspotIndex % planEditorShells.length] }}>
+                    <div style={styles.linkRowHeader}>
+                      <span style={styles.linkRowTitle}>{spot.label || `Link Area ${hotspotIndex + 1}`}</span>
+                      <button type="button" style={styles.iconDeleteBtn} onClick={() => removeHotspot(hotspotIndex)} title="Delete link area">×</button>
+                    </div>
+                    <input type="text" value={String(spot.label || "")} onChange={(event) => updateHotspot(hotspotIndex, { label: event.target.value })} style={styles.propertyInput} placeholder="Label, e.g. Growth plan button" />
+                    <input type="text" value={String(spot.href || "")} onChange={(event) => updateHotspot(hotspotIndex, { href: event.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="/checkout?plan=growth or https://..." />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginTop: 8 }}>
+                      {[
+                        ["x", "X"],
+                        ["y", "Y"],
+                        ["width", "W"],
+                        ["height", "H"],
+                      ].map(([key, label]) => (
+                        <label key={`hotspot-${hotspotIndex}-${key}`} style={{ display: "grid", gap: 4, color: "#cbd5e1", fontSize: 12, fontWeight: 800 }}>
+                          {label} %
+                          <input
+                            type="number"
+                            value={Number(spot[key] ?? (key === "width" ? 20 : key === "height" ? 8 : 0))}
+                            onChange={(event) => updateHotspot(hotspotIndex, { [key]: Math.max(0, Math.min(100, Number(event.target.value) || 0)) })}
+                            style={styles.propertyInput}
+                            min={0}
+                            max={100}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+                      <input type="checkbox" checked={!!spot.newTab} onChange={(event) => updateHotspot(hotspotIndex, { newTab: event.target.checked })} style={styles.checkboxInput} />
+                      Open in new tab
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         ) : null}
@@ -3584,8 +4113,8 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
               checked={!!props.showOverlayText}
               onChange={(e) => update({
                 showOverlayText: e.target.checked,
-                headline: e.target.checked ? (props.headline || "Add image headline") : props.headline,
-                subheadline: e.target.checked ? (props.subheadline || "Add supporting text") : props.subheadline,
+                headline: props.headline,
+                subheadline: props.subheadline,
               })}
               style={styles.checkboxInput}
             />
@@ -3742,7 +4271,7 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
   );
 }
 
-function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, pages = [] }) {
   const props = block.props || {};
   const [section, setSection] = useState("setup");
   const navbarSectionShells = [
@@ -3880,6 +4409,7 @@ function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
               <label style={styles.propertyLabel}>Navigation Links</label>
               <NavbarLinksEditor
                 links={props.links}
+                pages={pages}
                 onChange={(links) => update({ links })}
               />
             </div>
@@ -4241,9 +4771,41 @@ function getTextAnimationBinding(block, editable) {
 function getSelectionStyleSource(editable, selection) {
   if (!editable) return null;
   const activeSelection = selection || (typeof window !== "undefined" ? window.getSelection?.() : null);
+  if (activeSelection?.rangeCount) {
+    const range = activeSelection.getRangeAt(0);
+    if (!range.collapsed) {
+      const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+          try {
+            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          } catch {
+            return NodeFilter.FILTER_REJECT;
+          }
+        },
+      });
+      const selectedTextNode = walker.nextNode();
+      if (selectedTextNode?.parentElement && editable.contains(selectedTextNode.parentElement)) {
+        return selectedTextNode.parentElement;
+      }
+
+      const elementWalker = document.createTreeWalker(editable, NodeFilter.SHOW_ELEMENT, {
+        acceptNode(node) {
+          if (!(node instanceof Element) || node === editable) return NodeFilter.FILTER_REJECT;
+          try {
+            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+          } catch {
+            return NodeFilter.FILTER_REJECT;
+          }
+        },
+      });
+      const selectedElement = elementWalker.nextNode();
+      if (selectedElement instanceof Element) return selectedElement;
+    }
+  }
   const node = activeSelection?.focusNode || activeSelection?.anchorNode || null;
   const element = node?.nodeType === 3 ? node.parentElement : node;
-  if (element instanceof Element && editable.contains(element)) {
+  if (element instanceof Element && element !== editable && editable.contains(element)) {
     return element;
   }
   return editable;
@@ -4289,6 +4851,17 @@ function normalizeLineHeightValue(value, fallback = 1.5) {
   const fallbackValue = Number.isFinite(Number(fallback)) ? Number(fallback) : 1.5;
   if (!Number.isFinite(parsed) || parsed <= 0) return Math.max(0.8, Math.min(3, Number(fallbackValue.toFixed(2))));
   return Math.max(0.8, Math.min(3, Number(parsed.toFixed(2))));
+}
+
+function parseToolbarFontSize(value, fallback = 18) {
+  const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
+  const fallbackParsed = Number.parseFloat(String(fallback ?? "").replace("px", ""));
+  const next = Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : Number.isFinite(fallbackParsed) && fallbackParsed > 0
+      ? fallbackParsed
+      : 18;
+  return Math.max(8, Math.min(240, Math.round(next)));
 }
 
 function stripInlineCssPropertyFromHtml(value, propertyName) {
@@ -4421,20 +4994,28 @@ function FontPickerDropdown({ value, onChange, onPreserveSelection }) {
   );
 }
 
-function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, blockType, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
+function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fontSize, lineHeight, fontWeight, fontStyle, textDecoration, textAlign, blockType, hasCopiedFormat, canStyleBox, boxBackgroundColor, boxBackgroundImage, boxWidth, onClearBoxBackground, onBoxBackgroundColor, onBoxBackgroundImageUpload, onClearBoxBackgroundImage, onBoxWidthChange, onCommand, onTextColor, onHighlightColor, onFontSize, onLineHeight, onBlockType, onFontFamily, onCopyFormat, onClearCopiedFormat, onOpenAnimations, position, onDragStart, onClose, onPreserveSelection }) {
   const backgroundFileInputRef = useRef(null);
   const currentLineHeight = normalizeLineHeightValue(lineHeight || 1.5);
-  const currentFontSize = Math.max(8, Math.min(240, Math.round(Number(fontSize || 18) || 18)));
+  const currentFontSize = parseToolbarFontSize(fontSize, 18);
   const fontSizeOptions = TEXT_TOOLBAR_SIZES.includes(currentFontSize)
     ? TEXT_TOOLBAR_SIZES
     : [...TEXT_TOOLBAR_SIZES, currentFontSize].sort((a, b) => a - b);
   const lineHeightOptions = TEXT_TOOLBAR_LINE_HEIGHTS.includes(currentLineHeight)
     ? TEXT_TOOLBAR_LINE_HEIGHTS
     : [...TEXT_TOOLBAR_LINE_HEIGHTS, currentLineHeight].sort((a, b) => a - b);
+  const defaultToolbarLineHeight = blockType === "P" ? 1.7 : blockType === "H1" ? 1.08 : blockType === "H2" ? 1.14 : blockType === "H3" ? 1.2 : 1.5;
 
   const keepSelection = (event, callback) => {
     event.preventDefault();
+    onPreserveSelection?.();
     callback?.();
+  };
+
+  const handleFontSizeChange = (value) => {
+    onPreserveSelection?.();
+    const nextSize = parseToolbarFontSize(value, currentFontSize);
+    onFontSize?.(nextSize);
   };
 
   const startHeaderDrag = (event) => {
@@ -4450,16 +5031,17 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
   ];
 
   const textButtons = [
-    { label: "B", title: "Bold", action: () => onCommand("bold") },
-    { label: "I", title: "Italic", action: () => onCommand("italic") },
-    { label: "U", title: "Underline", action: () => onCommand("underline") },
+    { label: "B", title: "Bold", active: Number.parseInt(fontWeight || "400", 10) >= 600, action: () => onCommand("bold") },
+    { label: "I", title: "Italic", active: fontStyle === "italic", action: () => onCommand("italic") },
+    { label: "U", title: "Underline", active: String(textDecoration || "").includes("underline"), action: () => onCommand("underline") },
   ];
 
+  const currentTextAlign = ["left", "center", "right", "justify"].includes(String(textAlign || "")) ? String(textAlign) : "left";
   const alignButtons = [
-    { label: "Left", title: "Align left", action: () => onCommand("justifyLeft") },
-    { label: "Center", title: "Align center", action: () => onCommand("justifyCenter") },
-    { label: "Right", title: "Align right", action: () => onCommand("justifyRight") },
-    { label: "Justify", title: "Justify", action: () => onCommand("justifyFull") },
+    { label: "Left", title: "Align left", value: "left", action: () => onCommand("justifyLeft") },
+    { label: "Center", title: "Align center", value: "center", action: () => onCommand("justifyCenter") },
+    { label: "Right", title: "Align right", value: "right", action: () => onCommand("justifyRight") },
+    { label: "Justify", title: "Justify", value: "justify", action: () => onCommand("justifyFull") },
   ];
 
   const utilityButtons = [
@@ -4488,7 +5070,7 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
         <span style={styles.textToolbarTitle}>Text Controls</span>
         <span style={styles.textToolbarSubtitle}>Quick inline editor</span>
         <button type="button" style={styles.textToolbarDoneBtn} onMouseDown={(event) => keepSelection(event, onClose)}>
-          Hide
+          Done
         </button>
       </div>
       <div style={styles.textToolbarBody}>
@@ -4514,45 +5096,41 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
           <label style={styles.textToolbarLabel}>
             Size
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 6 }}>
+              <button
+                type="button"
+                title="Decrease font size"
+                style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+                onMouseDown={(event) => keepSelection(event, () => {
+                  const nextSize = Math.max(8, currentFontSize - 1);
+                  onFontSize?.(nextSize);
+                })}
+              >−</button>
               <select
-                value={String(currentFontSize)}
-                style={{ ...styles.textToolbarSelect, minWidth: 82, marginTop: 0 }}
+                value={currentFontSize}
+                aria-label="Font size in pixels"
+                style={{ ...styles.textToolbarSelect, width: 86, minWidth: 86, marginTop: 0, padding: "4px 6px" }}
                 onMouseDownCapture={() => onPreserveSelection?.()}
-                onChange={(event) => onFontSize?.(Number(event.target.value))}
+                onFocus={() => onPreserveSelection?.()}
+                onChange={(event) => handleFontSizeChange(event.target.value)}
               >
                 {fontSizeOptions.map((value) => (
                   <option key={`font-size-${value}`} value={value}>{value}px</option>
                 ))}
               </select>
-              <input
-                type="number"
-                min={8}
-                max={240}
-                value={currentFontSize}
-                aria-label="Font size in pixels"
-                style={{ ...styles.textToolbarSelect, width: 64, minWidth: 64, marginTop: 0, padding: "4px 6px" }}
-                onMouseDownCapture={() => onPreserveSelection?.()}
-                onChange={(event) => {
-                  const nextSize = Math.max(8, Math.min(240, Number(event.target.value) || currentFontSize));
+              <button
+                type="button"
+                title="Increase font size"
+                style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
+                onMouseDown={(event) => keepSelection(event, () => {
+                  const nextSize = Math.min(240, currentFontSize + 1);
                   onFontSize?.(nextSize);
-                }}
-              />
+                })}
+              >+</button>
             </div>
           </label>
           <label style={styles.textToolbarLabel}>
-            Line
-            <select
-              value={String(currentLineHeight)}
-              style={{ ...styles.textToolbarSelect, minWidth: 88, marginTop: 6 }}
-              onMouseDownCapture={() => onPreserveSelection?.()}
-              onChange={(event) => onLineHeight?.(Number(event.target.value))}
-            >
-              {lineHeightOptions.map((value) => (
-                <option key={`line-height-${value}`} value={value}>{value}</option>
-              ))}
-            </select>
-          </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            Line spacing
+            <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap", marginTop: 6 }}>
             <button
               type="button"
               title="Decrease line spacing"
@@ -4565,64 +5143,46 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
               onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(currentLineHeight + 0.05)))}
             >+</button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 3, flexWrap: "nowrap" }}>
+            <select
+              value={String(currentLineHeight)}
+              style={{ ...styles.textToolbarSelect, width: 78, minWidth: 78, marginTop: 0 }}
+              onMouseDownCapture={() => onPreserveSelection?.()}
+              onChange={(event) => onLineHeight?.(Number(event.target.value))}
+            >
+              {lineHeightOptions.map((value) => (
+                <option key={`line-height-${value}`} value={value}>{value}</option>
+              ))}
+            </select>
             <button
               type="button"
-              title="Decrease font size"
-              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
-              onMouseDown={(event) => keepSelection(event, () => {
-                const sizes = TEXT_TOOLBAR_SIZES;
-                const cur = Number(fontSize || 18);
-                const idx = sizes.findIndex((s) => s >= cur);
-                const next = idx > 0 ? sizes[idx - 1] : sizes[0];
-                onFontSize?.(next);
-              })}
-            >−</button>
-            {[14, 16, 18, 20, 24, 28, 32, 36, 48, 64].map((size) => (
-              <button
-                key={size}
-                type="button"
-                title={`${size}px`}
-                style={{
-                  ...styles.textToolbarIconBtn,
-                  minWidth: 30,
-                  padding: "0 5px",
-                  fontSize: 12,
-                  fontWeight: Number(fontSize) === size ? 800 : 400,
-                  background: Number(fontSize) === size ? "rgba(14,165,233,0.85)" : undefined,
-                  color: Number(fontSize) === size ? "#fff" : undefined,
-                  outline: Number(fontSize) === size ? "none" : undefined,
-                }}
-                onMouseDown={(event) => keepSelection(event, () => onFontSize?.(size))}
-              >{size}</button>
-            ))}
-            <button
-              type="button"
-              title="Increase font size"
-              style={{ ...styles.textToolbarIconBtn, fontWeight: 700, fontSize: 15, minWidth: 26, padding: "0 5px" }}
-              onMouseDown={(event) => keepSelection(event, () => {
-                const sizes = TEXT_TOOLBAR_SIZES;
-                const cur = Number(fontSize || 18);
-                const idx = sizes.findIndex((s) => s > cur);
-                const next = idx >= 0 ? sizes[idx] : sizes[sizes.length - 1];
-                onFontSize?.(next);
-              })}
-            >+</button>
-          </div>
+              title="Reset line spacing"
+              style={{ ...styles.textToolbarActionChip, padding: "4px 8px", minHeight: 30 }}
+              onMouseDown={(event) => keepSelection(event, () => onLineHeight?.(normalizeLineHeightValue(defaultToolbarLineHeight)))}
+            >Reset</button>
+            </div>
+          </label>
         </div>
         <div style={styles.textToolbarInlineDivider} />
         <div style={{ ...styles.textToolbarInlineGroup, ...styles.textToolbarFormattingGroup }}>
           <div style={styles.textToolbarButtonRow}>
             {textButtons.map((item) => (
-              <button key={item.title} type="button" title={item.title} style={styles.textToolbarIconBtn} onMouseDown={(event) => keepSelection(event, item.action)}>
+              <button key={item.title} type="button" title={item.title} style={{ ...styles.textToolbarIconBtn, ...(item.active ? { background: "#0ea5e9", color: "#ffffff", borderColor: "#0284c7" } : {}) }} onMouseDown={(event) => keepSelection(event, item.action)}>
                 {item.label}
               </button>
             ))}
           </div>
           <div style={styles.textToolbarButtonRow}>
             {alignButtons.map((item) => (
-              <button key={item.title} type="button" title={item.title} style={styles.textToolbarMiniActionChip} onMouseDown={(event) => keepSelection(event, item.action)}>
+              <button
+                key={item.title}
+                type="button"
+                title={item.title}
+                style={{
+                  ...styles.textToolbarMiniActionChip,
+                  ...(currentTextAlign === item.value ? { background: "#0ea5e9", color: "#ffffff", borderColor: "#0284c7" } : {}),
+                }}
+                onMouseDown={(event) => keepSelection(event, item.action)}
+              >
                 {item.label}
               </button>
             ))}
@@ -4635,6 +5195,27 @@ function TextEditingToolbar({ visible, textColor, highlightColor, fontFamily, fo
               {item.label}
             </button>
           ))}
+          <button
+            type="button"
+            title="Copy format, then click another text box to apply it"
+            style={{
+              ...styles.textToolbarActionChip,
+              ...(hasCopiedFormat ? { background: "#22c55e", color: "#052e16", borderColor: "#16a34a" } : {}),
+            }}
+            onMouseDown={(event) => keepSelection(event, () => onCopyFormat?.())}
+          >
+            Copy Format
+          </button>
+          {hasCopiedFormat ? (
+            <button
+              type="button"
+              title="Cancel copied format"
+              style={styles.textToolbarActionChip}
+              onMouseDown={(event) => keepSelection(event, () => onClearCopiedFormat?.())}
+            >
+              Cancel Format
+            </button>
+          ) : null}
           <button
             type="button"
             style={styles.textToolbarActionChip}
@@ -5567,18 +6148,57 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
             </div>
             <div style={styles.propertyField}>
               <label style={styles.propertyLabel}>Text Vertical Position</label>
-              <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
-                <option value="center">Centre of card</option>
+              <select value={String(props.contentVerticalAlign || "top")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
                 <option value="top">Top of card</option>
+                <option value="center">Centre of card</option>
               </select>
             </div>
-            <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
-            <NumberField label="Card Height (px)" value={Number(props.cardHeight || 420)} min={200} max={900} onChange={(v) => update({ cardHeight: v })} />
-            <NumberField label="Card Gap (px)" value={Number(props.cardGap || 16)} min={0} max={60} onChange={(v) => update({ cardGap: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Fit</label>
+              <select value="contain" onChange={() => update({ imageFit: "contain" })} style={styles.propertyInput}>
+                <option value="contain">Contain</option>
+              </select>
+            </div>
+            <NumberField label="Sticky Top Offset (px)" value={Number(props.accordionStickyTopOffset ?? props.stickyTopOffset ?? 110)} min={0} max={260} onChange={(v) => update({ accordionStickyTopOffset: v, stickyTopOffset: v })} />
+            <NumberField label="Card Header Visible Height (px)" value={Number(props.accordionHeaderHeight ?? 58)} min={40} max={96} onChange={(v) => update({ accordionHeaderHeight: v })} />
+            <NumberField label="Card Stack Gap (px)" value={Number(props.accordionStackGap ?? 8)} min={0} max={32} onChange={(v) => update({ accordionStackGap: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Expanded Card Height</label>
+              <select value={String(props.expandedCardHeightMode || "viewport")} onChange={(e) => update({ expandedCardHeightMode: e.target.value })} style={styles.propertyInput}>
+                <option value="viewport">Viewport minus sticky offset</option>
+                <option value="auto">Auto</option>
+                <option value="custom">Custom px</option>
+              </select>
+            </div>
+            {String(props.expandedCardHeightMode || "viewport") === "custom" ? (
+              <NumberField label="Custom Expanded Height (px)" value={Number(props.expandedCardHeightPx || 720)} min={360} max={1200} onChange={(v) => update({ expandedCardHeightPx: v })} />
+            ) : null}
+            <label style={{ ...styles.inlineToggle, alignSelf: "end" }}>
+              <input
+                type="checkbox"
+                checked={props.lastCardRelease !== false}
+                onChange={(e) => update({ lastCardRelease: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Last card releases naturally
+            </label>
+            <NumberField label="Title Size (px)" value={Number(props.itemLabelFontSize || 24)} min={12} max={72} onChange={(v) => update({ itemLabelFontSize: v })} />
+            <NumberField label="Title Line Height" value={Number(props.itemLabelLineHeight || 1.2)} min={0.8} max={2.4} step={0.05} onChange={(v) => update({ itemLabelLineHeight: v })} />
+            <NumberField label="Title Top Padding (px)" value={Number(props.itemLabelPaddingTop ?? 20)} min={0} max={120} onChange={(v) => update({ itemLabelPaddingTop: v })} />
+            <NumberField label="Title Left Padding (px)" value={Number(props.itemLabelPaddingLeft ?? 32)} min={0} max={160} onChange={(v) => update({ itemLabelPaddingLeft: v })} />
+            <NumberField label="Image Max Width (px)" value={Number(props.imageMaxWidth || 0)} min={0} max={1600} onChange={(v) => update({ imageMaxWidth: v })} />
+            <NumberField label="Image Max Height (px)" value={Number(props.imageMaxHeight || 0)} min={0} max={1200} onChange={(v) => update({ imageMaxHeight: v })} />
+            <NumberField label="Card Max Width (px)" value={Number(props.cardWidth || 1180)} min={640} max={1800} onChange={(v) => update({ cardWidth: v })} />
+            <NumberField label="Card Min Height (px)" value={Number(props.cardMinHeight || props.cardHeight || 650)} min={600} max={800} onChange={(v) => update({ cardMinHeight: v, cardHeight: v })} />
+            <NumberField label="Card Padding (px)" value={Number(props.cardPadding ?? 56)} min={24} max={120} onChange={(v) => update({ cardPadding: v })} />
+            <NumberField label="Column Gap (px)" value={Number(props.cardGap || 32)} min={0} max={120} onChange={(v) => update({ cardGap: v })} />
+            <NumberField label="Card Scroll Gap (px)" value={Number(props.cardScrollGap ?? 240)} min={0} max={360} onChange={(v) => update({ cardScrollGap: v })} />
             <NumberField label="Card Inset (px)" value={Number(props.cardInset || 24)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
             <NumberField label="Heading Size (px)" value={Number(props.headingFontSize ?? 48)} min={16} max={96} onChange={(v) => update({ headingFontSize: v })} />
             <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
-            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
+            <NumberField label="Scroll VH Per Card" value={Number(props.scrollVhPerCard || 120)} min={80} max={300} onChange={(v) => update({ scrollVhPerCard: v })} />
+            <NumberField label="Overlap Delay VH" value={Number(props.overlapDelayVh ?? 60)} min={0} max={200} onChange={(v) => update({ overlapDelayVh: v })} />
+            <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 28)} min={0} max={80} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
         </div>
@@ -5630,14 +6250,32 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <div style={styles.colorGrid}>
             <NumberField label="Lead Offset (px)" value={Number(props.stickyTopOffset ?? 0)} min={0} max={200} onChange={(v) => update({ stickyTopOffset: v })} />
             <NumberField label="Cards Top Lead (px)" value={Number(props.cardLead ?? 0)} min={0} max={200} onChange={(v) => update({ cardLead: v })} />
+            <NumberField label="Visible Header (px)" value={Number(props.peekHeight ?? props.cardPeekHeight ?? 52)} min={48} max={140} onChange={(v) => update({ peekHeight: v })} />
+            <NumberField label="Text Top Padding (px)" value={Number(props.contentTopPadding ?? 72)} min={24} max={180} onChange={(v) => update({ contentTopPadding: v })} />
             <NumberField label="Card Side Padding (px)" value={Number(props.cardInset ?? 0)} min={0} max={80} onChange={(v) => update({ cardInset: v })} />
             <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Text Vertical Alignment</label>
+          <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
+            <option value="top">Top</option>
+            <option value="center">Center</option>
+            <option value="bottom">Bottom</option>
+          </select>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.hideHeaderDivider === true}
+              onChange={(e) => update({ hideHeaderDivider: e.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Hide header divider line
+          </label>
           <ColorSelector label="Card Border Colour" value={props.cardBorderColor || "#3b82f6"} fallback="#3b82f6" onChange={(v) => update({ cardBorderColor: v })} />
         </div>
         {panels.map((panel, panelIdx) => {
           const expanded = expandedIdx === panelIdx;
+          const showPanelCta = panel.showCta !== false;
           return (
             <div key={panel.id || `ss-${panelIdx}`} style={styles.linkRowCard}>
               <div style={styles.linkRowHeader}>
@@ -5674,14 +6312,22 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                     <label style={styles.propertyLabel}>Body</label>
                     <textarea value={String(panel.body || "")} onChange={(e) => updatePanel(panelIdx, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 80, resize: "vertical" }} placeholder="Body text" />
                   </div>
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA Text</label>
-                    <input type="text" value={String(panel.ctaText || "")} onChange={(e) => updatePanel(panelIdx, { ctaText: e.target.value })} style={styles.propertyInput} placeholder="Learn More" />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="checkbox" id={`ss-cta-${panelIdx}`} checked={showPanelCta} onChange={(e) => updatePanel(panelIdx, { showCta: e.target.checked })} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                    <label htmlFor={`ss-cta-${panelIdx}`} style={{ ...styles.propertyLabel, margin: 0, cursor: "pointer" }}>Show CTA button</label>
                   </div>
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA URL</label>
-                    <input type="text" value={String(panel.ctaUrl || "")} onChange={(e) => updatePanel(panelIdx, { ctaUrl: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
-                  </div>
+                  {showPanelCta ? (
+                    <>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>CTA Text</label>
+                        <input type="text" value={String(panel.ctaText || "")} onChange={(e) => updatePanel(panelIdx, { ctaText: e.target.value })} style={styles.propertyInput} placeholder="Learn More" />
+                      </div>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>CTA URL</label>
+                        <input type="text" value={String(panel.ctaUrl || "")} onChange={(e) => updatePanel(panelIdx, { ctaUrl: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                      </div>
+                    </>
+                  ) : null}
                   <div style={styles.propertyField}>
                     <label style={styles.propertyLabel}>Image URL</label>
                     <input type="text" value={String(panel.image || "")} onChange={(e) => updatePanel(panelIdx, { image: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
@@ -5703,19 +6349,21 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                     <label style={styles.propertyLabel}>Image Style</label>
                     <select value={String(panel.imageStyle || "bleed")} onChange={(e) => updatePanel(panelIdx, { imageStyle: e.target.value })} style={styles.propertyInput}>
                       <option value="bleed">Full Bleed</option>
-                      <option value="card">Inset Card (monday.com style)</option>
+                      <option value="card">Inset Card</option>
                     </select>
                   </div>
                   {(panel.imageStyle || "bleed") === "card" ? (
                     <ColorSelector label="Card Background" value={panel.imageCardBg || panel.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => updatePanel(panelIdx, { imageCardBg: v })} />
                   ) : null}
-                  <div style={styles.propertyField}>
-                    <label style={styles.propertyLabel}>CTA Style</label>
-                    <select value={String(panel.ctaStyle || "filled")} onChange={(e) => updatePanel(panelIdx, { ctaStyle: e.target.value })} style={styles.propertyInput}>
-                      <option value="filled">Filled</option>
-                      <option value="pill">Pill (rounded)</option>
-                    </select>
-                  </div>
+                  {showPanelCta ? (
+                    <div style={styles.propertyField}>
+                      <label style={styles.propertyLabel}>CTA Style</label>
+                      <select value={String(panel.ctaStyle || "filled")} onChange={(e) => updatePanel(panelIdx, { ctaStyle: e.target.value })} style={styles.propertyInput}>
+                        <option value="filled">Filled</option>
+                        <option value="pill">Pill (rounded)</option>
+                      </select>
+                    </div>
+                  ) : null}
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <input type="checkbox" id={`ss-dot-${panelIdx}`} checked={panel.eyebrowDot !== false} onChange={(e) => updatePanel(panelIdx, { eyebrowDot: e.target.checked })} style={{ width: 14, height: 14, cursor: "pointer" }} />
                     <label htmlFor={`ss-dot-${panelIdx}`} style={{ ...styles.propertyLabel, margin: 0, cursor: "pointer" }}>Show eyebrow colour dot</label>
@@ -5748,7 +6396,7 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
           style={{ ...styles.primaryBtn, width: "100%", marginTop: 4 }}
           onClick={() => {
             const now = Date.now(); const len = panels.length;
-            update({ panels: [...panels, { id: `ss-panel-${now}`, eyebrow: `Section ${len + 1}`, heading: "A bold, compelling headline", body: "Explain your value proposition clearly and concisely.", ctaText: "Learn More", ctaUrl: "#", image: "", imageAlt: "", imagePosition: len % 2 === 0 ? "right" : "left", backgroundColor: "#0f172a", textColor: "#ffffff", accentColor: "#0ea5e9" }] });
+            update({ panels: [...panels, { id: `ss-panel-${now}`, eyebrow: `Section ${len + 1}`, heading: "A bold, compelling headline", body: "Explain your value proposition clearly and concisely.", showCta: true, ctaText: "Learn More", ctaUrl: "#", image: "", imageAlt: "", imagePosition: len % 2 === 0 ? "right" : "left", backgroundColor: "#0f172a", textColor: "#ffffff", accentColor: "#0ea5e9" }] });
             setExpandedIdx(len);
           }}
         >+ Add Panel</button>

@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
+import { isDeveloperEmail } from "../lib/adminUsers";
 
 function formatSignupError(error) {
   const raw = String(error?.message || "");
@@ -23,6 +24,18 @@ function formatSignupError(error) {
   }
 
   return raw || "Something went wrong while creating your account.";
+}
+
+function hasActiveSubscription(account) {
+  const status = String(account?.subscription_status || "").toLowerCase();
+  return !!status && !["none", "inactive", "cancelled", "canceled", "past_due"].includes(status);
+}
+
+function isPlatformApproved(account) {
+  if (!account) return false;
+  const status = String(account.status || "").toLowerCase();
+  const blocked = ["paused", "rejected", "declined", "disabled"].includes(status);
+  return !blocked && (account.is_approved === true || account.approved === true);
 }
 
 export default function Login() {
@@ -143,9 +156,17 @@ export default function Login() {
       const user = data?.user;
       if (!user) return setMsg("Invalid login credentials.");
 
+      if (isDeveloperEmail(user.email)) {
+        const redirectTo = router.query.redirect;
+        if (redirectTo && String(redirectTo).startsWith("/")) {
+          return router.push(String(redirectTo));
+        }
+        return router.push("/dashboard");
+      }
+
       const { data: account } = await supabase
         .from("accounts")
-        .select("is_approved, subscription_status, status")
+        .select("is_approved, approved, subscription_status, status, onboarding_completed")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -177,26 +198,26 @@ export default function Login() {
         return router.push("/account");
       }
 
-      if (account.status === "paused") {
+      const accountStatus = String(account.status || "").toLowerCase();
+      if (accountStatus === "paused") {
         await supabase.auth.signOut();
         setMsg("Your account is temporarily paused. Please contact support to restore access.");
         return;
       }
 
       // ✅ Routing logic
-      if (!account.is_approved || account.status === "pending") {
+      if (!isPlatformApproved(account)) {
         return router.push("/account");
       }
 
-      if (account.is_approved === true) {
+      if (isPlatformApproved(account)) {
         // Honour explicit redirect param (e.g. from approval email link)
         const redirectTo = router.query.redirect;
         if (redirectTo && redirectTo.startsWith("/")) {
           return router.push(redirectTo);
         }
         // Approved but no active subscription → must complete billing first
-        const hasSub = account.subscription_status && account.subscription_status !== "none" && account.subscription_status !== "inactive";
-        if (!hasSub) {
+        if (!hasActiveSubscription(account)) {
           return router.push("/billing");
         }
         return router.push("/dashboard");

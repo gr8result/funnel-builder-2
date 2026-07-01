@@ -20,7 +20,7 @@ import {
   DEFAULT_ENQUIRY_BOOKING_URL, resolveContactBookingUrl, htmlToPlainText,
   createPricingPlan, normalizePricingPlans,
   NAVBAR_STYLE_PRESETS, BLOCK_STYLE_PRESETS, COPY_TONE_OPTIONS,
-  getHeroLayoutDefaults, applyHeroPresetLayout, withHeroOverlayDefaults,
+  applyHeroPresetLayout,
   TEXT_SIZE_OPTIONS, ANIMATION_PRESETS,
 } from "./pbEditorUtils";
 import { styles } from "./pbStyles";
@@ -55,6 +55,52 @@ import {
   BlockLibraryPanel, PageSectionsPanel,
 } from "./pbPropertiesPanels";
 
+class BlockPreviewBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    if (typeof console !== "undefined") {
+      console.error("Website builder block preview failed", {
+        blockId: this.props.block?.id,
+        blockType: this.props.block?.type,
+        error,
+        info,
+      });
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.error && (prevProps.block !== this.props.block || prevProps.resetKey !== this.props.resetKey)) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      const message = this.state.error?.message || "This block could not be rendered.";
+      return (
+        <div style={styles.blockPreviewError}>
+          <strong style={styles.blockPreviewErrorTitle}>
+            {this.props.label || "Block preview failed"}
+          </strong>
+          <span style={styles.blockPreviewErrorText}>
+            {this.props.block?.type ? `${this.props.block.type}: ${message}` : message}
+          </span>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected, layoutWidth }) {
   return renderBlockPreview(block, brandAssets, {
     compact,
@@ -76,12 +122,12 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
   const [hoveredSlot, setHoveredSlot] = useState(null);
-  const isDragTarget = activeDragIndex !== null && activeDragIndex !== index && block.type === "columns-2";
+  const isDragTarget = false;
   const stickyMode = String(block?.props?.stickyMode || "normal");
   const isStickyNavBlock = block?.type === "nav-bar" && stickyMode !== "normal";
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
@@ -131,15 +177,21 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         width: "100%",
         maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
+        background: frameBackground,
+        border: "none",
+        outline: "none",
+        boxShadow: "none",
         ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? (() => {
           const sp    = block.props || {};
-          const spBg  = sp.backgroundStyle === "color"    ? sp.backgroundColor || "transparent"
+          const spColor = String(sp.backgroundColor || "").trim().toLowerCase();
+          const defaultWhiteSpacer = spColor === "" || spColor === "#fff" || spColor === "#ffffff" || spColor === "white" || spColor === "rgb(255, 255, 255)";
+          const spBg  = sp.backgroundStyle === "color"    ? (defaultWhiteSpacer ? "transparent" : sp.backgroundColor)
                       : sp.backgroundStyle === "gradient" ? sp.backgroundGradient || "transparent"
                       : sp.backgroundStyle === "image" && sp.backgroundImage
                           ? `url(${JSON.stringify(sp.backgroundImage)}) ${sp.backgroundPosition || "center center"} / ${sp.backgroundSize || "cover"} no-repeat`
                       : "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px";
-          return { padding: 0, background: spBg, border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
+          return { padding: 0, background: spBg, border: "none", borderRadius: 0, outline: selected ? "1px dashed rgba(99,102,241,0.35)" : "none", minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
         })() : {}),
         ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "grid-section" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
         ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
@@ -277,7 +329,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             >
               🗑
             </button>
-            {!compactPreview && onSaveAsGlobal ? (
+            {!compactPreview && onSaveAsGlobal && block?.type === BlockTypes.NAV_BAR ? (
               <>
                 <button
                   type="button"
@@ -290,6 +342,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                 >
                   📌 Nav
                 </button>
+              </>
+            ) : null}
+            {!compactPreview && onSaveAsGlobal && block?.type === BlockTypes.FOOTER ? (
+              <>
                 <button
                   type="button"
                   style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
@@ -326,20 +382,22 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         </div>
         ) : null}
         <div style={{ ...styles.blockPreview, ...(showOverlay ? styles.blockPreviewWithOverlay : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
-          <CanvasBlockPreview
-            key={`${block.id || index}-${animationReplayToken || 0}`}
-            block={block}
-            index={index}
-            brandAssets={brandAssets}
-            compact={compactPreview}
-            layoutWidth={pageCanvasWidth}
-            selected={selected}
-            onChange={onChange}
-            onUploadImage={onUploadImage}
-            onUploadLayerImage={onUploadLayerImage}
-            onSelectAsset={onSelectAsset}
-            replayToken={animationReplayToken}
-          />
+          <BlockPreviewBoundary block={block} resetKey={animationReplayToken} label="Block preview failed">
+            <CanvasBlockPreview
+              key={`${block.id || index}-${animationReplayToken || 0}`}
+              block={block}
+              index={index}
+              brandAssets={brandAssets}
+              compact={compactPreview}
+              layoutWidth={pageCanvasWidth}
+              selected={selected}
+              onChange={onChange}
+              onUploadImage={onUploadImage}
+              onUploadLayerImage={onUploadLayerImage}
+              onSelectAsset={onSelectAsset}
+              replayToken={animationReplayToken}
+            />
+          </BlockPreviewBoundary>
           {isDragTarget ? (
             <div style={{ position: "absolute", inset: 0, display: "grid", gridTemplateColumns: "1fr 1fr", zIndex: 30, pointerEvents: "all" }}>
               {[{ key: "leftColumnBlock", label: "Left Column" }, { key: "rightColumnBlock", label: "Right Column" }].map(({ key, label }) => (
@@ -390,54 +448,6 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
     </div>
   );
 };
-
-function CounterLiveStats({ projectId, startNumber }) {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const fetchStats = React.useCallback(() => {
-    if (!projectId) return;
-    setLoading(true);
-    const base = Math.max(0, Number(startNumber || 0));
-    fetch(`/api/website/track-visit?projectId=${encodeURIComponent(projectId)}&base=${base}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setStats(data); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [projectId, startNumber]);
-
-  useEffect(() => { fetchStats(); }, [fetchStats]);
-
-  const realVisits = stats?.totalVisits ?? 0;
-  const totalShown = stats?.count ?? startNumber ?? 0;
-
-  return (
-    <div style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: "#38bdf8", letterSpacing: "0.08em" }}>LIVE VISIT DATA</span>
-        <button
-          type="button"
-          onClick={fetchStats}
-          disabled={loading}
-          style={{ fontSize: 16, padding: "2px 8px", borderRadius: 5, border: "1px solid rgba(14,165,233,0.4)", background: "transparent", color: "#38bdf8", cursor: loading ? "default" : "pointer", opacity: loading ? 0.5 : 1 }}
-        >{loading ? "…" : "↻ Refresh"}</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#0ea5e9", lineHeight: 1 }}>{totalShown.toLocaleString()}</div>
-          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>shown on counter</div>
-        </div>
-        <div style={{ textAlign: "center", background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "6px 4px" }}>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#10b981", lineHeight: 1 }}>{realVisits.toLocaleString()}</div>
-          <div style={{ fontSize: 16, color: "#94a3b8", marginTop: 2 }}>real visits tracked</div>
-        </div>
-      </div>
-      <p style={{ margin: "8px 0 0", fontSize: 16, color: "#64748b", lineHeight: 1.4 }}>
-        Visits are recorded when someone opens your <strong style={{ color: "#94a3b8" }}>Preview</strong> or <strong style={{ color: "#94a3b8" }}>live published page</strong> — not this editor.
-      </p>
-    </div>
-  );
-}
 
 function MarqueeItemEditor({ item, index, onChange, onRemove, stylesRef }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -642,13 +652,14 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
         </div>
       ) : null}
       <div style={styles.globalBlockPreviewSurface}>
-        
-        {renderWebsiteBlock(block, {
-          compact,
-          assets: brandAssets,
-          editor: true,
-          onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
-        })}
+        <BlockPreviewBoundary block={block} label="Global block preview failed">
+          {renderWebsiteBlock(block, {
+            compact,
+            assets: brandAssets,
+            editor: true,
+            onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
+          })}
+        </BlockPreviewBoundary>
       </div>
     </div>
   );
@@ -773,6 +784,13 @@ function ImageStackPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               min={240}
               max={1400}
               onChange={(value) => update({ minHeight: `${Math.max(240, value)}px` })}
+            />
+            <NumberField
+              label="Canvas Width"
+              value={Number(props.baseLayoutWidth || 1100)}
+              min={720}
+              max={2400}
+              onChange={(value) => update({ baseLayoutWidth: Math.max(720, value) })}
             />
             <div style={styles.colorField}>
               <span style={styles.colorLabel}>Background</span>
@@ -1116,9 +1134,10 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
 
         {columnConfigs.map((column) => {
           const imageValue = resolveAssetField(props, column.imageKey, brandAssets) || props?.[column.imageKey] || "";
-          const colContentType = String(props?.[`${column.prefix}ContentType`] || "text");
+          const rawContentType = String(props?.[`${column.prefix}ContentType`] || "text");
+          const colContentType = rawContentType === "newsletter" ? "newsletter" : "text";
           const isNewsletter = colContentType === "newsletter";
-          const isBlock = colContentType === "block";
+          const isBlock = false;
           const embeddedBlock = props?.[`${column.prefix}Block`] || null;
           const colBg = props[`${column.prefix}BackgroundColor`] || props.columnBackgroundColor || props.cardBackgroundColor || "#f8fafc";
           return (
@@ -1137,10 +1156,10 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
 
               {/* Column type selector */}
               <div style={styles.inlineChipRow}>
-                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }, { value: "block", label: "📦 Embedded Block" }].map((opt) => (
+                {[{ value: "text", label: "📝 Text / Image" }, { value: "newsletter", label: "📬 Newsletter" }].map((opt) => (
                   <button key={opt.value} type="button"
                     style={{ ...styles.presetChip, ...(colContentType === opt.value ? styles.presetChipActive : {}) }}
-                    onClick={() => update({ [`${column.prefix}ContentType`]: opt.value })}
+                    onClick={() => update({ [`${column.prefix}ContentType`]: opt.value, [`${column.prefix}Block`]: null })}
                   >{opt.label}</button>
                 ))}
               </div>
@@ -1284,7 +1303,7 @@ function ColumnsPropertiesPanel({ block, index, onChange, brandAssets, onUploadI
                                             updateEB({ rows: next });
                                           }}
                                           style={{ ...styles.propertyInput, flex: 1, margin: 0, fontSize: 11 }}
-                                          placeholder="monday.com"
+                                          placeholder="asana.com"
                                         />
                                         {logo.src ? (
                                           <button
@@ -1957,7 +1976,15 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
   useEffect(() => {
     let cancelled = false;
     fetch("/api/website-builder/icon-library")
-      .then((response) => response.ok ? response.json() : { entries: [] })
+      .then(async (response) => {
+        if (!response.ok) return { entries: [] };
+        const text = await response.text();
+        try {
+          return text ? JSON.parse(text) : { entries: [] };
+        } catch {
+          return { entries: [] };
+        }
+      })
       .then((payload) => {
         if (cancelled) return;
         setDiscoveredIconEntries(Array.isArray(payload?.entries) ? payload.entries : []);
@@ -2280,6 +2307,187 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
   );
 }
 
+function TemplateShowcasePropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const templates = Array.isArray(props.templates) ? props.templates : [];
+  const stats = Array.isArray(props.stats) ? props.stats : [];
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateTemplate = (itemIndex, patch) => {
+    update({
+      templates: templates.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+  const updateStat = (itemIndex, patch) => {
+    update({
+      stats: stats.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>Edit: Template Showcase</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Eyebrow</label>
+          <input type="text" value={String(props.eyebrow || "")} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Headline</label>
+          <textarea value={String(props.headline || "")} onChange={(e) => update({ headline: e.target.value })} style={{ ...styles.propertyInput, minHeight: 76, resize: "vertical" }} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subheadline</label>
+          <textarea value={String(props.subheadline || "")} onChange={(e) => update({ subheadline: e.target.value })} style={{ ...styles.propertyInput, minHeight: 92, resize: "vertical" }} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Primary CTA</label>
+          <input type="text" value={String(props.ctaText || "")} onChange={(e) => update({ ctaText: e.target.value })} style={styles.propertyInput} placeholder="Button text" />
+          <input type="text" value={String(props.ctaLink || "")} onChange={(e) => update({ ctaLink: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="#contact-us" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Secondary CTA</label>
+          <input type="text" value={String(props.secondaryCtaText || "")} onChange={(e) => update({ secondaryCtaText: e.target.value })} style={styles.propertyInput} placeholder="Button text" />
+          <input type="text" value={String(props.secondaryCtaLink || "")} onChange={(e) => update({ secondaryCtaLink: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="#templates" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <NumberField label="Animation Speed (s)" value={Number(props.speed || 34)} min={12} max={90} onChange={(value) => update({ speed: value })} />
+          <NumberField label="Minimum Height (px)" value={parsePixelValue(props.minHeight, 720)} min={420} max={1100} onChange={(value) => update({ minHeight: `${value}px` })} />
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.reverse === true} onChange={(e) => update({ reverse: e.target.checked })} style={styles.checkboxInput} />
+            Reverse scroll direction
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input type="checkbox" checked={props.showDeviceFocus !== false} onChange={(e) => update({ showDeviceFocus: e.target.checked })} style={styles.checkboxInput} />
+            Show laptop and phone focus
+          </label>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <ColorSelector label="Background" value={props.backgroundColor || "#080b14"} fallback="#080b14" onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Text" value={props.textColor || "#f8fafc"} fallback="#f8fafc" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Muted Text" value={props.mutedTextColor || "#b8c2d8"} fallback="#b8c2d8" onChange={(value) => update({ mutedTextColor: value })} />
+          <ColorSelector label="Accent" value={props.accentColor || "#24d3ee"} fallback="#24d3ee" onChange={(value) => update({ accentColor: value })} />
+          <ColorSelector label="Second Accent" value={props.secondaryAccentColor || "#8b5cf6"} fallback="#8b5cf6" onChange={(value) => update({ secondaryAccentColor: value })} />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Stats</label>
+          {stats.map((stat, statIndex) => (
+            <div key={`ts-stat-${statIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <input type="text" value={String(stat.value || "")} onChange={(e) => updateStat(statIndex, { value: e.target.value })} style={styles.propertyInput} placeholder="80+" />
+              <input type="text" value={String(stat.label || "")} onChange={(e) => updateStat(statIndex, { label: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="industry layouts" />
+            </div>
+          ))}
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Template Cards</label>
+          {templates.map((item, itemIndex) => (
+            <div key={item.id || `ts-template-${itemIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <div style={styles.linkRowHeader}>
+                <span style={styles.linkRowTitle}>Card {itemIndex + 1}</span>
+                <input type="color" value={String(item.palette || "#24d3ee")} onChange={(e) => updateTemplate(itemIndex, { palette: e.target.value })} style={{ width: 38, height: 30, border: 0, background: "transparent" }} />
+              </div>
+              <input type="text" value={String(item.title || "")} onChange={(e) => updateTemplate(itemIndex, { title: e.target.value })} style={styles.propertyInput} placeholder="Template name" />
+              <input type="text" value={String(item.category || "")} onChange={(e) => updateTemplate(itemIndex, { category: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Category" />
+              <input type="text" value={String(item.cta || "")} onChange={(e) => updateTemplate(itemIndex, { cta: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Badge / CTA" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SideScrollAccordionPropertiesPanel({ block, index, onChange }) {
+  const props = block?.props || {};
+  const items = Array.isArray(props.items) ? props.items : [];
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const updateItem = (itemIndex, patch) => {
+    update({
+      items: items.map((item, currentIndex) => (
+        currentIndex === itemIndex ? { ...item, ...patch } : item
+      )),
+    });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>Edit: Side Scroll Accordion</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Eyebrow</label>
+          <input type="text" value={String(props.eyebrow || "")} onChange={(e) => update({ eyebrow: e.target.value })} style={styles.propertyInput} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Title</label>
+          <textarea value={String(props.title || "")} onChange={(e) => update({ title: e.target.value })} style={{ ...styles.propertyInput, minHeight: 70, resize: "vertical" }} />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subtitle</label>
+          <textarea value={String(props.subtitle || "")} onChange={(e) => update({ subtitle: e.target.value })} style={{ ...styles.propertyInput, minHeight: 90, resize: "vertical" }} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Display Mode</label>
+          <select value={String(props.displayMode || "side-stack")} onChange={(e) => update({ displayMode: e.target.value })} style={styles.propertyInput}>
+            <option value="side-stack">Scroll stack from right</option>
+            <option value="marquee">Continuous side scroll</option>
+          </select>
+          {String(props.displayMode || "side-stack") === "marquee" ? (
+            <>
+              <NumberField label="Scroll Speed (s)" value={Number(props.speed || 42)} min={18} max={120} onChange={(value) => update({ speed: value })} />
+              <NumberField label="Card Width (px)" value={Number(props.cardWidth || 410)} min={280} max={620} onChange={(value) => update({ cardWidth: value })} />
+              <NumberField label="Card Height (px)" value={Number(props.cardHeight || 520)} min={380} max={760} onChange={(value) => update({ cardHeight: value })} />
+            </>
+          ) : (
+            <>
+              <NumberField label="Stack Strip Width (px)" value={Number(props.peekWidth || 78)} min={58} max={170} onChange={(value) => update({ peekWidth: value })} />
+              <NumberField label="Card Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={40} onChange={(value) => update({ cardRadius: value })} />
+            </>
+          )}
+          {String(props.displayMode || "side-stack") === "marquee" ? (
+            <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+              <input type="checkbox" checked={props.autoScroll !== false} onChange={(e) => update({ autoScroll: e.target.checked })} style={styles.checkboxInput} />
+              Auto-scroll right to left
+            </label>
+          ) : null}
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Button Text</label>
+          <input type="text" value={String(props.buttonText || "")} onChange={(e) => update({ buttonText: e.target.value })} style={styles.propertyInput} placeholder="Explore More" />
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Button URL</label>
+          <input type="text" value={String(props.buttonUrl || "")} onChange={(e) => update({ buttonUrl: e.target.value })} style={styles.propertyInput} placeholder="#contact-us" />
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.showButtons === true} onChange={(e) => update({ showButtons: e.target.checked })} style={styles.checkboxInput} />
+            Show panel buttons
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input type="checkbox" checked={props.buttonFullWidth === true} onChange={(e) => update({ buttonFullWidth: e.target.checked })} style={styles.checkboxInput} />
+            Full-width buttons
+          </label>
+        </div>
+        <div style={styles.sectionCard}>
+          <ColorSelector label="Background" value={props.backgroundColor || "#07111f"} fallback="#07111f" onChange={(value) => update({ backgroundColor: value })} />
+          <ColorSelector label="Text" value={props.textColor || "#ffffff"} fallback="#ffffff" onChange={(value) => update({ textColor: value })} />
+          <ColorSelector label="Muted Text" value={props.mutedTextColor || "#b8c2d8"} fallback="#b8c2d8" onChange={(value) => update({ mutedTextColor: value })} />
+          <ColorSelector label="Accent" value={props.accentColor || "#00d5ff"} fallback="#00d5ff" onChange={(value) => update({ accentColor: value })} />
+        </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Panels</label>
+          {items.map((item, itemIndex) => (
+            <div key={item.id || `ssa-${itemIndex}`} style={{ ...styles.linkRowCard, marginTop: 8 }}>
+              <div style={styles.linkRowHeader}>
+                <span style={styles.linkRowTitle}>Panel {itemIndex + 1}</span>
+              </div>
+              <input type="text" value={String(item.eyebrow || "")} onChange={(e) => updateItem(itemIndex, { eyebrow: e.target.value })} style={styles.propertyInput} placeholder="Eyebrow" />
+              <input type="text" value={String(item.title || "")} onChange={(e) => updateItem(itemIndex, { title: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Title" />
+              <textarea value={String(item.body || "")} onChange={(e) => updateItem(itemIndex, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 92, resize: "vertical", marginTop: 8 }} placeholder="Body" />
+              <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Image URL" />
+              <input type="text" value={(Array.isArray(item.tags) ? item.tags : []).join(", ")} onChange={(e) => updateItem(itemIndex, { tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="SEO, local search, bookings" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Hover Cards Properties Panel ─────────────────────────────────────────────
 function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
   const props = block?.props || {};
@@ -2295,7 +2503,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
   const addCard = () => {
     const newId = `hc-${Date.now()}`;
     update({
-      cards: [...cards, { id: newId, title: `Card ${cards.length + 1}`, description: "Add a short description here.", image: "", cardColor: "#dde3ea", link: "#" }],
+      cards: [...cards, { id: newId, title: `Card ${cards.length + 1}`, description: "Add a short description here.", image: "", cardColor: "#dde3ea", hoverBackgroundColor: "", link: "#" }],
     });
     setExpandedCard(cards.length);
   };
@@ -2317,7 +2525,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
 
   // Parse overlay color for color input (hex only)
   const overlayHex = (() => {
-    const raw = String(props.overlayColor || "rgba(0,0,0,0.85)");
+    const raw = String(props.hoverBackgroundColor || props.overlayColor || "rgba(0,0,0,0.85)");
     const match = raw.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
     if (match) {
       return "#" + [match[1], match[2], match[3]].map((n) => parseInt(n, 10).toString(16).padStart(2, "0")).join("");
@@ -2334,7 +2542,8 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    update({ overlayColor: `rgba(${r},${g},${b},${(opacity / 100).toFixed(2)})` });
+    const value = `rgba(${r},${g},${b},${(opacity / 100).toFixed(2)})`;
+    update({ hoverBackgroundColor: value, overlayColor: value });
   };
 
   return (
@@ -2386,8 +2595,20 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
             <NumberField label="Card Radius (px)" value={Number(props.cardRadius || 12)} min={0} max={48} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Gap Between Cards (px)" value={Number(props.cardGap || 16)} min={0} max={64} onChange={(v) => update({ cardGap: v })} />
             <NumberField label="Card Padding (px)" value={Number(props.cardPadding || 20)} min={8} max={60} onChange={(v) => update({ cardPadding: v })} />
-            <NumberField label="Auto-Play Interval (ms)" value={Number(props.autoPlayInterval || 3500)} min={1000} max={10000} onChange={(v) => update({ autoPlayInterval: v })} />
+            <NumberField label="Loop Speed (px/sec)" value={Number(props.continuousSpeed || 45)} min={8} max={180} onChange={(v) => update({ continuousSpeed: v })} />
+            {props.continuousLoop === false ? (
+              <NumberField label="Auto-Play Interval (ms)" value={Number(props.autoPlayInterval || 3500)} min={1000} max={10000} onChange={(v) => update({ autoPlayInterval: v })} />
+            ) : null}
           </div>
+          <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={props.continuousLoop !== false}
+              onChange={(event) => update({ continuousLoop: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Seamless continuous loop
+          </label>
         </div>
 
         {/* Section spacing */}
@@ -2423,7 +2644,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <label style={styles.propertyLabel}>Hover (Back Face)</label>
           <div style={styles.colorGrid}>
             <div>
-              <label style={styles.propertyLabel}>Back Color</label>
+              <label style={styles.propertyLabel}>Hover Card BG</label>
               <input type="color" value={overlayHex} onChange={(e) => setOverlay(e.target.value, overlayOpacity)} style={styles.colorSwatch} />
             </div>
             <NumberField label="Opacity (%)" value={overlayOpacity} min={10} max={100} onChange={(v) => setOverlay(overlayHex, v)} />
@@ -2503,6 +2724,10 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
                         <input type="color" value={String(card.cardColor || props.cardColor || "#dde3ea")} onChange={(e) => updateCard(cardIndex, { cardColor: e.target.value })} style={styles.colorSwatch} />
                       </div>
                       <div>
+                        <label style={styles.propertyLabel}>Hover Background Color</label>
+                        <input type="color" value={String(card.hoverBackgroundColor || overlayHex).startsWith("#") ? String(card.hoverBackgroundColor || overlayHex).slice(0, 7) : overlayHex} onChange={(e) => updateCard(cardIndex, { hoverBackgroundColor: e.target.value })} style={styles.colorSwatch} />
+                      </div>
+                      <div>
                         <label style={styles.propertyLabel}>Card Image</label>
                         {card.image ? (
                           <img src={card.image} alt="" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
@@ -2533,6 +2758,217 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, width: "100%" }} onClick={addCard}>+ Add Card</button>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+function FramerPortfolioPropertiesPanel({ block, index, onChange, onUploadImage }) {
+  const props = block?.props || {};
+  const cards = Array.isArray(props.cards) ? props.cards : [];
+  const [expandedCard, setExpandedCard] = useState(0);
+  const update = (patch) => onChange(index, { ...props, ...patch });
+
+  const updateCard = (cardIndex, patch) => {
+    update({
+      cards: cards.map((card, currentIndex) => (
+        currentIndex === cardIndex ? { ...card, ...patch } : card
+      )),
+    });
+  };
+
+  const addCard = () => {
+    const nextIndex = cards.length + 1;
+    update({
+      cards: [
+        ...cards,
+        {
+          id: `fp-${Date.now()}`,
+          title: `Project ${nextIndex}`,
+          desc: "Add a short project summary.",
+          image: "",
+          link: "#",
+        },
+      ],
+    });
+    setExpandedCard(cards.length);
+  };
+
+  const removeCard = (cardIndex) => {
+    if (cards.length <= 1) return;
+    const nextCards = cards.filter((_, currentIndex) => currentIndex !== cardIndex);
+    update({ cards: nextCards });
+    setExpandedCard((current) => Math.min(current, Math.max(0, nextCards.length - 1)));
+  };
+
+  const moveCard = (cardIndex, direction) => {
+    const nextIndex = cardIndex + direction;
+    if (nextIndex < 0 || nextIndex >= cards.length) return;
+    const nextCards = [...cards];
+    const [moved] = nextCards.splice(cardIndex, 1);
+    nextCards.splice(nextIndex, 0, moved);
+    update({ cards: nextCards });
+    setExpandedCard(nextIndex);
+  };
+
+  const openCardImagePicker = (cardIndex) => {
+    openSharedMediaPicker({
+      view: "generic",
+      onPick: (asset) => {
+        if (!asset?.src) return;
+        updateCard(cardIndex, { image: asset.src, imageAssetId: asset.id || "" });
+      },
+      onBlocked: () => window.open("/assets?view=generic", "_blank", "noopener,noreferrer"),
+    });
+  };
+
+  const uploadCardImage = async (cardIndex, file) => {
+    if (!file) return;
+    const asset = await Promise.resolve(onUploadImage?.(index, `__fp_card_${cardIndex}__`, file));
+    if (asset?.src) updateCard(cardIndex, { image: asset.src, imageAssetId: asset.id || "" });
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🎨 Edit: Framer Portfolio</h3>
+      <div style={styles.propertyGrid}>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Section Text</label>
+          <input type="text" value={String(props.title || "")} onChange={(event) => update({ title: event.target.value })} style={styles.propertyInput} placeholder="Selected Projects" />
+          <textarea value={String(props.subtitle || "")} onChange={(event) => update({ subtitle: event.target.value })} style={{ ...styles.propertyInput, minHeight: 72, resize: "vertical", marginTop: 8 }} placeholder="A collection of recent work" />
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Layout</label>
+          <div style={styles.colorGrid}>
+            <NumberField label="Visible Cards" value={Number(props.visibleCount || 2.5)} min={1} max={6} onChange={(value) => update({ visibleCount: value })} />
+            <NumberField label="Card Height (px)" value={Number(props.cardHeight || 520)} min={180} max={900} onChange={(value) => update({ cardHeight: value })} />
+            <NumberField label="Card Radius (px)" value={Number(props.cardRadius || 12)} min={0} max={48} onChange={(value) => update({ cardRadius: value })} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Scroll Behaviour</label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!props.autoScroll}
+              onChange={(event) => update({ autoScroll: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Auto-scroll cards
+          </label>
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Scroll Mode</label>
+          <select value={String(props.scrollMode || "card")} onChange={(event) => update({ scrollMode: event.target.value })} style={styles.propertyInput}>
+            <option value="card">One card at a time</option>
+            <option value="continuous">Continuous scroll</option>
+          </select>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.loopScroll !== false}
+              onChange={(event) => update({ loopScroll: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Continuous loop
+          </label>
+          <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={props.pauseOnHover !== false}
+              onChange={(event) => update({ pauseOnHover: event.target.checked })}
+              style={styles.checkboxInput}
+            />
+            Pause on hover
+          </label>
+          {String(props.scrollMode || "card") === "continuous" ? (
+            <NumberField label="Continuous Speed (px/sec)" value={Number(props.continuousScrollSpeed || 45)} min={5} max={240} onChange={(value) => update({ continuousScrollSpeed: value })} />
+          ) : (
+            <NumberField label="Card Interval (ms)" value={Number(props.cardScrollInterval || 2500)} min={700} max={10000} onChange={(value) => update({ cardScrollInterval: value })} />
+          )}
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Colours</label>
+          <div style={styles.colorGrid}>
+            <div>
+              <label style={styles.propertyLabel}>Background</label>
+              <input type="color" value={String(props.backgroundColor || "#0a0a0a")} onChange={(event) => update({ backgroundColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+            <div>
+              <label style={styles.propertyLabel}>Text</label>
+              <input type="color" value={String(props.textColor || "#ffffff")} onChange={(event) => update({ textColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+            <div>
+              <label style={styles.propertyLabel}>Accent</label>
+              <input type="color" value={String(props.accentColor || "#a78bfa")} onChange={(event) => update({ accentColor: event.target.value })} style={styles.colorSwatch} />
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Cards ({cards.length})</label>
+          <div style={{ display: "grid", gap: 8 }}>
+            {cards.map((card, cardIndex) => {
+              const isOpen = expandedCard === cardIndex;
+              return (
+                <div key={card.id || cardIndex} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, overflow: "hidden" }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "rgba(255,255,255,0.05)", cursor: "pointer" }}
+                    onClick={() => setExpandedCard(isOpen ? -1 : cardIndex)}
+                  >
+                    <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {card.title || `Project ${cardIndex + 1}`}
+                    </span>
+                    <button type="button" style={styles.linkMoveBtn} disabled={cardIndex === 0} onClick={(event) => { event.stopPropagation(); moveCard(cardIndex, -1); }} title="Move up">↑</button>
+                    <button type="button" style={styles.linkMoveBtn} disabled={cardIndex === cards.length - 1} onClick={(event) => { event.stopPropagation(); moveCard(cardIndex, 1); }} title="Move down">↓</button>
+                    {cards.length > 1 ? (
+                      <button type="button" style={{ ...styles.linkMoveBtn, color: "#f87171" }} onClick={(event) => { event.stopPropagation(); removeCard(cardIndex); }} title="Remove">×</button>
+                    ) : null}
+                    <span style={{ color: "#94a3b8", fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
+                  </div>
+                  {isOpen ? (
+                    <div style={{ padding: "10px 10px 14px", display: "grid", gap: 8 }}>
+                      <div>
+                        <label style={styles.propertyLabel}>Title</label>
+                        <input type="text" value={String(card.title || "")} onChange={(event) => updateCard(cardIndex, { title: event.target.value })} style={styles.propertyInput} placeholder="Project title" />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Description</label>
+                        <textarea value={String(card.desc || card.description || "")} onChange={(event) => updateCard(cardIndex, { desc: event.target.value })} style={{ ...styles.propertyInput, minHeight: 78, resize: "vertical" }} placeholder="Short project summary..." />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Link URL</label>
+                        <input type="text" value={String(card.link || "")} onChange={(event) => updateCard(cardIndex, { link: event.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Image</label>
+                        {card.image ? (
+                          <img src={card.image} alt="" style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
+                        ) : null}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button type="button" style={styles.secondaryBtn} onClick={() => openCardImagePicker(cardIndex)}>Library</button>
+                          <label style={{ ...styles.secondaryBtn, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+                            Upload
+                            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              event.target.value = "";
+                              uploadCardImage(cardIndex, file);
+                            }} />
+                          </label>
+                          {card.image ? (
+                            <button type="button" style={{ ...styles.secondaryBtn, color: "#f87171" }} onClick={() => updateCard(cardIndex, { image: "", imageAssetId: "" })}>Remove</button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, width: "100%" }} onClick={addCard}>+ Add Project Card</button>
+        </div>
       </div>
     </div>
   );
@@ -2798,25 +3234,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   const def = BlockDefinitions[block.type];
   const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
+  const savedVideos = Array.isArray(brandAssets?.videos) ? brandAssets.videos : [];
   const savedLogo = brandAssets?.logo || null;
   const currentBackgroundPreview = resolveAssetField(block?.props || {}, "backgroundImage", brandAssets);
-  const currentOverlayPreview = resolveAssetField(block?.props || {}, "floatingImage", brandAssets);
-  const effectiveOverlayPreview = currentOverlayPreview || savedLogo?.src || "";
   const isHero = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
-  const fontWeightKey = isHero ? "headlineFontWeight" : "fontWeight";
-  const fontFamilyKey = isHero ? "headlineFontFamily" : "fontFamily";
-  const colorKey = isHero ? "headlineColor" : "textColor";
-  const alignKey = isHero ? "headlineAlignment" : "alignment";
   const supportsParallaxToggle = [BlockTypes.PARALLAX, BlockTypes.TEXT, BlockTypes.HERO].includes(block.type);
-  const isPositionableText = block.type === BlockTypes.PARALLAX || (!!block?.props?.enableParallax && [BlockTypes.HERO, BlockTypes.TEXT].includes(block.type));
-  const supportsOverlayImage = [BlockTypes.HERO, BlockTypes.PARALLAX].includes(block.type);
   const heroSections = [
     { id: "layout", label: "Layout" },
     { id: "media", label: "Media" },
-    { id: "style", label: "Style" },
     { id: "animations", label: "Animations" },
-    { id: "overlays", label: "Overlays" },
-    { id: "counter", label: "Counter ✦" },
   ];
   const heroTabBtnStyle = (active) => ({
     ...styles.tabChip,
@@ -2832,35 +3258,22 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     boxSizing: "border-box",
   });
   const heroTabRowBase = { display: "flex", gap: 4, marginBottom: 4 };
-  const heroLayoutKeys = new Set(["heroVariant", "spacingScale", "headlineAlignment"]);
+  const heroLayoutKeys = new Set(["heroVariant", "spacingScale", "marginTop"]);
   const heroContentKeys = new Set(["headline", "subheadline", "ctaText", "ctaLink", "ctaSubtext", "eyebrow", "tagline", "brand"]);
   const heroAnimationKeys = new Set([
     "sectionAnimation",
     "sectionAnimationDelay",
     "sectionAnimationSpeed",
-    "textAnimation",
-    "textAnimationDelay",
-    "textAnimationSpeed",
-    "subheadlineAnimation",
-    "subheadlineAnimationDelay",
-    "subheadlineAnimationSpeed",
-    "ctaAnimation",
-    "ctaAnimationDelay",
-    "ctaAnimationSpeed",
-    "contentOverlayAnimation",
-    "contentOverlayAnimationDelay",
-    "contentOverlayAnimationSpeed",
-    "imageOverlayAnimation",
-    "imageOverlayAnimationDelay",
-    "imageOverlayAnimationSpeed",
   ]);
 
   function shouldShowHeroPanelSection(sectionId) {
+    if (isHero && !heroSections.some((section) => section.id === sectionId)) return false;
     return !isHero || heroEditorSection === sectionId;
   }
 
   function shouldRenderHeroGenericField(key, value) {
     if (!isHero) return true;
+    if (!heroSections.some((section) => section.id === heroEditorSection)) return false;
 
     if (heroAnimationKeys.has(key) || /animation/i.test(key)) {
       return heroEditorSection === "animations";
@@ -2918,19 +3331,12 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
-  function applyCanvasAlignment(axis, value) {
-    const nextProps = { ...(block.props || {}) };
-
-    if (axis === "x") {
-      nextProps[alignKey] = value;
-    } else {
-      nextProps.verticalAlign = value;
+  function openAssetBrowser(fieldKey, title) {
+    if (["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(fieldKey || ""))) {
+      setAssetBrowser({ visible: true, fieldKey, title });
+      return;
     }
 
-    onChange(index, nextProps);
-  }
-
-  function openAssetBrowser(fieldKey, title) {
     const opened = openSharedMediaPicker({
       onPick: (asset) => {
         if (!assetBrowser.fieldKey && !fieldKey) return;
@@ -2943,7 +3349,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   const selectedBrowserImage = assetBrowser.fieldKey ? String(block?.props?.[assetBrowser.fieldKey] || "") : "";
-  const browserAssets = [savedLogo, ...savedImages].filter(Boolean);
+  const isVideoAssetBrowser = ["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(assetBrowser.fieldKey || ""));
+  const browserAssets = isVideoAssetBrowser
+    ? savedVideos
+    : [savedLogo, ...savedImages].filter(Boolean);
 
   async function regenerateBlockCopy() {
     if (!block || typeof index !== "number") return;
@@ -2992,6 +3401,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
         onUploadImage={onUploadImage}
         onSelectAsset={onSelectAsset}
+        pages={project?.pages || []}
       />
     );
   }
@@ -3029,6 +3439,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         index={index}
         onChange={onChange}
         brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
         onOpenImageEditor={onOpenImageEditor}
       />
     );
@@ -3066,6 +3477,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         index={index}
         onChange={onChange}
         brandAssets={brandAssets}
+        onUploadImage={onUploadImage}
       />
     );
   }
@@ -3135,6 +3547,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         block={block}
         index={index}
         onChange={onChange}
+        onUploadImage={onUploadImage}
       />
     );
   }
@@ -3187,6 +3600,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
       />
     );
+  }
+
+  if (block.type === BlockTypes.SIDE_SCROLL_ACCORDION) {
+    return <SideScrollAccordionPropertiesPanel block={block} index={index} onChange={onChange} />;
   }
 
   if (block.type === BlockTypes.SCROLL_STACK) {
@@ -3393,8 +3810,16 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     );
   }
 
+  if (block.type === BlockTypes.TEMPLATE_SHOWCASE) {
+    return <TemplateShowcasePropertiesPanel block={block} index={index} onChange={onChange} />;
+  }
+
   if (block.type === BlockTypes.HOVER_CARDS) {
     return <HoverCardsPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
+  }
+
+  if (block.type === BlockTypes.FRAMER_PORTFOLIO) {
+    return <FramerPortfolioPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
   }
 
   if (block.type === BlockTypes.VIDEO_HERO) {
@@ -3453,7 +3878,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 Uploading video to CDN…
               </div>
             ) : vp.videoSrc ? (
-              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop playsInline
+              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay playsInline preload="auto"
                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3597,15 +4022,6 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </p>
           </div>
 
-          {/* ── Options ── */}
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Options</label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#94a3b8", cursor: "pointer" }}>
-              <input type="checkbox" checked={vp.unmuteOnScroll === true} onChange={(e) => updateVH({ unmuteOnScroll: e.target.checked })} />
-              🔊 Unmute when scrolled into view
-            </label>
-          </div>
-
         </div>
       </div>
     );
@@ -3654,6 +4070,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               <NumberField label="Text Size" value={Number(marqueeProps.fontSize || 16)} min={10} max={48} onChange={(value) => updateMarquee({ fontSize: value })} />
               <NumberField label="Outline Width" value={Number(marqueeProps.textStrokeWidth || 0)} min={0} max={8} onChange={(value) => updateMarquee({ textStrokeWidth: value })} />
               <NumberField label="Divider Size" value={Number(marqueeProps.dividerSize || 14)} min={8} max={48} onChange={(value) => updateMarquee({ dividerSize: value })} />
+              <NumberField label="Angle" value={Number(marqueeProps.angle ?? 0)} min={-45} max={45} onChange={(value) => updateMarquee({ angle: value })} />
               <NumberField label="Animation Duration" value={Number(marqueeProps.speed || 24)} min={10} max={80} onChange={(value) => updateMarquee({ speed: value })} />
               <NumberField label="Top Padding" value={Number(marqueeProps.paddingTop ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingTop: value })} />
               <NumberField label="Bottom Padding" value={Number(marqueeProps.paddingBottom ?? 16)} min={0} max={64} onChange={(value) => updateMarquee({ paddingBottom: value })} />
@@ -3767,6 +4184,102 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             value={String(marqueeProps.accentColor || "#7dd3fc")}
             fallback="#7dd3fc"
             onChange={(nextValue) => updateMarquee({ accentColor: nextValue })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === BlockTypes.WAVE_MARQUEE) {
+    const waveProps = block.props || {};
+    const updateWave = (patch) => onChange(index, { ...waveProps, ...patch });
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>~ Edit: Wave Marquee</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Text</label>
+            <input
+              type="text"
+              value={String(waveProps.text || "")}
+              onChange={(event) => updateWave({ text: event.target.value })}
+              style={styles.propertyInput}
+              placeholder="FULL SERVICE MARKETING AGENCY"
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Separator</label>
+            <input
+              type="text"
+              value={String(waveProps.separator ?? " * ")}
+              onChange={(event) => updateWave({ separator: event.target.value })}
+              style={styles.propertyInput}
+              placeholder=" * "
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Direction</label>
+            <select
+              value={String(waveProps.direction || "left")}
+              onChange={(event) => updateWave({ direction: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="left">Move Left</option>
+              <option value="right">Move Right</option>
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Letter Case</label>
+            <select
+              value={String(waveProps.textTransform || "uppercase")}
+              onChange={(event) => updateWave({ textTransform: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="uppercase">UPPERCASE</option>
+              <option value="none">Normal Case</option>
+              <option value="lowercase">lowercase</option>
+              <option value="capitalize">Capitalize</option>
+            </select>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Wave Motion</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Speed (s)" value={parsePixelValue(waveProps.speed, 22)} min={8} max={120} onChange={(value) => updateWave({ speed: value })} />
+              <NumberField label="Height" value={parsePixelValue(waveProps.height, 190)} min={90} max={420} onChange={(value) => updateWave({ height: value })} />
+              <NumberField label="Wave Height" value={parsePixelValue(waveProps.amplitude, 42)} min={0} max={180} onChange={(value) => updateWave({ amplitude: value })} />
+              <NumberField label="Wave Width" value={parsePixelValue(waveProps.wavelength, 640)} min={360} max={1800} onChange={(value) => updateWave({ wavelength: value })} />
+              <NumberField label="Angle" value={parsePixelValue(waveProps.angle, 0)} min={-20} max={20} onChange={(value) => updateWave({ angle: value })} />
+              <NumberField label="Repeats" value={parsePixelValue(waveProps.repeatCount, 4)} min={2} max={10} onChange={(value) => updateWave({ repeatCount: value })} />
+            </div>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Typography</label>
+            <div style={styles.colorGrid}>
+              <NumberField label="Text Size" value={parsePixelValue(waveProps.fontSize, 22)} min={10} max={96} onChange={(value) => updateWave({ fontSize: value })} />
+              <NumberField label="Letter Spacing" value={parsePixelValue(waveProps.letterSpacing, 2.6)} min={0} max={12} onChange={(value) => updateWave({ letterSpacing: value })} />
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Font Weight</label>
+            <select
+              value={String(waveProps.fontWeight || "900")}
+              onChange={(event) => updateWave({ fontWeight: event.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="500">Medium 500</option>
+              <option value="600">Semi Bold 600</option>
+              <option value="700">Bold 700</option>
+              <option value="800">Extra Bold 800</option>
+              <option value="900">Black 900</option>
+            </select>
+          </div>
+
+          <ColorSelector
+            label="Background Color"
+            value={String(waveProps.backgroundColor || "#000000")}
+            fallback="#000000"
+            allowTransparent
+            onChange={(nextValue) => updateWave({ backgroundColor: nextValue })}
+          />
+          <ColorSelector
+            label="Text Color"
+            value={String(waveProps.textColor || "#00a99d")}
+            fallback="#00a99d"
+            onChange={(nextValue) => updateWave({ textColor: nextValue })}
           />
         </div>
       </div>
@@ -3938,6 +4451,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         title={assetBrowser.title || "Media Library"}
         assets={browserAssets}
         selectedSrc={selectedBrowserImage}
+        uploadAccept={isVideoAssetBrowser ? "video/*" : "image/*"}
         onClose={() => setAssetBrowser({ visible: false, fieldKey: "", title: "" })}
         onSelect={(asset) => {
           if (!assetBrowser.fieldKey) return;
@@ -3982,6 +4496,17 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </label>
           </div>
         ) : null}
+        {isHero && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <NumberField
+              label="Top Margin (px)"
+              value={Number(block?.props?.marginTop || 0)}
+              min={0}
+              max={400}
+              onChange={(value) => onChange(index, { ...block.props, marginTop: value })}
+            />
+          </div>
+        ) : null}
         {supportsParallaxToggle && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Parallax Mode</label>
@@ -4001,128 +4526,6 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               />
               Enable parallax background
             </label>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("layout") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Hero Copy</label>
-            <p style={styles.aiHint}>This sits with layout so the copy and positioning stay in one place.</p>
-            <label style={styles.inlineToggle}>
-              <input
-                type="checkbox"
-                checked={!block?.props?.hideTextOverlay}
-                onChange={(e) => onChange(index, { ...block.props, hideTextOverlay: !e.target.checked })}
-                style={styles.checkboxInput}
-              />
-              Show text overlay in preview
-            </label>
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Eyebrow</label>
-            <input
-              type="text"
-              value={htmlToPlainText(block?.props?.eyebrow || "")}
-              onChange={(event) => onChange(index, { ...block.props, eyebrow: event.target.value })}
-              style={styles.propertyInput}
-              placeholder="Section label"
-            />
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Headline</label>
-            <textarea
-              value={htmlToPlainText(block?.props?.headline || "")}
-              onChange={(event) => onChange(index, { ...block.props, headline: event.target.value })}
-              placeholder="Write headline..."
-              style={{ ...styles.propertyInput, minHeight: 88, resize: "vertical", lineHeight: 1.45 }}
-            />
-            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Body Copy</label>
-            <textarea
-              value={htmlToPlainText(block?.props?.subheadline || "")}
-              onChange={(event) => onChange(index, { ...block.props, subheadline: event.target.value })}
-              placeholder="Write supporting text..."
-              style={{ ...styles.propertyInput, minHeight: 108, resize: "vertical", lineHeight: 1.5 }}
-            />
-            <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Primary CTA</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.ctaText || "")}
-                  onChange={(event) => onChange(index, { ...block.props, ctaText: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="Get Started"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Primary Link</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.ctaLink || "")}
-                  onChange={(event) => onChange(index, { ...block.props, ctaLink: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="#contact"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Secondary CTA</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.secondaryCtaText || "")}
-                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaText: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="Learn More"
-                />
-              </div>
-              <div style={styles.propertyField}>
-                <label style={styles.propertyLabel}>Secondary Link</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.secondaryCtaLink || "")}
-                  onChange={(event) => onChange(index, { ...block.props, secondaryCtaLink: event.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="#services"
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("layout") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Text Block Position</label>
-            <div style={styles.inlineChipRow}>
-              {[
-                { value: "left", label: "Left" },
-                { value: "center", label: "Center" },
-                { value: "right", label: "Right" },
-              ].map((option) => (
-                <button
-                  key={`hero-align-${option.value}`}
-                  type="button"
-                  style={{ ...styles.presetChip, ...(String(block?.props?.headlineAlignment || "center") === option.value ? styles.presetChipActive : {}) }}
-                  onClick={() => applyCanvasAlignment("x", option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div style={styles.inlineChipRow}>
-              {[
-                { value: "top", label: "Top" },
-                { value: "center", label: "Middle" },
-                { value: "bottom", label: "Bottom" },
-              ].map((option) => (
-                <button
-                  key={`hero-vertical-${option.value}`}
-                  type="button"
-                  style={{ ...styles.presetChip, ...(String(block?.props?.verticalAlign || "center") === option.value ? styles.presetChipActive : {}) }}
-                  onClick={() => applyCanvasAlignment("y", option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div style={styles.colorGrid}>
-              <NumberField label="Text X %" value={Number(block?.props?.contentX ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentX)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentX: value })} />
-              <NumberField label="Text Y %" value={Number(block?.props?.contentY ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentY)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, contentY: value })} />
-              <NumberField label="Text Width" value={Number(block?.props?.contentWidth ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentWidth)} min={180} max={1400} onChange={(value) => onChange(index, { ...block.props, contentWidth: value })} />
-              <NumberField label="Text Height" value={Number(block?.props?.contentHeight ?? getHeroLayoutDefaults(block?.props?.heroVariant || "spotlight").contentHeight)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, contentHeight: value })} />
-            </div>
           </div>
         ) : null}
         {isHero && shouldShowHeroPanelSection("media") ? (
@@ -4156,7 +4559,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               <button
                 type="button"
                 style={styles.secondaryBtn}
-                onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset(index, "backgroundImage", asset))}
+                onClick={() => openAssetBrowser("backgroundImage", block.type === BlockTypes.PARALLAX ? "Section Background Library" : "Hero Background Library")}
               >
                 Choose From Library
               </button>
@@ -4245,12 +4648,16 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     type="file"
                     accept="video/mp4,video/*"
                     style={{ display: "none" }}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
+                      e.target.value = "";
                       if (!file) return;
                       const localUrl = URL.createObjectURL(file);
                       onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: localUrl });
-                      onUploadImage?.(index, "backgroundVideoUrl", file);
+                      const asset = await Promise.resolve(onUploadImage?.(index, "backgroundVideoUrl", file));
+                      if (asset?.src) {
+                        onChange(index, { ...block.props, backgroundStyle: "video", backgroundVideoUrl: asset.src, backgroundVideoUrlAssetId: asset.id || "" });
+                      }
                     }}
                   />
                 </label>
@@ -4268,6 +4675,13 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                     onClick={() => onChange(index, { ...block.props, backgroundVideoUrl: "" })}
                   >Remove Video</button>
                 ) : null}
+                <button
+                  type="button"
+                  style={{ ...styles.assetLibraryBtn, marginTop: 8 }}
+                  onClick={() => openAssetBrowser("backgroundVideoUrl", "Video Library")}
+                >
+                  Open Video Library
+                </button>
                 <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Video Overlay (darken/tint)</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input
@@ -4327,7 +4741,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             ) : null}
           </div>
         ) : null}
-        {supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
+        {!isHero && supportsCopyRegeneration(block.type) && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>AI Copy</label>
             <label style={styles.propertyLabel}>Tone</label>
@@ -4361,532 +4775,19 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         {isHero && shouldShowHeroPanelSection("animations") ? (
           <>
             {renderAnimationControlCard("Section Entrance", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", { animation: "fade-up", delay: 0.06, speed: 0.9 })}
-            {renderAnimationControlCard("Content Shell", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", { animation: "sweep-right", delay: 0.22, speed: 1.05 })}
-            {renderAnimationControlCard("Overlay Image", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", { animation: "sweep-left", delay: 0.08, speed: 1.45 })}
-            {renderAnimationControlCard("Headline", "textAnimation", "textAnimationDelay", "textAnimationSpeed", { animation: "fade-up", delay: 0, speed: 0.8 })}
-            {renderAnimationControlCard("Body Copy", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", { animation: "fade-in", delay: 0.12, speed: 0.9 })}
-            {renderAnimationControlCard("CTA Buttons", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", { animation: "fade-up", delay: 0.18, speed: 0.9 })}
           </>
         ) : null}
-        {/* ─── Overlays tab ─── */}
-        {isHero && shouldShowHeroPanelSection("overlays") ? (
-          <>
-            {/* Hero stat items */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Inline Hero Stats (below CTA buttons)</label>
-              <p style={styles.aiHint}>Small number + label pairs shown inline in the hero, e.g. "500+ Clients".</p>
-              {(Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).map((stat, sIdx) => {
-                const updateStat = (patch) => {
-                  const next = (Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).map((s, i) => i !== sIdx ? s : { ...s, ...patch });
-                  onChange(index, { ...block.props, heroStatItems: next });
-                };
-                const deleteStat = () => {
-                  const next = (Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : []).filter((_, i) => i !== sIdx);
-                  onChange(index, { ...block.props, heroStatItems: next });
-                };
-                return (
-                  <div key={stat.id || sIdx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                    <input type="text" value={stat.number || ""} onChange={(e) => updateStat({ number: e.target.value })} style={styles.propertyInput} placeholder="e.g. 500+" />
-                    <input type="text" value={stat.label || ""} onChange={(e) => updateStat({ label: e.target.value })} style={styles.propertyInput} placeholder="e.g. Clients" />
-                    <button type="button" onClick={deleteStat} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px" }}>✕</button>
-                  </div>
-                );
-              })}
-              <button
-                type="button"
-                style={styles.secondaryBtn}
-                onClick={() => {
-                  const current = Array.isArray(block?.props?.heroStatItems) ? block.props.heroStatItems : [];
-                  onChange(index, { ...block.props, heroStatItems: [...current, { id: `stat-${Date.now()}`, number: "", label: "" }] });
-                }}
-              >+ Add Stat</button>
-            </div>
-            {/* Extra text overlays */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Text Overlays</label>
-              <p style={styles.aiHint}>Free-floating text blocks. Add them with the green "+ Text Block" chip on the hero canvas.</p>
-              {(Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).length === 0 ? (
-                <p style={{ margin: 0, fontSize: 16, color: "#64748b" }}>No text overlays yet.</p>
-              ) : (Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).map((txt, tIdx) => {
-                const deleteTxt = () => {
-                  const next = (Array.isArray(block?.props?.extraTextOverlays) ? block.props.extraTextOverlays : []).filter((_, i) => i !== tIdx);
-                  onChange(index, { ...block.props, extraTextOverlays: next });
-                };
-                return (
-                  <div key={txt.id || tIdx} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6, minWidth: 0 }}>
-                    <div style={{ flex: 1, fontSize: 16, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "rgba(0,0,0,0.2)", borderRadius: 6, padding: "4px 8px" }}>
-                      {(txt.text || "(empty)").replace(/<[^>]*>/g, "").trim() || "(empty)"}
-                    </div>
-                    <button type="button" onClick={deleteTxt} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px", flexShrink: 0 }}>Remove</button>
-                  </div>
-                );
-              })}
-            </div>
-            {/* Floating images */}
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Floating Images</label>
-              <p style={styles.aiHint}>Images overlaid on the hero. Drag on canvas to reposition. Add via "+ Logo" or "+ Image / GIF" on the hero.</p>
-              {(Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).length === 0 ? (
-                <p style={{ margin: "0 0 8px", fontSize: 16, color: "#64748b" }}>No floating images yet.</p>
-              ) : (Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).map((img, iIdx) => {
-                const deleteImg = () => {
-                  const next = (Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : []).filter((_, i) => i !== iIdx);
-                  onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
-                };
-                const imgSrc = resolveAssetField(img, "src", brandAssets) || img?.src || "";
-                const replaceInputId = `replace-float-img-${index}-${iIdx}`;
-                return (
-                  <div key={img.id || iIdx} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, padding: 8, borderRadius: 8, border: "1px solid rgba(148,163,184,0.18)", background: "rgba(0,0,0,0.15)", minWidth: 0 }}>
-                    <label htmlFor={replaceInputId} title="Click to replace image" style={{ cursor: "pointer", flexShrink: 0, position: "relative" }}>
-                      {imgSrc ? <img src={imgSrc} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, display: "block" }} /> : <div style={{ width: 44, height: 44, borderRadius: 6, background: "rgba(255,255,255,0.05)" }} />}
-                      <div style={{ position: "absolute", inset: 0, borderRadius: 6, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.15s" }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-                        onMouseLeave={e => e.currentTarget.style.opacity = "0"}
-                      >
-                        <span style={{ fontSize: 18, color: "#fff" }}>✎</span>
-                      </div>
-                      <input id={replaceInputId} type="file" accept="image/*,image/gif" style={{ display: "none" }} onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (!file) return;
-                        Promise.resolve(onUploadImage?.(index, "__addFloatingImage", file)).then((asset) => {
-                          if (!asset?.src) return;
-                          const current = Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : [];
-                          const next = current.map((fi, i) => i !== iIdx ? fi : { ...fi, src: asset.src, assetId: asset.id || "" });
-                          onChange(index, { ...block.props, floatingImages: next, floatingImage: next[0]?.src || "" });
-                        });
-                      }} />
-                    </label>
-                    <span style={{ flex: 1, fontSize: 16, color: "#94a3b8" }}>Image {iIdx + 1}</span>
-                    <button type="button" onClick={deleteImg} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "4px 8px", flexShrink: 0 }}>Remove</button>
-                  </div>
-                );
-              })}
-              <label style={{ ...styles.secondaryBtn, display: "block", textAlign: "center", cursor: "pointer", marginTop: 4 }}>
-                Upload Floating Image
-                <input type="file" accept="image/*,image/gif" style={{ display: "none" }} onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (!file) return;
-                  Promise.resolve(onUploadImage?.(index, "__addFloatingImage", file)).then((asset) => {
-                    if (!asset?.src) return;
-                    const current = Array.isArray(block?.props?.floatingImages) ? block.props.floatingImages : [];
-                    onChange(index, { ...block.props, floatingImages: [...current, { src: asset.src, assetId: asset.id || "", x: 76, y: 52, width: 280, height: 320, animation: "sweep-left", animationDelay: 0.08, animationSpeed: 1.45 }] });
-                  });
-                }} />
-              </label>
-            </div>
-            {/* Orbit feature cards editor */}
-            {block?.props?.heroVariant === "orbit" ? (
-              <div style={styles.sectionCard}>
-                <label style={styles.propertyLabel}>Orbit Feature Cards</label>
-                <p style={styles.aiHint}>6 floating cards shown around your avatar. Customize the title, icon (emoji), and up to 2 lines each.</p>
-                {(Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
-                  ? block.props.orbitCards
-                  : [
-                    { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
-                    { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
-                    { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
-                    { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
-                    { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
-                    { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
-                  ]
-                ).slice(0, 6).map((card, cIdx) => {
-                  const updateCard = (patch) => {
-                    const base = Array.isArray(block?.props?.orbitCards) && block.props.orbitCards.length > 0
-                      ? block.props.orbitCards
-                      : [
-                        { id: "oc1", title: "Integrations", icon: "🔗", accent: "#6366f1", lines: ["Slack, Gmail +26 more", "All connected"] },
-                        { id: "oc2", title: "Dashboards",   icon: "📊", accent: "#10b981", lines: ["$120,760 revenue", "↑ 14% this month"] },
-                        { id: "oc3", title: "Conversations",icon: "💬", accent: "#3b82f6", lines: ["3 unread threads", "Team standup done"] },
-                        { id: "oc4", title: "Data records", icon: "🗂️", accent: "#f59e0b", lines: ["lead_scoring_model", "sales_targets_rev2"] },
-                        { id: "oc5", title: "Files",        icon: "📁", accent: "#8b5cf6", lines: ["proposal_v2.pdf", "client_brief.docx"] },
-                        { id: "oc6", title: "Updates",      icon: "🔔", accent: "#ec4899", lines: ["Ben shared a draft", "2 mentions today"] },
-                      ];
-                    const next = base.map((c, i) => i !== cIdx ? c : { ...c, ...patch });
-                    onChange(index, { ...block.props, orbitCards: next });
-                  };
-                  const SLOT_LABELS = ["Top Left", "Top Right", "Mid Left", "Mid Right", "Bot Left", "Bot Right"];
-                  return (
-                    <div key={card.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.18)", borderRadius: 10, padding: "10px 10px 8px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", marginBottom: 8 }}>Card {cIdx + 1} — {SLOT_LABELS[cIdx] || ""}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 52px", gap: 6, marginBottom: 6 }}>
-                        <div>
-                          <label style={styles.propertyLabel}>Icon</label>
-                          <input type="text" value={card.icon || ""} onChange={(e) => updateCard({ icon: e.target.value })} style={{ ...styles.propertyInput, textAlign: "center", fontSize: 18 }} placeholder="📊" maxLength={4} />
-                        </div>
-                        <div>
-                          <label style={styles.propertyLabel}>Title</label>
-                          <input type="text" value={card.title || ""} onChange={(e) => updateCard({ title: e.target.value })} style={styles.propertyInput} placeholder="Feature name" />
-                        </div>
-                        <div>
-                          <label style={styles.propertyLabel}>Accent</label>
-                          <input type="color" value={card.accent || "#6366f1"} onChange={(e) => updateCard({ accent: e.target.value })} style={{ ...styles.propertyInput, padding: 2, height: 32, cursor: "pointer" }} title="Card accent colour" />
-                        </div>
-                      </div>
-                      <label style={styles.propertyLabel}>Line 1</label>
-                      <input type="text" value={(card.lines || [])[0] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[0] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. 1,240 visits" />
-                      <label style={{ ...styles.propertyLabel, marginTop: 5 }}>Line 2</label>
-                      <input type="text" value={(card.lines || [])[1] || ""} onChange={(e) => { const lines = [...(card.lines || [])]; lines[1] = e.target.value; updateCard({ lines }); }} style={styles.propertyInput} placeholder="e.g. +8.4% this week" />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-            {/* Counter Widgets */}
-            {(Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).length > 0 ? (
-              <div style={styles.sectionCard}>
-                <label style={styles.propertyLabel}>Counter Widgets</label>
-                <p style={styles.aiHint}>Counters dragged onto the hero. Edit each one below.</p>
-                {(Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).map((ctr, cIdx) => {
-                  const updateCtr = (patch) => {
-                    const next = (Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).map((t, i) => i !== cIdx ? t : { ...t, ...patch });
-                    onChange(index, { ...block.props, extraCounterOverlays: next });
-                  };
-                  const deleteCtr = () => {
-                    const next = (Array.isArray(block?.props?.extraCounterOverlays) ? block.props.extraCounterOverlays : []).filter((_, i) => i !== cIdx);
-                    onChange(index, { ...block.props, extraCounterOverlays: next });
-                  };
-                  return (
-                    <div key={ctr.id || cIdx} style={{ border: "1px solid rgba(148,163,184,0.2)", borderRadius: 10, padding: "10px 10px 6px", marginBottom: 10, background: "rgba(0,0,0,0.15)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8" }}>Counter {cIdx + 1}</span>
-                        <button type="button" onClick={deleteCtr} style={{ ...styles.secondaryBtn, color: "#ef4444", padding: "2px 8px", fontSize: 16 }}>Remove</button>
-                      </div>
-                      <label style={styles.propertyLabel}>Label</label>
-                      <input type="text" value={ctr.label || ""} onChange={(e) => updateCtr({ label: e.target.value })} style={styles.propertyInput} placeholder="e.g. Site Visits" />
-                      <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Background</label>
-                      <input type="text" value={ctr.background || ""} onChange={(e) => updateCtr({ background: e.target.value })} style={styles.propertyInput} placeholder="e.g. rgba(0,0,0,0.6)" />
-                      <div style={{ ...styles.colorGrid, marginTop: 6 }}>
-                        <ColorSelector label="Number color" value={ctr.numberColor || "#0c8ce9"} fallback="#0c8ce9" onChange={(v) => updateCtr({ numberColor: v })} />
-                        <ColorSelector label="Label color" value={ctr.labelColor || "#ffffff"} fallback="#ffffff" onChange={(v) => updateCtr({ labelColor: v })} />
-                      </div>
-                      <div style={{ ...styles.colorGrid, marginTop: 6 }}>
-                        <ColorSelector label="Icon color" value={ctr.iconColor || "#ffffff"} fallback="#ffffff" onChange={(v) => updateCtr({ iconColor: v })} />
-                        <NumberField label="Number size" value={Number(ctr.numberSize ?? 52)} min={20} max={120} onChange={(v) => updateCtr({ numberSize: v })} />
-                      </div>
-                      <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Icon shape</label>
-                      <select value={ctr.bgIcon || "diamond"} onChange={(e) => updateCtr({ bgIcon: e.target.value })} style={styles.propertyInput}>
-                        <option value="diamond">Diamond</option>
-                        <option value="circle">Circle</option>
-                        <option value="star">Star</option>
-                        <option value="hexagon">Hexagon</option>
-                        <option value="none">None</option>
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </>
-        ) : null}
-        {/* ─── Counter tab ─── */}
-        {isHero && shouldShowHeroPanelSection("counter") ? (
-          <>
-            <div style={styles.sectionCard}>
-              <label style={styles.propertyLabel}>Hero Inline Counter</label>
-              <p style={styles.aiHint}>Embed a draggable animated counter widget inside the hero. Drag it beside your image at the bottom.</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 16, color: "#e2e8f0" }}>
-                  <input
-                    type="checkbox"
-                    checked={!!block?.props?.heroInlineCounter?.enabled}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, enabled: e.target.checked } });
-                    }}
-                    style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#0ea5e9" }}
-                  />
-                  Enable counter in hero
-                </label>
-              </div>
-              {block?.props?.heroInlineCounter?.enabled ? (
-                <>
-                  <CounterLiveStats
-                    projectId={project?.id || ""}
-                    startNumber={block?.props?.heroInlineCounter?.startNumber ?? 0}
-                  />
-                  <label style={styles.propertyLabel}>Starting visit count</label>
-                  <p style={{ ...styles.aiHint, marginBottom: 4 }}>Set the number shown now. Every real page visit adds +1 on top of this.</p>
-                  <input
-                    type="number"
-                    value={block?.props?.heroInlineCounter?.startNumber ?? 0}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      const n = Number(e.target.value);
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, startNumber: n, targetNumber: n } });
-                    }}
-                    placeholder="e.g. 28642"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Suffix (e.g. +, %)</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.suffix || ""}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, suffix: e.target.value } });
-                    }}
-                    placeholder="e.g. +"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Label text</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.label || ""}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, label: e.target.value } });
-                    }}
-                    placeholder="e.g. Happy Customers"
-                    style={styles.propertyInput}
-                  />
-                  <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Background</label>
-                  <input
-                    type="text"
-                    value={block?.props?.heroInlineCounter?.backgroundColor || "rgba(0,0,0,0.55)"}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, backgroundColor: e.target.value } });
-                    }}
-                    placeholder="rgba(0,0,0,0.55) or #1e293b"
-                    style={styles.propertyInput}
-                  />
-                  <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-                    <ColorSelector
-                      label="Number color"
-                      value={block?.props?.heroInlineCounter?.numberColor || "#0c8ce9"}
-                      fallback="#0c8ce9"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, numberColor: v } });
-                      }}
-                    />
-                    <ColorSelector
-                      label="Label color"
-                      value={block?.props?.heroInlineCounter?.labelColor || "#ffffff"}
-                      fallback="#ffffff"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, labelColor: v } });
-                      }}
-                    />
-                    <ColorSelector
-                      label="Icon color"
-                      value={block?.props?.heroInlineCounter?.iconColor || "#ffffff"}
-                      fallback="#ffffff"
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, iconColor: v } });
-                      }}
-                    />
-                  </div>
-                  <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-                    <NumberField
-                      label="Number size"
-                      value={Number(block?.props?.heroInlineCounter?.numberFontSize ?? 64)}
-                      min={24}
-                      max={120}
-                      onChange={(v) => {
-                        const cur = block?.props?.heroInlineCounter || {};
-                        onChange(index, { ...block.props, heroInlineCounter: { ...cur, numberFontSize: v } });
-                      }}
-                    />
-                  </div>
-                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Background icon shape</label>
-                  <select
-                    value={block?.props?.heroInlineCounter?.iconType || "diamond"}
-                    onChange={(e) => {
-                      const cur = block?.props?.heroInlineCounter || {};
-                      onChange(index, { ...block.props, heroInlineCounter: { ...cur, iconType: e.target.value } });
-                    }}
-                    style={styles.propertyInput}
-                  >
-                    <option value="diamond">Diamond</option>
-                    <option value="circle">Circle</option>
-                    <option value="star">Star</option>
-                    <option value="hexagon">Hexagon</option>
-                    <option value="none">None</option>
-                  </select>
-                  <p style={{ ...styles.aiHint, marginTop: 8 }}>Drag the counter on the canvas to reposition it. The ✕ button on the widget disables it.</p>
-                </>
-              ) : null}
-            </div>
-          </>
-        ) : null}
+
         {![BlockTypes.HERO, BlockTypes.PARALLAX, BlockTypes.STATS, BlockTypes.CTA_BUTTON].includes(block.type) && textContentKeys.length ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Text Editing</label>
             <p style={{ margin: 0, color: "#64748b", fontSize: 16, lineHeight: 1.5 }}>Edit text directly on the canvas. Use the floating text toolbar or the on-block size controls when available.</p>
           </div>
         ) : null}
-        {supportsOverlayImage && shouldShowHeroPanelSection("media") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Overlay Image / Logo</label>
-            <p style={styles.aiHint}>Add a logo, badge, or product shot over the background image.</p>
-            {effectiveOverlayPreview ? (
-              <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
-                <div style={{ width: "100%", minHeight: 132, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(148,163,184,0.24)", background: "linear-gradient(180deg,#0f172a,#111827)", display: "grid", placeItems: "center", padding: 16, boxSizing: "border-box" }}>
-                  <img src={effectiveOverlayPreview} alt="Current overlay media" style={{ maxWidth: "100%", maxHeight: 132, objectFit: currentOverlayPreview ? "cover" : "contain", display: "block" }} />
-                </div>
-                <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.5 }}>
-                  {currentOverlayPreview ? "Current overlay image used on the hero." : "No custom overlay set, so the hero falls back to the saved brand logo."}
-                </div>
-              </div>
-            ) : null}
-            <div style={styles.assetPicker}>
-              <label style={styles.assetUploadCta}>
-                Upload Overlay
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={styles.hiddenInput}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!file) return;
-                    onChange(index, withHeroOverlayDefaults(block.props || {}));
-                    onUploadImage(index, "floatingImage", file);
-                  }}
-                />
-              </label>
-              {savedLogo ? (
-                <button
-                  type="button"
-                  style={styles.assetChip}
-                  onClick={() => {
-                    const nextProps = applyAssetToProps(block.props || {}, "floatingImage", savedLogo);
-                    onChange(index, {
-                      ...withHeroOverlayDefaults(nextProps),
-                      floatingImage: savedLogo.src || "",
-                    });
-                    onSelectAsset(index, "floatingImage", savedLogo);
-                  }}
-                >
-                  Use Brand Logo
-                </button>
-              ) : null}
-              {!block?.props?.floatingImage ? (
-                <button
-                  type="button"
-                  style={styles.assetChip}
-                  onClick={() => onChange(index, {
-                    ...withHeroOverlayDefaults(block.props || {}),
-                    floatingImage: "https://placehold.co/640x640/e2e8f0/475569?text=%20",
-                  })}
-                >
-                  Add Placeholder
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => onChange(index, { ...block.props, floatingImage: "" })}
-                >
-                  Remove Overlay
-                </button>
-              )}
-              <button
-                type="button"
-                style={styles.assetLibraryBtn}
-                onClick={() => openAssetBrowser("floatingImage", "Overlay Media Library")}
-              >
-                Open Media Library
-              </button>
-            </div>
-            <div style={styles.colorGrid}>
-              <NumberField label="Image X %" value={Number(block?.props?.floatingX ?? 76)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingX: value })} />
-              <NumberField label="Image Y %" value={Number(block?.props?.floatingY ?? 58)} min={0} max={100} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingY: value })} />
-              <NumberField label="Image W" value={Number(block?.props?.floatingWidth ?? 220)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingWidth: value })} />
-              <NumberField label="Image H" value={Number(block?.props?.floatingHeight ?? 220)} min={80} max={1000} onChange={(value) => onChange(index, { ...block.props, enableParallax: true, floatingHeight: value })} />
-            </div>
-          </div>
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("style") ? (
-          <ColorSelector
-            label="Text Block Background"
-            value={String(block?.props?.contentBackground || "transparent")}
-            fallback="transparent"
-            allowTransparent
-            onChange={(nextValue) => onChange(index, { ...block.props, contentBackground: nextValue })}
-          />
-        ) : null}
-        {isHero && shouldShowHeroPanelSection("style") ? (
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Headline Text Style</label>
-            <select
-              value={String(block?.props?.headlineTextStyle || "fill")}
-              onChange={(e) => onChange(index, { ...block.props, headlineTextStyle: e.target.value })}
-              style={styles.propertyInput}
-            >
-              <option value="fill">Fill (default)</option>
-              <option value="outline">Outline</option>
-              <option value="gradient">Gradient</option>
-              <option value="glow">Glow</option>
-              <option value="shadow">Drop Shadow</option>
-            </select>
-            {block?.props?.headlineTextStyle === "outline" ? (
-              <>
-                <ColorSelector label="Outline Color" value={block?.props?.headlineOutlineColor || "#ffffff"} fallback="#ffffff" onChange={(v) => onChange(index, { ...block.props, headlineOutlineColor: v })} />
-                <NumberField label="Outline Width (px)" value={Number(block?.props?.headlineOutlineWidth || 2)} min={1} max={12} onChange={(v) => onChange(index, { ...block.props, headlineOutlineWidth: v })} />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "gradient" ? (
-              <>
-                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Gradient Presets</label>
-                <div style={styles.inlineChipRow}>
-                  {[
-                    { label: "Purple → Pink", value: "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)" },
-                    { label: "Blue → Cyan", value: "linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)" },
-                    { label: "Gold → Orange", value: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)" },
-                    { label: "Green → Teal", value: "linear-gradient(135deg, #22c55e 0%, #06b6d4 100%)" },
-                    { label: "White → Silver", value: "linear-gradient(135deg, #ffffff 0%, #94a3b8 100%)" },
-                  ].map((preset) => (
-                    <button
-                      key={preset.value}
-                      type="button"
-                      style={{ ...styles.presetChip, ...(block?.props?.headlineGradient === preset.value ? styles.presetChipActive : {}) }}
-                      onClick={() => onChange(index, { ...block.props, headlineGradient: preset.value })}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <label style={{ ...styles.propertyLabel, marginTop: 6 }}>Custom Gradient CSS</label>
-                <input
-                  type="text"
-                  value={String(block?.props?.headlineGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)")}
-                  onChange={(e) => onChange(index, { ...block.props, headlineGradient: e.target.value })}
-                  style={{ ...styles.propertyInput, marginTop: 4 }}
-                  placeholder="linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"
-                />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "glow" ? (
-              <>
-                <ColorSelector label="Glow Color" value={block?.props?.headlineGlowColor || "#7c3aed"} fallback="#7c3aed" onChange={(v) => onChange(index, { ...block.props, headlineGlowColor: v })} />
-                <NumberField label="Glow Blur (px)" value={Number(block?.props?.headlineGlowBlur || 20)} min={4} max={80} onChange={(v) => onChange(index, { ...block.props, headlineGlowBlur: v })} />
-              </>
-            ) : null}
-            {block?.props?.headlineTextStyle === "shadow" ? (
-              <>
-                <ColorSelector label="Shadow Color" value={block?.props?.headlineShadowColor || "rgba(0,0,0,0.6)"} fallback="#000000" onChange={(v) => onChange(index, { ...block.props, headlineShadowColor: v })} />
-                <div style={styles.colorGrid}>
-                  <NumberField label="Blur (px)" value={Number(block?.props?.headlineShadowBlur || 12)} min={0} max={60} onChange={(v) => onChange(index, { ...block.props, headlineShadowBlur: v })} />
-                  <NumberField label="Offset X" value={Number(block?.props?.headlineShadowOffsetX ?? 2)} min={-30} max={30} onChange={(v) => onChange(index, { ...block.props, headlineShadowOffsetX: v })} />
-                  <NumberField label="Offset Y" value={Number(block?.props?.headlineShadowOffsetY ?? 4)} min={-30} max={30} onChange={(v) => onChange(index, { ...block.props, headlineShadowOffsetY: v })} />
-                </div>
-              </>
-            ) : null}
-            <div style={{ ...styles.colorGrid, marginTop: 10 }}>
-              <NumberField label="Headline Size" value={Number(block?.props?.headlineFontSize || 52)} min={18} max={120} onChange={(value) => onChange(index, { ...block.props, headlineFontSize: value })} />
-              <NumberField label="Body Size" value={Number(block?.props?.subheadlineFontSize || 20)} min={12} max={72} onChange={(value) => onChange(index, { ...block.props, subheadlineFontSize: value })} />
-            </div>
-          </div>
-        ) : null}
+
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (["id", "type", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections
           if (Array.isArray(value) || (typeof value === "object" && value !== null)) return null;
@@ -5030,6 +4931,7 @@ export {
   GridSectionPropertiesPanel,
   ContactFormPropertiesPanel,
   HoverCardsPropertiesPanel,
+  FramerPortfolioPropertiesPanel,
   PropertiesPanel,
   renderBlockPreview,
 };

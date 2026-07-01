@@ -33,12 +33,12 @@ function getMarketplaceAccessEndpoint(pathname) {
 function isMainPlatformVerified(account) {
   if (!account) return false;
   const approved = account.is_approved === true || account.approved === true;
-  const statusOk =
-    account.status === "approved" ||
-    account.status === "active" ||
-    account.status == null;
-  // Approved users are verified regardless of subscription_status
-  return approved && statusOk;
+  const status = String(account.status || "").toLowerCase();
+  const statusOk = !["paused", "rejected", "declined", "disabled"].includes(status);
+  const subscriptionStatus = String(account.subscription_status || "").toLowerCase();
+  const subscriptionOk = !!subscriptionStatus && !["none", "inactive", "cancelled", "canceled", "past_due"].includes(subscriptionStatus);
+  const onboardingOk = account.onboarding_completed !== false || (approved && subscriptionOk);
+  return approved && statusOk && onboardingOk && subscriptionOk;
 }
 
 function isApprovedVendor(account) {
@@ -225,8 +225,6 @@ export default function Layout({ children }) {
           return;
         }
 
-        console.log("[Layout.js] Logged in user:", user);
-
         await ensureUserFolders();
 
         const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email);
@@ -236,7 +234,7 @@ export default function Layout({ children }) {
         const { data, error } = await supabase
           .from("accounts")
           .select(
-            "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status"
+            "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status, onboarding_completed, phone_verified, email_verified"
           )
           .eq("user_id", user.id)
           .single();
@@ -244,9 +242,19 @@ export default function Layout({ children }) {
         if (error) console.error(error);
         setAccount(data);
 
-        console.log("[Layout.js] Loaded account row:", data);
+        if (hasDeveloperAccess) {
+          const branding = await buildBrandingState(data || {});
+          setHeader(data ? branding.header : {
+            nameLine1: DEFAULT_BRAND_NAME,
+            nameLine2: "Digital Solutions",
+            logo: DEFAULT_BRAND_LOGO,
+          });
+          setAvatar(branding.avatar || DEFAULT_BRAND_LOGO);
+          setLoading(false);
+          return;
+        }
 
-        if ((hasDeveloperAccess || isInternalGr8ResultAccount(data)) && data) {
+        if (isInternalGr8ResultAccount(data) && data) {
           const branding = await buildBrandingState(data);
           setHeader(branding.header);
           setAvatar(branding.avatar);
@@ -303,7 +311,12 @@ export default function Layout({ children }) {
         if (!verifiedPlatformUser && !vendorAllowed && isProtectedPlatformRoute && !isAdminRoute) {
           // User is logged in but not fully set up — route them appropriately, never to marketplace
           const approved = data?.is_approved === true || data?.approved === true;
-          if (!approved || data?.status === "pending") {
+          const status = String(data?.status || "").toLowerCase();
+          const statusBlocked = ["paused", "rejected", "declined", "disabled"].includes(status);
+          const subscriptionStatus = String(data?.subscription_status || "").toLowerCase();
+          const subscriptionOk = !!subscriptionStatus && !["none", "inactive", "cancelled", "canceled", "past_due"].includes(subscriptionStatus);
+          const onboardingReady = (data?.onboarding_completed !== false && data?.phone_verified !== false) || (approved && subscriptionOk);
+          if (!approved || statusBlocked || !onboardingReady) {
             router.replace("/account");
           } else {
             router.replace("/billing");
@@ -404,8 +417,8 @@ export default function Layout({ children }) {
             <UsageWarning />
             {/* ✅ Getting Started checklist */}
             <GettingStartedMenu />
-            {/* ✅ Help & Tutorials */}
-            <TutorialsMenu />
+            {/* ✅ Help & Tutorials — restore once tutorial videos are recorded */}
+            {/* <TutorialsMenu /> */}
             {/* ✅ Avatar Circle */}
             <ProfileMenu avatar={avatar} />
           </header>

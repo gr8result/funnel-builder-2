@@ -1,0 +1,401 @@
+{
+  "id": "sms",
+  "name": "SMS",
+  "slug": "sms",
+  "seo": {},
+  "sections": [],
+  "widgets": [],
+  "styles": {},
+  "assets": [],
+  "objective": "Recovered SMS page from previous project data.",
+  "blocks": [
+    {
+      "id": "nav-bar-njv0lw3",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home",
+            "children": [],
+            "highlighted": true
+          },
+          {
+            "href": "#about",
+            "label": "About"
+          },
+          {
+            "href": "#services",
+            "label": "Services"
+          },
+          {
+            "href": "#contact",
+            "label": "Contact"
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Get Started",
+        "variant": "split-dark",
+        "showLogo": false,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "normal",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#ffffff",
+        "ctaFontSize": 16,
+        "linkFontSize": 16,
+        "brandFontSize": 18,
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#0f172a",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+      }
+    },
+    {
+      "id": 1782095149942,
+      "type": "hero",
+      "props": {
+        "backgroundStyle": "image",
+        "minHeight": "1350px",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "e5a504f9-7834-4e3c-8afd-7f6f40eb0473",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782095156620-ChatGPT-Image-Jun-22-2026-06_16_46-AM.png",
+        "headline": "",
+        "headlineBlock": {
+          "content": ""
+        },
+        "contentX": 50,
+        "contentY": 68,
+        "contentWidth": 760,
+        "contentHeight": 220,
+        "floatingX": 50,
+        "floatingY": 24,
+        "floatingWidth": 176,
+        "floatingHeight": 176,
+        "hideTextOverlay": true,
+        "marginTop": 130
+      }
+    },
+    {
+      "id": 1782073799851,
+      "type": "wave-marquee",
+      "props": {
+        "text": "WEBSITES • SALES FUNNELS • CRM SYSTEMS • EMAIL MARKETING • SMS MARKETING • AUTOMATION • ONLINE BOOKINGS • SOCIAL MEDIA • LEAD GENERATION • BUSINESS GROWTH",
+        "separator": " * ",
+        "repeatCount": 8,
+        "speed": 22,
+        "direction": "left",
+        "height": 300,
+        "amplitude": 70,
+        "wavelength": 650,
+        "angle": -2,
+        "fontSize": 32,
+        "fontWeight": "500",
+        "letterSpacing": 2.6,
+        "textTransform": "uppercase",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffc000",
+        "fullWidthBackground": true,
+        "sectionAnimation": "fade-in",
+        "sectionAnimationDelay": 0.04,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": 1782092755021,
+      "type": "scroll-stack",
+      "props": {
+        "panels": [
+          {
+            "id": "ss-panel-1",
+            "eyebrow": "Automated SMS Workflows",
+            "eyebrowDot": false,
+            "heading": "SMS Broadcasts",
+            "body": "Promote sales, special offers, events, product launches, and important updates instantly. With open rates often exceeding 90%, SMS remains one of the most effective communication channels available.",
+            "showCta": false,
+            "ctaText": "",
+            "ctaUrl": "",
+            "ctaStyle": "pill",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782096585172-ChatGPT-Image-Jun-22-2026-12_35_34-PM.png",
+            "imageAlt": "Team collaborating",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(255,255,255,0.15)",
+            "imagePosition": "right",
+            "backgroundColor": "#0d9488",
+            "textColor": "#ffffff",
+            "accentColor": "#5eead4"
+          },
+          {
+            "id": "ss-panel-2",
+            "eyebrow": "Keep leads and customers engaged without lifting a finger.",
+            "eyebrowDot": false,
+            "heading": "Automate Every Follow-Up",
+            "body": "A mobile experience that makes it easy to manage your pipeline on the go. Log calls, check statuses, and add activities whenever you need to.",
+            "showCta": false,
+            "ctaText": "Explore CRM",
+            "ctaUrl": "#",
+            "ctaStyle": "pill",
+            "image": "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "Mobile app interface",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(255,255,255,0.15)",
+            "imagePosition": "right",
+            "backgroundColor": "#1a73e8",
+            "textColor": "#ffffff",
+            "accentColor": "#93c5fd"
+          },
+          {
+            "id": "ss-panel-3",
+            "eyebrow": "AI Automation",
+            "eyebrowDot": false,
+            "heading": "Work smarter with built-in AI",
+            "body": "Create intelligent SMS sequences that trigger automatically based on customer actions. Send appointment reminders, quote follow-ups, abandoned cart messages, review requests, and nurturing campaigns 24/7.",
+            "showCta": false,
+            "ctaText": "Explore AI features",
+            "ctaUrl": "#",
+            "ctaStyle": "pill",
+            "image": "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "AI interface",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(255,255,255,0.15)",
+            "imagePosition": "right",
+            "backgroundColor": "#7c3aed",
+            "textColor": "#ffffff",
+            "accentColor": "#c4b5fd"
+          }
+        ],
+        "baseLayoutWidth": 1500,
+        "stickyTopOffset": 50
+      }
+    },
+    {
+      "id": 1782092782850,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    }
+  ],
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "nav-bar-njv0lw3",
+        "type": "nav-bar",
+        "props": {
+          "logo": "",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home",
+              "children": [],
+              "highlighted": true
+            },
+            {
+              "href": "#about",
+              "label": "About"
+            },
+            {
+              "href": "#services",
+              "label": "Services"
+            },
+            {
+              "href": "#contact",
+              "label": "Contact"
+            }
+          ],
+          "ctaLink": "#contact",
+          "ctaText": "Get Started",
+          "variant": "split-dark",
+          "showLogo": false,
+          "logoWidth": 44,
+          "textColor": "#e2e8f0",
+          "stickyMode": "normal",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "buttonColor": "#ffffff",
+          "ctaFontSize": 16,
+          "linkFontSize": 16,
+          "brandFontSize": 18,
+          "backgroundColor": "#0b1220",
+          "buttonTextColor": "#0f172a",
+          "linkHoverEffect": "fill",
+          "mobileMenuStyle": "hamburger",
+          "linkHoverTextColor": "#ffffff",
+          "activeLinkTextColor": "#ffffff",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+        }
+      },
+      {
+        "id": 1782095149942,
+        "type": "hero",
+        "props": {
+          "backgroundStyle": "image",
+          "minHeight": "1350px",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true,
+          "backgroundImageAssetId": "e5a504f9-7834-4e3c-8afd-7f6f40eb0473",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782095156620-ChatGPT-Image-Jun-22-2026-06_16_46-AM.png",
+          "headline": "",
+          "headlineBlock": {
+            "content": ""
+          },
+          "contentX": 50,
+          "contentY": 68,
+          "contentWidth": 760,
+          "contentHeight": 220,
+          "floatingX": 50,
+          "floatingY": 24,
+          "floatingWidth": 176,
+          "floatingHeight": 176,
+          "hideTextOverlay": true,
+          "marginTop": 130
+        }
+      },
+      {
+        "id": 1782073799851,
+        "type": "wave-marquee",
+        "props": {
+          "text": "WEBSITES • SALES FUNNELS • CRM SYSTEMS • EMAIL MARKETING • SMS MARKETING • AUTOMATION • ONLINE BOOKINGS • SOCIAL MEDIA • LEAD GENERATION • BUSINESS GROWTH",
+          "separator": " * ",
+          "repeatCount": 8,
+          "speed": 22,
+          "direction": "left",
+          "height": 300,
+          "amplitude": 70,
+          "wavelength": 650,
+          "angle": -2,
+          "fontSize": 32,
+          "fontWeight": "500",
+          "letterSpacing": 2.6,
+          "textTransform": "uppercase",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffc000",
+          "fullWidthBackground": true,
+          "sectionAnimation": "fade-in",
+          "sectionAnimationDelay": 0.04,
+          "baseLayoutWidth": 1500
+        }
+      },
+      {
+        "id": 1782092755021,
+        "type": "scroll-stack",
+        "props": {
+          "panels": [
+            {
+              "id": "ss-panel-1",
+              "eyebrow": "Automated SMS Workflows",
+              "eyebrowDot": false,
+              "heading": "SMS Broadcasts",
+              "body": "Promote sales, special offers, events, product launches, and important updates instantly. With open rates often exceeding 90%, SMS remains one of the most effective communication channels available.",
+              "showCta": false,
+              "ctaText": "",
+              "ctaUrl": "",
+              "ctaStyle": "pill",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782096585172-ChatGPT-Image-Jun-22-2026-12_35_34-PM.png",
+              "imageAlt": "Team collaborating",
+              "imageStyle": "card",
+              "imageCardBg": "rgba(255,255,255,0.15)",
+              "imagePosition": "right",
+              "backgroundColor": "#0d9488",
+              "textColor": "#ffffff",
+              "accentColor": "#5eead4"
+            },
+            {
+              "id": "ss-panel-2",
+              "eyebrow": "Keep leads and customers engaged without lifting a finger.",
+              "eyebrowDot": false,
+              "heading": "Automate Every Follow-Up",
+              "body": "A mobile experience that makes it easy to manage your pipeline on the go. Log calls, check statuses, and add activities whenever you need to.",
+              "showCta": false,
+              "ctaText": "Explore CRM",
+              "ctaUrl": "#",
+              "ctaStyle": "pill",
+              "image": "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1400&q=80",
+              "imageAlt": "Mobile app interface",
+              "imageStyle": "card",
+              "imageCardBg": "rgba(255,255,255,0.15)",
+              "imagePosition": "right",
+              "backgroundColor": "#1a73e8",
+              "textColor": "#ffffff",
+              "accentColor": "#93c5fd"
+            },
+            {
+              "id": "ss-panel-3",
+              "eyebrow": "AI Automation",
+              "eyebrowDot": false,
+              "heading": "Work smarter with built-in AI",
+              "body": "Create intelligent SMS sequences that trigger automatically based on customer actions. Send appointment reminders, quote follow-ups, abandoned cart messages, review requests, and nurturing campaigns 24/7.",
+              "showCta": false,
+              "ctaText": "Explore AI features",
+              "ctaUrl": "#",
+              "ctaStyle": "pill",
+              "image": "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&w=1400&q=80",
+              "imageAlt": "AI interface",
+              "imageStyle": "card",
+              "imageCardBg": "rgba(255,255,255,0.15)",
+              "imagePosition": "right",
+              "backgroundColor": "#7c3aed",
+              "textColor": "#ffffff",
+              "accentColor": "#c4b5fd"
+            }
+          ],
+          "baseLayoutWidth": 1500,
+          "stickyTopOffset": 50
+        }
+      },
+      {
+        "id": 1782092782850,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "html": "",
+  "updatedAt": "2026-06-22T02:50:03.043Z"
+}

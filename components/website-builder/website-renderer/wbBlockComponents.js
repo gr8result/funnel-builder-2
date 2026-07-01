@@ -1,7 +1,8 @@
-﻿import React from "react";
-import { FaArrowDown, FaArrowRight } from "react-icons/fa";
+import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { renderGridLibraryIcon } from "../gridIconLibrary";
+import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
+import { FAQAccordionItems, FAQAccordionBlock } from "../../../modules/website-builder/blocks/accordion/AccordionBlock";
 import {
   MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
   asArray, slugifyText, resolveCurrentPageKey,
@@ -25,6 +26,35 @@ import {
   buildNavLinkStyle, applyNavHoverEffect, resetNavHoverEffect,
   findScrollParent, BrandMark,
 } from "./wbVariantStyles";
+
+const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+function getVideoDebugState(video) {
+  if (!video) return {};
+  return {
+    currentTime: Number.isFinite(video.currentTime) ? Number(video.currentTime.toFixed(3)) : null,
+    duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : null,
+    paused: video.paused,
+    ended: video.ended,
+    muted: video.muted,
+    loop: video.loop,
+    autoplay: video.autoplay,
+    playsInline: video.playsInline,
+    preload: video.preload,
+    readyState: video.readyState,
+    networkState: video.networkState,
+    currentSrc: video.currentSrc || "",
+    error: video.error ? { code: video.error.code, message: video.error.message } : null,
+  };
+}
+
+function logHeroVideoDebug(label, eventName, video, extra = {}) {
+  if (!shouldLogHeroVideoDebug()) return;
+  console.info(`[HeroVideoDebug] ${label}: ${eventName}`, {
+    ...getVideoDebugState(video),
+    ...extra,
+  });
+}
 
 function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
   const wrapperRef = React.useRef(null);
@@ -256,14 +286,34 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <a
-                  href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
-                  style={asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted))}
-                  onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
-                  onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
-                >
-                  {item?.label || "Link"}
-                </a>
+                {hasChildren ? (
+                  <button
+                    type="button"
+                    style={{
+                      ...asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted)),
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                    onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setOpenDropdown((value) => (value === idx ? null : idx));
+                    }}
+                    aria-expanded={isOpen}
+                  >
+                    {item?.label || "Menu"}
+                  </button>
+                ) : (
+                  <a
+                    href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
+                    style={asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted))}
+                    onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                    onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
+                  >
+                    {item?.label || "Link"}
+                  </a>
+                )}
                 {hasChildren ? (
                   <button
                     type="button"
@@ -278,7 +328,11 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                       minHeight: MIN_TAP_SIZE,
                       minWidth: MIN_TAP_SIZE,
                     }}
-                    onClick={() => setOpenDropdown((value) => (value === idx ? null : idx))}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setOpenDropdown((value) => (value === idx ? null : idx));
+                    }}
                   >
                     ▾
                   </button>
@@ -306,6 +360,10 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                     <a
                       key={`${child?.label || "child"}-${childIdx}`}
                       href={editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext)}
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        if (shouldUseMobileMenu) setMobileOpen(false);
+                      }}
                       style={{
                         color: blockProps.textColor || "#e2e8f0",
                         textDecoration: "none",
@@ -331,7 +389,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
       </div>
 
       {blockProps.ctaText ? (
-        <a href={blockProps.ctaLink || "#contact"} style={asStyleObject(navTheme.cta)}>
+        <a href={editor ? (blockProps.ctaLink || "#contact") : resolvePublishedNavHref({ href: blockProps.ctaLink || "#contact" }, navigationContext)} style={asStyleObject(navTheme.cta)}>
           {blockProps.ctaText}
         </a>
       ) : null}
@@ -369,23 +427,6 @@ function shouldSkipToolbarBlur(event) {
   return !!event?.relatedTarget?.closest?.('[data-text-toolbar="true"]');
 }
 
-function cleanInlineEditorHtml(value) {
-  let result = String(value || "")
-    .replace(/\u200b/g, "")
-    .replace(/<span\b([^>]*)>\s*<\/span>/gi, "");
-  // NOTE: Do NOT unwrap outer <span style="..."> wrappers here — those are intentionally
-  // created by the text toolbar (font-size, color, font-family) when the user selects all
-  // text. Stripping them would discard the user's formatting change.
-  // Strip data-start / data-end / data-* attributes inserted by AI-generated content.
-  // These cause no-op diffs but pollute the stored HTML and can break rendering
-  // when a <p> with data-* is nested inside another <p> (invalid HTML).
-  result = result.replace(/ data-[a-z][a-z0-9-]*="[^"]*"/gi, "");
-  result = result.replace(/ data-[a-z][a-z0-9-]*='[^']*'/gi, "");
-  return result
-    .replace(/<h([1-6])\b([^>]*)>\s*(?:<br\s*\/?\s*>|&nbsp;|\s)*<\/h\1>/gi, "")
-    .replace(/<p\b([^>]*)>\s*(?:<span\b[^>]*>\s*)?(?:<br\s*\/?\s*>|&nbsp;|\s)*(?:<\/span>\s*)?<\/p>/gi, "");
-}
-
 function htmlToPlainText(value) {
   const raw = String(value || "").replace(/\u200b/g, "");
   if (!/[<&]/.test(raw)) return raw;
@@ -406,6 +447,21 @@ function htmlToPlainText(value) {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderStatLabelHtml(value) {
+  const raw = String(value ?? "");
+  const looksLikePastedCodeBlock = /<(pre|code)\b/i.test(raw) || /code-block-viewer|cm-content|token-border-light/i.test(raw);
+  return looksLikePastedCodeBlock ? escapeHtml(htmlToPlainText(raw).trim()) : asRichHtml(raw);
 }
 
 function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage, layoutWidth = null }) {
@@ -933,6 +989,10 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
   const fullWidthProps = { ...props, fullWidthBackground: props?.fullWidthBackground !== false };
   const rawWidth = String(props?.width || "100%").trim().toLowerCase();
   const useFullWidth = fullWidthProps.fullWidthBackground || rawWidth === "100%" || rawWidth === "full" || rawWidth.includes("vw");
+  const fullBleedImage = useFullWidth || String(props?.imageStyle || props?.fitMode || "").toLowerCase() === "bleed";
+  const seamlessEdges = fullBleedImage && props?.seamlessEdges !== false;
+  const seamlessBackground = props?.backgroundColor || props?.seamlessBackgroundColor || "transparent";
+  const naturalFullWidthHeight = fullBleedImage && props?.autoHeight !== false;
   const widthPx = parseSizeValue(props?.width, compact ? 280 : 720);
   const heightPx = parseSizeValue(props?.height, compact ? 220 : 400);
   const effectiveWidth = Math.max(1, Math.round(figureSize.width || widthPx));
@@ -1067,6 +1127,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
 
       onChangeBlock({
         ...latestPropsRef.current,
+        autoHeight: false,
         width: `${Math.max(160, current.baseWidth + dx)}px`,
         height: `${Math.max(120, current.baseHeight + dy)}px`,
       });
@@ -1144,18 +1205,58 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
         ...fullWidthStyle(fullWidthProps, compact, editor),
         ...((!editor || animationPreview) ? getAnimationStyle(props?.sectionAnimation, props?.sectionAnimationDelay || 0, props?.sectionAnimationSpeed) : {}),
         padding: 0,
-        marginTop: 0,
-        marginBottom: 0,
-        background: "transparent",
+        marginTop: seamlessEdges ? -1 : 0,
+        marginBottom: seamlessEdges ? -1 : 0,
+        background: seamlessBackground,
         border: "none",
         boxShadow: "none",
+        lineHeight: 0,
+        fontSize: 0,
+        overflow: "hidden",
+        position: "relative",
+        zIndex: seamlessEdges ? 1 : undefined,
       }}
     >
-      <figure ref={figureRef} style={{ ...sharedStyles.figure, position: "relative", width: useFullWidth ? "100%" : `${widthPx}px`, maxWidth: "100%" }}>
+      <figure
+        ref={figureRef}
+        style={{
+          ...sharedStyles.figure,
+          position: "relative",
+          width: useFullWidth ? "100%" : `${widthPx}px`,
+          maxWidth: "100%",
+          margin: 0,
+          padding: 0,
+          background: seamlessBackground,
+          border: "none",
+          boxShadow: "none",
+          borderRadius: fullBleedImage ? 0 : sharedStyles.figure?.borderRadius,
+          overflow: "hidden",
+          lineHeight: 0,
+          fontSize: 0,
+        }}
+      >
         {imageSrc ? (
-          <img src={imageSrc} alt={props.alt || "Image"} style={{ ...sharedStyles.figureImage, width: "100%", height: `${heightPx}px`, maxHeight: "none" }} />
+          <img
+            src={imageSrc}
+            alt={props.alt || "Image"}
+            style={{
+              ...sharedStyles.figureImage,
+              width: "100%",
+              height: naturalFullWidthHeight ? "auto" : `${heightPx}px`,
+              maxHeight: "none",
+              objectFit: naturalFullWidthHeight ? "contain" : (props?.objectFit || "cover"),
+              objectPosition: props?.objectPosition || "center center",
+              borderRadius: fullBleedImage ? 0 : sharedStyles.figureImage?.borderRadius,
+              display: "block",
+              verticalAlign: "top",
+              margin: 0,
+              padding: 0,
+              border: 0,
+              outline: "none",
+            }}
+          />
         ) : (
-          <div style={{ ...sharedStyles.galleryPlaceholder, width: "100%", height: `${heightPx}px`, borderRadius: 22 }}>
+          <div style={{ ...sharedStyles.galleryPlaceholder, width: "100%", height: `${heightPx}px`, borderRadius: fullBleedImage ? 0 : 22, lineHeight: 1.2 }}>
             Upload or choose an image
           </div>
         )}
@@ -1164,7 +1265,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
             style={{
               position: "absolute",
               inset: 0,
-              borderRadius: 22,
+              borderRadius: fullBleedImage ? 0 : 22,
               pointerEvents: "none",
             }}
           >
@@ -1356,7 +1457,7 @@ function EditableImageBlock({ props, imageSrc, compact, editor = false, animatio
 function getListMarker(style, index) {
   if (style === "number") return `${index + 1}.`;
   if (style === "disc") return "•";
-  return "✓";
+  return "?";
 }
 
 function ColumnEditorCard({
@@ -1402,7 +1503,7 @@ function ColumnEditorCard({
 }) {
   const resolvedAlign = contentAlign || "left";
   const isNewsletter = contentType === "newsletter";
-  const isBlock = contentType === "block";
+  const isBlock = false;
   const normalizedTitle = String(title || "").trim();
   const normalizedContent = String(content || "")
     .replace(/<[^>]+>/g, " ")
@@ -1419,6 +1520,7 @@ function ColumnEditorCard({
         .map((item) => (typeof item === "string" ? { src: item } : (item || {})))
         .filter((item) => editor || item.src)
     : [];
+  const shouldShowEmptyTextPlaceholders = editor && !image && !normalizedExtraImages.length && !normalizedTitle && !normalizedContent;
 
   const startResizeNL = React.useCallback((e, dir) => {
     e.preventDefault();
@@ -1520,7 +1622,7 @@ function ColumnEditorCard({
           aria-label="Swap columns"
           onClick={(e) => { e.stopPropagation(); onSwap(); }}
           style={{ position: "absolute", top: 8, right: 8, zIndex: 20, background: "rgba(14,165,233,0.92)", border: "none", borderRadius: 8, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", padding: "4px 10px", boxShadow: "0 2px 8px rgba(14,165,233,0.4)", lineHeight: 1 }}
-        >⇆</button>
+        >×</button>
       ) : null}
       <div style={{ position: "relative", zIndex: 1 }}>
       {isBlock ? (
@@ -1691,7 +1793,7 @@ function ColumnEditorCard({
                   })}
                 </div>
               ) : null),
-              title: ((normalizedTitle || editor) ? (
+              title: (normalizedTitle || shouldShowEmptyTextPlaceholders ? (
                 <h3
                   data-website-inline-editor="true"
                   data-text-prop={titleProp}
@@ -1699,10 +1801,10 @@ function ColumnEditorCard({
                   suppressContentEditableWarning
                   onBlur={(event) => onTitleChange?.(cleanInlineEditorHtml(event.currentTarget.innerHTML))}
                   style={{ margin: 0, color: textColor || "#0f172a", fontSize: compact ? 18 : 22, fontWeight: 600, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0, minHeight: editor && !normalizedTitle ? 32 : undefined }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(title) }}
+                  dangerouslySetInnerHTML={{ __html: normalizedTitle ? asRichHtml(title) : "Column title" }}
                 />
               ) : null),
-              content: ((normalizedContent || editor) ? (
+              content: (normalizedContent || shouldShowEmptyTextPlaceholders ? (
                 <div
                   data-website-inline-editor="true"
                   data-text-prop={contentProp}
@@ -1710,7 +1812,7 @@ function ColumnEditorCard({
                   suppressContentEditableWarning
                   onBlur={(event) => onContentChange?.(event.currentTarget.innerHTML)}
                   style={{ color: bodyTextColor || textColor || "#334155", fontSize: compact ? 14 : 16, lineHeight: 1.7, textAlign: resolvedAlign, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "6px 8px" : 0, minHeight: editor && !normalizedContent ? 40 : undefined }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(content) }}
+                  dangerouslySetInnerHTML={{ __html: normalizedContent ? asRichHtml(content) : "Column content" }}
                 />
               ) : null),
             };
@@ -1721,8 +1823,8 @@ function ColumnEditorCard({
                 <div key={key} style={{ position: "relative", marginBottom: 12 }}>
                   {editor && onReorderSection ? (
                     <div style={{ position: "absolute", top: 4, right: 4, zIndex: 20, display: "flex", flexDirection: "column", gap: 2 }}>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} style={{ background: idx === 0 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === 0 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>▲</button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === order.length - 1} style={{ background: idx === order.length - 1 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === order.length - 1 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>▼</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, -1); }} disabled={idx === 0} style={{ background: idx === 0 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === 0 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>×</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); moveSection(idx, 1); }} disabled={idx === order.length - 1} style={{ background: idx === order.length - 1 ? "rgba(148,163,184,0.3)" : "rgba(14,165,233,0.85)", border: "none", borderRadius: 5, color: "#fff", fontSize: 12, fontWeight: 700, cursor: idx === order.length - 1 ? "default" : "pointer", padding: "1px 6px", lineHeight: 1.4 }}>×</button>
                     </div>
                   ) : null}
                   {node}
@@ -1734,240 +1836,6 @@ function ColumnEditorCard({
       )}
       </div>
     </article>
-  );
-}
-
-function FAQAccordionItems({ items, compact, editor = false, props, openItems, onToggleItem, onPatchItem, propPrefix = "items" }) {
-  const sourceSplitVariant = props.faqVariant === "source-split";
-  const sourceHeaderBackground = "linear-gradient(34deg, rgba(13, 141, 222, 0.2), rgba(8, 140, 202, 0.09))";
-  const sourceArrowBackground = props.arrowBackgroundColor || "linear-gradient(135deg, #163628 0%, #22c55e 52%, #bef264 100%)";
-  return (
-    <div style={sharedStyles.stack}>
-      {items.map((item, idx) => {
-        const isOpen = openItems.includes(idx);
-        return (
-          <ScrollReveal
-            key={item.id || `${item.question}-${idx}`}
-            animationName={sourceSplitVariant ? (props.faqAnimation || "fade-up") : "fade-up"}
-            delay={(sourceSplitVariant ? Number(props.faqAnimationDelay || 0) : 0) + (idx * 0.06)}
-            speed={sourceSplitVariant ? props.faqAnimationSpeed : undefined}
-            disabled={editor}
-            style={{
-              ...sharedStyles.faqItem,
-              ...(sourceSplitVariant ? {
-                background: "rgba(3, 18, 28, 0.16)",
-                border: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
-                borderRadius: 15,
-                overflow: "hidden",
-                padding: 0,
-                boxShadow: "0 10px 28px rgba(0,0,0,0.14)",
-                gap: 0,
-                marginBottom: 15,
-              } : {
-                background: props.itemBackgroundColor || sharedStyles.faqItem.background,
-                border: `1px solid ${props.itemBorderColor || props.borderColor || "#cbd5e1"}`,
-              }),
-            }}
-          >
-            <div style={{
-              ...sharedStyles.faqTrigger,
-              ...(sourceSplitVariant ? {
-                display: "grid",
-                gridTemplateColumns: `${compact ? 36 : 40}px minmax(0, 1fr)`,
-                alignItems: "center",
-                gap: compact ? 14 : 20,
-                padding: compact ? "20px" : "30px",
-                background: sourceHeaderBackground,
-              } : {}),
-            }}>
-              <button
-                type="button"
-                onClick={() => onToggleItem(idx)}
-                style={{
-                  ...sharedStyles.faqChevronButton,
-                  color: props.chevronColor || "#2563eb",
-                  ...(sourceSplitVariant ? {
-                    width: compact ? 44 : 52,
-                    height: compact ? 44 : 52,
-                    alignSelf: "center",
-                    justifySelf: "start",
-                    flex: "0 0 auto",
-                    borderRadius: 6,
-                    background: sourceArrowBackground,
-                    boxShadow: "0 12px 28px rgba(0,0,0,0.18)",
-                  } : {}),
-                }}
-                aria-expanded={isOpen}
-                aria-label={isOpen ? "Collapse FAQ item" : "Expand FAQ item"}
-              >
-                <span style={{ ...sharedStyles.faqChevron, color: sourceSplitVariant ? "#ffffff" : (props.chevronColor || "#2563eb"), ...(sourceSplitVariant ? { fontSize: compact ? 18 : 22, fontWeight: 600, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center" } : {}) }}>
-                  {isOpen ? <FaArrowDown /> : <FaArrowRight />}
-                </span>
-              </button>
-              <div
-                data-website-inline-editor="true"
-                data-text-prop={`${propPrefix}.${idx}.question`}
-                contentEditable={editor}
-                suppressContentEditableWarning
-                onBlur={(event) => onPatchItem(idx, { question: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                style={{
-                  ...sharedStyles.faqQ,
-                  color: props.questionColor || (sourceSplitVariant ? "#ffffff" : "#0f172a"),
-                  fontSize: compact ? Math.max(17, Number(props.questionFontSize || 18) - 1) : Number(props.questionFontSize || 18),
-                  fontWeight: props.questionFontWeight || (sourceSplitVariant ? "700" : "inherit"),
-                  fontFamily: sourceSplitVariant ? "Poppins, sans-serif" : undefined,
-                  lineHeight: props.questionLineHeight || (sourceSplitVariant ? "23.4px" : undefined),
-                  letterSpacing: sourceSplitVariant ? "0.3px" : undefined,
-                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-                  borderRadius: sourceSplitVariant ? 10 : 8,
-                  padding: editor ? "4px 6px" : 0,
-                  flex: 1,
-                  minWidth: 0,
-                  cursor: editor ? "text" : "default",
-                  boxSizing: "border-box",
-                }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(item.question) }}
-              />
-            </div>
-            {isOpen ? (
-              <div
-                data-website-inline-editor="true"
-                data-text-prop={`${propPrefix}.${idx}.answer`}
-                contentEditable={editor}
-                suppressContentEditableWarning
-                onBlur={(event) => onPatchItem(idx, { answer: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
-                style={{
-                  ...sharedStyles.faqA,
-                  color: props.answerColor || props.textColor || "#475569",
-                  fontSize: compact ? Math.max(12, Number(props.answerFontSize || MIN_TEXT_SIZE) - 1) : Number(props.answerFontSize || MIN_TEXT_SIZE),
-                  outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-                  borderRadius: sourceSplitVariant ? 15 : 8,
-                  padding: editor ? "6px 8px" : (sourceSplitVariant ? "30px" : 0),
-                  ...(sourceSplitVariant ? {
-                    borderTop: `1px solid ${props.itemBorderColor || "rgba(0, 66, 96, 0.39)"}`,
-                    fontFamily: "Inter, sans-serif",
-                    lineHeight: props.answerLineHeight || "28.8px",
-                    background: "rgba(2, 12, 18, 0.34)",
-                  } : {}),
-                }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(item.answer) }}
-              />
-            ) : null}
-          </ScrollReveal>
-        );
-      })}
-    </div>
-  );
-}
-
-function FAQAccordionBlock({ props, compact, editor = false, onChangeBlock, sectionAnimationStyle, assets }) {
-  const sourceItems = asArray(props.items).map((item, idx) => {
-    const question = item?.question || item?.heading || item?.q || `Question ${idx + 1}`;
-    const answer = item?.answer || item?.content || item?.a || "Answer";
-    return {
-      ...item,
-      id: item?.id || `faq-item-${idx}`,
-      question,
-      answer,
-      heading: question,
-      content: answer,
-    };
-  });
-  const items = sourceItems;
-  const faqBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
-  const [openItems, setOpenItems] = React.useState(() => {
-    if (props.faqStartCollapsed) return [];
-    return items.length ? [0] : [];
-  });
-  const allowMultipleOpen = !!props.faqAllowMultipleOpen;
-
-  React.useEffect(() => {
-    if (!items.length) {
-      setOpenItems([]);
-      return;
-    }
-    setOpenItems((current) => {
-      const next = current.filter((idx) => idx >= 0 && idx < items.length);
-      if (next.length) return next;
-      return props.faqStartCollapsed ? [] : [0];
-    });
-  }, [items.length, props.faqStartCollapsed]);
-
-  function toggleItem(itemIndex) {
-    setOpenItems((current) => {
-      const isOpen = current.includes(itemIndex);
-      if (allowMultipleOpen) {
-        return isOpen ? current.filter((idx) => idx !== itemIndex) : [...current, itemIndex];
-      }
-      if (isOpen) return [];
-      return [itemIndex];
-    });
-  }
-
-  function patchItem(itemIndex, patch) {
-    if (!editor || typeof onChangeBlock !== "function") return;
-    const nextItems = sourceItems.map((item, currentIndex) => {
-      if (currentIndex !== itemIndex) return item;
-      const nextQuestion = patch.question ?? item.question;
-      const nextAnswer = patch.answer ?? item.answer;
-      return {
-        ...item,
-        question: nextQuestion,
-        heading: nextQuestion,
-        answer: nextAnswer,
-        content: nextAnswer,
-      };
-    });
-    onChangeBlock({ ...props, items: nextItems });
-  }
-
-  const faqOuterStyle = {
-    width: "100%",
-    borderRadius: compact ? 16 : 22,
-    padding: compact ? "20px" : scaleBoxPadding("30px", spacingMultiplier(props)),
-    background: props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? props.blockBackgroundColor : "transparent",
-    ...(faqBackgroundImage ? {
-      backgroundImage: `linear-gradient(180deg, ${colorWithAlpha(props.blockBackgroundColor || "#0f172a", props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? (Number(props.backgroundOverlayOpacity ?? 55) / 100) : (Number(props.backgroundOverlayOpacity ?? 28) / 100))}, ${colorWithAlpha(props.blockBackgroundColor || "#0f172a", props.blockBackgroundColor && props.blockBackgroundColor !== "transparent" ? (Number(props.backgroundOverlayOpacity ?? 55) / 100) : (Number(props.backgroundOverlayOpacity ?? 28) / 100))}), url(${faqBackgroundImage})`,
-      backgroundSize: props.backgroundSize || "cover",
-      backgroundPosition: props.backgroundPosition || "center center",
-      backgroundRepeat: props.backgroundRepeat || "no-repeat",
-    } : {}),
-  };
-
-  const faqPanelStyle = {
-    ...sharedStyles.cardSection(compact, { ...props, backgroundColor: props.faqPanelBackgroundColor || props.backgroundColor || "#ffffff" }),
-    width: "100%",
-    maxWidth: `${Math.max(320, Number(props.faqMaxWidth || 980))}px`,
-    marginLeft: "auto",
-    marginRight: "auto",
-  };
-
-  return (
-    <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqOuterStyle)}>
-      <div style={asStyleObject(faqPanelStyle)}>
-      <h2
-        data-website-inline-editor="true"
-        data-text-prop="title"
-        contentEditable={editor}
-        suppressContentEditableWarning
-        onBlur={(event) => {
-          if (!editor || typeof onChangeBlock !== "function") return;
-          onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-        }}
-        style={{
-          ...sharedStyles.sectionTitle(compact),
-          ...headingTypography(props),
-          fontSize: compact ? Math.max(18, Number(props.headlineFontSize || 28) - 4) : Number(props.headlineFontSize || 28),
-          color: props.headlineColor || headingTypography(props).color,
-          outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
-          borderRadius: 8,
-          padding: editor ? "4px 6px" : 0,
-        }}
-        dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Questions") }}
-      />
-      <FAQAccordionItems items={items} compact={compact} editor={editor} props={props} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="items" />
-      </div>
-    </ScrollReveal>
   );
 }
 
@@ -2061,6 +1929,11 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   const splitParallaxEnabled = !!splitBackgroundImage && !!props.enableParallax;
   const splitParallaxActive = splitParallaxEnabled && !compact;
   const splitContentWidth = Math.max(320, Number(props.blockMaxWidth || layoutWidth || props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
+  const contentPanelPadX = compact
+    ? 20
+    : isTabletLike
+      ? 40
+      : Math.min(120, Math.max(40, Math.round(splitContentWidth * 0.08)));
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -2127,6 +2000,26 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
     "60-40": "3fr 2fr",
     "67-33": "2fr 1fr",
   };
+  const splitLeftFractionMap = {
+    "33-67": 1 / 3,
+    "40-60": 0.4,
+    "43-57": 434 / 997,
+    "50-50": 0.5,
+    "45-55": 0.45,
+    "55-45": 0.55,
+    "57-43": 0.57,
+    "60-40": 0.6,
+    "67-33": 2 / 3,
+  };
+  const splitLeftFraction = splitLeftFractionMap[props.splitLayout] || 0.5;
+  const splitFixedBackgroundOffset = Math.round((splitLeftFraction - 1) * splitContentWidth * 0.5);
+  const splitFixedBackgroundX = `calc(50% + ${splitFixedBackgroundOffset}px)`;
+  const splitBackgroundPositionY = (() => {
+    const tokens = String(props.backgroundPosition || "center center").trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return "center";
+    if (tokens[0] === "top" || tokens[0] === "bottom") return tokens[0];
+    return tokens[1] || "center";
+  })();
   const splitIsFullWidth = props.fullWidthBackground !== false;
   const sectionSurface = {
     position: "relative",
@@ -2148,6 +2041,11 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   const panelShell = {
     display: "grid",
     gridTemplateColumns: compact ? "1fr" : (splitRatioMap[props.splitLayout] || "1fr 1fr"),
+    width: "100%",
+    maxWidth: `${splitContentWidth}px`,
+    marginLeft: "auto",
+    marginRight: "auto",
+    boxSizing: "border-box",
     minHeight: compact ? undefined : props.minHeight || "760px",
     borderRadius: 0,
     overflow: (hasLeftPanelAnim || hasRightPanelAnim) ? "visible" : "hidden",
@@ -2160,10 +2058,13 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
   const mediaPanelStyle = splitBackgroundImage
     ? {
         position: "relative",
+        minWidth: 0,
         overflow: "hidden",
         zIndex: textPanelOverlap > 0 ? 1 : undefined,
         backgroundImage: `url(${splitBackgroundImage})`,
-        backgroundPosition: props.backgroundPosition || "center center",
+        backgroundPosition: splitParallaxActive && !editor
+          ? `${splitFixedBackgroundX} ${splitBackgroundPositionY}`
+          : (props.backgroundPosition || "center center"),
         backgroundSize: props.backgroundSize || "cover",
         backgroundRepeat: props.backgroundRepeat || "no-repeat",
         backgroundAttachment: splitParallaxActive ? "fixed" : "scroll",
@@ -2171,6 +2072,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
       }
     : {
         position: "relative",
+        minWidth: 0,
         overflow: "hidden",
         zIndex: textPanelOverlap > 0 ? 1 : undefined,
         minHeight: compact ? 122 : undefined,
@@ -2178,13 +2080,17 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
       };
   const contentPanelStyle = {
     position: "relative",
+    minWidth: 0,
+    maxWidth: "100%",
     zIndex: textPanelOverlap > 0 ? 2 : undefined,
     marginLeft: textPanelOverlap > 0 ? `-${textPanelOverlap}%` : undefined,
     background: props.contentPanelBackgroundColor || "transparent",
-    padding: compact ? "44px 20px 56px" : (isTabletLike ? "115px 20px 115px 40px" : "115px 120px 115px 120px"),
+    padding: compact ? "44px 20px 56px" : `115px ${contentPanelPadX}px`,
     display: "grid",
     alignContent: "start",
     gap: compact ? 16 : 20,
+    boxSizing: "border-box",
+    overflowWrap: "anywhere",
   };
   const faqWrapStyle = {
     width: "100%",
@@ -2272,6 +2178,8 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                   alignItems: "center",
                   gap: 0,
                   marginBottom: compact ? 8 : 10,
+                  minWidth: 0,
+                  maxWidth: "100%",
                 }}
               >
                 <span
@@ -2309,6 +2217,10 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                   WebkitTextFillColor: "transparent",
                   color: "transparent",
                   textAlign: headlineBlockProps.alignment || "left",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
                   outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
                   borderRadius: 8,
                   padding: editor ? "4px 6px" : 0,
@@ -2324,7 +2236,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
               delay={headlineBlockProps.animationDelay || 0}
               speed={headlineBlockProps.animationSpeed}
               disabled={editor}
-              style={{ width: "100%", display: props.headlineOverImage ? "none" : undefined }}
+              style={{ width: "100%", maxWidth: "100%", minWidth: 0, display: props.headlineOverImage ? "none" : undefined }}
             >
               <h2
                 data-website-inline-editor="true"
@@ -2353,6 +2265,9 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                   textAlign: headlineBlockProps.alignment || "left",
                   letterSpacing: compact ? "-0.3px" : "-0.6px",
                   marginBottom: 10,
+                  maxWidth: "100%",
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
                   outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
                   borderRadius: 8,
                   padding: editor ? "4px 6px" : 0,
@@ -2367,7 +2282,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                 delay={bodyBlockProps.animationDelay || 0}
                 speed={bodyBlockProps.animationSpeed}
                 disabled={editor}
-                style={{ width: "100%" }}
+                style={{ width: "100%", maxWidth: "100%", minWidth: 0 }}
               >
                 <p
                   data-website-inline-editor="true"
@@ -2395,6 +2310,9 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                     fontWeight: bodyBlockProps.fontWeight || undefined,
                     textAlign: bodyBlockProps.alignment || "left",
                     width: "100%",
+                    maxWidth: "100%",
+                    overflowWrap: "anywhere",
+                    wordBreak: "break-word",
                     marginBottom: compact ? 20 : 35,
                     outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none",
                     borderRadius: 8,
@@ -2404,7 +2322,7 @@ function SplitFaqBlock({ props, compact, editor = false, onChangeBlock, sectionA
                 />
               </ScrollReveal>
             ) : null}
-            <div style={asStyleObject(faqWrapStyle)}>
+            <div style={{ ...asStyleObject(faqWrapStyle), minWidth: 0, maxWidth: "100%" }}>
               <ScrollReveal as="div" animationName={faqBlockProps.sectionAnimation || "fade-up"} delay={faqBlockProps.sectionAnimationDelay || 0.12} speed={faqBlockProps.sectionAnimationSpeed} disabled={editor} style={asStyleObject(faqSurfaceStyle)}>
                 <FAQAccordionItems items={items} compact={compact} editor={editor} props={faqBlockProps} openItems={openItems} onToggleItem={toggleItem} onPatchItem={patchItem} propPrefix="faqBlock.items" />
               </ScrollReveal>
@@ -2783,7 +2701,7 @@ function DraggableContentOverlay({ props, compact, editor, onChangeBlock, align 
             onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...latestPropsRef.current, hideTextOverlay: true }); }}
             style={{ position: "absolute", top: 4, right: 6, zIndex: 10, width: 22, height: 22, borderRadius: "50%", background: "#ef4444", border: "2px solid #fff", color: "#fff", fontSize: 16, fontWeight: 600, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(239,68,68,0.5)" }}
           >
-            ✕
+            ?
           </button>
         ) : null}
         <div
@@ -3588,7 +3506,7 @@ function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => { event.stopPropagation(); onDelete(); }}
           style={{ position: "absolute", top: -9, right: -9, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
-        >✕</button>
+        >×</button>
       ) : null}
       {editor ? (
         <div
@@ -3789,7 +3707,7 @@ function ExtraCounterOverlay({ item, editor, onUpdate, onDelete }) {
           Number size
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <button type="button" onClick={() => onUpdateRef.current({ numberSize: Math.max(24, (item.numberSize || 52) - 4) })}
-              style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>−</button>
+              style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>-</button>
             <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 16 }}>{item.numberSize || 52}</span>
             <button type="button" onClick={() => onUpdateRef.current({ numberSize: Math.min(120, (item.numberSize || 52) + 4) })}
               style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>+</button>
@@ -3861,7 +3779,7 @@ function ExtraCounterOverlay({ item, editor, onUpdate, onDelete }) {
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => { event.stopPropagation(); onDelete(); }}
           style={{ position: "absolute", top: -9, right: -9, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: "rgba(239,68,68,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
-        >✕</button>
+        >×</button>
       ) : null}
 
       {/* Edit settings button */}
@@ -3873,7 +3791,7 @@ function ExtraCounterOverlay({ item, editor, onUpdate, onDelete }) {
           onClick={(event) => { event.stopPropagation(); setShowEdit((v) => !v); }}
           title="Edit counter settings"
           style={{ position: "absolute", top: -9, right: 16, zIndex: 14, width: 20, height: 20, borderRadius: 999, background: showEdit ? "#0ea5e9" : "rgba(30,41,59,0.9)", border: "2px solid #fff", color: "#fff", fontSize: 16, cursor: "pointer", display: "grid", placeItems: "center", padding: 0, lineHeight: 1 }}
-        >⚙</button>
+        >×</button>
       ) : null}
 
       {/* Resize handle */}
@@ -4176,7 +4094,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
                   onClick={(e) => { e.stopPropagation(); onMoveLayer(-1); }}
                   style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 16, cursor: "pointer" }}
                   title="Move layer backward"
-                >↓ Back</button>
+                >? Back</button>
                 <button
                   type="button"
                   data-overlay-resize="true"
@@ -4184,7 +4102,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
                   onClick={(e) => { e.stopPropagation(); onMoveLayer(1); }}
                   style={{ ...sharedStyles.editorChip, background: "#334155", color: "#fff", padding: "2px 6px", fontSize: 16, cursor: "pointer" }}
                   title="Move layer forward"
-                >↑ Front</button>
+                >? Front</button>
               </>
             ) : null}
           </div>
@@ -4216,14 +4134,14 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
             }
           </div>
         )).concat([
-          // Rotate handle — purple circle with ↻ icon, positioned above the image center
+          // Rotate handle — purple circle with ? icon, positioned above the image center
           <div
             key="rotate-handle"
             data-overlay-resize="true"
             onPointerDown={(event) => startInteraction(event, "rotate")}
             style={{ position: "absolute", bottom: -36, left: "50%", transform: "translateX(-50%)", zIndex: 10, width: 24, height: 24, borderRadius: 999, background: "#a78bfa", border: "2px solid #fff", cursor: "grab", display: "grid", placeItems: "center", fontSize: 14, color: "#fff", pointerEvents: "auto", boxShadow: "0 4px 12px rgba(167,139,250,0.45)", userSelect: "none" }}
             title={`Rotate image — current: ${displayRotation}°`}
-          >↻</div>,
+          >?</div>,
         ]).concat(onDelete ? [
           <button
             key="delete-overlay"
@@ -4233,7 +4151,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
             onClick={(event) => { event.stopPropagation(); onDelete(); }}
             style={{ position: "absolute", top: -8, right: -8, zIndex: 7, width: 22, height: 22, borderRadius: 999, background: "rgba(239,68,68,0.92)", border: "2px solid #fff", color: "#fff", fontSize: 16, lineHeight: 1, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 4px 12px rgba(239,68,68,0.4)", padding: 0 }}
             title="Remove image"
-          >✕</button>
+          >×</button>
         ] : []) : null}
       </div>
     </>
@@ -4241,7 +4159,7 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
 }
 
 
-// ─── Standalone icon-counter block with inline edit panel ────────────────────
+// --- Standalone icon-counter block with inline edit panel --------------------
 function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimationStyle, siteId = "" }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const panelRef = React.useRef(null);
@@ -4374,7 +4292,7 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
             onClick={(e) => { e.stopPropagation(); setShowEdit((v) => !v); }}
             style={{ ...sharedStyles.editorChip, background: showEdit ? "#0ea5e9" : undefined, color: showEdit ? "#fff" : undefined }}
           >
-            {showEdit ? "✕ Close" : "✎ Edit Counter"}
+            {showEdit ? "? Close" : "? Edit Counter"}
           </button>
 
           {showEdit ? (
@@ -4412,7 +4330,7 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
                 <label style={lbl}>
                   Target number
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <button type="button" style={stepBtn} onClick={() => update({ targetNumber: Math.max(0, (Number(props.targetNumber) || 0) - 100) })}>−</button>
+                    <button type="button" style={stepBtn} onClick={() => update({ targetNumber: Math.max(0, (Number(props.targetNumber) || 0) - 100) })}>-</button>
                     <input type="number" value={props.targetNumber ?? 0} onChange={(e) => update({ targetNumber: Number(e.target.value) })} style={{ ...inpStyle, textAlign: "center", flex: 1, minWidth: 0 }} />
                     <button type="button" style={stepBtn} onClick={() => update({ targetNumber: (Number(props.targetNumber) || 0) + 100 })}>+</button>
                   </div>
@@ -4420,7 +4338,7 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
                 <label style={lbl}>
                   Start number
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <button type="button" style={stepBtn} onClick={() => update({ startNumber: Math.max(0, (Number(props.startNumber) || 0) - 100) })}>−</button>
+                    <button type="button" style={stepBtn} onClick={() => update({ startNumber: Math.max(0, (Number(props.startNumber) || 0) - 100) })}>-</button>
                     <input type="number" value={props.startNumber ?? 0} onChange={(e) => update({ startNumber: Number(e.target.value) })} style={{ ...inpStyle, textAlign: "center", flex: 1, minWidth: 0 }} />
                     <button type="button" style={stepBtn} onClick={() => update({ startNumber: (Number(props.startNumber) || 0) + 100 })}>+</button>
                   </div>
@@ -4456,7 +4374,7 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
                 <label style={lbl}>
                   Number size
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <button type="button" style={stepBtn} onClick={() => update({ numberFontSize: Math.max(20, (Number(props.numberFontSize) || 78) - 4) })}>−</button>
+                    <button type="button" style={stepBtn} onClick={() => update({ numberFontSize: Math.max(20, (Number(props.numberFontSize) || 78) - 4) })}>-</button>
                     <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 16 }}>{props.numberFontSize || 78}</span>
                     <button type="button" style={stepBtn} onClick={() => update({ numberFontSize: Math.min(180, (Number(props.numberFontSize) || 78) + 4) })}>+</button>
                   </div>
@@ -4464,7 +4382,7 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
                 <label style={lbl}>
                   Label size
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <button type="button" style={stepBtn} onClick={() => update({ labelFontSize: Math.max(10, (Number(props.labelFontSize) || 22) - 2) })}>−</button>
+                    <button type="button" style={stepBtn} onClick={() => update({ labelFontSize: Math.max(10, (Number(props.labelFontSize) || 22) - 2) })}>-</button>
                     <span style={{ flex: 1, textAlign: "center", color: "#e2e8f0", fontSize: 16 }}>{props.labelFontSize || 22}</span>
                     <button type="button" style={stepBtn} onClick={() => update({ labelFontSize: Math.min(72, (Number(props.labelFontSize) || 22) + 2) })}>+</button>
                   </div>
@@ -4482,33 +4400,152 @@ function IconCounterBlock({ props, compact, editor, onChangeBlock, sectionAnimat
 }
 
 
-// ─── Framer Portfolio Block (horizontal carousel, click-to-reveal) ────────────
+// --- Framer Portfolio Block (horizontal carousel, click-to-reveal) ------------
 function FramerPortfolioBlock({ props, compact, editor, onUploadImage, onChangeBlock }) {
   const sectionRef = React.useRef(null);
   const scrollRef = React.useRef(null);
   const fileInputRefs = React.useRef({});
+  const hoveredRef = React.useRef(false);
+  const wheelLockRef = React.useRef(0);
   const [cardW, setCardW] = React.useState(0);
   const [hoveredIdx, setHoveredIdx] = React.useState(null);
   const cards = Array.isArray(props.cards) ? props.cards : [];
   const bg = props.backgroundColor || "#000";
   const GAP = 12;
-  const CARD_HEIGHT = 600;
+  const CARD_HEIGHT = Math.max(180, Number(props.cardHeight || 600));
+  const visibleCount = Math.max(1, Number(compact ? 1 : props.visibleCount || 3));
+  const autoScrollEnabled = !!props.autoScroll;
+  const scrollMode = String(props.scrollMode || "card");
+  const loopScroll = props.loopScroll !== false;
+  const pauseOnHover = props.pauseOnHover !== false;
+  const cardIntervalMs = Math.max(700, Number(props.cardScrollInterval || 2500));
+  const continuousSpeed = Math.max(5, Number(props.continuousScrollSpeed || 45));
+  const renderCards = autoScrollEnabled && scrollMode === "continuous" && loopScroll && cards.length > 1
+    ? [...cards, ...cards]
+    : cards;
 
   // Measure container so cards are exactly 1/3 in pixels
   React.useEffect(() => {
     if (!sectionRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect?.width || 0;
-      setCardW(compact ? w : Math.floor((w - GAP * 2) / 3));
+      const measuredWidth = entries[0]?.contentRect?.width || 0;
+      const fallbackWidth = scrollRef.current?.clientWidth || 0;
+      const w = measuredWidth || fallbackWidth;
+      const gaps = Math.max(0, Math.ceil(visibleCount) - 1) * GAP;
+      setCardW(compact ? w : Math.floor((w - gaps) / visibleCount));
     });
     ro.observe(sectionRef.current);
     return () => ro.disconnect();
-  }, [compact]);
+  }, [compact, visibleCount]);
+
+  const getCardStep = React.useCallback((el) => {
+    const measuredStep = Number(cardW || 0);
+    if (measuredStep > 1) return measuredStep + GAP;
+    const fallbackVisible = Math.max(1, Number(compact ? 1 : props.visibleCount || 3));
+    const fallbackGaps = Math.max(0, Math.ceil(fallbackVisible) - 1) * GAP;
+    const fallbackWidth = Math.floor((Math.max(0, el.clientWidth - fallbackGaps)) / fallbackVisible);
+    return Math.max(160, fallbackWidth) + GAP;
+  }, [cardW, compact, props.visibleCount]);
 
   const scroll = (dir) => {
-    if (!scrollRef.current || !cardW) return;
-    scrollRef.current.scrollBy({ left: dir * (cardW + GAP), behavior: "smooth" });
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    const step = getCardStep(el);
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+    const nextLeft = el.scrollLeft + dir * step;
+    if (loopScroll && nextLeft > maxScroll - 4) {
+      el.scrollTo({ left: 0, behavior: "smooth" });
+      return;
+    }
+    if (loopScroll && nextLeft < 0) {
+      el.scrollTo({ left: maxScroll, behavior: "smooth" });
+      return;
+    }
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
+
+  const handleWheel = (event) => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+    if (maxScroll <= 1) return;
+
+    const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    const deltaModeMultiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientWidth : 1;
+    const delta = rawDelta * deltaModeMultiplier;
+    if (!delta) return;
+
+    const atStart = el.scrollLeft <= 1;
+    const atEnd = el.scrollLeft >= maxScroll - 1;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!loopScroll && ((delta < 0 && atStart) || (delta > 0 && atEnd))) return;
+
+    if (scrollMode === "card") {
+      const now = Date.now();
+      if (now - wheelLockRef.current < 420) return;
+      wheelLockRef.current = now;
+      scroll(delta > 0 ? 1 : -1);
+      return;
+    }
+
+    el.scrollBy({ left: delta, behavior: "auto" });
+  };
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [cardW, loopScroll, scrollMode]);
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !autoScrollEnabled || cards.length <= 1) return undefined;
+
+    if (scrollMode === "card") {
+      const timer = window.setInterval(() => {
+        if (pauseOnHover && hoveredRef.current) return;
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+        const step = getCardStep(el);
+        const nextLeft = el.scrollLeft + step;
+        if (nextLeft > maxScroll - 4) {
+          if (loopScroll) el.scrollTo({ left: 0, behavior: "smooth" });
+          return;
+        }
+        el.scrollBy({ left: step, behavior: "smooth" });
+      }, cardIntervalMs);
+      return () => window.clearInterval(timer);
+    }
+
+    let rafId = 0;
+    let lastTime = 0;
+    const loopPoint = loopScroll ? Math.max(1, el.scrollWidth / 2) : 0;
+
+    function tick(time) {
+      rafId = window.requestAnimationFrame(tick);
+      if (!lastTime) {
+        lastTime = time;
+        return;
+      }
+      const deltaSeconds = Math.min(0.08, (time - lastTime) / 1000);
+      lastTime = time;
+      if (pauseOnHover && hoveredRef.current) return;
+
+      el.scrollLeft += continuousSpeed * deltaSeconds;
+      if (loopScroll && loopPoint > 1 && el.scrollLeft >= loopPoint) {
+        el.scrollLeft -= loopPoint;
+      } else if (!loopScroll && el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+        window.cancelAnimationFrame(rafId);
+      }
+    }
+
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [autoScrollEnabled, cards.length, cardIntervalMs, continuousSpeed, getCardStep, loopScroll, pauseOnHover, scrollMode]);
 
   const handleUpload = async (cardIdx, file) => {
     if (!file) return;
@@ -4527,16 +4564,17 @@ function FramerPortfolioBlock({ props, compact, editor, onUploadImage, onChangeB
       </button>
 
       {/* Scroll track */}
-      <div ref={scrollRef} style={{ display: "flex", gap: GAP, padding: "0 0", overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
-        {cards.map((card, idx) => {
+      <div ref={scrollRef} className="__fp_track" style={{ display: "flex", gap: GAP, padding: "0 0", overflowX: "auto", overscrollBehavior: "contain", touchAction: "pan-x", scrollSnapType: scrollMode === "card" ? "x mandatory" : "none", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}>
+        {renderCards.map((card, idx) => {
+          const sourceIdx = cards.length ? idx % cards.length : idx;
           const isHovered = hoveredIdx === idx;
           return (
             <div
-              key={card.id || idx}
-              style={{ flexShrink: 0, width: cardW || "33.333%", height: CARD_HEIGHT, scrollSnapAlign: "start", position: "relative", overflow: "hidden", background: "#111", cursor: "pointer" }}
-              onMouseEnter={() => setHoveredIdx(idx)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onDoubleClick={() => { if (editor) fileInputRefs.current[idx]?.click(); }}
+              key={`${card.id || sourceIdx}-${idx}`}
+              style={{ flexShrink: 0, width: cardW || `${100 / visibleCount}%`, height: CARD_HEIGHT, scrollSnapAlign: scrollMode === "card" ? "start" : "none", position: "relative", overflow: "hidden", background: "#111", cursor: "pointer" }}
+              onMouseEnter={() => { hoveredRef.current = true; setHoveredIdx(idx); }}
+              onMouseLeave={() => { hoveredRef.current = false; setHoveredIdx(null); }}
+              onDoubleClick={() => { if (editor) fileInputRefs.current[sourceIdx]?.click(); }}
             >
               {/* Full image — contain so nothing is cropped */}
               {card.image
@@ -4553,13 +4591,13 @@ function FramerPortfolioBlock({ props, compact, editor, onUploadImage, onChangeB
                   style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 20, display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "rgba(0,0,0,0.8)", border: "2px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  📷 {card.image ? "Replace image" : "Upload image"}
+                  🖼️ {card.image ? "Replace image" : "Upload image"}
                   <input
-                    ref={(el) => { fileInputRefs.current[idx] = el; }}
+                    ref={(el) => { fileInputRefs.current[sourceIdx] = el; }}
                     type="file"
                     accept="image/*"
                     style={{ display: "none" }}
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleUpload(idx, f); }}
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleUpload(sourceIdx, f); }}
                   />
                 </label>
               ) : null}
@@ -4578,7 +4616,7 @@ function FramerPortfolioBlock({ props, compact, editor, onUploadImage, onChangeB
   );
 }
 
-// ─── Hover Cards Block ────────────────────────────────────────────────────────
+// --- Hover Cards Block --------------------------------------------------------
 function HoverCardsBlock({ props, compact, editor, navigationContext }) {
   const [flippedIndex, setFlippedIndex] = React.useState(null);
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -4599,15 +4637,17 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
   const cardHeight = Number(props.cardHeight || 320);
   const cardRadius = Number(props.cardRadius || 12);
   const cardPadding = Number(props.cardPadding || 20);
-  const backColor = props.overlayColor || "#000000";
+  const backColor = props.hoverBackgroundColor || props.overlayColor || "#000000";
   const buttonColor = props.buttonColor || "#ffffff";
   const buttonTextColor = props.buttonTextColor || "#0f172a";
-  const buttonText = props.buttonText || "Learn more →";
+  const buttonText = props.buttonText || "Learn more ?";
   const arrowBg = props.arrowBg || "#ffffff";
   const arrowColor = props.arrowColor || "#0f172a";
   const autoPlayInterval = Number(props.autoPlayInterval || 3500);
   const maxIndex = Math.max(0, cards.length - visibleCards);
-  const showArrows = maxIndex > 0;
+  const seamlessLoop = props.continuousLoop !== false && cards.length > visibleCards;
+  const loopSpeed = Math.max(8, Number(props.continuousSpeed || 45));
+  const showArrows = !seamlessLoop && maxIndex > 0;
 
   React.useEffect(() => {
     const el = viewportRef.current;
@@ -4642,17 +4682,22 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
 
   // Auto-advance loop — pauses while someone is reading a hovered/flipped card.
   React.useEffect(() => {
+    if (seamlessLoop) return undefined;
     if (hovering || flippedIndex !== null) return undefined;
     if (maxIndex <= 0) return undefined;
     const id = setInterval(() => {
       setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
     }, autoPlayInterval);
     return () => clearInterval(id);
-  }, [maxIndex, hovering, flippedIndex, autoPlayInterval]);
+  }, [maxIndex, hovering, flippedIndex, autoPlayInterval, seamlessLoop]);
 
   const { cardPxWidth } = measured;
   const goTo = (idx) => setCurrentIndex(Math.max(0, Math.min(maxIndex, idx)));
   const offset = currentIndex * (cardPxWidth + cardGap);
+  const loopDistance = seamlessLoop && cardPxWidth > 0 ? cards.length * (cardPxWidth + cardGap) : 0;
+  const loopDuration = loopDistance > 0 ? Math.max(8, loopDistance / loopSpeed) : 0;
+  const loopKeyframeName = `wbHoverCardsLoop_${cards.length}_${Math.round(cardPxWidth)}_${Math.round(cardGap)}`;
+  const renderedCards = seamlessLoop ? [...cards, ...cards] : cards;
   const canPrev = currentIndex > 0;
   const canNext = currentIndex < maxIndex;
 
@@ -4730,28 +4775,40 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
         >
           {showArrows ? arrowBtn("left", canPrev, "Previous", () => goTo(currentIndex - 1)) : null}
           {showArrows ? arrowBtn("right", canNext, "Next", () => goTo(currentIndex + 1)) : null}
+          {seamlessLoop && loopDistance > 0 ? (
+            <style>{`
+              @keyframes ${loopKeyframeName} {
+                from { transform: translate3d(0,0,0); }
+                to { transform: translate3d(-${loopDistance}px,0,0); }
+              }
+            `}</style>
+          ) : null}
 
           {/* Track — slides via translateX */}
           <div style={{
             display: "flex",
             gap: cardGap,
-            transform: cardPxWidth > 0 ? `translateX(-${offset}px)` : "translateX(0)",
-            transition: "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
+            transform: seamlessLoop ? "translateX(0)" : (cardPxWidth > 0 ? `translateX(-${offset}px)` : "translateX(0)"),
+            transition: seamlessLoop ? "none" : "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
+            animation: seamlessLoop && loopDistance > 0 ? `${loopKeyframeName} ${loopDuration}s linear infinite` : "none",
+            animationPlayState: seamlessLoop && hovering ? "paused" : "running",
             willChange: "transform",
           }}>
-            {cards.map((card, idx) => {
-              const isFlipped = flippedIndex === idx;
+            {renderedCards.map((card, idx) => {
+              const sourceIdx = idx % Math.max(cards.length, 1);
+              const flipKey = `${Math.floor(idx / Math.max(cards.length, 1))}-${sourceIdx}`;
+              const isFlipped = flippedIndex === flipKey;
               const basis = cardPxWidth > 0
                 ? `${cardPxWidth}px`
                 : `calc(${100 / visibleCards}% - ${(cardGap * (visibleCards - 1)) / visibleCards}px)`;
               return (
                 <div
-                  key={card.id || idx}
+                  key={`${card.id || sourceIdx}-${idx}`}
                   tabIndex={0}
                   style={{ flex: `0 0 ${basis}`, minWidth: basis, height: cardHeight, perspective: "1000px", flexShrink: 0 }}
-                  onMouseEnter={() => { setHovering(true); setFlippedIndex(idx); }}
+                  onMouseEnter={() => { setHovering(true); setFlippedIndex(flipKey); }}
                   onMouseLeave={() => { setHovering(false); setFlippedIndex(null); }}
-                  onFocus={() => { setHovering(true); setFlippedIndex(idx); }}
+                  onFocus={() => { setHovering(true); setFlippedIndex(flipKey); }}
                   onBlur={(event) => {
                     if (event.currentTarget.contains(event.relatedTarget)) return;
                     setHovering(false);
@@ -4768,7 +4825,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
                     transition: "transform 0.65s cubic-bezier(0.4,0.2,0.2,1)",
                   }}>
 
-                    {/* ── FRONT FACE ─────────────────────────────────── */}
+                    {/* -- FRONT FACE ----------------------------------- */}
                     <div style={{
                       position: "absolute",
                       top: 0, left: 0, right: 0, bottom: 0,
@@ -4798,7 +4855,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
                       </div>
                     </div>
 
-                    {/* ── BACK FACE ──────────────────────────────────── */}
+                    {/* -- BACK FACE ------------------------------------ */}
                     <div style={{
                       position: "absolute",
                       top: 0, left: 0, right: 0, bottom: 0,
@@ -4807,7 +4864,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
                       transform: "rotateY(180deg)",
                       borderRadius: cardRadius,
                       overflow: "hidden",
-                      background: backColor,
+                      background: card.hoverBackgroundColor || backColor,
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "flex-start",
@@ -4840,7 +4897,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
         </div>
 
         {/* Dot indicators */}
-        {maxIndex > 0 ? (
+        {!seamlessLoop && maxIndex > 0 ? (
           <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 20 }}>
             {Array.from({ length: maxIndex + 1 }, (_, i) => (
               <button
@@ -4866,15 +4923,15 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
   );
 }
 
-// ─── Feature Accordion Block ───────────────────────────────────────────────
+// --- Feature Accordion Block -----------------------------------------------
 function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, onUploadImage }) {
   const items = asArray(props.items).map((item, idx) => ({
     id: item?.id || `fa-item-${idx}`,
     label: htmlToPlainText(item?.label || `Section ${idx + 1}`),
     image: item?.image || "",
     imageAlt: htmlToPlainText(item?.imageAlt || ""),
-    accentColor: item?.accentColor || null,   // null → falls back to global accent
-    panelBg: item?.panelBg || null,           // null → falls back to global bg/accent gradient
+    accentColor: item?.accentColor || null,   // null ? falls back to global accent
+    panelBg: item?.panelBg || null,           // null ? falls back to global bg/accent gradient
     contentBlocks: asArray(item?.contentBlocks).map((cb, cbIdx) => ({
       id: cb?.id || `cb-${idx}-${cbIdx}`,
       type: cb?.type || "text",
@@ -4891,7 +4948,15 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const textColor = props.textColor       || "#ffffff";
   const accent    = props.accentColor     || "#0ea5e9";
   const imageRight = (props.imagePosition || "right") !== "left";
-  const contentVerticalAlign = props.contentVerticalAlign === "top" ? "flex-start" : "center";
+  const contentVerticalSetting = String(
+    props.contentVerticalAlign || props.contentPosition || props.textPosition || props.textVerticalPosition || "top"
+  ).toLowerCase();
+  const contentVerticalAlign =
+    contentVerticalSetting === "center" || contentVerticalSetting === "centre" || contentVerticalSetting === "middle"
+      ? "center"
+      : contentVerticalSetting === "bottom" || contentVerticalSetting === "end"
+        ? "flex-end"
+        : "flex-start";
   const leadOffset = Number(props.stickyTopOffset ?? 0);
   const [navH, setNavH] = React.useState(0);
 
@@ -4914,7 +4979,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   // auto-detected nav height + manual lead offset
   const stickyTop = navH + leadOffset;
 
-  // ── border props ───────────────────────────────────────────────────────────
+  // -- border props -----------------------------------------------------------
   const bEnabled   = props.itemBorderEnabled !== false;
   const bColor     = props.itemBorderColor   || "rgba(255,255,255,0.10)";
   const bStyle     = props.itemBorderStyle   || "solid";
@@ -4922,7 +4987,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const bActiveColor = props.activeBorderColor || accent;
   const progressColor = props.progressColor  || accent;
 
-  // ── scroll tracking (stacked card deck — published preview only) ──────────
+  // -- scroll tracking (stacked card deck — published preview only) ----------
   React.useEffect(() => {
     if (editor || compact || typeof window === "undefined") return;
     const n = items.length;
@@ -4942,7 +5007,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     return () => window.removeEventListener("scroll", onScroll);
   }, [editor, compact, items.length]);
 
-  // ── helpers ────────────────────────────────────────────────────────────────
+  // -- helpers ----------------------------------------------------------------
 
   function patchItems(newItems) {
     if (!editor || typeof onChangeBlock !== "function") return;
@@ -5023,7 +5088,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     if (asset?.src) patchItemField(itemIdx, "image", asset.src);
   }
 
-  // ── content block renderer ─────────────────────────────────────────────────
+  // -- content block renderer -------------------------------------------------
 
   function renderCb(item, itemIdx, block, cbIdx, perCardAccent = accent) {
     const edgeOut    = editor ? "1px dashed rgba(14,165,233,0.35)" : "none";
@@ -5038,20 +5103,20 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
           disabled: cbIdx === 0,
           title: "Move up",
           style: { background: "rgba(255,255,255,0.08)", border: "none", color: cbIdx === 0 ? "rgba(255,255,255,0.2)" : "#e2e8f0", borderRadius: 4, padding: "3px 7px", fontSize: 16, cursor: cbIdx === 0 ? "default" : "pointer", fontWeight: 600 },
-        }, "↑"),
+        }, "?"),
         React.createElement("button", {
           type: "button",
           onClick: (e) => { e.stopPropagation(); moveContentBlock(itemIdx, cbIdx, 1); },
           disabled: cbIdx === totalBlocks - 1,
           title: "Move down",
           style: { background: "rgba(255,255,255,0.08)", border: "none", color: cbIdx === totalBlocks - 1 ? "rgba(255,255,255,0.2)" : "#e2e8f0", borderRadius: 4, padding: "3px 7px", fontSize: 16, cursor: cbIdx === totalBlocks - 1 ? "default" : "pointer", fontWeight: 600 },
-        }, "↓"),
+        }, "?"),
         React.createElement("button", {
           type: "button",
           onClick: (e) => { e.stopPropagation(); removeContentBlock(itemIdx, cbIdx); },
           title: "Remove block",
           style: { background: "rgba(239,68,68,0.18)", border: "none", color: "#f87171", borderRadius: 4, padding: "3px 7px", fontSize: 16, cursor: "pointer" },
-        }, "✕"),
+        }, "?"),
       )
     ) : null;
 
@@ -5146,7 +5211,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 patchContentBlock(itemIdx, cbIdx, { label: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
               }}
               style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", lineHeight: 1.4, outline: editor ? "1px dashed rgba(14,165,233,0.3)" : "none", borderRadius: 4, padding: editor ? "2px 4px" : "0" }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(block.label || "metric") }}
+              dangerouslySetInnerHTML={{ __html: renderStatLabelHtml(block.label || "metric") }}
             />
           </div>
           {reorderControls}
@@ -5174,7 +5239,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   style={{ display: "inline-block", background: "rgba(14,165,233,0.14)", color: perCardAccent, border: "1px solid rgba(14,165,233,0.25)", borderRadius: 20, padding: "4px 14px", fontSize: 16, fontWeight: 600, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none" }}
                 >{tag}</span>
                 {editor ? (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); patchContentBlock(itemIdx, cbIdx, { tags: tags.filter((_, i) => i !== tagIdx) }); }} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 2px", lineHeight: 1 }}>✕</button>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); patchContentBlock(itemIdx, cbIdx, { tags: tags.filter((_, i) => i !== tagIdx) }); }} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 16, padding: "0 2px", lineHeight: 1 }}>×</button>
                 ) : null}
               </div>
             ))}
@@ -5227,7 +5292,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     return null;
   }
 
-  // ── image slot ─────────────────────────────────────────────────────────────
+  // -- image slot -------------------------------------------------------------
   function renderImageSlot(item, idx, forEditor = false) {
     return (
       <>
@@ -5242,7 +5307,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
             <span style={{ fontSize: 36 }}>🖼️</span>
             {forEditor ? (
               <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 8, background: "rgba(14,165,233,0.15)", border: "1px dashed rgba(14,165,233,0.5)", color: accent, fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
-                📷 Upload Image
+                🖼️ Upload Image
                 <input ref={(el) => { fileInputRefs.current[idx] = el; }} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
               </label>
             ) : (
@@ -5253,17 +5318,17 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
         {forEditor && item.image ? (
           <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }} onClick={(e) => e.stopPropagation()}>
-              📷 Replace
+              ↻ Replace
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
             </label>
-            <button type="button" onClick={(e) => { e.stopPropagation(); patchItemField(idx, "image", ""); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>✕</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); patchItemField(idx, "image", ""); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
           </div>
         ) : null}
       </>
     );
   }
 
-  // ── EDITOR: all items stacked, fully expanded ──────────────────────────────
+  // -- EDITOR: all items stacked, fully expanded ------------------------------
   if (editor) {
     return (
       <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box" }}>
@@ -5317,7 +5382,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     );
   }
 
-  // ── COMPACT / MOBILE: click-to-expand accordion ────────────────────────────
+  // -- COMPACT / MOBILE: click-to-expand accordion ----------------------------
   if (compact) {
     return (
       <section style={{ width: "100%", background: bg, color: textColor, boxSizing: "border-box" }}>
@@ -5335,7 +5400,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               <div onClick={() => setActiveIdx(isOpen ? -1 : idx)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 24px", cursor: "pointer", userSelect: "none" }}>
                 <span style={{ width: 3, height: 22, borderRadius: 2, background: isOpen ? (item.accentColor || accent) : "rgba(255,255,255,0.2)", flexShrink: 0, transition: "background 0.3s" }} />
                 <span style={{ flex: 1, fontSize: 17, fontWeight: 600, color: textColor }}>{item.label}</span>
-                <span style={{ color: isOpen ? (item.accentColor || accent) : "rgba(255,255,255,0.35)", fontSize: 18, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s", display: "inline-block" }}>▾</span>
+                <span style={{ color: isOpen ? (item.accentColor || accent) : "rgba(255,255,255,0.35)", fontSize: 18, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s", display: "inline-block" }}>⌄</span>
               </div>
               <div style={{ display: "grid", gridTemplateRows: isOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1)" }}>
                 <div style={{ overflow: "hidden", minHeight: 0 }}>
@@ -5352,7 +5417,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     );
   }
 
-  // ── PUBLISHED: stacked card deck ──────────────────────────────────────────
+  // -- PUBLISHED: stacked card deck ------------------------------------------
   // Peek heights decrease per card: top card shows most, deeper cards show less
   const peeks = items.map((_, i) => Math.max(60, 90 - i * 8));
   const n = items.length;
@@ -5417,7 +5482,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 willChange: "transform",
               }}
             >
-              {/* ── Header strip — always visible, always clickable ── */}
+              {/* -- Header strip — always visible, always clickable -- */}
               <div
                 onClick={() => jumpToCard(idx)}
                 style={{
@@ -5456,10 +5521,10 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                   flexShrink: 0,
                   transform: isActive ? "rotate(90deg)" : "none",
                   transition: "transform 0.3s, opacity 0.3s",
-                }}>▶</span>
+                }}>⌄</span>
               </div>
 
-              {/* ── Full content area ── */}
+              {/* -- Full content area -- */}
               <div style={{
                 height: `calc(100vh - ${peekH}px)`,
                 display: "flex",
@@ -5503,11 +5568,11 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
 
 
 
-// ─── ScrollStackBlock ───────────────────────────────────────────────────────
+// --- ScrollStackBlock -------------------------------------------------------
 // Full-page stacking panels: image one side, text the other.
 // Preview: CSS position:sticky makes each panel "stack" over the previous as user scrolls.
 // Editor: panels rendered flat so the canvas stays editable.
-// imageStyle "card" = inset rounded card with colored bg (monday.com style)
+// imageStyle "card" = inset rounded card with colored bg
 // imageStyle "bleed" = full-bleed image fills the entire half
 
 function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUploadImage }) {
@@ -5517,9 +5582,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     eyebrowDot: p?.eyebrowDot !== false,
     heading: p?.heading ?? "",
     body: p?.body ?? "",
+    showCta: p?.showCta !== false,
     ctaText: p?.ctaText ?? "",
     ctaUrl: p?.ctaUrl ?? "#",
     ctaStyle: p?.ctaStyle ?? "filled",
+    buttonFullWidth: p?.buttonFullWidth === true || p?.ctaFullWidth === true,
     image: p?.image ?? "",
     imageAlt: p?.imageAlt ?? "",
     imageStyle: p?.imageStyle ?? "bleed",
@@ -5552,6 +5619,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
         eyebrowDot: true,
         heading: "A bold, compelling headline",
         body: "Explain your value proposition clearly and concisely. What makes this different?",
+        showCta: true,
         ctaText: "Get Started",
         ctaUrl: "#",
         ctaStyle: "pill",
@@ -5577,9 +5645,9 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     if (asset?.src) patchPanel(panelIdx, { image: asset.src });
   }
 
-  // ── Image rendering ────────────────────────────────────────────────────────
+  // -- Image rendering --------------------------------------------------------
   // "bleed" = raw image fills entire half
-  // "card"  = inset rounded card with imageCardBg behind image (monday.com style)
+  // "card"  = inset rounded card with imageCardBg behind image
   function renderImageHalf(panel, idx, forEditor = false, halfHeight = "100%") {
     const isCard = panel.imageStyle === "card";
     const imageEl = panel.image ? (
@@ -5599,7 +5667,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
         <span style={{ fontSize: 48 }}>🖼️</span>
         {forEditor ? (
           <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 20px", borderRadius: 8, background: isCard ? "rgba(255,255,255,0.2)" : "rgba(14,165,233,0.15)", border: `1px dashed ${isCard ? "rgba(255,255,255,0.5)" : "rgba(14,165,233,0.5)"}`, color: isCard ? "#fff" : panel.accentColor, fontSize: 16, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
-            📷 Upload Image
+            🖼️ Upload Image
             <input ref={(el) => { fileInputRefs.current[idx] = el; }} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
           </label>
         ) : (
@@ -5611,10 +5679,10 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     const replaceControls = forEditor && panel.image ? (
       <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6, zIndex: 4 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }} onClick={(e) => e.stopPropagation()}>
-          📷 Replace
+          ↻ Replace
           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
         </label>
-        <button type="button" onClick={(e) => { e.stopPropagation(); patchPanel(idx, { image: "" }); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>✕</button>
+        <button type="button" onClick={(e) => { e.stopPropagation(); patchPanel(idx, { image: "" }); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
       </div>
     ) : null;
 
@@ -5639,19 +5707,28 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
-  // ── Text content ───────────────────────────────────────────────────────────
+  // -- Text content -----------------------------------------------------------
   function renderPanelContent(panel, idx) {
     const tc = panel.textColor;
     const ac = panel.accentColor;
+    const contentVerticalSetting = String(panel.contentVerticalAlign || props.contentVerticalAlign || props.textVerticalAlign || "center").toLowerCase();
+    const contentJustify = contentVerticalSetting === "top" || contentVerticalSetting === "start"
+      ? "flex-start"
+      : contentVerticalSetting === "bottom" || contentVerticalSetting === "end"
+        ? "flex-end"
+        : "center";
+    const contentPadTop = contentJustify === "flex-start" ? Math.max(24, Number(props.contentTopPadding ?? 72)) : 0;
     const isLight = tc !== "#ffffff"; // light background panels use darker body text
     const edgeOut = editor ? "1px dashed rgba(14,165,233,0.35)" : "none";
     const edgePad = editor ? "4px 8px" : "0";
     const bodyColor = isLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.72)";
     const isPill = panel.ctaStyle === "pill";
     const ctaBg = isLight ? tc : ac;
+    const showCta = panel.showCta !== false;
+    const buttonFullWidth = panel.buttonFullWidth === true || props.buttonFullWidth === true;
 
     return (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, padding: compact ? "40px 24px 48px" : "0 64px 0 72px", height: "100%", boxSizing: "border-box" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: contentJustify, gap: 20, padding: compact ? "40px 24px 48px" : `${contentPadTop}px 64px 0 72px`, height: "100%", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", overflow: "hidden" }}>
 
         {/* Eyebrow — colored dot + label */}
         {(panel.eyebrow || editor) ? (
@@ -5688,7 +5765,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
             if (shouldSkipToolbarBlur(e)) return;
             patchPanel(idx, { heading: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
           }}
-          style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0 }}
+          style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
           dangerouslySetInnerHTML={{ __html: asRichHtml(panel.heading || "Your headline") }}
         />
 
@@ -5705,20 +5782,21 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               if (shouldSkipToolbarBlur(e)) return;
               patchPanel(idx, { body: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ fontSize: panel.bodySize || 17, lineHeight: 1.75, color: bodyColor, outline: edgeOut, borderRadius: 6, padding: edgePad }}
+            style={{ fontSize: panel.bodySize || 17, lineHeight: 1.75, color: bodyColor, outline: edgeOut, borderRadius: 6, padding: edgePad, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(panel.body || (editor ? "Add your body text here." : "")) }}
           />
         ) : null}
 
         {/* CTA */}
-        {(panel.ctaText || editor) ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        {showCta && (panel.ctaText || editor) ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", width: buttonFullWidth ? "100%" : undefined }}>
             {panel.ctaText ? (
               <a
                 href={editor ? undefined : (panel.ctaUrl || "#")}
                 onClick={(e) => editor && e.preventDefault()}
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  width: buttonFullWidth ? "100%" : undefined,
                   background: ctaBg, color: isLight ? "#ffffff" : "#ffffff",
                   borderRadius: isPill ? 100 : 10,
                   padding: isPill ? "14px 32px" : "13px 28px",
@@ -5761,7 +5839,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
-  // ── EDITOR MODE: flat stacked panels, no sticky ────────────────────────────
+  // -- EDITOR MODE: flat stacked panels, no sticky ----------------------------
   if (editor) {
     return (
       <div style={{ width: "100%" }}>
@@ -5791,7 +5869,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
-  // ── COMPACT / MOBILE: image on top, text below ─────────────────────────────
+  // -- COMPACT / MOBILE: image on top, text below -----------------------------
   if (compact) {
     return (
       <div style={{ width: "100%" }}>
@@ -5805,19 +5883,19 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
-  // ── PREVIEW MODE: Stacked Card Deck ────────────────────────────────────────
+  // -- PREVIEW MODE: Stacked Card Deck ----------------------------------------
   // Visual: past cards compress to a slim coloured header strip at the top.
   //         Future cards peek from the bottom so the whole deck is visible.
   //         The active card fills the space between those two zones.
   // Scroll: 100vh of dwell per card — each card slides smoothly from the
   //         bottom peek area up to its settled stack position.
-  // Click:  any past/future card header → window.scrollTo() jumps to it.
+  // Click:  any past/future card header ? window.scrollTo() jumps to it.
   //
   // Z-index rule: later cards (higher idx) sit ON TOP of earlier ones.
   //   This means a future card's peek (higher z) overlaps the active card's
   //   bottom edge — exactly the "physical card deck" layering we want.
 
-  const PEEK = 52; // px — height of each card's visible header strip when stacked
+  const PEEK = Math.max(48, Math.min(140, Number(props.peekHeight ?? props.cardPeekHeight ?? 52))); // px - visible header strip when stacked
 
   const sectionRef = React.useRef(null);
   const [scrollProgress, setScrollProgress] = React.useState(0); // continuous 0..n
@@ -5869,23 +5947,114 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   const hInset = Number(props.cardInset ?? 0);
   const n = panels.length;
   const vp = ((typeof window !== "undefined" && window.innerHeight) || 800) - stickyTop;
+  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+  const stackMode = String(props.stackMode || props.orientation || props.scrollStackMode || "").toLowerCase();
+  const useSideStack = stackMode === "side" || stackMode === "horizontal" || stackMode === "right";
+
+  if (useSideStack) {
+    const SIDE_PEEK = Math.max(58, Math.min(170, Number(props.peekWidth ?? props.cardPeekWidth ?? props.sidePeekWidth ?? PEEK)));
+    return (
+      <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative", background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f" }}>
+        <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
+          {panels.map((panel, idx) => {
+            const dist = idx - scrollProgress;
+            let x;
+            if (dist <= 0) {
+              x = cardLead + idx * SIDE_PEEK;
+            } else if (dist < 1) {
+              const t = 1 - dist;
+              const xFuture = vw - (n - idx) * SIDE_PEEK;
+              x = xFuture + t * (cardLead + idx * SIDE_PEEK - xFuture);
+            } else {
+              x = vw - (n - idx) * SIDE_PEEK;
+            }
+
+            const visibleContentWidth = Math.max(320, vw - SIDE_PEEK - Math.max(0, x));
+            const isPast = dist < -0.05;
+            const isFuture = dist > 0.05;
+            const imageRight = panel.imagePosition !== "left";
+            const tc = panel.textColor || "#ffffff";
+            const ac = panel.accentColor || "#0ea5e9";
+
+            return (
+              <div
+                key={panel.id}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: "100vw",
+                  height: "100%",
+                  transform: `translateX(${x}px)`,
+                  zIndex: idx + 1,
+                  background: panel.backgroundColor,
+                  color: tc,
+                  borderRadius: idx > 0 ? `${Number(props.cardRadius ?? 18)}px 0 0 ${Number(props.cardRadius ?? 18)}px` : 0,
+                  overflow: "hidden",
+                  boxShadow: idx > 0 ? "-10px 0 34px rgba(0,0,0,0.26)" : "none",
+                  border: Number(props.cardBorderWidth ?? 0) > 0 ? `${Number(props.cardBorderWidth)}px solid ${props.cardBorderColor || "#3b82f6"}` : "none",
+                }}
+              >
+                <div
+                  onClick={() => (isPast || isFuture) ? jumpToCard(idx) : undefined}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: SIDE_PEEK,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 12,
+                    padding: "22px 0",
+                    cursor: (isPast || isFuture) ? "pointer" : "default",
+                    background: panel.backgroundColor,
+                    borderRight: props.hideHeaderDivider === true ? "none" : `1px solid ${tc}1a`,
+                    userSelect: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", display: "flex", alignItems: "center", gap: 12, maxHeight: "86%" }}>
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: ac, flexShrink: 0 }} />
+                    <span style={{ fontSize: 15, fontWeight: 800, color: tc, letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {panel.eyebrow || panel.heading || `Panel ${idx + 1}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ marginLeft: SIDE_PEEK, width: visibleContentWidth, height: "100%", display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden" }}>
+                  <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
+                    {renderImageHalf(panel, idx, false, "100%")}
+                  </div>
+                  <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center", overflow: "hidden" }}>
+                    {renderPanelContent(panel, idx)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative" }}>
       <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
         {panels.map((panel, idx) => {
-          // dist < 0 → past (settled at top), dist = 0 → active, dist > 0 → future
+          // dist < 0 ? past (settled at top), dist = 0 ? active, dist > 0 ? future
           const dist = idx - scrollProgress;
 
           // translateY for this card:
-          //  Past/active: settled at its stacked-header row  →  idx × PEEK
+          //  Past/active: settled at its stacked-header row  ?  idx × PEEK
           //  Transitioning in (0 < dist < 1): lerp from bottom-peek to settled
-          //  Future (dist ≥ 1): peeking from the bottom of the viewport
+          //  Future (dist = 1): peeking from the bottom of the viewport
           let y;
           if (dist <= 0) {
             y = cardLead + idx * PEEK;
           } else if (dist < 1) {
-            const t = 1 - dist; // 0 → 1 as card arrives
+            const t = 1 - dist; // 0 ? 1 as card arrives
             const yFuture = vp - (n - idx) * PEEK;
             y = yFuture + t * (cardLead + idx * PEEK - yFuture);
           } else {
@@ -5915,7 +6084,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                 border: Number(props.cardBorderWidth ?? 0) > 0 ? `${Number(props.cardBorderWidth)}px solid ${props.cardBorderColor || "#3b82f6"}` : "none",
               }}
             >
-              {/* ── Slim header bar — always the visible strip when stacked ── */}
+              {/* -- Slim header bar — always the visible strip when stacked -- */}
               <div
                 onClick={() => (isPast || isFuture) ? jumpToCard(idx) : undefined}
                 style={{
@@ -5927,7 +6096,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   padding: "0 28px",
                   cursor: (isPast || isFuture) ? "pointer" : "default",
                   background: panel.backgroundColor,
-                  borderBottom: `1px solid ${tc}1a`,
+                  borderBottom: props.hideHeaderDivider === true ? "none" : `1px solid ${tc}1a`,
                   userSelect: "none",
                 }}
               >
@@ -5943,7 +6112,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                 ) : null}
               </div>
 
-              {/* ── Full card content: image split + text panel ── */}
+              {/* -- Full card content: image split + text panel -- */}
               <div style={{ height: `calc(100vh - ${PEEK}px)`, display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden" }}>
                 <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
                   {renderImageHalf(panel, idx, false, "100%")}
@@ -5960,17 +6129,17 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   );
 }
 
-// ─── AvatarMorphBlock ─────────────────────────────────────────────────────────
+// --- AvatarMorphBlock ---------------------------------------------------------
 // Three avatar images that crossfade as the section scrolls into view.
 // Feature blocks fly outward from the avatar center like they're emerging from behind.
 // CSS blur + scale on start creates a "materialising from depth" effect.
 
 const AVATAR_FLY_BLOCK_DEFAULTS = [
-  { id: "fb-1", icon: "⚡", label: "Automation",  value: "Always On",   color: "#f59e0b", endX: -380, endY: -170, delay: 0.00 },
-  { id: "fb-2", icon: "🎯", label: "Precision",   value: "99.9% up",    color: "#3b82f6", endX: -430, endY:   15, delay: 0.10 },
-  { id: "fb-3", icon: "🚀", label: "Growth",      value: "+240% ROI",   color: "#10b981", endX: -370, endY:  190, delay: 0.20 },
-  { id: "fb-4", icon: "💎", label: "Quality",     value: "5★ Rated",    color: "#8b5cf6", endX:  -90, endY: -300, delay: 0.05 },
-  { id: "fb-5", icon: "🔥", label: "Results",     value: "Day 1 Gains", color: "#ef4444", endX:  -90, endY:  300, delay: 0.15 },
+  { id: "fb-1", icon: "?", label: "Automation",  value: "Always On",   color: "#f59e0b", endX: -380, endY: -170, delay: 0.00 },
+  { id: "fb-2", icon: "⚙️", label: "Precision",   value: "99.9% up",    color: "#3b82f6", endX: -430, endY:   15, delay: 0.10 },
+  { id: "fb-3", icon: "📈", label: "Growth",      value: "+240% ROI",   color: "#10b981", endX: -370, endY:  190, delay: 0.20 },
+  { id: "fb-4", icon: "★", label: "Quality",     value: "5★ Rated",    color: "#8b5cf6", endX:  -90, endY: -300, delay: 0.05 },
+  { id: "fb-5", icon: "🎯", label: "Results",     value: "Day 1 Gains", color: "#ef4444", endX:  -90, endY:  300, delay: 0.15 },
 ];
 
 function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBlock, onUploadImage }) {
@@ -6021,8 +6190,8 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
       lastP = raw;
       const p = raw;
 
-      // ── Avatar crossfade ────────────────────────────────────────────────
-      // Three-phase: img1 → img2 (0–0.45), img2 → img3 (0.45–0.80), hold img3
+      // -- Avatar crossfade ------------------------------------------------
+      // Three-phase: img1 ? img2 (0–0.45), img2 ? img3 (0.45–0.80), hold img3
       let o1, o2, o3;
       if (p < 0.45) {
         const t = easeOut(p / 0.45);
@@ -6047,7 +6216,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
         img3Ref.current.style.filter  = o3 < 0.6 ? `blur(${((1 - o3) * 4).toFixed(1)}px)` : "";
       }
 
-      // ── Flying blocks ──────────────────────────────────────────────────
+      // -- Flying blocks --------------------------------------------------
       flyRefs.current.forEach((el, i) => {
         if (!el) return;
         const bd  = flyBlockData[i];
@@ -6072,14 +6241,14 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
     };
   }, [editor, flyBlockData]);
 
-  // ── Upload helpers ─────────────────────────────────────────────────────────
+  // -- Upload helpers ---------------------------------------------------------
   async function handleAvatarUpload(slot, file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage(`__avatar_morph_${slot}__`, file));
     if (asset?.src) onChangeBlock?.({ ...props, [slot]: asset.src });
   }
 
-  // ── Shared styles ──────────────────────────────────────────────────────────
+  // -- Shared styles ----------------------------------------------------------
   const avatarImgStyle = {
     position: "absolute", top: 0, left: 0,
     width: "100%", height: "100%",
@@ -6087,7 +6256,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
     display: "block", pointerEvents: "none",
   };
 
-  // ── Flying block render ────────────────────────────────────────────────────
+  // -- Flying block render ----------------------------------------------------
   function renderFlyBlock(bd, i) {
     const isEditor = editor;
     const editorTransform = `translate(calc(-50% + ${bd.endX}px), calc(-50% + ${bd.endY}px)) scale(1)`;
@@ -6137,7 +6306,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
     );
   }
 
-  // ── Editor upload slot ─────────────────────────────────────────────────────
+  // -- Editor upload slot -----------------------------------------------------
   function renderEditorSlot(src, slot, label) {
     return (
       <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
@@ -6148,7 +6317,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
               type="button"
               onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, [slot]: "" }); }}
               style={{ position: "absolute", top: 4, right: 4, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 5, padding: "2px 7px", fontSize: 13, cursor: "pointer" }}
-            >✕</button>
+            >×</button>
           </>
         ) : (
           <div style={{ height: 170, background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: "rgba(255,255,255,0.25)", fontSize: 14, fontWeight: 600 }}>
@@ -6160,14 +6329,14 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
           style={{ display: "block", marginTop: 5, textAlign: "center", padding: "5px 0", background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 7, color: "#a5b4fc", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
           onClick={(e) => e.stopPropagation()}
         >
-          📷 Upload
+          🖼️ Upload
           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleAvatarUpload(slot, f); }} />
         </label>
       </div>
     );
   }
 
-  // ── EDITOR mode ────────────────────────────────────────────────────────────
+  // -- EDITOR mode ------------------------------------------------------------
   if (editor) {
     return (
       <div style={{ position: "relative", background: backgroundColor, padding: compact ? "40px 24px" : "72px 56px", borderRadius: 16, overflow: "hidden" }}>
@@ -6229,7 +6398,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
     );
   }
 
-  // ── LIVE / PREVIEW mode ────────────────────────────────────────────────────
+  // -- LIVE / PREVIEW mode ----------------------------------------------------
   const hasAnyAvatar = !!(avatarSrc1 || avatarSrc2 || avatarSrc3);
 
   return (
@@ -6253,7 +6422,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
       {/* 2-col grid */}
       <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: compact ? 48 : 70, alignItems: "center", width: "100%", maxWidth: 1240, margin: "0 auto", position: "relative", zIndex: 2 }}>
 
-        {/* ── Left: text ── */}
+        {/* -- Left: text -- */}
         <div style={{ display: "flex", flexDirection: "column", gap: compact ? 18 : 26 }}>
           {props.eyebrow ? <div style={{ fontSize: compact ? 12 : 13, fontWeight: 700, letterSpacing: "0.10em", color: accentColor, textTransform: "uppercase" }}>{props.eyebrow}</div> : null}
           <h2 style={{ margin: 0, fontSize: compact ? 32 : 60, fontWeight: 900, lineHeight: 1.03, color: textColor, letterSpacing: "-0.02em" }}>
@@ -6273,7 +6442,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
           ) : null}
         </div>
 
-        {/* ── Right: avatar + flying blocks ── */}
+        {/* -- Right: avatar + flying blocks -- */}
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {/* Avatar image stack */}
           <div style={{ position: "relative", width: compact ? 240 : 400, height: compact ? 340 : 560, flexShrink: 0 }}>
@@ -6301,7 +6470,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
   );
 }
 
-// ─── VideoHeroBlock ───────────────────────────────────────────────────────────
+// --- VideoHeroBlock -----------------------------------------------------------
 // Full-bleed video hero with lazy loading via IntersectionObserver.
 // The video is hosted on Supabase storage (uploaded via onUploadImage).
 // Video src is only set once the element scrolls into view — zero network
@@ -6334,30 +6503,54 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
 
   const videoRef     = React.useRef(null);
   const sectionRef   = React.useRef(null);
-  const loadedRef    = React.useRef(false);
+  const loadedRef = React.useRef(false);
+  const loadedSrcRef = React.useRef("");
   const [muted, setMuted] = React.useState(true);
-  const unmuteOnScroll = props.unmuteOnScroll === true;
+  const debugLabel = `video-hero ${block?.id || "unknown"}`;
 
-  // Lazy-load: only assign video src once element is ≥10% visible.
-  // If unmuteOnScroll is enabled, also unmute at that point.
+  React.useEffect(() => {
+    const video = videoRef.current;
+    logHeroVideoDebug(debugLabel, "Hero component mounted", video, { videoSrc, editor });
+    return () => logHeroVideoDebug(debugLabel, "Hero component unmounted", video, { videoSrc, editor });
+  }, [debugLabel, editor, videoSrc]);
+
+  React.useEffect(() => {
+    logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { videoSrc });
+  }, [debugLabel, videoSrc]);
+
+  // React owns the media source; the observer only nudges playback and never
+  // reloads an already-active source.
   React.useEffect(() => {
     if (editor || !videoSrc || typeof window === "undefined") return undefined;
     const el = sectionRef.current;
     if (!el) return undefined;
 
     // Already loaded on this mount
-    if (loadedRef.current && videoRef.current?.src) return undefined;
+    if (loadedRef.current && loadedSrcRef.current === videoSrc && videoRef.current?.src) return undefined;
 
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && videoRef.current && !loadedRef.current) {
+        if (entries[0]?.isIntersecting && videoRef.current && (!loadedRef.current || loadedSrcRef.current !== videoSrc)) {
           loadedRef.current = true;
-          videoRef.current.src = videoSrc;
-          videoRef.current.load();
-          if (unmuteOnScroll) {
-            // Unmute — the browser allows this since it's inside a user-scroll event chain
-            videoRef.current.muted = false;
-            setMuted(false);
+          loadedSrcRef.current = videoSrc;
+          const currentSrc = videoRef.current.currentSrc || "";
+          const attrSrc = videoRef.current.getAttribute("src") || "";
+          const sourceAlreadyActive = currentSrc === videoSrc || attrSrc === videoSrc;
+          if (!sourceAlreadyActive) {
+            videoRef.current.src = videoSrc;
+            logHeroVideoDebug(debugLabel, "IntersectionObserver set source", videoRef.current, { videoSrc });
+            if (videoRef.current.readyState === 0) {
+              videoRef.current.load();
+              logHeroVideoDebug(debugLabel, "Video load() called", videoRef.current, { videoSrc });
+            }
+          } else {
+            logHeroVideoDebug(debugLabel, "Video source already active", videoRef.current, { videoSrc });
+          }
+          const playResult = videoRef.current.play?.();
+          if (playResult && typeof playResult.catch === "function") {
+            playResult.catch((error) => logHeroVideoDebug(debugLabel, "Video play() failed", videoRef.current, { videoSrc, error: error?.message || String(error || "") }));
+          } else {
+            logHeroVideoDebug(debugLabel, "Video play() requested", videoRef.current, { videoSrc });
           }
           obs.disconnect();
         }
@@ -6366,9 +6559,9 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [editor, videoSrc, unmuteOnScroll]);
+  }, [debugLabel, editor, videoSrc]);
 
-  // ── Upload helpers ────────────────────────────────────────────────────────
+  // -- Upload helpers --------------------------------------------------------
   async function handleVideoUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
     // Show local blob URL immediately so the preview updates before the upload finishes.
@@ -6388,7 +6581,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     if (asset?.src) onChangeBlock?.({ ...props, posterSrc: asset.src });
   }
 
-  // ── Shared overlay style ──────────────────────────────────────────────────
+  // -- Shared overlay style --------------------------------------------------
   const overlayStyle = {
     position: "absolute", inset: 0, zIndex: 1,
     background: overlayColor,
@@ -6432,7 +6625,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     whiteSpace: "nowrap",
   });
 
-  // ── EDITOR mode — controls are in the PropertiesPanel right sidebar ─────────
+  // -- EDITOR mode — controls are in the PropertiesPanel right sidebar ---------
   if (false && editor) {
     return (
       <div style={{ background: "#0d1117", display: "flex", flexDirection: "column", gap: 20, padding: "24px 24px 28px", alignItems: "stretch" }}>
@@ -6442,7 +6635,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
             <video
               src={videoSrc}
               poster={posterSrc || undefined}
-              muted autoPlay loop playsInline
+              muted autoPlay playsInline preload="auto"
               style={{ width: "100%", maxHeight: 220, objectFit: "cover", objectPosition, display: "block" }}
             />
             <div style={overlayStyle} />
@@ -6472,7 +6665,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
             </label>
             {videoSrc ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>✕ Remove video</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove video</button>
             ) : null}
           </div>
 
@@ -6484,7 +6677,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handlePosterUpload(f); }} />
             </label>
             {posterSrc ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, posterSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>✕ Remove poster</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, posterSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove poster</button>
             ) : null}
           </div>
         </div>
@@ -6576,7 +6769,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     );
   }
 
-  // ── LIVE / PREVIEW mode ───────────────────────────────────────────────────
+  // -- LIVE / PREVIEW mode ---------------------------------------------------
   return (
     <div style={marginTop ? { marginTop } : undefined}>
     <section ref={sectionRef} style={sectionStyle}>
@@ -6629,15 +6822,21 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
         </div>
       ) : null}
 
-      {/* Video element — src set immediately in editor, lazy-loaded via IntersectionObserver in live */}
+      {/* Video element: stable src prevents re-renders from restarting playback. */}
       <video
         ref={videoRef}
-        src={editor ? (videoSrc || undefined) : undefined}
+        src={videoSrc || undefined}
         poster={posterSrc || undefined}
         muted={muted}
         autoPlay
-        loop
         playsInline
+        preload="auto"
+        onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+        onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+        onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+        onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+        onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+        onError={(event) => logHeroVideoDebug(debugLabel, "Video error", event.currentTarget)}
         style={{
           position: "absolute", inset: 0, zIndex: 0,
           width: "100%", height: "100%",

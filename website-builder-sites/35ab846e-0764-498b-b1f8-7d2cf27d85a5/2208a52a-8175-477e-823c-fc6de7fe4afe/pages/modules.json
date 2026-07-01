@@ -1,0 +1,611 @@
+{
+  "id": "modules",
+  "name": "Modules",
+  "slug": "modules",
+  "seo": {},
+  "sections": [],
+  "widgets": [],
+  "styles": {},
+  "assets": [],
+  "objective": "Build the Modules page.",
+  "blocks": [
+    {
+      "id": "nav-bar-cq3c7uo",
+      "type": "nav-bar",
+      "props": {
+        "logo": "",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          {
+            "href": "#home",
+            "label": "Home",
+            "children": [],
+            "highlighted": true
+          },
+          {
+            "href": "#about",
+            "label": "About"
+          },
+          {
+            "href": "#services",
+            "label": "Services"
+          },
+          {
+            "href": "#contact",
+            "label": "Contact"
+          },
+          {
+            "href": "#modules",
+            "label": "Modules"
+          },
+          {
+            "href": "#about-us",
+            "label": "About Us"
+          }
+        ],
+        "ctaLink": "#contact",
+        "ctaText": "Get Started",
+        "variant": "split-dark",
+        "showLogo": false,
+        "logoWidth": 44,
+        "textColor": "#e2e8f0",
+        "stickyMode": "normal",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "buttonColor": "#ffffff",
+        "ctaFontSize": 16,
+        "linkFontSize": 16,
+        "brandFontSize": 18,
+        "backgroundColor": "#0b1220",
+        "buttonTextColor": "#0f172a",
+        "linkHoverEffect": "fill",
+        "mobileMenuStyle": "hamburger",
+        "linkHoverTextColor": "#ffffff",
+        "activeLinkTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+      }
+    },
+    {
+      "id": 1781468862706,
+      "type": "video-hero",
+      "props": {
+        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
+        "posterSrc": "",
+        "heightMode": "full",
+        "minHeight": 620,
+        "objectFit": "cover",
+        "objectPosition": "top center",
+        "overlayColor": "#000000",
+        "overlayOpacity": 0,
+        "showText": true,
+        "eyebrow": "",
+        "title": "",
+        "subtitle": "",
+        "ctaText": "",
+        "ctaUrl": "#",
+        "textColor": "#ffffff",
+        "accentColor": "#6366f1",
+        "baseLayoutWidth": 1500,
+        "unmuteOnScroll": true
+      }
+    },
+    {
+      "id": 1779493727146,
+      "type": "text",
+      "props": {
+        "text": "<h1><span style=\"font-size: 48px;\">Powerful Modules. One Connected Platform.</span></h1><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">Our platform brings together powerful business tools designed to help you automate operations, increase productivity, generate more leads, and grow your business from one central ecosystem. Every module works independently while also integrating seamlessly together, giving businesses complete flexibility and control.</span></p><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">Whether you need a CRM, marketing automation, funnels, websites, bookings, social media management, communities, or communication tools, every module has been designed to simplify workflows, improve efficiency, and reduce the need for multiple disconnected software subscriptions.</span></p><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">From small businesses and tradies through to growing teams and larger organisations, our platform delivers the tools needed to manage customers, automate marketing, improve communication, and scale operations through intelligent AI-powered systems and streamlined business automation.</span></p><p><span style=\"color: rgb(255, 255, 255);\">Explore our powerful range of modules below and discover how each system has been built to work together to create one complete business operating platform.</span></p>",
+        "textSize": "medium",
+        "alignment": "center",
+        "minHeight": "220px",
+        "textColor": "#ffc000",
+        "fontFamily": "system-ui",
+        "fontWeight": "400",
+        "hideBorder": true,
+        "lineHeight": 1.8,
+        "paddingTop": 48,
+        "textFontSize": 20,
+        "paddingBottom": 48,
+        "textAnimation": "fade-in",
+        "enableParallax": false,
+        "textLineHeight": 1.8,
+        "backgroundColor": "#121c26",
+        "backgroundImage": "",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": 1779483915353,
+      "type": "hover-cards",
+      "props": {
+        "cards": [
+          {
+            "id": "hc-1",
+            "link": "/command",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740987780.png",
+            "title": "Command Centre",
+            "cardColor": "#dbeafe",
+            "description": "\nThe Command Centre gives you complete control of your business from one powerful central dashboard designed to simplify daily operations and improve productivity.\n\nMonitor live business statistics, manage priorities, track performance, and stay organised with intelligent task management and real-time insights all in one place.\n\nEverything you need is accessible from a single streamlined interface, helping your team work smarter, faster, and more efficiently every day.\n\n\n\n"
+          },
+          {
+            "id": "hc-2",
+            "link": "#",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985167.png",
+            "title": "Email Marketing",
+            "cardColor": "#dcfce7",
+            "description": "\n\nOur powerful Email Marketing module helps you generate leads, nurture customers, and increase repeat business through smart automated communication.\n\nCreate professional campaigns using industry-specific templates, automated autoresponders, bulk broadcasts, and advanced customer journeys with ease.\n\nThe intuitive drag-and-drop automation builder makes it simple to design powerful workflows that keep your audience engaged and your business growing.\n\n\n\n"
+          },
+          {
+            "id": "hc-3",
+            "link": "/communities",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740986857.png",
+            "title": "Communities",
+            "cardColor": "#fef3c7",
+            "description": "\n\nOur Communities module helps businesses build stronger relationships through fully integrated local and global online communities.\n\nCreate private or public groups, manage member interactions, share updates, and encourage engagement from one central platform.\n\nKeep your audience connected, informed, and actively involved while building long-term loyalty around your brand, business, or organisation.\n\n\n\n"
+          },
+          {
+            "id": "hc-4",
+            "link": "/calendar",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740988599.png",
+            "title": "Calendar Bookings",
+            "cardColor": "#fae8ff",
+            "description": "\n\nOur smart Calendar Booking system simplifies appointment scheduling with fully automated online bookings and real-time availability management.\n\nAllow customers to book appointments 24/7 while reducing no-shows through automated reminders, confirmations, and scheduling workflows.\n\nManage staff calendars, client bookings, and business availability from one easy-to-use platform designed to save time and improve organisation.\n\n\n\n"
+          },
+          {
+            "id": "hc-5",
+            "link": "/crm",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985934.png",
+            "title": "CRM",
+            "cardColor": "#ecfdf5",
+            "description": "\n\nOur advanced CRM module helps businesses manage sales teams, client relationships, pipelines, and opportunities from one powerful system.\n\nTrack deals, quotations, revenue, follow-ups, and customer activity in real time while keeping your entire sales process organised and efficient.\n\nBuilt-in forecasting, KPI tracking, and performance reporting tools help your team stay focused, accountable, and consistently drive business growth.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484253261",
+            "link": "/funnel",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920325.png",
+            "title": "Funnel Builder",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur AI-powered Funnel Builder makes it easy to create high-converting sales funnels, lead capture pages, and automated customer journeys.\n\nDesign professional funnels in minutes using drag-and-drop simplicity, intelligent layouts, and built-in automation tools with no coding required.\n\nTrack conversions, automate follow-ups, and optimise every stage of your customer journey to generate more leads and increase sales.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484253772",
+            "link": "/landing",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983071.png",
+            "title": "Landing Page Builder",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur Landing Page Builder lets you create stunning, high-converting pages quickly using an intuitive drag-and-drop editor and proven design templates.\n\nBuild fully responsive, professional landing pages tailored to any campaign, offer, or business goal without needing coding or design skills.\n\nOptimise performance with built-in conversion tools, fast loading layouts, and seamless integration into your marketing funnels.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484254371",
+            "link": "/marketplace",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920886.png",
+            "title": "Online Marketplace",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur Online Marketplace connects buyers and sellers of digital products, physical goods, and online courses within one powerful platform.\n\nList, manage, and sell products easily while also accessing a built-in affiliate marketplace to expand reach and increase sales.\n\nVendors gain full control through a dedicated dashboard to manage products, track performance, and scale their business efficiently.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484254876",
+            "link": "/sms",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740919559.png",
+            "title": "SMS and Desktop Telephone",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur SMS and Desktop Telephone system lets you communicate with customers instantly through integrated messaging and calling from one central platform.\n\nRun bulk SMS campaigns, handle inbound and outbound calls, and manage all customer communication directly from your dashboard.\n\nWith built-in call recording and AI transcription, you can review conversations, improve training, and enhance customer service quality.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484257652",
+            "link": "/social",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983891.png",
+            "title": "Social Media Manager",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur Social Media module allows you to manage, create, and publish content across more than a dozen platforms from one central dashboard.\n\nUse AI-powered tools to generate content, schedule posts, and run consistent campaigns that keep your brand active and engaging.\n\nAutomate your social media presence to save time, grow your audience, and maintain consistent messaging across every channel.\n\n\n\n"
+          },
+          {
+            "id": "hc-1779484259460",
+            "link": "/website",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740984510.png",
+            "title": "Website Builder",
+            "cardColor": "#dde3ea",
+            "description": "\n\nOur AI-powered Website Builder lets you create stunning, professional websites for any trade or industry in minutes.\n\nDesign fully responsive, interactive websites using drag-and-drop tools, smart layouts, and ready-made templates with no coding required.\n\nBuild a strong online presence with fast, optimised websites that are designed to convert visitors into customers.\n\n\n\n"
+          },
+          {
+            "id": "hc-1781468191793",
+            "title": "Builders Platform",
+            "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity.",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780972725600-Projects-Hub.png",
+            "cardColor": "#dde3ea",
+            "link": "#"
+          }
+        ],
+        "arrowBg": "#ffffff",
+        "cardGap": 24,
+        "eyebrow": "modules",
+        "headline": "THIS IS OUR MODULES PAGE",
+        "maxWidth": 1200,
+        "alignment": "center",
+        "bodyBlock": {
+          "color": "#ffffff",
+          "content": "Explore the different modules in our platform",
+          "fontSize": 20,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "lineHeight": 1.6
+        },
+        "cardColor": "#dde3ea",
+        "dotsColor": "#cbd5e1",
+        "fullWidth": true,
+        "textColor": "#ffc000",
+        "arrowColor": "#0f172a",
+        "buttonText": "Learn more →",
+        "cardHeight": 700,
+        "cardRadius": 16,
+        "fontFamily": "system-ui",
+        "fontWeight": "800",
+        "lineHeight": 1.4,
+        "paddingTop": 48,
+        "buttonColor": "#ffffff",
+        "cardPadding": 24,
+        "subheadline": "Explore the different modules in our platform",
+        "minCardWidth": 400,
+        "overlayColor": "rgba(79,136,196,0.85)",
+        "paddingSides": 40,
+        "sectionTitle": "Our Modules",
+        "textFontSize": 13,
+        "visibleCards": 3,
+        "headlineBlock": {
+          "color": "#ffc000",
+          "content": "THIS IS OUR MODULES PAGE",
+          "fontSize": 52,
+          "alignment": "center",
+          "fontFamily": "system-ui",
+          "fontWeight": "700",
+          "lineHeight": 1.1
+        },
+        "headlineColor": "#ffc000",
+        "paddingBottom": 48,
+        "textLineHeight": 1.4,
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#0f172a",
+        "dotsActiveColor": "#0f172a",
+        "autoPlayInterval": 6000,
+        "headlineFontSize": 52,
+        "sectionTitleSize": 48,
+        "headlineAlignment": "center",
+        "sectionTitleColor": "#e1ba2d",
+        "headlineFontFamily": "system-ui",
+        "headlineFontWeight": "700",
+        "headlineLineHeight": 1.1,
+        "subheadlineFontSize": 20,
+        "subheadlineLineHeight": 1.6
+      }
+    },
+    {
+      "id": 1781468957799,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    }
+  ],
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "nav-bar-cq3c7uo",
+        "type": "nav-bar",
+        "props": {
+          "logo": "",
+          "brand": "Gr8 Result Digital Solutions",
+          "links": [
+            {
+              "href": "#home",
+              "label": "Home",
+              "children": [],
+              "highlighted": true
+            },
+            {
+              "href": "#about",
+              "label": "About"
+            },
+            {
+              "href": "#services",
+              "label": "Services"
+            },
+            {
+              "href": "#contact",
+              "label": "Contact"
+            },
+            {
+              "href": "#modules",
+              "label": "Modules"
+            },
+            {
+              "href": "#about-us",
+              "label": "About Us"
+            }
+          ],
+          "ctaLink": "#contact",
+          "ctaText": "Get Started",
+          "variant": "split-dark",
+          "showLogo": false,
+          "logoWidth": 44,
+          "textColor": "#e2e8f0",
+          "stickyMode": "normal",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "buttonColor": "#ffffff",
+          "ctaFontSize": 16,
+          "linkFontSize": 16,
+          "brandFontSize": 18,
+          "backgroundColor": "#0b1220",
+          "buttonTextColor": "#0f172a",
+          "linkHoverEffect": "fill",
+          "mobileMenuStyle": "hamburger",
+          "linkHoverTextColor": "#ffffff",
+          "activeLinkTextColor": "#ffffff",
+          "fullWidthBackground": true,
+          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
+          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
+        }
+      },
+      {
+        "id": 1781468862706,
+        "type": "video-hero",
+        "props": {
+          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
+          "posterSrc": "",
+          "heightMode": "full",
+          "minHeight": 620,
+          "objectFit": "cover",
+          "objectPosition": "top center",
+          "overlayColor": "#000000",
+          "overlayOpacity": 0.42,
+          "showText": true,
+          "eyebrow": "",
+          "title": "",
+          "subtitle": "",
+          "ctaText": "",
+          "ctaUrl": "#",
+          "textColor": "#ffffff",
+          "accentColor": "#6366f1",
+          "baseLayoutWidth": 1500,
+          "unmuteOnScroll": true
+        }
+      },
+      {
+        "id": 1779493727146,
+        "type": "text",
+        "props": {
+          "text": "<h1><span style=\"font-size: 48px;\">Powerful Modules. One Connected Platform.</span></h1><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">Our platform brings together powerful business tools designed to help you automate operations, increase productivity, generate more leads, and grow your business from one central ecosystem. Every module works independently while also integrating seamlessly together, giving businesses complete flexibility and control.</span></p><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">Whether you need a CRM, marketing automation, funnels, websites, bookings, social media management, communities, or communication tools, every module has been designed to simplify workflows, improve efficiency, and reduce the need for multiple disconnected software subscriptions.</span></p><p class=\"isSelectedEnd\"><span style=\"color: rgb(255, 255, 255);\">From small businesses and tradies through to growing teams and larger organisations, our platform delivers the tools needed to manage customers, automate marketing, improve communication, and scale operations through intelligent AI-powered systems and streamlined business automation.</span></p><p><span style=\"color: rgb(255, 255, 255);\">Explore our powerful range of modules below and discover how each system has been built to work together to create one complete business operating platform.</span></p>",
+          "textSize": "medium",
+          "alignment": "center",
+          "minHeight": "220px",
+          "textColor": "#ffc000",
+          "fontFamily": "system-ui",
+          "fontWeight": "400",
+          "hideBorder": true,
+          "lineHeight": 1.8,
+          "paddingTop": 48,
+          "textFontSize": 20,
+          "paddingBottom": 48,
+          "textAnimation": "fade-in",
+          "enableParallax": false,
+          "textLineHeight": 1.8,
+          "backgroundColor": "#121c26",
+          "backgroundImage": "",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true
+        }
+      },
+      {
+        "id": 1779483915353,
+        "type": "hover-cards",
+        "props": {
+          "cards": [
+            {
+              "id": "hc-1",
+              "link": "/command",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740987780.png",
+              "title": "Command Centre",
+              "cardColor": "#dbeafe",
+              "description": "\nThe Command Centre gives you complete control of your business from one powerful central dashboard designed to simplify daily operations and improve productivity.\n\nMonitor live business statistics, manage priorities, track performance, and stay organised with intelligent task management and real-time insights all in one place.\n\nEverything you need is accessible from a single streamlined interface, helping your team work smarter, faster, and more efficiently every day.\n\n\n\n"
+            },
+            {
+              "id": "hc-2",
+              "link": "#",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985167.png",
+              "title": "Email Marketing",
+              "cardColor": "#dcfce7",
+              "description": "\n\nOur powerful Email Marketing module helps you generate leads, nurture customers, and increase repeat business through smart automated communication.\n\nCreate professional campaigns using industry-specific templates, automated autoresponders, bulk broadcasts, and advanced customer journeys with ease.\n\nThe intuitive drag-and-drop automation builder makes it simple to design powerful workflows that keep your audience engaged and your business growing.\n\n\n\n"
+            },
+            {
+              "id": "hc-3",
+              "link": "/communities",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740986857.png",
+              "title": "Communities",
+              "cardColor": "#fef3c7",
+              "description": "\n\nOur Communities module helps businesses build stronger relationships through fully integrated local and global online communities.\n\nCreate private or public groups, manage member interactions, share updates, and encourage engagement from one central platform.\n\nKeep your audience connected, informed, and actively involved while building long-term loyalty around your brand, business, or organisation.\n\n\n\n"
+            },
+            {
+              "id": "hc-4",
+              "link": "/calendar",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740988599.png",
+              "title": "Calendar Bookings",
+              "cardColor": "#fae8ff",
+              "description": "\n\nOur smart Calendar Booking system simplifies appointment scheduling with fully automated online bookings and real-time availability management.\n\nAllow customers to book appointments 24/7 while reducing no-shows through automated reminders, confirmations, and scheduling workflows.\n\nManage staff calendars, client bookings, and business availability from one easy-to-use platform designed to save time and improve organisation.\n\n\n\n"
+            },
+            {
+              "id": "hc-5",
+              "link": "/crm",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740985934.png",
+              "title": "CRM",
+              "cardColor": "#ecfdf5",
+              "description": "\n\nOur advanced CRM module helps businesses manage sales teams, client relationships, pipelines, and opportunities from one powerful system.\n\nTrack deals, quotations, revenue, follow-ups, and customer activity in real time while keeping your entire sales process organised and efficient.\n\nBuilt-in forecasting, KPI tracking, and performance reporting tools help your team stay focused, accountable, and consistently drive business growth.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484253261",
+              "link": "/funnel",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920325.png",
+              "title": "Funnel Builder",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur AI-powered Funnel Builder makes it easy to create high-converting sales funnels, lead capture pages, and automated customer journeys.\n\nDesign professional funnels in minutes using drag-and-drop simplicity, intelligent layouts, and built-in automation tools with no coding required.\n\nTrack conversions, automate follow-ups, and optimise every stage of your customer journey to generate more leads and increase sales.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484253772",
+              "link": "/landing",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983071.png",
+              "title": "Landing Page Builder",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur Landing Page Builder lets you create stunning, high-converting pages quickly using an intuitive drag-and-drop editor and proven design templates.\n\nBuild fully responsive, professional landing pages tailored to any campaign, offer, or business goal without needing coding or design skills.\n\nOptimise performance with built-in conversion tools, fast loading layouts, and seamless integration into your marketing funnels.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484254371",
+              "link": "/marketplace",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740920886.png",
+              "title": "Online Marketplace",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur Online Marketplace connects buyers and sellers of digital products, physical goods, and online courses within one powerful platform.\n\nList, manage, and sell products easily while also accessing a built-in affiliate marketplace to expand reach and increase sales.\n\nVendors gain full control through a dedicated dashboard to manage products, track performance, and scale their business efficiently.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484254876",
+              "link": "/sms",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740919559.png",
+              "title": "SMS and Desktop Telephone",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur SMS and Desktop Telephone system lets you communicate with customers instantly through integrated messaging and calling from one central platform.\n\nRun bulk SMS campaigns, handle inbound and outbound calls, and manage all customer communication directly from your dashboard.\n\nWith built-in call recording and AI transcription, you can review conversations, improve training, and enhance customer service quality.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484257652",
+              "link": "/social",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740983891.png",
+              "title": "Social Media Manager",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur Social Media module allows you to manage, create, and publish content across more than a dozen platforms from one central dashboard.\n\nUse AI-powered tools to generate content, schedule posts, and run consistent campaigns that keep your brand active and engaging.\n\nAutomate your social media presence to save time, grow your audience, and maintain consistent messaging across every channel.\n\n\n\n"
+            },
+            {
+              "id": "hc-1779484259460",
+              "link": "/website",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/private-copy-1779740984510.png",
+              "title": "Website Builder",
+              "cardColor": "#dde3ea",
+              "description": "\n\nOur AI-powered Website Builder lets you create stunning, professional websites for any trade or industry in minutes.\n\nDesign fully responsive, interactive websites using drag-and-drop tools, smart layouts, and ready-made templates with no coding required.\n\nBuild a strong online presence with fast, optimised websites that are designed to convert visitors into customers.\n\n\n\n"
+            },
+            {
+              "id": "hc-1781468191793",
+              "title": "Builders Platform",
+              "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity.",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780972725600-Projects-Hub.png",
+              "cardColor": "#dde3ea",
+              "link": "#"
+            }
+          ],
+          "arrowBg": "#ffffff",
+          "cardGap": 24,
+          "eyebrow": "modules",
+          "headline": "THIS IS OUR MODULES PAGE",
+          "maxWidth": 1200,
+          "alignment": "center",
+          "bodyBlock": {
+            "color": "#ffffff",
+            "content": "Explore the different modules in our platform",
+            "fontSize": 20,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "400",
+            "lineHeight": 1.6
+          },
+          "cardColor": "#dde3ea",
+          "dotsColor": "#cbd5e1",
+          "fullWidth": true,
+          "textColor": "#ffc000",
+          "arrowColor": "#0f172a",
+          "buttonText": "Learn more →",
+          "cardHeight": 700,
+          "cardRadius": 16,
+          "fontFamily": "system-ui",
+          "fontWeight": "800",
+          "lineHeight": 1.4,
+          "paddingTop": 48,
+          "buttonColor": "#ffffff",
+          "cardPadding": 24,
+          "subheadline": "Explore the different modules in our platform",
+          "minCardWidth": 400,
+          "overlayColor": "rgba(79,136,196,0.85)",
+          "paddingSides": 40,
+          "sectionTitle": "Our Modules",
+          "textFontSize": 13,
+          "visibleCards": 3,
+          "headlineBlock": {
+            "color": "#ffc000",
+            "content": "THIS IS OUR MODULES PAGE",
+            "fontSize": 52,
+            "alignment": "center",
+            "fontFamily": "system-ui",
+            "fontWeight": "700",
+            "lineHeight": 1.1
+          },
+          "headlineColor": "#ffc000",
+          "paddingBottom": 48,
+          "textLineHeight": 1.4,
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#0f172a",
+          "dotsActiveColor": "#0f172a",
+          "autoPlayInterval": 6000,
+          "headlineFontSize": 52,
+          "sectionTitleSize": 48,
+          "headlineAlignment": "center",
+          "sectionTitleColor": "#e1ba2d",
+          "headlineFontFamily": "system-ui",
+          "headlineFontWeight": "700",
+          "headlineLineHeight": 1.1,
+          "subheadlineFontSize": 20,
+          "subheadlineLineHeight": 1.6
+        }
+      },
+      {
+        "id": 1781468957799,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "html": "",
+  "updatedAt": "2026-06-20T21:41:06.093Z"
+}

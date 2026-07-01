@@ -11,6 +11,8 @@ import {
   normalizeDomain,
   slugifyWebsiteValue,
 } from "../../../lib/website-builder/publishConfig";
+import { loadFullSplitWebsiteProject } from "../../../lib/website-builder/supabaseSiteStorage";
+import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
 
 export const config = {
   api: {
@@ -50,7 +52,10 @@ async function handler(req, res) {
   }
 
   const userId = userData.user.id;
-  const project = req.body?.project;
+  const incomingProject = req.body?.project;
+  const splitProjectId = String(incomingProject?.id || "").trim();
+  const splitProject = splitProjectId ? await loadFullSplitWebsiteProject(userId, splitProjectId) : null;
+  const project = splitProject ? { ...incomingProject, ...splitProject, brandAssets: incomingProject?.brandAssets } : incomingProject;
   if (!project || typeof project !== "object") {
     return res.status(400).json({ ok: false, error: "Missing website project payload" });
   }
@@ -67,6 +72,15 @@ async function handler(req, res) {
   const slug = requestedSlug;
   const primaryDomain = buildDefaultSiteDomain(slug) || getPublishHost() || `${slug}--published`;
   const customDomainTarget = getCustomDomainTargetHost();
+
+  if (projectId) {
+    await createWebsiteBuilderBackup(userId, projectId, {
+      source: "publish",
+      reason: "Before publishing website",
+      project,
+      metadata: { slug, customDomain: requestedCustomDomain || "" },
+    });
+  }
 
   const { data: conflictingSlug } = await supabaseAdmin
     .from("published_websites")
