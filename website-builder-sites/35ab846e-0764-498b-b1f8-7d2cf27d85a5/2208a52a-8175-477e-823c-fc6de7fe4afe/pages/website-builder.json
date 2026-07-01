@@ -335,8 +335,8 @@
       "type": "stats",
       "props": {
         "eyebrow": "Why it matters",
-        "title": "Build the website, capture the lead, trigger the follow-up",
-        "subtitle": "Gr8 Result turns each page into part of the sales engine: clear offers, fast edits, lead capture and automation in one place.",
+        "title": "A website should be the start of the sales system",
+        "subtitle": "Built to help you launch faster, capture more leads, and manage follow-up from one connected platform.",
         "backgroundColor": "#101926",
         "textColor": "#ffffff",
         "accentColor": "#22c55e",
@@ -344,10 +344,10 @@
         "equalCardHeights": true,
         "statsCardHeight": 248,
         "stats": [
-          { "value": "1", "label": "One builder for the whole site", "detail": "Create home pages, service pages, landing pages and module pages without jumping between disconnected tools." },
-          { "value": "24/7", "label": "Always-on lead capture", "detail": "Forms, quote requests, bookings, CRM, email and SMS follow-up keep working after the visitor leaves the page." },
-          { "value": "0", "label": "No developer bottleneck", "detail": "Update copy, images, sections, buttons and calls to action yourself whenever the offer changes." },
-          { "value": "100%", "label": "Owned inside Gr8 Result", "detail": "Keep pages, assets, leads, tracking and automations together so the website feeds the rest of the platform." }
+          { "value": "1", "label": "All-In-One Platform", "detail": "Build websites, funnels, landing pages, CRM, bookings, email and automation inside one workspace." },
+          { "value": "24/7", "label": "Lead Capture & Follow-Up", "detail": "Capture enquiries around the clock and keep prospects moving with automated follow-up." },
+          { "value": "0", "label": "Code Needed", "detail": "Update pages, forms, content and campaigns without waiting on a developer." },
+          { "value": "100%", "label": "Owned Inside Gr8 Result", "detail": "Keep your website, marketing tools, leads and business systems together in Gr8 Result." }
         ]
       }
     },

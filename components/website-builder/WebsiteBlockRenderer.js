@@ -1,4 +1,5 @@
 import React from "react";
+import WbRichTextEditor from "../text-editor/WbRichTextEditor";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
@@ -52,6 +53,68 @@ import {
 
 // Re-export animation utilities consumed by PageBuilderCanvas
 export { websiteBlockKeyframes, getAnimationStyle } from "./website-renderer/wbAnimations";
+
+const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+function getHeroVideoDebugState(video) {
+  if (!video) return {};
+  return {
+    currentTime: Number.isFinite(video.currentTime) ? Number(video.currentTime.toFixed(3)) : null,
+    duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : null,
+    paused: video.paused,
+    ended: video.ended,
+    muted: video.muted,
+    loop: video.loop,
+    autoplay: video.autoplay,
+    playsInline: video.playsInline,
+    preload: video.preload,
+    readyState: video.readyState,
+    networkState: video.networkState,
+    currentSrc: video.currentSrc || "",
+    error: video.error ? { code: video.error.code, message: video.error.message } : null,
+  };
+}
+
+function logHeroVideoDebug(label, eventName, video, extra = {}) {
+  if (!shouldLogHeroVideoDebug()) return;
+  console.info(`[HeroVideoDebug] ${label}: ${eventName}`, {
+    ...getHeroVideoDebugState(video),
+    ...extra,
+  });
+}
+
+function HeroBackgroundVideo({ src, style, blockId }) {
+  const videoRef = React.useRef(null);
+  const debugLabel = `hero-background ${blockId || "unknown"}`;
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    logHeroVideoDebug(debugLabel, "Hero component mounted", video, { src });
+    return () => logHeroVideoDebug(debugLabel, "Hero component unmounted", video, { src });
+  }, [debugLabel, src]);
+
+  React.useEffect(() => {
+    logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { src });
+  }, [debugLabel, src]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      autoPlay
+      muted
+      playsInline
+      preload="auto"
+      onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+      onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+      onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+      onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+      onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+      onError={(event) => logHeroVideoDebug(debugLabel, "Video error", event.currentTarget)}
+      style={style}
+    />
+  );
+}
 
 function sanitizeFeatureTextHtml(value, style = {}, fallback = "") {
   let html = asRichHtml(value || fallback || "");
@@ -186,6 +249,11 @@ const textSectionRichTextStyles = `
 .wb-text-block :where(p,li,blockquote){line-height:var(--wb-text-line-height, 1.35);}
 .wb-text-block :where(p){margin-bottom:0.25em;}
 .wb-text-block :where(p:last-child,h1:last-child,h2:last-child,h3:last-child,h4:last-child,h5:last-child,h6:last-child,ul:last-child,ol:last-child,blockquote:last-child){margin-bottom:0;}
+.wb-text-block ul{list-style-type:disc;padding-left:1.5em;margin-bottom:0.5em;}
+.wb-text-block ol{list-style-type:decimal;padding-left:1.5em;margin-bottom:0.5em;}
+.wb-text-block li{margin-bottom:0.2em;}
+.wb-text-block blockquote{border-left:3px solid rgba(255,255,255,0.3);padding-left:1em;margin-left:0;font-style:italic;opacity:0.85;}
+.wb-text-block a{color:inherit;text-decoration:underline;}
 `;
 
 /**
@@ -775,6 +843,41 @@ function SideScrollAccordionBlock({ props, compact = false, editor = false, onCh
   );
 }
 
+// ── WbTextEditableContent ──────────────────────────────────────────────────────
+// Wraps WbRichTextEditor for the "text" block type.  Defined as a real React
+// component (capital letter) so it can use hooks internally via WbRichTextEditor.
+// Only rendered in editor mode; the read-only path uses a plain div.
+
+function WbTextEditableContent({ props, onChangeBlock, compact }) {
+  const textLineHeight = Math.max(
+    0.8,
+    Math.min(3, Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35) || 1.35)
+  );
+
+  return (
+    <WbRichTextEditor
+      html={cleanTextSectionHtml(props.text)}
+      onChange={(html) => {
+        if (typeof onChangeBlock === "function") {
+          onChangeBlock({ ...props, text: cleanInlineEditorHtml(html) });
+        }
+      }}
+      blockStyle={{
+        margin: 0,
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        "--wb-text-line-height": textLineHeight,
+        fontSize: Math.max(12, Number(props.textFontSize || 18)),
+        lineHeight: textLineHeight,
+        textAlign: props.alignment || "left",
+        ...bodyTypography(props),
+      }}
+      placeholder="Click to edit text…"
+    />
+  );
+}
+
 export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
   const rawProps = block?.props || {};
   // When a global canvas width (layoutWidth) is provided, enforce it as the content container's
@@ -985,12 +1088,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
           {isVideoHero ? (
             <>
-              <video
+              <HeroBackgroundVideo
                 src={props.backgroundVideoUrl}
-                autoPlay
-                muted
-                loop={props.videoLoop === true}
-                playsInline
+                blockId={block?.id}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
               />
               {props.videoOverlayColor && props.videoOverlayColor !== "transparent" ? (
@@ -1736,9 +1836,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           <style>{textSectionRichTextStyles}</style>
           <div style={{ ...sectionContentStyle(props, compact), position: "relative", zIndex: textOverlayEnabled ? 3 : undefined }}>
             {editor ? (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 6, flexWrap: "wrap" }}>
-                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.max(14, Number(props.textFontSize || 18) - 2) })} style={sharedStyles.editorChip}>A−</button>
-                <button type="button" onClick={() => onChangeBlock?.({ ...props, textFontSize: Math.min(72, Number(props.textFontSize || 18) + 2) })} style={sharedStyles.editorChip}>A+</button>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6, gap: 6 }}>
                 <button type="button" onClick={() => onChangeBlock?.({ ...props, hideBorder: !props.hideBorder })} style={{ ...sharedStyles.editorChip, ...(props.hideBorder ? { background: "#64748b", color: "#fff" } : {}) }} title="Toggle section border">{props.hideBorder ? "Border Off" : "Border On"}</button>
               </div>
             ) : null}
@@ -1765,22 +1863,19 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 align={props.alignment || "left"}
                 onResize={(w) => onChangeBlock?.({ ...props, textContentWidth: w })}
               >
-                <div
-                  className="wb-text-block"
-                  data-website-inline-editor="true"
-                  data-text-prop="text"
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onBlur={(event) => {
-                    if (shouldSkipToolbarBlur(event)) return;
-                    if (!editor || typeof onChangeBlock !== "function") return;
-                    onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                  }}
-                  style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed), outline: editor ? "1px dashed rgba(14,165,233,0.4)" : "none", padding: editor ? "6px 8px" : 0, borderRadius: 8 }}
-                  dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
-                />
+                {editor ? (
+                  <WbTextEditableContent
+                    props={props}
+                    onChangeBlock={onChangeBlock}
+                    compact={compact}
+                  />
+                ) : (
+                  <div
+                    className="wb-text-block"
+                    style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) }}
+                    dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
+                  />
+                )}
               </TextColumnResizer>
             </div>
           </div>
@@ -1794,7 +1889,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const ctaVariant = ctaButtonVariantStyles(props, compact);
       const ctaWidthProps = { ...props, fullWidthBackground: props.fullWidthBackground === true };
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={ctaVariant.content}>
             {(editor || !!stripPlaceholder(props.eyebrow)) ? (
@@ -2218,6 +2313,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "pricing-table":
       const pricingVariant = pricingVariantStyles(props);
       const plans = asArray(props.plans).map((plan, idx) => normalizePricingPlan(plan, idx));
+      const pricingImageHotspots = asArray(props.pricingImageHotspots);
       const patchPlan = (planIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         const normalizedPatch = {
@@ -2263,6 +2359,68 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         });
         onChangeBlock({ ...props, plans: nextPlans });
       };
+
+      if (props.pricingImageUrl) {
+        const imageMaxWidth = Math.max(240, Number(props.pricingImageMaxWidth || 980) || 980);
+        const imageFit = props.pricingImageFit || "contain";
+        return (
+          <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor) }}>
+            <div style={sectionContentStyle(props, compact)}>
+              <h2
+                data-website-inline-editor="true"
+                data-text-prop="title"
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onBlur={(event) => {
+                  if (!editor || typeof onChangeBlock !== "function") return;
+                  onChangeBlock({ ...props, title: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+                }}
+                style={{ ...sharedStyles.sectionTitle(compact), color: pricingVariant.sectionTitleColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Pricing" : "")) }}
+              />
+              <div style={{ position: "relative", width: "100%", maxWidth: imageMaxWidth, margin: "0 auto", overflow: "hidden", borderRadius: Number(props.pricingImageRadius || 12) || 12 }}>
+                <img
+                  src={props.pricingImageUrl}
+                  alt={props.pricingImageAlt || "Pricing options"}
+                  style={{ display: "block", width: "100%", height: imageFit === "cover" ? Number(props.pricingImageHeight || 0) || "auto" : "auto", objectFit: imageFit }}
+                />
+                {pricingImageHotspots.map((spot, spotIndex) => {
+                  const href = String(spot?.href || "").trim();
+                  const label = spot?.label || `Pricing link ${spotIndex + 1}`;
+                  const rectStyle = {
+                    position: "absolute",
+                    left: `${Number(spot?.x ?? 0)}%`,
+                    top: `${Number(spot?.y ?? 0)}%`,
+                    width: `${Number(spot?.width ?? 20)}%`,
+                    height: `${Number(spot?.height ?? 8)}%`,
+                    borderRadius: 8,
+                    outline: editor ? "2px dashed rgba(14,165,233,0.85)" : "none",
+                    background: editor ? "rgba(14,165,233,0.12)" : "transparent",
+                    color: "transparent",
+                    overflow: "hidden",
+                    cursor: href && !editor ? "pointer" : "default",
+                  };
+                  if (!href || editor) {
+                    return <span key={spot?.id || `pricing-hotspot-${spotIndex}`} title={label} style={rectStyle} />;
+                  }
+                  return (
+                    <a
+                      key={spot?.id || `pricing-hotspot-${spotIndex}`}
+                      href={href}
+                      aria-label={label}
+                      target={spot?.newTab ? "_blank" : undefined}
+                      rel={spot?.newTab ? "noopener noreferrer" : undefined}
+                      style={rectStyle}
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          </ScrollReveal>
+        );
+      }
 
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, { ...props, backgroundColor: pricingVariant.section?.background || props.backgroundColor, borderColor: pricingVariant.section?.borderColor || props.borderColor }), ...fullWidthStyle(props, compact, editor) }}>
@@ -3331,7 +3489,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   suppressContentEditableWarning
                   onBlur={(event) => patchStat(idx, { detail: cleanInlineEditorHtml(event.currentTarget.innerHTML) })}
                   style={asStyleObject({ ...statsVariant.detail, ...detailAnimationStyle })}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "Proof that your website is built to attract attention, capture leads and support real business growth.") }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(stat.detail || "") }}
                 />
               ) : null}
             </div>
@@ -3703,7 +3861,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const trustBadgeBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
       const trustBadgeSty = trustBadgeVariantStyles(props, compact, trustBadgeBackgroundImage);
       return (
-        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor) }}>
+        <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...trustBadgeSty.section, ...fullWidthStyle(props, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>
           <div style={asStyleObject(trustBadgeSty.row)}>
             {asArray(props.badges).map((badge, idx) => (
@@ -3757,8 +3915,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             color: text,
             overflow: hasMarqueeAngle ? "visible" : "hidden",
             fontSize: `${marqueeFontSize}px`,
+            border: "none",
             borderTop: "none",
             borderBottom: "none",
+            outline: "none",
             borderRadius: 0,
             padding: hasMarqueeAngle ? `${angledOuterPad}px 0` : `${stripPaddingTop}px 0 ${stripPaddingBottom}px`,
             marginTop: marqueeMarginTop,
@@ -3784,6 +3944,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               transform: hasMarqueeAngle ? `rotate(${marqueeAngle}deg)` : undefined,
               transformOrigin: "center center",
               boxSizing: "border-box",
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
             }}
           >
             <div
@@ -3947,6 +4110,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             alignItems: "center",
             boxSizing: "border-box",
             isolation: "isolate",
+            border: "none",
+            borderTop: "none",
+            borderBottom: "none",
+            outline: "none",
+            boxShadow: "none",
           }}
         >
           {editor ? (

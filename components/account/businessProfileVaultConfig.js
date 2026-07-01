@@ -27,6 +27,12 @@ export const PROOF_OF_ADDRESS_DOCUMENT_TYPES = [
 
 export const BUSINESS_PROFILE_SECTIONS = [
   {
+    key: "introduction_video",
+    title: "Introduction & Explanation Video",
+    description: "Start here with a short welcome video explaining the onboarding process.",
+    fields: [],
+  },
+  {
     key: "account_holder_verification",
     title: "Account Holder Verification",
     description: "Identity and contact details for the primary account holder.",

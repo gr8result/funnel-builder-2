@@ -1,0 +1,573 @@
+{
+  "id": "social-media",
+  "name": "Social Media",
+  "slug": "social-media",
+  "seo": {
+    "title": "AI Social Media Management | Gr8 Result Digital Solutions",
+    "description": "Generate an entire month of social media content in 15 minutes. AI-powered posts, images and captions published automatically across Facebook, Instagram, LinkedIn, TikTok and 5 more platforms."
+  },
+  "sections": [],
+  "widgets": [],
+  "styles": {},
+  "assets": [],
+  "objective": "Sell the Social Media module by demonstrating AI campaign creation, automated publishing and dramatic time savings.",
+  "blocks": [
+    {
+      "id": "sm-nav",
+      "type": "nav-bar",
+      "props": {
+        "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+        "brand": "Gr8 Result Digital Solutions",
+        "links": [
+          { "href": "#home", "label": "Home" },
+          {
+            "id": "nav-modules-sm",
+            "href": "#modules",
+            "label": "Modules",
+            "children": [
+              { "id": "nav-child-email-sm", "href": "#email", "label": "Email Marketing" },
+              { "id": "nav-child-sms-sm", "href": "#sms", "label": "SMS Marketing" },
+              { "id": "nav-child-crm-sm", "href": "#crm", "label": "CRM Management" },
+              { "id": "nav-child-funnels-sm", "href": "#funnels", "label": "Funnels" },
+              { "id": "nav-child-wb-sm", "href": "#website-builder", "label": "Website Builder" }
+            ]
+          },
+          { "href": "#about-us", "label": "About Us" },
+          { "href": "#pricing", "label": "Pricing" },
+          { "href": "#contact-us", "label": "Contact Us" }
+        ],
+        "ctaLink": "#contact-us",
+        "ctaText": "Start Free Trial",
+        "variant": "boxed-brand",
+        "showLogo": true,
+        "logoWidth": 150,
+        "textColor": "#a78bfa",
+        "stickyMode": "normal",
+        "buttonColor": "#a855f7",
+        "backgroundColor": "#06020f",
+        "buttonTextColor": "#ffffff",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "sm-hero",
+      "type": "hero",
+      "props": {
+        "heroVariant": "spotlight",
+        "eyebrow": "AI Social Media Management",
+        "headline": "Create an Entire Month of Content in Minutes",
+        "subheadline": "Generate engaging AI-powered social media posts, images and captions, then automatically publish them across multiple platforms from one simple dashboard.",
+        "buttonText": "Start Free Trial",
+        "buttonLink": "#contact-us",
+        "secondaryButtonText": "Book a Demo",
+        "secondaryButtonLink": "#contact-us",
+        "backgroundColor": "linear-gradient(135deg,#06020f,#130028 55%,#1a0040)",
+        "headlineColor": "#ffffff",
+        "textColor": "#c4b5fd",
+        "buttonColor": "#a855f7",
+        "buttonTextColor": "#ffffff",
+        "secondaryButtonColor": "rgba(168,85,247,0.18)",
+        "secondaryButtonTextColor": "#e9d5ff",
+        "contentBackground": "transparent",
+        "image": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1400&q=80",
+        "minHeight": "720px",
+        "textAnimation": "fade-up",
+        "subheadlineAnimation": "fade-up",
+        "sectionAnimation": "fade-in",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-platform-ticker",
+      "type": "wave-marquee",
+      "props": {
+        "text": "FACEBOOK · INSTAGRAM · LINKEDIN · TIKTOK · X (TWITTER) · PINTEREST · GOOGLE BUSINESS · THREADS · YOUTUBE · ONE CLICK · FULLY AUTOMATED",
+        "angle": 4,
+        "speed": 14,
+        "height": 360,
+        "fontSize": 20,
+        "amplitude": 110,
+        "textColor": "#e9d5ff",
+        "accentColor": "#a855f7",
+        "backgroundColor": "#0d0520",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "sm-why-love",
+      "type": "feature-list",
+      "props": {
+        "featureVariant": "glass-cards",
+        "layout": "columns",
+        "spacingScale": "normal",
+        "title": "Everything You Need to Dominate Social Media",
+        "subtitle": "Four powerful AI tools working together to handle your entire social media presence from creation to publishing.",
+        "items": [
+          {
+            "title": "AI Post Generator",
+            "body": "Generate engaging, on-brand social media posts for any business in seconds. Choose your tone, topic and platform and let AI write content that actually converts followers into customers.",
+            "image": "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "AI Image Creation",
+            "body": "Automatically generate beautiful, professional social media graphics for every post. Branded, colourful and sized perfectly for each platform — no designer required.",
+            "image": "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Publish Everywhere",
+            "body": "Connect all your social media accounts once and publish to every platform simultaneously with a single click. Facebook, Instagram, LinkedIn, TikTok, X and more — all from one dashboard.",
+            "image": "https://images.unsplash.com/photo-1562577309-4932fdd64cd1?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Plan Weeks Ahead",
+            "body": "Stop scrambling for content every day. Create and schedule an entire month of posts in under 15 minutes, then let Gr8 Result publish everything automatically while you focus on your business.",
+            "image": "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=900&q=80"
+          }
+        ],
+        "backgroundColor": "linear-gradient(180deg,#0d0520,#06020f)",
+        "itemBackgroundColor": "linear-gradient(170deg,rgba(139,92,246,0.12),rgba(168,85,247,0.06))",
+        "textColor": "#e2e8f0",
+        "borderColor": "rgba(139,92,246,0.3)",
+        "sectionAnimation": "fade-up",
+        "textAnimation": "fade-right",
+        "sectionAnimationDelay": 0.04,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-stats",
+      "type": "stats",
+      "props": {
+        "statsVariant": "spotlight-orbs",
+        "title": "Real Numbers. Real Results.",
+        "subtitle": "Businesses using Gr8 Result Social Media spend less time creating content and more time growing their business.",
+        "stats": [
+          {
+            "number": "15",
+            "label": "Minutes",
+            "detail": "Generate an entire month of posts, images, hashtags and captions in one campaign session."
+          },
+          {
+            "number": "9",
+            "label": "Platforms",
+            "detail": "Publish to Facebook, Instagram, LinkedIn, TikTok, X, Pinterest, Google Business, Threads and YouTube simultaneously."
+          },
+          {
+            "number": "4",
+            "label": "Weeks",
+            "detail": "Schedule content weeks in advance so your social media runs on autopilot while you run your business."
+          },
+          {
+            "number": "24/7",
+            "label": "Automatic Publishing",
+            "detail": "Your scheduled posts publish automatically at the best times, even when you are offline or asleep."
+          }
+        ],
+        "backgroundColor": "#06020f",
+        "textColor": "#f8fafc",
+        "accentColor": "#a855f7",
+        "borderColor": "rgba(139,92,246,0.3)",
+        "cardBackgroundColor": "rgba(139,92,246,0.1)",
+        "sectionAnimation": "blur-in",
+        "sectionAnimationDelay": 0.06,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-campaign-builder",
+      "type": "scroll-stack",
+      "props": {
+        "backgroundColor": "#0d0520",
+        "textColor": "#e2e8f0",
+        "accentColor": "#a855f7",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500,
+        "sectionAnimation": "fade-in",
+        "panels": [
+          {
+            "id": "ss-sm-1",
+            "eyebrow": "AI Campaign Builder",
+            "eyebrowDot": true,
+            "heading": "One Click. 28 Days of Content. Every Platform.",
+            "body": "The AI Campaign Builder is the feature that sets Gr8 Result apart. Instead of creating posts one at a time, you generate an entire month of content in a single workflow — mixed promotional and educational posts, with matching AI-generated images, hashtags already created, and best posting times automatically selected.",
+            "showCta": true,
+            "ctaText": "See It In Action",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "AI generating a month of social media content",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(139,92,246,0.15)"
+          },
+          {
+            "id": "ss-sm-2",
+            "eyebrow": "Step 1 — Choose Your Campaign",
+            "eyebrowDot": true,
+            "heading": "Tell the AI What Your Business Does and Who It Serves",
+            "body": "Select your campaign type — promotional, educational, seasonal or product launch. Tell the AI your business type, target audience and tone. That is all it needs. In seconds it begins building 28 days of content tailored specifically to your business and goals.",
+            "showCta": false,
+            "image": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "Choosing a social media campaign type in the dashboard",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(139,92,246,0.15)"
+          },
+          {
+            "id": "ss-sm-3",
+            "eyebrow": "Step 2 — Content Generated",
+            "eyebrowDot": true,
+            "heading": "28 Posts. Mixed Content. Captions, Hashtags and Images Included.",
+            "body": "The AI generates a balanced mix of promotional posts, educational tips, engagement questions and seasonal content — everything a professional social media manager would create, delivered in under a minute. Every post includes its caption, hashtags, emojis, a CTA and a matching AI-generated image ready to publish.",
+            "showCta": false,
+            "image": "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "28 social media posts generated by AI with images and captions",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(139,92,246,0.15)"
+          },
+          {
+            "id": "ss-sm-4",
+            "eyebrow": "Step 3 — Review and Edit",
+            "eyebrowDot": true,
+            "heading": "Every Post Is Editable Before It Goes Live",
+            "body": "Review every post before it publishes. Change a caption, swap an image, adjust a hashtag or reschedule a date. You have full control over every piece of content. The AI does the heavy lifting but you always have the final say on what your audience sees.",
+            "showCta": false,
+            "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "Reviewing and editing AI-generated social media posts",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(139,92,246,0.15)"
+          },
+          {
+            "id": "ss-sm-5",
+            "eyebrow": "Step 4 — Schedule and Publish",
+            "eyebrowDot": true,
+            "heading": "Best Posting Times Selected. Scheduled to Every Platform. Done.",
+            "body": "Gr8 Result automatically identifies the optimal posting times for maximum engagement on each platform, then schedules every post to all your connected accounts. Facebook, Instagram, LinkedIn, TikTok, X, Pinterest, Google Business, Threads and YouTube — one schedule covers all of them. Your entire month is handled in around 15 minutes.",
+            "showCta": true,
+            "ctaText": "Start Your Free Trial",
+            "ctaUrl": "#contact-us",
+            "ctaStyle": "pill",
+            "image": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=80",
+            "imageAlt": "Drag and drop social media scheduling calendar",
+            "imageStyle": "card",
+            "imageCardBg": "rgba(139,92,246,0.15)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sm-platforms",
+      "type": "trust-badges",
+      "props": {
+        "title": "Publish to Every Platform Simultaneously",
+        "subtitle": "Connect your accounts once and Gr8 Result handles the rest. One post, one click, nine platforms reached at the same time.",
+        "badges": [
+          { "icon": "📘", "label": "Facebook" },
+          { "icon": "📸", "label": "Instagram" },
+          { "icon": "💼", "label": "LinkedIn" },
+          { "icon": "🎵", "label": "TikTok" },
+          { "icon": "✖️", "label": "X (Twitter)" },
+          { "icon": "📌", "label": "Pinterest" },
+          { "icon": "🔍", "label": "Google Business" },
+          { "icon": "🧵", "label": "Threads" },
+          { "icon": "▶️", "label": "YouTube Community" }
+        ],
+        "backgroundColor": "#06020f",
+        "textColor": "#e2e8f0",
+        "badgeBackgroundColor": "rgba(139,92,246,0.15)",
+        "badgeBorderColor": "rgba(139,92,246,0.35)",
+        "badgeTextColor": "#e9d5ff",
+        "sectionAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-wave-divider",
+      "type": "marquee-strip",
+      "props": {
+        "items": ["AI CAPTIONS", "AI HASHTAGS", "AI IMAGES", "AI EMOJIS", "AI CTAs", "PROMOTIONAL POSTS", "EDUCATIONAL POSTS", "SEASONAL CAMPAIGNS", "ENGAGEMENT QUESTIONS", "PRODUCT LAUNCHES", "CUSTOMER STORIES", "INDUSTRY TIPS"],
+        "speed": 30,
+        "direction": "left",
+        "dividerText": "·",
+        "dividerSize": 18,
+        "fontSize": 13,
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "paddingTop": 18,
+        "paddingBottom": 18,
+        "itemPaddingX": 18,
+        "backgroundColor": "#1a0040",
+        "textColor": "#e9d5ff",
+        "accentColor": "#ec4899",
+        "fullWidthBackground": true
+      }
+    },
+    {
+      "id": "sm-ai-content",
+      "type": "feature-list",
+      "props": {
+        "featureVariant": "editorial-strip",
+        "layout": "vertical",
+        "spacingScale": "luxury",
+        "title": "AI Writes Every Type of Content You Need",
+        "subtitle": "Stop staring at a blank screen. Tell the AI what you want and it generates professional, platform-ready content in seconds — fully editable before it publishes.",
+        "items": [
+          {
+            "title": "Promotional Campaigns",
+            "body": "Generate compelling offer posts, limited-time promotions, product launches and seasonal sales campaigns that drive clicks and conversions. The AI knows how to write urgency and desire into every word.",
+            "image": "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Educational and Value Posts",
+            "body": "Build authority in your industry with how-to guides, tips, FAQs, behind-the-scenes insights and educational content that positions your business as the trusted expert customers want to hire.",
+            "image": "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Engagement and Community Posts",
+            "body": "Generate questions, polls, conversation starters and community-building content that gets your audience commenting, sharing and interacting — turning passive followers into active brand advocates.",
+            "image": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Captions, Hashtags and CTAs",
+            "body": "Every post is generated with a tailored caption, a relevant hashtag set, natural emoji usage and a clear call to action — all matched to the platform and the objective of that specific post.",
+            "image": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=900&q=80"
+          }
+        ],
+        "backgroundColor": "linear-gradient(180deg,#0d0520,#06020f)",
+        "itemBackgroundColor": "linear-gradient(135deg,#130028,#0d0520)",
+        "textColor": "#e2e8f0",
+        "borderColor": "rgba(236,72,153,0.25)",
+        "sectionAnimation": "slide-right",
+        "textAnimation": "fade-right",
+        "sectionAnimationDelay": 0.04,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-visual-content",
+      "type": "feature-list",
+      "props": {
+        "featureVariant": "glass-cards",
+        "layout": "columns",
+        "spacingScale": "normal",
+        "title": "AI Creates Your Images Too",
+        "subtitle": "Every post comes with a professionally generated graphic — no Canva, no designer, no stock photo subscription required.",
+        "items": [
+          {
+            "title": "Professional Graphics",
+            "body": "Clean, modern social media graphics that look like they were designed by a professional creative agency — generated automatically for every post in your campaign.",
+            "image": "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Branded Imagery",
+            "body": "Images generated using your business colours, fonts and visual style so every post looks consistent and recognisable across all platforms and audiences.",
+            "image": "https://images.unsplash.com/photo-1558655146-d09347e92766?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Marketing Banners",
+            "body": "Eye-catching promotional banners for sales, events, product launches and special offers — created in seconds and sized correctly for every social platform.",
+            "image": "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "Seasonal Artwork",
+            "body": "Holiday campaigns, seasonal promotions and timely content with matching visuals generated automatically so your brand always looks fresh, current and relevant.",
+            "image": "https://images.unsplash.com/photo-1543083477-4f785aeafaa9?auto=format&fit=crop&w=900&q=80"
+          }
+        ],
+        "backgroundColor": "#06020f",
+        "itemBackgroundColor": "linear-gradient(170deg,rgba(236,72,153,0.1),rgba(139,92,246,0.06))",
+        "textColor": "#e2e8f0",
+        "borderColor": "rgba(236,72,153,0.3)",
+        "sectionAnimation": "fade-up",
+        "sectionAnimationDelay": 0.04,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-scheduling",
+      "type": "feature-list",
+      "props": {
+        "featureVariant": "minimal-list",
+        "layout": "vertical",
+        "spacingScale": "tight",
+        "title": "Smart Scheduling That Runs on Autopilot",
+        "subtitle": "Plan your entire content calendar weeks in advance. Gr8 Result handles the timing, the publishing and the consistency — so you never have to think about it again.",
+        "items": [
+          {
+            "title": "Drag and Drop Calendar",
+            "body": "Visualise your entire content schedule on a clean calendar view. Drag posts to different days, reorder your queue and spot gaps instantly — managing a month of content takes minutes."
+          },
+          {
+            "title": "Queue Management",
+            "body": "Add posts to a smart publishing queue and Gr8 Result automatically schedules them at optimal times. Content flows out consistently without you having to micromanage every post."
+          },
+          {
+            "title": "Recurring Campaigns",
+            "body": "Set up repeating content campaigns — weekly tips, monthly promotions, daily quotes — and Gr8 Result regenerates and republishes them automatically, keeping your feed consistently active."
+          },
+          {
+            "title": "Best Posting Times",
+            "body": "Gr8 Result analyses engagement data and automatically schedules your posts at the times your audience is most active, maximising reach and interaction on every platform."
+          },
+          {
+            "title": "Timezone Support",
+            "body": "Serving multiple markets or audiences in different regions? Schedule posts to publish at the right local time for each audience without manually tracking timezone differences."
+          },
+          {
+            "title": "Draft Mode and Approval Workflows",
+            "body": "Save posts as drafts for review before they go live. Set up approval steps so content can be reviewed and signed off before publishing — perfect for teams and agency-managed accounts."
+          }
+        ],
+        "backgroundColor": "linear-gradient(180deg,#0d0520,#06020f)",
+        "itemBackgroundColor": "transparent",
+        "textColor": "#e2e8f0",
+        "borderColor": "rgba(139,92,246,0.25)",
+        "sectionAnimation": "slide-right",
+        "sectionAnimationDelay": 0.04,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-benefits",
+      "type": "hover-cards",
+      "props": {
+        "sectionTitle": "What Your Business Gains",
+        "sectionTitleColor": "#ffffff",
+        "sectionTitleSize": 36,
+        "backgroundColor": "#06020f",
+        "visibleCards": 4,
+        "cardHeight": 300,
+        "cardRadius": 16,
+        "cardGap": 16,
+        "cardPadding": 24,
+        "fullWidth": true,
+        "continuousLoop": true,
+        "continuousSpeed": 38,
+        "overlayColor": "rgba(13,5,32,0.92)",
+        "buttonText": "Learn More →",
+        "buttonColor": "#a855f7",
+        "buttonTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "paddingTop": 60,
+        "paddingBottom": 60,
+        "cards": [
+          {
+            "id": "sm-benefit-1",
+            "title": "Save Hours Every Week",
+            "description": "What used to take hours of writing, designing and scheduling every week now takes 15 minutes once a month. Your time is better spent running your business.",
+            "image": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#130028,#1a0040)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-2",
+            "title": "Increase Engagement",
+            "description": "AI-generated content is crafted for maximum audience interaction — posts that ask questions, share value and prompt real responses that grow your community.",
+            "image": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#1a003a,#2d006a)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-3",
+            "title": "Stay Perfectly Consistent",
+            "description": "Inconsistent posting kills reach. With Gr8 Result your business posts every single day — same voice, same branding, same quality — without any daily effort from you.",
+            "image": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#1f0030,#3d0068)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-4",
+            "title": "Never Run Out of Ideas",
+            "description": "The AI has unlimited content ideas for any industry. Whenever you need fresh campaigns, new angles or seasonal content, it is ready in seconds.",
+            "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#0d0030,#1a0050)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-5",
+            "title": "Grow Your Brand",
+            "description": "Consistent, professional content builds brand recognition over time. Your audience comes to know your voice, trust your expertise and choose you over competitors.",
+            "image": "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#200040,#3a0070)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-6",
+            "title": "Reach More Customers",
+            "description": "Publishing across 9 platforms simultaneously puts your business in front of audiences you would never reach with a single-platform approach — without any extra effort.",
+            "image": "https://images.unsplash.com/photo-1562577309-4932fdd64cd1?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#130028,#260050)",
+            "link": "#contact-us"
+          },
+          {
+            "id": "sm-benefit-7",
+            "title": "Connected to Your CRM",
+            "description": "Social media leads flow directly into your Gr8 Result CRM. Enquiries, clicks and messages from social platforms are tracked, followed up and never lost.",
+            "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80",
+            "cardColor": "linear-gradient(135deg,#0a001a,#1a0040)",
+            "link": "#contact-us"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sm-comparison",
+      "type": "feature-list",
+      "props": {
+        "featureVariant": "cards",
+        "layout": "columns",
+        "spacingScale": "normal",
+        "title": "Manual Posting vs Gr8 Result",
+        "subtitle": "See exactly what changes when you stop doing social media the hard way.",
+        "items": [
+          {
+            "title": "❌  The Old Way — Manual Posting",
+            "body": "Hours every week writing individual posts. Forgetting to post for days or weeks. Inconsistent branding across platforms. Missing trending moments and seasonal opportunities. Paying for separate design tools, scheduling apps and content calendars. Running out of ideas and posting random, unfocused content. Publishing to one or two platforms at best.",
+            "image": "https://images.unsplash.com/photo-1495364141860-b0d03eccd065?auto=format&fit=crop&w=900&q=80"
+          },
+          {
+            "title": "✅  The Gr8 Result Way — AI Automated",
+            "body": "15 minutes to generate an entire month of content. Consistent daily posting on autopilot across all platforms. Professional AI-generated images for every post. Perfectly timed publishing at peak engagement hours. Everything managed from one platform — no extra subscriptions. Fresh campaign ideas generated on demand in seconds. Publishing to 9 platforms simultaneously with one click.",
+            "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=900&q=80"
+          }
+        ],
+        "backgroundColor": "linear-gradient(180deg,#06020f,#0d0520)",
+        "itemBackgroundColor": "linear-gradient(165deg,rgba(139,92,246,0.08),rgba(13,5,32,0.9))",
+        "textColor": "#e2e8f0",
+        "borderColor": "rgba(139,92,246,0.3)",
+        "sectionAnimation": "fade-up",
+        "sectionAnimationDelay": 0.06,
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "sm-cta",
+      "type": "cta-button",
+      "props": {
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\">Your Social Media Can Run Itself</span></span>",
+        "eyebrow": "Ready to automate your content?",
+        "description": "<span style=\"font-size: 22px;\">Generate, schedule and publish your entire social media presence weeks in advance using one powerful AI platform. Start your 14-day free trial today — no credit card required.</span>",
+        "text": "Start Your Free Trial",
+        "link": "#contact-us",
+        "note": "Book a Demo",
+        "size": "large",
+        "alignment": "center",
+        "textColor": "#ffffff",
+        "backgroundColor": "#06020f",
+        "borderColor": "rgba(139,92,246,0.3)",
+        "buttonColor": "#a855f7",
+        "buttonTextColor": "#ffffff",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    }
+  ]
+}

@@ -27,6 +27,35 @@ import {
   findScrollParent, BrandMark,
 } from "./wbVariantStyles";
 
+const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+function getVideoDebugState(video) {
+  if (!video) return {};
+  return {
+    currentTime: Number.isFinite(video.currentTime) ? Number(video.currentTime.toFixed(3)) : null,
+    duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : null,
+    paused: video.paused,
+    ended: video.ended,
+    muted: video.muted,
+    loop: video.loop,
+    autoplay: video.autoplay,
+    playsInline: video.playsInline,
+    preload: video.preload,
+    readyState: video.readyState,
+    networkState: video.networkState,
+    currentSrc: video.currentSrc || "",
+    error: video.error ? { code: video.error.code, message: video.error.message } : null,
+  };
+}
+
+function logHeroVideoDebug(label, eventName, video, extra = {}) {
+  if (!shouldLogHeroVideoDebug()) return;
+  console.info(`[HeroVideoDebug] ${label}: ${eventName}`, {
+    ...getVideoDebugState(video),
+    ...extra,
+  });
+}
+
 function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
   const wrapperRef = React.useRef(null);
   const shellRef = React.useRef(null);
@@ -257,14 +286,34 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <a
-                  href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
-                  style={asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted))}
-                  onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
-                  onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
-                >
-                  {item?.label || "Link"}
-                </a>
+                {hasChildren ? (
+                  <button
+                    type="button"
+                    style={{
+                      ...asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted)),
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                    onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setOpenDropdown((value) => (value === idx ? null : idx));
+                    }}
+                    aria-expanded={isOpen}
+                  >
+                    {item?.label || "Menu"}
+                  </button>
+                ) : (
+                  <a
+                    href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
+                    style={asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted))}
+                    onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
+                    onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
+                  >
+                    {item?.label || "Link"}
+                  </a>
+                )}
                 {hasChildren ? (
                   <button
                     type="button"
@@ -279,7 +328,11 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                       minHeight: MIN_TAP_SIZE,
                       minWidth: MIN_TAP_SIZE,
                     }}
-                    onClick={() => setOpenDropdown((value) => (value === idx ? null : idx))}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setOpenDropdown((value) => (value === idx ? null : idx));
+                    }}
                   >
                     ▾
                   </button>
@@ -307,6 +360,10 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                     <a
                       key={`${child?.label || "child"}-${childIdx}`}
                       href={editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext)}
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        if (shouldUseMobileMenu) setMobileOpen(false);
+                      }}
                       style={{
                         color: blockProps.textColor || "#e2e8f0",
                         textDecoration: "none",
@@ -4580,7 +4637,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
   const cardHeight = Number(props.cardHeight || 320);
   const cardRadius = Number(props.cardRadius || 12);
   const cardPadding = Number(props.cardPadding || 20);
-  const backColor = props.overlayColor || "#000000";
+  const backColor = props.hoverBackgroundColor || props.overlayColor || "#000000";
   const buttonColor = props.buttonColor || "#ffffff";
   const buttonTextColor = props.buttonTextColor || "#0f172a";
   const buttonText = props.buttonText || "Learn more ?";
@@ -4807,7 +4864,7 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
                       transform: "rotateY(180deg)",
                       borderRadius: cardRadius,
                       overflow: "hidden",
-                      background: backColor,
+                      background: card.hoverBackgroundColor || backColor,
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "flex-start",
@@ -6446,30 +6503,54 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
 
   const videoRef     = React.useRef(null);
   const sectionRef   = React.useRef(null);
-  const loadedRef    = React.useRef(false);
+  const loadedRef = React.useRef(false);
+  const loadedSrcRef = React.useRef("");
   const [muted, setMuted] = React.useState(true);
-  const unmuteOnScroll = props.unmuteOnScroll === true;
+  const debugLabel = `video-hero ${block?.id || "unknown"}`;
 
-  // Lazy-load: only assign video src once element is ≥10% visible.
-  // If unmuteOnScroll is enabled, also unmute at that point.
+  React.useEffect(() => {
+    const video = videoRef.current;
+    logHeroVideoDebug(debugLabel, "Hero component mounted", video, { videoSrc, editor });
+    return () => logHeroVideoDebug(debugLabel, "Hero component unmounted", video, { videoSrc, editor });
+  }, [debugLabel, editor, videoSrc]);
+
+  React.useEffect(() => {
+    logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { videoSrc });
+  }, [debugLabel, videoSrc]);
+
+  // React owns the media source; the observer only nudges playback and never
+  // reloads an already-active source.
   React.useEffect(() => {
     if (editor || !videoSrc || typeof window === "undefined") return undefined;
     const el = sectionRef.current;
     if (!el) return undefined;
 
     // Already loaded on this mount
-    if (loadedRef.current && videoRef.current?.src) return undefined;
+    if (loadedRef.current && loadedSrcRef.current === videoSrc && videoRef.current?.src) return undefined;
 
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && videoRef.current && !loadedRef.current) {
+        if (entries[0]?.isIntersecting && videoRef.current && (!loadedRef.current || loadedSrcRef.current !== videoSrc)) {
           loadedRef.current = true;
-          videoRef.current.src = videoSrc;
-          videoRef.current.load();
-          if (unmuteOnScroll) {
-            // Unmute — the browser allows this since it's inside a user-scroll event chain
-            videoRef.current.muted = false;
-            setMuted(false);
+          loadedSrcRef.current = videoSrc;
+          const currentSrc = videoRef.current.currentSrc || "";
+          const attrSrc = videoRef.current.getAttribute("src") || "";
+          const sourceAlreadyActive = currentSrc === videoSrc || attrSrc === videoSrc;
+          if (!sourceAlreadyActive) {
+            videoRef.current.src = videoSrc;
+            logHeroVideoDebug(debugLabel, "IntersectionObserver set source", videoRef.current, { videoSrc });
+            if (videoRef.current.readyState === 0) {
+              videoRef.current.load();
+              logHeroVideoDebug(debugLabel, "Video load() called", videoRef.current, { videoSrc });
+            }
+          } else {
+            logHeroVideoDebug(debugLabel, "Video source already active", videoRef.current, { videoSrc });
+          }
+          const playResult = videoRef.current.play?.();
+          if (playResult && typeof playResult.catch === "function") {
+            playResult.catch((error) => logHeroVideoDebug(debugLabel, "Video play() failed", videoRef.current, { videoSrc, error: error?.message || String(error || "") }));
+          } else {
+            logHeroVideoDebug(debugLabel, "Video play() requested", videoRef.current, { videoSrc });
           }
           obs.disconnect();
         }
@@ -6478,7 +6559,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [editor, videoSrc, unmuteOnScroll]);
+  }, [debugLabel, editor, videoSrc]);
 
   // -- Upload helpers --------------------------------------------------------
   async function handleVideoUpload(file) {
@@ -6554,7 +6635,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
             <video
               src={videoSrc}
               poster={posterSrc || undefined}
-              muted autoPlay loop={props.loopVideo === true} playsInline
+              muted autoPlay playsInline preload="auto"
               style={{ width: "100%", maxHeight: 220, objectFit: "cover", objectPosition, display: "block" }}
             />
             <div style={overlayStyle} />
@@ -6741,15 +6822,21 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
         </div>
       ) : null}
 
-      {/* Video element — src set immediately in editor, lazy-loaded via IntersectionObserver in live */}
+      {/* Video element: stable src prevents re-renders from restarting playback. */}
       <video
         ref={videoRef}
-        src={editor ? (videoSrc || undefined) : undefined}
+        src={videoSrc || undefined}
         poster={posterSrc || undefined}
         muted={muted}
         autoPlay
-        loop={props.loopVideo === true}
         playsInline
+        preload="auto"
+        onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+        onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+        onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+        onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+        onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+        onError={(event) => logHeroVideoDebug(debugLabel, "Video error", event.currentTarget)}
         style={{
           position: "absolute", inset: 0, zIndex: 0,
           width: "100%", height: "100%",

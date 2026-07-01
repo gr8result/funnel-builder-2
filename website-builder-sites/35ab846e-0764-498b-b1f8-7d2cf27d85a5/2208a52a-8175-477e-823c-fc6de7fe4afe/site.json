@@ -86,6 +86,14 @@
       "objective": "Showcase the website builder module as a premium, AI-assisted website creation system.",
       "file": "website-builder.json",
       "order": 9
+    },
+    {
+      "id": "social-media",
+      "name": "Social Media",
+      "slug": "social-media",
+      "objective": "Sell the Social Media module by demonstrating AI campaign creation, automated publishing and dramatic time savings.",
+      "file": "social-media.json",
+      "order": 10
     }
   ],
   "status": "saved",
@@ -317,7 +325,10 @@
     "email",
     "pricing",
     "crm",
-    "sms"
+    "sms",
+    "funnels",
+    "website-builder",
+    "social-media"
   ],
   "pageSlugs": {
     "Home": "home",
@@ -327,7 +338,10 @@
     "Email": "email",
     "Pricing": "pricing",
     "CRM": "crm",
-    "SMS": "sms"
+    "SMS": "sms",
+    "Funnels": "funnels",
+    "Website Builder": "website-builder",
+    "Social Media": "social-media"
   },
   "published": false,
   "storageVersion": 2

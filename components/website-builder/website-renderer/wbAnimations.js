@@ -543,6 +543,26 @@ function pickDefaultAvatarSrc(assets) {
 function resolvePublishedNavHref(link, navigationContext) {
   const href = String(link?.href || "").trim();
   if (!href) return "#";
+  const canonicalRoutes = {
+    home: "/",
+    "about-us": "/about",
+    about: "/about",
+    modules: "/modules",
+    "contact-us": "/contact",
+    contact: "/contact",
+    email: "/email",
+    pricing: "/pricing",
+    crm: "/crm",
+    sms: "/sms",
+    funnels: "/funnels",
+  };
+  if (href.startsWith("#")) {
+    const anchorKey = slugifyText(href.slice(1));
+    if (canonicalRoutes[anchorKey]) return canonicalRoutes[anchorKey];
+  }
+  if (/^https?:\/\/localhost(?::\d+)?/i.test(href)) {
+    return href.replace(/^https?:\/\/localhost(?::\d+)?/i, "") || "/";
+  }
   if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
 
   const pageMap = navigationContext?.pageMap || {};

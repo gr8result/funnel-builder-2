@@ -10,36 +10,60 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
-            "label": "Home"
+            "id": "nav-item-0-0-home",
+            "href": "/",
+            "slug": "home",
+            "label": "Home",
+            "children": []
           },
           {
-            "href": "#about-us",
-            "label": "About Us"
+            "id": "nav-item-1-0-about-us",
+            "href": "/about",
+            "slug": "about-us",
+            "label": "About Us",
+            "children": []
           },
           {
-            "href": "#modules",
-            "label": "Modules"
+            "id": "nav-item-2-0-modules",
+            "href": "/modules",
+            "slug": "modules",
+            "label": "Modules",
+            "children": []
           },
           {
-            "href": "#contact-us",
-            "label": "Contact Us"
+            "id": "nav-item-3-0-contact-us",
+            "href": "/contact",
+            "slug": "contact-us",
+            "label": "Contact Us",
+            "children": []
           },
           {
-            "href": "#email",
-            "label": "Email"
+            "id": "nav-item-4-0-email",
+            "href": "/email",
+            "slug": "email",
+            "label": "Email",
+            "children": []
           },
           {
-            "href": "#sms",
-            "label": "SMS"
+            "id": "nav-item-5-0-sms",
+            "href": "/sms",
+            "slug": "sms",
+            "label": "SMS",
+            "children": []
           },
           {
-            "href": "#crm",
-            "label": "CRM"
+            "id": "nav-item-6-0-crm",
+            "href": "/crm",
+            "slug": "crm",
+            "label": "CRM",
+            "children": []
           },
           {
-            "href": "#pricing",
-            "label": "Pricing"
+            "id": "nav-item-7-0-pricing",
+            "href": "/pricing",
+            "slug": "pricing",
+            "label": "Pricing",
+            "children": []
           }
         ],
         "ctaLink": "#contact",
@@ -193,6 +217,37 @@
       }
     },
     {
+      "id": 1782777426009,
+      "type": "image",
+      "props": {
+        "alt": "Image",
+        "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782777445108-chatgpt-image-jun-30-2026-09_54_56-am.png",
+        "width": "400px",
+        "height": "300px",
+        "caption": "",
+        "headline": "",
+        "bodyBlock": {
+          "content": ""
+        },
+        "objectFit": "contain",
+        "autoHeight": true,
+        "imageStyle": "bleed",
+        "srcAssetId": "542c8068-26dc-4c04-baed-ea0230228663",
+        "subheadline": "",
+        "headlineBlock": {
+          "content": ""
+        },
+        "seamlessEdges": true,
+        "objectPosition": "center center",
+        "backgroundColor": "transparent",
+        "baseLayoutWidth": 1500,
+        "showOverlayText": false,
+        "overlayTextWidth": 320,
+        "overlayTextXRatio": null,
+        "fullWidthBackground": true
+      }
+    },
+    {
       "id": 1779656099605,
       "type": "pricing-table",
       "props": {
@@ -226,10 +281,14 @@
               "Reporting — Email & CRM stats",
               "Support — Email"
             ],
+            "textColor": "",
             "description": "For solo operators and small teams just getting started.",
             "featureIcon": "tick",
             "highlighted": false,
+            "ctaTextColor": "",
+            "cardAnimation": "",
             "individualPrice": "$215",
+            "subtleTextColor": "",
             "includedFeatures": [
               "Team Seats — 2 users",
               "CRM Pipelines — 1",
@@ -241,7 +300,8 @@
               "Marketplace Access",
               "Reporting — Email & CRM stats",
               "Support — Email"
-            ]
+            ],
+            "cardBackgroundColor": ""
           },
           {
             "id": "pricing-default-2",
@@ -274,10 +334,14 @@
               "Reporting — Email, SMS & Call Analytics",
               "Support — Priority Email"
             ],
+            "textColor": "",
             "description": "For growing teams scaling sales and marketing operations.",
             "featureIcon": "spark",
             "highlighted": true,
+            "ctaTextColor": "",
+            "cardAnimation": "",
             "individualPrice": "$474",
+            "subtleTextColor": "",
             "includedFeatures": [
               "Team Seats — 5 users",
               "CRM Pipelines — 3",
@@ -291,7 +355,8 @@
               "Affiliate Management",
               "Reporting — Email, SMS & Call Analytics",
               "Support — Priority Email"
-            ]
+            ],
+            "cardBackgroundColor": ""
           },
           {
             "id": "pricing-default-3",
@@ -323,10 +388,14 @@
               "Reporting — Full Analytics + CSV export",
               "Support — Dedicated Onboarding"
             ],
+            "textColor": "",
             "description": "For established businesses scaling teams and operations.",
             "featureIcon": "arrow",
             "highlighted": false,
+            "ctaTextColor": "",
+            "cardAnimation": "",
             "individualPrice": "$913",
+            "subtleTextColor": "",
             "includedFeatures": [
               "Team Seats — 10 users",
               "CRM Pipelines — 10",
@@ -339,7 +408,8 @@
               "Shared Phone Number",
               "Reporting — Full Analytics + CSV export",
               "Support — Dedicated Onboarding"
-            ]
+            ],
+            "cardBackgroundColor": ""
           },
           {
             "id": "pricing-default-4",
@@ -370,10 +440,14 @@
               "Reporting — Full Analytics + Scheduled Reports",
               "Support — Account Manager + SLA"
             ],
+            "textColor": "",
             "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
             "featureIcon": "tick",
             "highlighted": false,
+            "ctaTextColor": "",
+            "cardAnimation": "",
             "individualPrice": "$1883",
+            "subtleTextColor": "",
             "includedFeatures": [
               "Team Seats — Up to 25 users",
               "CRM Pipelines — Unlimited",
@@ -385,7 +459,8 @@
               "Shared Phone Number",
               "Reporting — Full Analytics + Scheduled Reports",
               "Support — Account Manager + SLA"
-            ]
+            ],
+            "cardBackgroundColor": ""
           }
         ],
         "title": "Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">That's $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>",
@@ -485,8 +560,8 @@
             "text": "The CRM and email automation alone are worth the price. But the AI phone system? That's what blew our team away. We're handling 3× the leads without adding headcount.",
             "author": "Josh Rohde",
             "rating": 5,
-            "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png",
-            "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png"
+            "avatarUrl": "",
+            "avatarAssetId": "8c9c5a3d-0583-4d0c-bdd2-7fb9383af9cf"
           },
           {
             "id": "ef6e9cdc-a050-45c6-8d21-c70bb86cf89f",
@@ -494,8 +569,8 @@
             "text": "Their onboarding team had us live in under a week. The website builder replaced our old drag-and-drop tool and the funnel templates are stunning.",
             "author": "Ethan Cooper",
             "rating": 5,
-            "avatarUrl": "__WB_PRESERVE_DATA_URL__",
-            "avatarAssetId": "a03beaeb-df1f-48d0-a8a6-4a80ccee4c33"
+            "avatarUrl": "",
+            "avatarAssetId": "bb4b2b8d-cacd-489d-aa91-28e024a66a42"
           },
           {
             "id": "92c11cc1-150a-4b49-801e-3e1f8578b8cd",
@@ -503,8 +578,8 @@
             "text": "I've tried every all-in-one platform. Gr8 Result is the first one that doesn't sacrifice depth for breadth. Best decision we made this year.",
             "author": "Sarah Reid",
             "rating": 5,
-            "avatarUrl": "__WB_PRESERVE_DATA_URL__",
-            "avatarAssetId": "d76f28b2-f810-4e66-af1e-73603dc29873"
+            "avatarUrl": "",
+            "avatarAssetId": "22a6dd1e-d67b-4eca-abb7-575e411a2560"
           }
         ],
         "title": "The platform agencies can't stop talking about",
@@ -560,36 +635,60 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
-              "label": "Home"
+              "id": "nav-item-0-0-home",
+              "href": "/",
+              "slug": "home",
+              "label": "Home",
+              "children": []
             },
             {
-              "href": "#about-us",
-              "label": "About Us"
+              "id": "nav-item-1-0-about-us",
+              "href": "/about",
+              "slug": "about-us",
+              "label": "About Us",
+              "children": []
             },
             {
-              "href": "#modules",
-              "label": "Modules"
+              "id": "nav-item-2-0-modules",
+              "href": "/modules",
+              "slug": "modules",
+              "label": "Modules",
+              "children": []
             },
             {
-              "href": "#contact-us",
-              "label": "Contact Us"
+              "id": "nav-item-3-0-contact-us",
+              "href": "/contact",
+              "slug": "contact-us",
+              "label": "Contact Us",
+              "children": []
             },
             {
-              "href": "#email",
-              "label": "Email"
+              "id": "nav-item-4-0-email",
+              "href": "/email",
+              "slug": "email",
+              "label": "Email",
+              "children": []
             },
             {
-              "href": "#sms",
-              "label": "SMS"
+              "id": "nav-item-5-0-sms",
+              "href": "/sms",
+              "slug": "sms",
+              "label": "SMS",
+              "children": []
             },
             {
-              "href": "#crm",
-              "label": "CRM"
+              "id": "nav-item-6-0-crm",
+              "href": "/crm",
+              "slug": "crm",
+              "label": "CRM",
+              "children": []
             },
             {
-              "href": "#pricing",
-              "label": "Pricing"
+              "id": "nav-item-7-0-pricing",
+              "href": "/pricing",
+              "slug": "pricing",
+              "label": "Pricing",
+              "children": []
             }
           ],
           "ctaLink": "#contact",
@@ -743,6 +842,37 @@
         }
       },
       {
+        "id": 1782777426009,
+        "type": "image",
+        "props": {
+          "alt": "Image",
+          "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782777445108-chatgpt-image-jun-30-2026-09_54_56-am.png",
+          "width": "400px",
+          "height": "300px",
+          "caption": "",
+          "headline": "",
+          "bodyBlock": {
+            "content": ""
+          },
+          "objectFit": "contain",
+          "autoHeight": true,
+          "imageStyle": "bleed",
+          "srcAssetId": "542c8068-26dc-4c04-baed-ea0230228663",
+          "subheadline": "",
+          "headlineBlock": {
+            "content": ""
+          },
+          "seamlessEdges": true,
+          "objectPosition": "center center",
+          "backgroundColor": "transparent",
+          "baseLayoutWidth": 1500,
+          "showOverlayText": false,
+          "overlayTextWidth": 320,
+          "overlayTextXRatio": null,
+          "fullWidthBackground": true
+        }
+      },
+      {
         "id": 1779656099605,
         "type": "pricing-table",
         "props": {
@@ -776,10 +906,14 @@
                 "Reporting — Email & CRM stats",
                 "Support — Email"
               ],
+              "textColor": "",
               "description": "For solo operators and small teams just getting started.",
               "featureIcon": "tick",
               "highlighted": false,
+              "ctaTextColor": "",
+              "cardAnimation": "",
               "individualPrice": "$215",
+              "subtleTextColor": "",
               "includedFeatures": [
                 "Team Seats — 2 users",
                 "CRM Pipelines — 1",
@@ -791,7 +925,8 @@
                 "Marketplace Access",
                 "Reporting — Email & CRM stats",
                 "Support — Email"
-              ]
+              ],
+              "cardBackgroundColor": ""
             },
             {
               "id": "pricing-default-2",
@@ -824,10 +959,14 @@
                 "Reporting — Email, SMS & Call Analytics",
                 "Support — Priority Email"
               ],
+              "textColor": "",
               "description": "For growing teams scaling sales and marketing operations.",
               "featureIcon": "spark",
               "highlighted": true,
+              "ctaTextColor": "",
+              "cardAnimation": "",
               "individualPrice": "$474",
+              "subtleTextColor": "",
               "includedFeatures": [
                 "Team Seats — 5 users",
                 "CRM Pipelines — 3",
@@ -841,7 +980,8 @@
                 "Affiliate Management",
                 "Reporting — Email, SMS & Call Analytics",
                 "Support — Priority Email"
-              ]
+              ],
+              "cardBackgroundColor": ""
             },
             {
               "id": "pricing-default-3",
@@ -873,10 +1013,14 @@
                 "Reporting — Full Analytics + CSV export",
                 "Support — Dedicated Onboarding"
               ],
+              "textColor": "",
               "description": "For established businesses scaling teams and operations.",
               "featureIcon": "arrow",
               "highlighted": false,
+              "ctaTextColor": "",
+              "cardAnimation": "",
               "individualPrice": "$913",
+              "subtleTextColor": "",
               "includedFeatures": [
                 "Team Seats — 10 users",
                 "CRM Pipelines — 10",
@@ -889,7 +1033,8 @@
                 "Shared Phone Number",
                 "Reporting — Full Analytics + CSV export",
                 "Support — Dedicated Onboarding"
-              ]
+              ],
+              "cardBackgroundColor": ""
             },
             {
               "id": "pricing-default-4",
@@ -920,10 +1065,14 @@
                 "Reporting — Full Analytics + Scheduled Reports",
                 "Support — Account Manager + SLA"
               ],
+              "textColor": "",
               "description": "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
               "featureIcon": "tick",
               "highlighted": false,
+              "ctaTextColor": "",
+              "cardAnimation": "",
               "individualPrice": "$1883",
+              "subtleTextColor": "",
               "includedFeatures": [
                 "Team Seats — Up to 25 users",
                 "CRM Pipelines — Unlimited",
@@ -935,7 +1084,8 @@
                 "Shared Phone Number",
                 "Reporting — Full Analytics + Scheduled Reports",
                 "Support — Account Manager + SLA"
-              ]
+              ],
+              "cardBackgroundColor": ""
             }
           ],
           "title": "Our Pricing Plans - Save up to $10,600 per year on your subscription costs<div><span style=\"color: rgb(255, 192, 0);\">That's $10,600 back in your bank, not wasted on multiple platforms that do not do what you need. Our platform is designed to help you scale your business to new heights.</span></div>",
@@ -1035,8 +1185,8 @@
               "text": "The CRM and email automation alone are worth the price. But the AI phone system? That's what blew our team away. We're handling 3× the leads without adding headcount.",
               "author": "Josh Rohde",
               "rating": 5,
-              "avatarUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png",
-              "avatarAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781725153882-ChatGPT-Image-Jun-17--2026--02_19_06-PM.png"
+              "avatarUrl": "",
+              "avatarAssetId": "8c9c5a3d-0583-4d0c-bdd2-7fb9383af9cf"
             },
             {
               "id": "ef6e9cdc-a050-45c6-8d21-c70bb86cf89f",
@@ -1044,8 +1194,8 @@
               "text": "Their onboarding team had us live in under a week. The website builder replaced our old drag-and-drop tool and the funnel templates are stunning.",
               "author": "Ethan Cooper",
               "rating": 5,
-              "avatarUrl": "__WB_PRESERVE_DATA_URL__",
-              "avatarAssetId": "a03beaeb-df1f-48d0-a8a6-4a80ccee4c33"
+              "avatarUrl": "",
+              "avatarAssetId": "bb4b2b8d-cacd-489d-aa91-28e024a66a42"
             },
             {
               "id": "92c11cc1-150a-4b49-801e-3e1f8578b8cd",
@@ -1053,8 +1203,8 @@
               "text": "I've tried every all-in-one platform. Gr8 Result is the first one that doesn't sacrifice depth for breadth. Best decision we made this year.",
               "author": "Sarah Reid",
               "rating": 5,
-              "avatarUrl": "__WB_PRESERVE_DATA_URL__",
-              "avatarAssetId": "d76f28b2-f810-4e66-af1e-73603dc29873"
+              "avatarUrl": "",
+              "avatarAssetId": "22a6dd1e-d67b-4eca-abb7-575e411a2560"
             }
           ],
           "title": "The platform agencies can't stop talking about",
@@ -1104,6 +1254,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-06-24T03:57:08.604Z",
+  "savedAt": "2026-06-30T22:15:39.485Z",
   "source": "autosave"
 }

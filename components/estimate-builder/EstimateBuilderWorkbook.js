@@ -1,19 +1,81 @@
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
 import { V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
-import { V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
+import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
+import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
+
+// AI Plan Takeoff — loaded client-side only (uses canvas, PDF.js, localStorage)
+const AIPlanTakeoffPage = dynamic(() => import("./ai-takeoff/AIPlanTakeoffPage"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading AI Plan Takeoff…</div>,
+});
+
+// AI Gantt Builder — loaded client-side only
+const GanttBuilderPage = dynamic(() => import("./gantt/GanttBuilderPage"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading AI Gantt Builder…</div>,
+});
 
 const DATA_INPUT_SECTIONS_FOR_LOOKUP = V4_DATA_SECTIONS || [];
 
 export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
   const jobFileInputRef = useRef(null);
+  const saveStatusTimerRef = useRef(null);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const [jobPickerOpen, setJobPickerOpen] = useState(false);
+  const [jobPickerMessage, setJobPickerMessage] = useState("");
   const [formulaTarget, setFormulaTarget] = useState(null);
+  const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
   const currentPage = sheet.pages.find((page) => page.key === sheet.workbook.page);
   const openFileName = openWorkbookFileName(sheet.workbook);
   const lockHandlers = previewMode ? previewProtectionHandlers : {};
+  const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
+  const isSaving = saveStatus.state === "saving";
+
+  useEffect(() => () => {
+    if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
+  }, []);
+
+  async function runSaveAction(label, action) {
+    if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
+    setSaveStatus({ state: "saving", label, detail: "" });
+    try {
+      const result = await Promise.resolve(action());
+      if (result?.ok === false) {
+        setSaveStatus({ state: "error", label: "Save failed", detail: result.message || "Please try again." });
+        saveStatusTimerRef.current = window.setTimeout(() => setSaveStatus({ state: "idle", label: "", detail: "" }), 7000);
+        return result;
+      }
+      const detail = result?.message || `${label.replace(/^Saving\s+/i, "")} saved`;
+      setSaveStatus({ state: "saved", label: "Saved", detail });
+      saveStatusTimerRef.current = window.setTimeout(() => setSaveStatus({ state: "idle", label: "", detail: "" }), 4000);
+      return result;
+    } catch (error) {
+      setSaveStatus({ state: "error", label: "Save failed", detail: error?.message || "Please try again." });
+      saveStatusTimerRef.current = window.setTimeout(() => setSaveStatus({ state: "idle", label: "", detail: "" }), 7000);
+      throw error;
+    }
+  }
+
+  async function openJobPicker() {
+    setJobPickerMessage("");
+    const jobs = await sheet.refreshSavedJobSummaries?.();
+    if (!jobs?.length) setJobPickerMessage("No saved jobs found");
+    setJobPickerOpen(true);
+  }
+
+  async function openSavedJob(key) {
+    const result = await sheet.openSavedJob?.(key);
+    if (result?.ok) {
+      setJobPickerOpen(false);
+      setFileMenuOpen(false);
+      return;
+    }
+    setJobPickerMessage(result?.message || "Saved job could not be opened.");
+  }
 
   return (
     <div style={{ ...styles.shell, ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
@@ -34,6 +96,12 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
             ? "Preview mode is blank and locked. Data entry, editing, copying, saving, and exports are disabled."
             : "Data Input feeds calculations, quotation rows, subtotals, margin, GST, and final quote total. Rates stay editable in the quotation sheet."}
         </div>
+        {!previewMode && (
+          <FloatingSaveJob
+            saveStatus={saveStatus}
+            onSaveJob={() => runSaveAction("Saving job", sheet.saveDraft)}
+          />
+        )}
       </aside>
 
       <main style={styles.main}>
@@ -55,12 +123,14 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
               open={fileMenuOpen}
               onToggle={() => setFileMenuOpen((current) => !current)}
               onClose={() => setFileMenuOpen(false)}
+              busy={isSaving}
+              recentJobs={sheet.recentJobs}
+              onOpenRecentJob={openSavedJob}
               items={[
-                { label: "Save", action: sheet.saveDraft, primary: true },
-                { label: "Save As Job File", action: () => saveJobFile(sheet) },
-                { label: "Open Job File", action: () => jobFileInputRef.current?.click() },
-                { label: "Load Saved Draft", action: sheet.loadDraft },
-                { label: "Export CSV", action: () => exportCurrentPageCsv(sheet) },
+                { label: "New Estimate", action: () => runSaveAction("Creating new estimate", sheet.createJobFromTemplate) },
+                { label: "Open Job", action: openJobPicker },
+                { label: "Save Job", action: () => runSaveAction("Saving job", sheet.saveDraft), primary: true },
+                { label: "Save As Base Template", action: () => runSaveAction("Saving base template", sheet.saveAsBaseTemplate) },
               ]}
             />
             <TemplateFileMenu
@@ -68,6 +138,8 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
               open={templateMenuOpen}
               onToggle={() => setTemplateMenuOpen((current) => !current)}
               onClose={() => setTemplateMenuOpen(false)}
+              onSaveAction={runSaveAction}
+              busy={isSaving}
             />
             <input
               ref={jobFileInputRef}
@@ -76,9 +148,13 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
               style={{ display: "none" }}
               onChange={(event) => openJobFile(event, sheet)}
             />
-            {sheet.lastSavedAt && <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>}
+            {saveStatus.state !== "idle" ? (
+              <SaveProgress status={saveStatus} />
+            ) : sheet.lastSavedAt ? (
+              <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
+            ) : null}
             {sheet.workbook.page === "quotation" && (
-              <>
+              <div style={styles.quoteSearchControls}>
                 <input
                   style={styles.searchInput}
                   placeholder="Search line item"
@@ -93,7 +169,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
                   />
                   Hide unused
                 </label>
-              </>
+              </div>
             )}
               </>
             )}
@@ -101,32 +177,42 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
         </div>
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
-          {sheet.workbook.page === "dataInput" && (
-            <DataInputSheet
-              sheet={sheet}
-              formulaTarget={formulaTarget}
-              onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
-            />
-          )}
-          {sheet.workbook.page === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
-          {sheet.workbook.page === "formulaSheet" && (
-            <FormulaSheet
-              sheet={sheet}
-              formulaTarget={formulaTarget}
-              onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
-            />
-          )}
+            {sheet.workbook.page === "dataInput" && (
+              <DataInputSheet
+                sheet={sheet}
+                formulaTarget={formulaTarget}
+                onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
+                canEditFormulas={isAdminMode}
+              />
+            )}
+            {sheet.workbook.page === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
+            {sheet.workbook.page === "formulaSheet" && (
+              <FormulaSheet
+                sheet={sheet}
+                formulaTarget={formulaTarget}
+                onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
+                canEditFormulas={isAdminMode}
+              />
+            )}
           {sheet.workbook.page === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
           {sheet.workbook.page === "summary" && <SummarySheet sheet={sheet} />}
           {sheet.workbook.page === "clientPage" && <ClientPageSheet sheet={sheet} />}
+          {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
+          {sheet.workbook.page === "procurement" && <ProcurementSheet sheet={sheet} />}
+          {sheet.workbook.page === "aiPlanTakeoff" && (
+            <AIPlanTakeoffPage sheet={sheet} />
+          )}
+          {sheet.workbook.page === "gantt" && (
+            <GanttBuilderPage sheet={sheet} />
+          )}
         </fieldset>
       </main>
 
       <aside style={styles.summary}>
-        {sheet.workbook.page === "clientPage" ? (
+        {sheet.workbook.page === "clientPage" || sheet.workbook.page === "cashflowSummary" ? (
           <>
-            <div style={styles.eyebrow}>Client Quote</div>
-            <h2 style={styles.navTitle}>Presentation Total</h2>
+            <div style={styles.eyebrow}>{sheet.workbook.page === "cashflowSummary" ? "Cashflow" : "Client Quote"}</div>
+            <h2 style={styles.navTitle}>{sheet.workbook.page === "cashflowSummary" ? "Contract Total" : "Presentation Total"}</h2>
             <div style={styles.finalBox}>
               <span>Total quoted price</span>
               <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
@@ -151,7 +237,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
             </div>
           </>
         )}
-        {sheet.workbook.page !== "clientPage" && (
+        {sheet.workbook.page !== "clientPage" && sheet.workbook.page !== "cashflowSummary" && sheet.workbook.page !== "procurement" && (
           <>
             <Panel title="Missing Required Inputs">
               {sheet.preview.missingRequired.length ? (
@@ -172,11 +258,33 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
           </>
         )}
       </aside>
+
+      {jobPickerOpen && (
+        <JobPickerModal
+          jobs={sheet.savedJobSummaries || []}
+          message={jobPickerMessage}
+          busy={isSaving}
+          onRefresh={openJobPicker}
+          onOpen={openSavedJob}
+          onClose={() => setJobPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
-function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference }) {
+function FloatingSaveJob({ saveStatus, onSaveJob }) {
+  const isSaving = saveStatus?.state === "saving";
+  return (
+    <div style={styles.floatingSaveJob}>
+      <button style={styles.floatingSaveJobButton} disabled={isSaving} onClick={onSaveJob}>
+        {isSaving ? "Saving..." : "Save Job"}
+      </button>
+    </div>
+  );
+}
+
+function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
   const readonly = sheet.previewMode;
   return (
     <div style={styles.pageStack}>
@@ -187,6 +295,9 @@ function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference }) {
             <span>{sheet.workbook.data?.[section.key]?.collapsed ? "Show" : "Hide"}</span>
           </button>
           {!sheet.workbook.data?.[section.key]?.collapsed && (
+            section.type === "subcontractorQuotes" ? (
+              <SubcontractorQuotesSection sheet={sheet} section={section} />
+            ) : (
             <>
             {!readonly && <button style={styles.addLineButton} onClick={() => sheet.addDataRow(section.key)}>Add new row</button>}
             <Spreadsheet
@@ -262,7 +373,7 @@ function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference }) {
                       ) : row.unit}
                     </Cell>
                     <Cell tone={tone}>
-                      {calculated && !readonly ? (
+                      {calculated && !readonly && canEditFormulas ? (
                         <BufferedInput
                           id={editId}
                           style={styles.formulaInput}
@@ -298,9 +409,127 @@ function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference }) {
               })}
             </Spreadsheet>
             </>
+            )
           )}
         </section>
       ))}
+    </div>
+  );
+}
+
+function SubcontractorQuotesSection({ sheet, section }) {
+  const readonly = sheet.previewMode;
+  return (
+    <div style={styles.subcontractorPanel}>
+      <div style={styles.subcontractorIntro}>
+        Quote reconciliation uses the live quotation costs for selected deductions and only pushes a fit-off value when Use Quote? is switched on.
+      </div>
+      <div style={styles.subcontractorCardList}>
+        {section.rows.map((row, index) => {
+          const saved = sheet.workbook.data?.subcontractorQuotes?.rows?.[row.key] || {};
+          const deductions = subcontractorDeductionsForRow(row.key);
+          const deductionRows = deductions.map((deduction) => ({
+            ...deduction,
+            amount: subcontractorDeductionAmount(sheet, deduction, saved),
+            selected: Boolean(saved.deductions?.[deduction.key]),
+          }));
+          const deductionTotal = deductionRows.reduce((sum, deduction) => sum + deduction.amount, 0);
+          const quoteAmount = summaryNumber(saved.quoteAmount);
+          const balance = Math.max(0, quoteAmount - deductionTotal);
+          const status = subcontractorQuoteStatus(saved, quoteAmount);
+          const statusStyle = styles[`subcontractorStatus${status.key}`] || styles.subcontractorStatusNoQuote;
+          const acceptedTone = saved.accepted
+            ? styles.subcontractorCardAccepted
+            : quoteAmount > 0
+              ? styles.subcontractorCardPending
+              : styles.subcontractorCardMissing;
+          return (
+            <section
+              key={row.key}
+              style={{
+                ...styles.subcontractorCard,
+                ...(index % 2 === 0 ? styles.subcontractorCardBlue : styles.subcontractorCardGrey),
+                ...acceptedTone,
+              }}
+            >
+              <div style={styles.subcontractorCardHeader}>
+                <div style={styles.subcontractorHeaderTitle}>
+                  <span style={styles.subcontractorIcon}>⚒</span>
+                  <span>{row.label}</span>
+                </div>
+                <span style={{ ...styles.subcontractorStatusBadge, ...statusStyle }}>{status.label}</span>
+              </div>
+              <div style={styles.subcontractorCardGrid}>
+                <div style={styles.subcontractorColumn}>
+                  <div style={styles.subcontractorColumnTitle}>Contractor Details</div>
+                  <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.contractorName || ""} placeholder="Contractor Name" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "contractorName", next)} />
+                  <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.company || ""} placeholder="Company" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "company", next)} />
+                </div>
+                <div style={{ ...styles.subcontractorColumn, ...styles.subcontractorColumnDivider }}>
+                  <div style={styles.subcontractorColumnTitle}>Quote Details</div>
+                <div style={styles.subcontractorFieldGrid}>
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.quoteNumber || ""} placeholder="Quote Number" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "quoteNumber", next)} />
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} type="date" value={saved.quoteDate || ""} onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "quoteDate", next)} />
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.quoteAmount || ""} placeholder="$0.00" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "quoteAmount", currencyInputValue(next))} />
+                    <label style={styles.subcontractorCheckLabel}><input style={styles.largeCheckbox} disabled={readonly} type="checkbox" checked={Boolean(saved.included)} onChange={(event) => sheet.updateSubcontractorQuote(row.key, "included", event.target.checked)} /> Included?</label>
+                </div>
+                  <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.notes || ""} placeholder="Notes" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "notes", next)} />
+                </div>
+                <div style={{ ...styles.subcontractorColumn, ...styles.subcontractorColumnDivider }}>
+                  <div style={styles.subcontractorColumnTitle}>Procurement</div>
+                <div style={styles.subcontractorFieldGrid}>
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.supplier || ""} placeholder="Supplier" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "supplier", next)} />
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.quotePdf || ""} placeholder="Quote PDF" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "quotePdf", next)} />
+                    <label style={styles.subcontractorCheckLabel}><input style={styles.largeCheckbox} disabled={readonly} type="checkbox" checked={Boolean(saved.accepted)} onChange={(event) => sheet.updateSubcontractorQuote(row.key, "accepted", event.target.checked)} /> Accepted?</label>
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} value={saved.purchaseOrder || ""} placeholder="Purchase Order" onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "purchaseOrder", next)} />
+                    <BufferedInput disabled={readonly} style={styles.subcontractorInput} type="date" value={saved.requiredDate || ""} onCommit={(next) => sheet.updateSubcontractorQuote(row.key, "requiredDate", next)} />
+                </div>
+                </div>
+                <div style={{ ...styles.subcontractorColumn, ...styles.subcontractorColumnDivider }}>
+                  <div style={styles.subcontractorColumnTitle}>Use Quote</div>
+                  <label style={styles.useQuoteToggleModern}>
+                    <input style={styles.toggleInput} disabled={readonly} type="checkbox" checked={Boolean(saved.useQuote)} onChange={(event) => sheet.updateSubcontractorQuote(row.key, "useQuote", event.target.checked)} />
+                    <span style={{ ...styles.toggleTrack, ...(saved.useQuote ? styles.toggleTrackOn : styles.toggleTrackOff) }}>
+                      <span style={{ ...styles.toggleKnob, ...(saved.useQuote ? styles.toggleKnobOn : {}) }} />
+                    </span>
+                    <strong style={{ color: saved.useQuote ? "#15803d" : "#475569" }}>{saved.useQuote ? "ON" : "OFF"}</strong>
+                  </label>
+                </div>
+                <div style={{ ...styles.subcontractorColumn, ...styles.subcontractorColumnDivider }}>
+                  <div style={styles.subcontractorColumnTitle}>Deductions</div>
+                {deductionRows.length ? (
+                  <div style={styles.deductionList}>
+                    {deductionRows.map((deduction) => (
+                      <label key={deduction.key} style={styles.deductionRow}>
+                        <input
+                          style={styles.largeCheckbox}
+                          disabled={readonly}
+                          type="checkbox"
+                          checked={deduction.selected}
+                          onChange={(event) => sheet.updateSubcontractorQuote(row.key, "deductions", { ...(saved.deductions || {}), [deduction.key]: event.target.checked })}
+                        />
+                        <span>{deduction.label}</span>
+                        <strong>{money(deduction.amount)}</strong>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={styles.readOnly}>No standard deductions mapped yet.</span>
+                )}
+                </div>
+                <div style={{ ...styles.subcontractorColumn, ...styles.subcontractorColumnDivider }}>
+                  <div style={styles.subcontractorColumnTitle}>Balance</div>
+                <div style={styles.balanceStack}>
+                    <div style={styles.balanceLine}><span>Quote</span><strong>{money(quoteAmount)}</strong></div>
+                    <div style={styles.balanceLine}><span>Less Deductions</span><strong>{money(deductionTotal)}</strong></div>
+                    <div style={styles.balanceNet}><span>Net Balance</span><strong>{money(balance)}</strong></div>
+                </div>
+                </div>
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -328,7 +557,7 @@ function WindowsDoorsSheet({ sheet }) {
             {openGroups[group.key] && (
               <>
                 {!readonly && <button style={styles.addLineButton} onClick={() => sheet.addWindow(group.rows[group.rows.length - 1]?.id || null, "after", null, group.defaultType, group.label)}>Add new row</button>}
-                <Spreadsheet headers={readonly ? ["SIZE", "RANGE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE"] : ["SIZE", "RANGE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE", "Actions"]}>
+                <Spreadsheet headers={readonly ? ["SIZE", "SIZE CODE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE"] : ["SIZE", "SIZE CODE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE", "Actions"]}>
                   {group.rows.map((row) => (
                     <tr key={row.id}>
                       <Cell>
@@ -358,7 +587,15 @@ function WindowsDoorsSheet({ sheet }) {
                               <option key={option} value={option}>{option}</option>
                             ))}
                           </select>
-                        ) : ""}
+                        ) : shouldSkipWindowSizeCode(row) ? "" : readonly ? (
+                          row.sizeCode || windowDoorSizeCodeForRow(row)
+                        ) : (
+                          <BufferedInput
+                            style={styles.unitInput}
+                            value={row.sizeCode || windowDoorSizeCodeForRow(row)}
+                            onCommit={(next) => sheet.updateWindow(row.id, "sizeCode", String(next || "").toUpperCase())}
+                          />
+                        )}
                       </Cell>
                       <Cell><BufferedInput style={styles.numberInput} value={value(row.quantity)} onCommit={(next) => sheet.updateWindow(row.id, "quantity", next)} /></Cell>
                       <Cell>
@@ -375,7 +612,7 @@ function WindowsDoorsSheet({ sheet }) {
                       <Cell>
                         {readonly
                           ? value(row.rate)
-                          : <BufferedInput style={styles.rateInput} value={value(row.rate)} onCommit={(next) => sheet.updateWindowRate(row.id, next)} />}
+                          : <BufferedInput style={styles.rateInput} value={value(row.rate)} onCommit={(next) => sheet.updateWindowRate(row.id, currencyInputValue(next))} />}
                       </Cell>
                       {!readonly && <Cell>
                         <div style={styles.rowActions}>
@@ -391,7 +628,7 @@ function WindowsDoorsSheet({ sheet }) {
             )}
           </div>
         ))}
-        <Spreadsheet headers={readonly ? ["Total", "RANGE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE"] : ["Total", "RANGE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE", "Actions"]}>
+        <Spreadsheet headers={readonly ? ["Total", "SIZE CODE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE"] : ["Total", "SIZE CODE", "QTY", "LEVEL", "HEIGHT", "WIDTH", "AREA", "SILL", "ARCH", "PRICE", "Actions"]}>
           <tr>
             <Cell strong>Total Area</Cell>
             <Cell />
@@ -423,18 +660,20 @@ function WindowsDoorsSheet({ sheet }) {
   );
 }
 
-function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference }) {
+function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
   const rows = formulaRows(sheet);
   const readonly = sheet.previewMode;
+  const locked = readonly || !canEditFormulas;
   return (
     <div style={styles.pageStack}>
-      {!readonly && <button style={styles.addLineButton} onClick={() => sheet.addFormulaRow()}>Add new row</button>}
-      <Spreadsheet headers={readonly ? ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note"] : ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note", "Actions"]}>
+      {!locked && <button style={styles.addLineButton} onClick={() => sheet.addFormulaRow()}>Add new row</button>}
+      <Spreadsheet headers={locked ? ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note"] : ["Formula Name", "Formula Expression", "Formula Result", "Unit", "Change Note", "Actions"]}>
         {rows.map((row) => (
           <tr key={row.key}>
             <Cell strong>
               {row.custom ? (
                 <BufferedInput
+                  disabled={locked}
                   style={styles.itemInput}
                   value={row.label || ""}
                   onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "label", next)}
@@ -444,6 +683,7 @@ function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference }) {
             <Cell>
               <BufferedInput
                 id={rowDomId("formula-edit", row.key)}
+                disabled={locked}
                 style={styles.formulaInput}
                 value={formulaForRow(sheet, row)}
                 onCommit={(next) => sheet.updateFormula(row.key, next)}
@@ -461,6 +701,7 @@ function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference }) {
             <Cell>
               {row.custom ? (
                 <BufferedInput
+                  disabled={locked}
                   style={styles.unitInput}
                   value={row.unit || ""}
                   onCommit={(next) => sheet.updateFormulaRowMeta(row.key, "unit", next)}
@@ -475,7 +716,7 @@ function FormulaSheet({ sheet, formulaTarget, onPickFormulaReference }) {
                 onCommit={(next) => sheet.updateFormulaNote(row.key, next)}
               />
             </Cell>
-            {!readonly && <Cell>
+            {!locked && <Cell>
               <div style={styles.rowActions}>
                 <button style={styles.smallButton} onClick={() => focusRowEditor(rowDomId("formula-edit", row.key))}>Edit</button>
                 <button style={styles.smallButton} onClick={() => sheet.addFormulaRow(row.key, "after")}>Insert below</button>
@@ -598,6 +839,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
     setOpenApplianceBrands((current) => ({ ...current, [brandKey]: !current[brandKey] }));
   }
 
+  const displayNumbering = quoteDisplayNumbering(sheet, openApplianceBrands);
+
   function renderQuoteSection(section, options = {}) {
     const previewSection = sheet.preview.quotation[section];
     const savedSection = sheet.workbook.quotation?.[section] || {};
@@ -605,10 +848,12 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
     const rows = (previewSection?.rows || []).filter((row) => {
       if (quoteFeeType(row)) return false;
       if (isHiddenQuoteRow(row)) return false;
+      if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
+      if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
       if (isApplianceHeadingQuoteRow(row)) return true;
       const haystack = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
       if (search && !haystack.includes(search)) return false;
-      if (sheet.hideUnused && !row.qty && !row.finalRateUsed && !row.cost) return false;
+      if (sheet.hideUnused && !isUsedQuoteRow(row)) return false;
       return true;
     });
     const renderedRows = isAppliancePackageSection(section) ? visibleApplianceRows(rows, openApplianceBrands) : rows;
@@ -623,16 +868,24 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
           <input
             aria-label={`${section} group number`}
             disabled={readonly}
+            readOnly
             style={styles.sectionGroupInput}
-            value={savedSection.groupNumber || ""}
-            onChange={(event) => sheet.updateQuoteSectionMeta(section, "groupNumber", event.target.value)}
+            value={displayNumbering.sections[section] || savedSection.groupNumber || ""}
+            onClick={(event) => event.stopPropagation()}
+          />
+          <input
+            aria-label={`${section} summary stage number`}
+            disabled={readonly}
+            style={styles.sectionStageInput}
+            value={savedSection.stageNumber || ""}
+            onChange={(event) => sheet.updateQuoteSectionMeta(section, "stageNumber", event.target.value)}
             onClick={(event) => event.stopPropagation()}
           />
           <button
             style={styles.sectionHeaderButton}
             onClick={() => sheet.toggleQuoteSection(section)}
           >
-            <span>{options.label || section}</span>
+              <span>{quoteSectionDisplayLabel(options.label || section)}</span>
             <span style={styles.sectionTotalStack}>
               <strong>{money(sectionTotal)}</strong>
               <small>{quotePercentOfTotal(sectionTotal, sheet.preview.summary.finalQuoteTotal)}</small>
@@ -642,7 +895,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         {!sheet.workbook.quotation?.[section]?.collapsed && showQuoteRows && (
         <>
         <Spreadsheet
-          headers={readonly ? ["Row", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"] : ["Move", "Row", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes", "Actions"]}
+          headers={readonly ? ["", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"] : ["Move", "", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes", "Actions"]}
           compactColumns={readonly ? [0] : [0, 1]}
         >
           {renderedRows.map((row, rowIndex) => {
@@ -689,7 +942,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                 style={styles.draggableRow}
               >
                 {!readonly && <Cell compact><span style={styles.dragHandle} title="Drag row">::</span></Cell>}
-                <Cell compact><span style={styles.rowNumber}>{quoteRowNumber(row, rowIndex)}</span></Cell>
+                <Cell compact />
                 <Cell>
                   <BufferedInput
                     id={rowDomId("quote-edit", row.id)}
@@ -708,7 +961,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                   )}
                 </Cell>
                 <Cell><BufferedInput style={styles.unitInput} value={row.unit || ""} onCommit={(next) => sheet.updateQuote(section, row.id, "unit", next)} /></Cell>
-                <Cell><BufferedInput style={styles.rateInput} value={value(row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", next)} /></Cell>
+                <Cell><BufferedInput style={styles.rateInput} value={value(row.manualRate || row.excelRate)} onCommit={(next) => sheet.updateQuote(section, row.id, "manualRate", currencyInputValue(next))} /></Cell>
                 <Cell final>{quoteCost(row)}</Cell>
                 <Cell>{row.sourceOfRate}</Cell>
                 <Cell>
@@ -751,6 +1004,11 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
       {!readonly && (
         <div style={styles.tabBar}>
           <button style={styles.primaryButton} onClick={openOrderManager}>Manage Section Order</button>
+          <button style={styles.secondaryButton} onClick={() => sheet.renumberQuoteDisplay?.()}>Renumber Display</button>
+          <button style={styles.secondaryButton} onClick={() => sheet.collapseAllQuoteSections?.()}>Collapse All</button>
+          {sheet.renumberReport && (
+            <span style={sheet.renumberReport.ok ? styles.okPill : styles.warningPill}>{sheet.renumberReport.message}</span>
+          )}
         </div>
       )}
       {orderManagerOpen && (
@@ -849,7 +1107,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         const childSections = isConcreteSlabSection(section)
           ? sheet.quoteSections.filter((item) => isConcreteSlabSubsection(item))
           : isWallFramesSection(section)
-            ? sheet.quoteSections.filter((item) => isWallFramesSubsection(item))
+            ? orderedFramingSubsections(sheet.quoteSections)
             : isRoofFramingSection(section)
               ? sheet.quoteSections.filter((item) => isRoofFramingSubsection(item))
               : isHardwareSection(section)
@@ -879,18 +1137,18 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                                       : isPlasterSupplyInstallSection(section)
                                         ? sheet.quoteSections.filter((item) => isPlasterSupplyInstallSubsection(item))
                                         : isFixOutMaterialsSection(section)
-                                          ? sheet.quoteSections.filter((item) => isFixOutMaterialsSubsection(item))
+                                          ? orderedFixOutSubsections(sheet.quoteSections)
                                           : isCabinetMakerSection(section)
                                             ? orderedCabinetMakerSubsections(sheet.quoteSections.filter((item) => isCabinetMakerSubsection(item)))
                                             : isAppliancePackageSection(section)
-                                              ? sheet.quoteSections.filter((item) => isApplianceBrandSubsection(item))
+                                              ? orderedApplianceBrandSubsections(sheet.quoteSections)
                                               : [];
         const sectionTotal = childSections.length
           ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
           : undefined;
         return (
           <div key={section} style={styles.quoteGroup}>
-            {renderQuoteSection(section, { total: sectionTotal, label: wallFramesDisplayLabel(section) })}
+            {renderQuoteSection(section, { total: sectionTotal, label: wallFramesDisplayLabel(section) || quoteSectionDisplayLabel(section) })}
             {childSections.length > 0 && !sheet.workbook.quotation?.[section]?.collapsed && (
               <div style={styles.nestedQuoteStack}>
                 {childSections.map((child) => renderQuoteSection(child, { nested: true, label: quoteSectionDisplayLabel(child) }))}
@@ -905,22 +1163,24 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
 
 function SummarySheet({ sheet }) {
   const readonly = sheet.previewMode;
-  const [expandedStages, setExpandedStages] = useState({});
   const stageGroups = summaryBuildStageGroups(sheet);
+  const [expandedStages, setExpandedStages] = useState({});
   const toggleStage = (stageNumber) => setExpandedStages((current) => ({ ...current, [stageNumber]: !current[stageNumber] }));
   const collapseAllRows = () => setExpandedStages({});
+  const expandAllRows = () => setExpandedStages(Object.fromEntries(stageGroups.map((group) => [group.stageNumber, true])));
   const headers = ["Stage / Section", "Section Name", "Item Name", "Qty", "Unit", "Rate", "Total / Cost", "Notes"];
   return (
     <div style={styles.pageStack}>
       <div style={styles.summaryToolbar}>
         <button style={styles.secondaryButton} onClick={collapseAllRows}>Collapse All Rows</button>
+        <button style={styles.secondaryButton} onClick={expandAllRows}>Expand All Rows</button>
         {!readonly && <button style={styles.addLineButton} onClick={sheet.addQuoteSection}>Add new row</button>}
       </div>
       <Spreadsheet headers={headers}>
         {stageGroups.flatMap((group) => {
           const mainOpen = Boolean(expandedStages[group.stageNumber]);
           const rows = [
-            <tr key={`stage-${group.stageNumber}`}>
+            <tr key={`stage-${group.stageNumber}`} style={styles.summaryStageRow}>
               <Cell strong>
                 <button style={styles.summaryToggleButton} onClick={() => toggleStage(group.stageNumber)}>
                   <span>{mainOpen ? "v" : ">"}</span>
@@ -938,14 +1198,27 @@ function SummarySheet({ sheet }) {
           ];
           if (!mainOpen) return rows;
           group.rows.forEach((item, rowIndex) => {
-            const sectionNumber = quoteSectionNumber(item.section, sheet);
+            if (item.adjustment) {
+              rows.push(
+                <tr key={`stage-adjustment-${group.stageNumber}-${item.row.id}`}>
+                  <Cell>Cost</Cell>
+                  <Cell>{group.label}</Cell>
+                  <Cell strong>{item.row.item}</Cell>
+                  <Cell>1</Cell>
+                  <Cell>ITEM</Cell>
+                  <Cell>{money(item.total)}</Cell>
+                  <Cell final>{money(item.total)}</Cell>
+                  <Cell>{item.row.notes}</Cell>
+                </tr>
+              );
+              return;
+            }
             const sectionDisplayName = summarySectionDisplayName(item.section, sheet);
             rows.push(
               <tr key={`stage-line-${group.stageNumber}-${item.section}-${item.row.id || rowIndex}`}>
-                <Cell>{sectionNumber ? `${sectionNumber}` : ""}</Cell>
+                <Cell>{group.stageNumber}</Cell>
                 <Cell>
                   <BufferedInput
-                    commitOnChange
                     style={styles.summarySectionInput}
                     disabled={readonly}
                     value={sectionDisplayName}
@@ -954,7 +1227,6 @@ function SummarySheet({ sheet }) {
                 </Cell>
                 <Cell>
                   <BufferedInput
-                    commitOnChange
                     style={styles.itemInput}
                     disabled={readonly}
                     value={quoteItem(item.row)}
@@ -964,7 +1236,6 @@ function SummarySheet({ sheet }) {
                 <Cell>
                   <BufferedInput
                     inputMode="decimal"
-                    commitOnChange
                     style={styles.numberInput}
                     disabled={readonly}
                     value={value(item.row.qty || item.row.quantity)}
@@ -973,7 +1244,6 @@ function SummarySheet({ sheet }) {
                 </Cell>
                 <Cell>
                   <BufferedInput
-                    commitOnChange
                     style={styles.unitInput}
                     disabled={readonly}
                     value={item.row.unit || ""}
@@ -983,17 +1253,15 @@ function SummarySheet({ sheet }) {
                 <Cell>
                   <BufferedInput
                     inputMode="decimal"
-                    commitOnChange
                     style={styles.rateInput}
                     disabled={readonly}
                     value={value(item.row.finalRateUsed || item.row.manualRate || item.row.excelRate)}
-                    onCommit={(next) => sheet.updateQuote(item.section, item.row.id, "manualRate", next)}
+                    onCommit={(next) => sheet.updateQuote(item.section, item.row.id, "manualRate", currencyInputValue(next))}
                   />
                 </Cell>
                 <Cell final>
                   <BufferedInput
                     inputMode="decimal"
-                    commitOnChange
                     style={styles.rateInput}
                     disabled={readonly}
                     value={summaryLineTotal(item.row)}
@@ -1002,7 +1270,6 @@ function SummarySheet({ sheet }) {
                 </Cell>
                 <Cell>
                   <BufferedInput
-                    commitOnChange
                     style={styles.input}
                     disabled={readonly}
                     value={item.row.notes || ""}
@@ -1017,6 +1284,8 @@ function SummarySheet({ sheet }) {
         {summaryTotalRow("Base line item subtotal", sheet.preview.summary.baseLineItemSubtotal ?? sheet.preview.summary.subtotalBeforeMargin, sheet.preview.summary.finalQuoteTotal)}
         {SUMMARY_TABLE_ADJUSTMENT_ROWS.map((field) => summaryAdjustmentRow(sheet, field, readonly))}
         {summaryFinalTotalRow(sheet.preview.summary.finalQuoteTotal)}
+        {summaryFloorAreaRow(sheet)}
+        {summaryRatePerM2Row(sheet)}
       </Spreadsheet>
       <section style={styles.section}>
         <div style={styles.staticSectionHeader}>Template Promotion Requests</div>
@@ -1036,216 +1305,288 @@ function SummarySheet({ sheet }) {
 function ClientPageSheet({ sheet }) {
   const readonly = sheet.previewMode;
   const logoFileInputRef = useRef(null);
+  const heroFileInputRef = useRef(null);
+  const showcaseFileInputRef = useRef(null);
+  const designFileInputRef = useRef(null);
   const [previewMode, setPreviewMode] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState(null);
-  const [printingClientPage, setPrintingClientPage] = useState(false);
+  const [activeProposalPage, setActiveProposalPage] = useState("cover");
   const client = clientPageValues(sheet);
-  const clientGroups = clientBuildStageGroups(sheet);
-  const sectionKeys = [
-    "introduction",
-    "scopeOfWorks",
-    "quotedWorks",
-    ...clientGroups.map((group) => `stage-${group.stageNumber}`),
-    "exclusions",
-    "terms",
-    "acceptance",
-    "signature",
-  ];
-  const allClientSectionsCollapsed = () => Object.fromEntries(sectionKeys.map((key) => [key, true]));
-  const visibleCollapsedSections = collapsedSections || allClientSectionsCollapsed();
-  const reportCollapsedSections = () => ({
-    ...allClientSectionsCollapsed(),
-    quotedWorks: false,
-  });
-  const toggleClientSection = (key) => setCollapsedSections((current) => {
-    const base = current || allClientSectionsCollapsed();
-    return { ...base, [key]: !base[key] };
-  });
-  const collapseAllClientSections = () => setCollapsedSections(allClientSectionsCollapsed());
-  const expandAllClientSections = () => setCollapsedSections({});
-  const printClientPage = () => {
-    setCollapsedSections(reportCollapsedSections());
-    setPrintingClientPage(true);
+  const pricingGroups = clientBuildStageGroups(sheet);
+  const proposalPages = QUOTE_PROPOSAL_PAGES;
+  const printProposal = () => {
     if (typeof window !== "undefined") {
       window.setTimeout(() => {
         window.print();
-        window.setTimeout(() => setPrintingClientPage(false), 500);
       }, 0);
     }
   };
-  const saveClientPage = () => {
-    sheet.saveDraft?.();
-  };
-  const uploadLogo = (event) => {
+  const saveProposal = () => sheet.saveDraft?.();
+  const uploadSingleImage = (event, key) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !file.type?.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = () => {
-      sheet.updateClientPage("logoUrl", String(reader.result || ""));
+      sheet.updateClientPage(key, String(reader.result || ""));
     };
     reader.readAsDataURL(file);
   };
+  const uploadImageGallery = (event, key) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type?.startsWith("image/"));
+    event.target.value = "";
+    if (!files.length) return;
+    Promise.all(files.map((file) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.readAsDataURL(file);
+    }))).then((images) => {
+      sheet.updateClientPage(key, [...(client[key] || []), ...images]);
+    });
+  };
+  const removeGalleryImage = (key, index) => {
+    sheet.updateClientPage(key, (client[key] || []).filter((_, imageIndex) => imageIndex !== index));
+  };
+  const generateAiText = () => {
+    const next = proposalAiText(client);
+    Object.entries(next).forEach(([key, text]) => sheet.updateClientPage(key, text));
+  };
+  const saveTemplate = () => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(QUOTE_PROPOSAL_TEMPLATE_KEY, JSON.stringify(quoteProposalTemplateFromClient(client)));
+    window.alert("Quote proposal template saved for future jobs.");
+  };
+  const applyTemplate = () => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem(QUOTE_PROPOSAL_TEMPLATE_KEY);
+    if (!saved) {
+      window.alert("No saved quote proposal template found yet.");
+      return;
+    }
+    try {
+      const template = JSON.parse(saved);
+      Object.entries(template).forEach(([key, value]) => sheet.updateClientPage(key, value));
+    } catch {
+      window.alert("Saved proposal template could not be applied.");
+    }
+  };
+  const acceptQuote = () => {
+    sheet.updateClientPage("quoteAcceptedAt", new Date().toISOString());
+    sheet.updateClientPage("termsAcknowledged", true);
+  };
   return (
-    <div style={styles.clientPageShell}>
+    <div style={styles.quoteProposalShell}>
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          .estimate-client-print, .estimate-client-print * { visibility: visible; }
-          .estimate-client-print { position: absolute; inset: 0; width: 100%; background: #ffffff; }
-          .estimate-client-tools, .estimate-client-editor, .estimate-client-stage-print { display: none !important; }
-          .estimate-client-stage-toggle { display: grid !important; }
+          .quote-proposal-print, .quote-proposal-print * { visibility: visible; }
+          .quote-proposal-print { position: absolute; inset: 0; width: 100%; background: #f8fafc; }
+          .quote-proposal-tools, .quote-proposal-editor { display: none !important; }
+          .quote-proposal-page { break-after: page; page-break-after: always; box-shadow: none !important; border-radius: 0 !important; }
         }
       `}</style>
-      <div className="estimate-client-tools" style={styles.clientToolbar}>
-        <button style={styles.secondaryButton} onClick={() => setPreviewMode((current) => !current)}>Preview Client Page</button>
-        <button style={styles.secondaryButton} onClick={collapseAllClientSections}>Collapse All Sections</button>
-        <button style={styles.secondaryButton} onClick={expandAllClientSections}>Expand All Sections</button>
-        <button style={styles.secondaryButton} onClick={printClientPage}>Print</button>
-        <button style={styles.secondaryButton} onClick={printClientPage}>Download PDF</button>
-        {!readonly && <button style={styles.primaryButton} onClick={saveClientPage}>Save Client Page</button>}
+      <div className="quote-proposal-tools" style={styles.quoteProposalToolbar}>
+        <button style={styles.primaryButton} disabled={readonly} onClick={generateAiText}>Generate AI Text</button>
+        <button style={styles.secondaryButton} disabled={readonly} onClick={saveTemplate}>Save Template</button>
+        <button style={styles.secondaryButton} disabled={readonly} onClick={applyTemplate}>Apply Template</button>
+        <button style={styles.secondaryButton} onClick={() => setPreviewMode((current) => !current)}>Preview Quote</button>
+        <button style={styles.secondaryButton} onClick={printProposal}>Export PDF</button>
+        {!readonly && <button style={styles.primaryButton} onClick={saveProposal}>Save Proposal</button>}
       </div>
-      {!previewMode && (
-        <section className="estimate-client-editor" style={styles.clientEditor}>
-          <div style={styles.clientLogoEditor}>
-            <div style={styles.clientLogoPreview}>
-              {client.logoUrl ? <img src={client.logoUrl} alt="Company logo preview" style={styles.clientLogoImage} /> : <span>LOGO</span>}
-            </div>
-            <div style={styles.clientLogoActions}>
-              <div style={styles.adjustmentLabel}>Company logo</div>
-              <div style={styles.clientLogoHint}>Upload a PNG, JPG, WebP, or SVG logo for the client-facing quote.</div>
-              <div style={styles.rowActions}>
-                <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => logoFileInputRef.current?.click()}>Upload Logo</button>
-                {client.logoUrl && <button type="button" style={styles.dangerButton} disabled={readonly} onClick={() => sheet.updateClientPage("logoUrl", "")}>Remove</button>}
-              </div>
-              <input
-                ref={logoFileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                style={{ display: "none" }}
-                onChange={uploadLogo}
-              />
-            </div>
-          </div>
-          <div style={styles.clientEditorGrid}>
-            {CLIENT_HEADER_FIELDS.map((field) => (
-              <label key={field.key} style={styles.adjustmentField}>
-                <span style={styles.adjustmentLabel}>{field.label}</span>
-                <BufferedInput
-                  commitOnChange
-                  disabled={readonly}
-                  style={styles.input}
-                  value={client[field.key] || ""}
-                  onCommit={(next) => sheet.updateClientPage(field.key, next)}
-                />
-              </label>
-            ))}
-          </div>
-          {CLIENT_TEXT_FIELDS.map((field) => (
-            <label key={field.key} style={styles.adjustmentField}>
-              <span style={styles.adjustmentLabel}>{field.label}</span>
-              <BufferedTextarea
-                disabled={readonly}
-                style={styles.clientTextarea}
-                value={client[field.key] || ""}
-                onCommit={(next) => sheet.updateClientPage(field.key, next)}
-              />
-            </label>
-          ))}
-        </section>
-      )}
-      <article className="estimate-client-print" style={styles.clientDocument}>
-        <header style={styles.clientHeader}>
-          <div style={styles.clientBrand}>
-            {client.logoUrl ? <img src={client.logoUrl} alt="Company logo" style={styles.clientLogoImage} /> : <div style={styles.clientLogoMark}>LOGO</div>}
-            <div>
-              <div style={styles.clientCompanyName}>{client.companyName || "Company Name"}</div>
-              <div style={styles.clientDocumentTitle}>{client.estimateTitle || "Estimate / Quote"}</div>
-            </div>
-          </div>
-          <div style={styles.clientMetaGrid}>
-            <ClientMeta label="Client" value={client.clientName} />
-            <ClientMeta label="Project address" value={client.projectAddress} />
-            <ClientMeta label="Quote number" value={client.quoteNumber} />
-            <ClientMeta label="Quote date" value={client.quoteDate} />
-            <ClientMeta label="Expiry date" value={client.expiryDate} />
-          </div>
-        </header>
-
-        <ClientTextBlock title="Introduction" value={client.introduction} summary={CLIENT_BLOCK_SUMMARIES.introduction} collapsed={visibleCollapsedSections.introduction} onToggle={() => toggleClientSection("introduction")} />
-        <ClientTextBlock title="Scope of works" value={client.scopeOfWorks} summary={CLIENT_BLOCK_SUMMARIES.scopeOfWorks} collapsed={visibleCollapsedSections.scopeOfWorks} onToggle={() => toggleClientSection("scopeOfWorks")} />
-
-        <section style={styles.clientSection}>
-          <button style={styles.clientSectionToggle} onClick={() => toggleClientSection("quotedWorks")}>
-            <span>{visibleCollapsedSections.quotedWorks ? ">" : "v"} Quoted Works</span>
-            <small style={styles.clientBlockSummary}>{clientGroups.length} stages priced with all internal allowances built into the visible totals.</small>
-          </button>
-          {!visibleCollapsedSections.quotedWorks && clientGroups.map((group) => (
-            <div key={group.stageNumber} style={styles.clientStage}>
-              <button className="estimate-client-stage-toggle" style={styles.clientStageHeader} onClick={() => toggleClientSection(`stage-${group.stageNumber}`)}>
-                <span>{visibleCollapsedSections[`stage-${group.stageNumber}`] ? ">" : "v"} {group.stageNumber} - {group.label}</span>
-                <small style={styles.clientStageSummary}>{clientStageSummary(group)}</small>
-                <strong>{money(group.total)}</strong>
+      <div style={styles.quoteProposalWorkspace}>
+        {!previewMode && (
+          <nav className="quote-proposal-editor" style={styles.quoteProposalNav}>
+            {proposalPages.map((page) => (
+              <button
+                key={page.key}
+                style={{ ...styles.quoteProposalNavButton, ...(activeProposalPage === page.key ? styles.quoteProposalNavButtonActive : {}) }}
+                onClick={() => setActiveProposalPage(page.key)}
+              >
+                <span>{page.label}</span>
               </button>
-              {!visibleCollapsedSections[`stage-${group.stageNumber}`] && (
-              <>
-              <div className="estimate-client-stage-print" style={styles.clientStageHeaderPrint}>
-                <span>{group.stageNumber} - {group.label}</span>
-                <strong>{money(group.total)}</strong>
-              </div>
-              <table style={styles.clientTable}>
-                <thead>
-                  <tr>
-                    <th style={styles.clientTh}>Description</th>
-                    <th style={styles.clientTh}>Qty</th>
-                    <th style={styles.clientTh}>Unit</th>
-                    <th style={styles.clientTh}>Rate</th>
-                    <th style={styles.clientTh}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.rows.map((item) => (
-                    <tr key={`${item.section}-${item.id}`}>
-                      <td style={styles.clientTd}>{item.description}</td>
-                      <td style={styles.clientTdNumber}>{value(item.qty)}</td>
-                      <td style={styles.clientTdNumber}>{item.unit || ""}</td>
-                      <td style={styles.clientTdNumber}>{money(item.loadedRate)}</td>
-                      <td style={styles.clientTdFinal}>{money(item.loadedTotal)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td style={styles.clientTdStrong}>Stage subtotal</td>
-                    <td style={styles.clientTd} />
-                    <td style={styles.clientTd} />
-                    <td style={styles.clientTd} />
-                    <td style={styles.clientTdFinal}>{money(group.total)}</td>
-                  </tr>
-                </tbody>
-              </table>
-              </>
-              )}
-            </div>
-          ))}
-          {!visibleCollapsedSections.quotedWorks && <div style={styles.clientGrandTotal}>
-            <span>Total quoted price</span>
-            <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
-          </div>}
-        </section>
+            ))}
+          </nav>
+        )}
+        <div className="quote-proposal-print" style={styles.quoteProposalDocument}>
+          {(previewMode ? proposalPages : proposalPages.filter((page) => page.key === activeProposalPage)).map((page) => {
+            if (page.key === "cover") {
+              return (
+                <QuoteProposalPage key={page.key} title="Cover Page">
+                  <div style={styles.proposalCoverGrid}>
+                    <div style={styles.proposalCoverBrand}>
+                      <div style={styles.proposalLogoBox}>
+                        {client.logoUrl ? <img src={client.logoUrl} alt="Builder logo" style={styles.proposalLogoImage} /> : <span>Builder Logo</span>}
+                      </div>
+                      {!previewMode && <button style={styles.secondaryButton} disabled={readonly} onClick={() => logoFileInputRef.current?.click()}>Upload Logo</button>}
+                      <input ref={logoFileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadSingleImage(event, "logoUrl")} />
+                    </div>
+                    <div style={styles.proposalCoverDetails}>
+                      <QuoteField label="Builder / Company Name" value={client.companyName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("companyName", next)} />
+                      <QuoteField label="Client Name" value={client.clientName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("clientName", next)} />
+                      <QuoteField label="Project Address" value={client.projectAddress} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("projectAddress", next)} />
+                      <QuoteField label="Quote Title" value={client.estimateTitle} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("estimateTitle", next)} />
+                      <div style={styles.proposalMiniGrid}>
+                        <QuoteField label="Quote Number" value={client.quoteNumber} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("quoteNumber", next)} />
+                        <QuoteField label="Quote Date" value={client.quoteDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("quoteDate", next)} />
+                        <QuoteField label="Expiry Date" value={client.expiryDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("expiryDate", next)} />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={styles.proposalHero}>
+                    {client.heroImageUrl ? <img src={client.heroImageUrl} alt="Quote proposal hero" style={styles.proposalHeroImage} /> : <div style={styles.proposalImagePlaceholder}>Hero image upload area</div>}
+                    {!previewMode && (
+                      <>
+                        <button style={styles.secondaryButton} disabled={readonly} onClick={() => heroFileInputRef.current?.click()}>Upload Hero Image</button>
+                        <input ref={heroFileInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadSingleImage(event, "heroImageUrl")} />
+                      </>
+                    )}
+                  </div>
+                  <ProposalGallery title="Past Project / Showcase Images" images={client.showcaseImages} readonly={readonly || previewMode} onUpload={() => showcaseFileInputRef.current?.click()} onRemove={(index) => removeGalleryImage("showcaseImages", index)} />
+                  <input ref={showcaseFileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageGallery(event, "showcaseImages")} />
+                </QuoteProposalPage>
+              );
+            }
+            if (page.key === "about") {
+              return (
+                <QuoteProposalPage key={page.key} title="About Us">
+                  <ProposalTextEditor label="About Us" value={client.aboutUs} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("aboutUs", next)} />
+                  <div style={styles.proposalThreeColumns}>
+                    <ProposalTextEditor label="Why Choose Us" value={client.whyChooseUs} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("whyChooseUs", next)} />
+                    <ProposalTextEditor label="Building Your Dream Home" value={client.buildingYourDreamHome} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("buildingYourDreamHome", next)} />
+                    <ProposalTextEditor label="Trust, Quality & Communication" value={client.trustQualityCommunication} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("trustQualityCommunication", next)} />
+                  </div>
+                </QuoteProposalPage>
+              );
+            }
+            if (page.key === "design") {
+              return (
+                <QuoteProposalPage key={page.key} title="Project Design">
+                  <ProposalTextEditor label="Project Design Introduction" value={client.projectDesignIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("projectDesignIntro", next)} />
+                  <ProposalGallery title="Floorplans, Facade Renders & Project Images" images={client.designImages} readonly={readonly || previewMode} onUpload={() => designFileInputRef.current?.click()} onRemove={(index) => removeGalleryImage("designImages", index)} large />
+                  <input ref={designFileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" style={{ display: "none" }} onChange={(event) => uploadImageGallery(event, "designImages")} />
+                </QuoteProposalPage>
+              );
+            }
+            if (page.key === "inclusions") {
+              return (
+                <QuoteProposalPage key={page.key} title="Inclusions Schedule">
+                  <ProposalTextEditor label="Inclusions Schedule Placeholder" value={client.inclusionsScheduleIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("inclusionsScheduleIntro", next)} />
+                  <div style={styles.proposalPlaceholderPanel}>
+                    <strong>Full inclusions schedule coming next.</strong>
+                    <span>This page is ready to connect to the inclusions system once the structured inclusions data is built.</span>
+                  </div>
+                </QuoteProposalPage>
+              );
+            }
+            if (page.key === "pricing") {
+              return (
+                <QuoteProposalPage key={page.key} title="Price Breakdown">
+                  <ProposalTextEditor label="Pricing Introduction" value={client.pricingIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("pricingIntro", next)} />
+                  <div style={styles.proposalPriceGrid}>
+                    {pricingGroups.map((group) => (
+                      <div key={group.stageNumber} style={styles.proposalPriceCard}>
+                        <span>{group.stageNumber} - {group.label}</span>
+                        <strong>{money(group.total)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={styles.proposalTotalsCard}>
+                    <ClientMeta label="Allowances / base subtotal" value={money(sheet.preview.summary.baseLineItemSubtotal ?? sheet.preview.summary.subtotalBeforeMargin)} />
+                    <ClientMeta label="GST" value={money(sheet.preview.summary.gst)} />
+                    <ClientMeta label="Final Quote Total" value={money(sheet.preview.summary.finalQuoteTotal)} />
+                  </div>
+                </QuoteProposalPage>
+              );
+            }
+            if (page.key === "acceptance") {
+              return (
+                <QuoteProposalPage key={page.key} title="Quote Acceptance">
+                  <ProposalTextEditor label="Acceptance Wording" value={client.acceptance} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptance", next)} />
+                  <div style={styles.proposalAcceptanceGrid}>
+                    <QuoteField label="Client Name" value={client.acceptanceClientName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptanceClientName", next)} />
+                    <QuoteField label="Date" value={client.acceptanceDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptanceDate", next)} />
+                    <div style={styles.proposalSignatureBox}>Signature area</div>
+                  </div>
+                  <label style={styles.proposalTermsCheck}>
+                    <input type="checkbox" disabled={readonly || previewMode} checked={Boolean(client.termsAcknowledged)} onChange={(event) => sheet.updateClientPage("termsAcknowledged", event.target.checked)} />
+                    <span>I acknowledge the quote, scope, exclusions, and terms.</span>
+                  </label>
+                  {!previewMode && <button style={styles.primaryButton} disabled={readonly || !client.termsAcknowledged} onClick={acceptQuote}>Accept Quote</button>}
+                </QuoteProposalPage>
+              );
+            }
+            return (
+              <QuoteProposalPage key={page.key} title="Thank You">
+                <div style={styles.proposalThankYou}>
+                  {client.logoUrl ? <img src={client.logoUrl} alt="Builder logo" style={styles.proposalLogoImage} /> : <div style={styles.clientLogoMark}>LOGO</div>}
+                  <h2>Thank you for choosing {client.companyName || "our team"}</h2>
+                  <ProposalTextEditor label="Thank You / Closing Text" value={client.thankYouText} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("thankYouText", next)} />
+                  <QuoteField label="Contact Details" value={client.contactDetails} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("contactDetails", next)} />
+                  {client.finalImageUrl && <img src={client.finalImageUrl} alt="Closing quote image" style={styles.proposalHeroImage} />}
+                </div>
+              </QuoteProposalPage>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        <ClientTextBlock title="Exclusions" value={client.exclusions} summary={CLIENT_BLOCK_SUMMARIES.exclusions} collapsed={visibleCollapsedSections.exclusions} onToggle={() => toggleClientSection("exclusions")} />
-        <ClientTextBlock title="Terms and conditions" value={client.terms} summary={CLIENT_BLOCK_SUMMARIES.terms} collapsed={visibleCollapsedSections.terms} onToggle={() => toggleClientSection("terms")} />
-        <ClientTextBlock title="Acceptance" value={client.acceptance} summary={CLIENT_BLOCK_SUMMARIES.acceptance} collapsed={visibleCollapsedSections.acceptance} onToggle={() => toggleClientSection("acceptance")} />
-        <section style={styles.clientSection}>
-          <button style={styles.clientSectionToggle} onClick={() => toggleClientSection("signature")}>
-            <span>{visibleCollapsedSections.signature ? ">" : "v"} Client signature</span>
-            <small style={styles.clientBlockSummary}>Formal approval area for client sign-off and quote acceptance.</small>
-          </button>
-        {!visibleCollapsedSections.signature && <div style={styles.clientSignatureGrid}>
-          <div style={styles.clientSignatureLine}>Client signature</div>
-          <div style={styles.clientSignatureLine}>Date</div>
-        </div>}
-        </section>
-      </article>
+function QuoteProposalPage({ title, children }) {
+  return (
+    <section className="quote-proposal-page" style={styles.quoteProposalPage}>
+      <div style={styles.quoteProposalPageHeader}>
+        <span>Quote Proposal</span>
+        <h2>{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function QuoteField({ label, value, readonly, onCommit }) {
+  return (
+    <label style={styles.proposalField}>
+      <span>{label}</span>
+      {readonly ? (
+        <strong>{value || "-"}</strong>
+      ) : (
+        <BufferedInput commitOnChange style={styles.proposalInput} value={value || ""} onCommit={onCommit} />
+      )}
+    </label>
+  );
+}
+
+function ProposalTextEditor({ label, value, readonly, onCommit }) {
+  return (
+    <label style={styles.proposalTextBlock}>
+      <span>{label}</span>
+      {readonly ? (
+        <p>{value || "-"}</p>
+      ) : (
+        <BufferedTextarea style={styles.proposalTextarea} value={value || ""} onCommit={onCommit} />
+      )}
+    </label>
+  );
+}
+
+function ProposalGallery({ title, images = [], readonly, onUpload, onRemove, large = false }) {
+  return (
+    <div style={styles.proposalGallery}>
+      <div style={styles.proposalGalleryHeader}>
+        <strong>{title}</strong>
+        {!readonly && <button type="button" style={styles.secondaryButton} onClick={onUpload}>Upload Images</button>}
+      </div>
+      <div style={{ ...styles.proposalImageGrid, ...(large ? styles.proposalImageGridLarge : {}) }}>
+        {images.length ? images.map((image, index) => (
+          <div key={`${image}-${index}`} style={styles.proposalImageTile}>
+            <img src={image} alt={`${title} ${index + 1}`} style={styles.proposalGalleryImage} />
+            {!readonly && <button type="button" style={styles.proposalImageRemove} onClick={() => onRemove(index)}>Remove</button>}
+          </div>
+        )) : (
+          <div style={styles.proposalImagePlaceholder}>Upload images to build this page.</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1269,6 +1610,206 @@ function ClientTextBlock({ title, value, summary, collapsed, onToggle }) {
       </button>
       {!collapsed && <p style={styles.clientParagraph}>{value}</p>}
     </section>
+  );
+}
+
+function CashflowSummarySheet({ sheet }) {
+  const readonly = sheet.previewMode;
+  const rows = cashflowSummaryRows(sheet);
+  const finalQuoteTotal = sheet.preview.summary.finalQuoteTotal || 0;
+  const totals = rows.reduce((sum, row) => ({
+    percent: sum.percent + row.percent,
+    incoming: sum.incoming + row.incoming,
+    outgoing: sum.outgoing + row.outgoing,
+    surplus: sum.surplus + row.surplus,
+  }), { percent: 0, incoming: 0, outgoing: 0, surplus: 0 });
+  return (
+    <div style={styles.pageStack}>
+      <section style={styles.cashflowHeader}>
+        <div>
+          <div style={styles.eyebrow}>Cashflow Summary</div>
+          <h2 style={styles.cashflowTitle}>Progress Payments</h2>
+        </div>
+        <div style={styles.cashflowMetricGrid}>
+          <CashflowMetric label="Contract total" value={money(finalQuoteTotal)} />
+          <CashflowMetric label="Progress payments" value={money(totals.incoming)} detail={`${formatPercent(totals.percent)}%`} />
+          <CashflowMetric label="Amortised costs" value={money(totals.outgoing)} />
+          <CashflowMetric label="Cash surplus" value={money(totals.surplus)} tone={totals.surplus < 0 ? "negative" : "positive"} />
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.staticSectionHeader}>Progress Payment Cashflow</div>
+        <Spreadsheet headers={["Stage", "Progress Payment %", "Incoming Progress Payment", "Outgoing Costs", "Cash Surplus"]}>
+          {rows.map((row) => (
+            <tr key={row.stageNumber}>
+              <Cell strong>{row.stageNumber} - {row.label}</Cell>
+              <Cell>
+                <BufferedInput
+                  inputMode="decimal"
+                  disabled={readonly}
+                  style={styles.cashflowPercentInput}
+                  value={row.percentDisplay}
+                  onCommit={(next) => sheet.updateCashflowPayment(row.stageNumber, next)}
+                />
+              </Cell>
+              <Cell final>{money(row.incoming)}</Cell>
+              <Cell final>{money(row.outgoing)}</Cell>
+              <Cell final>{money(row.surplus)}</Cell>
+            </tr>
+          ))}
+          <tr>
+            <Cell strong>Total</Cell>
+            <Cell strong>{formatPercent(totals.percent)}%</Cell>
+            <Cell final>{money(totals.incoming)}</Cell>
+            <Cell final>{money(totals.outgoing)}</Cell>
+            <Cell final>{money(totals.surplus)}</Cell>
+          </tr>
+        </Spreadsheet>
+      </section>
+    </div>
+  );
+}
+
+function CashflowMetric({ label, value, detail = "", tone = "" }) {
+  return (
+    <div style={{ ...styles.cashflowMetric, ...(tone === "negative" ? styles.cashflowMetricNegative : {}), ...(tone === "positive" ? styles.cashflowMetricPositive : {}) }}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail && <small>{detail}</small>}
+    </div>
+  );
+}
+
+const PROCUREMENT_ORDER_STATUSES = [
+  "Not Started",
+  "Quote Requested",
+  "Quote Received",
+  "Approved",
+  "Purchase Order Raised",
+  "Ordered",
+  "Delivered",
+  "Backordered",
+  "Cancelled",
+  "Removed From Quote",
+];
+
+const PROCUREMENT_DELIVERY_STATUSES = [
+  "Not Required Yet",
+  "Scheduled",
+  "Part Delivered",
+  "Delivered",
+  "Issue / Damage",
+  "Returned",
+];
+
+const PROCUREMENT_CATEGORIES = [
+  "Materials",
+  "Labour",
+  "Subcontractor",
+  "Appliances",
+  "Fixtures",
+  "Fittings",
+  "Windows & Doors",
+  "Flooring",
+  "Plumbing",
+  "Electrical",
+  "Cabinetry",
+  "Hardware",
+  "Other",
+];
+
+function ProcurementSheet({ sheet }) {
+  const readonly = sheet.previewMode;
+  const procurement = sheet.workbook.procurement || {};
+  const items = procurement.items || [];
+  const activeItems = items.filter((item) => !item.removedFromQuote);
+  const removedItems = items.filter((item) => item.removedFromQuote);
+  const estimatedTotal = activeItems.reduce((sum, item) => sum + numberValue(item.estimatedTotal), 0);
+  const [message, setMessage] = useState("");
+
+  function run(action) {
+    const result = action?.();
+    setMessage(result?.message || "");
+  }
+
+  return (
+    <div style={styles.pageStack}>
+      <section style={styles.cashflowHeader}>
+        <div>
+          <div style={styles.eyebrow}>Procurement</div>
+          <h2 style={styles.cashflowTitle}>Purchasing List</h2>
+        </div>
+        <div style={styles.cashflowMetricGrid}>
+          <CashflowMetric label="Active items" value={String(activeItems.length)} />
+          <CashflowMetric label="Estimated total" value={money(estimatedTotal)} />
+          <CashflowMetric label="Removed" value={String(removedItems.length)} />
+        </div>
+      </section>
+
+      {!readonly && (
+        <div style={styles.tabBar}>
+          <button style={styles.primaryButton} onClick={() => run(sheet.generateProcurementListFromQuote)}>Generate Procurement List From Quote</button>
+          <button style={styles.secondaryButton} onClick={() => run(sheet.refreshProcurementListFromQuote)}>Refresh From Quote</button>
+          <button style={styles.secondaryButton} onClick={() => exportProcurementCsv(sheet)}>Export Procurement CSV</button>
+          <button style={styles.secondaryButton} onClick={() => run(sheet.pushProcurementToJobBoard)}>Push To Job Board</button>
+          <button style={styles.secondaryButton} onClick={() => run(sheet.createPurchaseOrdersFromProcurement)}>Create Purchase Orders</button>
+          {message && <span style={styles.okPill}>{message}</span>}
+        </div>
+      )}
+
+      <Spreadsheet headers={[
+        "Stage",
+        "Section",
+        "Item",
+        "Qty",
+        "Unit",
+        "Est. Rate",
+        "Est. Total",
+        "Supplier",
+        "Quote #",
+        "Category",
+        "Required By",
+        "Order Status",
+        "Delivery",
+        "Officer",
+        "Notes",
+      ]}>
+        {items.length ? items.map((item) => (
+          <tr key={item.id} style={item.removedFromQuote ? styles.removedProcurementRow : undefined}>
+            <Cell>{item.stageNumber} {item.stageName}</Cell>
+            <Cell>{item.sectionNumber} {item.sectionName}</Cell>
+            <Cell strong>{item.itemDescription}</Cell>
+            <Cell>{item.qty}</Cell>
+            <Cell>{item.unit}</Cell>
+            <Cell>{money(item.estimatedRate)}</Cell>
+            <Cell final>{money(item.estimatedTotal)}</Cell>
+            <Cell><BufferedInput disabled={readonly || item.removedFromQuote} style={styles.itemInput} value={item.supplier || ""} onCommit={(next) => sheet.updateProcurementItem(item.id, "supplier", next)} /></Cell>
+            <Cell><BufferedInput disabled={readonly || item.removedFromQuote} style={styles.itemInput} value={item.supplierQuoteNumber || ""} onCommit={(next) => sheet.updateProcurementItem(item.id, "supplierQuoteNumber", next)} /></Cell>
+            <Cell>
+              <select disabled={readonly || item.removedFromQuote} style={styles.selectInput} value={item.procurementCategory || "Other"} onChange={(event) => sheet.updateProcurementItem(item.id, "procurementCategory", event.target.value)}>
+                {PROCUREMENT_CATEGORIES.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </Cell>
+            <Cell><BufferedInput disabled={readonly || item.removedFromQuote} type="date" style={styles.itemInput} value={item.requiredByDate || ""} onCommit={(next) => sheet.updateProcurementItem(item.id, "requiredByDate", next)} /></Cell>
+            <Cell>
+              <select disabled={readonly || item.removedFromQuote} style={styles.selectInput} value={item.orderStatus || "Not Started"} onChange={(event) => sheet.updateProcurementItem(item.id, "orderStatus", event.target.value)}>
+                {PROCUREMENT_ORDER_STATUSES.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </Cell>
+            <Cell>
+              <select disabled={readonly || item.removedFromQuote} style={styles.selectInput} value={item.deliveryStatus || "Not Required Yet"} onChange={(event) => sheet.updateProcurementItem(item.id, "deliveryStatus", event.target.value)}>
+                {PROCUREMENT_DELIVERY_STATUSES.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </Cell>
+            <Cell><BufferedInput disabled={readonly || item.removedFromQuote} style={styles.itemInput} value={item.assignedPurchasingOfficer || ""} onCommit={(next) => sheet.updateProcurementItem(item.id, "assignedPurchasingOfficer", next)} /></Cell>
+            <Cell><BufferedInput disabled={readonly || item.removedFromQuote} style={styles.itemInput} value={item.notes || ""} onCommit={(next) => sheet.updateProcurementItem(item.id, "notes", next)} /></Cell>
+          </tr>
+        )) : (
+          <tr><Cell>No procurement items yet. Generate the list from the quote.</Cell></tr>
+        )}
+      </Spreadsheet>
+    </div>
   );
 }
 
@@ -1315,7 +1856,7 @@ function summaryAdjustmentRow(sheet, field, readonly) {
             disabled={readonly}
             style={styles.rateInput}
             value={`${percent}%`}
-            onCommit={(next) => sheet.updateSummaryAdjustment(field.percentKey, next)}
+            onCommit={(next) => sheet.updateSummaryAdjustment(field.percentKey, cleanPercentInputValue(next))}
           />
         ) : (
           ""
@@ -1338,6 +1879,40 @@ function summaryFinalTotalRow(amount) {
       <Cell />
       <Cell final>{money(amount)}</Cell>
       <Cell>100% of total</Cell>
+    </tr>
+  );
+}
+
+function summaryFloorAreaRow(sheet) {
+  const floorArea = sheet.preview.quantities?.slabFloorAreaM2 || 0;
+  return (
+    <tr key="Total floor area">
+      <Cell strong>Total floor area</Cell>
+      <Cell />
+      <Cell />
+      <Cell />
+      <Cell />
+      <Cell>Imported from Data Input row 43</Cell>
+      <Cell final>{formatArea(floorArea)} m2</Cell>
+      <Cell />
+    </tr>
+  );
+}
+
+function summaryRatePerM2Row(sheet) {
+  const finalQuoteTotal = sheet.preview.summary?.finalQuoteTotal || 0;
+  const floorArea = summaryNumber(sheet.preview.quantities?.slabFloorAreaM2 || 0);
+  const rate = floorArea > 0 ? finalQuoteTotal / floorArea : 0;
+  return (
+    <tr key="Rate per m2">
+      <Cell strong>Rate per m2</Cell>
+      <Cell />
+      <Cell />
+      <Cell />
+      <Cell />
+      <Cell>Final quote total / total floor area</Cell>
+      <Cell final>{floorArea > 0 ? `${money(rate)} / m2` : "$0.00 / m2"}</Cell>
+      <Cell />
     </tr>
   );
 }
@@ -1393,6 +1968,39 @@ const CLIENT_BLOCK_SUMMARIES = {
   acceptance: "Turns the quote into an actionable approval step with clear intent to proceed.",
 };
 
+const QUOTE_PROPOSAL_TEMPLATE_KEY = "estimate-builder-quote-proposal-template";
+
+const QUOTE_PROPOSAL_PAGES = [
+  { key: "cover", label: "Cover" },
+  { key: "about", label: "About" },
+  { key: "design", label: "Design" },
+  { key: "inclusions", label: "Inclusions" },
+  { key: "pricing", label: "Pricing" },
+  { key: "acceptance", label: "Acceptance" },
+  { key: "thankYou", label: "Thank You" },
+];
+
+const QUOTE_PROPOSAL_TEMPLATE_FIELDS = [
+  "companyName",
+  "logoUrl",
+  "estimateTitle",
+  "aboutUs",
+  "whyChooseUs",
+  "buildingYourDreamHome",
+  "trustQualityCommunication",
+  "projectDesignIntro",
+  "inclusionsScheduleIntro",
+  "pricingIntro",
+  "introduction",
+  "scopeOfWorks",
+  "exclusions",
+  "terms",
+  "acceptance",
+  "thankYouText",
+  "contactDetails",
+  "showcaseImages",
+];
+
 const CLIENT_STAGE_SUMMARIES = {
   1: "Site readiness, approvals, setup, and early project requirements.",
   2: "Groundworks, slab/base activities, and the foundation of the build.",
@@ -1405,12 +2013,15 @@ const CLIENT_STAGE_SUMMARIES = {
 
 function clientPageValues(sheet) {
   const saved = sheet.workbook.clientPage || {};
+  const companyName = saved.companyName || "";
+  const clientName = saved.clientName || clientWorkbookDataValue(sheet, "clientName");
+  const projectAddress = saved.projectAddress || clientWorkbookDataValue(sheet, "projectAddress");
   return {
-    companyName: saved.companyName || "",
+    companyName,
     logoUrl: saved.logoUrl || "",
-    estimateTitle: saved.estimateTitle || "Estimate / Quote",
-    clientName: saved.clientName || clientWorkbookDataValue(sheet, "clientName"),
-    projectAddress: saved.projectAddress || clientWorkbookDataValue(sheet, "projectAddress"),
+    estimateTitle: saved.estimateTitle || "Residential Building Quote Proposal",
+    clientName,
+    projectAddress,
     quoteNumber: saved.quoteNumber || "",
     quoteDate: saved.quoteDate || new Date().toLocaleDateString("en-AU"),
     expiryDate: saved.expiryDate || "",
@@ -1419,7 +2030,50 @@ function clientPageValues(sheet) {
     exclusions: saved.exclusions || "Items not expressly included in this quotation are excluded.",
     terms: saved.terms || "This quotation is valid until the expiry date shown above and is subject to final contract documentation.",
     acceptance: saved.acceptance || "I/we accept this quotation and authorise the works to proceed.",
+    heroImageUrl: saved.heroImageUrl || "",
+    finalImageUrl: saved.finalImageUrl || "",
+    showcaseImages: Array.isArray(saved.showcaseImages) ? saved.showcaseImages : [],
+    designImages: Array.isArray(saved.designImages) ? saved.designImages : [],
+    aboutUs: saved.aboutUs || proposalAiText({ companyName }).aboutUs,
+    whyChooseUs: saved.whyChooseUs || proposalAiText({ companyName }).whyChooseUs,
+    buildingYourDreamHome: saved.buildingYourDreamHome || proposalAiText({ companyName }).buildingYourDreamHome,
+    trustQualityCommunication: saved.trustQualityCommunication || proposalAiText({ companyName }).trustQualityCommunication,
+    projectDesignIntro: saved.projectDesignIntro || "This section presents the key design information for the project, including floorplans, facade renders, and project imagery.",
+    inclusionsScheduleIntro: saved.inclusionsScheduleIntro || "The full inclusions schedule will be shown here once the structured inclusions system is connected.",
+    pricingIntro: saved.pricingIntro || "The price breakdown below summarises the major stages and allowances included in this proposal.",
+    thankYouText: saved.thankYouText || proposalAiText({ companyName }).thankYouText,
+    contactDetails: saved.contactDetails || "",
+    acceptanceClientName: saved.acceptanceClientName || clientName || "",
+    acceptanceDate: saved.acceptanceDate || "",
+    termsAcknowledged: Boolean(saved.termsAcknowledged),
+    quoteAcceptedAt: saved.quoteAcceptedAt || "",
   };
+}
+
+function proposalAiText(client = {}) {
+  const builder = client.companyName || "our building team";
+  const tradeType = client.tradeType || "residential building";
+  const clientName = client.clientName || "you";
+  const projectAddress = client.projectAddress || "your project";
+  return {
+    introduction: `Thank you for inviting ${builder} to prepare this quote proposal for ${projectAddress}. This document has been prepared to give ${clientName} a clear, professional overview of the proposed scope, design direction, pricing, allowances, and acceptance process.`,
+    aboutUs: `${builder} is a ${tradeType} business focused on delivering well-managed projects, clear communication, reliable workmanship, and a quality finish from the first conversation through to handover.`,
+    whyChooseUs: `Clients choose ${builder} because we focus on practical planning, transparent quoting, organised site delivery, and consistent communication. Our aim is to make the building process feel structured, informed, and professionally managed.`,
+    buildingYourDreamHome: `Building or renovating a home is a major decision. Our role is to help turn your ideas, plans, and selections into a finished result that reflects the way you want to live, while keeping the process clear and accountable.`,
+    trustQualityCommunication: `We place strong emphasis on trust, workmanship, communication, and detail. You can expect regular updates, clear documentation, and a team that treats your project with care from start to finish.`,
+    scopeOfWorks: "This proposal is based on the plans, selections, allowances, and information available at the time of quoting. The works include the quoted building stages and inclusions shown in this document.",
+    exclusions: "Items not expressly included in this proposal, not shown in the accepted plans, or not listed in the inclusions schedule are excluded unless confirmed in writing.",
+    terms: "This proposal is subject to final contract documentation, site conditions, authority requirements, engineering, selections, and any agreed variations. Pricing remains valid until the expiry date shown in this document.",
+    acceptance: "By accepting this quote, the client confirms their intention to proceed with the proposed works subject to final contract documentation, agreed selections, and any required approvals.",
+    thankYouText: `Thank you for considering ${builder}. We appreciate the opportunity to be part of your project and look forward to helping bring it to life.`,
+  };
+}
+
+function quoteProposalTemplateFromClient(client = {}) {
+  return QUOTE_PROPOSAL_TEMPLATE_FIELDS.reduce((template, key) => {
+    template[key] = client[key];
+    return template;
+  }, {});
 }
 
 function clientWorkbookDataValue(sheet, key) {
@@ -1445,17 +2099,21 @@ function quotePercentOfTotal(amount, finalQuoteTotal) {
 function clientBuildStageGroups(sheet) {
   const stageGroups = summaryBuildStageGroups(sheet);
   const sourceItems = stageGroups.flatMap((group) => group.rows.map((item) => ({ ...item, stageNumber: group.stageNumber, stageLabel: group.label })));
-  const baseSubtotal = roundMoney(sourceItems.reduce((sum, item) => sum + summaryLineTotal(item.row), 0));
+  const normalItems = sourceItems.filter((item) => !item.adjustment);
+  const fixedItems = sourceItems.filter((item) => item.adjustment);
+  const normalBaseSubtotal = roundMoney(normalItems.reduce((sum, item) => sum + summaryLineTotal(item.row), 0));
+  const fixedTotal = roundMoney(fixedItems.reduce((sum, item) => sum + summaryLineTotal(item.row), 0));
   const finalQuoteTotal = roundMoney(sheet.preview.summary.finalQuoteTotal || 0);
-  const hiddenAddons = roundMoney(finalQuoteTotal - baseSubtotal);
+  const hiddenAddons = roundMoney(finalQuoteTotal - normalBaseSubtotal - fixedTotal);
   let loadedItems = sourceItems.map((item) => {
     const baseTotal = roundMoney(summaryLineTotal(item.row));
     const qty = summaryNumber(item.row?.qty || item.row?.quantity || 0);
-    const share = baseSubtotal > 0 ? baseTotal / baseSubtotal : 0;
+    const share = !item.adjustment && normalBaseSubtotal > 0 ? baseTotal / normalBaseSubtotal : 0;
     const loadedTotal = roundMoney(baseTotal + hiddenAddons * share);
     return {
       id: item.row.id,
       section: item.section,
+      adjustment: Boolean(item.adjustment),
       stageNumber: item.stageNumber,
       stageLabel: item.stageLabel,
       description: clientItemDescription(item.section, item.row, sheet),
@@ -1468,7 +2126,8 @@ function clientBuildStageGroups(sheet) {
   const loadedTotal = roundMoney(loadedItems.reduce((sum, item) => sum + item.loadedTotal, 0));
   const correction = roundMoney(finalQuoteTotal - loadedTotal);
   if (loadedItems.length && correction) {
-    const lastIndex = loadedItems.length - 1;
+    const lastNormalIndex = loadedItems.map((item, index) => (item.adjustment ? -1 : index)).filter((index) => index >= 0).pop();
+    const lastIndex = lastNormalIndex ?? loadedItems.length - 1;
     const correctedTotal = roundMoney(loadedItems[lastIndex].loadedTotal + correction);
     const qty = summaryNumber(loadedItems[lastIndex].qty);
     loadedItems[lastIndex] = {
@@ -1488,9 +2147,52 @@ function clientBuildStageGroups(sheet) {
   return groups.filter((group) => group.rows.length);
 }
 
+function cashflowSummaryRows(sheet) {
+  const finalQuoteTotal = summaryNumber(sheet.preview.summary.finalQuoteTotal || 0);
+  const outgoingGroups = summaryBuildStageGroups(sheet);
+  const outgoingByStage = new Map(outgoingGroups.map((group) => [group.stageNumber, group]));
+  const savedPayments = sheet.workbook.cashflowPayments || {};
+  return BUILD_STAGE_GROUPS.filter((group) => Number(group.stageNumber) > 0).map((group) => {
+    const savedPercent = savedPayments?.[group.stageNumber];
+    const hasSavedPercent = String(savedPercent ?? "").trim() !== "";
+    const defaultPercent = DEFAULT_CASHFLOW_PROGRESS_PAYMENTS[group.stageNumber] || 0;
+    const percent = cashflowPercent(savedPercent, defaultPercent);
+    const incoming = roundMoney(finalQuoteTotal * percent / 100);
+    const outgoing = roundMoney(outgoingByStage.get(group.stageNumber)?.total || 0);
+    return {
+      stageNumber: group.stageNumber,
+      label: group.label,
+      percent,
+      percentDisplay: cashflowPercentDisplay(hasSavedPercent ? savedPercent : "", percent),
+      incoming,
+      outgoing,
+      surplus: roundMoney(incoming - outgoing),
+    };
+  });
+}
+
+function cashflowPercent(value, fallback = 0) {
+  const text = String(value ?? "").replace("%", "").trim();
+  if (!text) return roundMoney(fallback);
+  const amount = Number(text);
+  return Number.isFinite(amount) ? amount : roundMoney(fallback);
+}
+
+function cashflowPercentDisplay(savedValue, percent) {
+  const text = String(savedValue ?? "").trim();
+  if (text) return text.includes("%") ? text : `${text}%`;
+  return `${formatPercent(percent)}%`;
+}
+
+function formatPercent(amount) {
+  const value = Math.round((Number(amount) || 0) * 100) / 100;
+  return value.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
+
 function clientItemDescription(section, row, sheet) {
   const sectionLabel = summaryLineSectionLabel(section, sheet);
   const item = quoteItem(row);
+  if (!sectionLabel) return item;
   return item ? `${sectionLabel} - ${item}` : sectionLabel;
 }
 
@@ -1499,6 +2201,7 @@ function roundMoney(amount) {
 }
 
 const BUILD_STAGE_GROUPS = [
+  { stageNumber: 0, label: "UNASSIGNED" },
   { stageNumber: 1, label: "PRELIMINARIES" },
   { stageNumber: 2, label: "BASE STAGE" },
   { stageNumber: 3, label: "FRAME STAGE" },
@@ -1508,10 +2211,26 @@ const BUILD_STAGE_GROUPS = [
   { stageNumber: 7, label: "HANDOVER" },
 ];
 
+const DEFAULT_CASHFLOW_PROGRESS_PAYMENTS = {
+  1: 5,
+  2: 15,
+  3: 15,
+  4: 20,
+  5: 18,
+  6: 17,
+  7: 10,
+};
+
 function summaryBuildStageGroups(sheet) {
   const parentByChild = quoteParentByChildSection(sheet.quoteSections);
   const groups = BUILD_STAGE_GROUPS.map((stage) => ({ ...stage, rows: [], total: 0 }));
   const byNumber = new Map(groups.map((group) => [group.stageNumber, group]));
+  summaryOpeningRows(sheet).forEach((item) => {
+    const group = byNumber.get(item.stageNumber);
+    if (!group) return;
+    group.rows.push(item);
+    group.total += item.total;
+  });
   sheet.quoteSections.forEach((section) => {
     selectedSummaryRows(sheet.preview.quotation?.[section]?.rows || []).forEach((row) => {
       const rowStageNumber = summaryStageNumberForRow(row, section, sheet, parentByChild);
@@ -1525,12 +2244,41 @@ function summaryBuildStageGroups(sheet) {
   groups.forEach((group) => {
     group.total = Math.round(group.total * 100) / 100;
   });
-  return groups;
+  return groups.filter((group) => group.rows.length);
+}
+
+function summaryOpeningRows(sheet) {
+  return [
+    summaryOpeningRow("summary-opening-preliminary-costs", "Preliminaries Costs", sheet.preview.summary?.preliminaryCostsAmount, "Imported from Preliminaries cost below"),
+    summaryOpeningRow("summary-opening-qbcc-registration", "QBCC Registration", sheet.preview.summary?.qbsaRegistration, "Imported from QBSA/QBCC registration below"),
+    summaryOpeningRow("summary-opening-q-leave-fees", "Q Leave Fees", sheet.preview.summary?.qLeaveFees, "Imported from Q Leave fees below"),
+    summaryOpeningRow("summary-opening-sales-commission", "Sales Commission", sheet.preview.summary?.salesCommissionAmount, "Imported from Sales commission below", 2),
+  ].filter(Boolean);
+}
+
+function summaryOpeningRow(id, label, amount, notes, stageNumber = 1) {
+  const total = summaryNumber(amount || 0);
+  if (!total) return null;
+  return {
+    stageNumber,
+    section: "",
+    total,
+    adjustment: true,
+    row: {
+      id,
+      item: label,
+      qty: 1,
+      quantity: 1,
+      unit: "ITEM",
+      finalRateUsed: total,
+      cost: total,
+      notes,
+    },
+  };
 }
 
 function summaryStageNumberForRow(row, section, sheet, parentByChild) {
-  return summaryStageNumber(row?.groupNumber)
-    || summaryStageNumber(row?.stageNumber)
+  return summaryStageNumber(row?.stageNumber)
     || summaryStageNumber(row?.buildStage)
     || summaryStageNumber(row?.stage)
     || summaryStageNumber(row?.group)
@@ -1538,10 +2286,13 @@ function summaryStageNumberForRow(row, section, sheet, parentByChild) {
 }
 
 function summaryStageNumberForSection(section, sheet, parentByChild) {
-  const ownStage = summaryStageNumber(sheet.workbook.quotation?.[section]?.groupNumber);
+  const sectionData = sheet.workbook.quotation?.[section] || {};
+  const ownStage = summaryStageNumber(sectionData.stageNumber)
+    || summaryStageNumber(sectionData.buildStage)
+    || summaryStageNumber(sectionData.stage);
   if (ownStage) return ownStage;
   const parent = parentByChild.get(section);
-  return parent ? summaryStageNumber(sheet.workbook.quotation?.[parent]?.groupNumber) : 0;
+  return parent ? summaryStageNumberForSection(parent, sheet, parentByChild) : 0;
 }
 
 function summaryStageNumber(value) {
@@ -1561,7 +2312,7 @@ function summarySectionDisplayName(section, sheet) {
 
 function summaryAdjustmentPercentDisplayValue(sheet, key) {
   const saved = sheet.workbook.summaryAdjustments?.[key];
-  if (saved !== undefined && saved !== null && saved !== "") return value(summaryNumber(saved));
+  if (saved !== undefined && saved !== null && saved !== "") return value(summaryPercentNumber(saved));
   const preview = sheet.preview.summary || {};
   const fallbackByKey = {
     preliminaryCostsPercent: preview.preliminaryCostsPercent,
@@ -1574,21 +2325,51 @@ function summaryAdjustmentPercentDisplayValue(sheet, key) {
   return value(fallbackByKey[key]);
 }
 
+function cleanPercentInputValue(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  const amount = summaryPercentNumber(text);
+  return Number.isFinite(amount) ? String(amount) : "";
+}
+
+function summaryPercentNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value ?? "").replace(/[%$,\s]/g, "");
+  const parsed = Number(cleaned);
+  if (Number.isFinite(parsed)) return parsed;
+  const match = String(value ?? "").match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
 function summaryAdjustmentAmountDisplayValue(sheet, key, fallback = 0) {
   const saved = sheet.workbook.summaryAdjustments?.[key];
   if (saved !== undefined && saved !== null && saved !== "") return saved;
   return value(fallback);
 }
 
+function subcontractorQuoteStatus(saved = {}, quoteAmount = 0) {
+  const explicit = String(saved.status || "").trim();
+  if (explicit) {
+    const key = explicit.replace(/\s+/g, "");
+    return { key, label: explicit };
+  }
+  if (saved.completed) return { key: "Completed", label: "Completed" };
+  if (saved.ordered) return { key: "Ordered", label: "Ordered" };
+  if (saved.purchaseOrder) return { key: "PurchaseOrderRaised", label: "Purchase Order Raised" };
+  if (saved.accepted) return { key: "Accepted", label: "Accepted" };
+  if (quoteAmount > 0 || saved.quoteNumber || saved.quoteDate) return { key: "QuoteReceived", label: "Quote Received" };
+  return { key: "NoQuote", label: "No Quote" };
+}
+
 function updateSummaryLineTotal(sheet, section, row, nextTotal) {
   const total = summaryNumber(nextTotal);
   const qty = summaryNumber(row?.qty || row?.quantity || 0);
   if (qty > 0) {
-    sheet.updateQuote(section, row.id, "manualRate", total ? String(total / qty) : "");
+    sheet.updateQuote(section, row.id, "manualRate", total ? currencyInputValue(total / qty) : "");
     return;
   }
   sheet.updateQuote(section, row.id, "quantity", total ? "1" : "");
-  sheet.updateQuote(section, row.id, "manualRate", total ? String(total) : "");
+  sheet.updateQuote(section, row.id, "manualRate", total ? currencyInputValue(total) : "");
 }
 
 function quoteParentByChildSection(sections = []) {
@@ -1623,6 +2404,39 @@ function summaryNumber(value) {
   const cleaned = String(value || "").replace(/[$,\s]/g, "");
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatArea(value) {
+  const amount = summaryNumber(value);
+  return amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function subcontractorDeductionsForRow(contractorKey) {
+  const keyMap = {
+    cabinetmaker: "cabinetMaker",
+  };
+  return SUBCONTRACTOR_QUOTE_DEDUCTIONS[keyMap[contractorKey] || contractorKey] || [];
+}
+
+function subcontractorDeductionAmount(sheet, deduction, saved = {}) {
+  if (deduction.sourceRow) {
+    return summaryNumber(findPreviewQuoteRowBySource(sheet.preview.quotation, deduction.sourceRow)?.cost);
+  }
+  return summaryNumber(saved.deductions?.[`${deduction.key}Amount`]);
+}
+
+function quoteRowSourceNumber(row) {
+  const direct  = row?.sourceRow ?? row?.excelRow ?? row?.importedWorkbookRow;
+  const idMatch = String(row?.id || "").match(/^quote-(\d+)$/);
+  const value   = direct ?? idMatch?.[1];
+  const number  = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function findPreviewQuoteRowBySource(quotation = {}, sourceRow) {
+  return Object.values(quotation || {})
+    .flatMap((section) => section?.rows || [])
+    .find((row) => quoteRowSourceNumber(row) === sourceRow) || null;
 }
 
 function Spreadsheet({ headers, children, compactColumns = [] }) {
@@ -1735,11 +2549,87 @@ function insertQuoteQuantityReference(sheet, target, key) {
   sheet.setPage("quotation");
 }
 
-function TemplateFileMenu({ sheet, open, onToggle, onClose }) {
+function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy = false }) {
+  const simpleTemplateName = "Master Estimate Template";
+  const simpleTemplateKey = "template:master-estimate-template";
+  const [simpleMessage, setSimpleMessage] = useState("");
+
+  async function runTemplateAction(label, action) {
+    setSimpleMessage("");
+    const result = typeof onSaveAction === "function"
+      ? await onSaveAction(label, action)
+      : await action();
+    await sheet.refreshTemplateSummaries?.();
+    setSimpleMessage(result?.message || "");
+    if (result?.ok) onClose?.();
+  }
+
+  function createNewJob() {
+    return runTemplateAction("Creating job", () => sheet.createJobFromTemplate());
+  }
+
+  function updateMaster() {
+    return runTemplateAction("Updating master template", () => sheet.updateMasterTemplate());
+  }
+
+  function saveBaseTemplate() {
+    return runTemplateAction("Saving base template", () => sheet.saveAsBaseTemplate());
+  }
+
+  return (
+    <div style={styles.templateFileWrap}>
+      <button style={styles.templateFileButton} onClick={onToggle} aria-haspopup="menu" aria-expanded={open}>
+        <span style={styles.templateFileButtonLabel}>Template File</span>
+        <small style={styles.templateFileButtonName}>{simpleTemplateName}</small>
+      </button>
+      {open && (
+        <div style={styles.templateFileMenuSimple} role="menu">
+          <div style={styles.templateFileHeader}>
+            <strong>{simpleTemplateName}</strong>
+            <span>{simpleTemplateKey || "No template linked"}</span>
+          </div>
+          <button
+            type="button"
+            style={styles.primaryActionButton}
+            disabled={busy}
+            onClick={createNewJob}
+          >
+            {busy ? "Working..." : "Create New Job From Master Template"}
+          </button>
+          <button
+            type="button"
+            style={styles.secondaryButton}
+            disabled={busy}
+            onClick={saveBaseTemplate}
+          >
+            {busy ? "Saving..." : "Save As Base Template"}
+          </button>
+          <button
+            type="button"
+            style={styles.secondaryButton}
+            disabled={busy}
+            onClick={updateMaster}
+          >
+            {busy ? "Saving..." : "Update Master Template"}
+          </button>
+          {simpleMessage && <div style={styles.templateInlineMessage}>{simpleMessage}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/*
   const templates = sheet.templateSummaries || [];
   const currentTemplateName = sheet.workbook.templateName || "Untitled template";
+  const sectionImportInputRef = useRef(null);
   const [selectedKey, setSelectedKey] = useState(sheet.workbook.templateKey || templates[0]?.key || "");
   const [newTemplateName, setNewTemplateName] = useState(sheet.workbook.templateName || suggestedUiTemplateName(sheet.workbook));
+  const [permissionMode, setPermissionMode] = useState(() => {
+    if (typeof window === "undefined") return "client";
+    return window.localStorage.getItem("estimate-builder-permission-mode") || "client";
+  });
+  const [selectedSection, setSelectedSection] = useState("APPLIANCE PACKAGE");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -1754,9 +2644,10 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose }) {
     if (sheet.workbook.templateName) setNewTemplateName(sheet.workbook.templateName);
   }, [sheet.workbook.templateName]);
 
-  async function run(action, closeAfter = false) {
+  async function run(action, closeAfter = false, label = "Saving template") {
     setMessage("");
-    const result = await action();
+    const shouldShowProgress = typeof onSaveAction === "function" && /^sav|^updat|^relink|^duplicat|^creat/i.test(label);
+    const result = shouldShowProgress ? await onSaveAction(label, action) : await action();
     await sheet.refreshTemplateSummaries?.();
     setMessage(result?.message || "");
     if (result?.key) setSelectedKey(result.key);
@@ -1765,29 +2656,71 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose }) {
 
   const selectedTemplate = templates.find((template) => template.key === selectedKey) || null;
   const hasCurrentTemplate = Boolean(sheet.workbook.templateKey);
+  const currentTemplateSummary = templates.find((template) => template.key === sheet.workbook.templateKey) || null;
+  const currentJobName = currentJobDisplayName(sheet.workbook);
+  const currentTemplateKey = sheet.workbook.templateKey || "Unlinked";
+  const lastTemplateSavedAt = currentTemplateSummary?.modifiedAt || currentTemplateSummary?.savedAt || "";
+  const isAdmin = permissionMode === "admin";
+  const quoteSectionNames = sheet.quoteSections.map((section) => String(section || "").trim()).filter(Boolean);
+  const selectedSectionExists = quoteSectionNames.includes(selectedSection);
 
   return (
     <div style={styles.templateFileWrap}>
       <button style={styles.templateFileButton} onClick={onToggle} aria-haspopup="menu" aria-expanded={open}>
-        <span>Template File</span>
-        <small>{currentTemplateName}</small>
+        <span style={styles.templateFileButtonLabel}>Template File</span>
+        <small style={styles.templateFileButtonName}>{currentTemplateName}</small>
       </button>
       {open && (
         <div style={styles.templateFileMenu} role="menu">
           <div style={styles.templateFileHeader}>
             <strong>{currentTemplateName}</strong>
-            <span>Current template</span>
+            <span>{templateTypeLabel(currentTemplateSummary?.templateType || sheet.workbook.templateType, sheet.workbook.templateKey)}</span>
           </div>
+          <label style={styles.templateNameField}>
+            <span>Permission mode</span>
+            <select
+              style={styles.templateNameInput}
+              value={permissionMode}
+              onChange={(event) => {
+                const nextMode = event.target.value;
+                setPermissionMode(nextMode);
+                try { window.localStorage.setItem("estimate-builder-permission-mode", nextMode); } catch {}
+              }}
+            >
+              <option value="client">Client</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          {isAdmin && (
+            <button
+              type="button"
+              style={{ ...styles.templateMenuItem, ...(!hasCurrentTemplate ? styles.templateMenuItemDisabled : {}) }}
+              disabled={!hasCurrentTemplate || busy}
+              onClick={() => run(() => sheet.saveTemplate(sheet.workbook.templateKey), false, "Saving template")}
+            >
+              {busy ? "Saving..." : "Update Existing Template"}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
+              style={styles.templateMenuDanger}
+              disabled={busy}
+              onClick={() => run(() => sheet.updateMasterTemplate(), false, "Updating master template")}
+            >
+              {busy ? "Saving..." : "Update Master Template"}
+            </button>
+          )}
           <button
             type="button"
-            style={{ ...styles.templateMenuItem, ...(!hasCurrentTemplate ? styles.templateMenuItemDisabled : {}) }}
-            disabled={!hasCurrentTemplate}
-            onClick={() => run(() => sheet.saveTemplate(sheet.workbook.templateKey))}
+            style={styles.templateMenuItem}
+            disabled={busy}
+            onClick={() => run(() => sheet.createJobFromTemplate(selectedKey || sheet.workbook.templateKey), true, "Creating job")}
           >
-            Save Existing Template
+            {busy ? "Working..." : "Create Job From Template"}
           </button>
           <label style={styles.templateNameField}>
-            <span>Save as</span>
+            <span>New template name</span>
             <input
               style={styles.templateNameInput}
               value={newTemplateName}
@@ -1798,10 +2731,74 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose }) {
           <button
             type="button"
             style={styles.templateMenuItem}
-            onClick={() => run(() => sheet.saveTemplateAs(newTemplateName))}
+            disabled={busy}
+            onClick={() => run(() => sheet.duplicateAsNewTemplate(selectedKey || sheet.workbook.templateKey), false, "Duplicating template")}
           >
-            Save As New Template
+            {busy ? "Working..." : "Duplicate As New Template"}
           </button>
+          <button
+            type="button"
+            style={styles.templateMenuItem}
+            disabled={busy}
+            onClick={() => run(() => sheet.saveTemplateAs(newTemplateName), false, "Saving template")}
+          >
+            {busy ? "Saving..." : "Save As New Template"}
+          </button>
+          <button
+            type="button"
+            style={styles.templateMenuItem}
+            disabled={busy}
+            onClick={() => run(() => sheet.relinkCurrentJobToExistingTemplate(), false, "Relinking job")}
+          >
+            {busy ? "Working..." : "Relink Current Job To Existing Template"}
+          </button>
+          <div style={styles.templateDebugPanel}>
+            <TemplateDebugRow label="Current job" value={currentJobName} />
+            <TemplateDebugRow label="Current template" value={currentTemplateName} />
+            <TemplateDebugRow label="Template key" value={currentTemplateKey} />
+            <TemplateDebugRow label="Last job saved" value={formatTemplateDate(sheet.lastSavedAt)} />
+            <TemplateDebugRow label="Last template saved" value={formatTemplateDate(lastTemplateSavedAt)} />
+          </div>
+          <div style={styles.templateMenuDivider} />
+          <div style={styles.templateListHeading}>Section CSV</div>
+          <label style={styles.templateNameField}>
+            <span>Selected section</span>
+            <select style={styles.templateNameInput} value={selectedSection} onChange={(event) => setSelectedSection(event.target.value)}>
+              {quoteSectionNames.map((section) => <option key={section} value={section}>{section}</option>)}
+            </select>
+          </label>
+          <div style={styles.templateActionRow}>
+            <button
+              type="button"
+              style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
+              disabled={!selectedSectionExists}
+              onClick={() => exportSectionCsv(sheet, selectedSection)}
+            >
+              Export Section CSV
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
+              disabled={!selectedSectionExists}
+              onClick={() => sectionImportInputRef.current?.click()}
+            >
+              Import Section CSV
+            </button>
+          </div>
+          <button
+            type="button"
+            style={styles.templateMenuItem}
+            onClick={() => run(() => restoreSectionBackupFromPrompt(sheet))}
+          >
+            Restore Section Backup
+          </button>
+          <input
+            ref={sectionImportInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: "none" }}
+            onChange={(event) => importSectionCsvFile(event, sheet, selectedSection, setMessage)}
+          />
           <div style={styles.templateMenuDivider} />
           <div style={styles.templateListHeading}>Open Existing Template</div>
           {templates.length ? (
@@ -1845,9 +2842,33 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose }) {
     </div>
   );
 }
+*/
 
 function suggestedUiTemplateName(workbook) {
   return workbook?.projectName || workbook?.data?.project?.rows?.projectName?.value || "Estimate template";
+}
+
+function currentJobDisplayName(workbook) {
+  return workbook?.data?.project?.rows?.projectName?.value
+    || workbook?.registeredJob?.jobName
+    || workbook?.projectName
+    || "simple.json";
+}
+
+function TemplateDebugRow({ label, value }) {
+  return (
+    <div style={styles.templateDebugRow}>
+      <span style={styles.templateDebugLabel}>{label}</span>
+      <strong style={styles.templateDebugValue}>{value || "Not recorded"}</strong>
+    </div>
+  );
+}
+
+function templateTypeLabel(type, key) {
+  if (type === "master_base_template" || key === "template:single-storey-dwelling-rendered-bv-waffle-pod-slab") return "Master Base Template";
+  if (type === "client_template") return "Client Template";
+  if (type === "job") return "Job";
+  return "Template";
 }
 
 function formatTemplateDate(value) {
@@ -1856,30 +2877,101 @@ function formatTemplateDate(value) {
   return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
 }
 
-function FileMenu({ open, items, onToggle, onClose }) {
+function FileMenu({ open, items, recentJobs = [], onOpenRecentJob, onToggle, onClose, busy = false }) {
   return (
     <div style={styles.fileMenuWrap}>
-      <button style={styles.fileMenuButton} onClick={onToggle} aria-haspopup="menu" aria-expanded={open}>
-        File
+      <button style={styles.fileMenuButton} onClick={onToggle} disabled={busy} aria-haspopup="menu" aria-expanded={open}>
+        {busy ? "Saving..." : "File"}
       </button>
       {open && (
         <div style={styles.fileMenu} role="menu">
           {items.map((item) => (
             <button
               key={item.label}
-              style={{ ...styles.fileMenuItem, ...(item.primary ? styles.fileMenuItemPrimary : {}) }}
-              onClick={() => {
-                item.action();
+              style={{ ...styles.fileMenuItem, ...(item.primary ? styles.fileMenuItemPrimary : {}), ...(busy ? styles.fileMenuItemDisabled : {}) }}
+              disabled={busy}
+              onClick={async () => {
+                await Promise.resolve(item.action());
                 onClose();
               }}
               role="menuitem"
             >
-              {item.label}
+              {busy && item.primary ? "Saving..." : item.label}
             </button>
           ))}
+          <div style={styles.fileMenuDivider} />
+          <div style={styles.fileMenuSectionTitle}>Recent Jobs</div>
+          {recentJobs.length ? recentJobs.slice(0, 4).map((job) => (
+            <button
+              key={job.key}
+              style={{ ...styles.fileMenuItem, ...styles.fileMenuRecentItem, ...(busy ? styles.fileMenuItemDisabled : {}) }}
+              disabled={busy}
+              onClick={async () => {
+                await Promise.resolve(onOpenRecentJob?.(job.key));
+                onClose();
+              }}
+              role="menuitem"
+            >
+              <span>{job.name || job.projectName || "Saved estimate job"}</span>
+              <small>{formatTemplateDate(job.savedAt)}</small>
+            </button>
+          )) : (
+            <div style={styles.fileMenuEmpty}>No recent jobs</div>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function JobPickerModal({ jobs = [], message = "", busy = false, onRefresh, onOpen, onClose }) {
+  return (
+    <div style={styles.modalBackdrop}>
+      <div style={styles.jobPickerModal} role="dialog" aria-modal="true" aria-label="Open saved estimate job">
+        <div style={styles.jobPickerHeader}>
+          <div>
+            <div style={styles.eyebrow}>Open Job</div>
+            <h2 style={styles.jobPickerTitle}>Saved Estimate Jobs</h2>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
+        </div>
+        <div style={styles.jobPickerActions}>
+          <button type="button" style={styles.secondaryButton} onClick={onRefresh} disabled={busy}>Refresh List</button>
+        </div>
+        {message && <div style={styles.jobPickerMessage}>{message}</div>}
+        {!jobs.length ? (
+          <div style={styles.jobPickerEmpty}>No saved jobs found</div>
+        ) : (
+          <div style={styles.jobPickerList}>
+            {jobs.map((job) => (
+              <button
+                key={job.key}
+                type="button"
+                style={styles.jobPickerRow}
+                disabled={busy}
+                onClick={() => onOpen?.(job.key)}
+              >
+                <strong>{job.name || job.projectName || "Saved estimate job"}</strong>
+                <span>{job.openedFileName || job.key}</span>
+                <small>Saved {formatTemplateDate(job.savedAt)}</small>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SaveProgress({ status }) {
+  const isSaving = status.state === "saving";
+  const isError = status.state === "error";
+  return (
+    <span style={{ ...styles.saveProgress, ...(isError ? styles.saveProgressError : {}) }} aria-live="polite">
+      {isSaving && <span style={styles.saveSpinner} />}
+      <span>{isSaving ? status.label : status.label || "Saved"}</span>
+      {status.detail && <small>{status.detail}</small>}
+    </span>
   );
 }
 
@@ -1977,9 +3069,9 @@ function openJobFile(event, sheet) {
   event.target.value = "";
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
-      sheet.loadJobFileText(String(reader.result || ""));
+      await sheet.loadJobFileText(String(reader.result || ""), file.name);
     } catch {
       window.alert("That job file could not be opened. Please choose a valid Estimate Builder JSON file.");
     }
@@ -1998,8 +3090,8 @@ function compactWorkbookForStorage(workbook = {}) {
 }
 
 function jobFileName(workbook) {
-  const name = workbookDataValue(workbook, "projectName") || "estimate-job";
-  return slug(name) || "estimate-job";
+  const name = workbookDataValue(workbook, "projectName") || "simple";
+  return slug(name) || "simple";
 }
 
 function openWorkbookFileName(workbook) {
@@ -2021,7 +3113,152 @@ function csvRowsForPage(sheet, page) {
   if (page === "formulaSheet") return formulaCsvRows(sheet);
   if (page === "quotation") return quotationCsvRows(sheet);
   if (page === "summary") return summaryCsvRows(sheet);
+  if (page === "procurement") return procurementCsvRows(sheet);
   return [["Page", "Value"], [page, "No export rows available"]];
+}
+
+function exportSectionCsv(sheet, sectionName) {
+  const section = sheet.workbook.quotation?.[sectionName];
+  if (!section) return;
+  const rows = sectionCsvRows(sectionName, section);
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${slug(sectionName)}-section.csv`);
+}
+
+function exportProcurementCsv(sheet) {
+  const rows = procurementCsvRows(sheet);
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${slug(openWorkbookFileName(sheet.workbook))}-procurement.csv`);
+}
+
+function procurementCsvRows(sheet) {
+  const items = sheet.workbook.procurement?.items || [];
+  return [
+    ["stage number", "stage name", "section number", "section name", "item description", "qty", "unit", "estimated rate", "estimated total", "supplier", "supplier quote number", "procurement category", "required by date", "order status", "delivery status", "assigned purchasing officer", "notes", "removed from quote", "linked quote row id"],
+    ...items.map((item) => [
+      item.stageNumber,
+      item.stageName,
+      item.sectionNumber,
+      item.sectionName,
+      item.itemDescription,
+      item.qty,
+      item.unit,
+      item.estimatedRate,
+      item.estimatedTotal,
+      item.supplier,
+      item.supplierQuoteNumber,
+      item.procurementCategory,
+      item.requiredByDate,
+      item.orderStatus,
+      item.deliveryStatus,
+      item.assignedPurchasingOfficer,
+      item.notes,
+      item.removedFromQuote ? "yes" : "no",
+      item.quoteRowId,
+    ]),
+  ];
+}
+
+function sectionCsvRows(sectionName, section) {
+  const rows = [["section name", "subsection name", "item name", "qty", "unit", "rate", "notes", "brand/package"]];
+  (section.rows || []).forEach((row) => {
+    rows.push([
+      section.displayName || sectionName,
+      subsectionNameForCsv(sectionName),
+      row.item || row.values?.[0] || "",
+      row.quantity || row.importedQuantity || "",
+      row.unit || "",
+      row.manualRate || row.supplierQuote || row.excelRate || "",
+      row.notes || "",
+      [row.applianceBrand, row.appliancePackage].filter(Boolean).join("/"),
+    ]);
+  });
+  return rows;
+}
+
+function subsectionNameForCsv(sectionName) {
+  const parts = String(sectionName || "").split(" - ");
+  return parts.length > 1 ? parts.slice(1).join(" - ") : "";
+}
+
+function importSectionCsvFile(event, sheet, sectionName, setMessage) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file || !sectionName) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCsvObjects(String(reader.result || ""));
+      const preview = sheet.previewSectionCsvImport(sectionName, rows);
+      const text = sectionImportPreviewText(preview);
+      if (!preview.ok || !window.confirm(`${text}\n\nApply import to ${sectionName}?`)) {
+        setMessage("Section CSV import cancelled.");
+        return;
+      }
+      const result = sheet.applySectionCsvImport(sectionName, preview);
+      setMessage(result?.message || "");
+    } catch (error) {
+      setMessage(error?.message || "Section CSV could not be imported.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCsvObjects(text) {
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => String(cell || "").trim()));
+  const headers = rows.shift() || [];
+  return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      row.push(cell);
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
+function sectionImportPreviewText(preview) {
+  return [
+    "Section CSV import preview",
+    `Rows to update: ${preview.updates?.length || 0}`,
+    `Rows to add: ${preview.adds?.length || 0}`,
+    `Rows ignored: ${preview.ignored?.length || 0}`,
+    `Errors: ${preview.errors?.length || 0}`,
+  ].join("\n");
+}
+
+function restoreSectionBackupFromPrompt(sheet) {
+  const backups = Object.values(sheet.workbook.sectionBackups || {});
+  if (!backups.length) return { ok: false, message: "No section backups available." };
+  const labels = backups.map((backup, index) => `${index + 1}. ${backup.section} - ${formatTemplateDate(backup.createdAt)}`).join("\n");
+  const answer = window.prompt(`Restore which section backup?\n${labels}`, "1");
+  const index = Number(answer) - 1;
+  if (!Number.isInteger(index) || !backups[index]) return { ok: false, message: "Section backup restore cancelled." };
+  return sheet.restoreSectionBackup(backups[index].key);
 }
 
 function dataInputCsvRows(sheet) {
@@ -2048,11 +3285,12 @@ function dataInputCsvRows(sheet) {
 }
 
 function windowsDoorsCsvRows(sheet) {
-  const rows = [["Section", "Code", "Type", "Qty", "Level", "Height", "Width", "Area", "Sill", "Arch", "Notes"]];
+  const rows = [["Section", "Code", "Size Code", "Type", "Qty", "Level", "Height", "Width", "Area", "Sill", "Arch", "Notes"]];
   sheet.preview.windowsDoors.rows.forEach((row) => {
     rows.push([
       row.section || "",
       row.code || "",
+      row.sizeCode || windowDoorSizeCodeForRow(row),
       row.type || "",
       value(row.quantity),
       row.level || "",
@@ -2066,6 +3304,7 @@ function windowsDoorsCsvRows(sheet) {
   });
   rows.push([
     "Totals",
+    "",
     "",
     "",
     value(sheet.preview.windowsDoors.totals.itemCount),
@@ -2206,6 +3445,11 @@ function isEntryDoorScheduleRow(row) {
   return text.includes("entry door") && !text.includes("garage") && !text.includes("internal");
 }
 
+function shouldSkipWindowSizeCode(row) {
+  const text = `${row?.section || ""} ${row?.type || ""} ${row?.code || ""}`.toLowerCase();
+  return text.includes("entry door");
+}
+
 function windowDoorDefaultType(section) {
   const text = String(section || "").toLowerCase();
   if (text.includes("entry doors")) return "Entry Door";
@@ -2254,6 +3498,16 @@ function focusRowEditor(id) {
 
 function value(v) {
   return v === "" || v === undefined || v === null ? "" : v;
+}
+
+function currencyInputValue(v) {
+  const text = String(v ?? "").trim();
+  if (!text) return "";
+  const cleaned = text.replace(/[$,\s]/g, "");
+  if (!cleaned) return "";
+  const amount = Number(cleaned);
+  if (!Number.isFinite(amount)) return text;
+  return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formulaForRow(sheet, row) {
@@ -2766,6 +4020,12 @@ function money(v) {
   return v ? `$${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00";
 }
 
+function numberValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const number = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(number) ? number : 0;
+}
+
 function quoteCost(row) {
   const qty = Number(row?.qty || row?.quantity || 0);
   if (!qty) return "";
@@ -2860,7 +4120,13 @@ function quoteRowNumber(row, rowIndex = 0) {
   return row?.excelRow || row?.sourceRow || row?.values?.sourceRow || rowIndex + 1;
 }
 
+function displayQuoteRowNumber(row, rowIndex = 0) {
+  return row?.displayRowNumber || quoteRowNumber(row, rowIndex);
+}
+
 function quoteSectionNumber(section, sheet) {
+  const savedNumber = sheet.workbook?.quotation?.[section]?.groupNumber;
+  if (savedNumber) return savedNumber;
   const override = QUOTE_SECTION_NUMBER_OVERRIDES[quoteSectionBaseName(section)];
   if (override) return override;
   const rows = sheet.preview?.quotation?.[section]?.rows || sheet.workbook?.quotation?.[section]?.rows || [];
@@ -2905,17 +4171,55 @@ function isApplianceHeadingQuoteRow(row) {
 }
 
 function isAppliancePackageSection(section) {
-  return quoteSectionBaseName(section) === "appliance package";
+  return ["appliance package", "appliances & white goods"].includes(quoteSectionBaseName(section));
 }
 
 function isApplianceBrandSubsection(section) {
-  return quoteSectionBaseName(section).startsWith("appliance package - ");
+  const name = quoteSectionBaseName(section);
+  return name.startsWith("appliance package - ") || name.startsWith("appliances & white goods - ");
 }
 
 function quoteSectionDisplayLabel(section) {
-  return isApplianceBrandSubsection(section)
-    ? section.replace(/^appliance package\s*-\s*/i, "")
-    : section;
+  const label = isApplianceBrandSubsection(section)
+    ? section.replace(/^(appliance package|appliances & white goods)\s*-\s*/i, "")
+    : quoteMainSectionDisplayLabel(section);
+  return quoteHeadingDisplayLabel(label);
+}
+
+function quoteMainSectionDisplayLabel(section) {
+  const name = quoteSectionBaseName(section);
+  if (name === "fix out materials" || name === "skirting & architraves") return "FIX OUT";
+  if (name === "appliance package") return "APPLIANCES & WHITE GOODS";
+  return section;
+}
+
+function orderedApplianceBrandSubsections(sections = []) {
+  return orderedKnownSubsections(sections, [
+    "appliances & white goods - euromaid",
+    "appliances & white goods - omega",
+    "appliances & white goods - blanco",
+    "appliances & white goods - ariston",
+    "appliances & white goods - westinghouse",
+    "appliances & white goods - smeg",
+    "appliance package - euromaid",
+    "appliance package - omega",
+    "appliance package - blanco",
+    "appliance package - ariston",
+    "appliance package - westinghouse",
+    "appliance package - smeg",
+  ], isApplianceBrandSubsection).filter((section, index, all) => {
+    const brand = applianceBrandFromSection(section);
+    return brand && all.findIndex((item) => applianceBrandFromSection(item) === brand) === index;
+  });
+}
+
+function applianceBrandFromSection(section) {
+  const name = quoteSectionBaseName(section);
+  return ["euromaid", "omega", "blanco", "ariston", "westinghouse", "smeg"].find((brand) => name.endsWith(`- ${brand}`)) || "";
+}
+
+function quoteHeadingDisplayLabel(label) {
+  return String(label || "").replace(/\s*\(\d+\)\s*$/, "").trim();
 }
 
 function applianceBrandKey(row) {
@@ -2936,6 +4240,44 @@ function visibleApplianceRows(rows = [], openApplianceBrands = {}) {
   });
 }
 
+function quoteDisplayNumbering(sheet, openApplianceBrands = {}) {
+  const sections = [];
+  topLevelQuoteSections(sheet.quoteSections).forEach((section) => {
+    sections.push(section);
+    quoteChildSectionsForParent(section, sheet.quoteSections, sheet).forEach((child) => sections.push(child));
+  });
+  const numbering = { sections: {}, rows: {} };
+  let sectionNumber = 1;
+  let rowNumber = 1;
+  sections.forEach((section) => {
+    const rows = visibleQuoteRowsForDisplay(sheet, section, openApplianceBrands);
+    numbering.sections[section] = String(sectionNumber);
+    sectionNumber += 1;
+    rows.forEach((row) => {
+      if (isApplianceHeadingQuoteRow(row)) return;
+      numbering.rows[row.id] = String(rowNumber);
+      rowNumber += 1;
+    });
+  });
+  return numbering;
+}
+
+function visibleQuoteRowsForDisplay(sheet, section, openApplianceBrands = {}) {
+  const search = String(sheet.lineSearch || "").toLowerCase();
+  const rows = (sheet.preview?.quotation?.[section]?.rows || []).filter((row) => {
+    if (quoteFeeType(row)) return false;
+    if (isHiddenQuoteRow(row)) return false;
+    if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
+    if (!hasSelectedWallThickness(sheet.workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
+    if (isApplianceHeadingQuoteRow(row)) return true;
+    const haystack = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+    if (search && !haystack.includes(search)) return false;
+    if (sheet.hideUnused && !isUsedQuoteRow(row)) return false;
+    return true;
+  });
+  return isAppliancePackageSection(section) ? visibleApplianceRows(rows, openApplianceBrands) : rows;
+}
+
 function applianceRowsForBrand(rows = [], brandKey = "") {
   const result = [];
   let collecting = false;
@@ -2951,6 +4293,28 @@ function applianceRowsForBrand(rows = [], brandKey = "") {
 
 function sumQuoteRows(rows = []) {
   return rows.reduce((total, row) => total + Number(row?.cost || 0), 0);
+}
+
+function isUsedQuoteRow(row = {}) {
+  return Boolean(
+    summaryNumber(row.qty || row.quantity || row.importedQuantity || 0)
+    || summaryNumber(row.cost || row.importedCost || 0)
+    || String(row.supplierQuote || "").trim()
+    || row.quoteRequired
+  );
+}
+
+function isQuoteRowRelevantForFloorCount(row, workbook) {
+  const floorCount = workbookDataValue(workbook, "floorCount") || "Single storey";
+  return quoteRowLevel(row) <= floorCountToLevels(floorCount);
+}
+
+function quoteRowLevel(row = {}) {
+  const key = String(row.quantityKey || "");
+  const text = `${row.section || ""} ${row.item || ""} ${row.rawText || ""} ${row.lineType || ""}`.toLowerCase();
+  if (key.startsWith("third") || text.includes("third level") || text.includes("third storey") || text.includes("third floor")) return 3;
+  if (key.startsWith("upper") || key.startsWith("second") || text.includes("second level") || text.includes("second storey") || text.includes("second floor") || text.includes("upper level")) return 2;
+  return 1;
 }
 
 function isLinkedQuoteQty(row) {
@@ -2997,6 +4361,21 @@ function isBlankQuoteQtyRow(row) {
 function isHiddenQuoteRow(row) {
   const itemText = String(row?.item || "").trim().toLowerCase();
   return itemText === "install exterior door architraves";
+}
+
+function is90mmWallFrameQuoteRow(row) {
+  const text = `${row?.item || ""} ${row?.rawText || ""} ${row?.quantityKey || ""}`.toLowerCase();
+  const mentions90mm = /\b90\s*mm\b/.test(text) || /\b90\s*x\s*35\b/.test(text) || text.includes("90mm");
+  if (!mentions90mm) return false;
+  return [
+    "wall frame",
+    "walls frame",
+    "framed wall",
+    "stud material",
+    "plates and noggins",
+    "timber framing",
+    "mpg 12",
+  ].some((phrase) => text.includes(phrase));
 }
 
 function isConcreteSlabSection(section) {
@@ -3111,6 +4490,7 @@ function topLevelQuoteSections(sections = []) {
 function isGroupedQuoteSubsection(section, sections = []) {
   if (isConcreteSlabSubsection(section)) return true;
   if (sections.some((item) => isWallFramesSection(item)) && isWallFramesSubsection(section)) return true;
+  if (sections.some((item) => isWallFramesSection(item)) && isFramingMovedSubsection(section)) return true;
   if (sections.some((item) => isRoofFramingSection(item)) && isRoofFramingSubsection(section)) return true;
   if (sections.some((item) => isHardwareSection(item)) && isHardwareSubsection(section)) return true;
   if (sections.some((item) => isRoofingMaterialsSection(item)) && isRoofingMaterialsSubsection(section)) return true;
@@ -3149,7 +4529,7 @@ function expandManagedQuoteSectionOrder(topLevelOrder = [], allSections = []) {
 
 function quoteChildSectionsForParent(section, sections = []) {
   if (isConcreteSlabSection(section)) return sections.filter((item) => isConcreteSlabSubsection(item));
-  if (isWallFramesSection(section)) return sections.filter((item) => isWallFramesSubsection(item));
+  if (isWallFramesSection(section)) return orderedFramingSubsections(sections);
   if (isRoofFramingSection(section)) return sections.filter((item) => isRoofFramingSubsection(item));
   if (isHardwareSection(section)) return sections.filter((item) => isHardwareSubsection(item));
   if (isRoofingMaterialsSection(section)) return sections.filter((item) => isRoofingMaterialsSubsection(item));
@@ -3166,7 +4546,7 @@ function quoteChildSectionsForParent(section, sections = []) {
   if (isPlasterSupplyInstallSection(section)) return sections.filter((item) => isPlasterSupplyInstallSubsection(item));
   if (isFixOutMaterialsSection(section)) return sections.filter((item) => isFixOutMaterialsSubsection(item));
   if (isCabinetMakerSection(section)) return orderedCabinetMakerSubsections(sections.filter((item) => isCabinetMakerSubsection(item)));
-  if (isAppliancePackageSection(section)) return sections.filter((item) => isApplianceBrandSubsection(item));
+  if (isAppliancePackageSection(section)) return orderedApplianceBrandSubsections(sections);
   return [];
 }
 
@@ -3195,7 +4575,7 @@ function isPlasterSupplyInstallSubsection(section) {
 }
 
 function isFixOutMaterialsSection(section) {
-  return quoteSectionBaseName(section) === "fix out materials";
+  return ["fix out", "fix out materials", "skirting & architraves"].includes(quoteSectionBaseName(section));
 }
 
 function isFixOutMaterialsSubsection(section) {
@@ -3212,7 +4592,64 @@ function isCabinetMakerSubsection(section) {
 
 function wallFramesDisplayLabel(section) {
   if (!isWallFramesSection(section)) return undefined;
-  return String(section || "WALL FRAMES").replace(/ground floor framing/i, "WALL FRAMES");
+  return "FRAMING";
+}
+
+function orderedFixOutSubsections(sections = []) {
+  return orderedKnownSubsections(sections, [
+    "install skirting",
+    "internal final fix-out",
+    "shelving",
+    "standard wardrobes complete (2.4m wide)",
+    "standard 3 door robe up to 3.6m wide",
+    "standard 2 door linen up to 2.4m wide",
+    "standard 3 door linen up to 3.6m wide",
+  ], isFixOutMaterialsSubsection);
+}
+
+function orderedFramingSubsections(sections = []) {
+  return orderedKnownSubsections(sections, [
+    "structural steel",
+    "pre-fab wall frames",
+    "framing timber",
+    "wall frames - lineal",
+    "lintels & beams",
+    "misc timber",
+    "bracing and tie down",
+    "ply bracing sheets",
+    "tie down",
+    "upper level timber flooring",
+    "flooring",
+    "roof framing",
+    "ceiling battens",
+    "hardware",
+    "bolts nuts & screws",
+    "couplings",
+    "nails",
+    "adhesives",
+    "misc",
+  ], (section) => isWallFramesSubsection(section) || isFramingMovedSubsection(section));
+}
+
+function orderedKnownSubsections(sections = [], preferredNames = [], predicate = () => true) {
+  const matching = sections.filter(predicate);
+  const preferred = [];
+  preferredNames.forEach((name) => {
+    const found = matching.find((section) => quoteSectionBaseName(section) === name && !preferred.includes(section));
+    if (found) preferred.push(found);
+  });
+  return [...preferred, ...matching.filter((section) => !preferred.includes(section))];
+}
+
+function isFramingMovedSubsection(section) {
+  const name = quoteSectionBaseName(section);
+  return name === "structural steel"
+    || name === "upper level timber flooring"
+    || name === "flooring"
+    || isRoofFramingSection(section)
+    || isRoofFramingSubsection(section)
+    || isHardwareSection(section)
+    || isHardwareSubsection(section);
 }
 
 function quoteSectionBaseName(section) {
@@ -3417,6 +4854,7 @@ const FLOORCOVERINGS_SUBSECTIONS = new Set([
   "vinyl flooring",
   "hybrid flooring",
   "engeineered timber",
+  "engineered timber",
   "solid timber flooring",
   "carpets",
   "misc flooring",
@@ -3429,6 +4867,7 @@ const FLOORCOVERINGS_SUBSECTION_ORDER = [
   "vinyl flooring",
   "hybrid flooring",
   "engeineered timber",
+  "engineered timber",
   "solid timber flooring",
   "carpets",
   "misc flooring",
@@ -3485,6 +4924,8 @@ const PLASTER_SUPPLY_INSTALL_SUBSECTIONS = new Set([
 ]);
 
 const FIX_OUT_MATERIALS_SUBSECTIONS = new Set([
+  "install skirting",
+  "internal final fix-out",
   "shelving",
   "standard wardrobes complete (2.4m wide)",
   "standard 3 door robe up to 3.6m wide",
@@ -3534,7 +4975,7 @@ function pretty(v) {
 const styles = {
   shell: { display: "grid", gridTemplateColumns: "240px minmax(760px, 1fr) 310px", gap: 16, alignItems: "start", fontSize: 16 },
   previewShell: { userSelect: "none", WebkitUserSelect: "none" },
-  nav: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, position: "sticky", top: 16 },
+  nav: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, position: "sticky", top: 16, maxHeight: "calc(100vh - 32px)", overflowY: "auto" },
   main: { minWidth: 0 },
   summary: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, position: "sticky", top: 16 },
   eyebrow: { color: "#0f766e", fontSize: 28, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" },
@@ -3542,12 +4983,14 @@ const styles = {
   navButton: { width: "100%", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 11px", marginBottom: 8, textAlign: "left", color: "#0f172a", fontWeight: 600, cursor: "pointer" },
   navButtonActive: { background: "#0f766e", borderColor: "#0f766e", color: "#ffffff" },
   navNote: { marginTop: 12, color: "#475569", fontSize: 16, lineHeight: 1.5 },
-  topbar: { position: "sticky", top: 16, zIndex: 5, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", marginBottom: 12, display: "grid", gridTemplateColumns: "minmax(190px, 1fr) minmax(220px, auto) minmax(280px, 1fr)", gap: 16, alignItems: "center" },
+  floatingSaveJob: { position: "sticky", top: 0, zIndex: 4, marginTop: 14, background: "#ffffff", padding: "8px 0", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" },
+  floatingSaveJobButton: { width: "100%", background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 7, padding: "10px 11px", fontWeight: 900, cursor: "pointer" },
+  topbar: { position: "sticky", top: 16, zIndex: 5, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", marginBottom: 12, display: "grid", gridTemplateColumns: "minmax(180px, 0.75fr) minmax(180px, 240px) minmax(420px, 1.4fr)", gap: 12, alignItems: "center" },
   pageTitle: { margin: "2px 0 0", color: "#0f172a", fontSize: 48, fontWeight: 600 },
-  openFileBanner: { justifySelf: "center", maxWidth: 420, minWidth: 0, textAlign: "center", border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 8, padding: "7px 12px" },
+  openFileBanner: { justifySelf: "stretch", minWidth: 0, textAlign: "center", border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 8, padding: "7px 10px" },
   openFileLabel: { display: "block", color: "#64748b", fontSize: 24, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
   openFileName: { display: "block", color: "#0f172a", fontSize: 24, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  topControls: { display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end" },
+  topControls: { minWidth: 0, display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" },
   lockedBadge: { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", borderRadius: 999, padding: "8px 12px", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
   previewFieldset: { border: 0, padding: 0, margin: 0, minWidth: 0 },
   fileMenuWrap: { position: "relative", display: "inline-flex" },
@@ -3555,9 +4998,29 @@ const styles = {
   fileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 20, minWidth: 190, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 6 },
   fileMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: 0, borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 600, cursor: "pointer" },
   fileMenuItemPrimary: { background: "#ecfdf5", color: "#0f766e" },
+  fileMenuItemDisabled: { opacity: 0.55, cursor: "wait" },
+  fileMenuDivider: { height: 1, background: "#dbe4ef", margin: "6px 0" },
+  fileMenuSectionTitle: { padding: "6px 10px 4px", color: "#64748b", fontSize: 11, fontWeight: 900, letterSpacing: "0.05em", textTransform: "uppercase" },
+  fileMenuRecentItem: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, lineHeight: 1.25 },
+  fileMenuEmpty: { padding: "8px 10px", color: "#64748b", fontSize: 12, fontWeight: 700 },
+  modalBackdrop: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15, 23, 42, 0.45)" },
+  jobPickerModal: { width: "min(760px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
+  jobPickerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, marginBottom: 12 },
+  jobPickerTitle: { margin: 0, color: "#0f172a", fontSize: 26, fontWeight: 900 },
+  jobPickerActions: { display: "flex", justifyContent: "flex-end", marginBottom: 10 },
+  jobPickerMessage: { padding: "9px 10px", border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 8, fontWeight: 800, marginBottom: 10 },
+  jobPickerEmpty: { padding: 24, border: "1px dashed #cbd5e1", borderRadius: 8, textAlign: "center", color: "#64748b", fontWeight: 800 },
+  jobPickerList: { display: "grid", gap: 8 },
+  jobPickerRow: { border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: "12px 14px", display: "grid", gap: 3, textAlign: "left", cursor: "pointer" },
+  saveProgress: { minHeight: 38, display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid #99f6e4", background: "#ecfdf5", color: "#0f766e", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" },
+  saveProgressError: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
+  saveSpinner: { width: 10, height: 10, borderRadius: 999, background: "#0f766e", boxShadow: "0 0 0 4px rgba(15, 118, 110, 0.14)" },
   templateButton: { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 8, padding: "9px 12px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
   templateFileWrap: { position: "relative", display: "inline-flex" },
-  templateFileButton: { minWidth: 210, maxWidth: 280, background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 8, padding: "7px 12px", fontWeight: 800, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, whiteSpace: "nowrap" },
+  templateFileButton: { width: 190, maxWidth: 190, background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 8, padding: "7px 10px", fontWeight: 800, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, whiteSpace: "nowrap", overflow: "hidden" },
+  templateFileButtonLabel: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
+  templateFileButtonName: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
+  templateFileMenuSimple: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, width: 300, maxWidth: "calc(100vw - 32px)", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10, display: "grid", gap: 10 },
   templateFileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, width: 360, maxWidth: "calc(100vw - 32px)", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10 },
   templateFileHeader: { borderBottom: "1px solid #e2e8f0", padding: "2px 2px 9px", marginBottom: 8, display: "flex", flexDirection: "column", gap: 2, color: "#0f172a" },
   templateMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 800, cursor: "pointer" },
@@ -3565,6 +5028,10 @@ const styles = {
   templateMenuItemDisabled: { opacity: 0.45, cursor: "not-allowed" },
   templateNameField: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 13, fontWeight: 800, margin: "8px 0" },
   templateNameInput: { width: "100%", boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 6, padding: "8px 9px", color: "#0f172a", fontWeight: 700 },
+  templateDebugPanel: { margin: "10px 0", border: "1px solid #cbd5e1", borderRadius: 6, background: "#f8fafc", padding: 8, display: "grid", gap: 6, color: "#0f172a", fontSize: 12 },
+  templateDebugRow: { display: "grid", gridTemplateColumns: "120px minmax(0, 1fr)", gap: 8, alignItems: "start" },
+  templateDebugLabel: { color: "#64748b", fontWeight: 900, textTransform: "uppercase" },
+  templateDebugValue: { color: "#0f172a", fontWeight: 800, overflowWrap: "anywhere" },
   templateMenuDivider: { height: 1, background: "#e2e8f0", margin: "10px 0" },
   templateListHeading: { color: "#334155", fontSize: 13, fontWeight: 900, textTransform: "uppercase", marginBottom: 6 },
   templateDropdownList: { maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 },
@@ -3602,15 +5069,115 @@ const styles = {
   templateEmpty: { color: "#64748b", fontWeight: 800, padding: 16 },
   templateModalFooter: { display: "flex", justifyContent: "flex-end", gap: 10, padding: "12px 18px", borderTop: "1px solid #e2e8f0", background: "#ffffff" },
   savedText: { color: "#475569", fontSize: 16, fontWeight: 600, whiteSpace: "nowrap" },
-  searchInput: { border: "1px solid #64748b", borderRadius: 7, padding: "8px 10px", color: "#0f172a", fontWeight: 600, minWidth: 220 },
+  quoteSearchControls: { display: "flex", gap: 8, alignItems: "center", flex: "1 1 260px", minWidth: 260 },
+  searchInput: { border: "1px solid #64748b", borderRadius: 7, padding: "8px 10px", color: "#0f172a", fontWeight: 600, minWidth: 0, flex: "1 1 180px" },
   checkLabel: { color: "#334155", fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 },
   pageStack: { display: "flex", flexDirection: "column", gap: 10 },
+  subcontractorPanel: { padding: 14, display: "flex", flexDirection: "column", gap: 12, background: "#ffffff" },
+  subcontractorIntro: { color: "#334155", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 15, lineHeight: 1.5, fontWeight: 800 },
+  subcontractorCardList: { display: "flex", flexDirection: "column", gap: 12 },
+  subcontractorCard: { overflow: "hidden", border: "2px solid #bfdbfe", borderRadius: 12, boxShadow: "0 10px 24px rgba(15,23,42,0.10)", color: "#0f172a" },
+  subcontractorCardBlue: { background: "#eef7ff" },
+  subcontractorCardGrey: { background: "#f8f9fb" },
+  subcontractorCardAccepted: { borderColor: "#22c55e" },
+  subcontractorCardPending: { borderColor: "#f59e0b" },
+  subcontractorCardMissing: { borderColor: "#ef4444" },
+  subcontractorCardHeader: { minHeight: 50, background: "#0f3f75", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 16px" },
+  subcontractorHeaderTitle: { display: "flex", alignItems: "center", gap: 10, fontSize: 18, lineHeight: 1.2, fontWeight: 900, letterSpacing: "0.04em", textTransform: "uppercase" },
+  subcontractorIcon: { width: 24, height: 24, borderRadius: 6, background: "rgba(255,255,255,0.18)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13 },
+  subcontractorStatusBadge: { borderRadius: 999, padding: "6px 11px", fontSize: 13, fontWeight: 900, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", border: "1px solid transparent" },
+  subcontractorStatusNoQuote: { background: "#fee2e2", color: "#991b1b", borderColor: "#fecaca" },
+  subcontractorStatusQuoteReceived: { background: "#dbeafe", color: "#1d4ed8", borderColor: "#bfdbfe" },
+  subcontractorStatusAccepted: { background: "#dcfce7", color: "#166534", borderColor: "#bbf7d0" },
+  subcontractorStatusPurchaseOrderRaised: { background: "#fef3c7", color: "#92400e", borderColor: "#fde68a" },
+  subcontractorStatusOrdered: { background: "#e0f2fe", color: "#075985", borderColor: "#bae6fd" },
+  subcontractorStatusCompleted: { background: "#ccfbf1", color: "#0f766e", borderColor: "#99f6e4" },
+  subcontractorCardGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(215px, 1fr))", gap: 0, padding: 14 },
+  subcontractorColumn: { minWidth: 0, padding: "4px 14px 8px 0", display: "flex", flexDirection: "column", gap: 8 },
+  subcontractorColumnDivider: { borderLeft: "2px solid #94a3b8", paddingLeft: 14 },
+  subcontractorColumnTitle: { color: "#0f3f75", fontSize: 13, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 },
+  subcontractorInput: { width: "100%", minWidth: 0, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 7, padding: "8px 9px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 700 },
+  subcontractorFieldGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 8, marginBottom: 2 },
+  subcontractorCheckLabel: { minHeight: 36, color: "#334155", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 9, cursor: "pointer" },
+  largeCheckbox: { width: 24, height: 24, minWidth: 24, accentColor: "#0f766e", cursor: "pointer" },
+  useQuoteToggleModern: { minHeight: 52, display: "inline-flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none", fontSize: 16, fontWeight: 900 },
+  toggleInput: { position: "absolute", opacity: 0, pointerEvents: "none" },
+  toggleTrack: { width: 68, height: 34, borderRadius: 999, position: "relative", display: "inline-flex", alignItems: "center", padding: 3, transition: "background 0.18s ease", boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.18)" },
+  toggleTrackOff: { background: "#cbd5e1" },
+  toggleTrackOn: { background: "#22c55e" },
+  toggleKnob: { width: 28, height: 28, borderRadius: "50%", background: "#ffffff", boxShadow: "0 2px 6px rgba(15,23,42,0.28)", transform: "translateX(0)", transition: "transform 0.18s ease" },
+  toggleKnobOn: { transform: "translateX(34px)" },
+  deductionList: { display: "flex", flexDirection: "column", gap: 10, minWidth: 220, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)" },
+  deductionRow: { display: "grid", gridTemplateColumns: "24px minmax(130px, 1fr) auto", alignItems: "center", gap: 10, color: "#0f172a", fontSize: 15, lineHeight: 1.35, fontWeight: 800, cursor: "pointer" },
+  balanceStack: { display: "flex", flexDirection: "column", gap: 9, minWidth: 170, color: "#14532d", background: "#dcfce7", border: "2px solid #86efac", borderRadius: 12, padding: 14, fontSize: 16, fontWeight: 800 },
+  balanceLine: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", color: "#166534" },
+  balanceNet: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", paddingTop: 10, marginTop: 2, borderTop: "1px solid #86efac", color: "#14532d", fontSize: 18 },
   summaryToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  summaryStageRow: { height: 48 },
+  summaryToggleButton: {
+    width: "100%",
+    minHeight: 42,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    border: 0,
+    background: "transparent",
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: 900,
+    textAlign: "left",
+    cursor: "pointer",
+  },
+  cashflowHeader: { display: "grid", gridTemplateColumns: "minmax(240px, 0.7fr) minmax(520px, 1.3fr)", gap: 14, alignItems: "stretch", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14 },
+  cashflowTitle: { margin: "2px 0 0", color: "#0f172a", fontSize: 34, fontWeight: 800 },
+  cashflowMetricGrid: { display: "grid", gridTemplateColumns: "repeat(4, minmax(135px, 1fr))", gap: 10 },
+  cashflowMetric: { minHeight: 78, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", padding: 10, display: "flex", flexDirection: "column", justifyContent: "center", gap: 4, color: "#0f172a" },
+  cashflowMetricPositive: { background: "#ecfdf5", borderColor: "#99f6e4" },
+  cashflowMetricNegative: { background: "#fff1f2", borderColor: "#fecaca" },
+  cashflowPercentInput: { width: 96, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "7px 8px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 800, textAlign: "right" },
   adjustmentsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, padding: 12, background: "#ffffff" },
   adjustmentField: { display: "flex", flexDirection: "column", gap: 5, color: "#334155", fontWeight: 700 },
   adjustmentLabel: { fontSize: 14, textTransform: "uppercase" },
   adjustmentInput: { width: "100%", boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "7px 8px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 700 },
   summarySectionInput: { width: "100%", minWidth: 190, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 16, fontWeight: 600 },
+  quoteProposalShell: { display: "flex", flexDirection: "column", gap: 14 },
+  quoteProposalToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
+  quoteProposalWorkspace: { display: "grid", gridTemplateColumns: "220px minmax(0, 1fr)", gap: 14, alignItems: "start" },
+  quoteProposalNav: { position: "sticky", top: 98, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 8, display: "flex", flexDirection: "column", gap: 7 },
+  quoteProposalNavButton: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: "11px 12px", fontSize: 16, fontWeight: 900, textAlign: "left", cursor: "pointer" },
+  quoteProposalNavButtonActive: { background: "#0f3f75", color: "#ffffff", borderColor: "#0f3f75" },
+  quoteProposalDocument: { display: "flex", flexDirection: "column", gap: 18, minWidth: 0 },
+  quoteProposalPage: { background: "#ffffff", color: "#172033", border: "1px solid #cbd5e1", borderRadius: 14, padding: 28, minHeight: 820, boxShadow: "0 20px 45px rgba(15,23,42,0.08)", display: "flex", flexDirection: "column", gap: 18 },
+  quoteProposalPageHeader: { borderBottom: "2px solid #0f3f75", paddingBottom: 14, marginBottom: 6 },
+  proposalCoverGrid: { display: "grid", gridTemplateColumns: "250px minmax(0, 1fr)", gap: 24, alignItems: "start" },
+  proposalCoverBrand: { display: "flex", flexDirection: "column", gap: 12 },
+  proposalLogoBox: { width: 210, minHeight: 150, border: "2px dashed #94a3b8", borderRadius: 12, background: "#f8fafc", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, textAlign: "center", overflow: "hidden" },
+  proposalLogoImage: { maxWidth: 210, maxHeight: 150, objectFit: "contain" },
+  proposalCoverDetails: { display: "flex", flexDirection: "column", gap: 12 },
+  proposalMiniGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 },
+  proposalField: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 13, fontWeight: 900, letterSpacing: "0.04em", textTransform: "uppercase" },
+  proposalInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 8, padding: "10px 11px", color: "#0f172a", background: "#ffffff", fontSize: 17, fontWeight: 800, textTransform: "none", letterSpacing: 0 },
+  proposalHero: { display: "flex", flexDirection: "column", gap: 10 },
+  proposalHeroImage: { width: "100%", maxHeight: 420, objectFit: "cover", borderRadius: 12, border: "1px solid #cbd5e1" },
+  proposalImagePlaceholder: { minHeight: 180, border: "2px dashed #94a3b8", borderRadius: 12, background: "#f8fafc", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, textAlign: "center", padding: 20 },
+  proposalGallery: { display: "flex", flexDirection: "column", gap: 10 },
+  proposalGalleryHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, color: "#0f172a", fontSize: 18 },
+  proposalImageGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
+  proposalImageGridLarge: { gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" },
+  proposalImageTile: { position: "relative", overflow: "hidden", border: "1px solid #cbd5e1", borderRadius: 10, background: "#ffffff", minHeight: 150 },
+  proposalGalleryImage: { width: "100%", height: 190, objectFit: "cover", display: "block" },
+  proposalImageRemove: { position: "absolute", right: 8, top: 8, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "5px 8px", fontWeight: 900, cursor: "pointer" },
+  proposalTextBlock: { display: "flex", flexDirection: "column", gap: 7, color: "#0f3f75", fontSize: 14, fontWeight: 900, letterSpacing: "0.04em", textTransform: "uppercase" },
+  proposalTextarea: { width: "100%", minHeight: 135, boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 10, padding: "12px 13px", color: "#0f172a", background: "#ffffff", fontSize: 16, lineHeight: 1.6, fontWeight: 650, fontFamily: "inherit", resize: "vertical", textTransform: "none", letterSpacing: 0 },
+  proposalThreeColumns: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 14 },
+  proposalPlaceholderPanel: { border: "1px solid #bfdbfe", borderRadius: 12, background: "#eff6ff", padding: 18, display: "flex", flexDirection: "column", gap: 8, color: "#1e3a8a", fontSize: 16, lineHeight: 1.55 },
+  proposalPriceGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 },
+  proposalPriceCard: { border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 14, display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center", color: "#0f172a", fontSize: 16, fontWeight: 800 },
+  proposalTotalsCard: { marginTop: 8, border: "2px solid #0f3f75", borderRadius: 12, background: "#f8fafc", padding: 16, display: "grid", gap: 10 },
+  proposalAcceptanceGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, alignItems: "end" },
+  proposalSignatureBox: { minHeight: 92, border: "1px solid #94a3b8", borderRadius: 10, background: "#f8fafc", color: "#64748b", display: "flex", alignItems: "flex-end", padding: 12, fontWeight: 900 },
+  proposalTermsCheck: { display: "flex", alignItems: "center", gap: 10, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 12, color: "#0f172a", fontSize: 16, fontWeight: 800 },
+  proposalThankYou: { minHeight: 620, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, textAlign: "center" },
   clientPageShell: { display: "flex", flexDirection: "column", gap: 12 },
   clientToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
   clientEditor: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 },
@@ -3666,9 +5233,10 @@ const styles = {
   tabButton: { background: "#f8fafc", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 7, padding: "8px 11px", fontWeight: 600, cursor: "pointer" },
   tabButtonActive: { background: "#0f766e", color: "#ffffff", borderColor: "#0f766e" },
   section: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden" },
-  sectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "96px minmax(0, 1fr)", alignItems: "stretch", background: "#ecfdf5", border: 0, borderBottom: "1px solid #99f6e4", color: "#0f172a" },
-  nestedSectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "96px minmax(0, 1fr)", alignItems: "stretch", background: "#eff6ff", border: 0, borderBottom: "1px solid #bfdbfe", color: "#0f172a" },
-  sectionGroupInput: { width: 68, alignSelf: "center", justifySelf: "center", border: "1px solid #94a3b8", borderRadius: 6, padding: "6px 6px", fontSize: 15, fontWeight: 800, textAlign: "center", background: "#ffffff", color: "#0f172a" },
+  sectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#ecfdf5", border: 0, borderBottom: "1px solid #99f6e4", color: "#0f172a" },
+  nestedSectionHeader: { width: "100%", display: "grid", gridTemplateColumns: "78px 44px minmax(0, 1fr)", alignItems: "stretch", background: "#eff6ff", border: 0, borderBottom: "1px solid #bfdbfe", color: "#0f172a" },
+  sectionGroupInput: { width: 58, height: 42, alignSelf: "center", justifySelf: "center", border: "1px solid #020617", borderRadius: 4, padding: "6px 6px", fontSize: 16, fontWeight: 900, textAlign: "center", background: "#020617", color: "#ffffff", boxSizing: "border-box" },
+  sectionStageInput: { width: 34, height: 34, alignSelf: "center", justifySelf: "center", border: "2px solid #f59e0b", borderRadius: 3, padding: "5px 4px", fontSize: 15, fontWeight: 900, textAlign: "center", background: "#fef3c7", color: "#7c2d12", boxSizing: "border-box" },
   sectionHeaderButton: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "transparent", border: 0, color: "#0f172a", padding: "14px 16px 14px 0", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", cursor: "pointer", textAlign: "left" },
   sectionTotalStack: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, whiteSpace: "nowrap", textAlign: "right" },
   staticSectionHeader: { background: "#ecfdf5", borderBottom: "1px solid #99f6e4", color: "#0f172a", padding: "14px 16px", fontSize: 34, lineHeight: 1.15, fontWeight: 600, textTransform: "uppercase", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 },
@@ -3695,6 +5263,8 @@ const styles = {
   shortInput: { width: 80, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 16, fontWeight: 600 },
   numberInput: { width: 76, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 16, fontWeight: 600 },
   itemInput: { width: "100%", minWidth: 280, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 16, fontWeight: 600 },
+  selectInput: { width: "100%", minWidth: 150, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#ffffff", fontSize: 14, fontWeight: 700 },
+  removedProcurementRow: { opacity: 0.55, background: "#f8fafc" },
   formulaInput: { width: "100%", minWidth: 260, boxSizing: "border-box", border: "1px solid #0f766e", borderRadius: 5, padding: "6px 7px", color: "#0f172a", background: "#f0fdfa", fontFamily: "Consolas, monospace", fontSize: 16, fontWeight: 600 },
   formulaText: { fontFamily: "Consolas, monospace", color: "#0f172a", fontWeight: 600 },
   formulaPickButton: { width: "100%", background: "transparent", color: "inherit", border: 0, padding: 0, textAlign: "left", font: "inherit", fontWeight: 600 },

@@ -242,6 +242,24 @@ const preview = calculateEstimateBuilderWorkbook(minimalWorkbook({
         },
       ],
     },
+    "ROOFING LABOUR": {
+      rows: [
+        {
+          id: "quote-825",
+          sourceRow: 825,
+          section: "ROOFING LABOUR",
+          item: "INSTALL ROOFING",
+          quantity: "",
+          importedQuantity: "322.55",
+          quantityKey: "roofAreaM2",
+          unit: "M2",
+          excelRate: "$3.85",
+          sourceOfRate: "workbook",
+          formulas: { G: "B825*F825" },
+          active: true,
+        },
+      ],
+    },
     "WINDOWS": {
       rows: [
         {
@@ -405,6 +423,11 @@ assert.equal(preview.quotation["ROOFING MATERIALS"].rows[0].quantity, String(pre
 assert.equal(preview.quotation["ROOFING MATERIALS"].rows[0].finalRateUsed, "$85.00");
 assert.equal(preview.quotation["ROOFING MATERIALS"].rows[0].cost, 27416.75);
 assert.deepEqual(preview.quotation["ROOFING MATERIALS"].rows.map((row) => row.id), ["quote-803", "quote-1129", "quote-1267"]);
+assert.equal(preview.quotation["ROOFING LABOUR"].rows[0].quantity, "");
+assert.equal(preview.quotation["ROOFING LABOUR"].rows[0].importedQuantity, "");
+assert.equal(preview.quotation["ROOFING LABOUR"].rows[0].quantityKey, "");
+assert.equal(preview.quotation["ROOFING LABOUR"].rows[0].qty, 0);
+assert.equal(preview.quotation["ROOFING LABOUR"].rows[0].cost, 0);
 const windowQuoteRows = preview.quotation.WINDOWS.rows;
 assert.deepEqual(windowQuoteRows.map((row) => row.id), [
   "quote-750",

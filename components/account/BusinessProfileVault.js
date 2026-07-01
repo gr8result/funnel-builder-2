@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabase-client";
+import { isDeveloperEmail } from "../../lib/adminUsers";
 import {
   BUSINESS_PROFILE_SECTIONS,
   VAULT_STATUS_LABELS,
@@ -10,6 +11,8 @@ import {
 } from "./businessProfileVaultConfig";
 
 const REVIEW_STEP = BUSINESS_PROFILE_SECTIONS.length;
+const GENERIC_ONBOARDING_VIDEO_URL = "";
+const INTRODUCTION_STEP_KEY = "introduction_video";
 
 function fieldKey(sectionKey, fieldKey) {
   return `${sectionKey}.${fieldKey}`;
@@ -38,6 +41,30 @@ function makeDocumentMap(documents) {
   }, {});
 }
 
+function getVideoEmbedUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      const id = parsed.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : raw;
+    }
+    if (host === "youtu.be") {
+      const id = parsed.pathname.replace("/", "");
+      return id ? `https://www.youtube.com/embed/${id}` : raw;
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+function isDirectVideoUrl(url) {
+  return /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(String(url || ""));
+}
+
 export default function BusinessProfileVault() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -51,6 +78,8 @@ export default function BusinessProfileVault() {
   const [uploadProgress, setUploadProgress] = useState({});
   const [validationIssues, setValidationIssues] = useState([]);
   const [error, setError] = useState("");
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [introVideoUploading, setIntroVideoUploading] = useState(false);
   const loadedRef = useRef(false);
 
   const documentMap = useMemo(() => makeDocumentMap(documents), [documents]);
@@ -96,6 +125,12 @@ export default function BusinessProfileVault() {
 
   useEffect(() => {
     loadVault();
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: sessionData }) => {
+      setIsDeveloper(isDeveloperEmail(sessionData?.session?.user?.email));
+    });
   }, []);
 
   useEffect(() => {
@@ -178,6 +213,34 @@ export default function BusinessProfileVault() {
         request.send(formData);
       })
       .catch((err) => setError(err.message || "Upload failed."));
+  }
+
+  async function uploadIntroVideo(file) {
+    if (!file) return;
+    setIntroVideoUploading(true);
+    setError("");
+    try {
+      const token = await getToken();
+      const response = await fetch("/api/website-builder/upload-video", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": file.type || "video/mp4",
+          "X-File-Name": encodeURIComponent(file.name || "onboarding-video.mp4"),
+          "X-File-Type": file.type || "video/mp4",
+        },
+        body: file,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.src) {
+        throw new Error(payload?.error || "Video upload failed.");
+      }
+      updateField(INTRODUCTION_STEP_KEY, "videoUrl", payload.src);
+    } catch (err) {
+      setError(err.message || "Video upload failed.");
+    } finally {
+      setIntroVideoUploading(false);
+    }
   }
 
   async function openDocument(documentId, admin = false) {
@@ -308,18 +371,86 @@ export default function BusinessProfileVault() {
     );
   }
 
+  function renderIntroductionStep() {
+    const videoUrl = String(data?.[INTRODUCTION_STEP_KEY]?.videoUrl || GENERIC_ONBOARDING_VIDEO_URL || "").trim();
+    const embedUrl = getVideoEmbedUrl(videoUrl);
+    const showVideoSetup = isDeveloper;
+    return (
+      <div className="intro-panel">
+        <div className="intro-video-frame">
+          {videoUrl && isDirectVideoUrl(videoUrl) ? (
+            <video controls preload="metadata">
+              <source src={videoUrl} />
+              Your browser does not support the video player.
+            </video>
+          ) : videoUrl ? (
+            <iframe
+              src={embedUrl}
+              title="Welcome and onboarding video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div className="intro-video-placeholder">
+              <span>▶</span>
+              <strong>Welcome video</strong>
+            </div>
+          )}
+        </div>
+        <div className="intro-copy">
+          <h3>Before You Start</h3>
+          <p>
+            We have prepared a short welcome video with a basic introduction and guidance for the onboarding process.
+            It explains what information is needed, why it matters, and how the GR8 Result team uses these details to
+            prepare your account correctly.
+          </p>
+          {showVideoSetup ? (
+            <div className="intro-admin-upload">
+              <strong>Developer video setup</strong>
+              <label className="intro-video-field">
+                <span>Upload welcome video</span>
+                <input
+                  type="file"
+                  accept="video/*"
+                  disabled={introVideoUploading}
+                  onChange={(event) => uploadIntroVideo(event.target.files?.[0])}
+                />
+              </label>
+              <label className="intro-video-field">
+                <span>Or paste video link</span>
+                <input
+                  type="url"
+                  value={videoUrl}
+                  placeholder="Paste YouTube, Vimeo, or MP4 video link"
+                  onChange={(event) => updateField(INTRODUCTION_STEP_KEY, "videoUrl", event.target.value)}
+                />
+              </label>
+              <small>{introVideoUploading ? "Uploading video..." : "This setup area is hidden from clients."}</small>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return <div className="vault-shell"><div className="vault-card">Loading Business Profile Vault...</div></div>;
   }
 
   return (
     <div className="vault-shell">
-      <div className="vault-header">
-        <div>
-          <Link href="/dashboard" className="back-link">Back to Dashboard</Link>
-          <h1>Business Profile Vault</h1>
-          <p>Verification, onboarding, integrations, website setup, marketing assets, and business management records.</p>
+      <section className="account-banner">
+        <div className="banner-title">
+          <span className="banner-icon" aria-hidden="true">⚙️</span>
+          <div>
+            <h1>Business Profile Vault</h1>
+            <p>Verification, onboarding, integrations, website setup, marketing assets, and business management records.</p>
+          </div>
         </div>
+        <Link href="/dashboard" className="banner-back">Back to Dashboard</Link>
+      </section>
+
+      <div className="vault-header">
         <div className="status-card">
           <span>{VAULT_STATUS_LABELS[vault?.status] || "Not Started"}</span>
           <strong>{completion}%</strong>
@@ -366,24 +497,28 @@ export default function BusinessProfileVault() {
                   <p>{activeSection.description}</p>
                 </div>
                 <button type="button" onClick={() => setActiveStep(Math.min(activeStep + 1, REVIEW_STEP))}>
-                  Save & Continue
+                  {activeSection.key === INTRODUCTION_STEP_KEY ? "Continue" : "Save & Continue"}
                 </button>
               </div>
 
-              <details open className="accordion">
-                <summary>{activeSection.title}</summary>
-                <div className="field-grid">
-                  {activeSection.fields.map((field) => (
-                    <label key={field.key} className={field.type === "textarea" ? "wide field" : "field"}>
-                      <span>
-                        {field.label}
-                        {field.required ? <em>Required</em> : <small>Optional</small>}
-                      </span>
-                      {renderInput(activeSection, field)}
-                    </label>
-                  ))}
-                </div>
-              </details>
+              {activeSection.key === INTRODUCTION_STEP_KEY ? (
+                renderIntroductionStep()
+              ) : (
+                <details open className="accordion">
+                  <summary>{activeSection.title}</summary>
+                  <div className="field-grid">
+                    {activeSection.fields.map((field) => (
+                      <label key={field.key} className={field.type === "textarea" ? "wide field" : "field"}>
+                        <span>
+                          {field.label}
+                          {field.required ? <em>Required</em> : <small>Optional</small>}
+                        </span>
+                        {renderInput(activeSection, field)}
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              )}
             </>
           ) : (
             <div>
@@ -405,7 +540,12 @@ export default function BusinessProfileVault() {
                 {BUSINESS_PROFILE_SECTIONS.map((section) => (
                   <details key={section.key} open={validationIssues.some((issue) => issue.section === section.title)}>
                     <summary>{section.title}</summary>
-                    {section.fields.map((field) => {
+                    {section.fields.length === 0 ? (
+                      <div className="review-row">
+                        <strong>Status</strong>
+                        <span>Viewed as part of the onboarding flow</span>
+                      </div>
+                    ) : section.fields.map((field) => {
                       const value = data?.[section.key]?.[field.key];
                       const docs = documentMap[fieldKey(section.key, field.key)] || [];
                       return (
@@ -439,15 +579,207 @@ export default function BusinessProfileVault() {
         .vault-header {
           max-width: 1320px;
           margin: 0 auto 20px;
-          display: grid;
-          grid-template-columns: 1fr 180px;
+          display: flex;
+          justify-content: flex-end;
+        }
+        .account-banner {
+          max-width: 1320px;
+          min-height: 120px;
+          margin: 0 auto 24px;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+          background: #8b5cf6;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+          padding: 22px 28px;
+        }
+        .banner-back {
+          color: #fff;
+          font-size: 18px;
+          font-weight: 600;
+          text-decoration: none;
+          white-space: nowrap;
+          margin-left: auto;
+        }
+        .banner-title {
+          display: flex;
+          align-items: center;
           gap: 18px;
-          align-items: end;
+          min-width: 0;
+          flex: 1 1 auto;
+        }
+        .banner-icon {
+          width: 64px;
+          height: 64px;
+          display: grid;
+          place-items: center;
+          border-radius: 16px;
+          background: rgba(12, 18, 26, 0.24);
+          font-size: 48px;
+          line-height: 1;
+          flex: 0 0 auto;
+        }
+        .banner-title h1 {
+          margin: 0 0 6px;
+          color: #fff;
+          font-size: 48px;
+          line-height: 1.05;
+          letter-spacing: 0;
+        }
+        .banner-title p {
+          color: rgba(255, 255, 255, 0.88);
+          font-size: 18px;
+          line-height: 1.45;
         }
         h1 { margin: 10px 0 8px; font-size: 34px; letter-spacing: 0; }
         h2 { margin: 0 0 8px; font-size: 24px; letter-spacing: 0; }
         p { color: #b6c3d3; margin: 0; line-height: 1.55; }
-        .back-link { color: #8bd7ff; font-weight: 700; text-decoration: none; }
+        .back-link { color: #8bd7ff; font-weight: 600; text-decoration: none; }
+        .video-card {
+          min-height: 82px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          background: #111827;
+          border: 1px solid #1f2937;
+          border-radius: 8px;
+          padding: 16px 18px;
+          box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
+        }
+        .video-copy {
+          display: grid;
+          gap: 5px;
+          min-width: 0;
+        }
+        .video-copy strong {
+          color: #f8fafc;
+          font-size: 18px;
+        }
+        .video-copy span {
+          color: #b6c3d3;
+          font-size: 16px;
+          line-height: 1.45;
+        }
+        .video-link {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 42px;
+          border-radius: 8px;
+          background: #8b5cf6;
+          color: #fff;
+          border: 0;
+          padding: 0 16px;
+          font-size: 18px;
+          font-weight: 600;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .video-link.muted {
+          background: #334155;
+        }
+        .intro-panel {
+          display: grid;
+          gap: 16px;
+          align-items: stretch;
+        }
+        .intro-video-frame {
+          min-height: 420px;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #060b13;
+          border: 1px solid #263244;
+          display: grid;
+          place-items: center;
+        }
+        .intro-video-frame video,
+        .intro-video-frame iframe {
+          width: 100%;
+          height: 100%;
+          background: #000;
+          border: 0;
+        }
+        .intro-video-frame video {
+          object-fit: contain;
+        }
+        .intro-video-placeholder {
+          display: grid;
+          place-items: center;
+          gap: 12px;
+          color: #dbeafe;
+          text-align: center;
+        }
+        .intro-video-placeholder span {
+          width: 74px;
+          height: 74px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #8b5cf6;
+          color: #fff;
+          font-size: 34px;
+          line-height: 1;
+          padding-left: 5px;
+        }
+        .intro-video-placeholder strong {
+          font-size: 22px;
+        }
+        .intro-copy {
+          background: #0f172a;
+          border: 1px solid #263244;
+          border-radius: 8px;
+          padding: 18px 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 8px;
+        }
+        .intro-copy h3 {
+          margin: 0;
+          color: #fff;
+          font-size: 20px;
+          letter-spacing: 0;
+        }
+        .intro-copy p {
+          font-size: 16px;
+          line-height: 1.55;
+        }
+        .intro-video-field {
+          display: grid;
+          gap: 8px;
+          width: 100%;
+          color: #e5e7eb;
+          font-weight: 600;
+        }
+        .intro-video-field span {
+          font-size: 16px;
+          color: #cbd5e1;
+        }
+        .intro-admin-upload {
+          width: 100%;
+          display: grid;
+          gap: 12px;
+          margin-top: 8px;
+          padding: 16px;
+          border: 1px dashed #8b5cf6;
+          border-radius: 8px;
+          background: rgba(139, 92, 246, 0.08);
+        }
+        .intro-admin-upload > strong {
+          color: #fff;
+          font-size: 36px;
+        }
+        .intro-admin-upload small {
+          color: #c4b5fd;
+          font-size: 13px;
+        }
         .status-card, .vault-card {
           background: #111827;
           border: 1px solid #1f2937;
@@ -505,7 +837,7 @@ export default function BusinessProfileVault() {
           background: #1f2937;
           color: #93c5fd;
           font-size: 13px;
-          font-weight: 800;
+          font-weight: 600;
         }
         .vault-card { padding: 22px; min-width: 0; }
         .section-head {
@@ -521,7 +853,7 @@ export default function BusinessProfileVault() {
           border: 0;
           border-radius: 8px;
           padding: 11px 16px;
-          font-weight: 800;
+          font-weight: 600;
           cursor: pointer;
         }
         .accordion, .review-list details {
@@ -533,7 +865,7 @@ export default function BusinessProfileVault() {
         summary {
           padding: 14px 16px;
           cursor: pointer;
-          font-weight: 800;
+          font-weight: 600;
           color: #facc15;
         }
         .field-grid {
@@ -549,13 +881,13 @@ export default function BusinessProfileVault() {
           justify-content: space-between;
           gap: 10px;
           color: #e5e7eb;
-          font-weight: 700;
+          font-weight: 600;
         }
         em, small {
           font-style: normal;
           color: #9ca3af;
-          font-size: 12px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 600;
         }
         input, select, textarea {
           width: 100%;
@@ -594,7 +926,7 @@ export default function BusinessProfileVault() {
           padding: 0;
           text-align: left;
           text-decoration: underline;
-          font-weight: 700;
+          font-weight: 600;
         }
         .alert {
           max-width: 1320px;
@@ -616,7 +948,11 @@ export default function BusinessProfileVault() {
         }
         .review-row span { color: #cbd5e1; word-break: break-word; }
         @media (max-width: 920px) {
-          .vault-header, .layout { grid-template-columns: 1fr; }
+          .layout { grid-template-columns: 1fr; }
+          .account-banner { align-items: start; }
+          .banner-title h1 { font-size: 40px; }
+          .video-card { align-items: flex-start; flex-direction: column; }
+          .intro-panel { grid-template-columns: 1fr; }
           .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .field-grid { grid-template-columns: 1fr; }
           .section-head { display: grid; }
@@ -625,6 +961,16 @@ export default function BusinessProfileVault() {
         @media (max-width: 560px) {
           .vault-shell { padding: 18px 12px 42px; }
           h1 { font-size: 28px; }
+          .account-banner {
+            padding: 18px;
+            align-items: flex-start;
+            flex-direction: column;
+          }
+          .banner-back { margin-left: 0; align-self: flex-end; }
+          .banner-title { align-items: flex-start; }
+          .banner-icon { width: 52px; height: 52px; font-size: 38px; border-radius: 12px; }
+          .banner-title h1 { font-size: 32px; }
+          .banner-title p { font-size: 16px; }
           .steps { grid-template-columns: 1fr; }
         }
       `}</style>

@@ -160,7 +160,7 @@ export default function SocialCalendar() {
       const token = await getToken();
       if (!token) { setNotice('Sign in to view the calendar.'); setLoading(false); return; }
       const res  = await fetch('/api/social/calendar-board', { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Failed to load');
       setCards(json.cards || []);
     } catch (err) { setNotice(err.message); }
@@ -190,7 +190,7 @@ export default function SocialCalendar() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId, scheduledFor: newIso }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error);
     } catch (err) {
       setNotice('Move failed: ' + err.message);

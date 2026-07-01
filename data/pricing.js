@@ -306,10 +306,10 @@ const PRICING = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Base platform plans — prices in AUD/month
 export const BASE_PLANS = {
-  starter:      { id: "starter",      name: "GR8 RESULT — Starter Plan",      price: 159, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
-  growth:       { id: "growth",       name: "GR8 RESULT — Growth Plan",       price: 359, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
-  scale:        { id: "scale",        name: "GR8 RESULT — Scale Plan",        price: 499, introDiscountPercent: 50, introMonths: 3, trialDays: 14 },
-  professional: { id: "professional", name: "GR8 RESULT — Professional Plan", price: 999, introDiscountPercent: null, introMonths: 0, trialDays: 14 },
+  starter:      { id: "starter",      name: "GR8 RESULT - Starter Plan",      price: 79,  introDiscountPercent: null, introMonths: 0, trialDays: 0 },
+  growth:       { id: "growth",       name: "GR8 RESULT - Growth Plan",       price: 249, introDiscountPercent: null, introMonths: 0, trialDays: 0 },
+  scale:        { id: "scale",        name: "GR8 RESULT - Scale Plan",        price: 399, introDiscountPercent: null, introMonths: 0, trialDays: 0 },
+  professional: { id: "professional", name: "GR8 RESULT - Professional Plan", price: 799, introDiscountPercent: null, introMonths: 0, trialDays: 0 },
 };
 
 export const BASE_PLAN_INCLUDES = {
@@ -320,7 +320,6 @@ export const BASE_PLAN_INCLUDES = {
     calendar: { tierId: "calendar-starter", price: 19  },  // 1 calendar, 50 bookings/mo
     crm:      { tierId: "crm-starter",      price: 19  },  // 1 pipeline, 500 contacts
     website:  { tierId: "website-starter",  price: 29  },  // 1 website, templates only
-    projectsHub: { tierId: "projects-hub-starter", price: 35 },  // 3 jobs, 5 projects, 2 users
     funnels:  { included: 0 },                              // landing pages only
   },
   growth: {
@@ -356,3 +355,4 @@ export const BASE_PLAN_INCLUDES = {
 };
 
 export default PRICING;
+

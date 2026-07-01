@@ -6,9 +6,8 @@
 
 import Head from "next/head";
 import Link from "next/link";
-import { Fragment } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { renderWebsiteBlock } from "../../components/website-builder/WebsiteBlockRenderer";
+import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath } from "../../lib/website-builder/publishConfig";
@@ -21,6 +20,26 @@ const supabase = createClient(SUPABASE_URL || "", SUPABASE_ANON_KEY || "", {
 });
 
 const CONTENT_WIDTH = 1440;
+const seamlessPublishedBlockFrame = (background) => ({
+  margin: 0,
+  marginTop: 0,
+  marginBottom: 0,
+  padding: 0,
+  border: "none",
+  outline: "none",
+  boxShadow: "none",
+  background: background || undefined,
+  display: "block",
+  overflowX: "clip",
+  minWidth: 0,
+});
+const resolvePublishedBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
+const resolvePublishedStackBackground = (blocks, index, fallback = "") => (
+  resolvePublishedBlockBackground(blocks?.[index])
+  || resolvePublishedBlockBackground(blocks?.[index - 1])
+  || resolvePublishedBlockBackground(blocks?.[index + 1])
+  || fallback
+);
 
 function slugifyPage(value) {
   return String(value || "")
@@ -363,21 +382,79 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
       <Head>
         <title>{publication?.name || project?.name || "Website"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>{`
+          [data-published-block] {
+            border: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          [data-published-block-type="trust-badges"] > section,
+          [data-published-block-type="marquee-strip"] > section,
+          [data-published-block-type="wave-marquee"] > section,
+          [data-published-block-type="cta-button"] > section,
+          [data-published-block-type="space"] > div:first-child {
+            border-top: none;
+            border-bottom: none;
+            outline: none;
+            box-shadow: none;
+          }
+          [data-published-block-type="trust-badges"] > section::before,
+          [data-published-block-type="trust-badges"] > section::after,
+          [data-published-block-type="marquee-strip"] > section::before,
+          [data-published-block-type="marquee-strip"] > section::after,
+          [data-published-block-type="wave-marquee"] > section::before,
+          [data-published-block-type="wave-marquee"] > section::after,
+          [data-published-block-type="cta-button"] > section::before,
+          [data-published-block-type="cta-button"] > section::after,
+          [data-published-block-type="space"] > div:first-child::before,
+          [data-published-block-type="space"] > div:first-child::after {
+            border-top: none !important;
+            border-bottom: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          [data-published-block] > hr,
+          [data-published-block] hr[data-wb-default-divider="true"] {
+            display: none !important;
+          }
+          ${process.env.NODE_ENV !== "production" ? `
+          [data-published-block] { position: relative; }
+          [data-published-block]:hover::after {
+            content: attr(data-published-block-type) " #" attr(data-published-block-id);
+            position: absolute;
+            left: 8px;
+            top: 0;
+            z-index: 9999;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: rgba(14, 165, 233, 0.92);
+            color: #fff;
+            font: 600 11px/1.2 system-ui, sans-serif;
+            pointer-events: none;
+          }
+          ` : ""}
+          ${websiteBlockKeyframes()}
+        `}</style>
       </Head>
-      <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif" }}>
+      <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
-          <Fragment key="global-nav">
+          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
             {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
-          </Fragment>
+          </div>
         ) : null}
 
         {Array.isArray(blocksToRender) && blocksToRender.length ? (
           <>
-            {blocksToRender.map((block, index) => (
-              <Fragment key={block.id || `${block.type}-${index}`}>
-                {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
-              </Fragment>
-            ))}
+            {blocksToRender.map((block, index) => {
+              const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
+              return (
+                <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={seamlessPublishedBlockFrame(blockBg)}>
+                  {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+                </div>
+              );
+            })}
           </>
         ) : pageContent ? (
           <section dangerouslySetInnerHTML={{ __html: pageContent }} />
@@ -391,9 +468,9 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
         )}
 
         {injectFooter ? (
-          <Fragment key="global-footer">
+          <div key="global-footer" data-published-block="true" data-published-block-id={globalFooterBlock?.id || ""} data-published-block-type={globalFooterBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalFooterBlock))}>
             {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
-          </Fragment>
+          </div>
         ) : null}
 
         {!globalNavBlock && pages.length > 1 ? (

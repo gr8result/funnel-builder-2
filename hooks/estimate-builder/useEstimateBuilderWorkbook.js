@@ -1,32 +1,37 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { V4_DATA_SECTIONS, V4_WINDOW_TYPES } from "../../lib/construction-estimation/estimateWorksheetV4Schema.js";
-import { createEstimateBuilderWorkbookDefaults } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
+import { createEstimateBuilderWorkbookDefaults, windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults.js";
 import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
 import { withWindowDoorApproximateRate } from "../../lib/construction-estimation/windowDoorApproximatePricing.js";
 import { doorScheduleRangeOptions, humeEntryDoorRows, humeEntryDoorSize, isDoorScheduleRangeRow, isHumeEntryDoorRow, isLegacyEntryDoorScheduleRow, supplementalEntryDoorRows, withDoorScheduleSelection, withHumeEntryDoorSelection } from "../../lib/construction-estimation/humeEntryDoorPricing.js";
 
 const ESTIMATE_BUILDER_PAGES = [
-  { key: "dataInput", label: "Data Input" },
-  { key: "windowsDoors", label: "Windows & Doors" },
-  { key: "formulaSheet", label: "Formula Sheet" },
-  { key: "quotation", label: "Quotation" },
-  { key: "summary", label: "Summary" },
-  { key: "clientPage", label: "Client Page" },
+  { key: "aiPlanTakeoff",  label: "AI Plan Takeoff"  },
+  { key: "dataInput",      label: "Data Input"      },
+  { key: "windowsDoors",   label: "Windows & Doors" },
+  { key: "formulaSheet",   label: "Formula Sheet"   },
+  { key: "quotation",      label: "Quotation"       },
+  { key: "summary",        label: "Summary"         },
+  { key: "clientPage",     label: "Quote Proposal"  },
+  { key: "cashflowSummary",label: "Cashflow Summary"},
+  { key: "procurement",    label: "Procurement"     },
+  { key: "gantt",          label: "AI Gantt Builder" },
 ];
 
-const REMOVED_QUOTE_SECTION_NAMES = new Set(["upper level framing", "roof cover - colourbond", "lock up materials", "quick render estimate", "project management", "entry doors", "entry doors - complete", "standard 820 entrace door", "plasterer", "fixout", "fix out", "specials", "internal door complete", "internal cavity sliding door complete", "internal doors"]);
+const REMOVED_QUOTE_SECTION_NAMES = new Set(["upper level framing", "roof cover - colourbond", "lock up materials", "quick render estimate", "project management", "entry doors", "entry doors - complete", "standard 820 entrace door", "plasterer", "fixout", "specials", "internal door complete", "internal cavity sliding door complete", "internal doors"]);
 const JOB_SET_OUT_LABOUR_ROW_IDS = new Set(["quote-245", "quote-246", "quote-247"]);
 const JOB_SET_OUT_LABOUR_SOURCE_ROWS = new Set([245, 246, 247]);
-const REMOVED_IMPORTED_QUOTE_SOURCE_ROWS = new Set([1248, 1250, 1251, 1350, 1351]);
+const REMOVED_IMPORTED_QUOTE_SOURCE_ROWS = new Set([161, 162, 163, 1248, 1250, 1251, 1350, 1351]);
 const QUOTE_ROWS_WITHOUT_IMPORTED_DATA = new Set([1272, 1373, 1374, 1380, 1381, 1382]);
 const STANDARD_THREE_DOOR_ROBE_SECTION = "STANDARD 3 DOOR ROBE UP TO 3.6M WIDE";
 const STANDARD_TWO_DOOR_LINEN_SECTION = "STANDARD 2 DOOR LINEN UP TO 2.4M WIDE";
-const STANDARD_THREE_DOOR_LINEN_SECTION = "STANDARD 3 DOOR LINEN UP TO 3.6M WIDE";
+  const STANDARD_THREE_DOOR_LINEN_SECTION = "STANDARD 3 DOOR LINEN UP TO 3.6M WIDE";
 const CABINET_MAKER_SECTION = "CABINET MAKER";
 const CABINET_MAKER_BUTLERS_PANTRY_SECTION = "BUTLERS PANTRY";
 const CABINET_MAKER_LAUNDRY_SECTION = "LAUNDRY";
 const CABINET_MAKER_BATHROOMS_SECTION = "BATHROOMS";
 const CABINET_MAKER_WARDROBES_SECTION = "WARDROBES";
+const ROUGH_INS_SECTION = "ROUGH-INS";
 const OLD_LINEN_AND_ROBE_DOOR_SECTIONS = new Set([
   "space saver sling robe doors",
   "standard linen complete (2.4m wide)",
@@ -49,10 +54,11 @@ const OLD_CABINET_MAKER_SECTIONS = new Set([
   "smeg upgrade options",
 ]);
 const BLANK_INPUT_QUOTE_SECTION_NAMES = new Set(["roof framing"]);
-const BLANK_QTY_QUOTE_SECTION_NAMES = new Set(["demolition works", "base brickwork", "face brickwork", "bricklayers labour", "entry doors", "double entry doors", "windows", "couplings", "misc", "materials", "roofing materials", "renderers labour", "misc rendering"]);
+const BLANK_QTY_QUOTE_SECTION_NAMES = new Set(["demolition works", "base brickwork", "face brickwork", "bricklayers labour", "entry doors", "double entry doors", "windows", "couplings", "misc", "materials", "roofing materials", "roofing labour", "renderers labour", "misc rendering"]);
 const BLANK_VALUE_QUOTE_SECTION_NAMES = new Set(["hourly rate"]);
 const TILING_MANUAL_QUOTE_SECTION_NAMES = new Set(["tiling", "toilet", "other room/s", "kitchen", "tile layer", "plumbing fittings & tapwear", "kitchen sinks", "kitchen taps", "vanity basins"]);
 const EDITABLE_LINKED_QUOTE_KEYS = new Set([
+  "cavityDoorQty",
   "quoteFaceBricksBaseRange",
   "quoteCommonSingleHeights",
   "quoteCommonTwinHeights",
@@ -124,8 +130,16 @@ const RENAMED_QUOTE_SECTION_NAMES = new Map([
   ["ground floor framing", "WALL FRAMES"],
   ["misc.", "TIMBER AND TRIMS"],
   ["entrance doors", "DOORS"],
-  ["skirting & architraves", "FIX OUT MATERIALS"],
+  ["skirting & architraves", "FIX OUT"],
+  ["fix out materials", "FIX OUT"],
+  ["appliance package", "APPLIANCES & WHITE GOODS"],
+  ["engeineered timber", "ENGINEERED TIMBER"],
 ]);
+
+function estimateBuilderLog(event, details = {}) {
+  if (typeof window === "undefined") return;
+  console.info(`[Estimate Builder] ${event}`, details);
+}
 
 export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const previewMode = Boolean(options.previewMode);
@@ -135,8 +149,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const [activeDataTab, setActiveDataTab] = useState("inputs");
   const [lastSavedAt, setLastSavedAt] = useState("");
   const [templateSummaries, setTemplateSummaries] = useState([]);
+  const [savedJobSummaries, setSavedJobSummaries] = useState([]);
+  const [recentJobs, setRecentJobs] = useState(() => loadRecentEstimateJobs());
+  const [renumberReport, setRenumberReport] = useState(null);
   const autosaveTimerRef = useRef(null);
   const autosaveIdleRef = useRef(null);
+  const lastLinkedTemplateRef = useRef(loadLastLinkedTemplateReference());
+  const allowUnlinkedJobSaveRef = useRef(loadAllowUnlinkedJobSave());
   const workbookRef = useRef(workbook);
   workbookRef.current = workbook;
   const deferredWorkbook = useDeferredValue(workbook);
@@ -154,6 +173,20 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   })), [dataWorkbook]);
 
   useEffect(() => {
+    const templateKey = String(workbook.templateKey || "").trim();
+    const templateName = String(workbook.templateName || "").trim();
+    if (!templateKey && !templateName) return;
+    lastLinkedTemplateRef.current = {
+      templateKey,
+      templateName,
+      templateSavedAt: workbook.savedAt || lastLinkedTemplateRef.current.templateSavedAt || "",
+    };
+    saveLastLinkedTemplateReference(lastLinkedTemplateRef.current);
+    allowUnlinkedJobSaveRef.current = false;
+    saveAllowUnlinkedJobSave(false);
+  }, [workbook.templateKey, workbook.templateName, workbook.savedAt]);
+
+  useEffect(() => {
     if (previewMode) return;
     if (deferredWorkbook !== workbookRef.current) return;
     setWorkbook((current) => syncEditableLinkedQuoteQuantities(syncWindowDoorApproximateRates(current), preview));
@@ -163,13 +196,67 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (previewMode) return;
     if (typeof window === "undefined") return;
     let cancelled = false;
-    loadLatestStoredJob().then((storedJob) => {
-      if (cancelled || !storedJob?.workbook) return;
+    purgeCorruptEstimateJobLocalStorage();
+    const activeRegisteredJob = loadActiveRegisteredEstimateJob();
+    if (activeRegisteredJob) {
+      const savedAt = new Date().toISOString();
+      resolveMasterTemplate().then(async (template) => {
+        if (cancelled || !template) return;
+        const registeredWorkbook = applyRegisteredJobToWorkbook(createCleanJobFromMasterTemplate(template, savedAt), activeRegisteredJob, savedAt);
+        const draft = prepareWorkbookForJobSave(registeredWorkbook, savedAt);
+        await saveStoredJob(draft, savedAt).catch(() => {});
+        rememberRecentJob(draft, savedAt);
+        clearActiveRegisteredEstimateJob();
+        if (cancelled) return;
+        estimateBuilderLog("loading registered job", {
+          source: "localStorage registered-job pointer + IndexedDB master template",
+          jobName: activeRegisteredJob.jobName || "",
+          jobId: activeRegisteredJob.jobId || "",
+          templateKey: MASTER_TEMPLATE_KEY,
+          templateName: MASTER_TEMPLATE_NAME,
+          mode: "job",
+        });
+        setWorkbook(normalizeWorkbook(registeredWorkbook));
+        setLastSavedAt(savedAt);
+        setRecentJobs(loadRecentEstimateJobs());
+      }).catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+    loadLatestStoredJob().then(async (storedJob) => {
+      if (cancelled) return;
+      if (!storedJob?.workbook) {
+        const savedAt = new Date().toISOString();
+        const template = await resolveMasterTemplate().catch(() => null);
+        if (cancelled || !template) return;
+        estimateBuilderLog("loading workbook", {
+          source: "master-template-fallback",
+          templateKey: MASTER_TEMPLATE_KEY,
+          templateName: MASTER_TEMPLATE_NAME,
+          mode: "new-job-from-template",
+        });
+        setWorkbook(createCleanJobFromMasterTemplate(template, savedAt));
+        setLastSavedAt("");
+        return;
+      }
+      estimateBuilderLog("loading workbook", {
+        source: "IndexedDB stored job",
+        jobName: storedJob.name || storedJob.workbook?.openedFileName || storedJob.workbook?.sourceFileName || "",
+        templateKey: storedJob.workbook?.templateKey || "",
+        templateName: storedJob.workbook?.templateName || "",
+        mode: "job",
+      });
       const localDraft = loadLocalDraft();
       const storedSavedAt = String(storedJob.savedAt || storedJob.workbook?.savedAt || "");
       const localSavedAt = String(localDraft?.savedAt || "");
       if (!localDraft || storedSavedAt > localSavedAt) {
-        setWorkbook(normalizeWorkbook(storedJob.workbook));
+        if (needsMasterTemplateMigration(storedJob.workbook)) {
+          await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
+        }
+        const workbookWithTemplateDefaults = await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook));
+        if (cancelled) return;
+        setWorkbook(normalizeWorkbook(workbookWithTemplateDefaults));
         setLastSavedAt(storedSavedAt);
       }
     }).catch(() => {});
@@ -195,12 +282,16 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     autosaveTimerRef.current = window.setTimeout(() => {
       const savedAt = new Date().toISOString();
       const saveDraftWhenIdle = () => {
-        const draft = compactWorkbookForStorage({ ...workbook, savedAt });
-        try {
-          window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify(draft));
-          setLastSavedAt(savedAt);
-        } catch {
-          // IndexedDB below remains the durable save path if localStorage is full.
+        const draft = prepareWorkbookForJobSave(workbook, savedAt);
+        saveLocalDraftMetadata(draft, savedAt);
+        setLastSavedAt(savedAt);
+        if ((draft.templateKey || draft.templateName) && (!workbook.templateKey && !workbook.templateName)) {
+          setWorkbook((current) => ({
+            ...current,
+            templateKey: draft.templateKey,
+            templateName: draft.templateName,
+            savedAt,
+          }));
         }
         saveStoredJob(draft, savedAt).catch(() => {});
       };
@@ -221,6 +312,21 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   function setPage(page) {
     setWorkbook((current) => ({ ...current, page }));
+  }
+
+  function updatePlans(plans = []) {
+    setWorkbook((current) => ({
+      ...current,
+      plans: Array.isArray(plans) ? plans : [],
+    }));
+  }
+
+  function updateTakeoffProject(project = {}) {
+    setWorkbook((current) => ({
+      ...current,
+      aiTakeoffProject: project && typeof project === "object" ? project : current.aiTakeoffProject,
+      plans: Array.isArray(project?.plans) ? project.plans : current.plans,
+    }));
   }
 
   function toggleDataSection(section) {
@@ -245,6 +351,29 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
             rows: {
               ...dataSection.rows,
               [key]: { ...(dataSection.rows[key] || {}), [field]: value },
+            },
+          },
+        },
+      };
+    });
+  }
+
+  function updateSubcontractorQuote(contractorKey, field, value) {
+    if (!contractorKey || !field) return;
+    setWorkbook((current) => {
+      const dataSection = safeDataSection(current, "subcontractorQuotes");
+      return {
+        ...current,
+        data: {
+          ...current.data,
+          subcontractorQuotes: {
+            ...dataSection,
+            rows: {
+              ...(dataSection.rows || {}),
+              [contractorKey]: {
+                ...(dataSection.rows?.[contractorKey] || {}),
+                [field]: value,
+              },
             },
           },
         },
@@ -448,18 +577,25 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   function updateWindow(id, key, value) {
     setWorkbook((current) => ({
       ...current,
-      windowsDoors: current.windowsDoors.map((row) => (row.id === id ? { ...row, [key]: value } : row)),
+      windowsDoors: current.windowsDoors.map((row) => {
+        if (row.id !== id) return row;
+        const updated = { ...row, [key]: value };
+        return ["code", "width", "height", "type", "section"].includes(key)
+          ? { ...updated, sizeCode: windowDoorSizeCodeForRow(updated) }
+          : updated;
+      }),
     }));
   }
 
   function updateWindowRate(id, value) {
+    const rate = currencyInputValue(value);
     setWorkbook((current) => ({
       ...current,
       windowsDoors: current.windowsDoors.map((row) => (row.id === id ? {
         ...row,
-        rate: value,
-        sourceOfRate: value ? "manual window/door schedule" : "",
-        notes: value ? row.notes : "",
+        rate,
+        sourceOfRate: rate ? "manual window/door schedule" : "",
+        notes: rate ? row.notes : "",
       } : row)),
     }));
   }
@@ -489,7 +625,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           if (isDoorScheduleRangeRow(currentRow || row)) {
             return withDoorScheduleSelection({ ...row, code, rate: "", sourceOfRate: "" });
           }
-          return withWindowDoorApproximateRate({
+          const updated = {
             ...row,
             code,
             width: option.width ?? row.width,
@@ -501,6 +637,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
             notes: row.notes || option.notes,
             values: option.values || row.values,
             formulas: option.formulas || row.formulas,
+          };
+          return withWindowDoorApproximateRate({
+            ...updated,
+            sizeCode: windowDoorSizeCodeForRow(updated),
           });
         }),
       };
@@ -549,7 +689,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }));
   }
 
+  function collapseAllQuoteSections() {
+    setWorkbook((current) => ({
+      ...current,
+      quotation: Object.fromEntries(Object.entries(current.quotation || {}).map(([section, data]) => [
+        section,
+        { ...data, collapsed: true },
+      ])),
+    }));
+  }
+
   function updateQuote(section, id, key, value) {
+    const nextValue = isCurrencyQuoteField(key) ? currencyInputValue(value) : value;
     setWorkbook((current) => ({
       ...current,
       quotation: {
@@ -576,16 +727,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
             }
             return {
               ...row,
-              [key]: value,
+              [key]: nextValue,
               ...(key === "quantity" ? { autoQuantity: false, quantityManualOverride: true } : {}),
             };
           }),
         },
       },
-      quoteHistory: shouldTrackQuoteChange(key) ? [
-        ...(current.quoteHistory || []),
-        { section, id, field: key, value, changedAt: new Date().toISOString() },
-      ] : current.quoteHistory || [],
+      quoteHistory: shouldTrackQuoteChange(key)
+        ? appendQuoteHistory(current.quoteHistory, { section, id, field: key, value: nextValue, changedAt: new Date().toISOString() })
+        : current.quoteHistory || [],
     }));
   }
 
@@ -623,6 +773,218 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         [key]: value,
       },
     }));
+  }
+
+  function updateCashflowPayment(stageNumber, value) {
+    if (stageNumber === undefined || stageNumber === null) return;
+    setWorkbook((current) => ({
+      ...current,
+      cashflowPayments: {
+        ...(current.cashflowPayments || {}),
+        [stageNumber]: value,
+      },
+    }));
+  }
+
+  function generateProcurementListFromQuote() {
+    const nextItems = buildProcurementItemsFromQuote(workbookRef.current, calculateEstimateBuilderWorkbook(workbookRef.current), []);
+    setWorkbook((current) => ({
+      ...current,
+      procurement: {
+        ...(current.procurement || {}),
+        items: nextItems,
+        generatedAt: new Date().toISOString(),
+      },
+    }));
+    return { ok: true, message: `Generated ${nextItems.length} procurement items.` };
+  }
+
+  function refreshProcurementListFromQuote() {
+    const existingItems = workbookRef.current?.procurement?.items || [];
+    const nextItems = buildProcurementItemsFromQuote(workbookRef.current, calculateEstimateBuilderWorkbook(workbookRef.current), existingItems);
+    setWorkbook((current) => ({
+      ...current,
+      procurement: {
+        ...(current.procurement || {}),
+        items: nextItems,
+        refreshedAt: new Date().toISOString(),
+      },
+    }));
+    return { ok: true, message: `Refreshed ${nextItems.length} procurement items.` };
+  }
+
+  function updateProcurementItem(id, key, value) {
+    if (!id || !key) return;
+    setWorkbook((current) => ({
+      ...current,
+      procurement: {
+        ...(current.procurement || {}),
+        items: (current.procurement?.items || []).map((item) => (
+          item.id === id ? { ...item, [key]: value } : item
+        )),
+      },
+    }));
+  }
+
+  function pushProcurementToJobBoard() {
+    const items = workbookRef.current?.procurement?.items || [];
+    const activeItems = items.filter((item) => !item.removedFromQuote);
+    const createdAt = new Date().toISOString();
+    const tasks = activeItems.map((item) => ({
+      id: `job-board:${item.id}`,
+      type: "procurement",
+      title: item.itemDescription,
+      section: item.sectionName,
+      quantity: item.qty,
+      unit: item.unit,
+      supplier: item.supplier || "",
+      quoteNumber: item.supplierQuoteNumber || "",
+      requiredByDate: item.requiredByDate || "",
+      orderStatus: item.orderStatus || "Not Started",
+      deliveryStatus: item.deliveryStatus || "Not Required Yet",
+      assignedPerson: item.assignedPurchasingOfficer || "",
+      notes: item.notes || "",
+      linkedEstimateJobId: workbookJobKey(workbookRef.current),
+      linkedQuoteRowId: item.quoteRowId,
+      createdAt,
+    }));
+    setWorkbook((current) => ({
+      ...current,
+      jobBoardTasks: [
+        ...(current.jobBoardTasks || []).filter((task) => task.type !== "procurement"),
+        ...tasks,
+      ],
+      procurement: {
+        ...(current.procurement || {}),
+        pushedToJobBoardAt: createdAt,
+      },
+    }));
+    return { ok: true, message: `Pushed ${tasks.length} procurement items to the job board.` };
+  }
+
+  function createPurchaseOrdersFromProcurement() {
+    const items = (workbookRef.current?.procurement?.items || []).filter((item) => !item.removedFromQuote);
+    const createdAt = new Date().toISOString();
+    const ordersBySupplier = new Map();
+    items.forEach((item) => {
+      const supplier = String(item.supplier || "Unassigned Supplier").trim();
+      if (!ordersBySupplier.has(supplier)) {
+        ordersBySupplier.set(supplier, {
+          id: `po:${slug(supplier)}:${Date.now().toString(36)}`,
+          supplier,
+          status: "Draft",
+          createdAt,
+          linkedEstimateJobId: workbookJobKey(workbookRef.current),
+          items: [],
+        });
+      }
+      ordersBySupplier.get(supplier).items.push({
+        procurementItemId: item.id,
+        quoteRowId: item.quoteRowId,
+        description: item.itemDescription,
+        qty: item.qty,
+        unit: item.unit,
+        estimatedRate: item.estimatedRate,
+        estimatedTotal: item.estimatedTotal,
+      });
+    });
+    const purchaseOrders = Array.from(ordersBySupplier.values());
+    setWorkbook((current) => ({
+      ...current,
+      purchaseOrders: [
+        ...(current.purchaseOrders || []),
+        ...purchaseOrders,
+      ],
+      procurement: {
+        ...(current.procurement || {}),
+        purchaseOrdersCreatedAt: createdAt,
+      },
+    }));
+    return { ok: true, message: `Created ${purchaseOrders.length} draft purchase orders.` };
+  }
+
+  function previewSectionCsvImport(section, rows = []) {
+    const quoteSection = workbookRef.current?.quotation?.[section];
+    if (!quoteSection) return { ok: false, message: "Choose a valid section first.", updates: [], adds: [], ignored: [], errors: [] };
+    const existingRows = quoteSection.rows || [];
+    const byItem = new Map(existingRows.map((row) => [normalizeCsvItemName(row.item || row.values?.[0]), row]).filter(([key]) => key));
+    const updates = [];
+    const adds = [];
+    const ignored = [];
+    const errors = [];
+    rows.forEach((rawRow, index) => {
+      const row = normalizeSectionCsvRow(rawRow);
+      const csvSection = String(row.sectionName || "").trim();
+      if (csvSection && quoteSectionBaseName(csvSection) !== quoteSectionBaseName(section)) {
+        ignored.push({ line: index + 2, reason: `CSV row belongs to ${csvSection}` });
+        return;
+      }
+      const itemKey = normalizeCsvItemName(row.itemName);
+      if (!itemKey) {
+        ignored.push({ line: index + 2, reason: "Missing item name" });
+        return;
+      }
+      const target = byItem.get(itemKey);
+      const payload = editableQuotePayloadFromCsv(row);
+      if (target) updates.push({ line: index + 2, id: target.id, itemName: row.itemName, payload });
+      else adds.push({ line: index + 2, itemName: row.itemName, payload });
+    });
+    return { ok: !errors.length, section, updates, adds, ignored, errors };
+  }
+
+  function applySectionCsvImport(section, preview) {
+    if (!section || !preview || preview.errors?.length) return { ok: false, message: "Import preview has errors." };
+    const timestamp = new Date().toISOString();
+    const backupKey = `section-backup:${section}:${timestamp}`;
+    setWorkbook((current) => {
+      const currentSection = current.quotation?.[section];
+      if (!currentSection) return current;
+      const updatesById = new Map((preview.updates || []).map((entry) => [entry.id, entry.payload]));
+      const addedRows = (preview.adds || []).map((entry, index) => newClientQuoteRow(section, entry.payload, index));
+      const nextSection = {
+        ...currentSection,
+        rows: [
+          ...(currentSection.rows || []).map((row) => {
+            const update = updatesById.get(row.id);
+            return update ? mergeEditableQuotePayload(row, update) : row;
+          }),
+          ...addedRows,
+        ],
+      };
+      return {
+        ...current,
+        sectionBackups: {
+          ...(current.sectionBackups || {}),
+          [backupKey]: {
+            key: backupKey,
+            section,
+            createdAt: timestamp,
+            sectionData: currentSection,
+          },
+        },
+        quotation: {
+          ...(current.quotation || {}),
+          [section]: nextSection,
+        },
+      };
+    });
+    return { ok: true, message: `Imported section CSV. Backup created: ${backupKey}`, backupKey };
+  }
+
+  function restoreSectionBackup(backupKey = "") {
+    if (!backupKey) return { ok: false, message: "Choose a section backup first." };
+    setWorkbook((current) => {
+      const backup = current.sectionBackups?.[backupKey];
+      if (!backup?.section || !backup?.sectionData) return current;
+      return {
+        ...current,
+        quotation: {
+          ...(current.quotation || {}),
+          [backup.section]: backup.sectionData,
+        },
+      };
+    });
+    return { ok: true, message: "Section backup restored." };
   }
 
   function addQuoteLine(section, anchorId = null, position = "after") {
@@ -712,10 +1074,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       return {
         ...current,
         quotation: nextQuotation,
-        quoteHistory: [
-          ...(current.quoteHistory || []),
-          { section: toSection, id, field: "moved", value: fromSection === toSection ? "Line reordered" : `Moved from ${fromSection}`, changedAt: new Date().toISOString() },
-        ],
+        quoteHistory: appendQuoteHistory(current.quoteHistory, {
+          section: toSection,
+          id,
+          field: "moved",
+          value: fromSection === toSection ? "Line reordered" : `Moved from ${fromSection}`,
+          changedAt: new Date().toISOString(),
+        }),
       };
     });
   }
@@ -730,10 +1095,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           rows: current.quotation[section].rows.filter((row) => row.id !== id),
         },
       },
-      quoteHistory: [
-        ...(current.quoteHistory || []),
-        { section, id, field: "deleted", value: "Line deleted for this estimate", changedAt: new Date().toISOString() },
-      ],
+      quoteHistory: appendQuoteHistory(current.quoteHistory, {
+        section,
+        id,
+        field: "deleted",
+        value: "Line deleted for this estimate",
+        changedAt: new Date().toISOString(),
+      }),
     }));
   }
 
@@ -757,11 +1125,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         ...current,
         quotation: {
           ...current.quotation,
-          [section]: { collapsed: false, rows: [] },
+          [section]: { collapsed: true, rows: [] },
         },
         quotationSectionOrder: normalizeQuoteSectionOrder([...(current.quotationSectionOrder || []), section], {
           ...current.quotation,
-          [section]: { collapsed: false, rows: [] },
+          [section]: { collapsed: true, rows: [] },
         }),
       };
     });
@@ -772,6 +1140,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       ...current,
       quotationSectionOrder: normalizeQuoteSectionOrder(nextOrder, current.quotation || {}),
     }));
+  }
+
+  function renumberQuoteDisplay() {
+    const current = workbookRef.current;
+    const result = renumberWorkbookQuoteDisplay(current);
+    setRenumberReport(result.report);
+    if (!result.ok) return result.report;
+    setWorkbook(result.workbook);
+    return result.report;
   }
 
   function requestPromoteFormula(key) {
@@ -809,21 +1186,55 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
-  function saveDraft() {
-    if (typeof window === "undefined") return;
+  async function saveDraft() {
+    if (typeof window === "undefined") return { ok: false, message: "Jobs are not available here." };
     const savedAt = new Date().toISOString();
-    const draft = compactWorkbookForStorage({ ...workbook, savedAt });
-    window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify(draft));
-    saveStoredJob(draft, savedAt).catch(() => {});
+    const draft = prepareWorkbookForJobSave(workbook, savedAt);
+    estimateBuilderLog("saving job", {
+      source: "current workbook",
+      destination: "IndexedDB job store + localStorage metadata",
+      jobName: workbookJobName(draft),
+      templateKey: draft.templateKey,
+      templateName: draft.templateName,
+      mode: "job",
+    });
+    saveLocalDraftMetadata(draft, savedAt);
+    await saveStoredJob(draft, savedAt);
+    rememberRecentJob(draft, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    if (draft.templateKey || draft.templateName) setWorkbook((current) => ({ ...current, templateKey: draft.templateKey, templateName: draft.templateName, savedAt }));
     setLastSavedAt(savedAt);
+    return { ok: true, message: "Job saved.", key: workbookJobKey(draft) };
   }
 
-  function loadDraft() {
+  function prepareWorkbookForJobSave(sourceWorkbook = workbookRef.current, savedAt = new Date().toISOString()) {
+    return compactWorkbookForStorage({
+      ...sourceWorkbook,
+      templateKey: MASTER_TEMPLATE_KEY,
+      templateName: MASTER_TEMPLATE_NAME,
+      templateType: "job",
+      savedAt,
+    });
+  }
+
+  async function loadDraft() {
     if (typeof window === "undefined") return;
-    const draft = loadLocalDraft();
-    if (!draft) return;
-    setWorkbook(normalizeWorkbook(draft));
-    setLastSavedAt(draft.savedAt || "");
+    const storedJob = await loadLatestStoredJob().catch(() => null);
+    if (!storedJob?.workbook) return;
+    estimateBuilderLog("loading draft", {
+      source: "IndexedDB job store",
+      jobName: storedJob.name || workbookJobName(storedJob.workbook),
+      templateKey: storedJob.workbook?.templateKey || "",
+      templateName: storedJob.workbook?.templateName || "",
+      mode: "job",
+    });
+    if (needsMasterTemplateMigration(storedJob.workbook)) {
+      await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
+    }
+    setWorkbook(normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook))));
+    setLastSavedAt(storedJob.savedAt || storedJob.workbook?.savedAt || "");
+    rememberRecentJob(storedJob.workbook, storedJob.savedAt || storedJob.workbook?.savedAt || "");
+    setRecentJobs(loadRecentEstimateJobs());
   }
 
   async function saveTemplateAs(name, options = {}) {
@@ -840,25 +1251,26 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const savedAt = new Date().toISOString();
     const templateWorkbook = sanitizeWorkbookForTemplate(workbook, { name: templateName, savedAt, category, tags });
     try {
-      await saveStoredTemplate(templateName, templateWorkbook, { createNew: true, category, tags });
-      await saveStoredTemplatePointer(templateWorkbook.templateKey);
+      const savedTemplate = await saveStoredTemplate(templateName, templateWorkbook, { createNew: true, category, tags, templateType: "client_template" });
+      const savedKey = savedTemplate?.key || templateWorkbook.templateKey;
+      await saveStoredTemplatePointer(savedKey);
       setLastSavedAt(savedAt);
-      setWorkbook((current) => normalizeWorkbook({
+      setWorkbook((current) => ({
         ...current,
-        templateKey: templateWorkbook.templateKey,
+        templateKey: savedKey,
         templateName,
         templateCategory: category,
         templateTags: tags.join(", "),
         savedAt,
       }));
       await refreshTemplateSummaries();
-      return { ok: true, message: "Template saved.", key: templateWorkbook.templateKey };
+      return { ok: true, message: "Template saved.", key: savedKey };
     } catch {
       return { ok: false, message: "Template could not be saved." };
     }
   }
 
-  async function saveTemplate(templateKey = "") {
+  async function saveTemplate(templateKey = "", options = {}) {
     if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
     try {
       const templates = templateSummaries.length ? templateSummaries : await listStoredTemplates();
@@ -873,9 +1285,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       const tags = Array.isArray(selectedTemplate.tags) ? selectedTemplate.tags : parseTags(workbook.templateTags);
       const templateWorkbook = sanitizeWorkbookForTemplate(workbook, { name: selectedTemplate.name, savedAt, category, tags });
       const workbookForSave = { ...templateWorkbook, templateKey: selectedTemplate.key, templateName: selectedTemplate.name };
-      await saveStoredTemplate(selectedTemplate.name, workbookForSave, { key: selectedTemplate.key, category, tags });
+      const templateType = selectedTemplate.templateType || templateTypeForKey(selectedTemplate.key);
+      if (!options.skipConfirm && templateType === "master_base_template" && !confirmMasterTemplateUpdate()) {
+        return { ok: false, message: "Master template was not updated." };
+      }
+      await saveStoredTemplate(selectedTemplate.name, workbookForSave, { key: selectedTemplate.key, category, tags, templateType });
       await saveStoredTemplatePointer(selectedTemplate.key);
-      setWorkbook((current) => normalizeWorkbook({
+      setWorkbook((current) => ({
         ...current,
         templateKey: selectedTemplate.key,
         templateName: selectedTemplate.name,
@@ -889,6 +1305,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     } catch {
       return { ok: false, message: "Template could not be saved." };
     }
+  }
+
+  async function saveTemplateChanges() {
+    if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
+    return updateMasterTemplate();
   }
 
   async function duplicateTemplate(templateKey = "") {
@@ -909,7 +1330,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       category: template.templateCategory || "",
       tags: parseTags(template.templateTags),
     });
-    await saveStoredTemplate(duplicateName, duplicateWorkbook, { createNew: true, category: duplicateWorkbook.templateCategory, tags: parseTags(duplicateWorkbook.templateTags) });
+    await saveStoredTemplate(duplicateName, duplicateWorkbook, { createNew: true, category: duplicateWorkbook.templateCategory, tags: parseTags(duplicateWorkbook.templateTags), templateType: "client_template" });
     await refreshTemplateSummaries();
     return { ok: true, message: "Template duplicated." };
   }
@@ -931,7 +1352,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       tags: selectedTemplate.tags || parseTags(template.templateTags),
     });
     const nextWorkbook = { ...renamedWorkbook, templateKey: selectedTemplate.key, templateName: newName };
-    await saveStoredTemplate(newName, nextWorkbook, { key: selectedTemplate.key, category: nextWorkbook.templateCategory, tags: parseTags(nextWorkbook.templateTags) });
+    await saveStoredTemplate(newName, nextWorkbook, { key: selectedTemplate.key, category: nextWorkbook.templateCategory, tags: parseTags(nextWorkbook.templateTags), templateType: selectedTemplate.templateType || templateTypeForKey(selectedTemplate.key) });
     if (workbook.templateKey === selectedTemplate.key) {
       setWorkbook((current) => normalizeWorkbook({ ...current, templateName: newName, savedAt }));
     }
@@ -943,6 +1364,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const templates = templateSummaries.length ? templateSummaries : await listStoredTemplates();
     const selectedTemplate = templates.find((template) => template.key === templateKey);
     if (!selectedTemplate) return { ok: false, message: "Template could not be found." };
+    if ((selectedTemplate.templateType || templateTypeForKey(selectedTemplate.key)) === "master_base_template" && !confirmMasterTemplateDelete()) {
+      return { ok: false, message: "Master template was not deleted." };
+    }
     await deleteStoredTemplate(templateKey);
     if (workbook.templateKey === templateKey) {
       setWorkbook((current) => normalizeWorkbook({ ...current, templateKey: "", templateName: "" }));
@@ -963,9 +1387,101 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       category: record.category || "",
       tags: record.tags || [],
     });
-    await saveStoredTemplate(record.name, { ...restoredWorkbook, templateKey, templateName: record.name }, { key: templateKey, category: record.category || "", tags: record.tags || [] });
+    await saveStoredTemplate(record.name, { ...restoredWorkbook, templateKey, templateName: record.name }, { key: templateKey, category: record.category || "", tags: record.tags || [], templateType: record.templateType || templateTypeForKey(templateKey) });
     await refreshTemplateSummaries();
     return { ok: true, message: "Template version restored." };
+  }
+
+  async function createJobFromTemplate() {
+    if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
+    const template = await resolveMasterTemplate();
+    if (!template) return { ok: false, message: "Template could not be found." };
+    const savedAt = new Date().toISOString();
+    const jobWorkbook = createCleanJobFromMasterTemplate(template, savedAt);
+    jobWorkbook.createdFromMasterTemplateAt = savedAt;
+    const draft = prepareWorkbookForJobSave(jobWorkbook, savedAt);
+    saveLocalDraftMetadata(draft, savedAt);
+    await saveStoredJob(draft, savedAt);
+    rememberRecentJob(draft, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    setWorkbook(jobWorkbook);
+    setLastSavedAt(savedAt);
+    await refreshTemplateSummaries();
+    return { ok: true, message: "New job created from master template.", key: MASTER_TEMPLATE_KEY };
+  }
+
+  async function duplicateAsNewTemplate(templateKey = "") {
+    if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
+    const selectedKey = String(templateKey || workbook.templateKey || REPAIR_TEMPLATE_KEY).trim();
+    const template = await loadStoredTemplate(selectedKey);
+    if (!template) return { ok: false, message: "Template could not be found." };
+    const sourceName = template.templateName || REPAIR_TEMPLATE_NAME;
+    const duplicateName = window.prompt("Duplicate as new client template", `${sourceName} Copy`);
+    if (!duplicateName) return { ok: false, message: "Template was not duplicated." };
+    const savedAt = new Date().toISOString();
+    const duplicateWorkbook = sanitizeWorkbookForTemplate(template, {
+      name: duplicateName,
+      savedAt,
+      category: template.templateCategory || "",
+      tags: parseTags(template.templateTags),
+    });
+    await saveStoredTemplate(duplicateName, duplicateWorkbook, { createNew: true, category: duplicateWorkbook.templateCategory, tags: parseTags(duplicateWorkbook.templateTags), templateType: "client_template" });
+    await refreshTemplateSummaries();
+    return { ok: true, message: "Client template duplicated." };
+  }
+
+  async function updateMasterTemplate() {
+    if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
+    if (!confirmMasterTemplateUpdate()) return { ok: false, message: "Master template was not updated." };
+    return saveCurrentWorkbookAsBaseTemplate("Master estimate template updated.");
+  }
+
+  async function saveAsBaseTemplate() {
+    if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
+    const confirmed = window.confirm("Save the current open workbook as the Master Estimate Template? This overwrites the base template used for all future new estimates. Continue?");
+    if (!confirmed) return { ok: false, message: "Base template was not updated." };
+    return saveCurrentWorkbookAsBaseTemplate("Saved current workbook as Master Estimate Template.");
+  }
+
+  async function saveCurrentWorkbookAsBaseTemplate(successMessage) {
+    const savedAt = new Date().toISOString();
+    await saveMasterTemplateBackup(savedAt).catch(() => {});
+    estimateBuilderLog("saving base template", {
+      source: "current open workbook",
+      destination: "IndexedDB template store",
+      jobName: workbookJobName(workbookRef.current),
+      openedFileName: workbookRef.current.openedFileName || workbookRef.current.sourceFileName || "",
+      templateKey: MASTER_TEMPLATE_KEY,
+      templateName: MASTER_TEMPLATE_NAME,
+      mode: "template-save-from-job",
+    });
+    const templateWorkbook = sanitizeWorkbookForTemplate(workbookRef.current, {
+      name: MASTER_TEMPLATE_NAME,
+      key: MASTER_TEMPLATE_KEY,
+      savedAt,
+      category: workbookRef.current.templateCategory || "Master Templates",
+      tags: parseTags(workbookRef.current.templateTags),
+      templateType: "master_base_template",
+    });
+    await saveStoredTemplate(MASTER_TEMPLATE_NAME, { ...templateWorkbook, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" }, {
+      key: MASTER_TEMPLATE_KEY,
+      category: templateWorkbook.templateCategory || "Master Templates",
+      tags: parseTags(templateWorkbook.templateTags),
+      templateType: "master_base_template",
+    });
+    await saveStoredTemplatePointer(MASTER_TEMPLATE_KEY);
+    setWorkbook((current) => ({ ...current, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "job", savedAt }));
+    setLastSavedAt(savedAt);
+    await refreshTemplateSummaries();
+    estimateBuilderLog("base template saved", {
+      source: "current open workbook",
+      destination: "IndexedDB template store",
+      templateKey: MASTER_TEMPLATE_KEY,
+      templateName: MASTER_TEMPLATE_NAME,
+      savedAt,
+      mode: "master_base_template",
+    });
+    return { ok: true, message: successMessage, key: MASTER_TEMPLATE_KEY };
   }
 
   async function loadTemplate(key) {
@@ -991,6 +1507,32 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
   }
 
+  async function relinkCurrentJobToExistingTemplate() {
+    if (typeof window === "undefined") return { ok: false, message: "Relink is not available here." };
+    const savedAt = new Date().toISOString();
+    const templateWorkbook = await loadStoredTemplate(REPAIR_TEMPLATE_KEY).catch(() => null);
+    const relinkedWorkbook = mergeMissingQuoteSectionTemplateMeta({
+      ...workbookRef.current,
+      templateKey: REPAIR_TEMPLATE_KEY,
+      templateName: REPAIR_TEMPLATE_NAME,
+      templateType: "job",
+      savedAt,
+    }, templateWorkbook);
+    const draft = compactWorkbookForStorage(relinkedWorkbook);
+    try {
+      allowUnlinkedJobSaveRef.current = false;
+      saveAllowUnlinkedJobSave(false);
+      saveLocalDraftMetadata(draft, savedAt);
+      await saveStoredJob(draft, savedAt);
+      setWorkbook(relinkedWorkbook);
+      setLastSavedAt(savedAt);
+      await refreshTemplateSummaries();
+      return { ok: true, message: "Current job relinked to existing template.", key: REPAIR_TEMPLATE_KEY };
+    } catch {
+      return { ok: false, message: "Current job could not be relinked." };
+    }
+  }
+
   async function refreshTemplateSummaries() {
     try {
       setTemplateSummaries(await listStoredTemplates());
@@ -999,11 +1541,59 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
   }
 
-  function loadJobFileText(text) {
+  async function refreshSavedJobSummaries() {
+    try {
+      const jobs = await listStoredJobs();
+      setSavedJobSummaries(jobs);
+      setRecentJobs(loadRecentEstimateJobs());
+      return jobs;
+    } catch {
+      setSavedJobSummaries([]);
+      return [];
+    }
+  }
+
+  async function openSavedJob(jobKey) {
+    if (typeof window === "undefined" || !jobKey) return { ok: false, message: "Choose a saved job first." };
+    const record = await loadStoredJob(jobKey).catch(() => null);
+    if (!record?.workbook) return { ok: false, message: "Saved job could not be found." };
+    if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) {
+      return { ok: false, message: "This saved job is blocked and cannot be opened." };
+    }
+    if (needsMasterTemplateMigration(record.workbook)) {
+      await saveJobBackup(record.workbook, new Date().toISOString()).catch(() => {});
+    }
+    const nextWorkbook = normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(record.workbook)));
+    const savedAt = record.savedAt || nextWorkbook.savedAt || "";
+    await setActiveStoredJob(record).catch(() => {});
+    rememberRecentJob(nextWorkbook, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    setWorkbook(nextWorkbook);
+    setLastSavedAt(savedAt);
+    return { ok: true, message: "Saved job opened.", key: record.key };
+  }
+
+  async function loadJobFileText(text, fileName = "") {
+    if (isCorruptEstimateJobFileName(fileName)) {
+      throw new Error("estimate-job.json is blocked and cannot be opened.");
+    }
     const parsed = JSON.parse(text);
     const workbookFromFile = parsed?.workbook || parsed;
-    setWorkbook(normalizeWorkbook(workbookFromFile));
-    setLastSavedAt(parsed?.savedAt || workbookFromFile?.savedAt || "");
+    if (isCorruptEstimateJobWorkbook(workbookFromFile)) {
+      throw new Error("estimate-job.json is blocked and cannot be opened.");
+    }
+    const savedAt = new Date().toISOString();
+    await saveJobBackup(workbookFromFile, savedAt).catch(() => {});
+    let nextWorkbook = migrateWorkbookToMasterTemplate({
+      ...workbookFromFile,
+      openedFileName: fileName || workbookFromFile?.openedFileName || workbookFromFile?.sourceFileName || "",
+      sourceFileName: fileName || workbookFromFile?.sourceFileName || workbookFromFile?.openedFileName || "",
+    });
+    nextWorkbook = await applyTemplateDefaultsToJob(nextWorkbook);
+    setWorkbook(normalizeWorkbook(nextWorkbook));
+    setLastSavedAt(parsed?.savedAt || nextWorkbook?.savedAt || "");
+    rememberRecentJob(nextWorkbook, parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
   }
 
   const formulaRows = Array.isArray(workbook.formulaRows)
@@ -1023,12 +1613,18 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     activeDataTab,
     lastSavedAt,
     templateSummaries,
+    savedJobSummaries,
+    recentJobs,
+    renumberReport,
     setLineSearch,
     setHideUnused,
     setActiveDataTab,
     setPage,
+    updatePlans,
+    updateTakeoffProject,
     toggleDataSection,
     updateData,
+    updateSubcontractorQuote,
     updateDataRowMeta,
     addDataRow,
     deleteDataRow,
@@ -1046,10 +1642,20 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     deleteWindow,
     resetWindowsDoorsFromExcel,
     toggleQuoteSection,
+    collapseAllQuoteSections,
     updateQuote,
     updateQuoteSectionMeta,
     updateSummaryAdjustment,
     updateClientPage,
+    updateCashflowPayment,
+    generateProcurementListFromQuote,
+    refreshProcurementListFromQuote,
+    updateProcurementItem,
+    pushProcurementToJobBoard,
+    createPurchaseOrdersFromProcurement,
+    previewSectionCsvImport,
+    applySectionCsvImport,
+    restoreSectionBackup,
     addQuoteLine,
     duplicateQuoteLine,
     moveQuoteLine,
@@ -1057,18 +1663,27 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     deleteQuoteSection,
     addQuoteSection,
     saveQuoteSectionOrder,
+    renumberQuoteDisplay,
     requestPromoteFormula,
     requestPromoteRate,
     saveDraft,
     loadDraft,
     saveTemplate,
+    saveTemplateChanges,
     saveTemplateAs,
     duplicateTemplate,
     renameTemplate,
     deleteTemplate,
     restoreTemplateVersion,
+    createJobFromTemplate,
+    duplicateAsNewTemplate,
+    updateMasterTemplate,
+    saveAsBaseTemplate,
     refreshTemplateSummaries,
+    refreshSavedJobSummaries,
+    openSavedJob,
     loadTemplate,
+    relinkCurrentJobToExistingTemplate,
     loadJobFileText,
   };
 }
@@ -1079,12 +1694,6 @@ function initialWorkbook(initialValues = {}, options = {}) {
   }
   if (typeof window === "undefined") {
     return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
-  }
-  try {
-    const raw = window.localStorage.getItem("estimate-builder-active-draft");
-    if (raw) return normalizeWorkbook(JSON.parse(raw));
-  } catch {
-    // Fall back to a clean template if the browser draft is invalid.
   }
   return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
 }
@@ -1108,6 +1717,7 @@ function createBlankPreviewWorkbook(initialValues = {}) {
     windowsDoors: (workbook.windowsDoors || []).map((row) => ({
       ...row,
       code: "",
+      sizeCode: "",
       quantity: "",
       width: "",
       height: "",
@@ -1159,9 +1769,17 @@ function normalizeWorkbook(workbook = {}) {
     windowsDoors: normalizeWindowsDoors(workbook.windowsDoors, defaults.windowsDoors),
     quotation,
     quotationSectionOrder: normalizeQuoteSectionOrder(workbook.quotationSectionOrder || defaults.quotationSectionOrder || [], quotation),
+    cashflowPayments: normalizeCashflowPayments(workbook.cashflowPayments, defaults.cashflowPayments),
     formulas: normalizeFormulas(defaults.formulas || {}, migratedFormulaRows.formulas),
     formulaNotes: { ...(defaults.formulaNotes || {}), ...(workbook.formulaNotes || {}) },
     formulaRows,
+  };
+}
+
+function normalizeCashflowPayments(savedPayments = {}, defaultPayments = {}) {
+  return {
+    ...(defaultPayments || {}),
+    ...(savedPayments || {}),
   };
 }
 
@@ -1329,7 +1947,7 @@ function normalizeWindowsDoors(savedRows, defaultRows = []) {
     const fallback = defaultById.get(String(row?.id || "")) || defaultBySourceRow.get(String(row?.sourceRow || "")) || null;
     if (!fallback) return row;
     const missingCode = !String(row?.code || "").trim();
-    return withWindowDoorApproximateRate(withDoorScheduleSelection({
+    const merged = {
       ...fallback,
       ...row,
       values: Array.isArray(row?.values) && row.values.some((value) => value !== "" && value !== null && value !== undefined)
@@ -1342,6 +1960,10 @@ function normalizeWindowsDoors(savedRows, defaultRows = []) {
       width: row?.width === "" || row?.width === undefined || row?.width === null ? fallback.width : row.width,
       height: row?.height === "" || row?.height === undefined || row?.height === null ? fallback.height : row.height,
       area: row?.area === "" || row?.area === undefined || row?.area === null ? fallback.area : row.area,
+    };
+    return withWindowDoorApproximateRate(withDoorScheduleSelection({
+      ...merged,
+      sizeCode: String(row?.sizeCode || "").trim() || windowDoorSizeCodeForRow(merged),
     }));
   });
   return orderWindowDoorRows(normalizeHumeEntryDoorRows(restoreMissingEntryDoorDefaults(normalizedSavedRows, defaultRows)));
@@ -1463,13 +2085,13 @@ function normalizeQuotation(savedQuotation = {}, defaultQuotation = {}) {
   const mergedEntries = mergeJobSetOutLabourRows(mergeQuickRenderRowsIntoRendering(renameRoofingLabourSection(renamedEntries)));
   const orderedEntries = orderSavedQuotationSections(mergedEntries);
   const entries = insertManualLinenSections(insertCabinetMakerSection(insertStandardThreeDoorRobeSection(movePlastererQuoteRowToSupplyInstall(orderedEntries), defaultQuotation), defaultQuotation), defaultQuotation);
-  const normalized = Object.fromEntries(entries
+  const normalized = Object.fromEntries(mergeRenamedQuoteSections(entries
     .filter(([sectionName]) => !isRemovedQuoteSection(sectionName))
-    .map(([sectionName, section]) => [normalizeSavedQuoteSectionName(sectionName), section])
+    .map(([sectionName, section]) => [normalizeSavedQuoteSectionName(sectionName), section]))
     .map(([sectionName, section]) => {
     const defaultSection = defaultQuotation?.[sectionName] || defaultQuoteSectionByBaseName(defaultQuotation, sectionName) || {};
     const defaultRowsById = Object.fromEntries((defaultSection.rows || []).map((row) => [row.id, row]));
-    const savedRows = quoteSectionBaseName(sectionName) === "appliance package" ? [] : section.rows || [];
+    const savedRows = isAppliancePackageSectionName(sectionName) ? [] : section.rows || [];
     const rows = orderQuoteRows(removeRemovedImportedQuoteRows(removeRoofingMaterialsRemovedRows(sectionName, normalizeBulkEarthworksRows(sectionName, ensureRequiredDefaultQuoteRows(sectionName, removeMisplacedFloorFramingQuoteRows(sectionName, savedRows), defaultSection.rows || [])))));
     const normalizedRows = rows
       .filter((row) => !isRemovedQuoteSection(row.section))
@@ -1477,21 +2099,297 @@ function normalizeQuotation(savedQuotation = {}, defaultQuotation = {}) {
     return [sectionName, {
       ...defaultSection,
       ...section,
-      collapsed: quoteSectionBaseName(sectionName) === "face brickwork" ? true : section.collapsed,
+      collapsed: typeof section.collapsed === "boolean" ? section.collapsed : true,
       rows: normalizeSavedQuoteSectionRows(sectionName, normalizedRows),
     }];
   }));
   Object.entries(defaultQuotation || {}).forEach(([sectionName, section]) => {
-    if (!isImportedFloorcoveringSectionName(sectionName) && !isImportedAppliancePackageSectionName(sectionName)) return;
+    if (!isImportedFloorcoveringSectionName(sectionName) && !isImportedAppliancePackageSectionName(sectionName) && !isRequiredDefaultQuoteSectionName(sectionName)) return;
     if (defaultQuoteSectionByBaseName(normalized, sectionName)) return;
-    normalized[sectionName] = section;
+    normalized[sectionName] = { ...section, collapsed: true };
   });
+  normalizeRoughInsSection(normalized);
+  normalizePlumbersFitOffSection(normalized);
+  moveFixOutOpeningRowsIntoFixOut(normalized);
+  normalizeApplianceWhiteGoodsSections(normalized);
   return normalized;
+}
+
+function normalizePlumbersFitOffSection(quotation = {}) {
+  const sectionName = Object.keys(quotation || {}).find((section) => quoteSectionBaseName(section) === "plumbers fit off costs") || "PLUMBER'S FIT OFF COSTS";
+  const section = quotation[sectionName] || {
+    collapsed: true,
+    columns: ["Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"],
+    rows: [],
+  };
+  const rows = Array.isArray(section.rows) ? section.rows : [];
+  const quoteRow = rows.find(isPlumberQuoteInputRow) || manualPlumberQuoteInputRow(sectionName);
+  const fitOffRow = rows.find(isPlumberFitOffBalanceRow) || manualPlumberFitOffBalanceRow(sectionName);
+  const ordered = [
+    { ...quoteRow, section: sectionName },
+    { ...fitOffRow, section: sectionName },
+    ...rows.filter((row) => !isPlumberQuoteInputRow(row) && !isPlumberFitOffBalanceRow(row)),
+  ];
+  quotation[sectionName] = {
+    ...section,
+    collapsed: typeof section.collapsed === "boolean" ? section.collapsed : true,
+    rows: uniqueQuoteRowsByIdentity(ordered),
+  };
+  return quotation;
+}
+
+function manualPlumberQuoteInputRow(sectionName) {
+  return manualGeneratedQuoteRow(30080, "Plumber's Quote", "QUOTE", sectionName);
+}
+
+function manualPlumberFitOffBalanceRow(sectionName) {
+  return manualGeneratedQuoteRow(30076, "Plumber's fit off costs", "ITEM", sectionName);
+}
+
+function manualGeneratedQuoteRow(sourceRow, item, unit, sectionName) {
+  return {
+    id: `quote-${sourceRow}`,
+    excelRow: sourceRow,
+    importedWorkbookRow: false,
+    section: sectionName,
+    values: [item, "", "", unit, "", "", ""],
+    formulas: {},
+    item,
+    quantity: "",
+    importedQuantity: "",
+    quantityKey: "",
+    unit,
+    excelRate: "",
+    supplierCatalogueRate: "",
+    quotedSupplierRate: "",
+    manualRate: "",
+    supplierQuote: "",
+    sourceOfRate: "manual",
+    rawText: item,
+    notes: "",
+  };
+}
+
+function isPlumberQuoteInputRow(row = {}) {
+  return quoteRowSourceNumber(row) === 30080 || String(row.item || "").trim().toLowerCase() === "plumber's quote";
+}
+
+function isPlumberFitOffBalanceRow(row = {}) {
+  const text = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  return quoteRowSourceNumber(row) === 30076 || (text.includes("plumber") && text.includes("fit off"));
+}
+
+function normalizeRoughInsSection(quotation = {}) {
+  const roughInsSectionName = Object.keys(quotation || {}).find((sectionName) => quoteSectionBaseName(sectionName) === "rough-ins") || ROUGH_INS_SECTION;
+  const existingRoughInsSection = quotation[roughInsSectionName];
+  if (!existingRoughInsSection) return quotation;
+  const rows = Array.isArray(existingRoughInsSection.rows) ? existingRoughInsSection.rows : [];
+  const remainingRows = rows.filter((row) => !isGeneratedRoughInRow(row));
+  if (remainingRows.length) {
+    quotation[roughInsSectionName] = { ...existingRoughInsSection, rows: remainingRows };
+  } else {
+    delete quotation[roughInsSectionName];
+  }
+  return quotation;
+}
+
+function roughInStandardRows(sectionName = ROUGH_INS_SECTION) {
+  return [];
+}
+
+function manualRoughInQuoteRow(sourceRow, item, sectionName) {
+  return {
+    id: `quote-${sourceRow}`,
+    excelRow: sourceRow,
+    importedWorkbookRow: false,
+    section: sectionName,
+    values: [item, "", "", "ITEM", "", "", ""],
+    formulas: {},
+    item,
+    quantity: "",
+    importedQuantity: "",
+    quantityKey: "",
+    unit: "ITEM",
+    excelRate: "",
+    supplierCatalogueRate: "",
+    quotedSupplierRate: "",
+    manualRate: "",
+    supplierQuote: "",
+    sourceOfRate: "manual",
+    rawText: item,
+    notes: "",
+  };
+}
+
+function isRoughInQuoteRow(row = {}) {
+  const text = `${row.item || ""} ${row.rawText || ""} ${Array.isArray(row.values) ? row.values.join(" ") : ""}`.toLowerCase();
+  return text.includes("rough") && text.includes("in") && (text.includes("plumber") || text.includes("electrician"));
+}
+
+function isGeneratedRoughInRow(row = {}) {
+  return [30078, 30079].includes(quoteRowSourceNumber(row)) || isPlumberRoughInRow(row) || isElectricianRoughInRow(row);
+}
+
+function orderRoughInRows(rows = []) {
+  const plumber = rows.find((row) => isPlumberRoughInRow(row));
+  const electrician = rows.find((row) => isElectricianRoughInRow(row));
+  const ordered = [plumber, electrician].filter(Boolean);
+  return [...ordered, ...rows.filter((row) => !ordered.includes(row))];
+}
+
+function isPlumberRoughInRow(row = {}) {
+  const text = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  return text.includes("plumber") && text.includes("rough") && text.includes("in");
+}
+
+function isElectricianRoughInRow(row = {}) {
+  const text = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  return text.includes("electrician") && text.includes("rough") && text.includes("in");
+}
+
+function moveFixOutOpeningRowsIntoFixOut(quotation = {}) {
+  const fixOutSectionName = Object.keys(quotation || {}).find(isFixOutSectionName);
+  if (!fixOutSectionName) return quotation;
+  const movingRows = [];
+  Object.entries(quotation || {}).forEach(([sectionName, section]) => {
+    const rows = Array.isArray(section?.rows) ? section.rows : [];
+    const remaining = [];
+    rows.forEach((row) => {
+      if ([159, 160].includes(quoteRowSourceNumber(row))) {
+        movingRows.push({ ...row, section: fixOutSectionName });
+      } else {
+        remaining.push(row);
+      }
+    });
+    if (remaining.length !== rows.length) {
+      quotation[sectionName] = { ...section, rows: remaining };
+    }
+  });
+  if (!movingRows.length) return quotation;
+  movingRows.sort((a, b) => quoteRowSourceNumber(a) - quoteRowSourceNumber(b));
+  const existingFixOutRows = quotation[fixOutSectionName]?.rows || [];
+  quotation[fixOutSectionName] = {
+    ...quotation[fixOutSectionName],
+    rows: uniqueQuoteRowsByIdentity([
+      ...movingRows,
+      ...existingFixOutRows,
+    ]).map((row) => ({ ...row, section: fixOutSectionName })),
+  };
+  return quotation;
+}
+
+const APPLIANCE_WHITE_GOODS_SECTION = "APPLIANCES & WHITE GOODS";
+const APPLIANCE_BRAND_ORDER = ["EUROMAID", "OMEGA", "BLANCO", "ARISTON", "WESTINGHOUSE", "SMEG"];
+
+function normalizeApplianceWhiteGoodsSections(quotation = {}) {
+  const parentSectionName = Object.keys(quotation || {}).find(isAppliancePackageSectionName) || APPLIANCE_WHITE_GOODS_SECTION;
+  const parentSection = quotation[parentSectionName] || {
+    collapsed: true,
+    columns: ["Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"],
+    rows: [],
+  };
+  const rowsByBrand = Object.fromEntries(APPLIANCE_BRAND_ORDER.map((brand) => [brand, []]));
+
+  Object.entries(quotation || {}).forEach(([sectionName, section]) => {
+    const isApplianceSection = isImportedAppliancePackageSectionName(sectionName);
+    const isFixOutSection = isFixOutSectionName(sectionName);
+    if (!isApplianceSection && !isFixOutSection) return;
+    const remainingRows = [];
+    (section?.rows || []).forEach((row) => {
+      const brand = applianceBrandForRow(row, sectionName);
+      if (brand && isRemovedApplianceHeading(row, brand)) return;
+      if (brand) {
+        rowsByBrand[brand].push(normalizeApplianceBrandRow(row, brand));
+      } else if (!isApplianceSection) {
+        remainingRows.push(row);
+      }
+    });
+    if (isFixOutSection) {
+      quotation[sectionName] = { ...section, rows: remainingRows };
+    } else {
+      delete quotation[sectionName];
+    }
+  });
+
+  quotation[APPLIANCE_WHITE_GOODS_SECTION] = {
+    ...parentSection,
+    collapsed: typeof parentSection.collapsed === "boolean" ? parentSection.collapsed : true,
+    rows: [],
+  };
+  APPLIANCE_BRAND_ORDER.forEach((brand) => {
+    const sectionName = applianceWhiteGoodsBrandSectionName(brand);
+    quotation[sectionName] = {
+      ...(quotation[sectionName] || parentSection),
+      collapsed: true,
+      columns: parentSection.columns || ["Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"],
+      rows: uniqueQuoteRowsByIdentity(rowsByBrand[brand]).map((row) => ({
+        ...row,
+        section: sectionName,
+      })),
+    };
+  });
+  return quotation;
+}
+
+function applianceWhiteGoodsBrandSectionName(brand) {
+  return `${APPLIANCE_WHITE_GOODS_SECTION} - ${brand}`;
+}
+
+function applianceBrandForRow(row = {}, sectionName = "") {
+  const primaryText = [
+    sectionName,
+    row.appliancePackage,
+    row.item,
+    row.rawText,
+    Array.isArray(row.values) ? row.values.join(" ") : "",
+    row.notes,
+  ].join(" ").toUpperCase().replace(/ARISTON[E]/g, "ARISTON");
+  const primaryBrand = APPLIANCE_BRAND_ORDER.find((brand) => primaryText.includes(brand));
+  if (primaryBrand) return primaryBrand;
+  const fallbackText = String(row.applianceBrand || "").toUpperCase().replace(/ARISTON[E]/g, "ARISTON");
+  return APPLIANCE_BRAND_ORDER.find((brand) => fallbackText.includes(brand)) || "";
+}
+
+function normalizeApplianceBrandRow(row = {}, brand = "") {
+  const sectionName = applianceWhiteGoodsBrandSectionName(brand);
+  return {
+    ...row,
+    section: sectionName,
+    item: normalizeApplianceBrandSpelling(row.item),
+    rawText: normalizeApplianceBrandSpelling(row.rawText),
+    notes: normalizeApplianceBrandSpelling(row.notes),
+    applianceBrand: brand,
+    appliancePackage: normalizeApplianceBrandSpelling(row.appliancePackage),
+    values: Array.isArray(row.values) ? row.values.map(normalizeApplianceBrandSpelling) : row.values,
+  };
+}
+
+function isRemovedApplianceHeading(row = {}, brand = "") {
+  const item = String(row.item || row.values?.[0] || "").trim().toUpperCase();
+  return brand === "OMEGA"
+    && (row.applianceHeading === true || row.lineType === "Appliance heading")
+    && item === "OMEGA 900MM GAS OPTIONS";
+}
+
+function normalizeApplianceBrandSpelling(value) {
+  return typeof value === "string" ? value.replace(/Ariston[e]/g, "Ariston").replace(/ARISTON[E]/g, "ARISTON") : value;
+}
+
+function isRequiredDefaultQuoteSectionName(sectionName) {
+  return [
+    "concrete and landscaping",
+    "underslab and drainage",
+    "rough-ins",
+    "plumbers fit off costs",
+    "electricians fit off costs",
+  ].includes(quoteSectionBaseName(sectionName));
 }
 
 function isImportedAppliancePackageSectionName(sectionName) {
   const baseName = quoteSectionBaseName(sectionName);
-  return baseName === "appliance package" || baseName.startsWith("appliance package - ");
+  return isAppliancePackageSectionName(sectionName)
+    || baseName.startsWith("appliance package - ")
+    || baseName.startsWith("appliances & white goods - ");
 }
 
 function isImportedFloorcoveringSectionName(sectionName) {
@@ -1501,10 +2399,33 @@ function isImportedFloorcoveringSectionName(sectionName) {
     "laminated flooring",
     "vinyl flooring",
     "hybrid flooring",
-    "engeineered timber",
+    "engineered timber",
     "solid timber flooring",
     "carpets",
   ].includes(quoteSectionBaseName(sectionName));
+}
+
+function mergeRenamedQuoteSections(entries = []) {
+  const merged = new Map();
+  entries.forEach(([sectionName, section]) => {
+    const existing = merged.get(sectionName);
+    if (!existing) {
+      merged.set(sectionName, section);
+      return;
+    }
+    const existingRows = Array.isArray(existing.rows) ? existing.rows : [];
+    const sectionRows = Array.isArray(section?.rows) ? section.rows : [];
+    merged.set(sectionName, {
+      ...existing,
+      ...section,
+      collapsed: typeof existing.collapsed === "boolean" ? existing.collapsed : section?.collapsed,
+      rows: uniqueQuoteRowsByIdentity([...existingRows, ...sectionRows]).map((row) => ({
+        ...row,
+        section: sectionName,
+      })),
+    });
+  });
+  return Array.from(merged.entries());
 }
 
 function normalizeSavedQuoteRow(row, defaultRowsById = {}) {
@@ -1596,10 +2517,10 @@ function normalizeSavedQuoteSectionRows(sectionName, rows = []) {
 
 function insertStandardThreeDoorRobeSection(entries = [], defaultQuotation = {}) {
   if (entries.some(([sectionName]) => quoteSectionBaseName(sectionName) === quoteSectionBaseName(STANDARD_THREE_DOOR_ROBE_SECTION))) return entries;
-  const defaultSection = defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_THREE_DOOR_ROBE_SECTION) || {
+  const defaultSection = closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_THREE_DOOR_ROBE_SECTION) || {
     collapsed: true,
     rows: standardThreeDoorRobeRows(),
-  };
+  });
   const section = [STANDARD_THREE_DOOR_ROBE_SECTION, defaultSection];
   const wardrobeIndex = entries.findIndex(([sectionName]) => quoteSectionBaseName(sectionName) === "standard wardrobes complete (2.4m wide)");
   if (wardrobeIndex < 0) return [...entries, section];
@@ -1612,14 +2533,14 @@ function insertManualLinenSections(entries = [], defaultQuotation = {}) {
     quoteSectionBaseName(STANDARD_TWO_DOOR_LINEN_SECTION),
     quoteSectionBaseName(STANDARD_THREE_DOOR_LINEN_SECTION),
   ].includes(quoteSectionBaseName(sectionName)));
-  const twoDoorDefault = defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_TWO_DOOR_LINEN_SECTION) || {
+  const twoDoorDefault = closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_TWO_DOOR_LINEN_SECTION) || {
     collapsed: true,
     rows: standardTwoDoorLinenRows(),
-  };
-  const threeDoorDefault = defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_THREE_DOOR_LINEN_SECTION) || {
+  });
+  const threeDoorDefault = closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, STANDARD_THREE_DOOR_LINEN_SECTION) || {
     collapsed: true,
     rows: standardThreeDoorLinenRows(),
-  };
+  });
   const sections = [
     [STANDARD_TWO_DOOR_LINEN_SECTION, twoDoorDefault],
     [STANDARD_THREE_DOOR_LINEN_SECTION, threeDoorDefault],
@@ -1652,17 +2573,17 @@ function insertCabinetMakerSection(entries = [], defaultQuotation = {}) {
   const defaultSection = existingCabinet?.[1]
     ? { ...existingCabinet[1], rows: cabinetMakerRows(existingCabinet[1].rows || [], CABINET_MAKER_SECTION) }
     : defaultCabinetSection
-      ? { ...defaultCabinetSection, rows: cabinetMakerRows(defaultCabinetSection.rows || [], CABINET_MAKER_SECTION) }
+      ? closedQuoteSection({ ...defaultCabinetSection, rows: cabinetMakerRows(defaultCabinetSection.rows || [], CABINET_MAKER_SECTION) })
       : {
           collapsed: true,
           rows: cabinetMakerRows(),
         };
   const sections = [
     [CABINET_MAKER_SECTION, defaultSection],
-    [CABINET_MAKER_BUTLERS_PANTRY_SECTION, existingButlersPantry?.[1] || defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BUTLERS_PANTRY_SECTION) || { collapsed: true, rows: cabinetMakerButlersPantryRows() }],
-    [CABINET_MAKER_LAUNDRY_SECTION, existingLaundry?.[1] || defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_LAUNDRY_SECTION) || { collapsed: true, rows: cabinetMakerLaundryRows() }],
-    [CABINET_MAKER_BATHROOMS_SECTION, existingBathrooms?.[1] || defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BATHROOMS_SECTION) || { collapsed: true, rows: cabinetMakerBathroomRows() }],
-    [CABINET_MAKER_WARDROBES_SECTION, existingWardrobes?.[1] || defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_WARDROBES_SECTION) || { collapsed: true, rows: cabinetMakerWardrobeRows() }],
+    [CABINET_MAKER_BUTLERS_PANTRY_SECTION, existingButlersPantry?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BUTLERS_PANTRY_SECTION) || { collapsed: true, rows: cabinetMakerButlersPantryRows() })],
+    [CABINET_MAKER_LAUNDRY_SECTION, existingLaundry?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_LAUNDRY_SECTION) || { collapsed: true, rows: cabinetMakerLaundryRows() })],
+    [CABINET_MAKER_BATHROOMS_SECTION, existingBathrooms?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_BATHROOMS_SECTION) || { collapsed: true, rows: cabinetMakerBathroomRows() })],
+    [CABINET_MAKER_WARDROBES_SECTION, existingWardrobes?.[1] || closedQuoteSection(defaultQuoteSectionByBaseName(defaultQuotation, CABINET_MAKER_WARDROBES_SECTION) || { collapsed: true, rows: cabinetMakerWardrobeRows() })],
   ];
   const groupEndIndex = filtered.findLastIndex(([sectionName]) => [
     "fix out materials",
@@ -1684,17 +2605,88 @@ function isNewCabinetMakerSection(section) {
 }
 
 function movePlastererQuoteRowToSupplyInstall(entries = []) {
-  return entries.map(([sectionName, section]) => {
+  const corniceRowsToMove = [];
+  const entriesWithoutCorniceRows = entries.map(([sectionName, section]) => {
+    if (quoteSectionBaseName(sectionName) !== "plastering extras") return [sectionName, section];
+    const rows = [];
+    (section.rows || []).forEach((row) => {
+      if ([1279, 1280].includes(quoteRowSourceNumber(row))) {
+        corniceRowsToMove.push({ ...row, section: "PLASTERER - SUPPLY AND INSTALL" });
+      } else {
+        rows.push(row);
+      }
+    });
+    return [sectionName, { ...section, rows }];
+  });
+  return entriesWithoutCorniceRows.map(([sectionName, section]) => {
     if (quoteSectionBaseName(sectionName) !== "plasterer - supply and install") return [sectionName, section];
+    const targetCorniceRows = (section.rows || []).filter((row) => [1279, 1280].includes(quoteRowSourceNumber(row)));
+    const existingRows = (section.rows || []).filter((row) => ![1279, 1280].includes(quoteRowSourceNumber(row)));
+    const movedRows = [1279, 1280]
+      .map((sourceRow) =>
+        targetCorniceRows.find((row) => quoteRowSourceNumber(row) === sourceRow)
+        || corniceRowsToMove.find((row) => quoteRowSourceNumber(row) === sourceRow)
+        || defaultCorniceQuoteRow(sourceRow)
+      )
+      .filter(Boolean)
+      .map(normalizePlasterSupplyInstallRow);
     return [sectionName, {
       ...section,
-      rows: insertRowsBefore(
-        (section.rows || []).filter((row) => row?.id !== "quote-plaster-supply-install"),
-        [plasterSupplyInstallQuoteRow()],
-        "quote-1269"
+      rows: insertRowsAfter(
+        insertRowsBefore(
+          existingRows.filter((row) => row?.id !== "quote-plaster-supply-install"),
+          [plasterSupplyInstallQuoteRow()],
+          "quote-1269"
+        ),
+        movedRows,
+        "quote-1271"
       ),
     }];
   });
+}
+
+function defaultCorniceQuoteRow(sourceRow) {
+  if (sourceRow === 1279) {
+    return {
+      id: "quote-1279",
+      excelRow: 1279,
+      importedWorkbookRow: true,
+      section: "PLASTERER - SUPPLY AND INSTALL",
+      values: ["55mm COVE CORNICE", "", "", "LM", "", "$8.71", ""],
+      formulas: { F: "6.6*1.1*1.2", G: "B1279*F1279" },
+      item: "55mm COVE CORNICE",
+      quantity: "",
+      importedQuantity: "",
+      quantityKey: "",
+      unit: "LM",
+      excelRate: "$8.71",
+      sourceOfRate: "workbook",
+      rawText: "55mm COVE CORNICE",
+      notes: "",
+    };
+  }
+  if (sourceRow === 1280) {
+    return {
+      id: "quote-1280",
+      excelRow: 1280,
+      importedWorkbookRow: true,
+      section: "PLASTERER - SUPPLY AND INSTALL",
+      values: ["90mm COVE CORNICE", "", "", "LM", "", "$11.22", ""],
+      formulas: { F: "8.5*1.1*1.2", G: "B1280*F1280" },
+      item: "90mm COVE CORNICE",
+      quantity: "",
+      importedQuantity: "",
+      quantityKey: "corniceLm",
+      unit: "LM",
+      excelRate: "$11.22",
+      sourceOfRate: "workbook",
+      rawText: "90mm COVE CORNICE",
+      notes: "IMPORTED DATA",
+      autoQuantity: true,
+      quantityManualOverride: false,
+    };
+  }
+  return null;
 }
 
 function plasterSupplyInstallQuoteRow() {
@@ -1973,7 +2965,6 @@ function canPreserveManualReplacement(existing) {
     && existing.importedWorkbookRow === false
     && !existing.importedQuantity
     && !existing.quantityKey
-    && !String(existing.notes || "").toUpperCase().includes("IMPORTED DATA")
   );
 }
 
@@ -2181,12 +3172,13 @@ function normalizeFixoutStageLabourRow(row) {
   }
   if (String(row?.id || "") === "quote-150" || quoteRowSourceNumber(row) === 150) {
     return {
-      ...normalizeFormulaQuoteRow(row, "HANG DOOR IN CAVITY SLIDER UNIT", "B104", "B150*F150"),
+      ...normalizeLinkedQuoteRowItem(row, "HANG DOOR IN CAVITY SLIDER UNIT", "cavityDoorQty"),
+      formulas: { G: "B150*F150" },
       notes: "Formula: =B104",
     };
   }
   if (String(row?.id || "") === "quote-152" || quoteRowSourceNumber(row) === 152) {
-    return normalizeFormulaQuoteRow(row, "HANG SINGLE DOOR INC. JAMB/ARCH/FURNITURE", "internalDoors-B150", "B152*F152");
+    return normalizeFormulaQuoteRow(row, "HANG SINGLE DOOR INC. JAMB/ARCH/FURNITURE", "internalDoors-cavityDoorQty", "B152*F152");
   }
   return row;
 }
@@ -2198,9 +3190,18 @@ function normalizeDoorFurnitureRow(row) {
 
 function normalizePlasterSupplyInstallRow(row) {
   if (quoteSectionBaseName(row?.section) !== "plasterer - supply and install") return row;
+  if (String(row?.id || "") === "quote-1269") {
+    return {
+      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - EXTERIOR WALLS", "lowerExternalPlasterboardWallM2"),
+      unit: "M2",
+      sourceOfRate: "workbook",
+      notes: "IMPORTED DATA",
+      values: ["GYPROCK SUPPLY & FIX - EXTERIOR WALLS", "", "", "M2", "", row.excelRate || "$14.00", ""],
+    };
+  }
   if (String(row?.id || "") === "quote-1270") {
     return {
-      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - INTERNAL WALLS", "plasterboardWallM2"),
+      ...normalizeLinkedQuoteRowItem(row, "GYPROCK SUPPLY & FIX - INTERNAL WALLS", "lowerInternalPlasterboardWallM2"),
       unit: "M2",
       sourceOfRate: "workbook",
       notes: "IMPORTED DATA",
@@ -2214,6 +3215,24 @@ function normalizePlasterSupplyInstallRow(row) {
       sourceOfRate: "workbook",
       notes: "IMPORTED DATA",
       values: ["GYPROCK SUPPLY & FIX - CEILINGS", "", "", "M2", "", row.excelRate || "$14.00", ""],
+    };
+  }
+  if (String(row?.id || "") === "quote-1279") {
+    return {
+      ...normalizeQuoteRowItem(row, "55mm COVE CORNICE"),
+      quantityKey: "",
+      autoQuantity: false,
+      unit: "LM",
+      values: ["55mm COVE CORNICE", "", "", "LM", "", row.excelRate || "$8.71", ""],
+    };
+  }
+  if (String(row?.id || "") === "quote-1280") {
+    return {
+      ...normalizeLinkedQuoteRowItem(row, "90mm COVE CORNICE", "corniceLm"),
+      unit: "LM",
+      sourceOfRate: "workbook",
+      notes: "IMPORTED DATA",
+      values: ["90mm COVE CORNICE", "", "", "LM", "", row.excelRate || "$11.22", ""],
     };
   }
   return row;
@@ -2539,10 +3558,14 @@ function syncWindowDoorApproximateRates(workbook) {
   const orderedRows = orderWindowDoorRows(restoredRows);
   if (restoredRows.length !== workbook.windowsDoors.length || !sameWindowDoorOrder(orderedRows, workbook.windowsDoors)) changed = true;
   const windowsDoors = orderedRows.map((row) => {
-    const priced = withWindowDoorApproximateRate(withDoorScheduleSelection(row));
+    const withSizeCode = {
+      ...row,
+      sizeCode: String(row?.sizeCode || "").trim() || windowDoorSizeCodeForRow(row),
+    };
+    const priced = withWindowDoorApproximateRate(withDoorScheduleSelection(withSizeCode));
     if (
       priced === row
-      || (priced.rate === row.rate && priced.sourceOfRate === row.sourceOfRate && priced.notes === row.notes)
+      || (priced.rate === row.rate && priced.sourceOfRate === row.sourceOfRate && priced.notes === row.notes && priced.sizeCode === row.sizeCode)
     ) {
       return row;
     }
@@ -2615,9 +3638,296 @@ function syncEditableLinkedQuoteQuantities(workbook, preview) {
   return changed ? { ...workbook, quotation } : workbook;
 }
 
+function renumberWorkbookQuoteDisplay(workbook = {}) {
+  const beforePreview = calculateEstimateBuilderWorkbook(workbook);
+  const beforeTotal = roundMoneyForCompare(beforePreview?.summary?.finalQuoteTotal || 0);
+  const backup = JSON.parse(JSON.stringify(workbook));
+  const sections = orderedQuoteSections(workbook.quotation || {}, workbook.quotationSectionOrder || []);
+  const oldToNewRows = {};
+  const oldToNewSections = {};
+  const floorCount = dataValue(workbook, "floorCount") || "Single storey";
+  let sectionNumber = 1;
+  let itemNumber = 1;
+  const quotation = { ...(workbook.quotation || {}) };
+
+  sections.forEach((sectionName) => {
+    const section = quotation[sectionName];
+    if (!section) return;
+    const visibleRows = (section.rows || []).filter((row) => isVisibleQuoteRowForRenumber(row, workbook, floorCount));
+    if (!visibleRows.length) return;
+    const oldSectionNumber = section.groupNumber || quoteFirstDisplayNumber(section.rows || []) || "";
+    oldToNewSections[String(oldSectionNumber || sectionName)] = String(sectionNumber);
+    quotation[sectionName] = {
+      ...section,
+      groupNumber: String(sectionNumber),
+      rows: (section.rows || []).map((row) => {
+        if (!visibleRows.some((visibleRow) => visibleRow.id === row.id)) return row;
+        if (isApplianceHeadingQuoteRow(row)) return row;
+        const oldRowNumber = row.displayRowNumber || quoteRowSourceNumber(row) || itemNumber;
+        const nextRow = {
+          ...row,
+          displayRowNumber: itemNumber,
+        };
+        oldToNewRows[String(oldRowNumber)] = String(itemNumber);
+        itemNumber += 1;
+        return nextRow;
+      }),
+    };
+    sectionNumber += 1;
+  });
+
+  const scannedFormulaReferences = scanWorkbookNumberReferences(workbook, oldToNewRows, oldToNewSections);
+  const nextWorkbook = {
+    ...workbook,
+    quotation,
+    numberingBackups: [
+      ...(workbook.numberingBackups || []),
+      {
+        id: `renumber-backup-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        workbook: backup,
+        oldToNewRows,
+        oldToNewSections,
+        scannedFormulaReferences,
+      },
+    ].slice(-3),
+    numberingReport: {
+      ok: true,
+      createdAt: new Date().toISOString(),
+      oldToNewRows,
+      oldToNewSections,
+      scannedFormulaReferences,
+      beforeTotal,
+      afterTotal: beforeTotal,
+      message: "Display numbering updated. Formula source-row references were scanned and preserved.",
+    },
+  };
+  const afterPreview = calculateEstimateBuilderWorkbook(nextWorkbook);
+  const afterTotal = roundMoneyForCompare(afterPreview?.summary?.finalQuoteTotal || 0);
+  if (afterTotal !== beforeTotal) {
+    return {
+      ok: false,
+      workbook,
+      report: {
+        ok: false,
+        createdAt: new Date().toISOString(),
+        oldToNewRows,
+        oldToNewSections,
+        scannedFormulaReferences,
+        beforeTotal,
+        afterTotal,
+        message: "Renumbering was rolled back because the final quote total changed.",
+      },
+    };
+  }
+  return {
+    ok: true,
+    workbook: {
+      ...nextWorkbook,
+      numberingReport: {
+        ...nextWorkbook.numberingReport,
+        afterTotal,
+      },
+    },
+    report: {
+      ...nextWorkbook.numberingReport,
+      afterTotal,
+    },
+  };
+}
+
+function buildProcurementItemsFromQuote(workbook = {}, preview = {}, existingItems = []) {
+  const existingByQuoteRowId = new Map((existingItems || []).map((item) => [item.quoteRowId, item]).filter(([id]) => id));
+  const activeQuoteRowIds = new Set();
+  const items = [];
+  const sections = orderedQuoteSections(preview.quotation || {}, workbook.quotationSectionOrder || []);
+  sections.forEach((sectionName) => {
+    const section = preview.quotation?.[sectionName];
+    if (!section) return;
+    const stageNumber = procurementStageNumber(workbook, sectionName);
+    const stageName = procurementStageName(stageNumber);
+    const sectionNumber = workbook.quotation?.[sectionName]?.groupNumber || quoteFirstDisplayNumber(section.rows || []) || "";
+    (section.rows || []).forEach((row) => {
+      if (!isProcurementQuoteRow(row)) return;
+      const quoteRowId = String(row.id || `quote-row:${sectionName}:${quoteRowSourceNumber(row) || row.item || items.length}`);
+      activeQuoteRowIds.add(quoteRowId);
+      const existing = existingByQuoteRowId.get(quoteRowId) || {};
+      const estimatedRate = procurementEstimatedRate(row);
+      const estimatedTotal = procurementEstimatedTotal(row);
+      items.push({
+        id: existing.id || `procurement:${quoteRowId}`,
+        quoteRowId,
+        stageNumber,
+        stageName,
+        sectionNumber,
+        sectionName,
+        itemDescription: row.item || row.values?.[0] || "",
+        qty: procurementQuantity(row),
+        unit: row.unit || row.values?.[3] || "",
+        estimatedRate,
+        estimatedTotal,
+        supplier: existing.supplier || "",
+        supplierQuoteNumber: existing.supplierQuoteNumber || "",
+        procurementCategory: existing.procurementCategory || procurementCategoryForRow(sectionName, row),
+        requiredByDate: existing.requiredByDate || "",
+        orderStatus: existing.orderStatus || "Not Started",
+        deliveryStatus: existing.deliveryStatus || "Not Required Yet",
+        assignedPurchasingOfficer: existing.assignedPurchasingOfficer || "",
+        notes: existing.notes || "",
+        supplierOriginalQuoteAmount: existing.supplierOriginalQuoteAmount || "",
+        supplierAdjustedAmount: existing.supplierAdjustedAmount || "",
+        supplierNetIncludedAmount: existing.supplierNetIncludedAmount || "",
+        supplierQuoteMode: existing.supplierQuoteMode || "Included In Quote",
+        removedFromQuote: false,
+      });
+    });
+  });
+  (existingItems || []).forEach((item) => {
+    if (!item.quoteRowId || activeQuoteRowIds.has(item.quoteRowId)) return;
+    items.push({
+      ...item,
+      removedFromQuote: true,
+      orderStatus: item.orderStatus === "Removed From Quote" ? item.orderStatus : "Removed From Quote",
+    });
+  });
+  return items;
+}
+
+function isProcurementQuoteRow(row = {}) {
+  if (!row) return false;
+  if (isApplianceHeadingQuoteRow(row)) return false;
+  if (quoteFeeType(row)) return false;
+  if (isHiddenQuoteRow(row)) return false;
+  const text = `${row.item || ""} ${row.lineType || ""} ${row.rawText || ""}`.toLowerCase();
+  if (text.includes("subtotal") || text.includes("total ") || text.includes("margin") || text.includes("gst") || text.includes("profit") || text.includes("overhead") || text.includes("sales commission") || text.includes("qbcc") || text.includes("qbsa") || text.includes("q leave")) return false;
+  return procurementQuantity(row) > 0 || procurementEstimatedTotal(row) > 0;
+}
+
+function procurementQuantity(row = {}) {
+  return numberFromInput(row.qty ?? row.quantity ?? row.importedQuantity ?? row.values?.[1]);
+}
+
+function procurementEstimatedRate(row = {}) {
+  return numberFromInput(row.finalRateUsed ?? row.manualRate ?? row.excelRate ?? row.values?.[5]);
+}
+
+function procurementEstimatedTotal(row = {}) {
+  const direct = numberFromInput(row.cost ?? row.importedCost ?? row.total ?? row.values?.[6]);
+  if (direct > 0) return direct;
+  return procurementQuantity(row) * procurementEstimatedRate(row);
+}
+
+function procurementStageNumber(workbook = {}, sectionName = "") {
+  return workbook.quotation?.[sectionName]?.stageNumber || workbook.quotation?.[sectionName]?.groupNumber || "";
+}
+
+function procurementStageName(stageNumber) {
+  const found = [
+    [1, "Preliminaries"],
+    [2, "Base Stage"],
+    [3, "Frame Stage"],
+    [4, "Lock Up Stage"],
+    [5, "Fix Out Stage"],
+    [6, "Practical Completion"],
+    [7, "Handover"],
+  ].find(([number]) => String(number) === String(stageNumber));
+  return found?.[1] || "";
+}
+
+function procurementCategoryForRow(sectionName = "", row = {}) {
+  const text = `${sectionName} ${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  if (text.includes("appliance") || ["euromaid", "omega", "blanco", "ariston", "westinghouse", "smeg"].some((brand) => text.includes(brand))) return "Appliances";
+  if (text.includes("window") || text.includes("door")) return "Windows & Doors";
+  if (text.includes("floor")) return "Flooring";
+  if (text.includes("plumb") || text.includes("tap") || text.includes("bath") || text.includes("toilet")) return "Plumbing";
+  if (text.includes("electrical") || text.includes("light") || text.includes("fan")) return "Electrical";
+  if (text.includes("cabinet") || text.includes("kitchen") || text.includes("vanity") || text.includes("wardrobe")) return "Cabinetry";
+  if (text.includes("hardware") || text.includes("screw") || text.includes("bolt") || text.includes("nail") || text.includes("adhesive")) return "Hardware";
+  if (text.includes("labour") || text.includes("install")) return "Labour";
+  if (text.includes("subcontract") || text.includes("contractor")) return "Subcontractor";
+  if (text.includes("fixture")) return "Fixtures";
+  if (text.includes("fitting")) return "Fittings";
+  if (text.includes("material") || text.includes("timber") || text.includes("steel") || text.includes("concrete")) return "Materials";
+  return "Other";
+}
+
+function numberFromInput(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value ?? "").replace(/[^0-9.-]/g, "");
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function isVisibleQuoteRowForRenumber(row, workbook, floorCount) {
+  if (quoteFeeType(row)) return false;
+  if (isHiddenQuoteRow(row)) return false;
+  if (!isQuoteRowRelevantForFloorCount(row, floorCount)) return false;
+  if (!hasSelectedWallThickness(workbook, "90") && is90mmWallFrameQuoteRow(row)) return false;
+  return true;
+}
+
+function isApplianceHeadingQuoteRow(row) {
+  return row?.applianceHeading === true || row?.lineType === "Appliance heading";
+}
+
+function isQuoteRowRelevantForFloorCount(row, floorCount) {
+  return quoteRowLevel(row) <= floorCountToLevels(floorCount);
+}
+
+function quoteRowLevel(row = {}) {
+  const key = String(row.quantityKey || "");
+  const text = `${row.section || ""} ${row.item || ""} ${row.rawText || ""} ${row.lineType || ""}`.toLowerCase();
+  if (key.startsWith("third") || text.includes("third level") || text.includes("third storey") || text.includes("third floor")) return 3;
+  if (key.startsWith("upper") || key.startsWith("second") || text.includes("second level") || text.includes("second storey") || text.includes("second floor") || text.includes("upper level")) return 2;
+  return 1;
+}
+
+function is90mmWallFrameQuoteRow(row = {}) {
+  const text = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  return text.includes("90mm") && (text.includes("wall frame") || text.includes("stud") || text.includes("plates") || text.includes("noggins"));
+}
+
+function quoteFirstDisplayNumber(rows = []) {
+  const row = rows.find((item) => item.displayRowNumber || quoteRowSourceNumber(item));
+  return row ? (row.displayRowNumber || quoteRowSourceNumber(row)) : "";
+}
+
+function scanWorkbookNumberReferences(workbook = {}, oldToNewRows = {}, oldToNewSections = {}) {
+  const rowNumbers = new Set(Object.keys(oldToNewRows));
+  const sectionNumbers = new Set(Object.keys(oldToNewSections));
+  const references = [];
+  const scanValue = (location, value, type = "row") => {
+    const text = String(value || "");
+    if (!text) return;
+    const matches = text.match(/[A-Z]+(\d+(?:\.\d+)?)/g) || [];
+    matches.forEach((match) => {
+      const number = match.replace(/^[A-Z]+/, "");
+      if (rowNumbers.has(number)) references.push({ location, type, reference: match, oldNumber: number, newNumber: oldToNewRows[number], action: "preserved source-row reference" });
+    });
+    Array.from(sectionNumbers).forEach((number) => {
+      if (number && text.includes(number)) references.push({ location, type: "section", oldNumber: number, newNumber: oldToNewSections[number], action: "scanned" });
+    });
+  };
+  Object.entries(workbook.formulas || {}).forEach(([key, formula]) => scanValue(`workbook.formulas.${key}`, formula));
+  Object.entries(workbook.quotation || {}).forEach(([sectionName, section]) => {
+    (section.rows || []).forEach((row) => {
+      Object.entries(row.formulas || {}).forEach(([column, formula]) => scanValue(`quotation.${sectionName}.${row.id}.formulas.${column}`, formula));
+    });
+  });
+  return references;
+}
+
+function roundMoneyForCompare(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
 function defaultQuoteSectionByBaseName(defaultQuotation = {}, sectionName) {
   const targetBaseName = quoteSectionBaseName(sectionName);
   return Object.entries(defaultQuotation).find(([defaultSectionName]) => quoteSectionBaseName(defaultSectionName) === targetBaseName)?.[1];
+}
+
+function closedQuoteSection(section = {}) {
+  return { ...section, collapsed: true };
 }
 
 function removeMisplacedFloorFramingQuoteRows(sectionName, rows = []) {
@@ -2684,6 +3994,8 @@ function ensureRequiredDefaultQuoteRows(sectionName, savedRows = [], defaultRows
         ? ["quote-1963.1", "quote-1965.1"]
       : sectionBaseName === "timber and trims"
         ? ["quote-20002", "quote-20003", "quote-20004", "quote-20005"]
+      : sectionBaseName === "plasterer - supply and install"
+        ? ["quote-1279", "quote-1280"]
         : []
   );
   if (!requiredIds.size) return savedRows;
@@ -2704,6 +4016,9 @@ function ensureRequiredDefaultQuoteRows(sectionName, savedRows = [], defaultRows
     const interiorRows = missingRows.filter((row) => row.id === "quote-1963.1");
     const exteriorRows = missingRows.filter((row) => row.id === "quote-1965.1");
     return insertRowsAfter(insertRowsAfter(savedRows, interiorRows, "quote-1963"), exteriorRows, "quote-1965");
+  }
+  if (sectionBaseName === "plasterer - supply and install") {
+    return insertRowsAfter(savedRows, missingRows.map(normalizePlasterSupplyInstallRow), "quote-1271");
   }
   if (sectionBaseName === "concrete slab") {
     return insertRowsAfter(savedRows, missingRows, "quote-315");
@@ -2850,7 +4165,10 @@ function orderSavedQuotationSections(entries) {
   ], "plasterer - supply and install");
   entries = moveSavedSectionAfter(entries, "skirting & architraves", "stairs");
   entries = moveSavedSectionAfter(entries, "fix out materials", "stairs");
+  entries = moveSavedSectionAfter(entries, "fix out", "stairs");
   entries = moveSavedSectionsAfter(entries, [
+    "install skirting",
+    "internal final fix-out",
     "shelving",
     "standard wardrobes complete (2.4m wide)",
     "standard 3 door robe up to 3.6m wide",
@@ -2917,7 +4235,7 @@ function orderSavedQuotationSections(entries) {
     "laminated flooring",
     "vinyl flooring",
     "hybrid flooring",
-    "engeineered timber",
+    "engineered timber",
     "solid timber flooring",
     "carpets",
     "misc flooring",
@@ -2928,6 +4246,7 @@ function orderSavedQuotationSections(entries) {
     "grange -semi frameless",
   ], "mirrors & shower screens");
   entries = moveSavedSectionAfter(entries, "appliance package", "cabinet maker");
+  entries = moveSavedSectionAfter(entries, "appliances & white goods", "cabinet maker");
   return moveSavedSectionsAfter(entries, [
     "bolts nuts & screws",
     "couplings",
@@ -3119,6 +4438,10 @@ function normalizedQuoteQuantityKey(row) {
   if (floorSystemQuantityKey) return floorSystemQuantityKey;
   const text = `${row?.item || ""} ${row?.rawText || ""}`.toLowerCase();
   if (isNoImportedDataQuoteRow(row)) return "";
+  if (isManualSkirtingTileQuoteRow(row)) return "";
+  if (isManualCeilingBattInsulationRow(row)) return "";
+  if (String(row?.id || "") === "quote-1279" || quoteRowSourceNumber(row) === 1279) return "";
+  if (String(row?.id || "") === "quote-1280" || quoteRowSourceNumber(row) === 1280 || text.includes("90mm cove cornice")) return "corniceLm";
   if (isBlankQuoteQtyRow(row)) return "";
   if (text.includes("cut/fill") || text.includes("cut fill")) return "cutFillM3";
   if (text.includes("total ground floor area")) return "lowerSlabAreaM2";
@@ -3142,6 +4465,8 @@ function normalizedQuoteQuantityKey(row) {
   if (quoteSectionBaseName(row?.section) === "bricklayers labour" && text.includes("bricklayer")) return "quoteBricklayerFaceBricks";
   if (quoteSectionBaseName(row?.section) === "rendering" && String(row?.item || "").trim().toLowerCase() === "item") return "quoteRenderingNetWallAreaM2";
   if (quoteSectionBaseName(row?.section) === "rendering" && text.includes("add for sills")) return "quoteRenderingSillsLm";
+  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1269" || quoteRowSourceNumber(row) === 1269 || text.includes("gyprock supply & fix - exterior walls"))) return "lowerExternalPlasterboardWallM2";
+  if (quoteSectionBaseName(row?.section) === "plasterer - supply and install" && (String(row?.id || "") === "quote-1270" || quoteRowSourceNumber(row) === 1270 || text.includes("gyprock supply & fix - internal walls"))) return "lowerInternalPlasterboardWallM2";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("install windows")) return "quoteFrameInstallWindows";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("second storey windows")) return "quoteFrameSecondStoreyWindows";
   if (quoteSectionBaseName(row?.section) === "frame stage labour" && text.includes("third storey windows")) return "quoteFrameThirdStoreyWindows";
@@ -3160,6 +4485,7 @@ function normalizedQuoteQuantityKey(row) {
   if (quoteSectionBaseName(row?.section) === "lock-up stage labour" && text.includes("install wall insulation batts") && (text.includes("second") || text.includes("upper"))) return "quoteWallBattsInstallSecondM2";
   if (quoteSectionBaseName(row?.section) === "lock-up stage labour" && text.includes("install wall insulation batts") && text.includes("third")) return "quoteWallBattsInstallThirdM2";
   if (quoteSectionBaseName(row?.section) === "lock-up stage labour" && text.includes("install insulation ceiling batts")) return "quoteCeilingInsulationFlatM2";
+  if (isManualCeilingBattInsulationRow(row)) return "";
   if (quoteSectionBaseName(row?.section) === "insulation" && text.includes("batts to ceilings")) return "quoteCeilingInsulationFlatM2";
   if (quoteSectionBaseName(row?.section) === "insulation" && (text.includes("sialation installed") || text.includes("sisalation installed") || text.includes("sisaltion installed")) && text.includes("ground level")) return "quoteSisalationInstallGroundM2";
   if (quoteSectionBaseName(row?.section) === "insulation" && (text.includes("sialation installed") || text.includes("sisalation installed") || text.includes("sisaltion installed")) && text.includes("second level")) return "quoteSisalationInstallSecondM2";
@@ -3190,6 +4516,20 @@ function normalizedQuoteQuantityKey(row) {
   if (text.includes("rolled window flashing")) return "lightweightCladdingWindowCount";
   if (row?.quantityKey === "windowDoorCount" && text.includes("window")) return "windowCount";
   return row?.quantityKey || "";
+}
+
+function isManualSkirtingTileQuoteRow(row) {
+  const rowNumber = quoteRowSourceNumber(row);
+  return rowNumber === 1587 || rowNumber === 1600;
+}
+
+function isManualCeilingBattInsulationRow(row) {
+  if (quoteSectionBaseName(row?.section) !== "insulation") return false;
+  const text = `${row?.item || ""} ${row?.rawText || ""}`.toLowerCase().replace(/\s+/g, " ").trim();
+  return text.includes("r 1.5 batts to ceilings")
+    || text.includes("r1.5 batts to ceilings")
+    || text.includes("r4.8 batts to ceilings")
+    || text.includes("r 4.8 batts to ceilings");
 }
 
 function floorSystemQuoteQuantityKey(row) {
@@ -3259,6 +4599,7 @@ function isBlankQuoteQtyRow(row) {
 
 function isNoImportedDataQuoteRow(row) {
   const rowNumber = quoteRowSourceNumber(row);
+  if (rowNumber === 1280) return false;
   return quoteSectionBaseName(row?.section) === "hot water" || QUOTE_ROWS_WITHOUT_IMPORTED_DATA.has(rowNumber) || (rowNumber >= 1275 && rowNumber <= 1283) || (rowNumber >= 1357 && rowNumber <= 1362);
 }
 
@@ -3311,7 +4652,43 @@ function normalizeQuoteSectionOrder(savedOrder = [], quotation = {}) {
   sections.forEach((section) => {
     if (!seen.has(section)) ordered.push(section);
   });
-  return moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(ordered, ["appliance package"], "cabinet maker"));
+  return moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(
+    moveQuoteSectionNamesAfter(
+      moveQuoteSectionNamesAfter(
+        moveQuoteSectionNamesAfterNumber(
+          moveQuoteSectionNamesAfter(
+            moveQuoteSectionNamesAfter(ordered, ["underslab and drainage"], "bulk earthworks"),
+            ["rough-ins"],
+            "wall frames",
+          ),
+          ["plumbers fit off costs", "electricians fit off costs"],
+          136,
+          quotation,
+        ),
+        ["job set-out"],
+        "underslab and drainage",
+      ),
+      ["concrete and landscaping"],
+      "miscellaneous",
+    ),
+    ["appliance package", "appliances & white goods"],
+    "cabinet maker",
+  ));
+}
+
+function moveQuoteSectionNamesAfterNumber(sections = [], sectionBaseNames = [], afterNumber = "", quotation = {}) {
+  const moveSet = new Set(sectionBaseNames);
+  const moving = [];
+  const remaining = [];
+  sections.forEach((section) => {
+    if (moveSet.has(quoteSectionBaseName(section))) moving.push(section);
+    else remaining.push(section);
+  });
+  if (!moving.length) return sections;
+  moving.sort((a, b) => sectionBaseNames.indexOf(quoteSectionBaseName(a)) - sectionBaseNames.indexOf(quoteSectionBaseName(b)));
+  const afterIndex = remaining.findIndex((section) => String(quoteFirstDisplayNumber(quotation?.[section]?.rows || [])) === String(afterNumber));
+  if (afterIndex < 0) return [...remaining, ...moving];
+  return [...remaining.slice(0, afterIndex + 1), ...moving, ...remaining.slice(afterIndex + 1)];
 }
 
 function moveQuoteSectionNamesAfter(sections = [], sectionBaseNames = [], afterBaseName = "") {
@@ -3330,9 +4707,11 @@ function moveQuoteSectionNamesAfter(sections = [], sectionBaseNames = [], afterB
 }
 
 function moveFixOutMaterialsGroupAfterStairs(sections = []) {
-  const parent = sections.find((section) => ["fix out materials", "skirting & architraves"].includes(quoteSectionBaseName(section)));
+  const parent = sections.find((section) => isFixOutSectionName(section) || quoteSectionBaseName(section) === "skirting & architraves");
   if (!parent) return sections;
   const childBaseNames = [
+    "install skirting",
+    "internal final fix-out",
     "shelving",
     "standard wardrobes complete (2.4m wide)",
     "standard 3 door robe up to 3.6m wide",
@@ -3353,6 +4732,14 @@ function moveFixOutMaterialsGroupAfterStairs(sections = []) {
 function isFaceBricksSection(section) {
   const name = quoteSectionBaseName(section);
   return name === "face brickwork" || name === "face bricks" || name.includes("face brick");
+}
+
+function isFixOutSectionName(section) {
+  return ["fix out", "fix out materials"].includes(quoteSectionBaseName(section));
+}
+
+function isAppliancePackageSectionName(section) {
+  return ["appliance package", "appliances & white goods"].includes(quoteSectionBaseName(section));
 }
 
 function quoteSectionBaseName(section) {
@@ -3577,6 +4964,24 @@ function shouldTrackQuoteChange(key) {
   return ["active", "quantity", "unit", "manualRate", "supplierQuote", "lineType", "quoteRequired", "notes", "item"].includes(key);
 }
 
+function appendQuoteHistory(history = [], entry = {}) {
+  return [...(history || []), entry].slice(-250);
+}
+
+function isCurrencyQuoteField(key) {
+  return key === "manualRate" || key === "supplierQuote";
+}
+
+function currencyInputValue(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  const cleaned = text.replace(/[$,\s]/g, "");
+  if (!cleaned) return "";
+  const amount = Number(cleaned);
+  if (!Number.isFinite(amount)) return text;
+  return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 const WALL_THICKNESS_70MM_RESULT_KEYS = new Set([
   "externalFramedWall70mmLm",
   "internalFramedWall70mmLm",
@@ -3768,7 +5173,7 @@ const TEMPLATE_SETUP_DATA_KEYS = new Set([
 function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
   const savedAt = options.savedAt || new Date().toISOString();
   const name = String(options.name || sourceWorkbook.templateName || suggestedTemplateName(sourceWorkbook)).trim();
-  const templateKey = templateStorageKey(name);
+  const templateKey = String(options.key || sourceWorkbook.templateKey || templateStorageKey(name)).trim();
   const category = String(options.category ?? sourceWorkbook.templateCategory ?? "").trim();
   const tags = Array.isArray(options.tags) ? options.tags : parseTags(options.tags ?? sourceWorkbook.templateTags);
   const workbook = normalizeWorkbook(sourceWorkbook);
@@ -3778,12 +5183,24 @@ function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
     savedAt,
     templateName: name,
     templateKey,
+    templateType: options.templateType || sourceWorkbook.templateType || "client_template",
     templateCategory: category,
     templateTags: tags.join(", "),
     activeSection: "inputDataSheet",
+    openedFileName: "",
+    sourceFileName: "",
+    jobName: "",
+    jobId: "",
+    projectId: "",
     data: sanitizeTemplateData(workbook.data),
     windowsDoors: sanitizeTemplateWindows(workbook.windowsDoors),
     quotation: sanitizeTemplateQuotation(workbook.quotation),
+    quotationSectionOrder: normalizeQuoteSectionOrder(workbook.quotationSectionOrder || [], workbook.quotation || {}),
+    summaryAdjustmentStages: { ...(workbook.summaryAdjustmentStages || {}) },
+    cashflowPayments: { ...(workbook.cashflowPayments || {}) },
+    clientPage: clearJobSpecificClientPage(workbook.clientPage),
+    procurement: { settings: { ...(workbook.procurement?.settings || {}) }, items: [] },
+    registeredJob: null,
     formulaHistory: [],
     quoteHistory: [],
     formulaPromotions: {},
@@ -3799,6 +5216,260 @@ function compactWorkbookForStorage(workbook = {}) {
     ...compact
   } = workbook;
   return compact;
+}
+
+async function applyTemplateDefaultsToJob(workbook = {}) {
+  const migratedWorkbook = migrateWorkbookToMasterTemplate(workbook);
+  const template = await resolveMasterTemplate().catch(() => null);
+  return mergeMissingQuoteSectionTemplateMeta(migratedWorkbook, template);
+}
+
+async function resolveMasterTemplate() {
+  const master = await loadStoredTemplate(MASTER_TEMPLATE_KEY).catch(() => null);
+  if (master?.quotation) {
+    estimateBuilderLog("loaded master template", { source: "IndexedDB master key", templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, mode: "master_base_template" });
+    return { ...master, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" };
+  }
+  const legacyMaster = await loadStoredTemplate(LEGACY_MASTER_TEMPLATE_KEY).catch(() => null);
+  if (legacyMaster?.quotation) {
+    estimateBuilderLog("loaded master template", { source: "IndexedDB legacy master key", templateKey: LEGACY_MASTER_TEMPLATE_KEY, promotedTo: MASTER_TEMPLATE_KEY, mode: "master_base_template" });
+    return { ...legacyMaster, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" };
+  }
+  const recentBase = await loadStoredTemplate(templateStorageKey("BASE TEMPLATE")).catch(() => null);
+  if (recentBase?.quotation) {
+    estimateBuilderLog("loaded master template", { source: "IndexedDB BASE TEMPLATE fallback", templateKey: templateStorageKey("BASE TEMPLATE"), promotedTo: MASTER_TEMPLATE_KEY, mode: "master_base_template" });
+    return { ...recentBase, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" };
+  }
+  const active = await loadStoredTemplate("").catch(() => null);
+  if (active?.quotation) {
+    estimateBuilderLog("loaded master template", { source: "IndexedDB active template pointer", templateKey: active.templateKey || "", promotedTo: MASTER_TEMPLATE_KEY, mode: "master_base_template" });
+    return { ...active, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" };
+  }
+  const templates = await listStoredTemplates().catch(() => []);
+  const base = templates.find((template) => template.key === MASTER_TEMPLATE_KEY)
+    || templates.find((template) => template.key === LEGACY_MASTER_TEMPLATE_KEY)
+    || templates.find((template) => String(template.name || "").trim().toLowerCase() === MASTER_TEMPLATE_NAME.toLowerCase())
+    || templates.find((template) => String(template.name || "").toLowerCase().includes("base template"));
+  const loaded = base?.key ? await loadStoredTemplate(base.key).catch(() => null) : null;
+  if (loaded?.quotation) {
+    estimateBuilderLog("loaded master template", { source: "IndexedDB template list fallback", templateKey: base.key, promotedTo: MASTER_TEMPLATE_KEY, mode: "master_base_template" });
+    return { ...loaded, templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, templateType: "master_base_template" };
+  }
+  estimateBuilderLog("loaded master template", { source: "default seed data", templateKey: MASTER_TEMPLATE_KEY, templateName: MASTER_TEMPLATE_NAME, mode: "master_base_template" });
+  return sanitizeWorkbookForTemplate(createEstimateBuilderWorkbookDefaults(), {
+    name: MASTER_TEMPLATE_NAME,
+    key: MASTER_TEMPLATE_KEY,
+    templateType: "master_base_template",
+    category: "Master Templates",
+  });
+}
+
+function migrateWorkbookToMasterTemplate(workbook = {}) {
+  return {
+    ...workbook,
+    templateKey: MASTER_TEMPLATE_KEY,
+    templateName: MASTER_TEMPLATE_NAME,
+    templateType: "job",
+  };
+}
+
+function needsMasterTemplateMigration(workbook = {}) {
+  return String(workbook?.templateKey || "").trim() !== MASTER_TEMPLATE_KEY
+    || String(workbook?.templateName || "").trim() !== MASTER_TEMPLATE_NAME;
+}
+
+function createCleanJobFromMasterTemplate(template = {}, savedAt = new Date().toISOString()) {
+  return normalizeWorkbook({
+    ...template,
+    templateKey: MASTER_TEMPLATE_KEY,
+    templateName: MASTER_TEMPLATE_NAME,
+    templateType: "job",
+    registeredJob: null,
+    savedAt,
+    page: "dataInput",
+    activeSection: "inputDataSheet",
+    data: clearJobSpecificData(template.data),
+    windowsDoors: clearJobSpecificWindows(template.windowsDoors),
+    quotation: sanitizeTemplateQuotation(template.quotation),
+    clientPage: clearJobSpecificClientPage(template.clientPage),
+    procurement: { settings: { ...(template.procurement?.settings || {}) }, items: [] },
+    jobBoardTasks: [],
+    purchaseOrders: [],
+    formulaHistory: [],
+    quoteHistory: [],
+    formulaPromotions: {},
+    ratePromotions: [],
+  });
+}
+
+function applyRegisteredJobToWorkbook(workbook = {}, job = {}, savedAt = new Date().toISOString()) {
+  const projectAddress = [job.siteAddress, job.suburb, job.state, job.postcode].filter(Boolean).join(", ");
+  const projectName = job.jobName || job.jobNumber || "Registered estimate job";
+  const data = Object.fromEntries(Object.entries(workbook.data || {}).map(([sectionKey, section]) => [
+    sectionKey,
+    {
+      ...section,
+      rows: Object.fromEntries(Object.entries(section?.rows || {}).map(([rowKey, row]) => {
+        if (rowKey === "projectName") return [rowKey, { ...row, value: projectName }];
+        if (rowKey === "projectAddress") return [rowKey, { ...row, value: projectAddress }];
+        if (rowKey === "clientName") return [rowKey, { ...row, value: job.clientName || "" }];
+        return [rowKey, row];
+      })),
+    },
+  ]));
+  return normalizeWorkbook({
+    ...workbook,
+    registeredJob: job,
+    savedAt,
+    openedFileName: `${projectName}.json`,
+    sourceFileName: `${projectName}.json`,
+    data,
+    clientPage: {
+      ...(workbook.clientPage || {}),
+      clientName: job.clientName || "",
+      projectAddress,
+      quoteNumber: job.jobNumber || "",
+    },
+  });
+}
+
+function clearJobSpecificData(data = {}) {
+  const configKeys = new Set(["salesCommissionPercent", "overheadsPercent", "marginPercent", "profitPercent"]);
+  return Object.fromEntries(Object.entries(data || {}).map(([sectionKey, section]) => [
+    sectionKey,
+    {
+      ...section,
+      rows: Object.fromEntries(Object.entries(section?.rows || {}).map(([rowKey, row]) => [
+        rowKey,
+        {
+          ...row,
+          value: configKeys.has(rowKey) ? row?.value ?? "" : "",
+          notes: "",
+        },
+      ])),
+    },
+  ]));
+}
+
+function clearJobSpecificWindows(rows = []) {
+  return (rows || []).map((row) => ({
+    ...row,
+    quantity: "",
+    cost: "",
+    notes: "",
+  }));
+}
+
+function clearJobSpecificClientPage(clientPage = {}) {
+  return {
+    ...(clientPage || {}),
+    clientName: "",
+    projectAddress: "",
+    quoteNumber: "",
+    quoteDate: "",
+    expiryDate: "",
+  };
+}
+
+function mergeMissingQuoteSectionTemplateMeta(jobWorkbook = {}, templateWorkbook = {}) {
+  if (!templateWorkbook?.quotation || !jobWorkbook?.quotation) return jobWorkbook;
+  let changed = false;
+  const quotation = Object.fromEntries(Object.entries(jobWorkbook.quotation || {}).map(([sectionName, section]) => {
+    const templateSection = templateWorkbook.quotation?.[sectionName]
+      || defaultQuoteSectionByBaseName(templateWorkbook.quotation, sectionName)
+      || null;
+    if (!templateSection) return [sectionName, section];
+    const nextSection = { ...section };
+    ["groupNumber", "stageNumber", "displayName"].forEach((field) => {
+      const currentValue = String(nextSection[field] ?? "").trim();
+      const templateValue = templateSection[field];
+      if (!currentValue && String(templateValue ?? "").trim()) {
+        nextSection[field] = templateValue;
+        changed = true;
+      }
+    });
+    const mergedRows = mergeMissingTemplateQuoteRows(section.rows || [], templateSection.rows || []);
+    if (mergedRows !== section.rows) {
+      nextSection.rows = mergedRows;
+      changed = true;
+    }
+    return [sectionName, nextSection];
+  }));
+  Object.entries(templateWorkbook.quotation || {}).forEach(([templateSectionName, templateSection]) => {
+    if (defaultQuoteSectionByBaseName(quotation, templateSectionName)) return;
+    quotation[templateSectionName] = {
+      ...templateSection,
+      collapsed: true,
+      rows: (templateSection.rows || []).map(sanitizeTemplateQuoteRow),
+    };
+    changed = true;
+  });
+  const quotationSectionOrder = changed
+    ? mergeTemplateSectionOrder(jobWorkbook.quotationSectionOrder || [], templateWorkbook.quotationSectionOrder || [], quotation)
+    : jobWorkbook.quotationSectionOrder;
+  return changed ? { ...jobWorkbook, quotation, quotationSectionOrder } : jobWorkbook;
+}
+
+function mergeMissingTemplateQuoteRows(jobRows = [], templateRows = []) {
+  let changed = false;
+  const templateById = new Map((templateRows || []).map((row) => [String(row?.id || ""), row]).filter(([id]) => id));
+  const templateByItem = new Map((templateRows || []).map((row) => [normalizeTemplateQuoteItemKey(row), row]).filter(([key]) => key));
+  const seenTemplateIds = new Set();
+  const mergedRows = (jobRows || []).map((row) => {
+    const templateRow = templateById.get(String(row?.id || "")) || templateByItem.get(normalizeTemplateQuoteItemKey(row));
+    if (!templateRow) return row;
+    if (templateRow.id) seenTemplateIds.add(String(templateRow.id));
+    const nextRow = mergeTemplateQuoteRowDefaults(row, templateRow);
+    if (nextRow !== row) changed = true;
+    return nextRow;
+  });
+  (templateRows || []).forEach((templateRow) => {
+    const id = String(templateRow?.id || "");
+    const itemKey = normalizeTemplateQuoteItemKey(templateRow);
+    const exists = (id && seenTemplateIds.has(id))
+      || mergedRows.some((row) => String(row?.id || "") === id || normalizeTemplateQuoteItemKey(row) === itemKey);
+    if (exists) return;
+    mergedRows.push(sanitizeTemplateQuoteRow(templateRow));
+    changed = true;
+  });
+  return changed ? mergedRows : jobRows;
+}
+
+function mergeTemplateQuoteRowDefaults(row = {}, templateRow = {}) {
+  let changed = false;
+  const nextRow = { ...row };
+  if ((!nextRow.formulas || !Object.keys(nextRow.formulas || {}).length) && templateRow.formulas && Object.keys(templateRow.formulas).length) {
+    nextRow.formulas = { ...templateRow.formulas };
+    changed = true;
+  }
+  ["excelRate", "manualRate", "finalRateUsed", "sourceOfRate"].forEach((field) => {
+    if (String(nextRow[field] ?? "").trim()) return;
+    if (!String(templateRow[field] ?? "").trim()) return;
+    nextRow[field] = templateRow[field];
+    changed = true;
+  });
+  const currentValueRate = Array.isArray(nextRow.values) ? String(nextRow.values[5] ?? "").trim() : "";
+  const templateRate = String(templateRow.manualRate || templateRow.excelRate || templateRow.finalRateUsed || templateRow.values?.[5] || "").trim();
+  if (Array.isArray(nextRow.values) && !currentValueRate && templateRate) {
+    nextRow.values = [...nextRow.values];
+    nextRow.values[5] = templateRate;
+    changed = true;
+  }
+  return changed ? nextRow : row;
+}
+
+function normalizeTemplateQuoteItemKey(row = {}) {
+  return String(row?.item || row?.values?.[0] || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function mergeTemplateSectionOrder(jobOrder = [], templateOrder = [], quotation = {}) {
+  const merged = [];
+  [...(templateOrder || []), ...(jobOrder || []), ...Object.keys(quotation || {})].forEach((section) => {
+    const resolved = Object.keys(quotation || {}).find((item) => item === section || quoteSectionBaseName(item) === quoteSectionBaseName(section));
+    if (!resolved || merged.includes(resolved)) return;
+    merged.push(resolved);
+  });
+  return normalizeQuoteSectionOrder(merged, quotation);
 }
 
 function sanitizeTemplateData(data = {}) {
@@ -3828,7 +5499,6 @@ function shouldKeepTemplateDataValue(rowKey, definition = {}) {
 function sanitizeTemplateWindows(rows = []) {
   return (rows || []).map((row) => ({
     ...row,
-    rate: "",
     cost: "",
     notes: "",
   }));
@@ -3839,18 +5509,48 @@ function sanitizeTemplateQuotation(quotation = {}) {
     sectionName,
     {
       ...section,
-      rows: (section?.rows || []).map((row) => ({
-        ...row,
-        quantity: "",
-        importedQuantity: "",
-        quantityManualOverride: false,
-        autoQuantity: false,
-        supplierQuote: "",
-        importedCost: "",
-        notes: "",
-      })),
+      rows: (section?.rows || []).map(sanitizeTemplateQuoteRow),
     },
   ]));
+}
+
+function sanitizeTemplateQuoteRow(row = {}) {
+  if (!isQuoteUnitRow(row)) {
+    const item = row.item || row.values?.[0] || "";
+    const unit = row.unit || row.values?.[3] || "";
+    const rate = row.manualRate || row.excelRate || row.finalRateUsed || row.values?.[5] || "";
+    return {
+      ...row,
+      quantity: "",
+      importedQuantity: "",
+      quantityManualOverride: false,
+      supplierQuote: "",
+      cost: 0,
+      importedCost: "",
+      values: Array.isArray(row.values) ? [item, "", row.values[2] || "", unit, row.values[4] || "", rate, ""] : row.values,
+    };
+  }
+  const item = row.item || row.values?.[0] || "";
+  const unit = row.unit || row.values?.[3] || "QUOTE";
+  return {
+    ...row,
+    quantity: "",
+    importedQuantity: "",
+    quantityManualOverride: false,
+    autoQuantity: false,
+    manualRate: row.manualRate || "",
+    supplierQuote: row.supplierQuote || "",
+    excelRate: row.excelRate || "",
+    finalRateUsed: row.finalRateUsed || row.manualRate || row.excelRate || "",
+    sourceOfRate: row.sourceOfRate || "manual",
+    cost: 0,
+    importedCost: "",
+    values: Array.isArray(row.values) ? [item, "", row.values[2] || "", unit, row.values[4] || "", row.manualRate || row.excelRate || row.finalRateUsed || row.values[5] || "", row.values[6] || ""] : row.values,
+  };
+}
+
+function isQuoteUnitRow(row = {}) {
+  return String(row.unit || row.values?.[3] || "").trim().toUpperCase() === "QUOTE";
 }
 
 function suggestedTemplateName(workbook = {}) {
@@ -3868,6 +5568,102 @@ function promptForTemplateKey(templates = []) {
   const byIndex = Number(text);
   if (Number.isInteger(byIndex) && templates[byIndex - 1]) return templates[byIndex - 1].key;
   return templates.find((template) => template.name.toLowerCase() === text.toLowerCase())?.key || "";
+}
+
+function normalizeSectionCsvRow(row = {}) {
+  const get = (...keys) => {
+    for (const key of keys) {
+      const found = Object.keys(row).find((candidate) => normalizeCsvHeader(candidate) === normalizeCsvHeader(key));
+      if (found) return row[found];
+    }
+    return "";
+  };
+  return {
+    sectionName: get("section name", "section"),
+    subsectionName: get("subsection name", "subsection"),
+    itemName: get("item name", "item"),
+    qty: get("qty", "quantity"),
+    unit: get("unit"),
+    rate: get("rate"),
+    notes: get("notes"),
+    brandPackage: get("brand/package", "brand package", "brand", "package"),
+  };
+}
+
+function normalizeCsvHeader(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeCsvItemName(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function editableQuotePayloadFromCsv(row = {}) {
+  return {
+    item: String(row.itemName || "").trim(),
+    quantity: String(row.qty || "").trim(),
+    unit: String(row.unit || "").trim(),
+    manualRate: String(row.rate || "").trim(),
+    notes: String(row.notes || "").trim(),
+    applianceBrand: brandFromCsv(row.brandPackage),
+    appliancePackage: packageFromCsv(row.brandPackage),
+  };
+}
+
+function mergeEditableQuotePayload(row = {}, payload = {}) {
+  return {
+    ...row,
+    item: payload.item || row.item || "",
+    quantity: payload.quantity,
+    unit: payload.unit || row.unit || "",
+    manualRate: payload.manualRate,
+    notes: payload.notes,
+    ...(payload.applianceBrand ? { applianceBrand: payload.applianceBrand } : {}),
+    ...(payload.appliancePackage ? { appliancePackage: payload.appliancePackage } : {}),
+    quantityManualOverride: true,
+    autoQuantity: false,
+  };
+}
+
+function newClientQuoteRow(section, payload = {}, index = 0) {
+  return {
+    id: `${section}-client-${Date.now()}-${index}`,
+    importedWorkbookRow: false,
+    section,
+    values: [payload.item || "", payload.quantity || "", payload.unit || "", "", "", payload.manualRate || "", payload.notes || ""],
+    formulas: {},
+    item: payload.item || "New item",
+    quantity: payload.quantity || "",
+    importedQuantity: "",
+    quantityKey: "",
+    unit: payload.unit || "",
+    excelRate: "",
+    supplierCatalogueRate: "",
+    quotedSupplierRate: "",
+    manualRate: payload.manualRate || "",
+    supplierQuote: "",
+    sourceOfRate: "manual",
+    quoteRequired: false,
+    lineType: "Client CSV item",
+    discontinuedWarning: false,
+    active: true,
+    importedCost: "",
+    rawText: payload.item || "",
+    notes: payload.notes || "",
+    applianceBrand: payload.applianceBrand || "",
+    appliancePackage: payload.appliancePackage || "",
+    autoQuantity: false,
+    quantityManualOverride: true,
+  };
+}
+
+function brandFromCsv(value) {
+  return String(value || "").split("/")[0]?.trim() || "";
+}
+
+function packageFromCsv(value) {
+  const parts = String(value || "").split("/");
+  return parts.length > 1 ? parts.slice(1).join("/").trim() : "";
 }
 
 function parseTags(value) {
@@ -3898,6 +5694,17 @@ const TEMPLATE_KEY = "current";
 const TEMPLATE_POINTER_KEY = "active-template-key";
 const JOB_STORE_NAME = "jobs";
 const ACTIVE_JOB_KEY = "active-job";
+const RECENT_JOBS_STORAGE_KEY = "estimate-builder-recent-jobs";
+const SIMPLE_JOB_KEY = "job:simple";
+const SIMPLE_JOB_FILE_NAME = "simple.json";
+const CORRUPT_ESTIMATE_JOB_FILE_NAME = "estimate-job.json";
+const LAST_LINKED_TEMPLATE_STORAGE_KEY = "estimate-builder-last-linked-template";
+const ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY = "estimate-builder-allow-unlinked-job-save";
+const MASTER_TEMPLATE_KEY = "template:master-estimate-template";
+const MASTER_TEMPLATE_NAME = "Master Estimate Template";
+const LEGACY_MASTER_TEMPLATE_KEY = "template:single-storey-dwelling-rendered-bv-waffle-pod-slab";
+const REPAIR_TEMPLATE_KEY = MASTER_TEMPLATE_KEY;
+const REPAIR_TEMPLATE_NAME = MASTER_TEMPLATE_NAME;
 
 function openTemplateDb() {
   return new Promise((resolve, reject) => {
@@ -3923,22 +5730,120 @@ function openTemplateDb() {
 function loadLocalDraft() {
   try {
     const raw = window.localStorage.getItem("estimate-builder-active-draft");
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed?.storageMode !== "indexeddb") return null;
+    if (isCorruptEstimateJobText(raw)) {
+      window.localStorage.removeItem("estimate-builder-active-draft");
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function loadActiveRegisteredEstimateJob() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem("estimate-builder-active-registered-job");
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
+function clearActiveRegisteredEstimateJob() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("estimate-builder-active-registered-job");
+    const raw = window.localStorage.getItem("estimate-builder-active-draft");
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed?.storageMode === "registered-job") {
+      window.localStorage.removeItem("estimate-builder-active-draft");
+    }
+  } catch {
+    try {
+      window.localStorage.removeItem("estimate-builder-active-registered-job");
+    } catch {}
+  }
+}
+
+function saveLocalDraftMetadata(workbook = {}, savedAt = "") {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("estimate-builder-active-draft");
+    if (isCorruptEstimateJobWorkbook(workbook)) return;
+    window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify({
+      storageMode: "indexeddb",
+      savedAt,
+      templateKey: workbook.templateKey || "",
+      templateName: workbook.templateName || "",
+      projectName: workbook.projectName || workbook.registeredJob?.jobName || "",
+    }));
+  } catch {
+    try {
+      window.localStorage.removeItem("estimate-builder-active-draft");
+    } catch {
+      // IndexedDB remains the durable save path.
+    }
+  }
+}
+
+function loadLastLinkedTemplateReference() {
+  if (typeof window === "undefined") return { templateKey: "", templateName: "", templateSavedAt: "" };
+  try {
+    const raw = window.localStorage.getItem(LAST_LINKED_TEMPLATE_STORAGE_KEY);
+    if (!raw) return { templateKey: "", templateName: "", templateSavedAt: "" };
+    const parsed = JSON.parse(raw);
+    return {
+      templateKey: String(parsed?.templateKey || "").trim(),
+      templateName: String(parsed?.templateName || "").trim(),
+      templateSavedAt: String(parsed?.templateSavedAt || "").trim(),
+    };
+  } catch {
+    return { templateKey: "", templateName: "", templateSavedAt: "" };
+  }
+}
+
+function saveLastLinkedTemplateReference(reference = {}) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_LINKED_TEMPLATE_STORAGE_KEY, JSON.stringify({
+      templateKey: reference.templateKey || "",
+      templateName: reference.templateName || "",
+      templateSavedAt: reference.templateSavedAt || "",
+    }));
+  } catch {}
+}
+
+function loadAllowUnlinkedJobSave() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveAllowUnlinkedJobSave(value) {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) window.localStorage.setItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY, "true");
+    else window.localStorage.removeItem(ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY);
+  } catch {}
+}
+
 function workbookJobKey(workbook = {}) {
   const registeredId = String(workbook?.registeredJob?.jobId || "").trim();
   if (registeredId) return `job:${registeredId}`;
-  const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "active-estimate-job";
-  const slugged = slug(projectName) || "active-estimate-job";
+  const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "new-job";
+  const slugged = slug(projectName) || "new-job";
   return `job:${slugged}`;
 }
 
 function workbookJobName(workbook = {}) {
-  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "Estimate job";
+  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "New estimate job";
 }
 
 function slug(input) {
@@ -3950,6 +5855,10 @@ function slug(input) {
 }
 
 async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
+  if (isCorruptEstimateJobWorkbook(workbook)) {
+    purgeCorruptEstimateJobLocalStorage();
+    return;
+  }
   const savedWorkbook = compactWorkbookForStorage({ ...workbook, savedAt });
   const key = workbookJobKey(savedWorkbook);
   const record = {
@@ -3978,19 +5887,283 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
   });
 }
 
-async function loadLatestStoredJob() {
+async function setActiveStoredJob(record = {}) {
+  if (!record?.workbook || !record?.key) return null;
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    transaction.objectStore(JOB_STORE_NAME).put(record, ACTIVE_JOB_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(record);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error || new Error("Could not set active estimate job");
+      db.close();
+      reject(error);
+    };
+  });
+}
+
+async function loadStoredJob(key = "") {
+  if (!key) return null;
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readonly");
-    const request = transaction.objectStore(JOB_STORE_NAME).get(ACTIVE_JOB_KEY);
+    const request = transaction.objectStore(JOB_STORE_NAME).get(key);
     request.onsuccess = () => resolve(request.result || null);
     request.onerror = () => reject(request.error || new Error("Could not load saved estimate job"));
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error || new Error("Could not load saved estimate job"));
+    };
+  });
+}
+
+async function listStoredJobs() {
+  purgeCorruptEstimateJobLocalStorage();
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(JOB_STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const byKey = new Map();
+      (request.result || []).forEach((record) => {
+        if (!record?.key) return;
+        if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record) || isBlockedEstimateBuilderJobKey(record.key) || isSnapshotJobKey(record.key)) {
+          if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) store.delete(record.key);
+          return;
+        }
+        if (record.type !== "job" || !record.workbook) return;
+        byKey.set(record.key, {
+          key: record.key,
+          id: record.key,
+          name: record.name || workbookJobName(record.workbook),
+          savedAt: record.savedAt || record.workbook?.savedAt || "",
+          openedFileName: record.workbook?.openedFileName || record.workbook?.sourceFileName || "",
+          projectName: dataValue(record.workbook || {}, "projectName") || record.workbook?.registeredJob?.jobName || "",
+          templateKey: record.workbook?.templateKey || "",
+          templateName: record.workbook?.templateName || "",
+        });
+      });
+      resolve(Array.from(byKey.values()).sort((a, b) => String(b.savedAt || "").localeCompare(String(a.savedAt || ""))));
+    };
+    request.onerror = () => reject(request.error || new Error("Could not list saved estimate jobs"));
+    transaction.oncomplete = () => db.close();
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error || new Error("Could not list saved estimate jobs"));
+    };
+  });
+}
+
+async function saveJobBackup(workbook, savedAt = new Date().toISOString()) {
+  if (isCorruptEstimateJobWorkbook(workbook)) return null;
+  const savedWorkbook = compactWorkbookForStorage({ ...workbook, savedAt });
+  const backupKey = `job-backup:${slug(workbookJobName(savedWorkbook)) || "new-job"}:${savedAt}`;
+  const record = {
+    type: "job-backup",
+    key: backupKey,
+    name: workbookJobName(savedWorkbook),
+    savedAt,
+    workbook: savedWorkbook,
+  };
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(JOB_STORE_NAME);
+    store.put(record, backupKey);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(record);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error || new Error("Could not save estimate job backup");
+      db.close();
+      reject(error);
+    };
+  });
+}
+
+async function loadLatestStoredJob() {
+  purgeCorruptEstimateJobLocalStorage();
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(JOB_STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const records = request.result || [];
+      const simpleJob = findSimpleStoredJob(records);
+      records.forEach((record) => {
+        if (!record?.key) return;
+        if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record) || isBlockedEstimateBuilderJobKey(record.key)) {
+          store.delete(record.key);
+        }
+      });
+      if (simpleJob) {
+        const activeSimple = prepareSimpleStoredJob(simpleJob);
+        store.put(activeSimple, activeSimple.key);
+        store.put(activeSimple, ACTIVE_JOB_KEY);
+        resolve(activeSimple);
+        return;
+      }
+      resolve(null);
+    };
+    request.onerror = () => reject(request.error || new Error("Could not load saved estimate jobs"));
     transaction.oncomplete = () => db.close();
     transaction.onerror = () => {
       db.close();
       reject(transaction.error || new Error("Could not read estimate jobs"));
     };
   });
+}
+
+function findSimpleStoredJob(records = []) {
+  const jobs = records.filter((record) => record?.type === "job" && record?.workbook && !isCorruptEstimateJobRecord(record));
+  return jobs.find(isSimpleEstimateBuilderJob)
+    || jobs.find((record) => String(record.key || "").toLowerCase() === SIMPLE_JOB_KEY && !isBlockedEstimateBuilderJobKey(record.key))
+    || null;
+}
+
+function prepareSimpleStoredJob(record = {}) {
+  const workbook = migrateWorkbookToMasterTemplate({
+    ...(record.workbook || {}),
+    openedFileName: SIMPLE_JOB_FILE_NAME,
+    sourceFileName: SIMPLE_JOB_FILE_NAME,
+    templateKey: MASTER_TEMPLATE_KEY,
+    templateName: MASTER_TEMPLATE_NAME,
+    templateType: "job",
+  });
+  return {
+    ...record,
+    type: "job",
+    key: SIMPLE_JOB_KEY,
+    name: "simple.json",
+    savedAt: record.savedAt || workbook.savedAt || "",
+    workbook,
+  };
+}
+
+function isSimpleEstimateBuilderJob(record = {}) {
+  const text = [
+    record.key,
+    record.name,
+    record.workbook?.openedFileName,
+    record.workbook?.sourceFileName,
+    record.workbook?.projectName,
+    record.workbook?.registeredJob?.jobName,
+    dataValue(record.workbook || {}, "projectName"),
+  ].join(" ").toLowerCase();
+  return /\bsimple(?:\.json)?\b/.test(text);
+}
+
+function isCorruptEstimateJobFileName(fileName = "") {
+  return String(fileName || "").trim().toLowerCase() === CORRUPT_ESTIMATE_JOB_FILE_NAME;
+}
+
+function isCorruptEstimateJobText(value = "") {
+  return String(value || "").toLowerCase().includes("estimate-job");
+}
+
+function isCorruptEstimateJobWorkbook(workbook = {}) {
+  const text = [
+    workbook?.openedFileName,
+    workbook?.sourceFileName,
+    workbook?.projectName,
+    workbook?.registeredJob?.jobName,
+    dataValue(workbook || {}, "projectName"),
+  ].join(" ");
+  return isCorruptEstimateJobText(text);
+}
+
+function isCorruptEstimateJobRecord(record = {}) {
+  const text = [
+    record.key,
+    record.name,
+    record.workbook?.openedFileName,
+    record.workbook?.sourceFileName,
+    record.workbook?.projectName,
+    record.workbook?.registeredJob?.jobName,
+    dataValue(record.workbook || {}, "projectName"),
+  ].join(" ");
+  return isCorruptEstimateJobText(text);
+}
+
+function purgeCorruptEstimateJobLocalStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    const keysToRemove = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key) continue;
+      if (!key.startsWith("estimate-builder")) continue;
+      const value = window.localStorage.getItem(key) || "";
+      if (isCorruptEstimateJobText(key) || isCorruptEstimateJobText(value)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch {}
+}
+
+function isBlockedEstimateBuilderActiveJob(record = {}) {
+  const key = String(record.key || "").toLowerCase();
+  const name = String(record.name || record.workbook?.projectName || workbookJobName(record.workbook || {}) || "").trim().toLowerCase();
+  return key === ACTIVE_JOB_KEY
+    || key === "job:estimate-job"
+    || key === "job:active-estimate-job"
+    || name === "estimate job"
+    || name === "estimate-job"
+    || name === "untitled job"
+    || name === "master estimate template";
+}
+
+function isBlockedEstimateBuilderJobKey(key = "") {
+  const text = String(key || "").toLowerCase();
+  return text === ACTIVE_JOB_KEY
+    || text === "job:estimate-job"
+    || text === "job:active-estimate-job"
+    || text.startsWith("job:estimate-job:snapshot:")
+    || text.startsWith("job:active-estimate-job:snapshot:");
+}
+
+function isSnapshotJobKey(key = "") {
+  return String(key || "").toLowerCase().includes(":snapshot:");
+}
+
+function loadRecentEstimateJobs() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(RECENT_JOBS_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((item) => item?.key && !isSnapshotJobKey(item.key)).slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentEstimateJobs(jobs = []) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RECENT_JOBS_STORAGE_KEY, JSON.stringify(jobs.slice(0, 4)));
+  } catch {}
+}
+
+function rememberRecentJob(workbook = {}, savedAt = "") {
+  if (typeof window === "undefined") return;
+  const key = workbookJobKey(workbook);
+  if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) return;
+  const item = {
+    key,
+    name: workbookJobName(workbook),
+    savedAt: savedAt || workbook.savedAt || new Date().toISOString(),
+    openedFileName: workbook.openedFileName || workbook.sourceFileName || "",
+    projectName: dataValue(workbook || {}, "projectName") || workbook.registeredJob?.jobName || "",
+  };
+  const existing = loadRecentEstimateJobs().filter((recent) => recent.key !== key);
+  saveRecentEstimateJobs([item, ...existing].slice(0, 4));
 }
 
 async function saveStoredTemplate(name, workbook, options = {}) {
@@ -4009,6 +6182,7 @@ async function saveStoredTemplate(name, workbook, options = {}) {
     ...(previousVersion ? [previousVersion] : []),
   ].slice(-25);
   const templateName = String(name || workbook?.templateName || "Estimate template").trim();
+  const templateType = options.templateType || workbook?.templateType || existing?.templateType || templateTypeForKey(key);
   const category = String(options.category ?? workbook?.templateCategory ?? existing?.category ?? "").trim();
   const tags = Array.isArray(options.tags) ? options.tags : parseTags(options.tags ?? workbook?.templateTags ?? existing?.tags);
   const createdAt = existing?.createdAt || savedAt;
@@ -4016,6 +6190,7 @@ async function saveStoredTemplate(name, workbook, options = {}) {
     ...workbook,
     templateKey: key,
     templateName,
+    templateType,
     templateCategory: category,
     templateTags: tags.join(", "),
     savedAt,
@@ -4026,6 +6201,7 @@ async function saveStoredTemplate(name, workbook, options = {}) {
     id: key,
     owner_id: ownerId,
     name: templateName,
+    templateType,
     category,
     tags,
     thumbnail: options.thumbnail || existing?.thumbnail || "",
@@ -4043,7 +6219,15 @@ async function saveStoredTemplate(name, workbook, options = {}) {
     store.put(record.workbook, TEMPLATE_KEY);
     transaction.oncomplete = () => {
       db.close();
-      resolve();
+      estimateBuilderLog("template stored", {
+        source: "workbook save",
+        destination: "IndexedDB template store",
+        templateKey: key,
+        templateName,
+        templateType,
+        savedAt,
+      });
+      resolve(record);
     };
     transaction.onerror = () => {
       const error = transaction.error || new Error("Could not save template");
@@ -4148,13 +6332,15 @@ async function listStoredTemplates() {
       const templates = (request.result || [])
         .filter((record) => record?.type === "template" && record?.key && record?.name)
         .filter((record) => !record.owner_id || record.owner_id === ownerId)
+        .filter((record) => record.key === MASTER_TEMPLATE_KEY || record.key === LEGACY_MASTER_TEMPLATE_KEY || String(record.name || "").trim().toLowerCase() === MASTER_TEMPLATE_NAME.toLowerCase())
         .map((record) => ({
-          key: record.key,
-          id: record.id || record.key,
+          key: MASTER_TEMPLATE_KEY,
+          id: MASTER_TEMPLATE_KEY,
           owner_id: record.owner_id || ownerId,
-          name: record.name,
-          category: record.category || "",
+          name: MASTER_TEMPLATE_NAME,
+          category: record.category || "Master Templates",
           tags: Array.isArray(record.tags) ? record.tags : parseTags(record.tags),
+          templateType: "master_base_template",
           thumbnail: record.thumbnail || "",
           createdAt: record.createdAt || record.savedAt || "",
           modifiedAt: record.modifiedAt || record.savedAt || "",
@@ -4165,6 +6351,7 @@ async function listStoredTemplates() {
             name: version.name || record.name,
           })) : [],
         }))
+        .filter((template, index, all) => all.findIndex((item) => item.key === template.key) === index)
         .sort((a, b) => String(b.modifiedAt || b.savedAt || "").localeCompare(String(a.modifiedAt || a.savedAt || "")));
       resolve(templates);
     };
@@ -4173,6 +6360,38 @@ async function listStoredTemplates() {
     transaction.onerror = () => {
       db.close();
       reject(transaction.error || new Error("Could not list templates"));
+    };
+  });
+}
+
+async function saveMasterTemplateBackup(savedAt = new Date().toISOString()) {
+  const existing = await loadStoredTemplateRecord(MASTER_TEMPLATE_KEY).catch(() => null)
+    || await loadStoredTemplateRecord(LEGACY_MASTER_TEMPLATE_KEY).catch(() => null)
+    || await loadStoredTemplateRecord(templateStorageKey("BASE TEMPLATE")).catch(() => null);
+  if (!existing?.workbook) return null;
+  const backupKey = `master-template-backup:${savedAt}`;
+  const record = {
+    ...existing,
+    type: "master-template-backup",
+    key: backupKey,
+    id: backupKey,
+    savedAt,
+    modifiedAt: savedAt,
+    backupOf: existing.key,
+  };
+  const db = await openTemplateDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(TEMPLATE_STORE_NAME, "readwrite");
+    const store = transaction.objectStore(TEMPLATE_STORE_NAME);
+    store.put(record, backupKey);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(record);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error || new Error("Could not save master template backup");
+      db.close();
+      reject(error);
     };
   });
 }
@@ -4205,4 +6424,25 @@ function templateStorageKey(name) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "estimate-template";
   return `template:${base}`;
+}
+
+function templateTypeForKey(key) {
+  return key === MASTER_TEMPLATE_KEY || key === LEGACY_MASTER_TEMPLATE_KEY ? "master_base_template" : "client_template";
+}
+
+function confirmMasterTemplateUpdate() {
+  if (typeof window === "undefined") return false;
+  return window.confirm("You are updating the master estimate template. This affects all new jobs. Continue?");
+}
+
+function confirmMasterTemplateDelete() {
+  if (typeof window === "undefined") return false;
+  if (window.localStorage.getItem("estimate-builder-permission-mode") !== "admin") {
+    window.alert("Admin mode is required to delete the Master Base Template.");
+    return false;
+  }
+  const first = window.confirm("Delete Master Base Template? This is protected and should almost never be deleted.");
+  if (!first) return false;
+  const second = window.prompt("Type DELETE MASTER to confirm deleting the Master Base Template.");
+  return String(second || "").trim() === "DELETE MASTER";
 }

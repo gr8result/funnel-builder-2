@@ -48,140 +48,185 @@ function normalizeActiveModuleId(moduleId) {
   return ACTIVE_MODULE_ALIASES[moduleId] || moduleId;
 }
 
+function moduleStatusLabel(module, selectedPlan, selected) {
+  const selectedRank = PLAN_RANK[selectedPlan] || 0;
+  if (module.comingSoon) return "Coming Soon";
+  if (module.addOn) {
+    if (selectedRank < PLAN_RANK[module.requiredPlan]) return "Requires Growth or higher";
+    return selected.includes(module.id) ? "Optional Add-on selected" : "Optional Add-on";
+  }
+  if (module.includedFrom && selectedRank >= PLAN_RANK[module.includedFrom]) {
+    if (module.id === "email" || module.id === "sms") return "Included - quota based";
+    if (module.id === "automation") return "Included - higher limits by plan";
+    if (module.id === "reporting") return selectedPlan === "starter" ? "Basic in Starter" : "Included";
+    return "Included";
+  }
+  if (module.includedFrom) return "Upgrade Required";
+  return "Optional Add-on";
+}
+
+function canToggleModule(module, selectedPlan) {
+  if (!module || module.comingSoon) return false;
+  if (module.addOn) return (PLAN_RANK[selectedPlan] || 0) >= PLAN_RANK[module.requiredPlan];
+  return true;
+}
+
+function isModuleIncludedInPlan(module, selectedPlan) {
+  if (!module?.includedFrom || !selectedPlan) return false;
+  return (PLAN_RANK[selectedPlan] || 0) >= (PLAN_RANK[module.includedFrom] || 99);
+}
+
 const MODULES = [
-  { id: "email",          name: "Email Marketing",         price: 59, color: "#facc15", icon: ICONS.email,          emoji: "📧" },
-  { id: "crm",            name: "CRM",                     price: 19, color: "#ec4899", icon: ICONS.account,         emoji: "🗂️" },
-  { id: "projects-hub",  name: "Projects Hub",            price: 35, color: "#f97316",                             emoji: "🏗️" },
-  { id: "sms",            name: "SMS Marketing",           price: 25, color: "#38bdf8", icon: ICONS.sms,            emoji: "💬" },
-  { id: "social",         name: "Social Media",            price: 29, color: "#8126e9", icon: ICONS.social,         emoji: "📱" },
-  { id: "calendar",       name: "Booking Calendar",         price: 19, color: "#84cc16", icon: ICONS.calendar,       emoji: "📅" },
-  { id: "website-builder",name: "Website Builder",         price: 29, color: "#3b82f6", icon: ICONS.websiteBuilder, emoji: "🌐" },
-  { id: "funnels",        name: "Funnels & Landing Pages", price: 19, color: "#ef465d", icon: ICONS.funnels },
-  { id: "automation",     name: "Business Automation",     price: 29, color: "#fb923c", icon: ICONS.automation,     emoji: "⚙️" },
-  { id: "webinars",       name: "Webinars",                price: 29, color: "#ef4444", icon: ICONS.webinars,       emoji: "🎥" },
-  { id: "subscription",   name: "Subscription Pipeline",   price: 19, color: "#7c3aed", icon: ICONS.subscription,   emoji: "🌿" },
-  { id: "subaccounts",    name: "Subaccounts",             price: 19, color: "#10b981", icon: ICONS.subaccounts },
+  { id: "email",          name: "Email Marketing",         price: 0,  color: "#facc15", icon: ICONS.email,          emoji: "📧", includedFrom: "starter", quotaBased: true },
+  { id: "crm",            name: "CRM",                     price: 0,  color: "#ec4899", icon: ICONS.account,         emoji: "🗂️", includedFrom: "starter" },
+  { id: "projects-hub",   name: "Projects Hub",            price: 0,  color: "#f97316",                             emoji: "🏗️", includedFrom: "growth" },
+  { id: "sms",            name: "SMS Marketing",           price: 0,  color: "#38bdf8", icon: ICONS.sms,            emoji: "💬", includedFrom: "starter", quotaBased: true },
+  { id: "social",         name: "Social Media",            price: 0,  color: "#8126e9", icon: ICONS.social,         emoji: "📱", includedFrom: "growth" },
+  { id: "calendar",       name: "Calendar Bookings",       price: 0,  color: "#84cc16", icon: ICONS.calendar,       emoji: "📅", includedFrom: "starter" },
+  { id: "website-builder",name: "Website Builder",         price: 0,  color: "#3b82f6", icon: ICONS.websiteBuilder, emoji: "🌐", includedFrom: "starter" },
+  { id: "funnels",        name: "Funnel Builder",          price: 0,  color: "#ef465d", icon: ICONS.funnels,        includedFrom: "starter" },
+  { id: "automation",     name: "Business Automation",     price: 0,  color: "#fb923c", icon: ICONS.automation,     emoji: "⚙️", includedFrom: "starter", quotaBased: true },
+  { id: "reporting",      name: "Reporting",               price: 0,  color: "#60a5fa",                             emoji: "📊", includedFrom: "starter" },
+  { id: "builder-pro",    name: "Builder Pro",             price: 49, color: "#14b8a6",                             emoji: "🏗", addOn: true, requiredPlan: "growth" },
+  { id: "communities",    name: "Communities",             price: 0,  color: "#06b6d4",                             emoji: "👥", comingSoon: true },
+  { id: "marketplace",    name: "Marketplace",             price: 0,  color: "#f59e0b",                             emoji: "🛒", includedFrom: "starter" },
+  { id: "webinars",       name: "Webinars",                price: 29, color: "#ef4444", icon: ICONS.webinars,       emoji: "🎥", comingSoon: true },
+  { id: "subscription",   name: "Subscription Pipeline",   price: 19, color: "#7c3aed", icon: ICONS.subscription,   emoji: "🌿", comingSoon: true },
+  { id: "subaccounts",    name: "Subaccounts",             price: 19, color: "#10b981", icon: ICONS.subaccounts,    comingSoon: true },
+];
+
+const PLAN_RANK = { starter: 1, growth: 2, scale: 3, professional: 4 };
+const BUILDER_PRO_FEATURES = [
+  "AI Estimate Builder",
+  "AI Plan Recognition",
+  "Quotation Builder",
+  "Projects Hub",
+  "Procurement",
+  "Purchase Orders",
+  "Work Orders",
+  "Gantt Charts",
+  "Variations",
+  "EOT Tracking",
+  "LD Tracking",
+  "Client Portal",
+];
+const PROJECT_CREDIT_PACKS = [
+  { id: "credit-1", label: "1 Project Credit", price: 59, badge: "" },
+  { id: "credit-10", label: "10 Project Credits", price: 531, badge: "Save 10%" },
+  { id: "credit-25", label: "25 Project Credits", price: 1254, badge: "Save 15%" },
+];
+const EMAIL_PACKS = [
+  { label: "+10,000 emails", price: 25 },
+  { label: "+25,000 emails", price: 65 },
+  { label: "+50,000 emails", price: 120 },
+  { label: "+100,000 emails", price: 199 },
+];
+const SMS_PACKS = [
+  { label: "+100 SMS", price: 10 },
+  { label: "+500 SMS", price: 35 },
+  { label: "+1,000 SMS", price: 60 },
+  { label: "+5,000 SMS", price: 250 },
+];
+const AI_PACKS = [
+  { label: "+500 AI credits", price: 29 },
+  { label: "+2,000 AI credits", price: 99 },
+  { label: "+10,000 AI credits", price: 399 },
 ];
 
 const BASE_PLANS = [
-  { id: "starter",      name: "Starter",      price: 159, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#6366f1", badge: null,           users: "2 users",        tagline: "Core tools for solo operators & small teams" },
-  { id: "growth",       name: "Growth",       price: 359, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#22c55e", badge: "Most Popular",  users: "5 users",        tagline: "Scale sales, marketing & automation" },
-  { id: "scale",        name: "Scale",        price: 499, introDiscountPercent: 50, introMonths: 3, trialDays: 14, color: "#f59e0b", badge: "Best Value",    users: "10 users",       tagline: "Advanced AI, analytics & full automation suite" },
-  { id: "professional", name: "Professional", price: 999, introDiscountPercent: null, introMonths: 0, trialDays: 14, color: "#7c3aed", badge: "Enterprise",    users: "Up to 25 users", tagline: "For large businesses with bigger teams, higher turnover, and advanced support needs" },
+  { id: "starter",      name: "Starter",      price: 79,  introDiscountPercent: null, introMonths: 0, trialDays: 0, color: "#6366f1", badge: null,           users: "2 users",        tagline: "For sole traders and startups." },
+  { id: "growth",       name: "Growth",       price: 249, introDiscountPercent: null, introMonths: 0, trialDays: 0, color: "#22c55e", badge: "Most Popular",  users: "5 users",        tagline: "For builders, trades and growing service businesses." },
+  { id: "scale",        name: "Scale",        price: 399, introDiscountPercent: null, introMonths: 0, trialDays: 0, color: "#f59e0b", badge: "Best Value",    users: "10 users",       tagline: "For established businesses managing more projects, teams and automation." },
+  { id: "professional", name: "Professional", price: 799, introDiscountPercent: null, introMonths: 0, trialDays: 0, color: "#7c3aed", badge: "Premium",       users: "25 users",       tagline: "For high-volume businesses with advanced reporting, higher usage and premium support." },
 ];
 
 // Full plan details (features + quotas) — used for the rich plan cards at the top of the page
 const PLANS = [
   {
     name: "Starter", color: "#6366f1", badge: null,
-    price: "$159", period: "/mo",
-    tagline: "For solo operators and small teams just getting started.",
+    price: "$79", period: "/mo",
+    tagline: "For sole traders and startups.",
     features: [
       { label: "Team Seats",              value: "2 users" },
-      { label: "CRM Pipelines",           value: "1" },
-      { label: "Communities",             value: "1" },
-      { label: "Connected Social Accounts", value: "3" },
-      { label: "Automation Workflows",    value: "5" },
-      { label: "Calendar & Bookings",     value: true },
-      { label: "Shared Phone Number for SMS",      value: true },
-      { label: "FREE Marketplace Access",      value: true },
-      { label: "Reporting",               value: "Email & CRM stats" },
-      { label: "Support",                 value: "Email" },
+      { label: "CRM",                     value: true },
+      { label: "Website Builder",         value: true },
+      { label: "Funnel Builder",          value: true },
+      { label: "Calendar Bookings",       value: true },
+      { label: "Email Marketing",         value: true },
+      { label: "SMS Marketing",           value: true },
+      { label: "Basic Automation",        value: true },
+      { label: "Basic Reporting",         value: true },
+      { label: "Marketplace Access",      value: true },
     ],
     quotas: [
-      { label: "Email contacts",        value: "5,000" },
-      { label: "Email sends/mo",        value: "50,000" },
-      { label: "SMS credits/mo",        value: "500" },
-      { label: "Websites",              value: "1" },
-      { label: "Funnels",               value: "Landing pages only" },
-      { label: "Projects Hub",           value: "3 jobs · 5 projects · 2 users" },
-      { label: "AI credits/mo",         value: "50" },
-      { label: "Storage",               value: "5 GB" },
+      { label: "Contacts",              value: "2,500" },
+      { label: "Monthly Email Sends Included", value: "10,000" },
+      { label: "SMS/mo",                value: "100" },
+      { label: "AI credits/mo",         value: "100" },
+      { label: "Projects Hub",          value: "Not included" },
     ],
   },
   {
     name: "Growth", color: "#22c55e", badge: "Most Popular",
-    price: "$359", period: "/mo",
-    tagline: "For growing teams scaling sales and marketing operations.",
+    price: "$249", period: "/mo",
+    tagline: "For builders, trades and growing service businesses.",
     features: [
       { label: "Team Seats",              value: "5 users" },
-      { label: "CRM Pipelines",           value: "3" },
-      { label: "Communities",             value: "3" },
-      { label: "Connected Social Accounts", value: "7" },
-      { label: "Automation Workflows",    value: "8" },
-      { label: "SMS Scheduled Campaigns",  value: "3" },
-      { label: "Call Recording & AI Transcription", value: true },
-      { label: "Calendar & Bookings",     value: true },
-      { label: "Shared Phone Number for Calls and SMS",      value: true },
-      { label: "Affiliate Management",    value: true },
-      { label: "Reporting",               value: "Email, SMS & Call Analytics" },
-      { label: "Support",                 value: "Priority Email" },
+      { label: "Everything in Starter",   value: true },
+      { label: "Social Media Scheduler",  value: true },
+      { label: "Projects Hub",            value: true },
+      { label: "More CRM pipelines",      value: true },
+      { label: "More automation workflows", value: true },
+      { label: "Priority email support",  value: true },
     ],
     quotas: [
-      { label: "Email contacts",        value: "15,000" },
-      { label: "Email sends/mo",        value: "150,000" },
-      { label: "SMS credits/mo",        value: "2,500" },
-      { label: "Websites",              value: "2" },
-      { label: "Funnels",               value: "1 (+ extras at cost)" },
-      { label: "Projects Hub",           value: "15 jobs · 20 projects · dependencies" },
-      { label: "AI credits/mo",         value: "250" },
-      { label: "Storage",               value: "25 GB" },
+      { label: "Contacts",              value: "10,000" },
+      { label: "Monthly Email Sends Included", value: "25,000" },
+      { label: "SMS/mo",                value: "500" },
+      { label: "AI credits/mo",         value: "500" },
+      { label: "Projects Hub",          value: "Included" },
     ],
   },
   {
     name: "Scale", color: "#f59e0b", badge: "Best Value",
-    price: "$499", period: "/mo",
-    tagline: "For established businesses scaling teams and operations.",
+    price: "$399", period: "/mo",
+    tagline: "For established businesses managing more projects, teams and automation.",
     features: [
       { label: "Team Seats",              value: "10 users" },
-      { label: "CRM Pipelines",           value: "10" },
-      { label: "Communities",             value: "Unlimited" },
-      { label: "Connected Social Accounts", value: "15" },
-      { label: "Automation Workflows",    value: "10" },
-      { label: "SMS Scheduled Campaigns",  value: "10" },
-      { label: "AI Transcription + Sentiment", value: true },
-      { label: "AI Website Builder",      value: true },
-      { label: "Shared Phone Number",      value: true },
-      { label: "Reporting",               value: "Full Analytics + CSV export" },
-      { label: "Support",                 value: "Dedicated Onboarding" },
+      { label: "Everything in Growth",    value: true },
+      { label: "Advanced Reporting",      value: true },
+      { label: "Team Permissions",        value: true },
+      { label: "More websites/funnels",   value: true },
+      { label: "More social profiles",    value: true },
+      { label: "Dedicated onboarding",    value: true },
     ],
     quotas: [
-      { label: "Email contacts",        value: "40,000" },
-      { label: "Email sends/mo",        value: "400,000" },
-      { label: "SMS credits/mo",        value: "5,000" },
-      { label: "Websites",              value: "3" },
-      { label: "Funnels",               value: "3 (+ extras at cost)" },
-      { label: "Projects Hub",           value: "Unlimited jobs & projects · resource allocation · critical path" },
-      { label: "AI credits/mo",         value: "750" },
-      { label: "Storage",               value: "100 GB" },
+      { label: "Contacts",              value: "30,000" },
+      { label: "Monthly Email Sends Included", value: "50,000" },
+      { label: "SMS/mo",                value: "2,000" },
+      { label: "AI credits/mo",         value: "2,000" },
+      { label: "Projects Hub",          value: "Included" },
     ],
   },
   {
-    name: "Professional", color: "#7c3aed", badge: "Enterprise",
-    price: "$999", period: "/mo",
-    tagline: "Complete business OS for large businesses with bigger teams, higher turnover, and advanced support needs.",
+    name: "Professional", color: "#7c3aed", badge: "Premium",
+    price: "$799", period: "/mo",
+    tagline: "For high-volume businesses with advanced reporting, higher usage and premium support.",
     features: [
-      { label: "Team Seats",              value: "Up to 25 users" },
-      { label: "CRM Pipelines",           value: "Unlimited" },
-      { label: "Communities",             value: "Unlimited" },
-      { label: "Connected Social Accounts", value: "Unlimited" },
-      { label: "SMS Scheduled Campaigns",  value: "Unlimited" },
-      { label: "Automation Workflows",    value: "Unlimited" },
-      { label: "AI Call Transcription & Sentiment", value: true },
-      { label: "AI Content & Post Generation", value: true },
-      { label: "Shared Phone Number",      value: true },
-      { label: "Reporting",               value: "Full Analytics + Scheduled Reports" },
-      { label: "Support",                 value: "Account Manager + SLA" },
+      { label: "Team Seats",              value: "25 users" },
+      { label: "Everything in Scale",      value: true },
+      { label: "Executive dashboards",     value: true },
+      { label: "Cross-module reporting",   value: true },
+      { label: "Higher usage limits",      value: true },
+      { label: "Account manager",          value: true },
+      { label: "SLA support",              value: true },
     ],
     quotas: [
-      { label: "Email contacts",  value: "200,000" },
-      { label: "Email sends/mo",  value: "2,000,000" },
-      { label: "SMS credits/mo",  value: "10,000" },
-      { label: "Websites",        value: "5" },
-      { label: "Funnels",               value: "10 (+ extras at cost)" },
-      { label: "Projects Hub",           value: "Unlimited · white-label · API" },
-      { label: "AI credits/mo",         value: "5,000" },
-      { label: "Storage",               value: "500 GB" },
+      { label: "Contacts",              value: "100,000" },
+      { label: "Monthly Email Sends Included", value: "100,000" },
+      { label: "SMS/mo",                value: "10,000" },
+      { label: "AI credits/mo",         value: "10,000" },
+      { label: "Projects Hub",          value: "Included" },
     ],
   },
 ];
@@ -216,7 +261,13 @@ export default function Billing() {
     const [crmPlanTier, setCrmPlanTier] = useState(null);
     const [funnelPackTier, setFunnelPackTier] = useState(null);
     const [websitePlanTier, setWebsitePlanTier] = useState(null);
-    const [projectsHubPlanTier, setProjectsHubPlanTier] = useState(null);  const [privateNumbers, setPrivateNumbers] = useState(0);  const [extraContactBlocks, setExtraContactBlocks] = useState(0);  const [extraSendBlocks, setExtraSendBlocks] = useState(0);  const [extraSeats, setExtraSeats] = useState(0);    const [queryTiersLoaded, setQueryTiersLoaded] = useState(false);
+    const [projectsHubPlanTier, setProjectsHubPlanTier] = useState(null);
+    const [extraSeats, setExtraSeats] = useState(0);
+    const [emailPackIndex, setEmailPackIndex] = useState(-1);
+    const [smsPackIndex, setSmsPackIndex] = useState(-1);
+    const [aiPackIndex, setAiPackIndex] = useState(-1);
+    const [projectCreditPack, setProjectCreditPack] = useState("");
+    const [queryTiersLoaded, setQueryTiersLoaded] = useState(false);
     // tiersFromUrl = tiers actively selected via URL params right now
     const [tiersFromUrl, setTiersFromUrl] = useState({});
     // dbPlanTiers = tiers already in DB (already paid)
@@ -365,7 +416,6 @@ export default function Billing() {
         email: acc?.email_plan_tier || null,
         sms: acc?.sms_plan_tier || null,
         calendar: acc?.calendar_plan_tier || null,
-        website: null,
       });
 
       // Seed tier badges from DB so module cards show the user's current
@@ -406,16 +456,7 @@ export default function Billing() {
 
       if (moduleRows && moduleRows.length > 0) {
         const ids = moduleRows.map((r) => r.module_id);
-        const savedWebsiteTier = ids
-          .find((id) => String(id || "").startsWith("__website_plan_tier:"))
-          ?.replace(/^__website_plan_tier:/, "") || null;
-        if (savedWebsiteTier && !params?.get("websitePlan")) {
-          setWebsitePlanTier(savedWebsiteTier);
-        }
-        if (savedWebsiteTier) {
-          setDbPlanTiers((prev) => ({ ...prev, website: savedWebsiteTier }));
-        }
-
+        // Extract social plan tier stored as __social_plan_tier:xxx (only apply if set via URL)
         const realIds = ids
           .filter((id) => !id.startsWith("__") && id !== "automation")
           .map(normalizeActiveModuleId);
@@ -451,24 +492,31 @@ export default function Billing() {
     if (!tiersFromUrl.projectsHub) setProjectsHubPlanTier(null);
   }, [selectedPlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if ((PLAN_RANK[selectedPlan] || 0) >= PLAN_RANK.growth) return;
+    setSelected((prev) => prev.filter((id) => id !== "builder-pro"));
+    setProjectCreditPack("");
+  }, [selectedPlan]);
+
   // When the user actively picks a plan, auto-select all available modules so
   // the cards light up immediately. Skips the initial mount so URL-loaded state
   // (e.g. returning from a module plan page) is never overridden.
-  const DEAD_MODULE_IDS = new Set(["automation", "webinars", "subscription", "subaccounts"]);
   useEffect(() => {
     if (!_autoSelectOnPlan.current) { _autoSelectOnPlan.current = true; return; }
     if (selectedPlan) {
-      const availableIds = MODULES.filter(m => !DEAD_MODULE_IDS.has(m.id)).map(m => m.id);
+      const availableIds = MODULES.filter(m => canToggleModule(m, selectedPlan)).map(m => m.id);
       setSelected(prev => Array.from(new Set([...prev, ...availableIds])));
     }
   }, [selectedPlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSelect = (id) => {
     if (activeModules.has(id)) return; // can't deselect an active/purchased module
+    const module = MODULES.find((m) => m.id === id);
+    if (!canToggleModule(module, selectedPlan)) return;
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  const selectAll = () => setSelected(MODULES.map((m) => m.id));
+  const selectAll = () => setSelected(MODULES.filter((m) => canToggleModule(m, selectedPlan)).map((m) => m.id));
   const clearAll = () => {
     setEmailPlanTier(null);
     setSmsPlanTier(null);
@@ -479,6 +527,7 @@ export default function Billing() {
     setFunnelPackTier(null);
     setProjectsHubPlanTier(null);
     setTiersFromUrl({});
+    setProjectCreditPack("");
     setSelected([]);
   };
 
@@ -516,7 +565,7 @@ export default function Billing() {
   const moduleSubtotal = MODULES.filter((m) => {
     if (!selected.includes(m.id)) return false;
     if (activeModules.has(m.id)) return false; // already purchased, don't charge again
-    if (selectedPlan && BASE_PLAN_INCLUDES[selectedPlan]?.[getBasePlanModuleKey(m.id)]) return false;
+    if (isModuleIncludedInPlan(m, selectedPlan)) return false;
     if (m.id === "email" && emailPlanTier) return false;
     if (m.id === "sms" && smsPlanTier) return false;
     if (m.id === "calendar" && calendarPlanTier) return false;
@@ -535,19 +584,23 @@ export default function Billing() {
   const socialPlanPrice   = (tiersFromUrl.social   && tiersFromUrl.social   !== dbPlanTiers.social)   ? getPlanPrice(tiersFromUrl.social)   : 0;
   const crmPlanPrice      = (tiersFromUrl.crm      && tiersFromUrl.crm      !== dbPlanTiers.crm)      ? getPlanPrice(tiersFromUrl.crm)      : 0;
   const funnelPackPrice   = (tiersFromUrl.funnels  && tiersFromUrl.funnels  !== dbPlanTiers.funnels)  ? getPlanPrice(tiersFromUrl.funnels)  : 0;
-  const websitePlanPrice  = (tiersFromUrl.website  && tiersFromUrl.website  !== dbPlanTiers.website)  ? getPlanPrice(tiersFromUrl.website)  : 0;
   const projectsHubPlanPrice = (tiersFromUrl.projectsHub && tiersFromUrl.projectsHub !== dbPlanTiers.projectsHub) ? getPlanPrice(tiersFromUrl.projectsHub) : 0;
   const basePlanPrice = selectedPlan ? (BASE_PLANS.find((p) => p.id === selectedPlan)?.price || 0) : 0;
-  const privateNumbersCost = privateNumbers * 35;
-  const extraContactsCost = extraContactBlocks * 10;
-  const extraSendsCost = extraSendBlocks * 20;
   const extraSeatsCost = extraSeats * 15;
-  const annualMultiplier = isAnnual ? 0.80 : 1;
-  const billingSubtotal = basePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + websitePlanPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const selectedProjectCreditPack = PROJECT_CREDIT_PACKS.find((pack) => pack.id === projectCreditPack);
+  const selectedEmailPack = emailPackIndex >= 0 ? EMAIL_PACKS[emailPackIndex] : null;
+  const selectedSmsPack = smsPackIndex >= 0 ? SMS_PACKS[smsPackIndex] : null;
+  const selectedAiPack = aiPackIndex >= 0 ? AI_PACKS[aiPackIndex] : null;
+  const projectCreditCost = selected.includes("builder-pro") && selectedProjectCreditPack ? selectedProjectCreditPack.price : 0;
+  const emailPackCost = selectedEmailPack?.price || 0;
+  const smsPackCost = selectedSmsPack?.price || 0;
+  const aiPackCost = selectedAiPack?.price || 0;
+  const annualMultiplier = isAnnual ? 0.95 : 1;
+  const billingSubtotal = basePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + extraSeatsCost + projectCreditCost + emailPackCost + smsPackCost + aiPackCost;
   const selectedBasePlan = selectedPlan ? BASE_PLANS.find((p) => p.id === selectedPlan) : null;
   const introDiscountPercent = !isAnnual ? (selectedBasePlan?.introDiscountPercent || 0) : 0;
   const introBasePlanPrice = introDiscountPercent > 0 ? basePlanPrice * (1 - introDiscountPercent / 100) : basePlanPrice;
-  const introBillingSubtotal = introBasePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + websitePlanPrice + projectsHubPlanPrice + privateNumbersCost + extraContactsCost + extraSendsCost + extraSeatsCost;
+  const introBillingSubtotal = introBasePlanPrice + moduleSubtotal + emailPlanPrice + smsPlanPrice + calendarPlanPrice + socialPlanPrice + crmPlanPrice + funnelPackPrice + projectsHubPlanPrice + extraSeatsCost + projectCreditCost + emailPackCost + smsPackCost + aiPackCost;
   const total = billingSubtotal * annualMultiplier * (1 - discountPercent / 100);
   const introTotal = introBillingSubtotal * (1 - discountPercent / 100);
   const introPrepaidTotal = selectedBasePlan?.introMonths ? introTotal * selectedBasePlan.introMonths : introTotal;
@@ -565,9 +618,13 @@ export default function Billing() {
       if (socialPlanTier) manualParams.set("socialPlan", socialPlanTier);
       if (crmPlanTier) manualParams.set("crmPlan", crmPlanTier);
       if (funnelPackTier) manualParams.set("funnelPlan", funnelPackTier);
-      if (websitePlanTier) manualParams.set("websitePlan", websitePlanTier);
       if (projectsHubPlanTier) manualParams.set("projectsHubPlan", projectsHubPlanTier);
       if (selected.length) manualParams.set("selected", selected.join(","));
+      if (extraSeats > 0) manualParams.set("extraSeats", String(extraSeats));
+      if (selectedProjectCreditPack) manualParams.set("projectCreditPack", selectedProjectCreditPack.id);
+      if (selectedEmailPack) manualParams.set("emailPack", selectedEmailPack.label);
+      if (selectedSmsPack) manualParams.set("smsPack", selectedSmsPack.label);
+      if (selectedAiPack) manualParams.set("aiPack", selectedAiPack.label);
       router.push(`/checkout/success?${manualParams.toString()}`);
       return;
     }
@@ -580,8 +637,12 @@ export default function Billing() {
     if (socialPlanTier) params.set("socialPlan", socialPlanTier);
     if (crmPlanTier) params.set("crmPlan", crmPlanTier);
     if (funnelPackTier) params.set("funnelPlan", funnelPackTier);
-    if (websitePlanTier) params.set("websitePlan", websitePlanTier);
     if (projectsHubPlanTier) params.set("projectsHubPlan", projectsHubPlanTier);
+    if (extraSeats > 0) params.set("extraSeats", String(extraSeats));
+    if (selectedProjectCreditPack) params.set("projectCreditPack", selectedProjectCreditPack.id);
+    if (selectedEmailPack) params.set("emailPack", selectedEmailPack.label);
+    if (selectedSmsPack) params.set("smsPack", selectedSmsPack.label);
+    if (selectedAiPack) params.set("aiPack", selectedAiPack.label);
     if (isAnnual) params.set("annual", "1");
     router.push(`/checkout?${params.toString()}`);
   };
@@ -606,10 +667,10 @@ export default function Billing() {
           We believe you should experience the power of Gr8 Result Digital Solutions before paying a cent. That's why we're giving every new customer a <strong>full 14-day free trial</strong>, allowing you to onboard, configure, and customise your platform without any upfront costs.
         </p>
         <p>
-          But that's not all. To help small and growing businesses get established, we're also offering an incredible <strong>50% off your first 3 months subscription</strong> on our Starter, Growth and Scale Plans, payable after your 14-day free trial ends. This gives you plenty of time to become familiar with the platform, implement your systems, and start seeing real results while keeping your costs low.
+          Annual billing is available with a <strong>5% saving</strong> for customers who prefer to commit for the year and keep their platform costs predictable.
         </p>
         <p>
-          <strong>Your credit card will not be charged during your 14-day trial period.</strong> Once your trial expires, unless yo have cancelled, you'll pay for your first three months at the discounted 50% rate in advance. After that, your chosen subscription plan will automatically renew at the standard monthly rate.
+          Choose the core plan that suits your business, then add module upgrades or Builder Pro when you need more specialist workflows.
         </p>
         <p>
           There's never been a better time to transform the way you run and grow your business. Start your free trial today and discover how easy business growth can be when everything you need is finally all in one place.
@@ -626,7 +687,7 @@ export default function Billing() {
         <button className={`toggle-switch ${isAnnual ? "on" : ""}`} onClick={() => setIsAnnual((v) => !v)} aria-label="Toggle annual billing">
           <span className="toggle-knob" />
         </button>
-        <span className={`toggle-label ${isAnnual ? "active" : ""}`}>Annual <span className="save-badge">Save 20% — 2 months free</span></span>
+        <span className={`toggle-label ${isAnnual ? "active" : ""}`}>Annual <span className="save-badge">Save 5%</span></span>
       </div>
       <div className="plans-grid">
         {PLANS.map((plan) => {
@@ -664,7 +725,7 @@ export default function Billing() {
               <div className="plan-price">
                 {isAnnual ? (
                   <>
-                    <span className="plan-amount" style={{ color: plan.color }}>${Math.round(planPrice * 12 * 0.80).toLocaleString()}</span>
+                    <span className="plan-amount" style={{ color: plan.color }}>${Math.round(planPrice * 12 * 0.95).toLocaleString()}</span>
                     <span className="plan-period">/yr</span>
                   </>
                 ) : (
@@ -675,11 +736,11 @@ export default function Billing() {
                 )}
               </div>
               {isAnnual && (
-                <div className="annual-note" style={{ color: plan.color }}>equiv. ${Math.round(planPrice * 0.80)}/mo billed annually</div>
+                <div className="annual-note" style={{ color: plan.color }}>equiv. ${Math.round(planPrice * 0.95)}/mo billed annually</div>
               )}
               {!isAnnual && introPrice && (
                 <div className="intro-note" style={{ borderColor: plan.color }}>
-                  <strong style={{ color: plan.color }}>{trialDays} days free</strong>, then {introDiscountPercent}% off your first {introMonths} months.
+                  <strong style={{ color: plan.color }}>{trialDays} days free</strong>, then <strong>${(introPrice * introMonths).toFixed(2)}</strong> upfront for your first {introMonths} months. Ongoing ${planPrice}/mo.
                 </div>
               )}
               <p className="plan-tagline">{plan.tagline}</p>
@@ -758,9 +819,35 @@ export default function Billing() {
       {/* ── Optional Extras ── */}
       <div className="section-header" style={{ marginTop: 8 }}>
         <h2 className="section-title">Optional Add-ons</h2>
-        <p className="section-sub">Extend your plan with extra seats, phone numbers, email contacts, and send capacity.</p>
+        <p className="section-sub">Included email, SMS, and AI quotas are monthly allowances. Add usage packs when customers need more capacity.</p>
       </div>
       <div className="extras-box">
+        {selected.includes("builder-pro") && (PLAN_RANK[selectedPlan] || 0) >= PLAN_RANK.growth && (
+          <>
+            <div className="extra-row">
+              <div className="extra-info">
+                <div className="extra-title">Builder Pro Project Credits</div>
+                <div className="extra-desc">Each Project Credit unlocks one complete Builder Pro project workspace from estimate through to completion.</div>
+                <div className="extra-price">Builder Pro extras only</div>
+              </div>
+              <div className="pack-options">
+                {PROJECT_CREDIT_PACKS.map((pack) => (
+                  <button
+                    key={pack.id}
+                    className={`pack-btn ${projectCreditPack === pack.id ? "active" : ""}`}
+                    onClick={() => setProjectCreditPack(projectCreditPack === pack.id ? "" : pack.id)}
+                    type="button"
+                  >
+                    <span>{pack.label}</span>
+                    <strong>${pack.price}/mo</strong>
+                    {pack.badge && <em>{pack.badge}</em>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="extra-divider" />
+          </>
+        )}
         <div className="extra-row">
           <div className="extra-info">
             <div className="extra-title">👤 Extra Team Seats</div>
@@ -776,40 +863,64 @@ export default function Billing() {
         <div className="extra-divider" />
         <div className="extra-row">
           <div className="extra-info">
-            <div className="extra-title">Private Dedicated Phone Number</div>
-            <div className="extra-desc">Your own number for calls &amp; SMS — independent of the shared platform number</div>
-            <div className="extra-price">$35 / month per number</div>
+            <div className="extra-title">📧 Email Packs</div>
+            <div className="extra-desc">Add monthly email sends above the included plan allowance</div>
+            <div className="extra-price">From $25 / month</div>
           </div>
-          <div className="extra-controls">
-            <button onClick={() => setPrivateNumbers(n => Math.max(0, n - 1))} className="qty-btn">−</button>
-            <span className="qty-val">{privateNumbers}</span>
-            <button onClick={() => setPrivateNumbers(n => n + 1)} className="qty-btn">+</button>
-          </div>
-        </div>
-        <div className="extra-divider" />
-        <div className="extra-row">
-          <div className="extra-info">
-            <div className="extra-title">📧 Extra Email Contacts</div>
-            <div className="extra-desc">Add extra subscriber capacity above your email plan limit</div>
-            <div className="extra-price">$10 / month per 1,000 contacts</div>
-          </div>
-          <div className="extra-controls">
-            <button onClick={() => setExtraContactBlocks(n => Math.max(0, n - 1))} className="qty-btn">−</button>
-            <span className="qty-val">{extraContactBlocks}</span>
-            <button onClick={() => setExtraContactBlocks(n => n + 1)} className="qty-btn">+</button>
+          <div className="pack-options">
+            {EMAIL_PACKS.map((pack, index) => (
+              <button
+                key={pack.label}
+                className={`pack-btn ${emailPackIndex === index ? "active" : ""}`}
+                onClick={() => setEmailPackIndex(emailPackIndex === index ? -1 : index)}
+                type="button"
+              >
+                <span>{pack.label}</span>
+                <strong>${pack.price}/mo</strong>
+              </button>
+            ))}
           </div>
         </div>
         <div className="extra-divider" />
         <div className="extra-row">
           <div className="extra-info">
-            <div className="extra-title">📨 Extra Email Sends</div>
-            <div className="extra-desc">Add extra monthly send capacity above your email plan limit</div>
-            <div className="extra-price">$20 / month per 10,000 sends</div>
+            <div className="extra-title">💬 SMS Packs</div>
+            <div className="extra-desc">Add monthly SMS capacity above the included plan allowance</div>
+            <div className="extra-price">From $10 / month</div>
           </div>
-          <div className="extra-controls">
-            <button onClick={() => setExtraSendBlocks(n => Math.max(0, n - 1))} className="qty-btn">−</button>
-            <span className="qty-val">{extraSendBlocks}</span>
-            <button onClick={() => setExtraSendBlocks(n => n + 1)} className="qty-btn">+</button>
+          <div className="pack-options">
+            {SMS_PACKS.map((pack, index) => (
+              <button
+                key={pack.label}
+                className={`pack-btn ${smsPackIndex === index ? "active" : ""}`}
+                onClick={() => setSmsPackIndex(smsPackIndex === index ? -1 : index)}
+                type="button"
+              >
+                <span>{pack.label}</span>
+                <strong>${pack.price}/mo</strong>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="extra-divider" />
+        <div className="extra-row">
+          <div className="extra-info">
+            <div className="extra-title">AI Credits</div>
+            <div className="extra-desc">Add monthly AI credits above the included plan allowance</div>
+            <div className="extra-price">From $29 / month</div>
+          </div>
+          <div className="pack-options">
+            {AI_PACKS.map((pack, index) => (
+              <button
+                key={pack.label}
+                className={`pack-btn ${aiPackIndex === index ? "active" : ""}`}
+                onClick={() => setAiPackIndex(aiPackIndex === index ? -1 : index)}
+                type="button"
+              >
+                <span>{pack.label}</span>
+                <strong>${pack.price}/mo</strong>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -844,10 +955,9 @@ export default function Billing() {
           const planName   = selectedPlan ? BASE_PLANS.find(p => p.id === selectedPlan)?.name : null;
           const deltaKey   = m.id === "website-builder" ? "website" : m.id === "projects-hub" ? "projectsHub" : m.id;
 
-          // Dead modules — not yet built, no plan badge
-          const DEAD_MODULES = new Set(["automation", "webinars", "subscription", "subaccounts"]);
-          const isDead = DEAD_MODULES.has(m.id);
+          const isDead = Boolean(m.comingSoon);
           const hasTier = !!tier;
+          const statusLabel = moduleStatusLabel(m, selectedPlan, selected);
 
           // Top-right corner badge — shows the selected base plan name on any coloured card
           let cornerBadge = null;
@@ -890,6 +1000,10 @@ export default function Billing() {
             <span className="icon">{m.emoji ? <span style={{ fontSize: 24, lineHeight: 1 }}>{m.emoji}</span> : m.icon({ size: 28 })}</span>
             <div className="card-info">
               <h3>{m.name}</h3>
+              <div className="module-status">{statusLabel}</div>
+              {m.id === "builder-pro" && (
+                <div className="module-mini-list">{BUILDER_PRO_FEATURES.slice(0, 4).join(" · ")}</div>
+              )}
               {tierCfg ? (
                 <button
                   className="upgrade-btn"
@@ -901,8 +1015,10 @@ export default function Billing() {
                 >
                   {tier ? "Manage / Upgrade Plan" : "See Plans / Upgrade"}
                 </button>
-              ) : (
+              ) : m.addOn ? (
                 <p>A${m.price} / month</p>
+              ) : (
+                <p>{m.includedFrom ? "Included in eligible plans" : `A$${m.price} / month`}</p>
               )}
             </div>
           </div>
@@ -940,14 +1056,23 @@ export default function Billing() {
         <p>Funnels Pack: <span>{funnelPackTier ? `${PRICING[funnelPackTier]?.name || funnelPackTier} (${getModuleDeltaLabel("funnels", funnelPackTier, selectedPlan)})` : "-"}</span></p>
         <p>Website Builder Plan: <span>{websitePlanTier ? `${PRICING[websitePlanTier]?.name || websitePlanTier} (${getModuleDeltaLabel("website", websitePlanTier, selectedPlan)})` : "-"}</span></p>
         <p>Projects Hub Plan: <span>{projectsHubPlanTier ? `${PRICING[projectsHubPlanTier]?.name || projectsHubPlanTier} (${getModuleDeltaLabel("projectsHub", projectsHubPlanTier, selectedPlan)})` : "-"}</span></p>
-        {privateNumbers > 0 && (
-          <p>Private Phone Numbers: <span>{privateNumbers} × $35 = ${privateNumbers * 35}/mo</span></p>
+        {selected.includes("builder-pro") && (
+          <p>Builder Pro: <span>$49/mo</span></p>
         )}
-        {extraContactBlocks > 0 && (
-          <p>Extra Email Contacts: <span>{extraContactBlocks} × 1,000 = {extraContactBlocks * 1000} contacts (+${extraContactBlocks * 10}/mo)</span></p>
+        {selectedProjectCreditPack && (
+          <p>Project Credits: <span>{selectedProjectCreditPack.label} (+${selectedProjectCreditPack.price}/mo)</span></p>
         )}
-        {extraSendBlocks > 0 && (
-          <p>Extra Email Sends: <span>{extraSendBlocks} × 10,000 = {(extraSendBlocks * 10000).toLocaleString()} sends (+${extraSendBlocks * 20}/mo)</span></p>
+        {extraSeats > 0 && (
+          <p>Extra Team Seats: <span>{extraSeats} × $15 = ${extraSeats * 15}/mo</span></p>
+        )}
+        {selectedEmailPack && (
+          <p>Email Pack: <span>{selectedEmailPack.label} (+${selectedEmailPack.price}/mo)</span></p>
+        )}
+        {selectedSmsPack && (
+          <p>SMS Pack: <span>{selectedSmsPack.label} (+${selectedSmsPack.price}/mo)</span></p>
+        )}
+        {selectedAiPack && (
+          <p>AI Pack: <span>{selectedAiPack.label} (+${selectedAiPack.price}/mo)</span></p>
         )}
         <p>Subtotal: <span>A${billingSubtotal.toFixed(2)}</span></p>
         {!isAnnual && selectedBasePlan?.introDiscountPercent > 0 && (
@@ -955,7 +1080,7 @@ export default function Billing() {
             <strong>Onboarding offer:</strong> To take advantage of the {selectedBasePlan.trialDays}-day free trial and {selectedBasePlan.introDiscountPercent}% off your first {selectedBasePlan.introMonths} months, your first {selectedBasePlan.introMonths} paid months are billed upfront as one onboarding payment. No payment is processed today. If you do not cancel before the trial ends, A${introPrepaidTotal.toFixed(2)} will be charged after the trial, then your account continues at A${total.toFixed(2)}/mo after the prepaid onboarding period.
           </div>
         )}
-        {isAnnual && <p style={{ color: "#22c55e" }}>Annual billing discount: <span>−20% (2 months free)</span></p>}
+        {isAnnual && <p style={{ color: "#22c55e" }}>Annual billing discount: <span>-5%</span></p>}
         {discountPercent > 0 && <p>Promo discount: <span>{discountPercent}%</span></p>}
         <p className="grand-total">
           {isAnnual
@@ -994,7 +1119,7 @@ export default function Billing() {
         .gift-panel p { margin: 10px 0 0; color: #d1d5db; font-size: 18px; line-height: 1.7; max-width: 1180px; }
         .gift-panel strong { color: #86efac; font-weight: 800; }
         /* ── Billing toggle ── */
-        .billing-toggle { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 1320px; margin: 0 auto 24px; }
+        .billing-toggle { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
         .toggle-label { font-size: 18px; font-weight: 600; color: #6b7280; }
         .toggle-label.active { color: #fff; }
         .toggle-switch { width: 52px; height: 28px; border-radius: 14px; background: #374151; border: none; cursor: pointer; position: relative; transition: background 0.2s; padding: 0; }
@@ -1005,12 +1130,12 @@ export default function Billing() {
         .annual-note { font-size: 15px; margin: -4px 0 8px; opacity: 0.85; }
         .intro-note { font-size: 16px; line-height: 1.45; color: #d1d5db; background: rgba(255,255,255,0.04); border: 1px solid; border-radius: 8px; padding: 10px 12px; margin: -2px 0 12px; }
         /* ── Section headers ── */
-        .section-header { width: 100%; max-width: 1320px; margin: 0 auto 18px; text-align: center; }
+        .section-header { width: 100%; max-width: 1320px; margin-bottom: 18px; }
         .section-title { font-size: 28px; font-weight: 700; margin: 0 0 4px; }
         .section-sub { font-size: 20px; color: #9ca3af; margin: 0; }
         /* ── Core Plan Cards ── */
-        .plans-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; width: 100%; max-width: 1320px; margin: 0 auto 48px; align-items: start; }
-        .plan-card { position: relative; min-width: 0; overflow: hidden; border: 2px solid; border-radius: 16px; padding: 28px 20px 24px; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; max-width: 1320px; margin-bottom: 48px; align-items: start; }
+        .plan-card { position: relative; border: 2px solid; border-radius: 16px; padding: 28px 20px 24px; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .plan-card:hover { transform: translateY(-4px); }
         .plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; padding: 5px 16px; border-radius: 20px; white-space: nowrap; }
         .current-plan-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; white-space: nowrap; }
@@ -1028,13 +1153,13 @@ export default function Billing() {
         .plan-divider { height: 2px; opacity: 0.22; border-radius: 2px; margin-bottom: 14px; }
         .plan-features { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; }
         .feature-row { display: flex; align-items: flex-start; gap: 7px; font-size: 18px; line-height: 1.45; }
-        .feature-label { flex: 1; min-width: 0; color: #d1d5db; overflow-wrap: anywhere; }
-        .feature-value { font-weight: 600; font-size: 18px; text-align: right; white-space: normal; flex-shrink: 1; min-width: 0; max-width: 52%; overflow-wrap: anywhere; }
+        .feature-label { flex: 1; color: #d1d5db; }
+        .feature-value { font-weight: 600; font-size: 18px; text-align: right; white-space: nowrap; flex-shrink: 0; }
         .quota-header { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; border-top: 1px solid; padding-top: 12px; margin-bottom: 10px; opacity: 0.8; }
-        .quota-list { min-width: 0; width: 100%; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
-        .quota-row { display: grid; grid-template-columns: minmax(68px, 0.72fr) minmax(0, 1fr); gap: 8px; align-items: start; width: 100%; min-width: 0; max-width: 100%; font-size: 18px; line-height: 1.35; overflow: hidden; }
-        .quota-label { display: block; min-width: 0; max-width: 100%; color: #9ca3af; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-        .quota-value { display: block; min-width: 0; max-width: 100%; font-weight: 600; text-align: right; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+        .quota-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+        .quota-row { display: flex; justify-content: space-between; font-size: 18px; }
+        .quota-label { color: #9ca3af; }
+        .quota-value { font-weight: 600; }
         /* ── Module grid ── */
         .actions { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; max-width: 1320px; width: 100%; }
         .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 20px; font-weight: 600; cursor: pointer; }
@@ -1054,6 +1179,14 @@ export default function Billing() {
         .card.dead-module { border-color: #2a3347; color: #4b5563; cursor: default; opacity: 0.5; }
         .card-info { flex: 1; }
         .card-info h3 { margin: 0; font-size: 30px; font-weight: 600;}
+        .module-status { margin-top: 6px; color: #cbd5e1; font-size: 17px; font-weight: 700; }
+        .module-mini-list { margin-top: 5px; color: #9ca3af; font-size: 15px; line-height: 1.45; }
+        .plan-active .card.selected .module-status,
+        .plan-active .card.tier-selected .module-status,
+        .card.active-module .module-status,
+        .plan-active .card.selected .module-mini-list,
+        .plan-active .card.tier-selected .module-mini-list,
+        .card.active-module .module-mini-list { color: rgba(255,255,255,0.86); }
         .plan-display { font-size: 20px; margin-top: 6px; }
         .upgrade-btn { margin-top: 10px; background: #facc15; color: #000; border: none; padding: 12px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 20px; }
         .sms-btn { background: #38bdf8; color: #fff; }
@@ -1080,6 +1213,11 @@ export default function Billing() {
         .extra-desc { font-size: 20px; color: #9ca3af; margin-bottom: 6px; }
         .extra-price { font-size: 20px; font-weight: 600; color: #f59e0b; }
         .extra-controls { display: flex; align-items: center; gap: 16px; }
+        .pack-options { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); gap: 10px; min-width: 420px; max-width: 560px; }
+        .pack-btn { background: #0c121a; border: 1px solid #334155; color: #e5e7eb; border-radius: 10px; padding: 11px 13px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-size: 16px; transition: border-color 0.15s, background 0.15s; }
+        .pack-btn strong { color: #f59e0b; font-size: 17px; }
+        .pack-btn em { color: #22c55e; font-size: 13px; font-style: normal; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+        .pack-btn.active { border-color: #22c55e; background: rgba(34,197,94,0.12); }
         .qty-btn { width: 44px; height: 44px; border-radius: 8px; border: 2px solid #f59e0b; background: transparent; color: #f59e0b; font-size: 24px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.15s; }
         .qty-btn:hover { background: #f59e0b; color: #000; }
         .qty-val { font-size: 26px; font-weight: 800; min-width: 36px; text-align: center; }
@@ -1089,6 +1227,8 @@ export default function Billing() {
         @media (max-width: 640px) {
           .plans-grid { grid-template-columns: 1fr; }
           .banner-title { font-size: 32px; }
+          .extra-row { align-items: flex-start; flex-direction: column; }
+          .pack-options { grid-template-columns: 1fr; min-width: 0; width: 100%; }
         }
       `}</style>
     </div>

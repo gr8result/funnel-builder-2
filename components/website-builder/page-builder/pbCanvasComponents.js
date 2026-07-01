@@ -122,7 +122,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || hovered;
   const resizeStateRef = useRef(null);
@@ -177,6 +177,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         width: "100%",
         maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
+        background: frameBackground,
+        border: "none",
+        outline: "none",
+        boxShadow: "none",
         ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? (() => {
           const sp    = block.props || {};
@@ -187,7 +191,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                       : sp.backgroundStyle === "image" && sp.backgroundImage
                           ? `url(${JSON.stringify(sp.backgroundImage)}) ${sp.backgroundPosition || "center center"} / ${sp.backgroundSize || "cover"} no-repeat`
                       : "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px";
-          return { padding: 0, background: spBg, border: "1px dashed rgba(99,102,241,0.35)", borderRadius: 6, minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
+          return { padding: 0, background: spBg, border: "none", borderRadius: 0, outline: selected ? "1px dashed rgba(99,102,241,0.35)" : "none", minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
         })() : {}),
         ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "grid-section" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
         ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
@@ -780,6 +784,13 @@ function ImageStackPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               min={240}
               max={1400}
               onChange={(value) => update({ minHeight: `${Math.max(240, value)}px` })}
+            />
+            <NumberField
+              label="Canvas Width"
+              value={Number(props.baseLayoutWidth || 1100)}
+              min={720}
+              max={2400}
+              onChange={(value) => update({ baseLayoutWidth: Math.max(720, value) })}
             />
             <div style={styles.colorField}>
               <span style={styles.colorLabel}>Background</span>
@@ -2492,7 +2503,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
   const addCard = () => {
     const newId = `hc-${Date.now()}`;
     update({
-      cards: [...cards, { id: newId, title: `Card ${cards.length + 1}`, description: "Add a short description here.", image: "", cardColor: "#dde3ea", link: "#" }],
+      cards: [...cards, { id: newId, title: `Card ${cards.length + 1}`, description: "Add a short description here.", image: "", cardColor: "#dde3ea", hoverBackgroundColor: "", link: "#" }],
     });
     setExpandedCard(cards.length);
   };
@@ -2514,7 +2525,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
 
   // Parse overlay color for color input (hex only)
   const overlayHex = (() => {
-    const raw = String(props.overlayColor || "rgba(0,0,0,0.85)");
+    const raw = String(props.hoverBackgroundColor || props.overlayColor || "rgba(0,0,0,0.85)");
     const match = raw.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
     if (match) {
       return "#" + [match[1], match[2], match[3]].map((n) => parseInt(n, 10).toString(16).padStart(2, "0")).join("");
@@ -2531,7 +2542,8 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    update({ overlayColor: `rgba(${r},${g},${b},${(opacity / 100).toFixed(2)})` });
+    const value = `rgba(${r},${g},${b},${(opacity / 100).toFixed(2)})`;
+    update({ hoverBackgroundColor: value, overlayColor: value });
   };
 
   return (
@@ -2632,7 +2644,7 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
           <label style={styles.propertyLabel}>Hover (Back Face)</label>
           <div style={styles.colorGrid}>
             <div>
-              <label style={styles.propertyLabel}>Back Color</label>
+              <label style={styles.propertyLabel}>Hover Card BG</label>
               <input type="color" value={overlayHex} onChange={(e) => setOverlay(e.target.value, overlayOpacity)} style={styles.colorSwatch} />
             </div>
             <NumberField label="Opacity (%)" value={overlayOpacity} min={10} max={100} onChange={(v) => setOverlay(overlayHex, v)} />
@@ -2710,6 +2722,10 @@ function HoverCardsPropertiesPanel({ block, index, onChange, onUploadImage }) {
                       <div>
                         <label style={styles.propertyLabel}>Card Background Color</label>
                         <input type="color" value={String(card.cardColor || props.cardColor || "#dde3ea")} onChange={(e) => updateCard(cardIndex, { cardColor: e.target.value })} style={styles.colorSwatch} />
+                      </div>
+                      <div>
+                        <label style={styles.propertyLabel}>Hover Background Color</label>
+                        <input type="color" value={String(card.hoverBackgroundColor || overlayHex).startsWith("#") ? String(card.hoverBackgroundColor || overlayHex).slice(0, 7) : overlayHex} onChange={(e) => updateCard(cardIndex, { hoverBackgroundColor: e.target.value })} style={styles.colorSwatch} />
                       </div>
                       <div>
                         <label style={styles.propertyLabel}>Card Image</label>
@@ -3385,6 +3401,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
         onUploadImage={onUploadImage}
         onSelectAsset={onSelectAsset}
+        pages={project?.pages || []}
       />
     );
   }
@@ -3530,6 +3547,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         block={block}
         index={index}
         onChange={onChange}
+        onUploadImage={onUploadImage}
       />
     );
   }
@@ -3860,7 +3878,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 Uploading video to CDN…
               </div>
             ) : vp.videoSrc ? (
-              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay loop={vp.loopVideo === true} playsInline
+              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay playsInline preload="auto"
                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -4002,15 +4020,6 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             <p style={{ margin: "8px 0 0", fontSize: 12, color: "#64748b" }}>
               Use <strong style={{ color: "#94a3b8" }}>Margin Top</strong> to push the block below a fixed nav bar. Use <strong style={{ color: "#94a3b8" }}>Padding Top</strong> to shift text content down within the video.
             </p>
-          </div>
-
-          {/* ── Options ── */}
-          <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Options</label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#94a3b8", cursor: "pointer" }}>
-              <input type="checkbox" checked={vp.unmuteOnScroll === true} onChange={(e) => updateVH({ unmuteOnScroll: e.target.checked })} />
-              🔊 Unmute when scrolled into view
-            </label>
           </div>
 
         </div>

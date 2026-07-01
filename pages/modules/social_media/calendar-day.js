@@ -79,7 +79,7 @@ export default function CalendarDay() {
       const token = await getToken();
       if (!token) { setNotice('Sign in to continue.'); setLoading(false); return; }
       const res  = await fetch('/api/social/calendar-board', { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Failed to load');
       const day = (json.cards || [])
         .filter(c => c.scheduledFor && toDayKey(new Date(c.scheduledFor)) === key)
@@ -116,7 +116,7 @@ export default function CalendarDay() {
           status: modal.post.status === 'failed' ? 'scheduled' : undefined,
         }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error);
       let newIso = modal.post.scheduledFor;
       if (modal.time && modal.post.scheduledFor) {
@@ -153,7 +153,7 @@ export default function CalendarDay() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Delete failed');
       setPosts(prev => prev.filter(p => p.postId !== modal.post.postId));
       setModal(null);
@@ -174,7 +174,7 @@ export default function CalendarDay() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ postId: modal.post.postId }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Publish failed');
       const nextStatus = json.postStatus || 'published';
       setPosts(prev => prev.map(p =>

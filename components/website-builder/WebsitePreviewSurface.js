@@ -27,6 +27,21 @@ function pickPageBackground(blocks, fallback = "#ffffff") {
   return fallback;
 }
 
+// Returns the block's own background colour so the blockFrame wrapper always
+// matches the section colour. This prevents white from bleeding through during
+// scroll-reveal animations (where the section element is temporarily shifted or
+// transparent while the animation plays).
+function resolveBlockBackground(block, fallback = "") {
+  return String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim() || fallback;
+}
+
+function resolveStackBlockBackground(blocks, index, fallback = "transparent") {
+  return resolveBlockBackground(blocks?.[index])
+    || resolveBlockBackground(blocks?.[index - 1])
+    || resolveBlockBackground(blocks?.[index + 1])
+    || fallback;
+}
+
 export default function WebsitePreviewSurface({ project, page, viewport, assets }) {
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
@@ -85,10 +100,58 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           [data-website-preview-block] {
             margin-top: 0 !important;
             margin-bottom: 0 !important;
-            border-top: 0 !important;
-            border-bottom: 0 !important;
+            border: none !important;
+            border-top: none !important;
+            border-bottom: none !important;
+            outline: none !important;
+            box-shadow: none !important;
             background-clip: padding-box;
           }
+          [data-website-preview-block-type="trust-badges"] > section,
+          [data-website-preview-block-type="marquee-strip"] > section,
+          [data-website-preview-block-type="wave-marquee"] > section,
+          [data-website-preview-block-type="cta-button"] > section,
+          [data-website-preview-block-type="space"] > div:first-child {
+            border-top: none;
+            border-bottom: none;
+            outline: none;
+            box-shadow: none;
+          }
+          [data-website-preview-block-type="trust-badges"] > section::before,
+          [data-website-preview-block-type="trust-badges"] > section::after,
+          [data-website-preview-block-type="marquee-strip"] > section::before,
+          [data-website-preview-block-type="marquee-strip"] > section::after,
+          [data-website-preview-block-type="wave-marquee"] > section::before,
+          [data-website-preview-block-type="wave-marquee"] > section::after,
+          [data-website-preview-block-type="cta-button"] > section::before,
+          [data-website-preview-block-type="cta-button"] > section::after,
+          [data-website-preview-block-type="space"] > div:first-child::before,
+          [data-website-preview-block-type="space"] > div:first-child::after {
+            border-top: none !important;
+            border-bottom: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+          }
+          [data-website-preview-block] > hr,
+          [data-website-preview-block] hr[data-wb-default-divider="true"] {
+            display: none !important;
+          }
+          ${process.env.NODE_ENV !== "production" ? `
+          [data-website-preview-block] { position: relative; }
+          [data-website-preview-block]:hover::after {
+            content: attr(data-website-preview-block-type) " #" attr(data-website-preview-block-id);
+            position: absolute;
+            left: 8px;
+            top: 0;
+            z-index: 9999;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: rgba(14, 165, 233, 0.92);
+            color: #fff;
+            font: 600 11px/1.2 system-ui, sans-serif;
+            pointer-events: none;
+          }
+          ` : ""}
           [data-website-preview-block-type="image"] {
             margin-top: -1px !important;
             margin-bottom: -1px !important;
@@ -115,14 +178,14 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
 
         <div style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
           {injectNav ? (
-            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(pageBackground)}>
+            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalNavBlock?.id || ""} data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalNavBlock, pageBackground))}>
               {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
 
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             blocksWithoutShellDuplicates.map((block, index) => (
-              <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-type={block.type || ""} style={styles.blockFrame(block.type === "image" ? (block.props?.backgroundColor || block.props?.seamlessBackgroundColor || pageBackground) : pageBackground)}>
+              <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-id={block.id || ""} data-website-preview-block-type={block.type || ""} style={styles.blockFrame(resolveStackBlockBackground(blocksWithoutShellDuplicates, index, pageBackground))}>
                 {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
               </div>
             ))
@@ -159,7 +222,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           )}
 
           {injectFooter ? (
-            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-type={globalFooterBlock?.type || ""} style={styles.blockFrame(pageBackground)}>
+            <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalFooterBlock?.id || ""} data-website-preview-block-type={globalFooterBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalFooterBlock, pageBackground))}>
               {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
@@ -219,6 +282,8 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr)",
     gap: 0,
+    rowGap: 0,
+    columnGap: 0,
   },
   previewViewport: (viewport, previewShellWidth, background) => ({
     ...styles.previewStack,
@@ -234,8 +299,12 @@ const styles = {
     overflowX: "clip",
     minWidth: 0,
     margin: 0,
+    marginTop: 0,
+    marginBottom: 0,
     padding: 0,
     border: 0,
+    outline: 0,
+    boxShadow: "none",
     background,
     display: "block",
   }),

@@ -73,24 +73,143 @@ function NavbarPresetPicker({ value, onApply }) {
   );
 }
 
-function NavbarLinksEditor({ links, onChange }) {
-  const safeLinks = Array.isArray(links) ? links : [];
+const CANONICAL_MENU_URLS = {
+  home: "/",
+  "about-us": "/about",
+  about: "/about",
+  modules: "/modules",
+  "contact-us": "/contact",
+  contact: "/contact",
+  email: "/email",
+  pricing: "/pricing",
+  crm: "/crm",
+  sms: "/sms",
+  funnels: "/funnels",
+};
+
+function slugifyNavValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function normalizeNavHref(href, label = "", pageSlug = "") {
+  const raw = String(href || "").trim();
+  if (/^localhost/i.test(raw) || /^https?:\/\/localhost/i.test(raw)) {
+    const path = raw.replace(/^https?:\/\/localhost(?::\d+)?/i, "");
+    return normalizeNavHref(path || "/", label, pageSlug);
+  }
+  if (/^(mailto:|tel:)/i.test(raw)) return raw;
+  if (raw.startsWith("#")) {
+    const anchorSlug = slugifyNavValue(raw.slice(1));
+    return CANONICAL_MENU_URLS[anchorSlug] || raw;
+  }
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const slug = slugifyNavValue(pageSlug || label || raw.replace(/^\//, ""));
+  if (CANONICAL_MENU_URLS[slug]) return CANONICAL_MENU_URLS[slug];
+  if (!raw) return slug ? `/${slug}` : "";
+  if (raw === "/") return "/";
+  return raw.startsWith("/") ? raw : `/${slugifyNavValue(raw) || raw}`;
+}
+
+function normalizeNavMenuItems(links, { removeDuplicates = false } = {}) {
+  const seenIds = new Set();
+  const seenKeys = new Set();
+  const duplicates = [];
+
+  const normalizeItem = (item, index, childIndex = null) => {
+    const label = String(item?.label || "").trim();
+    const pageId = String(item?.pageId || item?.page_id || "").trim();
+    const pageSlug = slugifyNavValue(item?.slug || item?.pageSlug || label || item?.href || "");
+    const href = normalizeNavHref(item?.href, label, pageSlug);
+    if (!label && !href) return null;
+
+    const baseId = String(item?.id || "").trim();
+    const id = baseId && !seenIds.has(baseId)
+      ? baseId
+      : `nav-${childIndex === null ? "item" : "child"}-${Date.now()}-${index}-${childIndex ?? 0}`;
+    seenIds.add(id);
+
+    const duplicateKey = [pageId || "", pageSlug || slugifyNavValue(href), slugifyNavValue(label)].join("|");
+    const isDuplicate = seenKeys.has(duplicateKey);
+    if (isDuplicate) duplicates.push({ label: label || href, href });
+    if (removeDuplicates && isDuplicate) return null;
+    seenKeys.add(duplicateKey);
+
+    const children = (Array.isArray(item?.children) ? item.children : [])
+      .map((child, idx) => normalizeItem(child, idx, idx))
+      .filter(Boolean)
+      .map((child) => ({ ...child, href: child.href || "/" }));
+
+    return {
+      ...item,
+      id,
+      label: label || "Link",
+      href: href || "/",
+      ...(pageId ? { pageId } : {}),
+      ...(pageSlug ? { slug: pageSlug } : {}),
+      ...(children.length ? { children } : { children: [] }),
+    };
+  };
+
+  const normalized = (Array.isArray(links) ? links : []).map((item, index) => normalizeItem(item, index)).filter(Boolean);
+  return { links: normalized, duplicates };
+}
+
+function buildNavLinkFromPage(page) {
+  const label = String(page?.name || page?.title || "").trim() || "Page";
+  const slug = slugifyNavValue(page?.slug || label);
+  return {
+    id: `nav-page-${slug || Date.now()}`,
+    pageId: String(page?.id || slug || ""),
+    slug,
+    label,
+    href: normalizeNavHref("", label, slug),
+    children: [],
+  };
+}
+
+function NavbarLinksEditor({ links, onChange, pages = [] }) {
+  const { links: safeLinks, duplicates } = normalizeNavMenuItems(links);
+  const duplicatePageSlugs = useMemo(() => {
+    const counts = new Map();
+    (Array.isArray(pages) ? pages : []).forEach((page) => {
+      const slug = slugifyNavValue(page?.slug || page?.name || "");
+      if (!slug) return;
+      counts.set(slug, (counts.get(slug) || 0) + 1);
+    });
+    return Array.from(counts.entries()).filter(([, count]) => count > 1).map(([slug]) => slug);
+  }, [pages]);
   const makeLinkId = () => `nav-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const makeChildLinkId = () => `nav-child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const emitChange = (nextLinks, options = {}) => {
+    onChange(normalizeNavMenuItems(nextLinks, options).links);
+  };
 
   function updateLink(idx, patch) {
     const next = safeLinks.map((item, currentIdx) => (
       currentIdx === idx ? { ...item, ...patch } : item
     ));
-    onChange(next);
+    emitChange(next);
   }
 
   function removeLink(idx) {
-    onChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
+    emitChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
   }
 
   function addLink() {
-    onChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "#" }]);
+    emitChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "/" }]);
+  }
+
+  function addPageLink(page) {
+    emitChange([...safeLinks, buildNavLinkFromPage(page)]);
+  }
+
+  function removeDuplicateLinks() {
+    emitChange(safeLinks, { removeDuplicates: true });
   }
 
   function moveLink(idx, direction) {
@@ -99,7 +218,7 @@ function NavbarLinksEditor({ links, onChange }) {
     const next = [...safeLinks];
     const [moved] = next.splice(idx, 1);
     next.splice(nextIndex, 0, moved);
-    onChange(next);
+    emitChange(next);
   }
 
   function updateChildLink(parentIdx, childIdx, patch) {
@@ -113,7 +232,7 @@ function NavbarLinksEditor({ links, onChange }) {
         )),
       };
     });
-    onChange(next);
+    emitChange(next);
   }
 
   function removeChildLink(parentIdx, childIdx) {
@@ -124,7 +243,7 @@ function NavbarLinksEditor({ links, onChange }) {
         children: (Array.isArray(item.children) ? item.children : []).filter((_, currentChildIdx) => currentChildIdx !== childIdx),
       };
     });
-    onChange(next);
+    emitChange(next);
   }
 
   function nestUnder(fromIdx, parentIdx) {
@@ -140,11 +259,30 @@ function NavbarLinksEditor({ links, onChange }) {
         if (currentIdx !== adjustedParentIdx) return item;
         return { ...item, children: [...(Array.isArray(item.children) ? item.children : []), asChild] };
       });
-    onChange(next);
+    emitChange(next);
   }
 
   return (
     <div style={styles.stackSm}>
+      {duplicatePageSlugs.length ? (
+        <div style={{ color: "#fbbf24", fontSize: 14, lineHeight: 1.45 }}>
+          Warning: duplicate page slugs found: {duplicatePageSlugs.join(", ")}
+        </div>
+      ) : null}
+      {duplicates.length ? (
+        <button type="button" style={{ ...styles.secondaryBtn, borderColor: "#f59e0b", color: "#fbbf24" }} onClick={removeDuplicateLinks}>
+          Remove Duplicate Menu Items
+        </button>
+      ) : null}
+      {Array.isArray(pages) && pages.length ? (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {pages.map((page) => (
+            <button key={page?.id || page?.slug || page?.name} type="button" style={styles.assetChip} onClick={() => addPageLink(page)}>
+              + {page?.name || page?.slug || "Page"}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {safeLinks.map((item, idx) => (
         <div key={item?.id || `link-${idx}`} style={styles.linkRowCard}>
           <div style={styles.linkRowHeader}>
@@ -167,7 +305,7 @@ function NavbarLinksEditor({ links, onChange }) {
           <input
             type="text"
             value={item?.href || ""}
-            onChange={(e) => updateLink(idx, { href: e.target.value })}
+            onChange={(e) => updateLink(idx, { href: normalizeNavHref(e.target.value, item?.label, item?.slug) })}
             style={styles.propertyInput}
             placeholder="#section or /page"
           />
@@ -214,7 +352,7 @@ function NavbarLinksEditor({ links, onChange }) {
                 <input
                   type="text"
                   value={child?.href || ""}
-                  onChange={(e) => updateChildLink(idx, childIdx, { href: e.target.value })}
+                  onChange={(e) => updateChildLink(idx, childIdx, { href: normalizeNavHref(e.target.value, child?.label, child?.slug) })}
                   style={styles.propertyInput}
                   placeholder="Dropdown href"
                 />
@@ -1570,9 +1708,24 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Typography</label>
+          {/* Block-level font family */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ ...styles.propertyLabel, fontSize: 13, marginBottom: 4, display: "block" }}>Block font family</label>
+            <select
+              value={props.fontFamily || ""}
+              onChange={(e) => update({ fontFamily: e.target.value || undefined })}
+              style={{ ...styles.propertyInput, width: "100%" }}
+            >
+              <option value="">— inherit from theme —</option>
+              {["Manrope","Inter","Poppins","Montserrat","Raleway","Lato","Open Sans","Roboto","Outfit","DM Sans","Work Sans","Nunito","Playfair Display","Merriweather","Lora","Oswald","Bebas Neue","Dancing Script","Pacifico"].map(f => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          {/* Block-level font size + line height */}
           <div style={styles.colorGrid}>
-            <NumberField label="Text size (px)" value={Number(props.textFontSize || 18)} min={12} max={72} onChange={(value) => update({ textFontSize: value })} />
-            <NumberField label="Line spacing" value={Number(props.textLineHeight || props.lineHeight || defaultLineHeight)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
+            <NumberField label="Base size (px)" value={Number(props.textFontSize || 18)} min={12} max={120} onChange={(value) => update({ textFontSize: value })} />
+            <NumberField label="Line height" value={Number(props.textLineHeight || props.lineHeight || defaultLineHeight)} min={0.8} max={3} step={0.05} onChange={updateLineHeight} />
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {[1.1, 1.25, 1.35, 1.5, 1.7, 2].map((value) => (
@@ -1590,8 +1743,43 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
               style={{ ...styles.secondaryBtn, padding: "6px 9px", minHeight: 0, background: "rgba(14,165,233,0.12)", borderColor: "rgba(14,165,233,0.35)" }}
               onClick={resetLineHeight}
             >
-              Reset spacing
+              Reset
             </button>
+          </div>
+          {/* Block-level default alignment */}
+          <div style={{ marginTop: 12 }}>
+            <label style={{ ...styles.propertyLabel, fontSize: 13, marginBottom: 6, display: "block" }}>Default alignment</label>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[
+                { value: "left",    icon: "⬅", label: "Left"    },
+                { value: "center",  icon: "↔", label: "Centre"  },
+                { value: "right",   icon: "➡", label: "Right"   },
+                { value: "justify", icon: "☰", label: "Justify" },
+              ].map(({ value, icon, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  title={label}
+                  onClick={() => update({ alignment: value })}
+                  style={{
+                    ...styles.secondaryBtn,
+                    flex: 1,
+                    padding: "5px 0",
+                    minHeight: 0,
+                    background: (props.alignment || "left") === value
+                      ? "rgba(14,165,233,0.22)" : undefined,
+                    borderColor: (props.alignment || "left") === value
+                      ? "rgba(14,165,233,0.6)" : undefined,
+                    color: (props.alignment || "left") === value ? "#38bdf8" : undefined,
+                  }}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+              The inline toolbar can override alignment per-paragraph.
+            </p>
           </div>
         </div>
         <div style={styles.sectionCard}>
@@ -2538,12 +2726,13 @@ function ImageGalleryPropertiesPanel({ block, index, onChange, brandAssets, onOp
   );
 }
 
-function PricingTablePropertiesPanel({ block, index, onChange }) {
+function PricingTablePropertiesPanel({ block, index, onChange, onUploadImage }) {
   const props = block?.props || {};
   const plans = normalizePricingPlans(props.plans);
   const replace = (nextProps) => onChange(index, nextProps);
   const update = (patch) => replace({ ...props, ...patch });
   const [activeTab, setActiveTab] = useState("content");
+  const hotspots = Array.isArray(props.pricingImageHotspots) ? props.pricingImageHotspots : [];
   const pricingSectionShells = [
     { background: "linear-gradient(180deg,#10243e,#153255)", borderColor: "#2f6fca" },
     { background: "linear-gradient(180deg,#12372d,#184a3c)", borderColor: "#2da66d" },
@@ -2652,6 +2841,33 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
       plans: normalizePricingPlans(defaults.plans),
     });
   };
+  const updateHotspot = (hotspotIndex, patch) => {
+    update({
+      pricingImageHotspots: hotspots.map((spot, currentIndex) => (
+        currentIndex === hotspotIndex ? { ...spot, ...patch } : spot
+      )),
+    });
+  };
+  const addHotspot = () => {
+    update({
+      pricingImageHotspots: [
+        ...hotspots,
+        {
+          id: `pricing-hotspot-${Date.now()}`,
+          label: `Button ${hotspots.length + 1}`,
+          href: "",
+          x: 8,
+          y: 72,
+          width: 20,
+          height: 10,
+          newTab: false,
+        },
+      ],
+    });
+  };
+  const removeHotspot = (hotspotIndex) => {
+    update({ pricingImageHotspots: hotspots.filter((_, currentIndex) => currentIndex !== hotspotIndex) });
+  };
 
   return (
     <div style={styles.properties}>
@@ -2662,6 +2878,7 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
       <div style={styles.tabRow}>
         {[
           { id: "content", label: "Content" },
+          { id: "image", label: "Image & Links" },
           { id: "style", label: "Style" },
           { id: "colours", label: "Colours" },
           { id: "motion", label: "Motion" },
@@ -2762,6 +2979,118 @@ function PricingTablePropertiesPanel({ block, index, onChange }) {
                 ))}
               </div>
               <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10 }} onClick={addPlan}>+ Add Plan</button>
+            </div>
+          </>
+        ) : null}
+        {activeTab === "image" ? (
+          <>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[1] }}>
+              <label style={styles.propertyLabel}>Pricing Image</label>
+              <label style={styles.assetUploadCta}>
+                Upload Pricing Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={styles.hiddenInput}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    const asset = await Promise.resolve(onUploadImage?.(index, "pricingImageUrl", file));
+                    if (asset?.src) update({ pricingImageUrl: asset.src, pricingImageAlt: asset.name || props.pricingImageAlt || "Pricing options" });
+                  }}
+                />
+              </label>
+              <input
+                type="text"
+                value={String(props.pricingImageUrl || "")}
+                onChange={(event) => update({ pricingImageUrl: event.target.value })}
+                style={{ ...styles.propertyInput, marginTop: 10 }}
+                placeholder="Or paste image URL"
+              />
+              <input
+                type="text"
+                value={String(props.pricingImageAlt || "")}
+                onChange={(event) => update({ pricingImageAlt: event.target.value })}
+                style={{ ...styles.propertyInput, marginTop: 8 }}
+                placeholder="Image alt text"
+              />
+              <div style={{ marginTop: 10 }}>
+                <NumberField label="Image Max Width" value={Number(props.pricingImageMaxWidth || 980)} min={240} max={1320} onChange={(value) => update({ pricingImageMaxWidth: value })} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                <div>
+                  <label style={styles.propertyLabel}>Image Fit</label>
+                  <select value={String(props.pricingImageFit || "contain")} onChange={(event) => update({ pricingImageFit: event.target.value })} style={styles.propertyInput}>
+                    <option value="contain">Contain</option>
+                    <option value="cover">Cover</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={styles.propertyLabel}>Corner Radius</label>
+                  <input
+                    type="number"
+                    value={Number(props.pricingImageRadius || 12)}
+                    onChange={(event) => update({ pricingImageRadius: Number(event.target.value) || 0 })}
+                    style={styles.propertyInput}
+                    min={0}
+                    max={48}
+                  />
+                </div>
+              </div>
+              {props.pricingImageUrl ? (
+                <div style={{ marginTop: 12, border: "1px solid rgba(148,163,184,0.35)", borderRadius: 10, overflow: "hidden", background: "#020617" }}>
+                  <img src={props.pricingImageUrl} alt="" style={{ display: "block", width: "100%", maxHeight: 240, objectFit: "contain" }} />
+                </div>
+              ) : null}
+              {props.pricingImageUrl ? (
+                <button type="button" style={{ ...styles.secondaryBtn, marginTop: 10, color: "#fca5a5" }} onClick={() => update({ pricingImageUrl: "" })}>Remove Pricing Image</button>
+              ) : null}
+            </div>
+            <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
+              <div style={styles.linkRowHeader}>
+                <label style={styles.propertyLabel}>Clickable Link Areas</label>
+                <button type="button" style={styles.secondaryBtn} onClick={addHotspot}>+ Add Link Area</button>
+              </div>
+              <p style={{ margin: "0 0 10px", color: "#cbd5e1", fontSize: 14, lineHeight: 1.45 }}>
+                Positions are percentages of the image: X/Y place the top-left corner, W/H control the clickable area size.
+              </p>
+              <div style={styles.propertyGrid}>
+                {hotspots.map((spot, hotspotIndex) => (
+                  <div key={spot.id || `pricing-hotspot-edit-${hotspotIndex}`} style={{ ...styles.linkRowCard, ...planEditorShells[hotspotIndex % planEditorShells.length] }}>
+                    <div style={styles.linkRowHeader}>
+                      <span style={styles.linkRowTitle}>{spot.label || `Link Area ${hotspotIndex + 1}`}</span>
+                      <button type="button" style={styles.iconDeleteBtn} onClick={() => removeHotspot(hotspotIndex)} title="Delete link area">×</button>
+                    </div>
+                    <input type="text" value={String(spot.label || "")} onChange={(event) => updateHotspot(hotspotIndex, { label: event.target.value })} style={styles.propertyInput} placeholder="Label, e.g. Growth plan button" />
+                    <input type="text" value={String(spot.href || "")} onChange={(event) => updateHotspot(hotspotIndex, { href: event.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="/checkout?plan=growth or https://..." />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginTop: 8 }}>
+                      {[
+                        ["x", "X"],
+                        ["y", "Y"],
+                        ["width", "W"],
+                        ["height", "H"],
+                      ].map(([key, label]) => (
+                        <label key={`hotspot-${hotspotIndex}-${key}`} style={{ display: "grid", gap: 4, color: "#cbd5e1", fontSize: 12, fontWeight: 800 }}>
+                          {label} %
+                          <input
+                            type="number"
+                            value={Number(spot[key] ?? (key === "width" ? 20 : key === "height" ? 8 : 0))}
+                            onChange={(event) => updateHotspot(hotspotIndex, { [key]: Math.max(0, Math.min(100, Number(event.target.value) || 0)) })}
+                            style={styles.propertyInput}
+                            min={0}
+                            max={100}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+                      <input type="checkbox" checked={!!spot.newTab} onChange={(event) => updateHotspot(hotspotIndex, { newTab: event.target.checked })} style={styles.checkboxInput} />
+                      Open in new tab
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         ) : null}
@@ -3942,7 +4271,7 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
   );
 }
 
-function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset }) {
+function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, pages = [] }) {
   const props = block.props || {};
   const [section, setSection] = useState("setup");
   const navbarSectionShells = [
@@ -4080,6 +4409,7 @@ function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
               <label style={styles.propertyLabel}>Navigation Links</label>
               <NavbarLinksEditor
                 links={props.links}
+                pages={pages}
                 onChange={(links) => update({ links })}
               />
             </div>

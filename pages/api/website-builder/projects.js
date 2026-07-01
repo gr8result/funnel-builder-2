@@ -316,20 +316,35 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not load website projects") });
     }
 
-    // Deduplicate: when a draft: row and a published row share the same effective id,
-    // always prefer the published (non-draft) row — it is the authoritative source.
-    // Only fall back to a draft row when no published row exists for that id.
+    // Deduplicate by effective project id. In-progress builder saves are written
+    // to draft/split storage, so newer draft content must beat older published
+    // or compact rows when the dashboard lists/open projects.
+    const preferProjectEntry = (existing, incoming) => {
+      if (!existing) return incoming;
+      const existingTs = Date.parse(existing.mapped?.updatedAt || existing.mapped?.createdAt || 0) || 0;
+      const incomingTs = Date.parse(incoming.mapped?.updatedAt || incoming.mapped?.createdAt || 0) || 0;
+      if (incomingTs !== existingTs) return incomingTs > existingTs ? incoming : existing;
+
+      const existingSplit = existing.source === "split" || !!existing.mapped?.__splitStorage || Number(existing.mapped?.storageVersion || 0) >= 2;
+      const incomingSplit = incoming.source === "split" || !!incoming.mapped?.__splitStorage || Number(incoming.mapped?.storageVersion || 0) >= 2;
+      if (incomingSplit !== existingSplit) return incomingSplit ? incoming : existing;
+
+      if (incoming.isDraft !== existing.isDraft) return incoming.isDraft ? incoming : existing;
+      return existing;
+    };
+
     const seen = new Map();
     for (const splitProject of await listSplitWebsiteProjects(userId)) {
       if (!splitProject?.id) continue;
-      seen.set(String(splitProject.id), { mapped: splitProject, isDraft: true });
+      const key = String(splitProject.id);
+      seen.set(key, preferProjectEntry(seen.get(key), { mapped: splitProject, isDraft: true, source: "split" }));
     }
     for (const row of Array.isArray(result.data) ? result.data : []) {
       const mapped = mapProjectRow(row);
       if (!mapped?.id) continue;
-      if (seen.has(mapped.id)) continue;
       const isDraft = String(row.project_id || "").startsWith("draft:");
-      const existing = seen.get(mapped.id);
+      seen.set(mapped.id, preferProjectEntry(seen.get(mapped.id), { mapped, isDraft, source: isDraft ? "draft-row" : "published-row" }));
+      const existing = { isDraft, mapped: { updatedAt: "9999-12-31T23:59:59.999Z" } };
       if (!existing) {
         seen.set(mapped.id, { mapped, isDraft });
       } else if (existing.isDraft && !isDraft) {

@@ -1263,6 +1263,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const previewWidth = previewMode === "mobile" ? 430 : previewMode === "tablet" ? 920 : "100%";
   const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
+  const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
+  const resolveCanvasFrameBackground = (entries, entryIndex) => (
+    resolveCanvasBlockBackground(entries?.[entryIndex]?.block)
+    || resolveCanvasBlockBackground(entries?.[entryIndex - 1]?.block)
+    || resolveCanvasBlockBackground(entries?.[entryIndex + 1]?.block)
+    || pageCanvasBackground
+  );
 
   // Auto-scale canvas to fit the panel width
   useEffect(() => {
@@ -2884,12 +2891,20 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       <style>{`
         ${websiteBlockKeyframes()}
         [data-builder-canvas="true"] [data-canvas-block-index] {
+          display: block;
           margin-top: 0 !important;
           margin-bottom: 0 !important;
-          border-top: 0 !important;
-          border-bottom: 0 !important;
-          box-shadow: none;
+          padding-top: 0;
+          padding-bottom: 0;
+          border: 0 !important;
+          outline: 0 !important;
+          box-shadow: none !important;
           background-clip: padding-box;
+        }
+        [data-builder-canvas="true"] [data-builder-block-list="true"] {
+          gap: 0 !important;
+          row-gap: 0 !important;
+          column-gap: 0 !important;
         }
         [data-builder-canvas="true"] [data-canvas-block-index] img,
         [data-builder-canvas="true"] [data-canvas-block-index] video,
@@ -3168,6 +3183,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             <div
               ref={blocksContainerRef}
               data-canvas-scale={1}
+              data-builder-block-list="true"
               style={{
                 ...styles.blocksList,
                 width: previewMode === "desktop" ? "100%" : previewWidth,
@@ -3213,6 +3229,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         block={block}
                         index={blockIndex}
                         pageCanvasWidth={pageCanvasWidth}
+                        frameBackground={resolveCanvasFrameBackground(canvasBlockEntries, idx)}
                         canvasScale={1}
                         brandAssets={brandAssets}
                         compactPreview={previewMode === "mobile"}

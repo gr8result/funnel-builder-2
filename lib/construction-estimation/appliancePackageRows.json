@@ -841,8 +841,8 @@
   },
   {
     "sourceRow": 83,
-    "section": "ARISTONE 600MM RANGEHOOD OPTIONS",
-    "item": "ARISTONE 600MM RANGEHOOD OPTIONS",
+    "section": "ARISTON 600MM RANGEHOOD OPTIONS",
+    "item": "ARISTON 600MM RANGEHOOD OPTIONS",
     "qty": "",
     "unit": "",
     "rate": "",
@@ -852,7 +852,7 @@
     "heading": true,
     "headingLevel": 2,
     "brand": "ARISTON",
-    "package": "ARISTONE 600MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 600MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 84,
@@ -867,7 +867,7 @@
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",
-    "package": "ARISTONE 600MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 600MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 85,
@@ -882,7 +882,7 @@
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",
-    "package": "ARISTONE 600MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 600MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 88,
@@ -1216,8 +1216,8 @@
   },
   {
     "sourceRow": 117,
-    "section": "ARISTONE 900MM RANGEHOOD OPTIONS",
-    "item": "ARISTONE 900MM RANGEHOOD OPTIONS",
+    "section": "ARISTON 900MM RANGEHOOD OPTIONS",
+    "item": "ARISTON 900MM RANGEHOOD OPTIONS",
     "qty": "",
     "unit": "",
     "rate": "",
@@ -1227,7 +1227,7 @@
     "heading": true,
     "headingLevel": 2,
     "brand": "ARISTON",
-    "package": "ARISTONE 900MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 900MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 118,
@@ -1242,7 +1242,7 @@
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",
-    "package": "ARISTONE 900MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 900MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 119,
@@ -1257,12 +1257,12 @@
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",
-    "package": "ARISTONE 900MM RANGEHOOD OPTIONS"
+    "package": "ARISTON 900MM RANGEHOOD OPTIONS"
   },
   {
     "sourceRow": 121,
-    "section": "ARISTONE DISHWASHER OPTIONS",
-    "item": "ARISTONE DISHWASHER OPTIONS",
+    "section": "ARISTON DISHWASHER OPTIONS",
+    "item": "ARISTON DISHWASHER OPTIONS",
     "qty": "",
     "unit": "",
     "rate": "",
@@ -1272,7 +1272,7 @@
     "heading": true,
     "headingLevel": 2,
     "brand": "ARISTON",
-    "package": "ARISTONE DISHWASHER OPTIONS"
+    "package": "ARISTON DISHWASHER OPTIONS"
   },
   {
     "sourceRow": 122,
@@ -1287,7 +1287,7 @@
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",
-    "package": "ARISTONE DISHWASHER OPTIONS"
+    "package": "ARISTON DISHWASHER OPTIONS"
   },
   {
     "sourceRow": 129,
@@ -1644,36 +1644,6 @@
     "cost": 0,
     "source": "workbook",
     "notes": "PACK PRICE OPTION - total package price shown on this row.",
-    "heading": false,
-    "headingLevel": 0,
-    "brand": "ARISTON",
-    "package": "OMEGA 900MM GAS OPTIONS"
-  },
-  {
-    "sourceRow": 161,
-    "section": "APPLIANCES",
-    "item": "- OMEGA 90CM 9 FUNCTION OVEN OBO960X1",
-    "qty": "",
-    "unit": "EACH",
-    "rate": 1199,
-    "cost": 0,
-    "source": "workbook",
-    "notes": "Component item for pack above. Use EACH rate only if pricing separately.",
-    "heading": false,
-    "headingLevel": 0,
-    "brand": "ARISTON",
-    "package": "OMEGA 900MM GAS OPTIONS"
-  },
-  {
-    "sourceRow": 162,
-    "section": "APPLIANCES",
-    "item": "- OMEGA 90CM 5 BURNER GAS COOKTOP OCG95FFX",
-    "qty": "",
-    "unit": "EACH",
-    "rate": 699,
-    "cost": 0,
-    "source": "workbook",
-    "notes": "Component item for pack above. Use EACH rate only if pricing separately.",
     "heading": false,
     "headingLevel": 0,
     "brand": "ARISTON",

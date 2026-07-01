@@ -28,6 +28,55 @@ import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
+const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
+
+function stripHtmlForSaveDebug(value = "") {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function summarizeBuilderBlocksForSave(blocks = []) {
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
+  return {
+    count: safeBlocks.length,
+    missingIds: safeBlocks
+      .map((block, index) => (!block?.id ? { index, type: block?.type || "" } : null))
+      .filter(Boolean),
+    textBlocks: safeBlocks
+      .map((block, index) => {
+        if (block?.type !== BlockTypes.TEXT) return null;
+        const text = stripHtmlForSaveDebug(block?.props?.text || "");
+        return {
+          index,
+          id: block?.id || "",
+          hidden: !!(block?.props?.hidden || block?.props?.textHidden || block?.props?.draftOnly || block?.props?.temporary),
+          textLength: text.length,
+          textPreview: text.slice(0, 120),
+        };
+      })
+      .filter(Boolean),
+    marqueeTextBlocks: safeBlocks
+      .map((block, index) => {
+        if (!["marquee-strip", "wave-marquee"].includes(String(block?.type || ""))) return null;
+        const items = Array.isArray(block?.props?.items) ? block.props.items : [];
+        return {
+          index,
+          id: block?.id || "",
+          type: block?.type || "",
+          itemCount: items.length,
+          textPreview: items.map((item) => stripHtmlForSaveDebug(item?.text || item?.label || item)).filter(Boolean).slice(0, 6),
+        };
+      })
+      .filter(Boolean),
+  };
+}
+
+function logWebsiteBuilderSaveDebug(label, details = {}) {
+  if (!WEBSITE_BUILDER_SAVE_DEBUG) return;
+  console.info(`[WebsiteBuilderSave] ${label}`, details);
+}
 
 // ─── Studio Loader ────────────────────────────────────────────────────────────
 const STUDIO_MESSAGES = [
@@ -215,7 +264,56 @@ function shouldUseEmergencyDraft(project, pageName, draft) {
   const currentBlocks = Array.isArray(project?.pageBlocks?.[pageName]) ? project.pageBlocks[pageName] : [];
   const draftSavedAt = Date.parse(draft.savedAt || 0) || 0;
   const projectUpdatedAt = Date.parse(project?.updatedAt || project?.createdAt || 0) || 0;
-  return draft.blocks.length > currentBlocks.length || draftSavedAt >= projectUpdatedAt;
+  const scoreBlocks = (blocks = []) => {
+    const safeBlocks = Array.isArray(blocks) ? blocks : [];
+    const textValues = [];
+    const visit = (value) => {
+      if (typeof value === "string") {
+        const text = stripHtmlForSaveDebug(value);
+        if (text) textValues.push(text);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+        return;
+      }
+      if (value && typeof value === "object") {
+        Object.entries(value).forEach(([key, child]) => {
+          if (/^(text|title|headline|subheadline|content|label|description)$/i.test(key)) visit(child);
+        });
+      }
+    };
+    safeBlocks.forEach((block) => visit(block?.props || {}));
+    return {
+      blockCount: safeBlocks.length,
+      textCount: textValues.length,
+      textChars: textValues.join(" ").length,
+      typeSignature: safeBlocks.map((block) => String(block?.type || "")).join("|"),
+    };
+  };
+  const currentScore = scoreBlocks(currentBlocks);
+  const draftScore = scoreBlocks(draft.blocks);
+  const source = String(draft.source || "").toLowerCase();
+  const draftIsNewer = draftSavedAt > projectUpdatedAt;
+  const draftHasMoreBlocks = draftScore.blockCount > currentScore.blockCount;
+  const draftHasMoreText = draftScore.textChars > currentScore.textChars;
+  const currentIsEmpty = currentScore.blockCount === 0;
+  const shouldRecover = currentIsEmpty
+    || (draftHasMoreBlocks && draftScore.textChars >= currentScore.textChars)
+    || (draftIsNewer && draftHasMoreText)
+    || (draftIsNewer && !source.includes("autosave") && draftScore.blockCount >= currentScore.blockCount && draftScore.typeSignature !== currentScore.typeSignature);
+
+  logWebsiteBuilderSaveDebug("emergency draft recovery decision", {
+    pageName,
+    source: draft.source || "",
+    draftSavedAt: draft.savedAt || "",
+    projectUpdatedAt: project?.updatedAt || project?.createdAt || "",
+    shouldRecover,
+    current: currentScore,
+    emergencyDraft: draftScore,
+  });
+
+  return shouldRecover;
 }
 
 async function fetchEmergencyPageDraft(projectId, pageName) {
@@ -518,6 +616,19 @@ export default function VisualBuilderPage() {
             );
 
             const shouldUseRemoteNow = shouldForceReload || !localProject || shouldRecoverRequestedPage;
+            logWebsiteBuilderSaveDebug("builder reload compared local vs server", {
+              projectId,
+              requestedPage,
+              localPageName,
+              remotePageName,
+              localUpdatedAt: localProject?.updatedAt || "",
+              remoteUpdatedAt: remoteProject?.updatedAt || "",
+              shouldForceReload,
+              shouldRecoverRequestedPage,
+              shouldUseRemoteNow,
+              local: summarizeBuilderBlocksForSave(localBlocksForPage),
+              remote: summarizeBuilderBlocksForSave(remoteBlocksForPage),
+            });
             if (localProject?.id && !shouldForceReload) {
               const mergedProject = mergeRemotePageIntoProject(localProject, remoteProject, requestedPage);
               nextProject = updateWebsiteProject(localProject.id, mergedProject) || mergedProject;
@@ -774,12 +885,16 @@ export default function VisualBuilderPage() {
     const remoteBlocks = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : null;
     const remoteHtml = remoteProject?.pagesContent?.[remotePageName];
     const remoteChai = remoteProject?.chaiData?.[remotePageName];
+    const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
+    const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
     const localTypes = new Set(localBlocks.map((block) => String(block?.type || "")));
     const remoteHasMissingStructure = Array.isArray(remoteBlocks)
       && remoteBlocks.some((block) => !localTypes.has(String(block?.type || "")));
     const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
     const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && (
-      localBlocks.length === 0
+      remoteUpdatedAt > localUpdatedAt
+      || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
+      || localBlocks.length === 0
       || remoteCleansInlineImages
       || (remoteBlocks.length > localBlocks.length && remoteHasMissingStructure)
     );
@@ -1486,6 +1601,16 @@ export default function VisualBuilderPage() {
         : safeBlocks;
       if (!isPreviewSave) setProject(projectToSync);
 
+      logWebsiteBuilderSaveDebug("force save payload prepared", {
+        projectId: currentProject.id,
+        pageName,
+        saveSource: options?.saveSource || "manual-save",
+        isPreviewSave,
+        activePage,
+        resolvedPageName: pageName,
+        payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+      });
+
       // Stage the current edit locally before cloud sync so the async merge below
       // cannot treat an older cache entry as the source of truth and roll blocks back.
       let serverSynced = null;
@@ -1513,6 +1638,13 @@ export default function VisualBuilderPage() {
         return serverSynced;
       }
 
+      logWebsiteBuilderSaveDebug("server sync response received", {
+        projectId: currentProject.id,
+        pageName,
+        updatedAt: serverSynced?.updatedAt || "",
+        stored: summarizeBuilderBlocksForSave(getSavedPageBlocks(serverSynced, pageName) || []),
+      });
+
       let verifiedProject = null;
       let verifiedSaveMatches = false;
       try {
@@ -1520,10 +1652,24 @@ export default function VisualBuilderPage() {
           ? await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName })
           : null;
         let verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
+        logWebsiteBuilderSaveDebug("post-save fetch verification", {
+          projectId: currentProject.id,
+          pageName,
+          updatedAt: verifiedProject?.updatedAt || "",
+          stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
+          matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+        });
         if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks) && session?.access_token) {
           await waitForSaveVerification();
           verifiedProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
           verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
+          logWebsiteBuilderSaveDebug("post-save fetch verification retry", {
+            projectId: currentProject.id,
+            pageName,
+            updatedAt: verifiedProject?.updatedAt || "",
+            stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
+            matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+          });
         }
         if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks)) {
           const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
@@ -1538,14 +1684,41 @@ export default function VisualBuilderPage() {
             verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
             syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
           });
-            verifiedProject = null;
+            const message = `Save verification failed for ${pageName}. The cloud copy did not contain the text blocks that were just saved.`;
+            flashNotice(message, "error", 15000);
+            return {
+              ...projectWithPatch,
+              _saveError: true,
+              _saveErrorMessage: message,
+              _saveDebug: {
+                payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+                verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
+                synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+              },
+            };
           }
         } else {
           verifiedSaveMatches = true;
         }
       } catch (verifyErr) {
         console.error("[forceSaveBlockPage] save verification check failed after cloud save.", verifyErr);
-        verifiedProject = null;
+        const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
+        if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+          verifiedProject = serverSynced;
+          verifiedSaveMatches = true;
+        } else {
+          const message = `Save verification failed for ${pageName}. Could not confirm the saved text in cloud storage.`;
+          flashNotice(message, "error", 15000);
+          return {
+            ...projectWithPatch,
+            _saveError: true,
+            _saveErrorMessage: message,
+            _saveDebug: {
+              payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+            },
+          };
+        }
       }
 
       const verifiedPagePatch = verifiedProject && typeof verifiedProject === "object" ? {

@@ -2,7 +2,6 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { createEstimateBuilderWorkbookDefaults } from "../../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 
 const EMPTY_FORM = {
   clientName: "",
@@ -61,7 +60,7 @@ export default function RegisterEstimateJobPage() {
   function confirmJob(event) {
     event.preventDefault();
     if (!requiredComplete) return;
-    const jobId = form.jobId || `estimate-job-${Date.now()}`;
+    const jobId = form.jobId || `builder-job-${Date.now()}`;
     const payload = { ...form, jobId, registeredAt: new Date().toISOString() };
     if (typeof window !== "undefined") {
       window.localStorage.setItem("estimate-builder-pending-job", JSON.stringify(payload));
@@ -69,10 +68,17 @@ export default function RegisterEstimateJobPage() {
         const nextCredits = credits - 1;
         const jobs = JSON.parse(window.localStorage.getItem("estimate-builder-registered-jobs") || "[]");
         const registeredJob = { ...payload, creditCharged: 1, status: "registered" };
-        const workbook = createWorkbookForRegisteredJob(registeredJob);
         window.localStorage.setItem("estimate-builder-credits", String(nextCredits));
         window.localStorage.setItem("estimate-builder-registered-jobs", JSON.stringify([...jobs, registeredJob]));
-        window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify(workbook));
+        window.localStorage.setItem("estimate-builder-active-registered-job", JSON.stringify(registeredJob));
+        window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify({
+          storageMode: "registered-job",
+          savedAt: registeredJob.registeredAt,
+          registeredJobId: registeredJob.jobId,
+          projectName: registeredJob.jobName,
+          templateKey: "template:master-estimate-template",
+          templateName: "Master Estimate Template",
+        }));
         window.localStorage.removeItem("estimate-builder-pending-job");
         setCredits(nextCredits);
         router.push("/modules/estimate-builder");
@@ -148,20 +154,6 @@ export default function RegisterEstimateJobPage() {
       </main>
     </>
   );
-}
-
-function createWorkbookForRegisteredJob(job) {
-  const projectAddress = [job.siteAddress, job.suburb, job.state, job.postcode].filter(Boolean).join(", ");
-  const savedAt = new Date().toISOString();
-  return {
-    ...createEstimateBuilderWorkbookDefaults({
-      projectName: job.jobName,
-      projectAddress,
-    }),
-    registeredJob: job,
-    savedAt,
-    page: "dataInput",
-  };
 }
 
 function Section({ title, children }) {
