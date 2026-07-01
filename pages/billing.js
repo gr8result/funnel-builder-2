@@ -511,8 +511,8 @@ export default function Billing() {
 
   const toggleSelect = (id) => {
     if (activeModules.has(id)) return; // can't deselect an active/purchased module
-    const module = MODULES.find((m) => m.id === id);
-    if (!canToggleModule(module, selectedPlan)) return;
+    const selectedModule = MODULES.find((m) => m.id === id);
+    if (!canToggleModule(selectedModule, selectedPlan)) return;
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 

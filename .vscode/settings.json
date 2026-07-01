@@ -8,6 +8,7 @@
 
   // Treat this extensionless billing file as JSX to prevent false CSS parser errors
   "files.associations": {
+    "tsconfig.json": "jsonc",
     "**/pages/modules/billing/email-plans2": "javascriptreact"
   }
 }
