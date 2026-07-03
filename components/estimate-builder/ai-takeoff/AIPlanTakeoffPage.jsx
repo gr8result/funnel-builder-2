@@ -11,12 +11,17 @@ import ObjectPanel           from "./ObjectPanel";
 import AIReviewPanel         from "./AIReviewPanel";
 
 import { TOOLS, createProject } from "./takeoffTypes";
-import { saveProject, loadByJobId, summarise } from "./takeoffUtils";
-import { runDetection, runOrientationDetection } from "./aiDetectionService";
+import { saveProject, loadByJobId, summarise, getPixelsPerUnit } from "./takeoffUtils";
+import { runDetection } from "./aiDetectionService";
+import { renderPdfDataUrlPage, normalizePlanRotation } from "./pdfPlanRendering";
 
 // ── Reducer: pages array with undo/redo ───────────────────────────────────────
 
 const initState = (pages) => ({ pages, undo:[], redo:[] });
+
+function getPageRotation(page) {
+  return normalizePlanRotation(page?.planRotation || 0);
+}
 
 function reducer(state, action) {
   switch (action.type) {
@@ -30,6 +35,17 @@ function reducer(state, action) {
     case "PATCH_PAGE": {
       const pages = state.pages.map(pg => pg.id===action.pageId ? action.fn(pg) : pg);
       return { pages, undo:[...state.undo,state.pages].slice(-60), redo:[] };
+    }
+
+    case "PATCH_PAGE_SILENT": {
+      let changed = false;
+      const pages = state.pages.map(pg => {
+        if (pg.id !== action.pageId) return pg;
+        const next = action.fn(pg);
+        if (next !== pg) changed = true;
+        return next;
+      });
+      return changed ? { ...state, pages } : state;
     }
 
     case "UPDATE_OVERLAY": {
@@ -56,77 +72,6 @@ function reducer(state, action) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-async function rotateTakeoffPage(page, rotationDegrees) {
-  const degrees = normalizeRotationDegrees(rotationDegrees);
-  if (!degrees || typeof window === "undefined") return page;
-  const rotatedImage = await rotateImageDataUrl(page.imageDataUrl, page.naturalWidth, page.naturalHeight, degrees);
-  const pdfPageRotationDegrees = normalizeRotationDegrees(page.pdfPageRotationDegrees || page.pdfPageRotation || page.pdfRotationDegrees || 0);
-  const detectedRotationDegrees = normalizeRotationDegrees((page.detectedRotationDegrees || 0) + degrees);
-  const manualRotationDegrees = normalizeRotationDegrees(page.manualRotationDegrees || page.userRotationDegrees || 0);
-  return {
-    ...page,
-    imageDataUrl: rotatedImage.dataUrl,
-    naturalWidth: rotatedImage.width,
-    naturalHeight: rotatedImage.height,
-    pdfPageRotationDegrees,
-    pdfPageRotation: pdfPageRotationDegrees,
-    pdfRotationDegrees: pdfPageRotationDegrees,
-    detectedRotationDegrees,
-    manualRotationDegrees,
-    userRotationDegrees: manualRotationDegrees,
-    finalRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + detectedRotationDegrees + manualRotationDegrees),
-    planRotationDegrees: normalizeRotationDegrees(pdfPageRotationDegrees + detectedRotationDegrees + manualRotationDegrees),
-    overlays: (page.overlays || []).map((overlay) => ({
-      ...overlay,
-      points: (overlay.points || []).map((point) => rotatePoint(point, page.naturalWidth, page.naturalHeight, degrees)),
-    })),
-  };
-}
-
-function rotateImageDataUrl(dataUrl, width, height, rotationDegrees) {
-  return new Promise((resolve, reject) => {
-    const degrees = normalizeRotationDegrees(rotationDegrees);
-    const sourceWidth = Number(width) || 0;
-    const sourceHeight = Number(height) || 0;
-    if (!dataUrl || !degrees || !sourceWidth || !sourceHeight) {
-      resolve({ dataUrl, width: sourceWidth, height: sourceHeight });
-      return;
-    }
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      const swap = degrees === 90 || degrees === 270;
-      canvas.width = swap ? sourceHeight : sourceWidth;
-      canvas.height = swap ? sourceWidth : sourceHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate((degrees * Math.PI) / 180);
-      ctx.drawImage(image, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
-      resolve({ dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height });
-    };
-    image.onerror = () => reject(new Error("Could not rotate plan image."));
-    image.src = dataUrl;
-  });
-}
-
-function rotatePoint(point, width, height, rotationDegrees) {
-  const degrees = normalizeRotationDegrees(rotationDegrees);
-  const x = Number(point?.x) || 0;
-  const y = Number(point?.y) || 0;
-  const W = Number(width) || 0;
-  const H = Number(height) || 0;
-  if (degrees === 90) return { x: H - y, y: x };
-  if (degrees === 180) return { x: W - x, y: H - y };
-  if (degrees === 270) return { x: y, y: W - x };
-  return { x, y };
-}
-
-function normalizeRotationDegrees(value) {
-  const degrees = Number(value) || 0;
-  const normalized = ((degrees % 360) + 360) % 360;
-  return [0, 90, 180, 270].includes(normalized) ? normalized : 0;
-}
-
 export default function AIPlanTakeoffPage({ sheet }) {
   const jobId = sheet?.workbook?.openedFileName || sheet?.workbook?.id || "";
   const savedTakeoffProject = sheet?.workbook?.aiTakeoffProject;
@@ -140,7 +85,6 @@ export default function AIPlanTakeoffPage({ sheet }) {
   const [selectedPageId, setSelectedPageId] = useState(pages[0]?.id || null);
   const [activeTool,     setActiveTool]     = useState(TOOLS.POINTER);
   const [selectedId,     setSelectedId]     = useState(null);
-  const [snapEnabled,    setSnapEnabled]    = useState(true);
   const [calibrating,    setCalibrating]    = useState(null);
   const [rightTab,       setRightTab]       = useState("rooms"); // "rooms" | "properties" | "ai"
 
@@ -149,19 +93,19 @@ export default function AIPlanTakeoffPage({ sheet }) {
   const [aiMessage,  setAiMessage]  = useState("");
 
   const [zoom,     setZoom]     = useState(1);
-  const [pan,      setPan]      = useState({ x:0, y:0 });
-  const [rotation, setRotation] = useState(0);
-
   const selectedPage = pages.find(p=>p.id===selectedPageId) || pages[0] || null;
-  const selectedPlan = selectedPage?.planId ? plans.find((plan) => plan.id === selectedPage.planId) : null;
-  const rawPpm       = selectedPage?.scale?.pixelsPerMetre || 0;
+  const rawPpm       = getPixelsPerUnit(selectedPage?.scale);
   const overlays     = selectedPage?.overlays || [];
   const selectedOv   = overlays.find(o=>o.id===selectedId) || null;
-  const orientationConfirmed = !!selectedPage && !selectedPage.orientationNeedsReview && !!(selectedPage.orientationAccepted || selectedPlan?.orientationAccepted);
-  const scaleConfirmed = !!selectedPage?.scale?.pixelsPerMetre && selectedPage.scale.accepted !== false;
+  const scaleConfirmed = getPixelsPerUnit(selectedPage?.scale) > 0 && selectedPage.scale.accepted !== false;
   const ppm          = scaleConfirmed ? rawPpm : 0;
   const totals       = summarise(overlays, ppm);
-  const setupReady = !!selectedPage && orientationConfirmed && scaleConfirmed;
+  const setupReady = !!selectedPage && scaleConfirmed;
+
+  useEffect(() => {
+    const savedZoom = Number(selectedPage?.viewState?.zoom);
+    setZoom(Number.isFinite(savedZoom) && savedZoom > 0 ? savedZoom : 1);
+  }, [selectedPage?.id]);
 
   // ── Auto-save ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -216,6 +160,92 @@ export default function AIPlanTakeoffPage({ sheet }) {
     setCalibrating(prev=>({ points:[...(prev?.points||[]),pt].slice(0,2) }));
   }, []);
 
+  const handleViewStateChange = useCallback((viewState) => {
+    if (!selectedPageId || !viewState) return;
+    dispatch({
+      type: "PATCH_PAGE_SILENT",
+      pageId: selectedPageId,
+      fn: (pg) => {
+        const nextZoom = Number(viewState.zoom);
+        const nextPan = viewState.pan || {};
+        const next = {
+          zoom: Number.isFinite(nextZoom) && nextZoom > 0 ? nextZoom : 1,
+          pan: {
+            x: Number.isFinite(Number(nextPan.x)) ? Number(nextPan.x) : 32,
+            y: Number.isFinite(Number(nextPan.y)) ? Number(nextPan.y) : 32,
+          },
+        };
+        const current = pg.viewState || {};
+        if (current.zoom === next.zoom && current.pan?.x === next.pan.x && current.pan?.y === next.pan.y) return pg;
+        return { ...pg, viewState: next };
+      },
+    });
+  }, [selectedPageId]);
+
+  const renderSelectedPageRotation = useCallback(async (page, nextRotation) => {
+    const planRotation = normalizePlanRotation(nextRotation);
+    const fileName = `${page?.originalFileName || page?.planFileName || ""}`.toLowerCase();
+    const isPdf = Boolean(page?.originalFileUrl && fileName.endsWith(".pdf"));
+    if (!isPdf) return { planRotation };
+
+    const rendered = await renderPdfDataUrlPage(page.originalFileUrl, page.pageNumber || 1, planRotation, 2.0);
+    return {
+      imageDataUrl: rendered.dataUrl,
+      naturalWidth: rendered.width,
+      naturalHeight: rendered.height,
+      originalWidth: rendered.width,
+      originalHeight: rendered.height,
+      normalisedImageData: rendered.dataUrl,
+      normalisedImageUrl: rendered.dataUrl,
+      planRotation: rendered.planRotation,
+    };
+  }, []);
+
+  const rotateSelectedPage = useCallback(async (deltaDegrees) => {
+    if (!selectedPageId) return;
+    const currentPage = pages.find((page) => page.id === selectedPageId);
+    if (!currentPage) return;
+    const nextRotation = normalizePlanRotation(getPageRotation(currentPage) + deltaDegrees);
+    const patch = await renderSelectedPageRotation(currentPage, nextRotation);
+    dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,...patch}) });
+
+    if (currentPage.planId) {
+      const nextPlans = plans.map((plan) => plan.id === currentPage.planId ? {
+        ...plan,
+        planRotation: patch.planRotation,
+        fileUrl: patch.imageDataUrl || plan.fileUrl,
+        normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
+        normalisedImageUrl: patch.normalisedImageUrl || plan.normalisedImageUrl,
+        originalWidth: patch.originalWidth || plan.originalWidth,
+        originalHeight: patch.originalHeight || plan.originalHeight,
+      } : plan);
+      setPlans(nextPlans);
+      sheet?.updatePlans?.(nextPlans);
+    }
+  }, [pages, plans, renderSelectedPageRotation, selectedPageId, sheet]);
+
+  const resetSelectedPageRotation = useCallback(async () => {
+    if (!selectedPageId) return;
+    const currentPage = pages.find((page) => page.id === selectedPageId);
+    if (!currentPage) return;
+    const patch = await renderSelectedPageRotation(currentPage, 0);
+    dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,...patch}) });
+
+    if (currentPage.planId) {
+      const nextPlans = plans.map((plan) => plan.id === currentPage.planId ? {
+        ...plan,
+        planRotation: 0,
+        fileUrl: patch.imageDataUrl || plan.fileUrl,
+        normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
+        normalisedImageUrl: patch.normalisedImageUrl || plan.normalisedImageUrl,
+        originalWidth: patch.originalWidth || plan.originalWidth,
+        originalHeight: patch.originalHeight || plan.originalHeight,
+      } : plan);
+      setPlans(nextPlans);
+      sheet?.updatePlans?.(nextPlans);
+    }
+  }, [pages, plans, renderSelectedPageRotation, selectedPageId, sheet]);
+
   // ── Overlays ───────────────────────────────────────────────────────────────
   const addOverlay = useCallback((ov) => {
     if (!selectedPageId) return;
@@ -238,7 +268,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
   // ── Tool change ────────────────────────────────────────────────────────────
   const handleToolChange = useCallback((t) => {
     if (!setupReady && t !== TOOLS.POINTER && t !== TOOLS.PAN) {
-      setAiMessage("Complete Plan Setup first: confirm orientation and scale before using takeoff tools.");
+      setAiMessage("Confirm the plan scale before using takeoff tools.");
       return;
     }
     setActiveTool(t);
@@ -286,19 +316,10 @@ export default function AIPlanTakeoffPage({ sheet }) {
   }, []);
   const handleAnalysePlan = useCallback(async () => {
     if (!pages.length) { setAiMessage("Upload plan files first."); return; }
-    const pendingOrientationPlans = plans.filter((plan) => (
-      plan.includedInTakeoff !== false
-      && (plan.orientationNeedsReview || (!plan.orientationAccepted && Number(plan.orientationConfidence || 0) <= 0))
-    ));
-    if (pendingOrientationPlans.length) {
-      setAiMessage("Choose and accept the upright orientation for each selected plan before running AI takeoff.");
-      setRightTab("ai");
-      return;
-    }
     const includedPlanIds = new Set(plans.filter((plan) => plan.includedInTakeoff !== false).map((plan) => plan.id));
     const pagesToAnalyse = pages.filter((page) => !page.planId || includedPlanIds.has(page.planId));
     if (!pagesToAnalyse.length) { setAiMessage("Select at least one plan to include in AI takeoff."); return; }
-    const pagesMissingScale = pagesToAnalyse.filter((page) => !(page.scale?.pixelsPerMetre > 0) || page.scale?.accepted === false);
+    const pagesMissingScale = pagesToAnalyse.filter((page) => !(getPixelsPerUnit(page.scale) > 0) || page.scale?.accepted === false);
     if (pagesMissingScale.length) {
       setAiMessage("Confirm the plan scale before running AI takeoff.");
       return;
@@ -319,45 +340,6 @@ export default function AIPlanTakeoffPage({ sheet }) {
     setAnalysing(false);
   }, [analyseSinglePage, pages, plans]);
 
-  const handleOrientPlan = useCallback(async () => {
-    if (!selectedPage?.imageDataUrl) { setAiMessage("Upload a PDF plan first."); return; }
-    setAnalysing(true);
-    setAiMessage("Checking plan orientation...");
-    const orientation = await runOrientationDetection({
-      imageDataUrl: selectedPage.imageDataUrl,
-      imageWidth: selectedPage.naturalWidth,
-      imageHeight: selectedPage.naturalHeight,
-    });
-    if (!orientation.connected) {
-      setAiMessage(orientation.message || "AI orientation service is not connected yet.");
-      setAnalysing(false);
-      return;
-    }
-    const rotationDegrees = normalizeRotationDegrees(orientation.rotationDegrees);
-    if (!rotationDegrees) {
-      setAiMessage(orientation.reason ? `Plan is already upright. ${orientation.reason}` : "Plan is already upright.");
-      setAnalysing(false);
-      return;
-    }
-    const rotatedPage = await rotateTakeoffPage(selectedPage, rotationDegrees);
-    dispatch({
-      type: "PATCH_PAGE",
-      pageId: selectedPageId,
-      fn: pg => ({
-        ...pg,
-        ...rotatedPage,
-        orientationCorrection: {
-          rotationDegrees,
-          confidence: orientation.confidence || 0,
-          reason: orientation.reason || "",
-          correctedAt: new Date().toISOString(),
-        },
-      }),
-    });
-    setRotation(0);
-    setAiMessage(`Rotated plan ${rotationDegrees} degrees. ${orientation.reason || ""}`.trim());
-    setAnalysing(false);
-  }, [selectedPage, selectedPageId, setRotation]);
   // Accept: change a single suggestion to "edited" (user-acknowledged, can still edit)
   const acceptSuggestion = useCallback((id) => {
     updateOverlay(id, { status: "edited" });
@@ -389,18 +371,14 @@ export default function AIPlanTakeoffPage({ sheet }) {
 
   return (
     <div style={S.root}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-
       {/* Toolbar */}
       <TakeoffToolbar
         activeTool={activeTool}     onToolChange={handleToolChange}
-        snapEnabled={snapEnabled}   onToggleSnap={()=>setSnapEnabled(v=>!v)}
         onUndo={()=>dispatch({type:"UNDO"})} canUndo={state.undo.length>0}
         onRedo={()=>dispatch({type:"REDO"})} canRedo={state.redo.length>0}
         overlayCount={overlays.length}
         confirmedCount={confirmedCount}
         onAnalysePlan={handleAnalysePlan}
-        onOrientPlan={handleOrientPlan}
         analysing={analysing}
         hasPage={pages.length>0}
         setupReady={setupReady}
@@ -431,14 +409,6 @@ export default function AIPlanTakeoffPage({ sheet }) {
           {selectedPage && (
             <>
               <div style={S.divider}/>
-              <PlanSetupChecklist
-                orientationConfirmed={orientationConfirmed}
-                scaleConfirmed={scaleConfirmed}
-                ready={setupReady}
-                orientationConfidence={selectedPlan?.orientationConfidence ?? selectedPage.orientationCorrection?.confidence ?? 0}
-                scaleConfidence={selectedPage.scale?.confidence ?? selectedPlan?.scaleConfidence ?? 0}
-              />
-              <div style={S.divider}/>
               <ScaleCalibrationPanel
                 scale={selectedPage.scale}
                 calibrating={calibrating}
@@ -467,15 +437,17 @@ export default function AIPlanTakeoffPage({ sheet }) {
             overlays={overlays}
             selectedId={selectedId}
             calibrating={calibrating}
-            snapEnabled={snapEnabled}
             onAddOverlay={addOverlay}
             onUpdateOverlay={updateOverlay}
             onDeleteOverlay={deleteOverlay}
             onSelectOverlay={id=>{setSelectedId(id);if(id)setRightTab("properties");}}
             onCalibrationPoint={handleCalibrationPoint}
             zoom={zoom}         setZoom={setZoom}
-            pan={pan}           setPan={setPan}
-            rotation={rotation} setRotation={setRotation}
+            viewState={selectedPage?.viewState}
+            onViewStateChange={handleViewStateChange}
+            onRotateLeft={()=>rotateSelectedPage(270)}
+            onRotateRight={()=>rotateSelectedPage(90)}
+            onResetRotation={resetSelectedPageRotation}
           />
         </div>
 
@@ -557,38 +529,10 @@ function SRow({label,value}) {
   );
 }
 
-function PlanSetupChecklist({ orientationConfirmed, scaleConfirmed, ready, orientationConfidence = 0, scaleConfidence = 0 }) {
-  return (
-    <div style={SS.setupBox}>
-      <div style={SS.setupTitle}>Plan Setup</div>
-      <SetupRow done={orientationConfirmed} label="Orientation confirmed" detail={`${Math.round(Number(orientationConfidence || 0) * 100)}% confidence`} />
-      <SetupRow done={scaleConfirmed} label="Scale confirmed" detail={scaleConfidence ? `${Math.round(Number(scaleConfidence || 0) * 100)}% confidence` : "confirm or measure scale"} />
-      <SetupRow done={ready} label="Ready for takeoff" detail={ready ? "tools unlocked" : "tools locked"} />
-    </div>
-  );
-}
-
-function SetupRow({ done, label, detail }) {
-  return (
-    <div style={SS.setupRow}>
-      <span style={done ? SS.setupDotDone : SS.setupDotTodo}>{done ? "OK" : "!"}</span>
-      <div>
-        <strong>{label}</strong>
-        <span>{detail}</span>
-      </div>
-    </div>
-  );
-}
-
 const SS = {
   wrap:    {display:"flex",flexDirection:"column",gap:3,padding:"8px 10px",background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0"},
   title:   {fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:2},
   noScale: {fontSize:11,color:"#d97706",fontStyle:"italic",marginBottom:2},
-  setupBox: {display:"grid",gap:7,padding:10,background:"#f8fafc",borderRadius:8,border:"1.5px solid #cbd5e1"},
-  setupTitle: {fontSize:12,fontWeight:900,color:"#0f172a",textTransform:"uppercase",letterSpacing:"0.05em"},
-  setupRow: {display:"flex",gap:8,alignItems:"flex-start",fontSize:12,color:"#334155",lineHeight:1.35},
-  setupDotDone: {display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:20,borderRadius:999,background:"#dcfce7",color:"#15803d",fontSize:10,fontWeight:900,flexShrink:0},
-  setupDotTodo: {display:"inline-flex",alignItems:"center",justifyContent:"center",width:24,height:20,borderRadius:999,background:"#fffbeb",color:"#92400e",fontSize:12,fontWeight:900,flexShrink:0},
 };
 
 const S = {

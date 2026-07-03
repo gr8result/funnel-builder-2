@@ -7,7 +7,7 @@
 // explicit user confirmation. It does NOT write to the workbook data.
 
 import { useState } from "react";
-import { fmtLM, fmtM2 } from "./takeoffUtils";
+import { fmtLM, fmtM2, getPixelsPerUnit } from "./takeoffUtils";
 import { OVERLAY_STATUS } from "./takeoffTypes";
 
 export default function PushToEstimatorPanel({ totals, pages = [], onPushConfirmed }) {
@@ -22,7 +22,7 @@ export default function PushToEstimatorPanel({ totals, pages = [], onPushConfirm
   });
 
   const hasConfirmed = pages.some((pg) => (pg.overlays || []).some((o) => o.status === OVERLAY_STATUS.CONFIRMED));
-  const hasScale     = pages.some((pg) => pg.scale?.pixelsPerMetre > 0);
+  const hasScale     = pages.some((pg) => getPixelsPerUnit(pg.scale) > 0);
   const ready        = hasConfirmed && hasScale && totals;
 
   const toggleMapping = (key) => setSelectedMappings((prev) => ({ ...prev, [key]: !prev[key] }));

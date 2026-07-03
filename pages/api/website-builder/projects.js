@@ -380,12 +380,12 @@ async function handler(req, res) {
     const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
     const now = new Date().toISOString();
-    const nextProject = syncPlatformPricingPage({
+    const nextProject = {
       ...project,
       id: projectId,
       createdAt: project?.createdAt || now,
       updatedAt: now,
-    });
+    };
 
     let splitProject = null;
     try {

@@ -547,6 +547,7 @@ export default function VisualBuilderPage() {
   const [showSetupPanel, setShowSetupPanel] = useState(false);
   const [siteSlug, setSiteSlug] = useState("");
   const [customDomain, setCustomDomain] = useState("");
+  const [primaryWebsite, setPrimaryWebsite] = useState(false);
   const [blockDefaults, setBlockDefaults] = useState({});
   const canSaveTemplates = DEVELOPER_USER_IDS.has(String(session?.user?.id || ""));
   const previewActionsRef = useRef(null);
@@ -909,7 +910,11 @@ export default function VisualBuilderPage() {
     if (savedCustomDomain !== customDomain) {
       setCustomDomain(savedCustomDomain);
     }
-  }, [project?.id, project?.publication?.customDomain, project?.publication?.custom_domain]);
+    const savedPrimaryWebsite = project?.publication?.isPrimaryWebsite === true || project?.publication?.primaryWebsite === true;
+    if (savedPrimaryWebsite !== primaryWebsite) {
+      setPrimaryWebsite(savedPrimaryWebsite);
+    }
+  }, [project?.id, project?.publication?.customDomain, project?.publication?.custom_domain, project?.publication?.isPrimaryWebsite, project?.publication?.primaryWebsite]);
 
   const currentObjective = useMemo(() => {
     const pageEntry = project?.pages?.find((entry) => entry.name === activePage || slugify(entry.name) === slugify(activePage));
@@ -1287,6 +1292,7 @@ export default function VisualBuilderPage() {
         body: JSON.stringify({
           slug: normalizedSlug,
           customDomain: normalizeDomain(customDomain),
+          primaryWebsite,
           project: {
             ...projectForPublish,
             brandAssets,
@@ -1323,7 +1329,12 @@ export default function VisualBuilderPage() {
           ? buildWebsiteUrl({ slug: normalizedSlug, domain: payload.publication?.custom_domain })
           : buildHostedWebsiteUrl({ slug: normalizedSlug })),
         defaultUrl: payload.defaultUrl || buildHostedWebsiteUrl({ slug: normalizedSlug }),
+        primaryWebsiteUrl: payload.primaryWebsiteUrl || payload.liveUrl || "",
+        internalPreviewUrl: payload.internalPreviewUrl || payload.defaultUrl || buildHostedWebsiteUrl({ slug: normalizedSlug }),
         customDomainInstructions: payload.customDomainInstructions || null,
+        isPrimaryWebsite: payload.primaryWebsite === true,
+        primaryWebsite: payload.primaryWebsite === true,
+        rootUrl: payload.rootUrl || "",
       };
 
       const updated = saveProjectPatch({ publication: nextPublication }, "Website published", { siteOnly: true, saveSource: "publish" });
@@ -2144,12 +2155,15 @@ export default function VisualBuilderPage() {
   const hasDedicatedRootDomain = !!getSiteRootDomain();
   const predictedSitePath = buildWebsitePath(siteSlug || displayName || "site");
   const publication = project?.publication || null;
+  const predictedPrimaryWebsiteUrl = customDomain
+    ? buildWebsiteUrl({ slug: siteSlug || displayName || "site", domain: customDomain })
+    : predictedHostedUrl;
   const resolvedPublicationLiveUrl = publication
-    ? (publication.customDomain
+    ? (publication.primaryWebsiteUrl || publication.liveUrl || (publication.customDomain
       ? buildWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site", domain: publication.customDomain })
-      : buildHostedWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site" }))
+      : buildHostedWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site" })))
     : "";
-  const liveUrl = publication?.liveUrl || publication?.defaultUrl || buildHostedWebsiteUrl({ slug: siteSlug || displayName || "site" });
+  const internalPreviewUrl = publication?.internalPreviewUrl || publication?.defaultUrl || predictedHostedUrl;
 
   if (!router.isReady) {
     return (
@@ -2382,10 +2396,10 @@ export default function VisualBuilderPage() {
                   style={styles.publishInput}
                 />
                 <span style={styles.fieldHelp}>
-                  This is the short name used in your hosted website URL. For example, if you enter <span style={styles.inlineHighlightBlue}>"my-business"</span>, the live URL becomes <span style={styles.inlineHighlightMint}>{buildHostedWebsiteUrl({ slug: "my-business" })}</span>.
+                  This is the short name used for the internal preview URL. For example, <span style={styles.inlineHighlightBlue}>"my-business"</span> creates <span style={styles.inlineHighlightMint}>{buildHostedWebsiteUrl({ slug: "my-business" })}</span>.
                 </span>
                 <span style={styles.fieldHelpMuted}>
-                  This is your website's live address. You can add your own custom domain later if you want a branded URL.
+                  Your custom domain becomes the primary live website address when it is connected.
                 </span>
               </label>
 
@@ -2399,8 +2413,24 @@ export default function VisualBuilderPage() {
                 />
               </label>
 
+              <label style={{ ...styles.fieldLabel, display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={primaryWebsite}
+                  onChange={(event) => setPrimaryWebsite(event.target.checked)}
+                  style={{ marginTop: 4, width: 16, height: 16, flex: "0 0 auto" }}
+                />
+                <span>
+                  Use this site for the public root fallback
+                  <span style={styles.fieldHelpMuted}>
+                    Custom domains become the primary website automatically. This option is only for choosing which published site should render when a visitor reaches the platform root without a matching custom domain.
+                  </span>
+                </span>
+              </label>
+
               <div style={styles.publishHintWrap}>
-                <span style={styles.publishHint}>Hosted website URL: <span style={styles.inlineHighlightMint}>{predictedHostedUrl}</span></span>
+                <span style={styles.publishHint}>Primary Website: <span style={styles.inlineHighlightMint}>{publication?.primaryWebsiteUrl || resolvedPublicationLiveUrl || predictedPrimaryWebsiteUrl}</span></span>
+                <span style={styles.publishHint}>Internal Preview URL: <span style={styles.inlineHighlightBlue}>{internalPreviewUrl}</span></span>
                 {hasDedicatedRootDomain ? <span style={styles.publishHint}>Branded subdomain: <span style={styles.inlineHighlightBlue}>{predictedDefaultDomain || "Add a site slug to generate one"}</span></span> : null}
                 <span style={styles.publishHint}>Published route path: <span style={styles.inlineHighlightGold}>{predictedSitePath}</span></span>
               </div>
@@ -2412,9 +2442,9 @@ export default function VisualBuilderPage() {
 
                 {resolvedPublicationLiveUrl ? (
                   <div style={styles.publishUrlCard}>
-                    <span style={styles.publishUrlLabel}>Published URL</span>
+                    <span style={styles.publishUrlLabel}>Primary Website</span>
                     <div style={styles.publishUrlRow}>
-                      <input value={resolvedPublicationLiveUrl} readOnly style={styles.publishUrlInput} aria-label="Published website URL" />
+                      <input value={resolvedPublicationLiveUrl} readOnly style={styles.publishUrlInput} aria-label="Primary website URL" />
                       <button type="button" onClick={() => handleCopyPublishedUrl(resolvedPublicationLiveUrl)} style={styles.publishUrlButton}>
                         Copy URL
                       </button>
@@ -2425,6 +2455,7 @@ export default function VisualBuilderPage() {
                     <a href={resolvedPublicationLiveUrl} style={styles.publishLiveLink} target="_blank" rel="noopener noreferrer">
                         {publication.customDomain ? `Live on ${publication.customDomain}` : `Open live website`}
                     </a>
+                    <span style={styles.publishHint}>Internal Preview URL: <span style={styles.inlineHighlightBlue}>{internalPreviewUrl}</span></span>
                   </div>
                 ) : null}
               </div>

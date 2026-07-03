@@ -6,6 +6,8 @@ import EstimateBuilderWorkbook from "../../../components/estimate-builder/Estima
 export default function EstimateBuilderPage() {
   const router = useRouter();
   const previewMode = router.query.mode === "preview";
+  const mode = typeof router.query.mode === "string" ? router.query.mode : "";
+  const recentId = typeof router.query.recentId === "string" ? router.query.recentId : "";
 
   return (
     <>
@@ -26,7 +28,7 @@ export default function EstimateBuilderPage() {
           </Link>
         </header>
 
-        <EstimateBuilderWorkbook previewMode={previewMode} />
+        <EstimateBuilderWorkbook previewMode={previewMode} mode={mode} recentId={recentId} />
       </main>
     </>
   );

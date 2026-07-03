@@ -1,1018 +1,996 @@
-// PlanCanvas.jsx — Phase 2 Manual Takeoff canvas.
-//
-// Drawing interaction (all through onMouseDown, never onClick):
-//   e.detail === 1  → single click
-//   e.detail >= 2   → double-click → finish polyline/polygon
-//
-// Tools that accumulate points (single click):
-//   externalWall, internalWall, polyline, measure → double-click finishes
-//   room → double-click OR click near first point finishes
-//
-// Two-point tools (two single clicks):
-//   rectangle → click corner A, click corner B → done
-//   circle    → click center,   click radius pt → done
-//
-// Marker tools (one click):
-//   door, window, column
-//
-// Pointer tool:
-//   click an overlay → select it
-//   drag a handle    → move that point
-//   click empty      → deselect
-//
-// Calibration (always highest priority when active):
-//   all left-clicks → calibration point handler
+// PlanCanvas.jsx
+// Deterministic PDF-canvas takeoff viewer. The only drawing coordinate space is
+// the rendered plan image coordinate space.
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  TOOLS, OT, STYLE,
-  POLYLINE_TOOLS, SEGMENT_TOOLS, POLYGON_TOOLS, MARKER_TOOLS, TWO_POINT_TOOLS,
+  TOOLS,
+  OT,
+  STYLE,
+  POLYLINE_TOOLS,
+  SEGMENT_TOOLS,
+  POLYGON_TOOLS,
+  MARKER_TOOLS,
+  TWO_POINT_TOOLS,
   createOverlay,
 } from "./takeoffTypes";
 import {
-  dist, polyLen, polyArea, polyPerim, centroid,
-  circleArea, circlePerim, rectCorners,
-  pxToM, pxToM2, findSnapPoint, hitOverlay,
-  fmtM, fmtM2, fmtMM,
+  dist,
+  polyLen,
+  polyArea,
+  centroid,
+  circleArea,
+  rectCorners,
+  pxToM,
+  pxToM2,
+  fmtM,
+  fmtM2,
+  getPixelsPerUnit,
 } from "./takeoffUtils";
+import { screenPointFromEvent, screenToDocument, documentToScreen } from "./planCoordinateUtils";
 
-const CLOSE_RADIUS_PX = 14; // screen px — click this close to start point to close polygon
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 5;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 10;
+const CLOSE_RADIUS_SCREEN_PX = 14;
+const WHEEL_ZOOM_SPEED = 0.0011;
+const VIEW_STATE_SAVE_DELAY_MS = 220;
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function segDist(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (!lenSq) return dist(p, a);
+  const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq, 0, 1);
+  return dist(p, { x: a.x + t * dx, y: a.y + t * dy });
+}
+
+function ptInPoly(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x;
+    const yi = poly[i].y;
+    const xj = poly[j].x;
+    const yj = poly[j].y;
+    if (((yi > pt.y) !== (yj > pt.y)) && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function hitOverlay(pt, ov, threshold) {
+  const pts = ov.points || [];
+  if (!pts.length) return false;
+
+  if (ov.type === OT.DOOR || ov.type === OT.WINDOW || ov.type === OT.COLUMN) {
+    return dist(pt, pts[0]) <= threshold;
+  }
+  if (ov.type === OT.CIRCLE) {
+    if (pts.length < 2) return false;
+    return Math.abs(dist(pt, pts[0]) - dist(pts[0], pts[1])) <= threshold;
+  }
+  if (ov.type === OT.ROOM || ov.type === OT.AREA || ov.type === OT.RECTANGLE) {
+    if (ptInPoly(pt, pts)) return true;
+    for (let i = 0; i < pts.length; i += 1) {
+      if (segDist(pt, pts[i], pts[(i + 1) % pts.length]) <= threshold) return true;
+    }
+    return false;
+  }
+  for (let i = 1; i < pts.length; i += 1) {
+    if (segDist(pt, pts[i - 1], pts[i]) <= threshold) return true;
+  }
+  return false;
+}
+
+function overlayLabel(ov, ppm) {
+  const pts = ov.points || [];
+  if (!pts.length) return "";
+
+  if ([OT.EXTERNAL_WALL, OT.INTERNAL_WALL, OT.POLYLINE, OT.MEASURE].includes(ov.type)) {
+    return fmtM(pxToM(polyLen(pts), ppm));
+  }
+  if ([OT.ROOM, OT.AREA, OT.RECTANGLE].includes(ov.type)) {
+    return fmtM2(pxToM2(polyArea(pts), ppm));
+  }
+  if (ov.type === OT.CIRCLE && pts.length >= 2) {
+    return fmtM2(pxToM2(circleArea(pts[0], pts[1]), ppm));
+  }
+  return "";
+}
+
+function labelPoint(ov) {
+  const pts = ov.points || [];
+  if (!pts.length) return { x: 0, y: 0 };
+  if (ov.type === OT.CIRCLE) return pts[0];
+  return centroid(pts);
+}
 
 export default function PlanCanvas({
   page,
   tool,
-  overlays,
+  overlays = [],
   selectedId,
   calibrating,
-  snapEnabled,
   onAddOverlay,
-  onUpdateOverlay,
   onDeleteOverlay,
   onSelectOverlay,
   onCalibrationPoint,
-  zoom,        setZoom,
-  pan,         setPan,
-  rotation,    setRotation,
+  onRotateLeft,
+  onRotateRight,
+  onResetRotation,
+  zoom: externalZoom = 1,
+  setZoom: setExternalZoom,
+  viewState,
+  onViewStateChange,
 }) {
-  const rootRef     = useRef(null);
-  const svgRef      = useRef(null);
-  const gRef        = useRef(null);
-  const spaceRef    = useRef(false);
-  const altRef      = useRef(false);
-  const shiftRef    = useRef(false);
-  const panRef      = useRef(null);      // { mx, my, px, py } — drag-pan start
-  // Mirror of zoom/pan state kept in refs so the wheel handler always reads
-  // the latest value without needing to be re-registered on every render.
-  const viewZoomRef = useRef(zoom);
-  const viewPanRef  = useRef(pan);
-  // Offscreen canvas for pixel-level wall edge detection
-  const pixelCanvasRef = useRef(null);
+  const rootRef = useRef(null);
+  const drawRef = useRef(null);
+  const panDragRef = useRef(null);
+  const spaceRef = useRef(false);
+  const shiftRef = useRef(false);
+  const zoomRef = useRef(clamp(Number(externalZoom) || 1, MIN_ZOOM, MAX_ZOOM));
+  const panRef = useRef({ x: 32, y: 32 });
+  const viewStateSaveTimerRef = useRef(null);
+  const wallSnapCanvasRef = useRef(null);
+  const [drawState, setDrawState] = useState(null);
+  const [cursorPt, setCursorPt] = useState(null);
+  const [snapMarker, setSnapMarker] = useState(null);
+  const [zoom, setZoomState] = useState(() => clamp(Number(externalZoom) || 1, MIN_ZOOM, MAX_ZOOM));
+  const [pan, setPan] = useState({ x: 32, y: 32 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [spaceHeld, setSpaceHeld] = useState(false);
 
-  // Drawing state: ref for handlers + state for rendering
-  const drawRef              = useRef(null);
-  const [drawState,  _setDraw]    = useState(null);
-  const [cursorPt,   setCursor]   = useState(null);
-  const [snapResult, setSnapResult] = useState(null);
-  const [noSnapMsg,  setNoSnapMsg]  = useState(false); // true when click blocked by snap gate
-  const noSnapTimerRef = useRef(null);
+  const W = page?.naturalWidth || 1200;
+  const H = page?.naturalHeight || 900;
+  const ppm = getPixelsPerUnit(page?.scale);
+  const needsScale = !ppm && ![TOOLS.POINTER, TOOLS.PAN, TOOLS.DOOR, TOOLS.WINDOW, TOOLS.COLUMN, TOOLS.DELETE].includes(tool);
 
-  const setDraw = useCallback((v) => {
-    const n = typeof v === "function" ? v(drawRef.current) : v;
-    drawRef.current = n;
-    _setDraw(n);
-  }, []);
-
-  // Keep refs in sync with state so wheel / key handlers always read current values
-  useEffect(() => { viewZoomRef.current = zoom; }, [zoom]);
-  useEffect(() => { viewPanRef.current  = pan;  }, [pan]);
-
-  const W   = page?.naturalWidth  || 1200;
-  const H   = page?.naturalHeight || 900;
-  const ppm = page?.scale?.pixelsPerMetre || 0;
-
-  // ── Load plan image to offscreen canvas for pixel-level edge detection ───────
-  useEffect(() => {
-    if (!page?.imageDataUrl) { pixelCanvasRef.current = null; return; }
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      c.width  = page.naturalWidth;
-      c.height = page.naturalHeight;
-      c.getContext("2d").drawImage(img, 0, 0);
-      pixelCanvasRef.current = c;
-    };
-    img.src = page.imageDataUrl;
-  }, [page?.id, page?.imageDataUrl]); // eslint-disable-line
-
-  // ── Fit / reset ───────────────────────────────────────────────────────────
-
-  const fit = useCallback(() => {
-    const svg = svgRef.current;
-    if (!svg || !page?.naturalWidth) return;
-    const r = svg.getBoundingClientRect();
-    const z = Math.min(r.width/W, r.height/H) * 0.92;
-    setZoom(z);
-    setPan({ x:(r.width -W*z)/2, y:(r.height-H*z)/2 });
-    setRotation(0);
-  }, [page, W, H, setZoom, setPan, setRotation]);
-
-  useEffect(() => { fit(); }, [page?.id]); // eslint-disable-line
-
-  // ── Modifier keys: Space (pan), Alt (disable snap), Shift (angle lock) ──────
-
-  useEffect(() => {
-    const dn = (e) => {
-      if (e.code==="Space"&&!["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) { e.preventDefault(); spaceRef.current=true; }
-      if (e.code==="AltLeft"||e.code==="AltRight")     { e.preventDefault(); altRef.current=true; }
-      if (e.code==="ShiftLeft"||e.code==="ShiftRight")  shiftRef.current=true;
-    };
-    const up = (e) => {
-      if (e.code==="Space")                             spaceRef.current=false;
-      if (e.code==="AltLeft"||e.code==="AltRight")     altRef.current=false;
-      if (e.code==="ShiftLeft"||e.code==="ShiftRight")  shiftRef.current=false;
-    };
-    window.addEventListener("keydown", dn);
-    window.addEventListener("keyup",   up);
-    return () => { window.removeEventListener("keydown",dn); window.removeEventListener("keyup",up); };
-  }, []);
-
-  // ── Keyboard shortcuts ────────────────────────────────────────────────────
-
-  const cancelDraw = useCallback(() => { setDraw(null); setCursor(null); setSnapResult(null); }, [setDraw]);
-
-  const finishDraw = useCallback(() => {
-    const curr = drawRef.current;
-    if (!curr) return;
-    const { type, points } = curr;
-    if (POLYLINE_TOOLS.has(type) && points.length >= 2) onAddOverlay?.(createOverlay({ type, points }));
-    else if (POLYGON_TOOLS.has(type) && points.length >= 3) onAddOverlay?.(createOverlay({ type, points }));
-    setDraw(null); setCursor(null); setSnapResult(null);
-  }, [onAddOverlay, setDraw]);
-
-  useEffect(() => {
-    const h = (e) => {
-      if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
-
-      // ── Arrow key pan ────────────────────────────────────────────────────
-      const ARROW_STEP = e.shiftKey ? 200 : 60; // screen pixels
-      if (e.key === "ArrowUp")    { e.preventDefault(); setPan(p=>({ ...p, y: p.y + ARROW_STEP })); return; }
-      if (e.key === "ArrowDown")  { e.preventDefault(); setPan(p=>({ ...p, y: p.y - ARROW_STEP })); return; }
-      if (e.key === "ArrowLeft")  { e.preventDefault(); setPan(p=>({ ...p, x: p.x + ARROW_STEP })); return; }
-      if (e.key === "ArrowRight") { e.preventDefault(); setPan(p=>({ ...p, x: p.x - ARROW_STEP })); return; }
-
-      // ── Drawing shortcuts ────────────────────────────────────────────────
-      if (e.key==="Escape") cancelDraw();
-      if (e.key==="Enter")  finishDraw();
-
-      // ── Zoom buttons (zoom to viewport centre) ───────────────────────────
-      if (e.key==="+"||e.key==="=") {
-        const svg = svgRef.current;
-        if (!svg) return;
-        const r = svg.getBoundingClientRect();
-        const mx = r.width/2, my = r.height/2;
-        const z  = viewZoomRef.current, p = viewPanRef.current;
-        const nz = Math.min(MAX_ZOOM, z*1.15);
-        setZoom(nz);
-        setPan({ x: mx-(mx-p.x)*(nz/z), y: my-(my-p.y)*(nz/z) });
-        return;
-      }
-      if (e.key==="-") {
-        const svg = svgRef.current;
-        if (!svg) return;
-        const r = svg.getBoundingClientRect();
-        const mx = r.width/2, my = r.height/2;
-        const z  = viewZoomRef.current, p = viewPanRef.current;
-        const nz = Math.max(MIN_ZOOM, z/1.15);
-        setZoom(nz);
-        setPan({ x: mx-(mx-p.x)*(nz/z), y: my-(my-p.y)*(nz/z) });
-        return;
-      }
-
-      if (e.key==="f"||e.key==="F") fit();
-      if (e.key==="r"||e.key==="R") setRotation(r=>(r+90)%360);
-      if ((e.key==="Delete"||e.key==="Backspace")&&selectedId&&!drawRef.current) {
-        onDeleteOverlay?.(selectedId);
-      }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [cancelDraw, finishDraw, fit, selectedId, setZoom, setPan, setRotation, onDeleteOverlay]);
-
-  // ── Wheel zoom ────────────────────────────────────────────────────────────
-
-  const zoomAtClientPoint = useCallback((clientX, clientY, deltaY) => {
-    const root = rootRef.current || svgRef.current;
-    if (!root) return;
-    const r  = root.getBoundingClientRect();
-    const mx = clientX - r.left;
-    const my = clientY - r.top;
-    const f  = deltaY < 0 ? 1.12 : 1 / 1.12;
-
-    // Read current values from refs — avoids the stale-closure problem that
-    // caused the canvas to jump when calling setPan inside setZoom's updater.
-    const z  = viewZoomRef.current;
-    const p  = viewPanRef.current;
-    const nz = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z * f));
-
-    // Both state updates computed from the SAME snapshot of z and p.
-    // React 18 batches them into one render, so zoom and pan change together.
-    setZoom(nz);
-    setPan({
-      x: mx - (mx - p.x) * (nz / z),
-      y: my - (my - p.y) * (nz / z),
+  const setZoom = useCallback((nextZoom) => {
+    setZoomState((currentZoom) => {
+      const rawZoom = typeof nextZoom === "function" ? nextZoom(currentZoom) : nextZoom;
+      const clampedZoom = clamp(Number(rawZoom) || 1, MIN_ZOOM, MAX_ZOOM);
+      zoomRef.current = clampedZoom;
+      return clampedZoom;
     });
-  }, [setZoom, setPan]);
-
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    zoomAtClientPoint(e.clientX, e.clientY, e.deltaY);
-  }, [zoomAtClientPoint]);
-
-  // ── Coordinate conversion ─────────────────────────────────────────────────
-
-  const toCanvas = useCallback((e) => {
-    const g = gRef.current;
-    if (!g) return null;
-    try {
-      const ctm = g.getScreenCTM();
-      if (!ctm) return null;
-      const pt = g.ownerSVGElement.createSVGPoint();
-      pt.x=e.clientX; pt.y=e.clientY;
-      const l = pt.matrixTransform(ctm.inverse());
-      return { x:l.x, y:l.y };
-    } catch { return null; }
   }, []);
 
-  // Used in mousemove — always returns a point (never null) so the preview line follows cursor
-  // ── Pixel-level wall edge detection ──────────────────────────────────────
-  // Scans the rendered plan image for dark pixels (wall lines) within a radius.
-  // canvasX/Y are in plan image coordinates (same as toCanvas() output).
-  // radiusPx is in IMAGE pixels (= screen radius / zoom).
-  const findPixelEdge = useCallback((canvasX, canvasY, radiusPx) => {
-    const oc = pixelCanvasRef.current;
-    if (!oc) return null;
-    const ctx = oc.getContext("2d");
-    const r   = Math.ceil(radiusPx);
-    const sx  = Math.max(0, Math.round(canvasX - r));
-    const sy  = Math.max(0, Math.round(canvasY - r));
-    const sw  = Math.min(r * 2 + 1, oc.width  - sx);
-    const sh  = Math.min(r * 2 + 1, oc.height - sy);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  const setDraw = useCallback((next) => {
+    const value = typeof next === "function" ? next(drawRef.current) : next;
+    drawRef.current = value;
+    setDrawState(value);
+  }, []);
+
+  const getViewOrigin = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return { x: 0, y: 0 };
+    const rect = root.getBoundingClientRect();
+    return { x: rect.left, y: rect.top };
+  }, []);
+
+  const getDocumentView = useCallback(() => ({
+    scale: zoom,
+    pan,
+    origin: getViewOrigin(),
+  }), [getViewOrigin, pan, zoom]);
+
+  const zoomToScreenPoint = useCallback((screenPoint, nextZoom) => {
+    const documentPoint = screenToDocument(screenPoint, getDocumentView());
+    const origin = getViewOrigin();
+    const clampedZoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+    setZoom(clampedZoom);
+    setPan({
+      x: screenPoint.x - origin.x - documentPoint.x * clampedZoom,
+      y: screenPoint.y - origin.y - documentPoint.y * clampedZoom,
+    });
+  }, [getDocumentView, getViewOrigin, setZoom]);
+
+  const zoomToViewportCentre = useCallback((nextZoom) => {
+    const root = rootRef.current;
+    if (!root) {
+      setZoom(clamp(nextZoom, MIN_ZOOM, MAX_ZOOM));
+      return;
+    }
+    const rect = root.getBoundingClientRect();
+    zoomToScreenPoint({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    }, nextZoom);
+  }, [setZoom, zoomToScreenPoint]);
+
+  const fitToScreen = useCallback(() => {
+    const root = rootRef.current;
+    if (!root || !W || !H) return;
+    const rect = root.getBoundingClientRect();
+    const nextZoom = clamp(Math.min(rect.width / W, rect.height / H) * 0.94, MIN_ZOOM, MAX_ZOOM);
+    setZoom(nextZoom);
+    setPan({
+      x: (rect.width - W * nextZoom) / 2,
+      y: (rect.height - H * nextZoom) / 2,
+    });
+  }, [H, W, setZoom]);
+
+  const fitToWidth = useCallback(() => {
+    const root = rootRef.current;
+    if (!root || !W) return;
+    const rect = root.getBoundingClientRect();
+    const nextZoom = clamp((rect.width * 0.94) / W, MIN_ZOOM, MAX_ZOOM);
+    setZoom(nextZoom);
+    setPan({
+      x: (rect.width - W * nextZoom) / 2,
+      y: 32,
+    });
+  }, [W, setZoom]);
+
+  const toDocumentPoint = useCallback((event) => {
+    const point = screenToDocument(screenPointFromEvent(event), getDocumentView());
+    return {
+      x: clamp(point.x, 0, W),
+      y: clamp(point.y, 0, H),
+    };
+  }, [W, H, getDocumentView]);
+
+  useEffect(() => {
+    if (!page?.imageDataUrl) {
+      wallSnapCanvasRef.current = null;
+      return;
+    }
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.drawImage(image, 0, 0, W, H);
+      wallSnapCanvasRef.current = canvas;
+    };
+    image.src = page.imageDataUrl;
+  }, [H, W, page?.id, page?.imageDataUrl]);
+
+  const findWallSnapPoint = useCallback((point, radiusScreenPx = 18) => {
+    const canvas = wallSnapCanvasRef.current;
+    if (!canvas || !point) return null;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    const radius = Math.max(3, Math.ceil(radiusScreenPx / Math.max(zoom, 0.1)));
+    const sx = Math.max(0, Math.round(point.x - radius));
+    const sy = Math.max(0, Math.round(point.y - radius));
+    const sw = Math.min(radius * 2 + 1, canvas.width - sx);
+    const sh = Math.min(radius * 2 + 1, canvas.height - sy);
     if (sw <= 0 || sh <= 0) return null;
 
     const data = ctx.getImageData(sx, sy, sw, sh).data;
-    const DARK = 80;   // RGB average below this = dark wall pixel
+    let best = null;
+    let bestDistance = radius + 1;
+    const isDark = (offset) => {
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const a = data[offset + 3];
+      return a > 40 && (r + g + b) / 3 < 185;
+    };
 
-    let nearest = null, nd = radiusPx;
-    for (let py = 0; py < sh; py++) {
-      for (let px = 0; px < sw; px++) {
-        const i  = (py * sw + px) * 4;
-        const br = (data[i] + data[i+1] + data[i+2]) / 3;
-        if (br > DARK) continue;           // not a dark pixel
-        const ix = sx + px, iy = sy + py;
-        const d  = Math.sqrt((ix - canvasX)**2 + (iy - canvasY)**2);
-        if (d < nd) { nearest = { x: ix, y: iy }; nd = d; }
+    for (let y = 0; y < sh; y += 1) {
+      for (let x = 0; x < sw; x += 1) {
+        const offset = (y * sw + x) * 4;
+        if (!isDark(offset)) continue;
+        const px = sx + x;
+        const py = sy + y;
+        const d = Math.sqrt((px - point.x) ** 2 + (py - point.y) ** 2);
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = { x: px, y: py, type: "wall-edge" };
+        }
       }
     }
-    return nearest ? { ...nearest, type: "edge", label: "Wall edge" } : null;
+
+    if (!best) return null;
+    const localX = Math.round(best.x - sx);
+    const localY = Math.round(best.y - sy);
+    let horizontalHits = 0;
+    let verticalHits = 0;
+    for (let i = -4; i <= 4; i += 1) {
+      const hx = localX + i;
+      const vy = localY + i;
+      if (hx >= 0 && hx < sw && isDark((localY * sw + hx) * 4)) horizontalHits += 1;
+      if (vy >= 0 && vy < sh && isDark((vy * sw + localX) * 4)) verticalHits += 1;
+    }
+    return {
+      ...best,
+      type: horizontalHits >= 3 && verticalHits >= 3 ? "wall-corner" : "wall-edge",
+      label: horizontalHits >= 3 && verticalHits >= 3 ? "Corner" : "Wall edge",
+    };
+  }, [zoom]);
+
+  const snapOrthogonalPoint = useCallback((start, point, { force = false, toleranceDeg = 5 } = {}) => {
+    if (!start || !point) return point;
+    const dx = point.x - start.x;
+    const dy = point.y - start.y;
+    if (!dx && !dy) return point;
+    const angle = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
+    const candidates = [0, 90, 180, 270];
+    const nearest = candidates.reduce((best, candidate) => {
+      const diff = Math.min(Math.abs(angle - candidate), 360 - Math.abs(angle - candidate));
+      return diff < best.diff ? { angle: candidate, diff } : best;
+    }, { angle: 0, diff: Infinity });
+
+    if (!force && nearest.diff > toleranceDeg) return point;
+    if (nearest.angle === 0 || nearest.angle === 180) return { x: point.x, y: start.y };
+    return { x: start.x, y: point.y };
   }, []);
 
-  // ── Snap helpers ──────────────────────────────────────────────────────────
+  const resolveSnapPoint = useCallback((rawPoint, options = {}) => {
+    let point = rawPoint;
+    let marker = null;
+    const basePoint = options.basePoint || null;
+    const forceOrthogonal = Boolean(options.forceOrthogonal);
+    const nearOrthogonal = Boolean(options.nearOrthogonal);
 
-  const snapForPreview = useCallback((rawPt) => {
-    if (!rawPt) return null;
-    const curr    = drawRef.current;
-    const lastPt  = curr?.points?.[curr.points.length - 1] || null;
-    const freeSnap = !snapEnabled || altRef.current;
-
-    // Try overlay geometry first
-    const result = findSnapPoint({
-      rawPt, overlays, zoom, ppm,
-      altHeld:  freeSnap,
-      shiftHeld: shiftRef.current,
-      lastPt,
-      blockIfNoSnap: false,
-    });
-
-    // If no overlay snap found, scan plan image for dark wall lines (30 screen px radius)
-    if (!freeSnap && (!result?.type || result.type === "free" || result.type === null)) {
-      const edge = findPixelEdge(rawPt.x, rawPt.y, 30 / Math.max(zoom, 0.1));
-      if (edge) return edge;
+    if (basePoint && (forceOrthogonal || nearOrthogonal)) {
+      point = snapOrthogonalPoint(basePoint, point, { force: forceOrthogonal, toleranceDeg: 5 });
     }
 
-    return result;
-  }, [snapEnabled, overlays, zoom, ppm, findPixelEdge]);
+    const wallSnap = findWallSnapPoint(point);
+    if (wallSnap) {
+      point = { x: wallSnap.x, y: wallSnap.y };
+      marker = wallSnap;
+      if (basePoint && (forceOrthogonal || nearOrthogonal)) {
+        point = snapOrthogonalPoint(basePoint, point, { force: forceOrthogonal, toleranceDeg: 5 });
+        marker = { ...marker, x: point.x, y: point.y };
+      }
+    }
 
-  const snapForClick = useCallback((rawPt) => {
-    if (!rawPt) return null;
-    const curr    = drawRef.current;
-    const lastPt  = curr?.points?.[curr.points.length - 1] || null;
-    const freeSnap = !snapEnabled || altRef.current;
+    return { point: { x: clamp(point.x, 0, W), y: clamp(point.y, 0, H) }, marker };
+  }, [H, W, findWallSnapPoint, snapOrthogonalPoint]);
 
-    // Try overlay geometry first
-    const result = findSnapPoint({
-      rawPt, overlays, zoom, ppm,
-      altHeld:  freeSnap,
-      shiftHeld: shiftRef.current,
-      lastPt,
-      blockIfNoSnap: false,   // we handle blocking below
-    });
+  const finishDraw = useCallback(() => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    const points = draw.points || [];
+    if (POLYLINE_TOOLS.has(draw.type) && points.length >= 2) {
+      onAddOverlay?.(createOverlay({ type: draw.type, points }));
+    }
+    if (POLYGON_TOOLS.has(draw.type) && points.length >= 3) {
+      onAddOverlay?.(createOverlay({ type: draw.type, points }));
+    }
+    setDraw(null);
+    setCursorPt(null);
+  }, [onAddOverlay, setDraw]);
 
-    if (freeSnap) return result; // snap off or alt held = always allow
+  const cancelDraw = useCallback(() => {
+    setDraw(null);
+    setCursorPt(null);
+    setSnapMarker(null);
+  }, [setDraw]);
 
-    // Valid overlay snap
-    if (result?.type && result.type !== null && result.type !== "free") return result;
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        spaceRef.current = true;
+        setSpaceHeld(true);
+      }
+      if (event.key === "Shift") shiftRef.current = true;
+      if (event.key === "Escape") cancelDraw();
+      if (event.key === "Enter") finishDraw();
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedId && !drawRef.current) {
+        onDeleteOverlay?.(selectedId);
+      }
+    };
+    const onKeyUp = (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        spaceRef.current = false;
+        setSpaceHeld(false);
+      }
+      if (event.key === "Shift") shiftRef.current = false;
+    };
+    const onBlur = () => {
+      spaceRef.current = false;
+      shiftRef.current = false;
+      setSpaceHeld(false);
+      panDragRef.current = null;
+      setIsPanning(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [cancelDraw, finishDraw, onDeleteOverlay, selectedId]);
 
-    // Try pixel edge snap (30 screen px radius)
-    const edge = findPixelEdge(rawPt.x, rawPt.y, 30 / Math.max(zoom, 0.1));
-    if (edge) return edge;
+  const handlePointerDown = useCallback((event) => {
+    const shouldPan = tool === TOOLS.PAN || event.button === 1 || (event.button === 0 && spaceRef.current);
 
-    // Nothing found — block the click
-    return null;
-  }, [snapEnabled, overlays, zoom, ppm, findPixelEdge]);
-
-  // Helper to show the "no snap" message briefly
-  const showNoSnap = useCallback(() => {
-    setNoSnapMsg(true);
-    clearTimeout(noSnapTimerRef.current);
-    noSnapTimerRef.current = setTimeout(() => setNoSnapMsg(false), 2200);
-  }, []);
-
-  // ── Is this event a pan trigger? ──────────────────────────────────────────
-
-  const isPan = (e) =>
-    tool===TOOLS.PAN || e.button===1 || e.button===2 || (e.button===0&&spaceRef.current);
-
-  // ── Mouse down ────────────────────────────────────────────────────────────
-
-  const handleMouseDown = useCallback((e) => {
-    // Calibration — always highest priority
-    if (calibrating && e.button===0) {
-      e.preventDefault();
-      const pt = toCanvas(e);
-      if (pt) onCalibrationPoint?.(pt);
+    if (shouldPan) {
+      event.preventDefault();
+      event.stopPropagation();
+      const screenPoint = screenPointFromEvent(event);
+      panDragRef.current = {
+        x: screenPoint.x,
+        y: screenPoint.y,
+        panX: pan.x,
+        panY: pan.y,
+      };
+      setIsPanning(true);
+      if (event.pointerId != null && event.currentTarget.hasPointerCapture && !event.currentTarget.hasPointerCapture(event.pointerId)) {
+        try {
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+        } catch {
+          // Some synthetic/mouse events do not have an active pointer to capture.
+        }
+      }
       return;
     }
 
-    if (isPan(e)) {
-      e.preventDefault();
-      panRef.current = { mx:e.clientX, my:e.clientY, px:pan.x, py:pan.y };
+    if (event.button !== 0) return;
+
+    const pt = toDocumentPoint(event);
+    if (!pt) return;
+
+    if (calibrating) {
+      const existingPoints = calibrating.points || [];
+      const { point, marker } = resolveSnapPoint(pt, {
+        basePoint: existingPoints[0] || null,
+        forceOrthogonal: existingPoints.length >= 1 && shiftRef.current,
+        nearOrthogonal: existingPoints.length >= 1,
+      });
+      setCursorPt(point);
+      setSnapMarker(marker);
+      onCalibrationPoint?.(point);
       return;
     }
 
-    if (e.button!==0) return;
-    e.preventDefault();
-
-    const rawPt = toCanvas(e);
-    if (!rawPt) return;
-
-    // ── Snap gate: use strict snap for clicks ──────────────────────────────
-    // Returns null if snap is ON, no target found, and Alt is not held.
-    // Pointer and Delete tools always use free placement (they don't draw geometry).
-    const needsSnap = tool !== TOOLS.POINTER && tool !== TOOLS.DELETE && !MARKER_TOOLS.has(tool);
-    const pt = needsSnap ? snapForClick(rawPt) : rawPt;
-
-    if (pt === null) {
-      // Snap required but no target found
-      showNoSnap();
+    if (tool === TOOLS.DELETE) {
+      const hit = [...overlays].reverse().find((ov) => hitOverlay(pt, ov, 12 / Math.max(zoom, 0.1)));
+      if (hit) onDeleteOverlay?.(hit.id);
       return;
     }
-    // A valid point was resolved — clear any lingering no-snap message
-    setNoSnapMsg(false);
 
-    // ── Double click ──────────────────────────────────────────────────────
-    if (e.detail >= 2) {
-      // Segment tools (internal wall): double-click cancels the started point
-      // (user may have accidentally double-clicked instead of two separate clicks)
-      if (SEGMENT_TOOLS.has(drawRef.current?.type)) {
-        setDraw(null); setCursor(null); setSnapResult(null);
+    if (tool === TOOLS.POINTER || tool === TOOLS.PAN) {
+      const hit = [...overlays].reverse().find((ov) => hitOverlay(pt, ov, 12 / Math.max(zoom, 0.1)));
+      onSelectOverlay?.(hit?.id || null);
+      return;
+    }
+
+    if (needsScale) return;
+
+    if (MARKER_TOOLS.has(tool)) {
+      const { point } = resolveSnapPoint(pt);
+      onAddOverlay?.(createOverlay({ type: tool, points: [point] }));
+      return;
+    }
+
+    if (SEGMENT_TOOLS.has(tool)) {
+      const current = drawRef.current;
+      const { point } = resolveSnapPoint(pt, {
+        basePoint: current?.points?.[0] || null,
+        forceOrthogonal: tool === TOOLS.MEASURE && shiftRef.current,
+        nearOrthogonal: tool === TOOLS.MEASURE,
+      });
+      if (current?.type === tool && current.points.length === 1) {
+        onAddOverlay?.(createOverlay({ type: tool, points: [current.points[0], point] }));
+        setDraw(null);
+        setCursorPt(null);
+        setSnapMarker(null);
+      } else {
+        setDraw({ type: tool, points: [point] });
+      }
+      return;
+    }
+
+    if (TWO_POINT_TOOLS.has(tool)) {
+      const current = drawRef.current;
+      const { point } = resolveSnapPoint(pt);
+      if (current?.type === tool && current.points.length === 1) {
+        const points = tool === TOOLS.RECTANGLE ? rectCorners(current.points[0], point) : [current.points[0], point];
+        onAddOverlay?.(createOverlay({ type: tool, points }));
+        setDraw(null);
+        setCursorPt(null);
+        setSnapMarker(null);
+      } else {
+        setDraw({ type: tool, points: [point] });
+      }
+      return;
+    }
+
+    if (POLYLINE_TOOLS.has(tool) || POLYGON_TOOLS.has(tool)) {
+      const current = drawRef.current;
+      const { point } = resolveSnapPoint(pt);
+      if (!current || current.type !== tool) {
+        setDraw({ type: tool, points: [point] });
         return;
       }
-      // All other drawing tools: double-click finishes the shape
+
+      const closeRadius = CLOSE_RADIUS_SCREEN_PX / Math.max(zoom, 0.1);
+      if (POLYGON_TOOLS.has(tool) && current.points.length >= 3 && dist(point, current.points[0]) <= closeRadius) {
+        finishDraw();
+        return;
+      }
+      setDraw({ type: tool, points: [...current.points, point] });
+    }
+  }, [
+    calibrating,
+    finishDraw,
+    needsScale,
+    onAddOverlay,
+    onCalibrationPoint,
+    onDeleteOverlay,
+    onSelectOverlay,
+    overlays,
+    resolveSnapPoint,
+    setDraw,
+    toDocumentPoint,
+    tool,
+    zoom,
+    pan,
+  ]);
+
+  const handlePointerMove = useCallback((event) => {
+    if (panDragRef.current) {
+      event.preventDefault();
+      const start = panDragRef.current;
+      const screenPoint = screenPointFromEvent(event);
+      setPan({
+        x: start.panX + screenPoint.x - start.x,
+        y: start.panY + screenPoint.y - start.y,
+      });
+      return;
+    }
+
+    const pt = toDocumentPoint(event);
+    if (!pt) return;
+    const calibrationBase = calibrating?.points?.[0] || null;
+    const draw = drawRef.current;
+    const drawBase = draw?.points?.[0] || null;
+    const shouldSnapMeasure = draw?.type === TOOLS.MEASURE;
+    const { point, marker } = resolveSnapPoint(pt, {
+      basePoint: calibrationBase || (shouldSnapMeasure ? drawBase : null),
+      forceOrthogonal: (Boolean(calibrationBase) || shouldSnapMeasure) && shiftRef.current,
+      nearOrthogonal: Boolean(calibrationBase) || shouldSnapMeasure,
+    });
+    setCursorPt(point);
+    setSnapMarker(marker);
+  }, [calibrating, resolveSnapPoint, toDocumentPoint]);
+
+  const handlePointerUp = useCallback((event) => {
+    if (!panDragRef.current) return;
+    panDragRef.current = null;
+    setIsPanning(false);
+    if (event.pointerId != null && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      try {
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture may already be gone after aux/middle-button release.
+      }
+    }
+  }, []);
+
+  const handleDoubleClick = useCallback((event) => {
+    event.preventDefault();
+    if (drawRef.current && (POLYLINE_TOOLS.has(drawRef.current.type) || POLYGON_TOOLS.has(drawRef.current.type))) {
       finishDraw();
-      return;
     }
+  }, [finishDraw]);
 
-    // ── Single click ──────────────────────────────────────────────────────
-    const curr = drawRef.current;
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
 
-    // Pointer: select / deselect
-    if (tool === TOOLS.POINTER) {
-      const thresh = 10/zoom;
-      for (let i=overlays.length-1; i>=0; i--) {
-        if (hitOverlay(pt, overlays[i], thresh)) {
-          onSelectOverlay?.(overlays[i].id===selectedId ? null : overlays[i].id);
-          return;
-        }
-      }
-      onSelectOverlay?.(null);
-      return;
-    }
+    const onWheel = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
 
-    // Delete: hit-test and remove
-    if (tool === TOOLS.DELETE) {
-      const thresh = 10/zoom;
-      for (let i=overlays.length-1; i>=0; i--) {
-        if (hitOverlay(pt, overlays[i], thresh)) { onDeleteOverlay?.(overlays[i].id); return; }
-      }
-      return;
-    }
+      const rect = root.getBoundingClientRect();
+      const currentZoom = zoomRef.current || 1;
+      const currentPan = panRef.current || { x: 0, y: 0 };
+      const deltaUnit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1;
+      const deltaY = event.deltaY * deltaUnit;
+      const zoomFactor = Math.exp(-deltaY * WHEEL_ZOOM_SPEED);
+      const nextZoom = clamp(currentZoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
+      if (nextZoom === currentZoom) return;
 
-    // Marker tools: one click places
-    if (MARKER_TOOLS.has(tool)) {
-      onAddOverlay?.(createOverlay({ type: tool, points:[pt] }));
-      return;
-    }
+      const offsetX = event.clientX - rect.left;
+      const offsetY = event.clientY - rect.top;
+      const documentPoint = {
+        x: (offsetX - currentPan.x) / currentZoom,
+        y: (offsetY - currentPan.y) / currentZoom,
+      };
+      const nextPan = {
+        x: offsetX - documentPoint.x * nextZoom,
+        y: offsetY - documentPoint.y * nextZoom,
+      };
 
-    // ── Segment tools (Internal Wall) ─────────────────────────────────────
-    // Click A = anchor.  Click B = commit segment, immediately reset for next.
-    // The tool stays active so the user can keep drawing independent segments.
-    if (SEGMENT_TOOLS.has(tool)) {
-      if (!curr) {
-        // First click: set the start point
-        setDraw({ type: tool, points: [pt] });
-      } else {
-        // Second click: commit this segment and reset (NOT deactivate the tool)
-        const [a] = curr.points;
-        onAddOverlay?.(createOverlay({ type: tool, points: [{ ...a }, { ...pt }] }));
-        setDraw(null);
-        setCursor(null);
-        setSnapResult(null);
-        // Tool remains active — next click starts a new segment automatically
-      }
-      return;
-    }
-
-    // Two-point tools (rectangle, circle)
-    if (TWO_POINT_TOOLS.has(tool)) {
-      if (!curr) {
-        setDraw({ type:tool, points:[pt] });
-      } else {
-        const [a] = curr.points;
-        const pts = tool===TOOLS.RECTANGLE ? rectCorners(a,pt) : [a,pt];
-        onAddOverlay?.(createOverlay({ type:tool, points:pts }));
-        setDraw(null); setCursor(null);
-      }
-      return;
-    }
-
-    // Polygon (room): close if near start
-    if (POLYGON_TOOLS.has(tool)) {
-      if (curr && curr.points.length >= 3) {
-        const screenDist = dist(pt, curr.points[0]) * zoom;
-        if (screenDist < CLOSE_RADIUS_PX) {
-          onAddOverlay?.(createOverlay({ type:tool, points:curr.points }));
-          setDraw(null); setCursor(null);
-          return;
-        }
-      }
-      setDraw(prev => prev
-        ? { ...prev, points:[...prev.points,pt] }
-        : { type:tool, points:[pt] }
-      );
-      return;
-    }
-
-    // Polyline tools (walls, measure, polyline)
-    if (POLYLINE_TOOLS.has(tool)) {
-      setDraw(prev => prev
-        ? { ...prev, points:[...prev.points,pt] }
-        : { type:tool, points:[pt] }
-      );
-    }
-  }, [calibrating, tool, pan, zoom, overlays, selectedId,
-      toCanvas, snapForClick, finishDraw, setDraw, showNoSnap,
-      onAddOverlay, onDeleteOverlay, onSelectOverlay, onCalibrationPoint]); // eslint-disable-line
-
-  // ── Mouse move ────────────────────────────────────────────────────────────
-
-  const handleMouseMove = useCallback((e) => {
-    if (panRef.current) {
-      setPan({ x:panRef.current.px+(e.clientX-panRef.current.mx), y:panRef.current.py+(e.clientY-panRef.current.my) });
-      return;
-    }
-    const rawPt = toCanvas(e);
-    if (!rawPt) return;
-    // Preview always returns a position (never null) so the line follows the cursor.
-    // The snap marker is only shown when a real snap target is found (type not null/free).
-    const snapped = snapForPreview(rawPt);
-    setCursor(snapped || rawPt);
-    const isRealSnap = snapped?.type && snapped.type !== "free" && snapped.type !== null && !snapped.type.includes("null");
-    setSnapResult(isRealSnap ? snapped : null);
-  }, [toCanvas, snapForPreview, setPan]);
-
-  const handleMouseUp = useCallback(() => { panRef.current=null; }, []);
-
-  // ── Point drag handle ─────────────────────────────────────────────────────
-
-  const startDrag = useCallback((ovId, ptIdx) => (e) => {
-    e.stopPropagation(); e.preventDefault();
-    const move = (me) => {
-      const pt = toCanvas(me);
-      if (!pt) return;
-      const ov = overlays.find(o=>o.id===ovId);
-      if (!ov) return;
-      const pts = ov.points.map((p,i) => i===ptIdx ? pt : p);
-      onUpdateOverlay?.(ovId, { points:pts });
+      zoomRef.current = nextZoom;
+      panRef.current = nextPan;
+      setZoom(nextZoom);
+      setPan(nextPan);
     };
-    const up = () => { window.removeEventListener("mousemove",move); window.removeEventListener("mouseup",up); };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup",   up);
-  }, [toCanvas, overlays, onUpdateOverlay]);
 
-  // ── SVG transform ─────────────────────────────────────────────────────────
+    root.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => root.removeEventListener("wheel", onWheel, { capture: true });
+  }, [setZoom]);
 
-  const cx=W/2, cy=H/2;
-  const transform = rotation
-    ? `translate(${pan.x},${pan.y}) scale(${zoom}) rotate(${rotation},${cx},${cy})`
-    : `translate(${pan.x},${pan.y}) scale(${zoom})`;
+  useEffect(() => {
+    cancelDraw();
+  }, [page?.id, cancelDraw]);
 
-  // ── Cursor ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const savedPan = viewState?.pan || {};
+    const savedZoom = Number(viewState?.zoom ?? externalZoom);
+    const nextZoom = clamp(Number.isFinite(savedZoom) && savedZoom > 0 ? savedZoom : 1, MIN_ZOOM, MAX_ZOOM);
+    zoomRef.current = nextZoom;
+    setZoomState(nextZoom);
+    setPan({
+      x: Number.isFinite(Number(savedPan.x)) ? Number(savedPan.x) : 32,
+      y: Number.isFinite(Number(savedPan.y)) ? Number(savedPan.y) : 32,
+    });
+  }, [page?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const svgCursor =
-    calibrating         ? "crosshair"    :
-    panRef.current      ? "grabbing"     :
-    tool===TOOLS.PAN    ? "grab"         :
-    spaceRef.current    ? "grab"         :
-    tool===TOOLS.POINTER? "default"      :
-    tool===TOOLS.DELETE ? "not-allowed"  :
-    "crosshair";
-
-  // ── Running measure while drawing ─────────────────────────────────────────
-
-  const runLabel = (() => {
-    if (!drawState || !cursorPt) return null;
-    const pts  = [...drawState.points, cursorPt];
-    const type = drawState.type;
-    // Segment tools: show live length from anchor to cursor
-    if (SEGMENT_TOOLS.has(type) && drawState.points.length === 1) {
-      const m = pxToM(dist(drawState.points[0], cursorPt), ppm);
-      return m != null ? `${fmtM(m)}  (${fmtMM(m)})` : "Click end point to place segment";
+  useEffect(() => {
+    if (!page?.id || !onViewStateChange) return;
+    if (viewStateSaveTimerRef.current) {
+      window.clearTimeout(viewStateSaveTimerRef.current);
     }
-    if (POLYLINE_TOOLS.has(type)) {
-      const m = pxToM(polyLen(pts), ppm);
-      return m!=null ? `${fmtM(m)}  (${fmtMM(m)})` : `${pts.length} pts — set scale for length`;
-    }
-    if ((type===TOOLS.ROOM||type===TOOLS.AREA)&&pts.length>=3) {
-      const m2 = pxToM2(polyArea(pts), ppm);
-      return m2!=null ? `Area: ${fmtM2(m2)}` : `${pts.length} pts — set scale for area`;
-    }
-    if (type===TOOLS.RECTANGLE&&drawState.points.length===1) {
-      const rc = rectCorners(drawState.points[0], cursorPt);
-      const m2 = pxToM2(polyArea(rc), ppm);
-      return m2!=null ? `Area: ${fmtM2(m2)}` : "Rectangle";
-    }
-    if (type===TOOLS.CIRCLE&&drawState.points.length===1) {
-      const r = dist(drawState.points[0], cursorPt);
-      const m2 = pxToM2(Math.PI*r*r, ppm);
-      return m2!=null ? `Area: ${fmtM2(m2)}` : "Circle";
-    }
-    return null;
-  })();
+    viewStateSaveTimerRef.current = window.setTimeout(() => {
+      viewStateSaveTimerRef.current = null;
+      const savedZoom = zoomRef.current || zoom;
+      const savedPan = panRef.current || pan;
+      setExternalZoom?.(savedZoom);
+      onViewStateChange({
+        zoom: savedZoom,
+        pan: savedPan,
+      });
+    }, VIEW_STATE_SAVE_DELAY_MS);
+  }, [onViewStateChange, page?.id, pan, setExternalZoom, zoom]);
 
-  // ── Empty state ───────────────────────────────────────────────────────────
+  useEffect(() => () => {
+    if (viewStateSaveTimerRef.current) {
+      window.clearTimeout(viewStateSaveTimerRef.current);
+      viewStateSaveTimerRef.current = null;
+    }
+  }, []);
+
+  const overlayCursor = tool === TOOLS.PAN || spaceHeld
+    ? (isPanning ? "grabbing" : "grab")
+    : calibrating
+      ? "crosshair"
+      : tool === TOOLS.POINTER
+        ? "default"
+        : tool === TOOLS.DELETE
+          ? "not-allowed"
+          : MARKER_TOOLS.has(tool)
+            ? "copy"
+            : "crosshair";
 
   if (!page?.imageDataUrl) {
     return (
       <div style={S.empty}>
-        <div style={{fontSize:48,marginBottom:12}}>📄</div>
-        <div style={{fontSize:16,fontWeight:700,color:"#334155"}}>Upload a PDF floor plan</div>
-        <div style={{fontSize:13,color:"#64748b",marginTop:6,lineHeight:1.6,maxWidth:260,textAlign:"center"}}>
-          Use the left panel to upload a PDF, then set the scale and start drawing.
-        </div>
+        <div style={S.emptyTitle}>Upload a plan to start takeoff</div>
+        <div style={S.emptySub}>PDF pages and images render into one shared canvas coordinate space.</div>
       </div>
     );
   }
 
-  // ── Scale gate ────────────────────────────────────────────────────────────
+  const view = {
+    scale: zoom,
+    pan,
+    origin: { x: 0, y: 0 },
+  };
 
-  const needsScale = (POLYLINE_TOOLS.has(tool)||SEGMENT_TOOLS.has(tool)||POLYGON_TOOLS.has(tool)||TWO_POINT_TOOLS.has(tool)) && !ppm;
-
-  // ── Render ────────────────────────────────────────────────────────────────
+  const surfaceStyle = {
+    ...S.surface,
+    width: W,
+    height: H,
+    transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+  };
 
   return (
-    <div ref={rootRef} style={S.root} tabIndex={0} onWheel={handleWheel}>
-      <svg
-        ref={svgRef}
-        style={{...S.svg, cursor:svgCursor}}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onContextMenu={e=>e.preventDefault()}
-      >
-        <g ref={gRef} transform={transform}>
-
-          {/* Plan image */}
-          <image href={page.imageDataUrl} x={0} y={0} width={W} height={H} style={{pointerEvents:"none"}} />
-
-          {/* ── Completed overlays ── */}
-          {overlays.map(ov => (
-            <OverlayShape key={ov.id} ov={ov} selected={ov.id===selectedId}
-              zoom={zoom} tool={tool}
-              onMouseDown={e => {
-                if (tool===TOOLS.POINTER) { e.stopPropagation(); onSelectOverlay?.(ov.id===selectedId?null:ov.id); }
-                if (tool===TOOLS.DELETE)  { e.stopPropagation(); onDeleteOverlay?.(ov.id); }
-              }}
-              onDragStart={startDrag}
+    <div ref={rootRef} style={S.root} onAuxClick={(event) => event.preventDefault()} onContextMenu={(event) => event.preventDefault()}>
+      <div style={S.viewport}>
+        <div style={surfaceStyle}>
+          <img src={page.imageDataUrl} alt="Plan page" style={S.image} draggable={false} />
+        </div>
+        <svg
+          width="100%"
+          height="100%"
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onDoubleClick={handleDoubleClick}
+          style={{ ...S.overlay, cursor: overlayCursor }}
+        >
+          {overlays.map((ov) => (
+            <OverlayShape
+              key={ov.id}
+              ov={ov}
+              selected={ov.id === selectedId}
+              ppm={ppm}
+              view={view}
             />
           ))}
+          {drawState && cursorPt && <DrawPreview draw={drawState} cursor={cursorPt} view={view} />}
+          {calibrating && <CalibrationPreview calibrating={calibrating} cursor={cursorPt} view={view} />}
+          {snapMarker && <SnapMarker snap={snapMarker} view={view} />}
+          {cursorPt && <LiveDistanceLabel calibrating={calibrating} draw={drawState} cursor={cursorPt} ppm={ppm} view={view} />}
+        </svg>
+      </div>
 
-          {/* ── In-progress drawing preview ── */}
-          {drawState && cursorPt && (
-            <DrawPreview draw={drawState} cursor={cursorPt} zoom={zoom} ppm={ppm} />
-          )}
-
-          {/* ── Snap indicator (type-specific visuals) ── */}
-          {snapResult && cursorPt && <SnapMarker snap={snapResult} zoom={zoom} />}
-
-          {/* ── Angle-lock preview line ── */}
-          {snapResult?.lockFrom && cursorPt && (
-            <line
-              x1={snapResult.lockFrom.x} y1={snapResult.lockFrom.y}
-              x2={cursorPt.x} y2={cursorPt.y}
-              stroke="#a855f7" strokeWidth={1/zoom} strokeDasharray={`${4/zoom} ${2/zoom}`}
-              style={{pointerEvents:"none"}} opacity={0.6}
-            />
-          )}
-
-          {/* ── Calibration overlay ── */}
-          {calibrating && (calibrating.points||[]).map((pt,i)=>(
-            <g key={i} style={{pointerEvents:"none"}}>
-              <circle cx={pt.x} cy={pt.y} r={7/zoom} fill="rgba(99,102,241,0.2)" stroke="#6366f1" strokeWidth={2/zoom}/>
-              <circle cx={pt.x} cy={pt.y} r={3/zoom} fill="#6366f1"/>
-              <text x={pt.x+10/zoom} y={pt.y-5/zoom} fontSize={11/zoom} fill="#6366f1" fontWeight="700">Point {i+1}</text>
-            </g>
-          ))}
-          {calibrating?.points?.length===2&&(
-            <line x1={calibrating.points[0].x} y1={calibrating.points[0].y}
-                  x2={calibrating.points[1].x} y2={calibrating.points[1].y}
-                  stroke="#6366f1" strokeWidth={2/zoom} strokeDasharray={`${6/zoom} ${3/zoom}`}
-                  style={{pointerEvents:"none"}}/>
-          )}
-
-        </g>
-      </svg>
-
-      {/* Calibration banner */}
       {calibrating && (
-        <div style={{...S.banner, background:"rgba(99,102,241,0.92)"}}>
-          {!calibrating.points?.length    &&"Click Point 1 on the plan"}
-          {calibrating.points?.length===1 &&"Click Point 2 on the plan"}
-          {calibrating.points?.length>=2  &&"✓ Two points set — enter the distance in the Scale panel"}
+        <div style={S.banner}>
+          {(calibrating.points || []).length === 0 && "Click point 1 on the plan"}
+          {(calibrating.points || []).length === 1 && "Click point 2 on the plan"}
+          {(calibrating.points || []).length >= 2 && "Two points set. Enter the real distance in the Scale panel."}
         </div>
       )}
 
-      {/* No-snap gate message */}
-      {noSnapMsg && !calibrating && (
-        <div style={S.noSnapMsg}>
-          <span style={{fontSize:16,marginRight:8}}>⚠</span>
-          No snap point found — zoom in, move closer to a corner, or hold <kbd style={{background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:3,padding:"0 5px",fontSize:12}}>Alt</kbd> to place a free point.
-        </div>
+      {!drawState && !calibrating && SEGMENT_TOOLS.has(tool) && !needsScale && (
+        <div style={S.banner}>{tool === TOOLS.MEASURE ? "Measure: click start point" : "Internal wall: click start point"}</div>
       )}
 
-      {/* Scale gate */}
       {needsScale && !calibrating && (
         <div style={S.gate}>
           <div style={S.gateCard}>
-            <div style={{fontSize:28,marginBottom:8}}>📐</div>
-            <strong style={{display:"block",fontSize:14,marginBottom:6}}>Set drawing scale first</strong>
-            <p style={{margin:0,fontSize:13,color:"#475569",lineHeight:1.6}}>
-              Use the <strong>Scale</strong> panel on the left (1:100 etc.) before drawing walls or rooms.<br/>
-              Doors, windows and columns can be placed without scale.
-            </p>
+            <strong>Set drawing scale first</strong>
+            <p>Use the Scale panel before drawing measured takeoff items.</p>
           </div>
         </div>
       )}
 
-      {/* Running measurement label / hint */}
-      {runLabel && !calibrating && (
-        <div style={S.banner}>
-          📏 {runLabel}
-          {drawState && SEGMENT_TOOLS.has(drawState.type)
-            ? <span style={{fontSize:11,marginLeft:8,opacity:.7}}>· click to place end point · Esc cancel</span>
-            : <span style={{fontSize:11,marginLeft:8,opacity:.7}}>· double-click or Enter to finish · Esc cancel</span>
-          }
-        </div>
-      )}
-      {/* Prompt when segment tool is active but no point placed yet */}
-      {!drawState && !calibrating && SEGMENT_TOOLS.has(tool) && (
-        <div style={{...S.banner, background:"rgba(234,88,12,0.85)"}}>
-          {tool===TOOLS.MEASURE ? "Measure - click start point" : "Internal Wall - click start point"}
-        </div>
-      )}
-
-      {/* View controls */}
       <div style={S.controls}>
-        <VBtn onClick={()=>setZoom(z=>Math.min(MAX_ZOOM,z*1.2))} title="Zoom in (+)">＋</VBtn>
-        <VBtn onClick={()=>setZoom(z=>Math.max(MIN_ZOOM,z/1.2))} title="Zoom out (−)">－</VBtn>
-        <div style={S.ctrlSep}/>
-        <VBtn onClick={()=>setRotation(r=>((r-90)+360)%360)} title="Rotate 90° left">↺</VBtn>
-        <VBtn onClick={()=>setRotation(r=>(r+90)%360)} title="Rotate 90° right (R)">↻</VBtn>
-        <div style={S.ctrlSep}/>
-        <VBtn onClick={fit} title="Fit (F)">⊡</VBtn>
-        <VBtn onClick={()=>{setZoom(1);setPan({x:0,y:0});setRotation(0);}} title="Reset view">↩</VBtn>
+        <ViewButton onClick={() => zoomToViewportCentre(zoom * 1.2)} title="Zoom in">＋</ViewButton>
+        <ViewButton onClick={() => zoomToViewportCentre(zoom / 1.2)} title="Zoom out">－</ViewButton>
+        <ViewButton onClick={fitToScreen} title="Fit to screen">⊡</ViewButton>
+        <ViewButton onClick={fitToWidth} title="Fit width">⇔</ViewButton>
+        <ViewButton onClick={() => zoomToViewportCentre(1)} title="100%">100</ViewButton>
+        <div style={S.ctrlSep} />
+        <ViewButton onClick={onRotateLeft} title="Rotate left">↺</ViewButton>
+        <ViewButton onClick={onRotateRight} title="Rotate right">↻</ViewButton>
+        <ViewButton onClick={onResetRotation} title="Reset rotation">0</ViewButton>
+        <div style={S.ctrlSep} />
+        <ViewButton onClick={() => { setZoom(1); setPan({ x: 32, y: 32 }); }} title="Reset zoom and pan">1:1</ViewButton>
       </div>
 
-      {/* Zoom + modifier badge */}
-      <div style={S.badge}>
-        {Math.round(zoom*100)}%{rotation?` · ${rotation}°`:""}
-        {snapEnabled ? " · snap" : " · snap off"}
-        {snapResult?.type ? ` · ${snapResult.label}` : ""}
-      </div>
-      {/* Key hint overlay */}
-      <div style={S.keyHint}>
-        <span>Alt: free point</span>
-        <span style={{margin:"0 8px"}}>·</span>
-        <span>Shift: lock 45°</span>
-      </div>
+      <div style={S.badge}>{Math.round(zoom * 100)}%</div>
     </div>
   );
 }
 
-// ── Snap marker (type-specific SVG symbol) ────────────────────────────────────
-
-function SnapMarker({ snap, zoom }) {
-  const x = snap.x, y = snap.y, z = zoom;
-  const r = 7 / z;
-
-  if (!snap.type) return null;
-
-  const baseType = snap.type.replace("+angle", "");
-
-  switch (baseType) {
-    case "endpoint":
-      // Amber square
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <rect x={x-r} y={y-r} width={r*2} height={r*2} fill="rgba(245,158,11,0.15)" stroke="#f59e0b" strokeWidth={2/z}/>
-          <circle cx={x} cy={y} r={2.5/z} fill="#f59e0b"/>
-        </g>
-      );
-    case "midpoint":
-      // Green triangle
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <polygon points={`${x},${y-r} ${x+r*0.87},${y+r*0.5} ${x-r*0.87},${y+r*0.5}`}
-            fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth={2/z}/>
-        </g>
-      );
-    case "intersection":
-      // Blue X
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <line x1={x-r} y1={y-r} x2={x+r} y2={y+r} stroke="#3b82f6" strokeWidth={2/z}/>
-          <line x1={x+r} y1={y-r} x2={x-r} y2={y+r} stroke="#3b82f6" strokeWidth={2/z}/>
-          <circle cx={x} cy={y} r={r} fill="none" stroke="#3b82f6" strokeWidth={1/z} opacity={0.4}/>
-        </g>
-      );
-    case "online":
-      // Cyan perpendicular marker
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <circle cx={x} cy={y} r={r} fill="none" stroke="#06b6d4" strokeWidth={2/z}/>
-          <circle cx={x} cy={y} r={2/z} fill="#06b6d4"/>
-        </g>
-      );
-    case "grid":
-      // Grey cross
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <line x1={x-r} y1={y} x2={x+r} y2={y} stroke="#94a3b8" strokeWidth={1.5/z}/>
-          <line x1={x} y1={y-r} x2={x} y2={y+r} stroke="#94a3b8" strokeWidth={1.5/z}/>
-        </g>
-      );
-    case "angle":
-      // Purple diamond
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <polygon points={`${x},${y-r} ${x+r},${y} ${x},${y+r} ${x-r},${y}`}
-            fill="rgba(168,85,247,0.15)" stroke="#a855f7" strokeWidth={2/z}/>
-          {snap.angleDeg != null && (
-            <text x={x+r+3/z} y={y+3/z} fontSize={10/z} fill="#a855f7" fontWeight="700" style={{pointerEvents:"none"}}>
-              {snap.angleDeg}°
-            </text>
-          )}
-        </g>
-      );
-    case "edge":
-      // Red-orange target reticle — pixel wall edge
-      return (
-        <g style={{pointerEvents:"none"}}>
-          <circle cx={x} cy={y} r={r*1.2} fill="none" stroke="#f97316" strokeWidth={2/z}/>
-          <line x1={x-r*0.6} y1={y} x2={x+r*0.6} y2={y} stroke="#f97316" strokeWidth={1.5/z}/>
-          <line x1={x} y1={y-r*0.6} x2={x} y2={y+r*0.6} stroke="#f97316" strokeWidth={1.5/z}/>
-          <circle cx={x} cy={y} r={2/z} fill="#f97316"/>
-          <text x={x+r*1.4} y={y-r*0.4} fontSize={9/z} fill="#f97316" fontWeight="700" style={{pointerEvents:"none"}}>Edge</text>
-        </g>
-      );
-    default:
-      return null;
-  }
+function screenPointString(points, view) {
+  return points.map((point) => {
+    const screen = documentToScreen(point, view);
+    return `${screen.x},${screen.y}`;
+  }).join(" ");
 }
 
-// ── Overlay shape ─────────────────────────────────────────────────────────────
-
-// Visual properties per overlay status + confidence
-function getOverlayVisual(ov) {
-  if (ov.status !== "suggested") return { dash: "none", opacity: 1 };
-  const c = ov.confidence || "medium";
-  return {
-    dash:    c==="high" ? "10 4" : c==="medium" ? "6 4" : "4 6",
-    opacity: c==="high" ? 0.75   : c==="medium" ? 0.55   : 0.38,
-  };
-}
-
-function OverlayShape({ ov, selected, zoom, tool, onMouseDown, onDragStart }) {
-  const st  = STYLE[ov.type] || { stroke:"#888", sw:1, fill:"none" };
-  const SEL = "#f59e0b";
-  const hw  = 6/zoom;
+function OverlayShape({ ov, selected, ppm, view }) {
   const pts = ov.points || [];
-  const { dash, opacity } = getOverlayVisual(ov);
+  const st = STYLE[ov.type] || { stroke: "#64748b", sw: 2, fill: "none" };
+  const dash = ov.status === "suggested" ? "8 5" : "none";
+  const opacity = ov.status === "suggested" ? 0.7 : 1;
 
-  const isEditing = selected && (tool===TOOLS.POINTER);
-
-  if (ov.type===OT.DOOR || ov.type===OT.WINDOW || ov.type===OT.COLUMN) {
-    const p=pts[0]; if(!p) return null;
-    const r=10/zoom;
-    const shapes = {
-      [OT.DOOR]:   <circle cx={p.x} cy={p.y} r={r} fill="#16a34a" stroke="#fff" strokeWidth={1.5/zoom}/>,
-      [OT.WINDOW]: <polygon points={`${p.x},${p.y-r} ${p.x+r},${p.y} ${p.x},${p.y+r} ${p.x-r},${p.y}`} fill="#7c3aed" stroke="#fff" strokeWidth={1.5/zoom}/>,
-      [OT.COLUMN]: <rect x={p.x-r*0.7} y={p.y-r*0.7} width={r*1.4} height={r*1.4} fill="#92400e" stroke="#fff" strokeWidth={1.5/zoom}/>,
-    };
-    const labels = { [OT.DOOR]:"D", [OT.WINDOW]:"W", [OT.COLUMN]:"C" };
+  if (ov.type === OT.DOOR || ov.type === OT.WINDOW || ov.type === OT.COLUMN) {
+    const docPoint = pts[0];
+    if (!docPoint) return null;
+    const p = documentToScreen(docPoint, view);
+    const r = 10;
     return (
-      <g onMouseDown={onMouseDown} style={{cursor:"pointer"}}>
-        {selected&&<circle cx={p.x} cy={p.y} r={r+5/zoom} fill={SEL} opacity={0.2}/>}
-        {shapes[ov.type]}
-        <text x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central" fontSize={7/zoom} fontWeight="bold" fill="#fff" style={{pointerEvents:"none"}}>{labels[ov.type]}</text>
+      <g style={{ cursor: "pointer" }} opacity={opacity}>
+        {selected && <circle cx={p.x} cy={p.y} r={16} fill="#f59e0b" opacity={0.2} />}
+        {ov.type === OT.DOOR && <circle cx={p.x} cy={p.y} r={r} fill="#16a34a" stroke="#fff" strokeWidth={2} />}
+        {ov.type === OT.WINDOW && <polygon points={`${p.x},${p.y - r} ${p.x + r},${p.y} ${p.x},${p.y + r} ${p.x - r},${p.y}`} fill="#7c3aed" stroke="#fff" strokeWidth={2} />}
+        {ov.type === OT.COLUMN && <rect x={p.x - r} y={p.y - r} width={r * 2} height={r * 2} fill="#92400e" stroke="#fff" strokeWidth={2} />}
+        <text x={p.x} y={p.y + 3} textAnchor="middle" fontSize={9} fontWeight="800" fill="#fff" style={{ pointerEvents: "none" }}>
+          {ov.type === OT.DOOR ? "D" : ov.type === OT.WINDOW ? "W" : "C"}
+        </text>
       </g>
     );
   }
 
-  if (ov.type===OT.CIRCLE) {
-    if (pts.length<2) return null;
-    const [cen,radPt]=pts, r=dist(cen,radPt), c=cen;
+  if (ov.type === OT.CIRCLE) {
+    if (pts.length < 2) return null;
+    const center = documentToScreen(pts[0], view);
+    const r = dist(pts[0], pts[1]) * view.scale;
     return (
-      <g onMouseDown={onMouseDown} style={{cursor:"pointer"}}>
-        {selected&&<circle cx={c.x} cy={c.y} r={r} stroke={SEL} strokeWidth={(st.sw+4)/zoom} fill="none"/>}
-        <circle cx={c.x} cy={c.y} r={r} stroke={st.stroke} strokeWidth={st.sw/zoom} fill={st.fill||"none"}/>
-        <text x={c.x} y={c.y} textAnchor="middle" dominantBaseline="middle" fontSize={11/zoom} fontWeight="700" fill={st.stroke} style={{pointerEvents:"none"}}>{ov.roomName||ov.label}</text>
-        {isEditing&&pts.map((p,i)=>(
-          <circle key={i} cx={p.x} cy={p.y} r={hw} fill="#fff" stroke={SEL} strokeWidth={2/zoom} style={{cursor:"grab"}} onMouseDown={onDragStart(ov.id,i)}/>
-        ))}
+      <g style={{ cursor: "pointer" }} opacity={opacity}>
+        {selected && <circle cx={center.x} cy={center.y} r={r} stroke="#f59e0b" strokeWidth={st.sw + 5} fill="none" />}
+        <circle cx={center.x} cy={center.y} r={r} stroke={st.stroke} strokeWidth={st.sw} fill={st.fill || "none"} strokeDasharray={dash} />
+        <OverlayText ov={ov} ppm={ppm} view={view} />
       </g>
     );
   }
 
-  // Room / rectangle / polylines
-  const isPolygon = ov.type===OT.ROOM||ov.type===OT.AREA||ov.type===OT.RECTANGLE;
-  if (isPolygon) {
-    if (pts.length<3) return null;
-    const ptStr=pts.map(p=>`${p.x},${p.y}`).join(" ");
-    const c=centroid(pts);
+  if (ov.type === OT.ROOM || ov.type === OT.AREA || ov.type === OT.RECTANGLE) {
+    if (pts.length < 3) return null;
+    const pointString = screenPointString(pts, view);
     return (
-      <g onMouseDown={onMouseDown} style={{cursor:"pointer"}} opacity={opacity}>
-        {selected&&<polygon points={ptStr} stroke={SEL} strokeWidth={(st.sw+3)/zoom} fill="none"/>}
-        <polygon points={ptStr} stroke={st.stroke} strokeWidth={st.sw/zoom} fill={st.fill||"none"} strokeDasharray={dash} strokeLinejoin="round"/>
-        <text x={c.x} y={c.y-6/zoom} textAnchor="middle" fontSize={12/zoom} fontWeight="700" fill={st.stroke} style={{pointerEvents:"none"}}>{ov.roomName||ov.label}</text>
-        {ov.status==="suggested"&&<text x={c.x} y={c.y+8/zoom} textAnchor="middle" fontSize={8/zoom} fill={st.stroke} opacity={0.7} style={{pointerEvents:"none"}}>AI suggestion</text>}
-        {ov.floorFinish&&ov.status!=="suggested"&&<text x={c.x} y={c.y+8/zoom} textAnchor="middle" fontSize={9/zoom} fill={st.stroke} opacity={0.8} style={{pointerEvents:"none"}}>{ov.floorFinish}</text>}
-        {isEditing&&pts.map((p,i)=>(
-          <circle key={i} cx={p.x} cy={p.y} r={hw} fill="#fff" stroke={SEL} strokeWidth={2/zoom} style={{cursor:"grab"}} onMouseDown={onDragStart(ov.id,i)}/>
-        ))}
+      <g style={{ cursor: "pointer" }} opacity={opacity}>
+        {selected && <polygon points={pointString} stroke="#f59e0b" strokeWidth={st.sw + 4} fill="none" />}
+        <polygon points={pointString} stroke={st.stroke} strokeWidth={st.sw} fill={st.fill || "none"} strokeDasharray={dash} strokeLinejoin="round" />
+        <OverlayText ov={ov} ppm={ppm} view={view} />
       </g>
     );
   }
 
-  // Polylines (walls, measure, polyline)
-  if (pts.length<2) return null;
-  const ptStr=pts.map(p=>`${p.x},${p.y}`).join(" ");
-  const mid=centroid(pts);
-  const isWall=ov.type===OT.EXTERNAL_WALL||ov.type===OT.INTERNAL_WALL;
+  if (pts.length < 2) return null;
+  const pointString = screenPointString(pts, view);
   return (
-    <g onMouseDown={onMouseDown} style={{cursor:"pointer"}} opacity={opacity}>
-      <polyline points={ptStr} stroke="transparent" strokeWidth={16/zoom} fill="none"/>
-      {selected&&<polyline points={ptStr} stroke={SEL} strokeWidth={(st.sw+5)/zoom} fill="none" strokeLinecap="round"/>}
-      <polyline points={ptStr} stroke={st.stroke} strokeWidth={st.sw/zoom} fill="none" strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round"/>
-      {isWall&&<text x={mid.x} y={mid.y-7/zoom} textAnchor="middle" fontSize={10/zoom} fontWeight="700" fill={st.stroke} style={{pointerEvents:"none"}}>{ov.label}</text>}
-      {ov.type===OT.MEASURE&&pts.length===2&&<MeasureLabel pts={pts} zoom={zoom}/>}
-      {isEditing&&pts.map((p,i)=>(
-        <circle key={i} cx={p.x} cy={p.y} r={hw} fill="#fff" stroke={SEL} strokeWidth={2/zoom} style={{cursor:"grab"}} onMouseDown={onDragStart(ov.id,i)}/>
-      ))}
+    <g style={{ cursor: "pointer" }} opacity={opacity}>
+      <polyline points={pointString} stroke="transparent" strokeWidth={18} fill="none" />
+      {selected && <polyline points={pointString} stroke="#f59e0b" strokeWidth={st.sw + 6} fill="none" strokeLinecap="round" strokeLinejoin="round" />}
+      <polyline points={pointString} stroke={st.stroke} strokeWidth={st.sw} fill="none" strokeDasharray={dash} strokeLinecap="round" strokeLinejoin="round" />
+      <OverlayText ov={ov} ppm={ppm} view={view} />
     </g>
   );
 }
 
-function MeasureLabel({ pts, zoom }) {
-  const mx=(pts[0].x+pts[1].x)/2, my=(pts[0].y+pts[1].y)/2;
+function OverlayText({ ov, ppm, view }) {
+  const p = documentToScreen(labelPoint(ov), view);
+  const text = ov.roomName || (ov.type === OT.MEASURE ? overlayLabel(ov, ppm) : ov.label);
+  const measure = ov.type !== OT.MEASURE ? overlayLabel(ov, ppm) : "";
   return (
-    <>
-      <rect x={mx-26/zoom} y={my-8/zoom} width={52/zoom} height={14/zoom} rx={3/zoom} fill="rgba(255,255,255,0.9)" stroke="#ef4444" strokeWidth={0.5/zoom}/>
-      <text x={mx} y={my+3/zoom} textAnchor="middle" fontSize={9/zoom} fill="#dc2626" fontWeight="700" style={{pointerEvents:"none"}}>
-        {/* label is set on overlay, shown via parent */}
-      </text>
-    </>
+    <g style={{ pointerEvents: "none" }}>
+      {text && (
+        <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize={12} fontWeight="800" fill="#0f172a" stroke="#fff" strokeWidth={3} paintOrder="stroke">
+          {text}
+        </text>
+      )}
+      {measure && (
+        <text x={p.x} y={p.y + 8} textAnchor="middle" fontSize={10} fontWeight="800" fill="#334155" stroke="#fff" strokeWidth={3} paintOrder="stroke">
+          {measure}
+        </text>
+      )}
+    </g>
   );
 }
 
-// ── Drawing preview ───────────────────────────────────────────────────────────
+function DrawPreview({ draw, cursor, view }) {
+  const st = STYLE[draw.type] || { stroke: "#2563eb", sw: 2, fill: "none" };
+  const pts = draw.points || [];
+  if (!cursor) return null;
+  const screenCursor = documentToScreen(cursor, view);
 
-function DrawPreview({ draw, cursor, zoom }) {
-  const { type, points } = draw;
-  const st = STYLE[type] || { stroke:"#3b82f6", sw:2, fill:"none" };
-  const c  = st.stroke;
-  const sw = st.sw/zoom;
-
-  // Show dots at committed points
-  const dots = points.map((p,i)=>(
-    <circle key={i} cx={p.x} cy={p.y} r={4/zoom} fill={c} opacity={0.9} style={{pointerEvents:"none"}}/>
-  ));
-
-  // Cursor ghost
-  const ghost = <circle cx={cursor.x} cy={cursor.y} r={3/zoom} fill={c} opacity={0.4} style={{pointerEvents:"none"}}/>;
-
-  if (TWO_POINT_TOOLS.has(type)) {
-    if (points.length===0) return <>{ghost}</>;
-    const [a]=points;
-    if (type===TOOLS.CIRCLE) {
-      const r=dist(a,cursor);
-      return (
-        <g style={{pointerEvents:"none"}}>
-          {dots}
-          <circle cx={a.x} cy={a.y} r={r} stroke={c} strokeWidth={sw} fill={st.fill||"none"} strokeDasharray={`${5/zoom} ${3/zoom}`} opacity={0.7}/>
-          {ghost}
-        </g>
-      );
+  if (TWO_POINT_TOOLS.has(draw.type)) {
+    if (!pts.length) return <circle cx={screenCursor.x} cy={screenCursor.y} r={4} fill={st.stroke} opacity={0.5} />;
+    const screenStart = documentToScreen(pts[0], view);
+    if (draw.type === TOOLS.CIRCLE) {
+      return <circle cx={screenStart.x} cy={screenStart.y} r={dist(pts[0], cursor) * view.scale} stroke={st.stroke} strokeWidth={st.sw} fill={st.fill || "none"} strokeDasharray="8 5" />;
     }
-    // Rectangle
-    const rc=rectCorners(a,cursor);
-    const ptStr=rc.map(p=>`${p.x},${p.y}`).join(" ");
-    return (
-      <g style={{pointerEvents:"none"}}>
-        {dots}
-        <polygon points={ptStr} stroke={c} strokeWidth={sw} fill={st.fill||"none"} strokeDasharray={`${5/zoom} ${3/zoom}`} opacity={0.7}/>
-        {ghost}
-      </g>
-    );
+    const corners = rectCorners(pts[0], cursor);
+    return <polygon points={screenPointString(corners, view)} stroke={st.stroke} strokeWidth={st.sw} fill={st.fill || "none"} strokeDasharray="8 5" />;
   }
 
-  const all=[...points,cursor];
-  const ptStr=all.map(p=>`${p.x},${p.y}`).join(" ");
-
-  if (POLYGON_TOOLS.has(type)) {
-    return (
-      <g style={{pointerEvents:"none"}}>
-        {all.length>=3&&<polygon points={ptStr} fill={st.fill||"rgba(100,100,255,0.06)"} stroke="none"/>}
-        <polyline points={ptStr} stroke={c} strokeWidth={sw} fill="none" strokeDasharray={`${5/zoom} ${3/zoom}`} strokeLinecap="round" opacity={0.8}/>
-        {dots}
-        {/* Close-ring hint */}
-        {points.length>=3&&<circle cx={points[0].x} cy={points[0].y} r={CLOSE_RADIUS_PX/zoom} stroke={c} strokeWidth={1/zoom} fill="none" opacity={0.35}/>}
-        {ghost}
-      </g>
-    );
-  }
-
+  const all = [...pts, cursor];
+  const pointString = screenPointString(all, view);
   return (
-    <g style={{pointerEvents:"none"}}>
-      {all.length>=2&&<polyline points={ptStr} stroke={c} strokeWidth={sw} fill="none" strokeDasharray={`${5/zoom} ${3/zoom}`} strokeLinecap="round" opacity={0.75}/>}
-      {dots}
-      {ghost}
+    <g style={{ pointerEvents: "none" }}>
+      {POLYGON_TOOLS.has(draw.type) && all.length >= 3 && <polygon points={pointString} fill={st.fill || "rgba(37,99,235,0.08)"} stroke="none" />}
+      {all.length >= 2 && <polyline points={pointString} stroke={st.stroke} strokeWidth={st.sw} fill="none" strokeDasharray="8 5" strokeLinecap="round" strokeLinejoin="round" />}
+      {pts.map((pt, index) => {
+        const screen = documentToScreen(pt, view);
+        return <circle key={index} cx={screen.x} cy={screen.y} r={4} fill={st.stroke} />;
+      })}
+      <circle cx={screenCursor.x} cy={screenCursor.y} r={4} fill={st.stroke} opacity={0.5} />
     </g>
   );
 }
 
-// ── View button ───────────────────────────────────────────────────────────────
-
-function VBtn({onClick,title,children}) {
-  const [h,sh]=useState(false);
+function CalibrationPreview({ calibrating, cursor, view }) {
+  const points = calibrating?.points || [];
+  const screenPoints = points.map((point) => documentToScreen(point, view));
+  const screenCursor = cursor ? documentToScreen(cursor, view) : null;
   return (
-    <button type="button" title={title}
-      onMouseDown={e=>e.stopPropagation()}
-      onClick={e=>{e.stopPropagation();onClick();}}
-      onMouseEnter={()=>sh(true)} onMouseLeave={()=>sh(false)}
-      style={{...S.ctrlBtn,...(h?{background:"rgba(255,255,255,0.14)"}:{})}}>
+    <g style={{ pointerEvents: "none" }}>
+      {screenPoints.map((pt, index) => (
+        <g key={index}>
+          <circle cx={pt.x} cy={pt.y} r={10} fill="rgba(99,102,241,0.16)" stroke="#6366f1" strokeWidth={2.5} />
+          <circle cx={pt.x} cy={pt.y} r={3.5} fill="#6366f1" />
+        </g>
+      ))}
+      {screenPoints.length === 1 && screenCursor && (
+        <>
+          <line x1={screenPoints[0].x} y1={screenPoints[0].y} x2={screenCursor.x} y2={screenCursor.y} stroke="#6366f1" strokeWidth={3} strokeDasharray="8 5" />
+          <circle cx={screenCursor.x} cy={screenCursor.y} r={9} fill="rgba(99,102,241,0.14)" stroke="#6366f1" strokeWidth={2.5} />
+          <circle cx={screenCursor.x} cy={screenCursor.y} r={3} fill="#6366f1" />
+        </>
+      )}
+      {screenPoints.length >= 2 && <line x1={screenPoints[0].x} y1={screenPoints[0].y} x2={screenPoints[1].x} y2={screenPoints[1].y} stroke="#6366f1" strokeWidth={2.5} />}
+    </g>
+  );
+}
+
+function SnapMarker({ snap, view }) {
+  const point = documentToScreen(snap, view);
+  const color = snap.type === "wall-corner" ? "#7c3aed" : "#f97316";
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <circle cx={point.x} cy={point.y} r={9} fill="none" stroke={color} strokeWidth={2.5} />
+      <line x1={point.x - 12} y1={point.y} x2={point.x - 4} y2={point.y} stroke={color} strokeWidth={2} />
+      <line x1={point.x + 4} y1={point.y} x2={point.x + 12} y2={point.y} stroke={color} strokeWidth={2} />
+      <line x1={point.x} y1={point.y - 12} x2={point.x} y2={point.y - 4} stroke={color} strokeWidth={2} />
+      <line x1={point.x} y1={point.y + 4} x2={point.x} y2={point.y + 12} stroke={color} strokeWidth={2} />
+      <text x={point.x + 13} y={point.y - 9} fontSize={11} fontWeight={800} fill={color} stroke="#fff" strokeWidth={3} paintOrder="stroke">
+        {snap.label || "Snap"}
+      </text>
+    </g>
+  );
+}
+
+function formatLiveDistance(lengthPx, ppm) {
+  if (ppm > 0) {
+    const metres = lengthPx / ppm;
+    if (metres < 1) return `${Math.round(metres * 1000)} mm`;
+    return `${metres.toFixed(2)} m`;
+  }
+  return `${Math.round(lengthPx)} px`;
+}
+
+function LiveDistanceLabel({ calibrating, draw, cursor, ppm, view }) {
+  const start = calibrating?.points?.[0] || draw?.points?.[0] || null;
+  if (!start || !cursor) return null;
+  if (draw && draw.type !== TOOLS.MEASURE && draw.type !== TOOLS.INTERNAL_WALL) return null;
+  const screen = documentToScreen(cursor, view);
+  const text = formatLiveDistance(dist(start, cursor), ppm);
+  const width = Math.max(58, text.length * 8 + 16);
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <rect x={screen.x + 12} y={screen.y - 30} width={width} height={22} rx={6} fill="rgba(15,23,42,0.88)" />
+      <text x={screen.x + 12 + width / 2} y={screen.y - 15} textAnchor="middle" fontSize={12} fontWeight={900} fill="#fff">
+        {text}
+      </text>
+    </g>
+  );
+}
+
+function ViewButton({ onClick, title, children }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+      style={S.ctrlBtn}
+    >
       {children}
     </button>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const S = {
-  root:     {position:"relative",width:"100%",height:"100%",overflow:"hidden",outline:"none",background:"#fff",userSelect:"none",pointerEvents:"auto",overscrollBehavior:"contain",touchAction:"none"},
-  svg:      {display:"block",width:"100%",height:"100%",background:"#fff",pointerEvents:"auto"},
-  empty:    {width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#f8fafc"},
-  gate:     {position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(248,250,252,0.88)",backdropFilter:"blur(2px)",zIndex:40},
-  gateCard: {background:"#fff",border:"1.5px solid #bfdbfe",borderRadius:14,padding:"24px 28px",maxWidth:320,textAlign:"center",boxShadow:"0 8px 24px rgba(0,0,0,0.08)"},
-  banner:   {position:"absolute",bottom:68,left:"50%",transform:"translateX(-50%)",background:"rgba(15,23,42,0.9)",color:"#f1f5f9",padding:"7px 18px",borderRadius:99,fontSize:13,fontWeight:700,zIndex:60,pointerEvents:"none",whiteSpace:"nowrap"},
-  controls: {position:"absolute",bottom:16,right:16,zIndex:50,display:"flex",flexDirection:"column",gap:3,background:"rgba(15,23,42,0.88)",borderRadius:12,padding:"8px 6px",border:"1px solid rgba(255,255,255,0.12)",boxShadow:"0 4px 16px rgba(0,0,0,0.3)"},
-  ctrlBtn:  {width:40,height:40,border:"none",borderRadius:8,background:"transparent",color:"#e2e8f0",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1},
-  ctrlSep:  {height:1,background:"rgba(255,255,255,0.12)",margin:"1px 0"},
-  badge:     {position:"absolute",bottom:16,left:16,background:"rgba(15,23,42,0.78)",color:"#94a3b8",fontSize:12,fontWeight:700,padding:"4px 10px",borderRadius:8,pointerEvents:"none",zIndex:50},
-  keyHint:   {position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",background:"rgba(15,23,42,0.55)",color:"#64748b",fontSize:11,padding:"3px 12px",borderRadius:99,pointerEvents:"none",zIndex:50,whiteSpace:"nowrap"},
-  noSnapMsg: {position:"absolute",top:12,left:"50%",transform:"translateX(-50%)",background:"rgba(220,38,38,0.92)",color:"#fff",padding:"9px 20px",borderRadius:99,fontSize:13,fontWeight:600,zIndex:70,pointerEvents:"none",whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,0.3)"},
+  root: { position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#e5e7eb", userSelect: "none", overscrollBehavior: "contain", touchAction: "none" },
+  viewport: { position: "absolute", inset: 0, overflow: "hidden", touchAction: "none" },
+  surface: { position: "absolute", left: 0, top: 0, background: "#fff", boxShadow: "0 10px 35px rgba(15,23,42,0.18)", transformOrigin: "0 0", willChange: "transform", contain: "layout paint style" },
+  image: { position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", objectFit: "fill", pointerEvents: "none", backfaceVisibility: "hidden" },
+  overlay: { position: "absolute", inset: 0, display: "block", cursor: "crosshair" },
+  empty: { width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#f8fafc", color: "#475569" },
+  emptyTitle: { fontSize: 16, fontWeight: 900, color: "#0f172a" },
+  emptySub: { fontSize: 12, marginTop: 6 },
+  gate: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(248,250,252,0.76)", zIndex: 30, pointerEvents: "none" },
+  gateCard: { background: "#fff", border: "1.5px solid #bfdbfe", borderRadius: 8, padding: "18px 22px", maxWidth: 300, textAlign: "center", boxShadow: "0 8px 22px rgba(15,23,42,0.12)" },
+  banner: { position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", background: "rgba(15,23,42,0.9)", color: "#f8fafc", padding: "8px 16px", borderRadius: 999, fontSize: 13, fontWeight: 800, zIndex: 50, pointerEvents: "none", whiteSpace: "nowrap" },
+  controls: { position: "absolute", right: 16, bottom: 16, zIndex: 60, display: "flex", flexDirection: "column", gap: 4, padding: 8, borderRadius: 10, background: "rgba(15,23,42,0.9)", boxShadow: "0 8px 20px rgba(15,23,42,0.35)" },
+  ctrlBtn: { width: 42, height: 36, border: "none", borderRadius: 7, background: "transparent", color: "#f8fafc", fontSize: 13, fontWeight: 900, cursor: "pointer" },
+  ctrlSep: { height: 1, background: "rgba(255,255,255,0.16)", margin: "2px 0" },
+  badge: { position: "absolute", left: 16, bottom: 16, zIndex: 60, background: "rgba(15,23,42,0.75)", color: "#e2e8f0", borderRadius: 7, padding: "5px 9px", fontSize: 12, fontWeight: 800, pointerEvents: "none" },
 };
-

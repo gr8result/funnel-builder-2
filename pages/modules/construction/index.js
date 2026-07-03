@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 export default function ConstructionHub() {
   const [estimateCredits, setEstimateCredits] = useState(0);
+  const [recentJobs, setRecentJobs] = useState([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -21,6 +22,25 @@ export default function ConstructionHub() {
     readCredits();
     window.addEventListener("focus", readCredits);
     return () => window.removeEventListener("focus", readCredits);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readRecent = () => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem("gr8-job-recent-files") || "[]");
+        setRecentJobs(Array.isArray(parsed) ? parsed.slice(0, 10) : []);
+      } catch {
+        setRecentJobs([]);
+      }
+    };
+    readRecent();
+    window.addEventListener("focus", readRecent);
+    window.addEventListener("storage", readRecent);
+    return () => {
+      window.removeEventListener("focus", readRecent);
+      window.removeEventListener("storage", readRecent);
+    };
   }, []);
 
   return (
@@ -120,6 +140,27 @@ export default function ConstructionHub() {
               action="Open Job"
               compact
             />
+          </div>
+
+          <div style={S.recentWrap}>
+            <div style={S.recentTitle}>Recent Jobs</div>
+            {!recentJobs.length ? (
+              <div style={S.recentEmpty}>No recent files yet</div>
+            ) : (
+              <div style={S.recentList}>
+                {recentJobs.slice(0, 10).map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/modules/estimate-builder?mode=open-recent&recentId=${encodeURIComponent(job.id)}`}
+                    style={S.recentRow}
+                  >
+                    <strong style={S.recentName}>{job.jobName || "Untitled Job"}</strong>
+                    <span style={S.recentMeta}>{job.clientName || "No client"}</span>
+                    <span style={S.recentMeta}>{job.lastModified ? new Date(job.lastModified).toLocaleString() : "Unknown"}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -314,6 +355,43 @@ const S = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: 18,
+  },
+  recentWrap: {
+    marginTop: 18,
+    border: "1px solid #1e293b",
+    borderRadius: 12,
+    background: "#0d1522",
+    padding: 14,
+  },
+  recentTitle: {
+    color: "#e2e8f0",
+    fontWeight: 800,
+    marginBottom: 10,
+  },
+  recentEmpty: {
+    color: "#94a3b8",
+    fontSize: 14,
+  },
+  recentList: {
+    display: "grid",
+    gap: 8,
+  },
+  recentRow: {
+    border: "1px solid #334155",
+    borderRadius: 8,
+    background: "#0f172a",
+    padding: "10px 12px",
+    display: "grid",
+    gap: 2,
+    textDecoration: "none",
+  },
+  recentName: {
+    color: "#f8fafc",
+    fontSize: 14,
+  },
+  recentMeta: {
+    color: "#94a3b8",
+    fontSize: 12,
   },
   estimateCard: {
     background: "#0d1522",

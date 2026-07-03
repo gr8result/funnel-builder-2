@@ -25,6 +25,10 @@ function isMissingPublishedWebsitesTable(error) {
 }
 
 function serialize(record) {
+  const internalPreviewUrl = buildHostedWebsiteUrl({ slug: record.slug });
+  const primaryWebsiteUrl = record.custom_domain
+    ? buildWebsiteUrl({ slug: record.slug, domain: record.custom_domain })
+    : internalPreviewUrl;
   return {
     id: record.id,
     name: record.name,
@@ -37,10 +41,10 @@ function serialize(record) {
     publishedAt: record.published_at,
     updatedAt: record.updated_at,
     sitePath: buildWebsitePath(record.slug),
-    defaultUrl: buildHostedWebsiteUrl({ slug: record.slug }),
-    liveUrl: record.custom_domain
-      ? buildWebsiteUrl({ slug: record.slug, domain: record.custom_domain })
-      : buildHostedWebsiteUrl({ slug: record.slug }),
+    defaultUrl: internalPreviewUrl,
+    internalPreviewUrl,
+    primaryWebsiteUrl,
+    liveUrl: primaryWebsiteUrl,
     dnsTargetHost: getCustomDomainTargetHost(),
     customDomainInstructions: buildInstructions(record),
   };
@@ -92,9 +96,35 @@ async function handler(req, res) {
       }
     }
 
+    const { data: existingRecord } = await supabaseAdmin
+      .from("published_websites")
+      .select("site_data, slug")
+      .eq("id", publicationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const slug = existingRecord?.slug || "";
+    const internalPreviewUrl = buildHostedWebsiteUrl({ slug });
+    const primaryWebsiteUrl = customDomain
+      ? buildWebsiteUrl({ slug, domain: customDomain })
+      : internalPreviewUrl;
+    const siteData = existingRecord?.site_data && typeof existingRecord.site_data === "object" ? existingRecord.site_data : {};
+    const publication = siteData.publication && typeof siteData.publication === "object" ? siteData.publication : {};
+
     const nextPatch = {
       custom_domain: customDomain || null,
+      primary_domain: customDomain || null,
       domain_status: customDomain ? "pending_verification" : "generated",
+      site_data: {
+        ...siteData,
+        primaryWebsiteUrl,
+        internalPreviewUrl,
+        publication: {
+          ...publication,
+          primaryWebsiteUrl,
+          internalPreviewUrl,
+        },
+      },
     };
 
     const { data, error } = await supabaseAdmin

@@ -305,6 +305,125 @@ const PRICING = {
 // Funnel pack IDs: funnel-pack-s | funnel-pack-m | funnel-pack-l | funnel-unlimited
 // ─────────────────────────────────────────────────────────────────────────────
 // Base platform plans — prices in AUD/month
+export const WEBSITE_TIER_ORDER = ["website-starter", "website-growth", "website-pro", "website-agency"];
+
+export const WEBSITE_PRICING_PLANS = [
+  {
+    id: "website-starter",
+    name: "Starter",
+    price: PRICING["website-starter"].price,
+    priceLabel: `$${PRICING["website-starter"].price} / month`,
+    color: "#6366f1",
+    marketingCta: "Start Free Trial",
+    marketingHref: "/create-account",
+    features: [
+      "1 website",
+      "Drag-and-drop builder",
+      "5 pages",
+      "Free subdomain",
+      "Basic templates",
+      "Basic SEO tools",
+    ],
+  },
+  {
+    id: "website-growth",
+    name: "Growth",
+    price: PRICING["website-growth"].price,
+    priceLabel: `$${PRICING["website-growth"].price} / month`,
+    color: "#22c55e",
+    marketingCta: "Get Started",
+    marketingHref: "/create-account",
+    features: [
+      "2 websites",
+      "Custom domain",
+      "10 pages",
+      "AI content generation",
+      "Blog & landing pages",
+      "Contact forms",
+      "Google Analytics",
+    ],
+  },
+  {
+    id: "website-pro",
+    name: "Scale",
+    price: PRICING["website-pro"].price,
+    priceLabel: `$${PRICING["website-pro"].price} / month`,
+    color: "#f59e0b",
+    recommended: true,
+    marketingCta: "Get Started",
+    marketingHref: "/create-account",
+    features: [
+      "3 websites",
+      "Custom domains",
+      "Full AI website builder",
+      "AI generate entire site from prompt",
+      "Ecommerce & product pages",
+      "Advanced analytics",
+      "Custom code injection",
+      "Priority support",
+    ],
+  },
+  {
+    id: "website-agency",
+    name: "Professional",
+    price: PRICING["website-agency"].price,
+    priceLabel: `$${PRICING["website-agency"].price} / month`,
+    color: "#7c3aed",
+    marketingCta: "Book Demo",
+    marketingHref: "/support",
+    features: [
+      "5 websites",
+      "All Scale features",
+      "AI site generation (unlimited)",
+      "Client management",
+      "API access",
+      "Dedicated support",
+    ],
+  },
+];
+
+export const WEBSITE_TIER_PRICES = WEBSITE_PRICING_PLANS.reduce((acc, plan) => {
+  acc[plan.id] = plan.price;
+  return acc;
+}, {});
+
+export const WEBSITE_FEATURES = [
+  { label: "Websites",                  key: "websites" },
+  { label: "Pages",                     key: "pages" },
+  { label: "Custom domain",             key: "customDomain" },
+  { label: "Drag-and-drop builder",     key: "dragDrop" },
+  { label: "Blog",                      key: "blog" },
+  { label: "AI content generation",     key: "aiContent" },
+  { label: "Full AI site builder",      key: "aiBuilder" },
+  { label: "Ecommerce",                 key: "ecommerce" },
+  { label: "Custom code injection",     key: "customCode" },
+  { label: "Analytics",                 key: "analytics" },
+  { label: "API access",                key: "apiAccess" },
+];
+
+export const WEBSITE_PLAN_FEATURES = {
+  "website-starter": {
+    websites: "1", pages: "5", customDomain: false, dragDrop: true, blog: false,
+    aiContent: false, aiBuilder: false, ecommerce: false, abTesting: false,
+    customCode: false, analytics: "Basic", apiAccess: false,
+  },
+  "website-growth": {
+    websites: "2", pages: "10", customDomain: true, dragDrop: true, blog: true,
+    aiContent: true, aiBuilder: false, ecommerce: false, abTesting: false,
+    customCode: false, analytics: "Standard", apiAccess: false,
+  },
+  "website-pro": {
+    websites: "3", pages: "Unlimited", customDomain: true, dragDrop: true, blog: true,
+    aiContent: true, aiBuilder: true, ecommerce: true, abTesting: true,
+    customCode: true, analytics: "Advanced", apiAccess: false,
+  },
+  "website-agency": {
+    websites: "5", pages: "Unlimited", customDomain: true, dragDrop: true, blog: true,
+    aiContent: true, aiBuilder: true, ecommerce: true, abTesting: true,
+    customCode: true, analytics: "Full", apiAccess: true,
+  },
+};
+
 export const BASE_PLANS = {
   starter:      { id: "starter",      name: "GR8 RESULT - Starter Plan",      price: 79,  introDiscountPercent: null, introMonths: 0, trialDays: 0 },
   growth:       { id: "growth",       name: "GR8 RESULT - Growth Plan",       price: 249, introDiscountPercent: null, introMonths: 0, trialDays: 0 },

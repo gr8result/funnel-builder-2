@@ -9,6 +9,7 @@ import {
   createPublicationPayload,
   getCustomDomainTargetHost,
   getPublishHost,
+  getSiteRootDomain,
   normalizeDomain,
   slugifyWebsiteValue,
 } from "../../../lib/website-builder/publishConfig";
@@ -36,6 +37,37 @@ function toErrorMessage(error, fallback) {
 function isMissingPublishedWebsitesTable(error) {
   const message = String(error?.message || "").toLowerCase();
   return message.includes("published_websites") && (message.includes("schema cache") || message.includes("does not exist") || message.includes("could not find the table"));
+}
+
+async function clearPrimaryWebsiteFlags(userId, keepId = "") {
+  const { data } = await supabaseAdmin
+    .from("published_websites")
+    .select("id, site_data")
+    .eq("user_id", userId)
+    .eq("published", true)
+    .limit(100);
+
+  for (const row of Array.isArray(data) ? data : []) {
+    if (!row?.id || row.id === keepId) continue;
+    const siteData = row.site_data && typeof row.site_data === "object" ? row.site_data : {};
+    const publication = siteData.publication && typeof siteData.publication === "object" ? siteData.publication : {};
+    if (siteData.isPrimaryWebsite === true || publication.isPrimaryWebsite === true || publication.primaryWebsite === true) {
+      await supabaseAdmin
+        .from("published_websites")
+        .update({
+          site_data: {
+            ...siteData,
+            isPrimaryWebsite: false,
+            publication: {
+              ...publication,
+              isPrimaryWebsite: false,
+              primaryWebsite: false,
+            },
+          },
+        })
+        .eq("id", row.id);
+    }
+  }
 }
 
 async function handler(req, res) {
@@ -70,16 +102,41 @@ async function handler(req, res) {
     before: videoHeroMediaBeforePublish,
     published: videoHeroMediaForPublish,
   });
-  const requestedCustomDomain = normalizeDomain(req.body?.customDomain);
+  const projectId = String(project.id || "").trim() || null;
+  let existingPublication = null;
+  if (projectId) {
+    const { data } = await supabaseAdmin
+      .from("published_websites")
+      .select("id, custom_domain, domain_status")
+      .eq("user_id", userId)
+      .eq("project_id", projectId)
+      .limit(1)
+      .maybeSingle();
+    existingPublication = data || null;
+  }
+
+  const requestedCustomDomain = normalizeDomain(req.body?.customDomain) || normalizeDomain(existingPublication?.custom_domain);
   const useCustomDomain = !!requestedCustomDomain;
+  const nextDomainStatus = useCustomDomain
+    ? (normalizeDomain(existingPublication?.custom_domain) === requestedCustomDomain
+      ? (existingPublication?.domain_status || "pending_verification")
+      : "pending_verification")
+    : "generated";
   const requestedSlug = slugifyWebsiteValue(req.body?.slug || publication.slug);
+  const rootDomain = getSiteRootDomain();
+  const requestedRootPrimaryWebsite = req.body?.primaryWebsite === true
+    || (rootDomain && (requestedCustomDomain === rootDomain || requestedCustomDomain === `www.${rootDomain}`))
+    || requestedSlug === "gr8-result-digital-solutions";
+  const primaryWebsiteUrl = useCustomDomain
+    ? buildWebsiteUrl({ slug: requestedSlug, domain: requestedCustomDomain })
+    : buildHostedWebsiteUrl({ slug: requestedSlug });
+  const internalPreviewUrl = buildHostedWebsiteUrl({ slug: requestedSlug });
   if (!requestedSlug) {
     return res.status(400).json({ ok: false, error: "A site slug is required to publish" });
   }
 
-  const projectId = String(project.id || "").trim() || null;
   const slug = requestedSlug;
-  const primaryDomain = buildDefaultSiteDomain(slug) || getPublishHost() || `${slug}--published`;
+  const primaryDomain = requestedCustomDomain || buildDefaultSiteDomain(slug) || null;
   const customDomainTarget = getCustomDomainTargetHost();
 
   if (projectId) {
@@ -126,18 +183,29 @@ async function handler(req, res) {
     slug,
     primary_domain: primaryDomain,
     custom_domain: useCustomDomain ? requestedCustomDomain : null,
-    domain_status: useCustomDomain ? "pending_verification" : "generated",
+    domain_status: nextDomainStatus,
     published: true,
     published_at: new Date().toISOString(),
     site_data: {
       ...publication.site_data,
       slug,
       publishedAt: new Date().toISOString(),
+      isPrimaryWebsite: requestedRootPrimaryWebsite,
+      primaryWebsiteUrl,
+      internalPreviewUrl,
+      publication: {
+        ...(publication.site_data?.publication || {}),
+        isPrimaryWebsite: requestedRootPrimaryWebsite,
+        primaryWebsite: requestedRootPrimaryWebsite,
+        primaryWebsiteUrl,
+        internalPreviewUrl,
+        rootDomain: rootDomain || null,
+      },
     },
   };
 
-  let existing = null;
-  if (projectId) {
+  let existing = existingPublication?.id ? { id: existingPublication.id } : null;
+  if (projectId && !existing) {
     const { data } = await supabaseAdmin
       .from("published_websites")
       .select("id")
@@ -171,14 +239,20 @@ async function handler(req, res) {
     return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not publish website") });
   }
 
+  if (requestedRootPrimaryWebsite) {
+    await clearPrimaryWebsiteFlags(userId, result.data.id);
+  }
+
   return res.status(200).json({
     ok: true,
     publication: result.data,
+    primaryWebsite: requestedRootPrimaryWebsite,
+    primaryWebsiteUrl,
+    internalPreviewUrl,
+    rootUrl: requestedRootPrimaryWebsite && rootDomain ? `https://${rootDomain}` : null,
     sitePath: buildWebsitePath(result.data.slug),
-    defaultUrl: buildHostedWebsiteUrl({ slug: result.data.slug }),
-    liveUrl: result.data.custom_domain
-      ? buildWebsiteUrl({ slug: result.data.slug, domain: result.data.custom_domain })
-      : buildHostedWebsiteUrl({ slug: result.data.slug }),
+    defaultUrl: internalPreviewUrl,
+    liveUrl: primaryWebsiteUrl,
     customDomainInstructions: useCustomDomain
       ? {
           domain: requestedCustomDomain,

@@ -16,7 +16,8 @@
     "lint": "next lint",
     "autoresponder:cron": "node scripts/local-autoresponder-cron.js",
     "sms:flush": "node scripts/flush-sms-queue.js",
-    "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs"
+    "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs",
+    "test:wb-typography": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-typography-persistence.mjs"
   },
   "dependencies": {
     "@chaibuilder/sdk": "^4.0.0-beta.51",
@@ -30,6 +31,15 @@
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.101.1",
+    "@tiptap/core": "2.27.2",
+    "@tiptap/extension-color": "2.27.2",
+    "@tiptap/extension-highlight": "2.27.2",
+    "@tiptap/extension-link": "2.27.2",
+    "@tiptap/extension-text-align": "2.27.2",
+    "@tiptap/extension-text-style": "2.27.2",
+    "@tiptap/extension-underline": "2.27.2",
+    "@tiptap/react": "2.27.2",
+    "@tiptap/starter-kit": "2.27.2",
     "@twilio/voice-sdk": "^2.18.0",
     "asynckit": "^0.5.0",
     "axios": "^1.13.2",

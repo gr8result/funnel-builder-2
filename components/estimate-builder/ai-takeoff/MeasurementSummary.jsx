@@ -1,11 +1,11 @@
 // MeasurementSummary.jsx — Phase 1: live measurements from drawn overlays.
 
 import { FLOOR_FINISHES, LEVEL_OPTIONS } from "./takeoffTypes";
-import { summarise, pxToM, pxToM2, polyLen, polyArea } from "./takeoffUtils";
+import { summarise, pxToM, pxToM2, polyLen, polyArea, getPixelsPerUnit } from "./takeoffUtils";
 
 export default function MeasurementSummary({ pages, selectedPageId, onUpdateOverlay }) {
   const page   = pages.find(p => p.id === selectedPageId);
-  const ppm    = page?.scale?.pixelsPerMetre || 0;
+  const ppm    = getPixelsPerUnit(page?.scale);
   const ovs    = page?.overlays || [];
   const totals = summarise(ovs, ppm);
   const level  = LEVEL_OPTIONS.find(l => l.value === page?.level)?.label || "";

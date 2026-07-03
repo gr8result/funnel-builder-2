@@ -543,6 +543,7 @@ function pickDefaultAvatarSrc(assets) {
 function resolvePublishedNavHref(link, navigationContext) {
   const href = String(link?.href || "").trim();
   if (!href) return "#";
+  const appBaseUrl = String(navigationContext?.appBaseUrl || "").replace(/\/$/, "");
   const canonicalRoutes = {
     home: "/",
     "about-us": "/about",
@@ -568,6 +569,21 @@ function resolvePublishedNavHref(link, navigationContext) {
   const pageMap = navigationContext?.pageMap || {};
   const basePath = String(navigationContext?.basePath || "").replace(/\/$/, "");
   const normalizedHref = href === "/" ? "home" : slugifyText(href.replace(/^\//, ""));
+  const platformRoutes = new Set([
+    "app",
+    "login",
+    "log-in",
+    "signin",
+    "sign-in",
+    "dashboard",
+    "register",
+    "signup",
+    "sign-up",
+  ]);
+  if (appBaseUrl && platformRoutes.has(normalizedHref)) {
+    const path = normalizedHref === "app" ? "" : `/${href.replace(/^\//, "")}`;
+    return `${appBaseUrl}${path}`;
+  }
   const publishedHref = pageMap[normalizedHref];
 
   if (publishedHref) {

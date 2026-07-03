@@ -4,121 +4,17 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { supabase } from "../../../utils/supabase-client";
-import ICONS from "../../../components/iconMap";
-import { BASE_PLAN_INCLUDES } from "../../../data/pricing";
+import {
+  BASE_PLAN_INCLUDES,
+  WEBSITE_FEATURES,
+  WEBSITE_PLAN_FEATURES,
+  WEBSITE_PRICING_PLANS,
+  WEBSITE_TIER_ORDER,
+  WEBSITE_TIER_PRICES,
+} from "../../../data/pricing";
+import PricingPlans from "../../../components/pricing/PricingPlans";
+import { pricingCardStyles } from "../../../components/pricing/PricingCard";
 import Link from "next/link";
-
-const WEBSITE_TIER_ORDER  = ["website-starter", "website-growth", "website-pro", "website-agency"];
-const WEBSITE_TIER_PRICES = {
-  "website-starter": 29,
-  "website-growth":  59,
-  "website-pro":     79,
-  "website-agency":  149,
-};
-
-const PLANS = [
-  {
-    id: "website-starter",
-    name: "Starter",
-    price: 29,
-    priceLabel: "$29 / month",
-    color: "#6366f1",
-    features: [
-      "1 website",
-      "Drag-and-drop builder",
-      "5 pages",
-      "Free subdomain",
-      "Basic templates",
-      "Basic SEO tools",
-    ],
-  },
-  {
-    id: "website-growth",
-    name: "Growth",
-    price: 59,
-    priceLabel: "$59 / month",
-    color: "#22c55e",
-    features: [
-      "2 websites",
-      "Custom domain",
-      "10 pages",
-      "AI content generation",
-      "Blog & landing pages",
-      "Contact forms",
-      "Google Analytics",
-    ],
-  },
-  {
-    id: "website-pro",
-    name: "Scale",
-    price: 79,
-    priceLabel: "$79 / month",
-    color: "#f59e0b",
-    recommended: true,
-    features: [
-      "3 websites",
-      "Custom domains",
-      "Full AI website builder",
-      "AI generate entire site from prompt",
-      "Ecommerce & product pages",
-      "Advanced analytics",
-      "Custom code injection",
-      "Priority support",
-    ],
-  },
-  {
-    id: "website-agency",
-    name: "Professional",
-    price: 149,
-    priceLabel: "$149 / month",
-    color: "#7c3aed",
-    features: [
-      "5 websites",
-      "All Scale features",
-      "AI site generation (unlimited)",
-      "Client management",
-      "API access",
-      "Dedicated support",
-    ],
-  },
-];
-
-const FEATURES = [
-  { label: "Websites",                  key: "websites" },
-  { label: "Pages",                     key: "pages" },
-  { label: "Custom domain",             key: "customDomain" },
-  { label: "Drag-and-drop builder",     key: "dragDrop" },
-  { label: "Blog",                      key: "blog" },
-  { label: "AI content generation",     key: "aiContent" },
-  { label: "Full AI site builder",      key: "aiBuilder" },
-  { label: "Ecommerce",                 key: "ecommerce" },
-  { label: "Custom code injection",     key: "customCode" },
-  { label: "Analytics",                 key: "analytics" },
-  { label: "API access",                key: "apiAccess" },
-];
-
-const PLAN_FEATURES = {
-  "website-starter": {
-    websites: "1", pages: "5", customDomain: false, dragDrop: true, blog: false,
-    aiContent: false, aiBuilder: false, ecommerce: false, abTesting: false,
-    customCode: false, analytics: "Basic", apiAccess: false,
-  },
-  "website-growth": {
-    websites: "2", pages: "10", customDomain: true, dragDrop: true, blog: true,
-    aiContent: true, aiBuilder: false, ecommerce: false, abTesting: false,
-    customCode: false, analytics: "Standard", apiAccess: false,
-  },
-  "website-pro": {
-    websites: "3", pages: "Unlimited", customDomain: true, dragDrop: true, blog: true,
-    aiContent: true, aiBuilder: true, ecommerce: true, abTesting: true,
-    customCode: true, analytics: "Advanced", apiAccess: false,
-  },
-  "website-agency": {
-    websites: "5", pages: "Unlimited", customDomain: true, dragDrop: true, blog: true,
-    aiContent: true, aiBuilder: true, ecommerce: true, abTesting: true,
-    customCode: true, analytics: "Full", apiAccess: true,
-  },
-};
 
 export default function WebsitePlans() {
   const router = useRouter();
@@ -192,7 +88,7 @@ export default function WebsitePlans() {
   };
 
   function renderCell(planId, feature) {
-    const val = PLAN_FEATURES[planId]?.[feature.key];
+    const val = WEBSITE_PLAN_FEATURES[planId]?.[feature.key];
     if (typeof val === "boolean") {
       return val
         ? <span style={{ color: "#86efac", fontWeight: 600, fontSize: 18 }}>✓</span>
@@ -212,18 +108,7 @@ export default function WebsitePlans() {
     aiCallout:  { background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 12, padding: "16px 20px", marginBottom: 30, display: "flex", alignItems: "center", gap: 14 },
     aiIcon:     { fontSize: 28 },
     aiText:     { fontSize: 16, color: "rgba(255,255,255,0.85)", lineHeight: 1.6 },
-    grid:       { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20, marginBottom: 40 },
-    card:       { background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "28px 22px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", position: "relative" },
-    cardActive: { border: "2px solid #86efac" },
-    cardRec:    { border: "2px solid #f59e0b" },
-    recBadge:   { position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#f59e0b", color: "#000", fontSize: 16, fontWeight: 600, padding: "3px 14px", borderRadius: 20, whiteSpace: "nowrap" },
-    activeBadge: { position: "absolute", top: -12, right: 14, background: "rgba(34,197,94,0.85)", color: "#000", fontSize: 16, fontWeight: 600, padding: "3px 14px", borderRadius: 20 },
-    planName:   { fontSize: 22, fontWeight: 600, marginBottom: 4 },
-    planPrice:  { fontSize: 28, fontWeight: 600 },
-    planDelta:  { fontSize: 16, marginTop: 4, minHeight: 18 },
-    featureList: { listStyle: "none", padding: 0, margin: "16px 0 0", textAlign: "left", width: "100%", fontSize: 16, lineHeight: 2 },
-    btn:        { marginTop: "auto", paddingTop: 20, width: "100%" },
-    btnEl:      { width: "100%", padding: "10px 0", borderRadius: 8, border: "none", fontWeight: 600, fontSize: 16, cursor: "pointer" },
+    btnEl:      pricingCardStyles.btnEl,
     table:      { width: "100%", borderCollapse: "collapse", background: "#111827", borderRadius: 12, overflow: "hidden", marginBottom: 40 },
     th:         { padding: "14px 12px", background: "#1f2937", fontWeight: 600, textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.08)" },
     thLeft:     { textAlign: "left" },
@@ -259,45 +144,21 @@ export default function WebsitePlans() {
         </div>
 
         {/* Plan cards */}
-        <div style={S.grid}>
-          {PLANS.map((plan) => {
-            const isActive  = plan.id === currentTierId;
-            const cardStyle = { ...S.card, ...(isActive ? S.cardActive : {}), ...(plan.recommended && !isActive ? S.cardRec : {}) };
-            const btnBg     = isActive ? "transparent" : plan.color;
-            const btnBorder = `2px solid ${plan.color}`;
-            const btnColor  = isActive ? plan.color : (plan.color === "#f59e0b" ? "#000" : "#fff");
-            return (
-              <div key={plan.id} style={cardStyle}>
-                {plan.recommended && !isActive && <div style={S.recBadge}>⭐ Best Value</div>}
-                {isActive && <div style={S.activeBadge}>✓ Active</div>}
-                <div style={{ ...S.planName, color: plan.color }}>{plan.name}</div>
-                <div style={S.planPrice}>{plan.priceLabel}</div>
-                <div style={{ ...S.planDelta, color: isActive ? plan.color : "rgba(255,255,255,0.55)" }}>{getDeltaLabel(plan)}</div>
-                <ul style={S.featureList}>
-                  {plan.features.map((f) => (
-                    <li key={f} style={{ color: "rgba(255,255,255,0.8)" }}>✓ {f}</li>
-                  ))}
-                </ul>
-                <div style={S.btn}>
-                  <button
-                    onClick={() => !isActive && selectPlan(plan.id)}
-                    disabled={isActive}
-                    style={{ ...S.btnEl, background: btnBg, border: btnBorder, color: btnColor, opacity: isActive ? 0.8 : 1 }}
-                  >
-                    {getButtonLabel(plan)}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <PricingPlans
+          plans={WEBSITE_PRICING_PLANS}
+          mode="billing"
+          currentPlanId={currentTierId}
+          getDeltaLabel={getDeltaLabel}
+          getButtonLabel={getButtonLabel}
+          onSelectPlan={selectPlan}
+        />
 
         {/* Feature comparison table */}
         <table style={S.table}>
           <thead>
             <tr>
               <th style={{ ...S.th, ...S.thLeft }}>Feature</th>
-              {PLANS.map((p) => (
+              {WEBSITE_PRICING_PLANS.map((p) => (
                 <th key={p.id} style={{ ...S.th, ...(p.id === currentTierId ? { background: `${p.color}22`, borderTop: `3px solid ${p.color}` } : {}), color: p.color }}>
                   {p.name}
                 </th>
@@ -305,10 +166,10 @@ export default function WebsitePlans() {
             </tr>
           </thead>
           <tbody>
-            {FEATURES.map((f) => (
+            {WEBSITE_FEATURES.map((f) => (
               <tr key={f.key}>
                 <td style={{ ...S.td, ...S.tdLeft }}>{f.label}</td>
-                {PLANS.map((p) => (
+                {WEBSITE_PRICING_PLANS.map((p) => (
                   <td key={p.id} style={{ ...S.td, ...(p.id === currentTierId ? { background: `${p.color}0d` } : {}) }}>
                     {renderCell(p.id, f)}
                   </td>
@@ -317,7 +178,7 @@ export default function WebsitePlans() {
             ))}
             <tr>
               <td style={S.td} />
-              {PLANS.map((p) => {
+              {WEBSITE_PRICING_PLANS.map((p) => {
                 const isActive = p.id === currentTierId;
                 return (
                   <td key={p.id} style={{ ...S.td, ...(p.id === currentTierId ? { background: `${p.color}0d` } : {}) }}>

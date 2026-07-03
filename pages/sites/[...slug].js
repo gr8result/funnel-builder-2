@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
-import { buildWebsitePath, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
+import { buildWebsitePath, getPlatformAppUrl, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -51,6 +51,17 @@ function slugifyPage(value) {
 
 function resolvePublishedPageName(page) {
   return slugifyPage(page?.slug || page?.name || page?.title || "");
+}
+
+function publishedPageAliases(value) {
+  const slug = slugifyPage(value);
+  if (!slug) return [""];
+  const aliases = new Set([slug]);
+  if (slug === "contact") aliases.add("contact-us");
+  if (slug === "contact-us") aliases.add("contact");
+  if (slug === "about") aliases.add("about-us");
+  if (slug === "about-us") aliases.add("about");
+  return Array.from(aliases);
 }
 
 function FullBleed({ bg, children }) {
@@ -342,7 +353,7 @@ export async function getServerSideProps(ctx) {
   };
 }
 
-function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
+export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
 
@@ -357,7 +368,8 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
-  const activePage = pages.find((page) => resolvePublishedPageName(page) === slugifyPage(requested)) || pages[0] || null;
+  const requestedAliases = publishedPageAliases(requested || "home");
+  const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
   const pageBlocks = activePage?.name ? (normalizedPageBlocks || {})[activePage.name] || [] : [];
   const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";
   const globalNavBlock = normalizedGlobalNavBlock?.type === "nav-bar" ? normalizedGlobalNavBlock : null;
@@ -372,6 +384,7 @@ function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest 
   const basePath = isDomainRequest ? "" : buildWebsitePath(publication?.slug || project?.name || "site");
   const navigationContext = {
     basePath,
+    appBaseUrl: getPlatformAppUrl().replace(/\/$/, ""),
     currentPageKey: resolvePublishedPageName(activePage) || "home",
     pageMap: Object.fromEntries(
       pages.map((page) => {

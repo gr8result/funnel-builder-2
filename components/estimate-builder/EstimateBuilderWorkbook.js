@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
+import { useJobFile } from "../../hooks/useJobFile";
 import { V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
@@ -19,18 +20,45 @@ const GanttBuilderPage = dynamic(() => import("./gantt/GanttBuilderPage"), {
 
 const DATA_INPUT_SECTIONS_FOR_LOOKUP = V4_DATA_SECTIONS || [];
 
-export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
+export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "" } = {}) {
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
-  const jobFileInputRef = useRef(null);
   const saveStatusTimerRef = useRef(null);
+  const modeHandledRef = useRef("");
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [jobPickerMessage, setJobPickerMessage] = useState("");
   const [formulaTarget, setFormulaTarget] = useState(null);
+  const [newJobModalOpen, setNewJobModalOpen] = useState(false);
+  const [newJobForm, setNewJobForm] = useState({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
+  const [jobFileError, setJobFileError] = useState("");
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
   const currentPage = sheet.pages.find((page) => page.key === sheet.workbook.page);
-  const openFileName = openWorkbookFileName(sheet.workbook);
+  const jobFilePayload = useMemo(() => workbookToJobFileData(sheet.workbook), [sheet.workbook]);
+  const jobFile = useJobFile({
+    enabled: !previewMode,
+    jobData: jobFilePayload,
+    autoSaveDelayMs: 3000,
+    onError: (message) => {
+      if (message) setJobFileError(message);
+    },
+    onOpenJob: async (job, fileName) => {
+      const nextWorkbook = {
+        ...(job.workbook || {}),
+        jobFileMeta: {
+          jobName: job.jobName || "",
+          clientName: job.clientName || "",
+          jobNumber: job.jobNumber || "",
+          address: job.address || "",
+          notes: job.notes || "",
+          created: job.created || new Date().toISOString(),
+          lastModified: job.lastModified || new Date().toISOString(),
+        },
+      };
+      await sheet.loadJobFileText(JSON.stringify({ ...job, workbook: nextWorkbook }), fileName || "job.gr8job");
+    },
+  });
+  const openFileName = jobFile.currentFileName || openWorkbookFileName(sheet.workbook);
   const lockHandlers = previewMode ? previewProtectionHandlers : {};
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
@@ -77,6 +105,52 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
     setJobPickerMessage(result?.message || "Saved job could not be opened.");
   }
 
+  function updateNewJobField(key, value) {
+    setNewJobForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleCreateNewJob() {
+    setJobFileError("");
+    const createResult = await runSaveAction("Creating new job", () => sheet.createJobFromTemplate(newJobForm));
+    if (!createResult?.ok || !createResult.workbook) return;
+
+    const fileCreateResult = await jobFile.newJob(workbookToJobFileData(createResult.workbook));
+    if (!fileCreateResult.ok && fileCreateResult.message) {
+      setJobFileError(fileCreateResult.message);
+      return;
+    }
+    if (!fileCreateResult.cancelled) {
+      setNewJobModalOpen(false);
+      setNewJobForm({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
+    }
+  }
+
+  useEffect(() => {
+    if (previewMode || !mode) return;
+    const key = `${mode}:${recentId || ""}`;
+    if (modeHandledRef.current === key) return;
+    modeHandledRef.current = key;
+
+    if (mode === "open-job") {
+      jobFile.open().then((result) => {
+        if (!result.ok && result.message) setJobFileError(result.message);
+      }).catch(() => {
+        setJobFileError("This job file could not be opened.");
+      });
+    }
+    if (mode === "open-recent" && recentId) {
+      jobFile.openRecent(recentId).then((result) => {
+        if (!result.ok && result.message) setJobFileError(result.message);
+      }).catch(() => {
+        setJobFileError("This job file could not be opened.");
+      });
+    }
+
+    if (typeof window !== "undefined") {
+      window.history.replaceState({}, "", "/modules/estimate-builder");
+    }
+  }, [mode, recentId, previewMode, jobFile]);
+
   return (
     <div style={{ ...styles.shell, ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
       <aside style={styles.nav}>
@@ -99,7 +173,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
         {!previewMode && (
           <FloatingSaveJob
             saveStatus={saveStatus}
-            onSaveJob={() => runSaveAction("Saving job", sheet.saveDraft)}
+            onSaveJob={() => runSaveAction("Saving job", jobFile.save)}
           />
         )}
       </aside>
@@ -124,12 +198,19 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
               onToggle={() => setFileMenuOpen((current) => !current)}
               onClose={() => setFileMenuOpen(false)}
               busy={isSaving}
-              recentJobs={sheet.recentJobs}
-              onOpenRecentJob={openSavedJob}
+              recentJobs={jobFile.recentJobs}
+              onOpenRecentJob={(id) => jobFile.openRecent(id)}
               items={[
-                { label: "New Estimate", action: () => runSaveAction("Creating new estimate", sheet.createJobFromTemplate) },
-                { label: "Open Job", action: openJobPicker },
-                { label: "Save Job", action: () => runSaveAction("Saving job", sheet.saveDraft), primary: true },
+                { label: "New Job", action: () => setNewJobModalOpen(true) },
+                {
+                  label: "Open Job",
+                  action: async () => {
+                    const result = await jobFile.open();
+                    if (!result.ok && result.message) setJobFileError(result.message);
+                  },
+                },
+                { label: "Save", action: () => runSaveAction("Saving job", jobFile.save), primary: true },
+                { label: "Save As", action: () => runSaveAction("Saving job as", jobFile.saveAs) },
                 { label: "Save As Base Template", action: () => runSaveAction("Saving base template", sheet.saveAsBaseTemplate) },
               ]}
             />
@@ -140,13 +221,6 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
               onClose={() => setTemplateMenuOpen(false)}
               onSaveAction={runSaveAction}
               busy={isSaving}
-            />
-            <input
-              ref={jobFileInputRef}
-              type="file"
-              accept="application/json,.json"
-              style={{ display: "none" }}
-              onChange={(event) => openJobFile(event, sheet)}
             />
             {saveStatus.state !== "idle" ? (
               <SaveProgress status={saveStatus} />
@@ -206,6 +280,10 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
             <GanttBuilderPage sheet={sheet} />
           )}
         </fieldset>
+
+        {jobFileError ? (
+          <div style={styles.fileErrorBanner} role="alert">{jobFileError}</div>
+        ) : null}
       </main>
 
       <aside style={styles.summary}>
@@ -267,6 +345,16 @@ export default function EstimateBuilderWorkbook({ previewMode = false } = {}) {
           onRefresh={openJobPicker}
           onOpen={openSavedJob}
           onClose={() => setJobPickerOpen(false)}
+        />
+      )}
+
+      {newJobModalOpen && (
+        <NewJobModal
+          form={newJobForm}
+          onChange={updateNewJobField}
+          busy={isSaving}
+          onClose={() => setNewJobModalOpen(false)}
+          onCreate={handleCreateNewJob}
         />
       )}
     </div>
@@ -2851,8 +2939,27 @@ function suggestedUiTemplateName(workbook) {
 function currentJobDisplayName(workbook) {
   return workbook?.data?.project?.rows?.projectName?.value
     || workbook?.registeredJob?.jobName
+    || workbook?.jobFileMeta?.jobName
     || workbook?.projectName
-    || "simple.json";
+    || "simple.gr8job";
+}
+
+function workbookToJobFileData(workbook = {}) {
+  const meta = workbook?.jobFileMeta || {};
+  const now = new Date().toISOString();
+  return {
+    jobName: meta.jobName || workbookDataValue(workbook, "projectName") || workbook?.projectName || "",
+    clientName: meta.clientName || workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || "",
+    jobNumber: meta.jobNumber || workbookDataValue(workbook, "jobNumber") || workbookDataValue(workbook, "quoteNumber") || "",
+    address: meta.address || workbookDataValue(workbook, "siteAddress") || workbookDataValue(workbook, "address") || "",
+    notes: meta.notes || workbookDataValue(workbook, "projectNotes") || workbookDataValue(workbook, "notes") || "",
+    rooms: workbook?.plans || [],
+    products: workbook?.procurement || [],
+    pricing: workbook?.summaryAdjustments || {},
+    created: meta.created || workbook?.createdFromMasterTemplateAt || now,
+    lastModified: workbook?.savedAt || meta.lastModified || now,
+    workbook,
+  };
 }
 
 function TemplateDebugRow({ label, value }) {
@@ -2903,23 +3010,66 @@ function FileMenu({ open, items, recentJobs = [], onOpenRecentJob, onToggle, onC
           <div style={styles.fileMenuSectionTitle}>Recent Jobs</div>
           {recentJobs.length ? recentJobs.slice(0, 4).map((job) => (
             <button
-              key={job.key}
+              key={job.id}
               style={{ ...styles.fileMenuItem, ...styles.fileMenuRecentItem, ...(busy ? styles.fileMenuItemDisabled : {}) }}
               disabled={busy}
               onClick={async () => {
-                await Promise.resolve(onOpenRecentJob?.(job.key));
+                await Promise.resolve(onOpenRecentJob?.(job.id));
                 onClose();
               }}
               role="menuitem"
             >
-              <span>{job.name || job.projectName || "Saved estimate job"}</span>
-              <small>{formatTemplateDate(job.savedAt)}</small>
+              <span>{job.jobName || "Saved estimate job"}</span>
+              <small>{formatTemplateDate(job.lastModified)}</small>
             </button>
           )) : (
             <div style={styles.fileMenuEmpty}>No recent jobs</div>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function NewJobModal({ form, onChange, busy = false, onClose, onCreate }) {
+  return (
+    <div style={styles.modalBackdrop}>
+      <div style={styles.newJobModal} role="dialog" aria-modal="true" aria-label="Create new job">
+        <div style={styles.jobPickerHeader}>
+          <div>
+            <div style={styles.eyebrow}>New Job</div>
+            <h2 style={styles.jobPickerTitle}>Create Job</h2>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={onClose} disabled={busy}>Close</button>
+        </div>
+        <div style={styles.newJobGrid}>
+          <label style={styles.fieldWrap}>
+            <span style={styles.label}>Job Name</span>
+            <input style={styles.input} value={form.jobName || ""} onChange={(event) => onChange("jobName", event.target.value)} />
+          </label>
+          <label style={styles.fieldWrap}>
+            <span style={styles.label}>Client Name</span>
+            <input style={styles.input} value={form.clientName || ""} onChange={(event) => onChange("clientName", event.target.value)} />
+          </label>
+          <label style={styles.fieldWrap}>
+            <span style={styles.label}>Job Number</span>
+            <input style={styles.input} value={form.jobNumber || ""} onChange={(event) => onChange("jobNumber", event.target.value)} />
+          </label>
+          <label style={styles.fieldWrap}>
+            <span style={styles.label}>Address</span>
+            <input style={styles.input} value={form.address || ""} onChange={(event) => onChange("address", event.target.value)} />
+          </label>
+          <label style={{ ...styles.fieldWrap, gridColumn: "1 / -1" }}>
+            <span style={styles.label}>Notes</span>
+            <textarea style={{ ...styles.input, minHeight: 90, resize: "vertical" }} value={form.notes || ""} onChange={(event) => onChange("notes", event.target.value)} />
+          </label>
+        </div>
+        <div style={styles.jobPickerActions}>
+          <button type="button" style={styles.primaryButton} disabled={busy || !String(form.jobName || "").trim()} onClick={onCreate}>
+            {busy ? "Creating..." : "Create Job"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3095,8 +3245,9 @@ function jobFileName(workbook) {
 }
 
 function openWorkbookFileName(workbook) {
-  const projectName = workbookDataValue(workbook, "projectName");
-  return projectName ? `${projectName}.json` : `${jobFileName(workbook)}.json`;
+  const fileName = currentJobDisplayName(workbook);
+  if (String(fileName).toLowerCase().endsWith(".gr8job")) return fileName;
+  return `${fileName}.gr8job`;
 }
 
 function workbookDataValue(workbook, key) {
@@ -5005,6 +5156,8 @@ const styles = {
   fileMenuEmpty: { padding: "8px 10px", color: "#64748b", fontSize: 12, fontWeight: 700 },
   modalBackdrop: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15, 23, 42, 0.45)" },
   jobPickerModal: { width: "min(760px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
+  newJobModal: { width: "min(820px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
+  newJobGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 14 },
   jobPickerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, marginBottom: 12 },
   jobPickerTitle: { margin: 0, color: "#0f172a", fontSize: 26, fontWeight: 900 },
   jobPickerActions: { display: "flex", justifyContent: "flex-end", marginBottom: 10 },
@@ -5012,6 +5165,7 @@ const styles = {
   jobPickerEmpty: { padding: 24, border: "1px dashed #cbd5e1", borderRadius: 8, textAlign: "center", color: "#64748b", fontWeight: 800 },
   jobPickerList: { display: "grid", gap: 8 },
   jobPickerRow: { border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: "12px 14px", display: "grid", gap: 3, textAlign: "left", cursor: "pointer" },
+  fileErrorBanner: { marginTop: 10, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
   saveProgress: { minHeight: 38, display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid #99f6e4", background: "#ecfdf5", color: "#0f766e", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" },
   saveProgressError: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
   saveSpinner: { width: 10, height: 10, borderRadius: 999, background: "#0f766e", boxShadow: "0 0 0 4px rgba(15, 118, 110, 0.14)" },

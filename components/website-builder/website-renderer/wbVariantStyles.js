@@ -168,18 +168,22 @@ function textLayerBackgroundStyle(layer) {
 function headingTypography(props) {
   return {
     fontFamily: props?.headlineFontFamily || props?.headingFontFamily || "inherit",
-    fontWeight: props?.headlineFontWeight || "600",
-    textAlign: props?.headlineAlignment || "center",
+    fontWeight: props?.headlineFontWeight || props?.headingFontWeight || "600",
+    ...((props?.headlineAlignment || props?.headlineAlign || props?.headingAlign || props?.textAlign || props?.alignment)
+      ? { textAlign: props?.headlineAlignment || props?.headlineAlign || props?.headingAlign || props?.textAlign || props?.alignment }
+      : {}),
     color: props?.headlineColor || "inherit",
     ...(props?.headlineFontSize || props?.headingFontSize ? { fontSize: Number(props?.headlineFontSize || props?.headingFontSize) } : {}),
-    ...(props?.headlineLineHeight ? { lineHeight: props.headlineLineHeight } : {}),
+    ...(props?.headlineLineHeight || props?.headingLineHeight ? { lineHeight: props.headlineLineHeight || props.headingLineHeight } : {}),
   };
 }
 
 function bodyTypography(props) {
   return {
     fontFamily: props?.fontFamily || props?.bodyFontFamily || "inherit",
-    fontWeight: props?.fontWeight || "400",
+    fontWeight: props?.fontWeight || props?.bodyFontWeight || "400",
+    ...((props?.bodyAlign || props?.textAlign || props?.alignment) ? { textAlign: props?.bodyAlign || props?.textAlign || props?.alignment } : {}),
+    ...((props?.textColor || props?.bodyColor || props?.subtleTextColor) ? { color: props?.textColor || props?.bodyColor || props?.subtleTextColor } : {}),
     ...(props?.textFontSize || props?.bodyFontSize || props?.subheadlineFontSize ? { fontSize: Number(props?.textFontSize || props?.bodyFontSize || props?.subheadlineFontSize) } : {}),
     ...(props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight ? { lineHeight: props?.textLineHeight || props?.bodyLineHeight || props?.lineHeight } : {}),
   };
@@ -226,12 +230,46 @@ function parseSizeValue(value, fallback) {
 
 function fullWidthStyle(props, compact, editor) {
   const maxWidth = Math.max(320, Number(props?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
+  const px = (value) => {
+    if (value === undefined || value === null || value === "") return undefined;
+    return typeof value === "number" ? `${value}px` : String(value);
+  };
+  const backgroundStyle = String(props?.backgroundStyle || "").toLowerCase();
+  const backgroundImage = String(props?.backgroundImage || "").trim();
+  const overlayOpacity = Math.max(0, Math.min(1, Number(props?.backgroundOverlayOpacity ?? props?.overlayOpacity ?? 0)));
+  const overlayColor = String(props?.backgroundOverlayColor || props?.overlayColor || "#000000");
+  const overlayRgb = /^#([0-9a-f]{6})$/i.test(overlayColor)
+    ? `${parseInt(overlayColor.slice(1, 3), 16)},${parseInt(overlayColor.slice(3, 5), 16)},${parseInt(overlayColor.slice(5, 7), 16)}`
+    : "0,0,0";
+  const imageLayer = backgroundImage
+    ? `url("${backgroundImage.replace(/"/g, "%22")}") ${props?.backgroundPosition || "center center"} / ${props?.backgroundSize || "cover"} no-repeat`
+    : "";
+  const designBackground = backgroundStyle === "gradient"
+    ? (props?.backgroundGradient || props?.sectionGradient || undefined)
+    : backgroundStyle === "image" && imageLayer
+      ? (overlayOpacity > 0 ? `linear-gradient(rgba(${overlayRgb},${overlayOpacity}), rgba(${overlayRgb},${overlayOpacity})), ${imageLayer}` : imageLayer)
+      : props?.backgroundColor || undefined;
+  const borderWidth = Number(props?.borderWidth || 0);
+  const designStyle = {
+    ...(props?.marginTop !== undefined ? { marginTop: px(props.marginTop) } : {}),
+    ...(props?.marginBottom !== undefined ? { marginBottom: px(props.marginBottom) } : {}),
+    ...(props?.paddingTop !== undefined ? { paddingTop: px(props.paddingTop) } : {}),
+    ...(props?.paddingBottom !== undefined ? { paddingBottom: px(props.paddingBottom) } : {}),
+    ...(props?.paddingLeft !== undefined ? { paddingLeft: px(props.paddingLeft) } : {}),
+    ...(props?.paddingRight !== undefined ? { paddingRight: px(props.paddingRight) } : {}),
+    ...(designBackground ? { background: designBackground } : {}),
+    ...(borderWidth > 0 ? { border: `${borderWidth}px solid ${props?.borderColor || "rgba(15,23,42,0.12)"}` } : {}),
+    ...(props?.borderRadius !== undefined ? { borderRadius: px(props.borderRadius), overflow: Number(props.borderRadius || 0) > 0 ? "hidden" : undefined } : {}),
+    ...(props?.boxShadow ? { boxShadow: props.boxShadow } : {}),
+  };
+
   if (props?.fullWidthBackground === false) {
     return {
       width: "100%",
       maxWidth: `${maxWidth}px`,
       marginLeft: "auto",
       marginRight: "auto",
+      ...designStyle,
     };
   }
 
@@ -241,6 +279,7 @@ function fullWidthStyle(props, compact, editor) {
     maxWidth: "none",
     marginLeft: 0,
     marginRight: 0,
+    ...designStyle,
   };
 }
 

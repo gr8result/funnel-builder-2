@@ -1,7 +1,7 @@
 {
   "templateOverrides": {
     "business-solution-template": {
-      "updatedAt": "2026-06-22T04:09:07.518Z",
+      "updatedAt": "2026-07-03T06:12:26.656Z",
       "pageBlocks": {
         "Home": [
           {
@@ -4333,6 +4333,748 @@
               "borderColor": "rgba(255,255,255,0.18)",
               "fullWidthBackground": true,
               "baseLayoutWidth": 1500
+            }
+          }
+        ],
+        "Project Hub": [
+          {
+            "id": "project-hub-enterprise-nav",
+            "type": "nav-bar",
+            "props": {
+              "brand": "Gr8 Result Digital Solutions",
+              "showLogo": true,
+              "variant": "split-dark",
+              "stickyMode": "sticky-transparent",
+              "fullWidthBackground": true,
+              "links": [
+                {
+                  "label": "Project Hub",
+                  "href": "#project-hub",
+                  "highlighted": true
+                },
+                {
+                  "label": "Estimator",
+                  "href": "#estimator"
+                },
+                {
+                  "label": "Gantt",
+                  "href": "#gantt"
+                },
+                {
+                  "label": "Job Board",
+                  "href": "#job-board"
+                },
+                {
+                  "label": "Integrations",
+                  "href": "#integrations"
+                },
+                {
+                  "label": "Demo",
+                  "href": "#demo"
+                }
+              ],
+              "ctaText": "Book Demo",
+              "ctaLink": "#demo",
+              "backgroundColor": "rgba(2,6,23,0.92)",
+              "textColor": "#e5eefb",
+              "buttonColor": "linear-gradient(135deg,#22c55e,#38bdf8)",
+              "buttonTextColor": "#03111f",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "logoWidth": 150
+            }
+          },
+          {
+            "id": "project-hub-enterprise-hero",
+            "type": "hero",
+            "props": {
+              "eyebrow": "Project Hub",
+              "headline": "Project Hub",
+              "subheadline": "Plan Jobs, Track Progress & Deliver Projects On Time",
+              "headlineBlock": {
+                "content": "Project Hub",
+                "fontSize": 82,
+                "fontWeight": "950",
+                "lineHeight": 0.95,
+                "color": "#ffffff",
+                "alignment": "left"
+              },
+              "bodyBlock": {
+                "content": "Plan Jobs, Track Progress & Deliver Projects On Time",
+                "fontSize": 34,
+                "lineHeight": 1.18,
+                "color": "#dbeafe",
+                "alignment": "left"
+              },
+              "ctaText": "Start Free Trial",
+              "ctaLink": "#trial",
+              "secondaryCtaText": "Book Demo",
+              "secondaryCtaLink": "#demo",
+              "backgroundStyle": "image",
+              "backgroundImage": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=2200&q=88",
+              "backgroundOverlayColor": "#020617",
+              "backgroundOverlayOpacity": 0.78,
+              "buttonColor": "linear-gradient(135deg,#22c55e,#38bdf8)",
+              "buttonTextColor": "#02111f",
+              "textColor": "#dbeafe",
+              "headlineColor": "#ffffff",
+              "headlineAlignment": "left",
+              "contentWidth": 820,
+              "minHeight": "920px",
+              "fullWidthBackground": true,
+              "floatingImage": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+              "floatingWidth": 520,
+              "floatingHeight": 360,
+              "floatingRotation": 2
+            }
+          },
+          {
+            "id": "project-hub-enterprise-command-centre-visual",
+            "type": "image-stack",
+            "props": {
+              "title": "A project command centre built to replace the disconnected tool stack",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(135deg,#020617,#111827 42%,#052e2b)",
+              "minHeight": "860px",
+              "images": [
+                {
+                  "id": "stack-site",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+                  "x": 30,
+                  "y": 54,
+                  "width": 420,
+                  "height": 300,
+                  "rotation": -5,
+                  "radius": 28,
+                  "zIndex": 1
+                },
+                {
+                  "id": "stack-manager",
+                  "kind": "image",
+                  "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
+                  "x": 830,
+                  "y": 210,
+                  "width": 310,
+                  "height": 420,
+                  "rotation": 5,
+                  "radius": 28,
+                  "zIndex": 2
+                },
+                {
+                  "id": "stack-crm",
+                  "kind": "image",
+                  "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-1.png",
+                  "x": 460,
+                  "y": 68,
+                  "width": 360,
+                  "height": 240,
+                  "rotation": 3,
+                  "radius": 24,
+                  "zIndex": 3
+                },
+                {
+                  "id": "stack-gantt",
+                  "kind": "image",
+                  "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+                  "x": 210,
+                  "y": 336,
+                  "width": 590,
+                  "height": 330,
+                  "rotation": 0,
+                  "radius": 26,
+                  "zIndex": 4
+                },
+                {
+                  "id": "stack-copy",
+                  "kind": "text",
+                  "content": "Lead, quote, approval, schedule, task, document, update, invoice and report - finally connected.",
+                  "x": 820,
+                  "y": 650,
+                  "width": 330,
+                  "height": 150,
+                  "rotation": -2,
+                  "radius": 24,
+                  "zIndex": 5,
+                  "fontSize": 25,
+                  "fontWeight": "900",
+                  "textAlign": "left",
+                  "verticalAlign": "center",
+                  "textColor": "#f8fafc",
+                  "background": "rgba(15,23,42,0.88)"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-why-exists",
+            "type": "columns-2",
+            "props": {
+              "title": "The flagship project operating system inside Gr8 Result",
+              "leftTitle": "Why Project Hub exists",
+              "leftContent": "<p>Most project-based businesses do not lose money because the team is lazy. They lose money because the information needed to run the job is scattered across quoting software, spreadsheets, inboxes, SMS threads, calendars, whiteboards, cloud folders and accounting tools. Every handover creates another opportunity for scope to be misunderstood, materials to be missed, deadlines to slip and owners to lose visibility.</p><p>Project Hub exists to remove that fragmentation. It connects the commercial side of the job with the operational side, so the quote that was sold, the schedule that was planned, the tasks that were assigned and the reports the owner needs all live inside the same platform. That is the difference between simply tracking jobs and actually operating a project-based business with control.</p>",
+              "rightImage": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#0f172a,#020617)",
+              "cardBackgroundColor": "rgba(15,23,42,0.82)",
+              "textColor": "#f8fafc",
+              "borderColor": "rgba(56,189,248,0.32)",
+              "paddingTop": 110,
+              "paddingBottom": 110
+            }
+          },
+          {
+            "id": "project-hub-enterprise-stats-operational-change",
+            "type": "stats",
+            "props": {
+              "title": "What changes when the workflow is connected",
+              "subtitle": "Project Hub is designed around measurable operational improvements: fewer duplicated steps, clearer accountability and faster decision-making.",
+              "statsVariant": "editorial-band",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(135deg,#0f172a,#1e1b4b 45%,#064e3b)",
+              "textColor": "#f8fafc",
+              "cardBackgroundColor": "rgba(15,23,42,0.86)",
+              "borderColor": "rgba(148,163,184,0.22)",
+              "accentColor": "#22c55e",
+              "stats": [
+                {
+                  "number": "Hours",
+                  "label": "Admin reduced",
+                  "detail": "Less retyping between quote, schedule, task board and reporting tools."
+                },
+                {
+                  "number": "Dates",
+                  "label": "Deadlines protected",
+                  "detail": "Milestones, dependencies and blockers become visible before they turn into expensive delays."
+                },
+                {
+                  "number": "Margin",
+                  "label": "Profit defended",
+                  "detail": "Scope, variations, materials and labour stay connected to the job that is actually being delivered."
+                },
+                {
+                  "number": "Team",
+                  "label": "Communication improved",
+                  "detail": "Office staff, supervisors and owners can work from the same operational picture."
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-mid-cta",
+            "type": "hero",
+            "props": {
+              "eyebrow": "Built for owners",
+              "headline": "Stop managing million-dollar work with disconnected tools",
+              "subheadline": "Project Hub gives growing trade, construction and service businesses the kind of operational command centre usually reserved for enterprise platforms - without forcing the team into another isolated app.",
+              "headlineBlock": {
+                "content": "Stop managing million-dollar work with disconnected tools",
+                "fontSize": 54,
+                "fontWeight": "900",
+                "lineHeight": 1.06,
+                "color": "#ffffff",
+                "alignment": "center"
+              },
+              "bodyBlock": {
+                "content": "Project Hub gives growing trade, construction and service businesses the kind of operational command centre usually reserved for enterprise platforms - without forcing the team into another isolated app.",
+                "fontSize": 21,
+                "lineHeight": 1.65,
+                "color": "#dbeafe",
+                "alignment": "center"
+              },
+              "ctaText": "See Project Hub In Action",
+              "ctaLink": "#demo",
+              "secondaryCtaText": "Start Free Trial",
+              "secondaryCtaLink": "#trial",
+              "backgroundStyle": "gradient",
+              "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 55%,#7c3aed)",
+              "fullWidthBackground": true,
+              "minHeight": "560px",
+              "contentWidth": 900,
+              "headlineAlignment": "center",
+              "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+              "buttonTextColor": "#111827"
+            }
+          },
+          {
+            "id": "project-hub-enterprise-estimator-deep",
+            "type": "columns-2",
+            "props": {
+              "title": "Estimator: from quote to project without double entry",
+              "leftTitle": "Build quotes that are ready for real delivery",
+              "leftContent": "<p>The Estimator is not just a price calculator. It is the commercial starting point for the project workflow. Your team can build detailed estimates with line items, quantities, labour allowances, material costs, markups, margins, optional extras and variations, then turn that commercial information into a client-ready proposal.</p><p>That matters because most delivery problems start before the job begins. If the estimate lives in one tool and the project plan lives somewhere else, the team has to manually translate the sold scope into tasks, dates and responsibilities. Project Hub reduces that waste by making the estimate the foundation of the project, not a separate document that gets forgotten after approval.</p><p>The result is fewer missed inclusions, faster handovers, cleaner variation control and better protection for margin. Competitors often provide estimating as a separate module or expect integrations to stitch the process together later. Project Hub is designed so quoting and delivery belong to the same operational system from day one.</p><ul><li>Itemised quote builder</li><li>Labour, materials and margin control</li><li>Variation and optional-extra tracking</li><li>Client-ready proposal structure</li><li>Approved quotes become project inputs</li></ul>",
+              "rightImage": "https://placehold.co/1600x980/08251c/22c55e?text=Estimator+Worksheet+%2B+Proposal+Builder",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+              "cardBackgroundColor": "rgba(15,23,42,0.86)",
+              "textColor": "#f8fafc",
+              "borderColor": "rgba(34,197,94,0.36)",
+              "paddingTop": 96,
+              "paddingBottom": 96
+            }
+          },
+          {
+            "id": "project-hub-enterprise-estimator-capabilities",
+            "type": "feature-list",
+            "props": {
+              "title": "Estimator capabilities that protect profit before the job starts",
+              "layout": "columns",
+              "featureVariant": "cards",
+              "featureCardWidth": 320,
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#0f172a,#052e2b)",
+              "itemBackgroundColor": "rgba(15,23,42,0.92)",
+              "borderColor": "rgba(34,197,94,0.26)",
+              "textColor": "#f8fafc",
+              "headingAlign": "center",
+              "accentColor": "#22c55e",
+              "paddingTop": 92,
+              "paddingBottom": 92,
+              "items": [
+                {
+                  "title": "Labour that does not vanish",
+                  "body": "<p>Estimate labour with clearer allowances, roles and cost assumptions so the project starts with realistic expectations. Labour leakage is one of the fastest ways a profitable job becomes painful, so Project Hub keeps labour thinking visible from quote to delivery.</p>",
+                  "image": "https://placehold.co/1600x980/08251c/22c55e?text=Estimator+Worksheet+%2B+Proposal+Builder"
+                },
+                {
+                  "title": "Materials with real scope context",
+                  "body": "<p>Materials can be connected to the work being promised, not hidden in a spreadsheet that nobody checks after approval. This makes handover cleaner and helps the team understand what was included, what changed and what needs procurement attention.</p>",
+                  "image": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88"
+                },
+                {
+                  "title": "Markup, margin and variation control",
+                  "body": "<p>Margins are protected when changes are visible. Project Hub supports a workflow where optional extras and variations can be treated as part of the commercial record rather than informal messages that are hard to recover later.</p>",
+                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Profit+Status+Forecasts"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-gantt-deep",
+            "type": "columns-2",
+            "props": {
+              "title": "Gantt Charts: turn the project into a living timeline",
+              "leftImage": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+              "rightTitle": "Plan dependencies, milestones and delays before they cost money",
+              "rightContent": "<p>Gantt planning gives owners and project managers a timeline view of the work, but the real value is not the chart itself. The value is seeing the relationship between stages, dependencies, milestones, resource timing and delays before they quietly damage the job. A connected Gantt chart helps the team understand what must happen first, what can happen in parallel and what is blocking progress.</p><p>Project Hub brings that planning into the same platform as the quote, job board, documents and communication tools. That means the timeline is not just a pretty planning artifact; it becomes part of the operational record. When dates move, the team can see what is affected. When a dependency slips, the impact is easier to explain. When owners need visibility, they can see the planned path and the actual progress in one place.</p><p>Standalone Gantt tools can look powerful, but they often sit away from the work. Project Hub is built to connect the schedule to the tasks and business systems around it, which is where time is actually saved.</p><ul><li>Timeline planning</li><li>Dependencies and blockers</li><li>Milestones and critical dates</li><li>Resource planning</li><li>Delay visibility and progress tracking</li></ul>",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+              "cardBackgroundColor": "rgba(15,23,42,0.86)",
+              "textColor": "#f8fafc",
+              "borderColor": "rgba(167,139,250,0.38)",
+              "paddingTop": 96,
+              "paddingBottom": 96
+            }
+          },
+          {
+            "id": "project-hub-enterprise-gantt-capabilities",
+            "type": "feature-list",
+            "props": {
+              "title": "Scheduling intelligence for work that changes in the real world",
+              "layout": "columns",
+              "featureVariant": "cards",
+              "featureCardWidth": 320,
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#15162b,#020617)",
+              "itemBackgroundColor": "rgba(17,24,39,0.94)",
+              "borderColor": "rgba(167,139,250,0.28)",
+              "textColor": "#f8fafc",
+              "headingAlign": "center",
+              "accentColor": "#a78bfa",
+              "paddingTop": 92,
+              "paddingBottom": 92,
+              "items": [
+                {
+                  "title": "Dependencies that expose risk",
+                  "body": "<p>Dependencies help the team see when one task is holding up another. That makes delays easier to communicate, easier to recover from and easier to prevent next time.</p>",
+                  "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones"
+                },
+                {
+                  "title": "Milestones that create accountability",
+                  "body": "<p>Milestones give the project rhythm. They help owners, supervisors and team members understand which dates matter most and what has to happen to protect them.</p>",
+                  "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Calendar+Scheduling+Resources"
+                },
+                {
+                  "title": "Progress owners can understand",
+                  "body": "<p>Project visibility should not require a meeting. Progress views help owners see where jobs stand, what is waiting and what needs attention.</p>",
+                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Profit+Status+Forecasts"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-jobboard-deep",
+            "type": "columns-2",
+            "props": {
+              "title": "Job Board: the live operating board for every active job",
+              "leftTitle": "Move work through the business without losing context",
+              "leftContent": "<p>The Job Board is where the plan becomes day-to-day execution. It gives the team a visual way to move work through stages such as pending, ready, in progress, waiting, review and complete. Tasks can carry owners, priorities, due dates, comments, files and status updates so the person doing the work has the context they need.</p><p>This is where Project Hub becomes practical. A Gantt chart can show the overall schedule, but the Job Board shows what the team should actually do next. It helps supervisors understand workload, helps office staff answer client questions and helps owners see whether the business is moving work forward or simply talking about it.</p><p>Generic task boards are common, but most are disconnected from the quote, client, documents and reporting context. Project Hub is different because the board is part of a broader business platform. The task is not isolated; it belongs to a job, a client, a timeline and a commercial outcome.</p><ul><li>Kanban-style task stages</li><li>Assignments and due dates</li><li>Drag-and-drop movement</li><li>Comments, documents and updates</li><li>Status visibility for owners and teams</li></ul>",
+              "rightImage": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files+Comments",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+              "cardBackgroundColor": "rgba(15,23,42,0.86)",
+              "textColor": "#f8fafc",
+              "borderColor": "rgba(249,115,22,0.34)",
+              "paddingTop": 96,
+              "paddingBottom": 96
+            }
+          },
+          {
+            "id": "project-hub-enterprise-jobboard-capabilities",
+            "type": "feature-list",
+            "props": {
+              "title": "Job Board features that keep production moving",
+              "layout": "columns",
+              "featureVariant": "cards",
+              "featureCardWidth": 320,
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#2b1908,#111827)",
+              "itemBackgroundColor": "rgba(15,23,42,0.92)",
+              "borderColor": "rgba(249,115,22,0.28)",
+              "textColor": "#f8fafc",
+              "headingAlign": "center",
+              "accentColor": "#f97316",
+              "paddingTop": 92,
+              "paddingBottom": 92,
+              "items": [
+                {
+                  "title": "Assignments with ownership",
+                  "body": "<p>Every task should have a clear owner. Assignments reduce the invisible someone-will-handle-it problem that causes work to stall between office, site and management teams.</p>",
+                  "image": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files+Comments"
+                },
+                {
+                  "title": "Files and comments where the work happens",
+                  "body": "<p>Photos, notes, approvals and documents are most useful when they sit next to the task they relate to. Project Hub reduces the need to search inboxes and message threads for the latest answer.</p>",
+                  "image": "https://placehold.co/1600x980/172554/60a5fa?text=Documents+Approvals+Photos+Files"
+                },
+                {
+                  "title": "Statuses that make bottlenecks visible",
+                  "body": "<p>Status columns make it obvious when work is waiting, blocked, being reviewed or complete. That helps the team act earlier and gives owners a better operational view.</p>",
+                  "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-workflow",
+            "type": "stats",
+            "props": {
+              "title": "Workflow from lead to report",
+              "subtitle": "The page is designed around the full operational journey, not one isolated module.",
+              "statsVariant": "data-ribbon",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(135deg,#020617,#1e1b4b 48%,#0f766e)",
+              "textColor": "#f8fafc",
+              "cardBackgroundColor": "rgba(15,23,42,0.88)",
+              "borderColor": "rgba(45,212,191,0.26)",
+              "accentColor": "#2dd4bf",
+              "paddingTop": 100,
+              "paddingBottom": 100,
+              "stats": [
+                {
+                  "number": "Lead",
+                  "label": "CRM captures demand",
+                  "detail": "The relationship starts in the same platform that will later manage the work."
+                },
+                {
+                  "number": "Quote",
+                  "label": "Estimator builds scope",
+                  "detail": "Pricing, labour, material assumptions and options become structured project context."
+                },
+                {
+                  "number": "Approval",
+                  "label": "Client approves",
+                  "detail": "The winning proposal becomes the bridge into delivery instead of another PDF in a folder."
+                },
+                {
+                  "number": "Project",
+                  "label": "Project starts",
+                  "detail": "The team gets a live workspace for tasks, documents, schedule and communication."
+                },
+                {
+                  "number": "Schedule",
+                  "label": "Timeline is tracked",
+                  "detail": "Dependencies, milestones and dates make delays visible earlier."
+                },
+                {
+                  "number": "Complete",
+                  "label": "Invoice and report",
+                  "detail": "Completion, reporting and billing information can close the loop."
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-comparison",
+            "type": "columns-2",
+            "props": {
+              "title": "Traditional business vs Gr8 Result Project Hub",
+              "leftTitle": "Traditional project workflow",
+              "leftContent": "<p>A lead enters the CRM, the quote is built somewhere else, the schedule is drafted in another tool, the job board lives in a separate app, files sit in a cloud folder, approvals are buried in email, reminders are sent manually and the owner asks for updates because reporting is not connected.</p><p>Every handover creates duplicated work. Every disconnected system adds subscription cost and training overhead. Every manual update increases the chance that the person making the next decision is working from old information.</p><ul><li>CRM separate from estimating</li><li>Quote separate from delivery</li><li>Calendar separate from schedule</li><li>Tasks separate from documents</li><li>Reports rebuilt manually</li></ul>",
+              "rightTitle": "Gr8 Result Project Hub",
+              "rightContent": "<p>Project Hub is designed to remove the duplication. Leads, quotes, projects, schedules, tasks, files, messages, automation and reporting can live inside one business platform. The team spends less time moving information between apps and more time moving jobs forward.</p><p>That is the strategic advantage. It is not simply one more module. It is the operational layer that makes the rest of the Gr8 Result platform more valuable because project delivery is connected to sales, communication, automation and reporting.</p><ul><li>One connected customer and job record</li><li>Quote context carries into project delivery</li><li>Tasks and schedule support each other</li><li>Messages and documents stay near the work</li><li>Reporting becomes easier to trust</li></ul>",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#f8fafc,#e0f2fe)",
+              "cardBackgroundColor": "#ffffff",
+              "textColor": "#0f172a",
+              "borderColor": "rgba(14,165,233,0.28)",
+              "paddingTop": 110,
+              "paddingBottom": 110
+            }
+          },
+          {
+            "id": "project-hub-enterprise-integrations",
+            "type": "feature-list",
+            "props": {
+              "title": "One platform advantage: every module strengthens Project Hub",
+              "layout": "columns",
+              "featureVariant": "cards",
+              "featureCardWidth": 280,
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+              "itemBackgroundColor": "rgba(255,255,255,0.07)",
+              "borderColor": "rgba(148,163,184,0.22)",
+              "textColor": "#e5eefb",
+              "headingAlign": "center",
+              "accentColor": "#38bdf8",
+              "paddingTop": 96,
+              "paddingBottom": 96,
+              "items": [
+                {
+                  "title": "CRM Integration",
+                  "body": "<p>Client, lead and pipeline information can connect directly to the project record, reducing the gap between winning work and delivering it.</p>",
+                  "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-1.png"
+                },
+                {
+                  "title": "Calendar & Scheduling",
+                  "body": "<p>Dates, bookings, resources and project milestones can work together instead of living in separate scheduling tools.</p>",
+                  "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Calendar+Scheduling+Resources"
+                },
+                {
+                  "title": "SMS & Email",
+                  "body": "<p>Project updates, reminders and client communications can be supported by platform messaging instead of manual chasing.</p>",
+                  "image": "https://placehold.co/1600x980/052e2b/2dd4bf?text=Automation+SMS+Email+Notifications"
+                },
+                {
+                  "title": "Documents",
+                  "body": "<p>Files, proposals, approvals, photos and updates stay close to the project context where the team needs them.</p>",
+                  "image": "https://placehold.co/1600x980/172554/60a5fa?text=Documents+Approvals+Photos+Files"
+                },
+                {
+                  "title": "Reports",
+                  "body": "<p>Owners can understand progress, bottlenecks and performance without rebuilding reports from multiple systems.</p>",
+                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Profit+Status+Forecasts"
+                },
+                {
+                  "title": "Accounting",
+                  "body": "<p>Approved work, variations, completion status and billing context can support cleaner financial administration.</p>",
+                  "image": "https://placehold.co/1600x980/08251c/22c55e?text=Estimator+Worksheet+%2B+Proposal+Builder"
+                },
+                {
+                  "title": "Communities",
+                  "body": "<p>Teams, clients or member groups can be supported with communication spaces connected to the broader platform.</p>",
+                  "image": "/assets/young-team-working-together-gr8-result.jpg"
+                },
+                {
+                  "title": "Funnels & Website Builder",
+                  "body": "<p>Marketing pages, lead capture and project delivery can operate inside the same commercial ecosystem.</p>",
+                  "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-source-of-truth",
+            "type": "image-stack",
+            "props": {
+              "title": "The project record becomes the source of truth",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(135deg,#111827,#0f172a 48%,#312e81)",
+              "minHeight": "860px",
+              "images": [
+                {
+                  "id": "truth-builder-preview",
+                  "kind": "image",
+                  "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+                  "x": 48,
+                  "y": 72,
+                  "width": 440,
+                  "height": 270,
+                  "rotation": -3,
+                  "radius": 28,
+                  "zIndex": 2
+                },
+                {
+                  "id": "truth-docs",
+                  "kind": "image",
+                  "src": "https://placehold.co/1600x980/172554/60a5fa?text=Documents+Approvals+Photos+Files",
+                  "x": 820,
+                  "y": 250,
+                  "width": 350,
+                  "height": 250,
+                  "rotation": -4,
+                  "radius": 24,
+                  "zIndex": 2
+                },
+                {
+                  "id": "truth-crm-2",
+                  "kind": "image",
+                  "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+                  "x": 520,
+                  "y": 92,
+                  "width": 330,
+                  "height": 230,
+                  "rotation": 4,
+                  "radius": 24,
+                  "zIndex": 3
+                },
+                {
+                  "id": "truth-reports",
+                  "kind": "image",
+                  "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Profit+Status+Forecasts",
+                  "x": 190,
+                  "y": 380,
+                  "width": 540,
+                  "height": 310,
+                  "rotation": 1,
+                  "radius": 28,
+                  "zIndex": 4
+                },
+                {
+                  "id": "truth-copy",
+                  "kind": "text",
+                  "content": "When every update belongs to the same project record, the business stops paying for confusion.",
+                  "x": 760,
+                  "y": 580,
+                  "width": 360,
+                  "height": 160,
+                  "rotation": 2,
+                  "radius": 24,
+                  "zIndex": 5,
+                  "fontSize": 28,
+                  "fontWeight": "900",
+                  "textAlign": "left",
+                  "verticalAlign": "center",
+                  "textColor": "#ffffff",
+                  "background": "rgba(2,6,23,0.88)"
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-executive-visibility",
+            "type": "stats",
+            "props": {
+              "title": "Executive visibility without another reporting meeting",
+              "subtitle": "Owners should not have to ask five people for five different updates. Project Hub is built to make status, risk and momentum easier to see.",
+              "statsVariant": "editorial-band",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#f8fafc,#ffffff)",
+              "textColor": "#0f172a",
+              "cardBackgroundColor": "#ffffff",
+              "borderColor": "rgba(148,163,184,0.24)",
+              "accentColor": "#1d4ed8",
+              "paddingTop": 105,
+              "paddingBottom": 105,
+              "stats": [
+                {
+                  "number": "Status",
+                  "label": "Every active job visible",
+                  "detail": "A clear operating view helps leaders see where attention is needed."
+                },
+                {
+                  "number": "Risk",
+                  "label": "Delays exposed earlier",
+                  "detail": "Dependencies, blocked tasks and slipping dates are easier to identify."
+                },
+                {
+                  "number": "Cash",
+                  "label": "Variation context protected",
+                  "detail": "Scope changes are less likely to disappear in informal conversations."
+                },
+                {
+                  "number": "Trust",
+                  "label": "Clients get clearer answers",
+                  "detail": "The team can answer questions from a shared source of truth."
+                }
+              ]
+            }
+          },
+          {
+            "id": "project-hub-enterprise-competitor-positioning",
+            "type": "columns-2",
+            "props": {
+              "title": "Built for the businesses competitors underserve",
+              "leftImage": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1800&q=88",
+              "rightTitle": "Enterprise discipline without enterprise friction",
+              "rightContent": "<p>Tools like Procore, Buildertrend, Autodesk Construction Cloud, Monday.com, ClickUp and Asana can be powerful, but they often force businesses into either heavy construction-specific systems or generic work management tools. Small and growing project-based businesses need something different: enough structure to control real jobs, but enough simplicity to actually get adopted by the team.</p><p>Project Hub is positioned inside the broader Gr8 Result platform, which means it can connect to marketing, CRM, communication, automation, website tools and reporting instead of pretending project management happens in isolation. That connected approach is what makes the page, the product and the platform more compelling.</p><ul><li>Premium SaaS operating model</li><li>Built for growing trade, service and construction teams</li><li>Connected to sales and marketing tools</li><li>Designed to reduce subscriptions and duplicated work</li><li>Clear enough for daily use</li></ul>",
+              "ratio": "50-50",
+              "fullWidthBackground": true,
+              "backgroundColor": "linear-gradient(180deg,#020617,#111827)",
+              "cardBackgroundColor": "rgba(15,23,42,0.86)",
+              "textColor": "#f8fafc",
+              "borderColor": "rgba(34,211,238,0.28)",
+              "paddingTop": 110,
+              "paddingBottom": 110
+            }
+          },
+          {
+            "id": "project-hub-enterprise-final-cta",
+            "type": "hero",
+            "props": {
+              "eyebrow": "Project Hub",
+              "headline": "Move the whole project workflow into one command centre",
+              "subheadline": "Start with estimating, scheduling and job tracking. Then connect CRM, calendar, documents, SMS, email, automation, reporting, funnels and your website so the business finally runs from one source of truth.",
+              "headlineBlock": {
+                "content": "Move the whole project workflow into one command centre",
+                "fontSize": 58,
+                "fontWeight": "950",
+                "lineHeight": 1.04,
+                "color": "#ffffff",
+                "alignment": "center"
+              },
+              "bodyBlock": {
+                "content": "Start with estimating, scheduling and job tracking. Then connect CRM, calendar, documents, SMS, email, automation, reporting, funnels and your website so the business finally runs from one source of truth.",
+                "fontSize": 21,
+                "lineHeight": 1.65,
+                "color": "#e0f2fe",
+                "alignment": "center"
+              },
+              "ctaText": "Start Free Trial",
+              "ctaLink": "#trial",
+              "secondaryCtaText": "Book Demo",
+              "secondaryCtaLink": "#demo",
+              "backgroundStyle": "image",
+              "backgroundImage": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1800&q=88",
+              "backgroundOverlayColor": "#020617",
+              "backgroundOverlayOpacity": 0.78,
+              "fullWidthBackground": true,
+              "minHeight": "680px",
+              "contentWidth": 950,
+              "headlineAlignment": "center",
+              "buttonColor": "linear-gradient(135deg,#22c55e,#38bdf8)",
+              "buttonTextColor": "#02111f",
+              "floatingImage": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Profit+Status+Forecasts",
+              "floatingWidth": 460,
+              "floatingHeight": 300
+            }
+          },
+          {
+            "id": "project-hub-enterprise-footer-note",
+            "type": "text",
+            "props": {
+              "text": "Project Hub by Gr8 Result Digital Solutions. Estimate, plan, schedule, assign, communicate, complete and report from one connected platform.",
+              "alignment": "center",
+              "fullWidthBackground": true,
+              "backgroundColor": "#020617",
+              "textColor": "#94a3b8",
+              "textFontSize": 15,
+              "paddingTop": 32,
+              "paddingBottom": 32
             }
           }
         ]

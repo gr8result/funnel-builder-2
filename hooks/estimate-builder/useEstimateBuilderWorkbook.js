@@ -224,20 +224,17 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         cancelled = true;
       };
     }
-    loadLatestStoredJob().then(async (storedJob) => {
+    loadActiveStoredJob().then(async (storedJob) => {
       if (cancelled) return;
       if (!storedJob?.workbook) {
-        const savedAt = new Date().toISOString();
-        const template = await resolveMasterTemplate().catch(() => null);
-        if (cancelled || !template) return;
         estimateBuilderLog("loading workbook", {
-          source: "master-template-fallback",
-          templateKey: MASTER_TEMPLATE_KEY,
-          templateName: MASTER_TEMPLATE_NAME,
-          mode: "new-job-from-template",
+          source: "no-active-job",
+          destination: "project-hub",
+          mode: "none",
         });
-        setWorkbook(createCleanJobFromMasterTemplate(template, savedAt));
-        setLastSavedAt("");
+        if (shouldRedirectToProjectHubOnMissingActiveJob()) {
+          window.location.replace("/modules/construction");
+        }
         return;
       }
       estimateBuilderLog("loading workbook", {
@@ -247,18 +244,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         templateName: storedJob.workbook?.templateName || "",
         mode: "job",
       });
-      const localDraft = loadLocalDraft();
       const storedSavedAt = String(storedJob.savedAt || storedJob.workbook?.savedAt || "");
-      const localSavedAt = String(localDraft?.savedAt || "");
-      if (!localDraft || storedSavedAt > localSavedAt) {
-        if (needsMasterTemplateMigration(storedJob.workbook)) {
-          await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
-        }
-        const workbookWithTemplateDefaults = await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook));
-        if (cancelled) return;
-        setWorkbook(normalizeWorkbook(workbookWithTemplateDefaults));
-        setLastSavedAt(storedSavedAt);
+      if (needsMasterTemplateMigration(storedJob.workbook)) {
+        await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
       }
+      const workbookWithTemplateDefaults = await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook));
+      if (cancelled) return;
+      setWorkbook(normalizeWorkbook(workbookWithTemplateDefaults));
+      setLastSavedAt(storedSavedAt);
     }).catch(() => {});
     return () => {
       cancelled = true;
@@ -1219,7 +1212,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
 
   async function loadDraft() {
     if (typeof window === "undefined") return;
-    const storedJob = await loadLatestStoredJob().catch(() => null);
+    const storedJob = await loadActiveStoredJob().catch(() => null);
     if (!storedJob?.workbook) return;
     estimateBuilderLog("loading draft", {
       source: "IndexedDB job store",
@@ -1392,12 +1385,12 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     return { ok: true, message: "Template version restored." };
   }
 
-  async function createJobFromTemplate() {
+  async function createJobFromTemplate(jobDetails = {}) {
     if (typeof window === "undefined") return { ok: false, message: "Templates are not available here." };
     const template = await resolveMasterTemplate();
     if (!template) return { ok: false, message: "Template could not be found." };
     const savedAt = new Date().toISOString();
-    const jobWorkbook = createCleanJobFromMasterTemplate(template, savedAt);
+    const jobWorkbook = applyJobDetailsToWorkbook(createCleanJobFromMasterTemplate(template, savedAt), jobDetails);
     jobWorkbook.createdFromMasterTemplateAt = savedAt;
     const draft = prepareWorkbookForJobSave(jobWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
@@ -1407,7 +1400,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setWorkbook(jobWorkbook);
     setLastSavedAt(savedAt);
     await refreshTemplateSummaries();
-    return { ok: true, message: "New job created from master template.", key: MASTER_TEMPLATE_KEY };
+    return { ok: true, message: "New job created from master template.", key: MASTER_TEMPLATE_KEY, workbook: jobWorkbook };
   }
 
   async function duplicateAsNewTemplate(templateKey = "") {
@@ -1590,8 +1583,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       sourceFileName: fileName || workbookFromFile?.sourceFileName || workbookFromFile?.openedFileName || "",
     });
     nextWorkbook = await applyTemplateDefaultsToJob(nextWorkbook);
+    const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
+    saveLocalDraftMetadata(draft, savedAt);
+    await saveStoredJob(draft, savedAt);
     setWorkbook(normalizeWorkbook(nextWorkbook));
-    setLastSavedAt(parsed?.savedAt || nextWorkbook?.savedAt || "");
+    setLastSavedAt(parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     rememberRecentJob(nextWorkbook, parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     setRecentJobs(loadRecentEstimateJobs());
   }
@@ -1696,6 +1692,59 @@ function initialWorkbook(initialValues = {}, options = {}) {
     return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
   }
   return normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
+}
+
+function applyJobDetailsToWorkbook(workbook = {}, jobDetails = {}) {
+  const next = {
+    ...workbook,
+    projectName: String(jobDetails.jobName || workbook.projectName || ""),
+    jobFileMeta: {
+      jobName: String(jobDetails.jobName || ""),
+      clientName: String(jobDetails.clientName || ""),
+      jobNumber: String(jobDetails.jobNumber || ""),
+      address: String(jobDetails.address || ""),
+      notes: String(jobDetails.notes || ""),
+      created: new Date().toISOString(),
+    },
+  };
+
+  const sectionEntries = Object.entries(next.data || {});
+  const fieldMap = {
+    projectName: String(jobDetails.jobName || ""),
+    jobName: String(jobDetails.jobName || ""),
+    clientName: String(jobDetails.clientName || ""),
+    customerName: String(jobDetails.clientName || ""),
+    jobNumber: String(jobDetails.jobNumber || ""),
+    quoteNumber: String(jobDetails.jobNumber || ""),
+    address: String(jobDetails.address || ""),
+    siteAddress: String(jobDetails.address || ""),
+    notes: String(jobDetails.notes || ""),
+    projectNotes: String(jobDetails.notes || ""),
+  };
+
+  for (const [sectionKey, section] of sectionEntries) {
+    const rows = section?.rows || {};
+    const nextRows = { ...rows };
+    let touched = false;
+    for (const [rowKey, row] of Object.entries(rows)) {
+      if (!Object.prototype.hasOwnProperty.call(fieldMap, rowKey)) continue;
+      const value = fieldMap[rowKey];
+      if (!value) continue;
+      nextRows[rowKey] = { ...(row || {}), value };
+      touched = true;
+    }
+    if (touched) {
+      next.data = {
+        ...(next.data || {}),
+        [sectionKey]: {
+          ...section,
+          rows: nextRows,
+        },
+      };
+    }
+  }
+
+  return next;
 }
 
 function createBlankPreviewWorkbook(initialValues = {}) {
@@ -5695,8 +5744,6 @@ const TEMPLATE_POINTER_KEY = "active-template-key";
 const JOB_STORE_NAME = "jobs";
 const ACTIVE_JOB_KEY = "active-job";
 const RECENT_JOBS_STORAGE_KEY = "estimate-builder-recent-jobs";
-const SIMPLE_JOB_KEY = "job:simple";
-const SIMPLE_JOB_FILE_NAME = "simple.json";
 const CORRUPT_ESTIMATE_JOB_FILE_NAME = "estimate-job.json";
 const LAST_LINKED_TEMPLATE_STORAGE_KEY = "estimate-builder-last-linked-template";
 const ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY = "estimate-builder-allow-unlinked-job-save";
@@ -5834,6 +5881,16 @@ function saveAllowUnlinkedJobSave(value) {
   } catch {}
 }
 
+function shouldRedirectToProjectHubOnMissingActiveJob() {
+  if (typeof window === "undefined") return false;
+  try {
+    const mode = new URLSearchParams(window.location.search || "").get("mode");
+    return mode !== "open-job" && mode !== "open-recent";
+  } catch {
+    return true;
+  }
+}
+
 function workbookJobKey(workbook = {}) {
   const registeredId = String(workbook?.registeredJob?.jobId || "").trim();
   if (registeredId) return `job:${registeredId}`;
@@ -5868,12 +5925,13 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
     savedAt,
     workbook: savedWorkbook,
   };
+  const activePointer = createActiveJobPointer(record);
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
     const store = transaction.objectStore(JOB_STORE_NAME);
     store.put(record, key);
-    store.put(record, ACTIVE_JOB_KEY);
+    store.put(activePointer, ACTIVE_JOB_KEY);
     store.put({ ...record, key: `${key}:snapshot:${savedAt}` }, `${key}:snapshot:${savedAt}`);
     transaction.oncomplete = () => {
       db.close();
@@ -5889,13 +5947,14 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
 
 async function setActiveStoredJob(record = {}) {
   if (!record?.workbook || !record?.key) return null;
+  const activePointer = createActiveJobPointer(record);
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
-    transaction.objectStore(JOB_STORE_NAME).put(record, ACTIVE_JOB_KEY);
+    transaction.objectStore(JOB_STORE_NAME).put(activePointer, ACTIVE_JOB_KEY);
     transaction.oncomplete = () => {
       db.close();
-      resolve(record);
+      resolve(activePointer);
     };
     transaction.onerror = () => {
       const error = transaction.error || new Error("Could not set active estimate job");
@@ -5932,6 +5991,7 @@ async function listStoredJobs() {
       const byKey = new Map();
       (request.result || []).forEach((record) => {
         if (!record?.key) return;
+        if (isActiveJobPointer(record)) return;
         if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record) || isBlockedEstimateBuilderJobKey(record.key) || isSnapshotJobKey(record.key)) {
           if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderJobKey(record.key)) store.delete(record.key);
           return;
@@ -5987,77 +6047,66 @@ async function saveJobBackup(workbook, savedAt = new Date().toISOString()) {
   });
 }
 
-async function loadLatestStoredJob() {
+function createActiveJobPointer(record = {}) {
+  return {
+    type: "active-job-pointer",
+    key: ACTIVE_JOB_KEY,
+    jobKey: record.key || "",
+    name: record.name || workbookJobName(record.workbook || {}),
+    savedAt: record.savedAt || record.workbook?.savedAt || "",
+    openedFileName: record.workbook?.openedFileName || record.workbook?.sourceFileName || "",
+  };
+}
+
+function isActiveJobPointer(record = {}) {
+  return record?.type === "active-job-pointer" || String(record?.key || "") === ACTIVE_JOB_KEY && Boolean(record?.jobKey);
+}
+
+async function loadActiveStoredJob() {
   purgeCorruptEstimateJobLocalStorage();
   const db = await openTemplateDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(JOB_STORE_NAME, "readwrite");
     const store = transaction.objectStore(JOB_STORE_NAME);
-    const request = store.getAll();
+    const request = store.get(ACTIVE_JOB_KEY);
     request.onsuccess = () => {
-      const records = request.result || [];
-      const simpleJob = findSimpleStoredJob(records);
-      records.forEach((record) => {
-        if (!record?.key) return;
-        if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record) || isBlockedEstimateBuilderJobKey(record.key)) {
-          store.delete(record.key);
-        }
-      });
-      if (simpleJob) {
-        const activeSimple = prepareSimpleStoredJob(simpleJob);
-        store.put(activeSimple, activeSimple.key);
-        store.put(activeSimple, ACTIVE_JOB_KEY);
-        resolve(activeSimple);
+      const activeRecord = request.result || null;
+      const activeJobKey = isActiveJobPointer(activeRecord)
+        ? String(activeRecord.jobKey || "").trim()
+        : String(activeRecord?.key || "").trim();
+      if (!activeJobKey || isBlockedEstimateBuilderJobKey(activeJobKey) || isSnapshotJobKey(activeJobKey)) {
+        if (activeRecord) store.delete(ACTIVE_JOB_KEY);
+        resolve(null);
         return;
       }
-      resolve(null);
+      const jobRequest = store.get(activeJobKey);
+      jobRequest.onsuccess = () => {
+        let storedJob = jobRequest.result || null;
+        if (!storedJob && activeRecord?.type === "job" && activeRecord?.workbook && activeRecord.key === activeJobKey) {
+          storedJob = activeRecord;
+          store.put(storedJob, activeJobKey);
+        }
+        if (!storedJob?.workbook || storedJob.type !== "job" || isCorruptEstimateJobRecord(storedJob) || isBlockedEstimateBuilderActiveJob(storedJob)) {
+          store.delete(ACTIVE_JOB_KEY);
+          resolve(null);
+          return;
+        }
+        store.put(createActiveJobPointer(storedJob), ACTIVE_JOB_KEY);
+        resolve(storedJob);
+      };
+      jobRequest.onerror = () => reject(jobRequest.error || new Error("Could not load active estimate job"));
     };
-    request.onerror = () => reject(request.error || new Error("Could not load saved estimate jobs"));
+    request.onerror = () => reject(request.error || new Error("Could not load active estimate job"));
     transaction.oncomplete = () => db.close();
     transaction.onerror = () => {
       db.close();
-      reject(transaction.error || new Error("Could not read estimate jobs"));
+      reject(transaction.error || new Error("Could not read active estimate job"));
+    };
+    transaction.onabort = () => {
+      db.close();
+      reject(transaction.error || new Error("Could not read active estimate job"));
     };
   });
-}
-
-function findSimpleStoredJob(records = []) {
-  const jobs = records.filter((record) => record?.type === "job" && record?.workbook && !isCorruptEstimateJobRecord(record));
-  return jobs.find(isSimpleEstimateBuilderJob)
-    || jobs.find((record) => String(record.key || "").toLowerCase() === SIMPLE_JOB_KEY && !isBlockedEstimateBuilderJobKey(record.key))
-    || null;
-}
-
-function prepareSimpleStoredJob(record = {}) {
-  const workbook = migrateWorkbookToMasterTemplate({
-    ...(record.workbook || {}),
-    openedFileName: SIMPLE_JOB_FILE_NAME,
-    sourceFileName: SIMPLE_JOB_FILE_NAME,
-    templateKey: MASTER_TEMPLATE_KEY,
-    templateName: MASTER_TEMPLATE_NAME,
-    templateType: "job",
-  });
-  return {
-    ...record,
-    type: "job",
-    key: SIMPLE_JOB_KEY,
-    name: "simple.json",
-    savedAt: record.savedAt || workbook.savedAt || "",
-    workbook,
-  };
-}
-
-function isSimpleEstimateBuilderJob(record = {}) {
-  const text = [
-    record.key,
-    record.name,
-    record.workbook?.openedFileName,
-    record.workbook?.sourceFileName,
-    record.workbook?.projectName,
-    record.workbook?.registeredJob?.jobName,
-    dataValue(record.workbook || {}, "projectName"),
-  ].join(" ").toLowerCase();
-  return /\bsimple(?:\.json)?\b/.test(text);
 }
 
 function isCorruptEstimateJobFileName(fileName = "") {

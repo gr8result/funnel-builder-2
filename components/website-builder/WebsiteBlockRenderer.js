@@ -1,8 +1,10 @@
 import React from "react";
-import WbRichTextEditor from "../text-editor/WbRichTextEditor";
+import RichText from "../RichText";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
+import PlatformPricingPlans from "../billing/PlatformPricingPlans";
+import { getPlatformChartPlans } from "../../data/platformPricing";
 import { renderGridLibraryIcon } from "./gridIconLibrary";
 import {
   MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
@@ -844,9 +846,8 @@ function SideScrollAccordionBlock({ props, compact = false, editor = false, onCh
 }
 
 // ── WbTextEditableContent ──────────────────────────────────────────────────────
-// Wraps WbRichTextEditor for the "text" block type.  Defined as a real React
-// component (capital letter) so it can use hooks internally via WbRichTextEditor.
-// Only rendered in editor mode; the read-only path uses a plain div.
+// Uses the established inline RichText editor for text blocks.
+// This keeps editor behavior consistent across existing sites.
 
 function WbTextEditableContent({ props, onChangeBlock, compact }) {
   const textLineHeight = Math.max(
@@ -855,23 +856,12 @@ function WbTextEditableContent({ props, onChangeBlock, compact }) {
   );
 
   return (
-    <WbRichTextEditor
-      html={cleanTextSectionHtml(props.text)}
+    <RichText
+      value={cleanTextSectionHtml(props.text)}
       onChange={(html) => {
         if (typeof onChangeBlock === "function") {
           onChangeBlock({ ...props, text: cleanInlineEditorHtml(html) });
         }
-      }}
-      blockStyle={{
-        margin: 0,
-        width: "100%",
-        maxWidth: "100%",
-        boxSizing: "border-box",
-        "--wb-text-line-height": textLineHeight,
-        fontSize: Math.max(12, Number(props.textFontSize || 18)),
-        lineHeight: textLineHeight,
-        textAlign: props.alignment || "left",
-        ...bodyTypography(props),
       }}
       placeholder="Click to edit text…"
     />
@@ -966,12 +956,19 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
       const rawHeroMarginTop = Math.max(0, Number(props.marginTop || 0));
       const heroMarginTop = editor ? Math.min(rawHeroMarginTop, 24) : rawHeroMarginTop;
-      const headingColor = props.headlineColor || "#ffffff";
-      const headingFamily = props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
-      const headingWeight = props.headlineFontWeight || "700";
-      const bodyColor = props.textColor || headingColor;
-      const bodyFamily = props.fontFamily || headingFamily;
-      const headingAlign = props.headlineAlignment || heroLayout.headlineAlignment || "center";
+      const headlineBlock = props.headlineBlock && typeof props.headlineBlock === "object" ? props.headlineBlock : {};
+      const bodyBlock = props.bodyBlock && typeof props.bodyBlock === "object" ? props.bodyBlock : {};
+      const headingColor = headlineBlock.color || props.headlineColor || "#ffffff";
+      const headingFamily = headlineBlock.fontFamily || props.headlineFontFamily || "system-ui, -apple-system, sans-serif";
+      const headingWeight = headlineBlock.fontWeight || props.headlineFontWeight || "700";
+      const headingLineHeight = headlineBlock.lineHeight || props.headlineLineHeight || 1.1;
+      const headingFontSize = headlineBlock.fontSize || props.headlineFontSize || 52;
+      const bodyColor = bodyBlock.color || props.textColor || headingColor;
+      const bodyFamily = bodyBlock.fontFamily || props.fontFamily || headingFamily;
+      const bodyWeight = bodyBlock.fontWeight || props.fontWeight || "400";
+      const bodyLineHeight = bodyBlock.lineHeight || props.subheadlineLineHeight || props.textLineHeight || 1.6;
+      const bodyFontSize = bodyBlock.fontSize || props.subheadlineFontSize || 20;
+      const headingAlign = headlineBlock.alignment || props.headlineAlignment || props.headlineAlign || props.headingAlign || heroLayout.headlineAlignment || "center";
       const heroHorizontalInset = compact ? 24 : 48;
       const heroContentMaxWidth = Math.max(320, Number(props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
       const heroContentBounds = {
@@ -1535,14 +1532,19 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   if (shouldSkipToolbarBlur(event)) return;
                   if (!editor || typeof onChangeBlock !== "function") return;
                   const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
-                  onChangeBlock({ ...props, headline: cleaned === "Click to type headline" ? "" : cleaned });
+                  const nextContent = cleaned === "Click to type headline" ? "" : cleaned;
+                  onChangeBlock({
+                    ...props,
+                    headline: nextContent,
+                    headlineBlock: { ...(props.headlineBlock || {}), content: nextContent },
+                  });
                 }}
                 style={{
                   position: "relative",
                   zIndex: 1,
                   margin: 0,
-                  fontSize: compact ? 22 : (props.headlineFontSize || 52),
-                  lineHeight: 1.1,
+                  fontSize: compact ? 22 : headingFontSize,
+                  lineHeight: headingLineHeight,
                   fontWeight: headingWeight,
                   fontFamily: headingFamily,
                   color: headingColor,
@@ -1557,7 +1559,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   overflowWrap: "break-word",
                   borderRadius: 8,
                 }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.headline) || (editor ? "Click to type headline" : "")) }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(headlineBlock.content ?? props.headline) || (editor ? "Click to type headline" : "")) }}
               />
                   {(editor || !!stripPlaceholder(props.subheadline)) ? (
                     <p
@@ -1571,16 +1573,21 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     if (shouldSkipToolbarBlur(event)) return;
                     if (!editor || typeof onChangeBlock !== "function") return;
                     const cleaned = cleanInlineEditorHtml(event.currentTarget.innerHTML);
-                    onChangeBlock({ ...props, subheadline: cleaned === "Add supporting text here" ? "" : cleaned });
+                    const nextContent = cleaned === "Add supporting text here" ? "" : cleaned;
+                    onChangeBlock({
+                      ...props,
+                      subheadline: nextContent,
+                      bodyBlock: { ...(props.bodyBlock || {}), content: nextContent },
+                    });
                   }}
                   style={{
                     position: "relative",
                     zIndex: 1,
                     margin: 0,
-                    fontSize: compact ? 15 : (props.subheadlineFontSize || 20),
-                    lineHeight: 1.6,
+                    fontSize: compact ? 15 : bodyFontSize,
+                    lineHeight: bodyLineHeight,
                     fontFamily: bodyFamily,
-                    fontWeight: props.fontWeight || "400",
+                    fontWeight: bodyWeight,
                     color: bodyColor,
                     ...(shouldRunAnimations ? getAnimationStyle(props.subheadlineAnimation, props.subheadlineAnimationDelay || 0, props.subheadlineAnimationSpeed) : {}),
                     width: "100%",
@@ -1593,7 +1600,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     padding: editor ? "4px 6px" : 0,
                     borderRadius: 8,
                   }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(props.subheadline) || (editor ? "Add supporting text here" : "")) }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(bodyBlock.content ?? props.subheadline) || (editor ? "Add supporting text here" : "")) }}
                     />
                   ) : null}
                   {props.ctaText ? (
@@ -1872,7 +1879,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 ) : (
                   <div
                     className="wb-text-block"
-                    style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, textAlign: props.alignment || "left", ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) }}
+                    style={{ margin: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", "--wb-text-line-height": textLineHeight, fontSize: Math.max(12, Number(props.textFontSize || 18)), lineHeight: textLineHeight, ...bodyTypography(props), ...getAnimationStyle(props.textAnimation, props.textAnimationDelay || 0, props.textAnimationSpeed) }}
                     dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
                   />
                 )}
@@ -2310,20 +2317,50 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
     }
 
+    case "platform-pricing-plans": {
+      return (
+        <ScrollReveal
+          as="section"
+          animationName={props.sectionAnimation || "fade-up"}
+          delay={props.sectionAnimationDelay || 0.06}
+          speed={props.sectionAnimationSpeed}
+          disabled={editor}
+          style={{
+            ...sharedStyles.cardSection(compact, props),
+            ...fullWidthStyle(props, compact, editor),
+            background: props.backgroundColor || "#0f172a",
+          }}
+        >
+          <div style={sectionContentStyle(props, compact)}>
+            {props.title ? (
+              <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#f8fafc", marginBottom: props.subtitle ? 10 : 28 }}>
+                {props.title}
+              </h2>
+            ) : null}
+            {props.subtitle ? (
+              <p style={{ ...sharedStyles.sectionSub, color: props.subtleTextColor || "rgba(226,232,240,0.78)", marginBottom: 30 }}>
+                {props.subtitle}
+              </p>
+            ) : null}
+            <PlatformPricingPlans
+              marketingMode
+              showAddOns={props.showAddOns !== false}
+              ctaLabel={props.ctaLabel || "Start Free Trial"}
+              selectedPlan={null}
+              currentPlan={null}
+            />
+          </div>
+        </ScrollReveal>
+      );
+    }
+
     case "pricing-table":
       const pricingVariant = pricingVariantStyles(props);
       const plans = asArray(props.plans).map((plan, idx) => normalizePricingPlan(plan, idx));
       const pricingImageHotspots = asArray(props.pricingImageHotspots);
       const patchPlan = (planIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
-        const normalizedPatch = {
-          ...patch,
-          ...(Object.prototype.hasOwnProperty.call(patch, "name") ? { name: htmlToPlainText(patch.name) } : {}),
-          ...(Object.prototype.hasOwnProperty.call(patch, "price") ? { price: htmlToPlainText(patch.price) } : {}),
-          ...(Object.prototype.hasOwnProperty.call(patch, "description") ? { description: htmlToPlainText(patch.description) } : {}),
-          ...(Object.prototype.hasOwnProperty.call(patch, "cta") ? { cta: htmlToPlainText(patch.cta) } : {}),
-          ...(Object.prototype.hasOwnProperty.call(patch, "includedFeatures") ? { includedFeatures: (Array.isArray(patch.includedFeatures) ? patch.includedFeatures : []).map((item) => htmlToPlainText(item)) } : {}),
-        };
+        const normalizedPatch = { ...patch };
         const nextPlans = plans.map((plan, currentIndex) => (
           currentIndex === planIndex
             ? {
@@ -2341,7 +2378,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         const nextPlans = plans.map((plan, currentIndex) => {
           if (currentIndex !== planIndex) return plan;
           const nextFeatures = asArray(plan.includedFeatures).map((feature, currentFeatureIndex) => (
-            currentFeatureIndex === featureIndex ? htmlToPlainText(nextValue) : feature
+            currentFeatureIndex === featureIndex ? nextValue : feature
           ));
           return { ...plan, includedFeatures: nextFeatures, features: nextFeatures };
         });
@@ -2353,7 +2390,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         const nextPlans = plans.map((plan, currentIndex) => {
           if (currentIndex !== planIndex) return plan;
           const nextExtras = asArray(plan.extras).map((extra, currentExtraIndex) => (
-            currentExtraIndex === extraIndex ? htmlToPlainText(nextValue) : extra
+            currentExtraIndex === extraIndex ? nextValue : extra
           ));
           return { ...plan, extras: nextExtras };
         });
@@ -2373,9 +2410,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 suppressContentEditableWarning
                 onBlur={(event) => {
                   if (!editor || typeof onChangeBlock !== "function") return;
-                  onChangeBlock({ ...props, title: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+                  onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
                 }}
-                style={{ ...sharedStyles.sectionTitle(compact), color: pricingVariant.sectionTitleColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+                style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: pricingVariant.sectionTitleColor || props.headlineColor || props.textColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Pricing" : "")) }}
               />
               <div style={{ position: "relative", width: "100%", maxWidth: imageMaxWidth, margin: "0 auto", overflow: "hidden", borderRadius: Number(props.pricingImageRadius || 12) || 12 }}>
@@ -2432,9 +2469,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             suppressContentEditableWarning
             onBlur={(event) => {
               if (!editor || typeof onChangeBlock !== "function") return;
-              onChangeBlock({ ...props, title: htmlToPlainText(cleanInlineEditorHtml(event.currentTarget.innerHTML)) });
+              onChangeBlock({ ...props, title: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
             }}
-            style={{ ...sharedStyles.sectionTitle(compact), color: pricingVariant.sectionTitleColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
+            style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), color: pricingVariant.sectionTitleColor || props.headlineColor || props.textColor || undefined, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Pricing" : "")) }}
           />
           <div
@@ -4455,12 +4492,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     case "chart": {
       const chartPlans = Array.isArray(props.plans) && props.plans.length > 0
         ? props.plans
-        : [
-            { id: "starter", name: "Starter", color: "#6366f1", individualPrice: 215, billingPrice: 159 },
-            { id: "growth", name: "Growth", color: "#22c55e", individualPrice: 474, billingPrice: 359 },
-            { id: "scale", name: "Scale", color: "#f59e0b", individualPrice: 913, billingPrice: 499 },
-            { id: "professional", name: "Professional", color: "#7c3aed", individualPrice: 1883, billingPrice: 999 },
-          ];
+        : getPlatformChartPlans();
       const chartBg = props.backgroundColor || "#0f172a";
       const chartTextColor = props.textColor || "#f8fafc";
       const chartHeading = props.heading || "Stop Paying Full Price";

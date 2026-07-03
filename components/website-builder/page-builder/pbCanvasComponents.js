@@ -191,12 +191,15 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                       : sp.backgroundStyle === "image" && sp.backgroundImage
                           ? `url(${JSON.stringify(sp.backgroundImage)}) ${sp.backgroundPosition || "center center"} / ${sp.backgroundSize || "cover"} no-repeat`
                       : "repeating-linear-gradient(45deg,rgba(99,102,241,0.08) 0,rgba(99,102,241,0.08) 1px,transparent 0,transparent 50%) 0 0 / 8px 8px";
-          return { padding: 0, background: spBg, border: "none", borderRadius: 0, outline: selected ? "1px dashed rgba(99,102,241,0.35)" : "none", minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
+          return { padding: 0, background: spBg, border: "none", borderRadius: 0, outline: selected || hovered ? "1px solid rgba(14,165,233,0.65)" : "none", minHeight: Number(String(sp.height || "40").replace("px", "")) || 40, boxShadow: "none" };
         })() : {}),
+        ...(hovered && !selected ? styles.canvasBlockHovered : {}),
         ...(selected && block?.type !== "columns-2" && block?.type !== "columns-3" && block?.type !== "grid-section" && block?.type !== "space" ? styles.canvasBlockSelected : {}),
         ...(selected && (block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { outline: "2px solid #0ea5e9" } : {}),
       }}
       data-canvas-block-index={index}
+      data-builder-block-active={showOverlay ? "true" : "false"}
+      data-builder-block-selected={selected ? "true" : "false"}
       draggable={!isEditingVideoHero}
       onDragStart={(e) => {
         if (e.target?.closest?.("button,input,select,textarea,label,[data-no-canvas-drag='true']")) {
@@ -3538,6 +3541,55 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         onUploadImage={onUploadImage}
         onOpenSimpleImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
       />
+    );
+  }
+
+  if (block.type === BlockTypes.PLATFORM_PRICING_PLANS) {
+    const platformProps = block.props || {};
+    const updatePlatformPricing = (patch) => onChange(index, { ...platformProps, ...patch });
+    return (
+      <div style={styles.properties}>
+        <h3 style={styles.propertiesTitle}>💳 Platform Pricing Plans</h3>
+        <div style={styles.propertyGrid}>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Locked Billing Source</label>
+            <p style={{ margin: 0, color: "#94a3b8", fontSize: 14, lineHeight: 1.55 }}>
+              This block renders the same platform plan cards as /billing. Plan names, prices, badges, quotas, add-ons, and annual billing math update from the shared billing pricing source.
+            </p>
+          </div>
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Section Title</label>
+            <input
+              type="text"
+              value={String(platformProps.title || "")}
+              onChange={(event) => updatePlatformPricing({ title: event.target.value })}
+              style={styles.propertyInput}
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Subtitle</label>
+            <textarea
+              value={String(platformProps.subtitle || "")}
+              onChange={(event) => updatePlatformPricing({ subtitle: event.target.value })}
+              style={{ ...styles.propertyInput, minHeight: 74, resize: "vertical" }}
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 10 }}>CTA label</label>
+            <input
+              type="text"
+              value={String(platformProps.ctaLabel || "Start Free Trial")}
+              onChange={(event) => updatePlatformPricing({ ctaLabel: event.target.value })}
+              style={styles.propertyInput}
+            />
+            <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+              <input
+                type="checkbox"
+                checked={platformProps.showAddOns !== false}
+                onChange={(event) => updatePlatformPricing({ showAddOns: event.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Show optional add-ons
+            </label>
+          </div>
+        </div>
+      </div>
     );
   }
 

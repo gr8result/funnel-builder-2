@@ -94,13 +94,21 @@
       "objective": "Sell the Social Media module by demonstrating AI campaign creation, automated publishing and dramatic time savings.",
       "file": "social-media.json",
       "order": 10
+    },
+    {
+      "id": "project-hub",
+      "name": "Project Hub",
+      "slug": "project-hub",
+      "objective": "Flagship enterprise SaaS sales page for Project Hub, presenting estimating, job boards, Gantt planning, integrations, reporting and workflow consolidation.",
+      "file": "project-hub.json",
+      "order": 11
     }
   ],
   "status": "saved",
   "buildType": "website",
   "createdAt": "2026-05-25T09:48:50.001931+10:00",
   "stylePack": "executive",
-  "updatedAt": "2026-06-22T21:08:05.027Z",
+  "updatedAt": "2026-07-03T06:12:26.656Z",
   "copyAngles": [],
   "__draftSync": true,
   "publication": {
@@ -158,6 +166,11 @@
               "id": "nav-child-website-builder",
               "href": "#website-builder",
               "label": "Website Builder"
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "#project-hub",
+              "label": "Project Hub"
             }
           ],
           "highlighted": false
@@ -328,7 +341,8 @@
     "sms",
     "funnels",
     "website-builder",
-    "social-media"
+    "social-media",
+    "project-hub"
   ],
   "pageSlugs": {
     "Home": "home",
@@ -341,7 +355,8 @@
     "SMS": "sms",
     "Funnels": "funnels",
     "Website Builder": "website-builder",
-    "Social Media": "social-media"
+    "Social Media": "social-media",
+    "Project Hub": "project-hub"
   },
   "published": false,
   "storageVersion": 2

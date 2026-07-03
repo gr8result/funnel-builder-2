@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { SCALE_PRESETS } from "./takeoffTypes";
-import { presetToPpm, calibrationToPpm } from "./takeoffUtils";
+import { presetToPpm, calibrationToPpm, getPixelsPerUnit } from "./takeoffUtils";
 
 export default function ScaleCalibrationPanel({
   scale, calibrating, measuredFloorAreaM2 = 0, onScaleChange, onStartCalibration, onCancelCalibration,
@@ -12,14 +12,16 @@ export default function ScaleCalibrationPanel({
   const [knownArea, setKnownArea] = useState("");
 
   const calPts     = calibrating?.points || [];
-  const calReady   = calPts.length >= 2 && parseFloat(distance) > 0;
-  const hasScale    = !!(scale?.pixelsPerMetre > 0);
+  const distanceMm = parseFloat(distance);
+  const calReady   = calPts.length >= 2 && distanceMm > 0;
+  const pixelsPerUnit = getPixelsPerUnit(scale);
+  const hasScale    = pixelsPerUnit > 0;
   const confirmed  = hasScale && scale?.accepted !== false;
   const canCorrectArea = confirmed && measuredFloorAreaM2 > 0 && parseFloat(knownArea) > 0;
 
   const applyPreset = useCallback((preset) => {
     const ppm = presetToPpm(preset.ratio);
-    onScaleChange({ method: "preset", preset: preset.value, ratio: preset.ratio, pixelsPerMetre: ppm, accepted: true, confidence: 1, confirmedAt: new Date().toISOString() });
+    onScaleChange({ method: "preset", preset: preset.value, ratio: preset.ratio, pixelsPerUnit: ppm, accepted: true, confidence: 1, confirmedAt: new Date().toISOString() });
   }, [onScaleChange]);
 
   const confirmDetectedScale = useCallback(() => {
@@ -28,25 +30,25 @@ export default function ScaleCalibrationPanel({
   }, [hasScale, onScaleChange, scale]);
 
   const applyCalibration = useCallback(() => {
-    const dist = parseFloat(distance);
     if (!calReady) return;
-    const ppm = calibrationToPpm(calPts[0], calPts[1], dist);
+    const distM = distanceMm / 1000;
+    const ppm = calibrationToPpm(calPts[0], calPts[1], distM);
     if (ppm) {
-      onScaleChange({ method: "calibration", preset: null, pixelsPerMetre: ppm, calibrationPoints: calPts, calibrationDistanceMetres: dist, accepted: true, confidence: 1, confirmedAt: new Date().toISOString() });
+      onScaleChange({ method: "calibration", preset: null, pixelsPerUnit: ppm, calibrationPoints: calPts, calibrationDistanceMetres: distM, calibrationDistanceMm: distanceMm, accepted: true, confidence: 1, confirmedAt: new Date().toISOString() });
       onCancelCalibration();
     }
-  }, [calReady, calPts, distance, onScaleChange, onCancelCalibration]);
+  }, [calReady, calPts, distanceMm, onScaleChange, onCancelCalibration]);
 
   const applyKnownAreaCorrection = useCallback(() => {
     const targetArea = parseFloat(knownArea);
     const currentArea = Number(measuredFloorAreaM2) || 0;
-    const currentPpm = Number(scale?.pixelsPerMetre) || 0;
+    const currentPpm = getPixelsPerUnit(scale);
     if (!(targetArea > 0 && currentArea > 0 && currentPpm > 0)) return;
     const correctionFactor = Math.sqrt(currentArea / targetArea);
     onScaleChange({
       ...scale,
       method: scale?.method || "calibration",
-      pixelsPerMetre: currentPpm * correctionFactor,
+      pixelsPerUnit: currentPpm * correctionFactor,
       accepted: true,
       areaCorrection: {
         targetAreaM2: targetArea,
@@ -104,7 +106,7 @@ export default function ScaleCalibrationPanel({
         <div style={S.calSection}>
           <div style={S.label}>1. Click two points on the plan</div>
           {!calibrating ? (
-            <button style={S.calBtn} onClick={onStartCalibration}>Click two points on canvas</button>
+            <button style={S.calBtn} onClick={onStartCalibration}>Set Scale</button>
           ) : (
             <div style={S.calStatus}>
               {calPts.length === 0 && "Click the first point…"}
@@ -117,11 +119,11 @@ export default function ScaleCalibrationPanel({
           <div style={{ ...S.label, marginTop: 8 }}>2. Enter the real distance</div>
           <div style={S.inputRow}>
             <input
-              type="number" min="0.01" step="0.01" placeholder="e.g. 5.0"
+              type="number" min="1" step="1" placeholder="e.g. 5000"
               value={distance} onChange={e => setDistance(e.target.value)}
               style={S.input}
             />
-            <span style={S.unit}>m</span>
+            <span style={S.unit}>mm</span>
           </div>
 
           {calReady && (

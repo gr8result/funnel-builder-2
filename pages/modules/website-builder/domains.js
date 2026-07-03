@@ -459,15 +459,19 @@ export default function WebsiteDomainsPage() {
                 <div style={styles.siteHeader}>
                   <div>
                     <h2 style={styles.siteTitle}>{site.name}</h2>
-                    <p style={styles.siteMeta}>Hosted URL: {site.liveUrl} · Status: {site.domainStatus || "generated"}</p>
+                    <p style={styles.siteMeta}>Primary Website: {site.primaryWebsiteUrl || site.liveUrl} - Status: {site.domainStatus || "generated"}</p>
                   </div>
-                  <a href={site.liveUrl} target="_blank" rel="noreferrer" style={styles.liveLink}>Open Live Site</a>
+                  <a href={site.primaryWebsiteUrl || site.liveUrl} target="_blank" rel="noreferrer" style={styles.liveLink}>Open Primary Website</a>
                 </div>
 
                 <div style={styles.domainGrid}>
                   <label style={styles.label}>
-                    Hosted website URL
-                    <input value={site.defaultUrl || ""} readOnly style={styles.readonlyInput} />
+                    Primary Website
+                    <input value={site.primaryWebsiteUrl || site.liveUrl || ""} readOnly style={styles.readonlyInput} />
+                  </label>
+                  <label style={styles.label}>
+                    Internal Preview URL
+                    <input value={site.internalPreviewUrl || site.defaultUrl || ""} readOnly style={styles.readonlyInput} />
                   </label>
                   <label style={styles.label}>
                     Custom domain

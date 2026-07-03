@@ -97,6 +97,209 @@ function createPreviewToken() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectAsset }) {
+  if (!block) return null;
+  const props = block.props || {};
+  const update = (patch) => onChange?.(index, { ...props, ...patch });
+  const numberValue = (key, fallback = 0) => {
+    const parsed = Number.parseFloat(String(props[key] ?? fallback).replace("px", ""));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const shadowPresets = [
+    { label: "None", value: "" },
+    { label: "Soft", value: "0 16px 36px rgba(15,23,42,0.14)" },
+    { label: "Lifted", value: "0 24px 60px rgba(15,23,42,0.22)" },
+    { label: "Crisp", value: "0 1px 2px rgba(15,23,42,0.12), 0 10px 24px rgba(15,23,42,0.10)" },
+  ];
+  const backgroundStyle = String(props.backgroundStyle || (props.backgroundGradient ? "gradient" : props.backgroundImage ? "image" : "color"));
+
+  return (
+    <div style={styles.sectionCard}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <div>
+          <label style={styles.propertyLabel}>Design</label>
+          <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.4 }}>Section and block styling</div>
+        </div>
+        <button
+          type="button"
+          style={styles.secondaryBtn}
+          onClick={() => update({
+            marginTop: undefined,
+            marginBottom: undefined,
+            paddingTop: undefined,
+            paddingBottom: undefined,
+            paddingLeft: undefined,
+            paddingRight: undefined,
+            backgroundStyle: undefined,
+            backgroundColor: undefined,
+            backgroundGradient: undefined,
+            backgroundImage: undefined,
+            backgroundOverlayColor: undefined,
+            backgroundOverlayOpacity: undefined,
+            borderWidth: undefined,
+            borderColor: undefined,
+            borderRadius: undefined,
+            boxShadow: undefined,
+            sectionAnimation: undefined,
+            sectionAnimationDelay: undefined,
+            sectionAnimationSpeed: undefined,
+          })}
+        >
+          Reset
+        </button>
+      </div>
+
+      <label style={{ ...styles.inlineToggle, marginTop: 12 }}>
+        <input
+          type="checkbox"
+          checked={props.fullWidthBackground !== false}
+          onChange={(event) => update({ fullWidthBackground: event.target.checked })}
+          style={styles.checkboxInput}
+        />
+        Full-width section background
+      </label>
+      <NumberField
+        label="Content max width"
+        value={numberValue("baseLayoutWidth", 1500)}
+        min={320}
+        max={2400}
+        onChange={(value) => update({ baseLayoutWidth: value })}
+      />
+
+      <div style={styles.colorGrid}>
+        <NumberField label="Margin top" value={numberValue("marginTop", 0)} min={-240} max={480} onChange={(value) => update({ marginTop: value })} />
+        <NumberField label="Margin bottom" value={numberValue("marginBottom", 0)} min={-240} max={480} onChange={(value) => update({ marginBottom: value })} />
+        <NumberField label="Padding top" value={numberValue("paddingTop", 0)} min={0} max={480} onChange={(value) => update({ paddingTop: value })} />
+        <NumberField label="Padding bottom" value={numberValue("paddingBottom", 0)} min={0} max={480} onChange={(value) => update({ paddingBottom: value })} />
+        <NumberField label="Padding left" value={numberValue("paddingLeft", 0)} min={0} max={240} onChange={(value) => update({ paddingLeft: value })} />
+        <NumberField label="Padding right" value={numberValue("paddingRight", 0)} min={0} max={240} onChange={(value) => update({ paddingRight: value })} />
+      </div>
+
+      <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Background</label>
+      <select value={backgroundStyle} onChange={(event) => update({ backgroundStyle: event.target.value })} style={styles.propertyInput}>
+        <option value="color">Colour</option>
+        <option value="gradient">Gradient</option>
+        <option value="image">Image</option>
+      </select>
+
+      {backgroundStyle === "color" ? (
+        <ColorSelector
+          label="Background colour"
+          value={String(props.backgroundColor || "#ffffff")}
+          fallback="#ffffff"
+          allowTransparent
+          onChange={(value) => update({ backgroundColor: value })}
+        />
+      ) : null}
+
+      {backgroundStyle === "gradient" ? (
+        <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+          <label style={styles.propertyLabel}>CSS gradient</label>
+          <input
+            type="text"
+            value={String(props.backgroundGradient || "")}
+            onChange={(event) => update({ backgroundGradient: event.target.value })}
+            style={styles.propertyInput}
+            placeholder="linear-gradient(135deg,#0f172a,#2563eb)"
+          />
+          <div style={styles.presetGrid}>
+            {[
+              "linear-gradient(135deg,#0f172a,#2563eb)",
+              "linear-gradient(135deg,#ffffff,#e0f2fe)",
+              "linear-gradient(135deg,#111827,#7c3aed)",
+            ].map((value) => (
+              <button key={value} type="button" style={styles.presetChip} onClick={() => update({ backgroundGradient: value })}>
+                {value.includes("#ffffff") ? "Light" : value.includes("#7c3aed") ? "Violet" : "Deep"}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {backgroundStyle === "image" ? (
+        <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+          {props.backgroundImage ? (
+            <img src={props.backgroundImage} alt="" style={{ width: "100%", height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(148,163,184,0.24)" }} />
+          ) : null}
+          <div style={styles.assetPicker}>
+            <label style={styles.assetUploadCta}>
+              Upload
+              <input
+                type="file"
+                accept="image/*"
+                style={styles.hiddenInput}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) onUploadImage?.(index, "backgroundImage", file);
+                }}
+              />
+            </label>
+            <button type="button" style={styles.secondaryBtn} onClick={() => openSharedLibraryAssetPicker((asset) => onSelectAsset?.(index, "backgroundImage", asset))}>
+              Library
+            </button>
+            {props.backgroundImage ? (
+              <button type="button" style={styles.secondaryBtn} onClick={() => update({ backgroundImage: "", backgroundImageAssetId: undefined })}>
+                Remove
+              </button>
+            ) : null}
+          </div>
+          <select value={String(props.backgroundSize || "cover")} onChange={(event) => update({ backgroundSize: event.target.value })} style={styles.propertyInput}>
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option>
+            <option value="auto">Auto</option>
+          </select>
+          <select value={String(props.backgroundPosition || "center center")} onChange={(event) => update({ backgroundPosition: event.target.value })} style={styles.propertyInput}>
+            <option value="center center">Centre</option>
+            <option value="top center">Top</option>
+            <option value="bottom center">Bottom</option>
+            <option value="left center">Left</option>
+            <option value="right center">Right</option>
+          </select>
+          <ColorSelector
+            label="Overlay colour"
+            value={String(props.backgroundOverlayColor || props.overlayColor || "#000000")}
+            fallback="#000000"
+            onChange={(value) => update({ backgroundOverlayColor: value })}
+          />
+          <NumberField
+            label="Overlay opacity"
+            value={Number(props.backgroundOverlayOpacity ?? props.overlayOpacity ?? 0)}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(value) => update({ backgroundOverlayOpacity: value })}
+          />
+        </div>
+      ) : null}
+
+      <div style={styles.colorGrid}>
+        <NumberField label="Border width" value={numberValue("borderWidth", 0)} min={0} max={20} onChange={(value) => update({ borderWidth: value })} />
+        <NumberField label="Border radius" value={numberValue("borderRadius", 0)} min={0} max={120} onChange={(value) => update({ borderRadius: value })} />
+      </div>
+      <ColorSelector
+        label="Border colour"
+        value={String(props.borderColor || "#e2e8f0")}
+        fallback="#e2e8f0"
+        allowTransparent
+        onChange={(value) => update({ borderColor: value })}
+      />
+      <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Shadow</label>
+      <select value={String(props.boxShadow || "")} onChange={(event) => update({ boxShadow: event.target.value })} style={styles.propertyInput}>
+        {shadowPresets.map((preset) => <option key={preset.label} value={preset.value}>{preset.label}</option>)}
+      </select>
+      <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Animation</label>
+      <select value={String(props.sectionAnimation || "none")} onChange={(event) => update({ sectionAnimation: event.target.value })} style={styles.propertyInput}>
+        {ANIMATION_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
+      </select>
+      <div style={styles.colorGrid}>
+        <NumberField label="Delay" value={Number(props.sectionAnimationDelay || 0)} min={0} max={4} step={0.05} onChange={(value) => update({ sectionAnimationDelay: value })} />
+        <NumberField label="Speed" value={Number(props.sectionAnimationSpeed || 0.9)} min={0.2} max={4} step={0.05} onChange={(value) => update({ sectionAnimationSpeed: value })} />
+      </div>
+    </div>
+  );
+}
+
 export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -341,7 +544,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const findEditable = (node) => {
     if (!(node instanceof Element)) return null;
-    return node.closest?.('[contenteditable="true"], [data-inline-editor="true"], [data-layer-editor="true"], [data-website-inline-editor="true"]') || null;
+    if (node.closest?.(".wb-tiptap-shell, [data-wb-tiptap-toolbar='true']")) return null;
+    const editable = node.closest?.('[contenteditable="true"], [data-inline-editor="true"], [data-layer-editor="true"], [data-website-inline-editor="true"]') || null;
+    return editable?.closest?.(".wb-tiptap-shell") ? null : editable;
   };
 
   const getEditablePlainText = (editable) => htmlToPlainText(editable?.innerHTML || editable?.textContent || "").replace(/\u00a0/g, " ").trim();
@@ -470,6 +675,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setAnimationPopover((prev) => ({ ...prev, visible: false }));
 
     const blockRoot = triggerNode?.closest?.("[data-canvas-block-index]") || document.querySelector(`[data-canvas-block-index="${index}"]`);
+    const tiptapEditable = blockRoot?.querySelector?.(".wb-tiptap-prosemirror");
+    if (tiptapEditable) {
+      setShowTextToolbar(false);
+      tiptapEditable.focus();
+      return;
+    }
     const editable = blockRoot?.querySelector?.('[data-website-inline-editor="true"], [contenteditable="true"], [data-layer-editor="true"]');
     if (!editable) return;
 
@@ -2527,6 +2738,42 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       selectionRangeRef.current = nextRange.cloneRange();
     }
 
+    if (!isFeatureTextBlock && (propName === "headline" || propName === "headlineblock.content")) {
+      nextProps.headlineBlock = {
+        ...(nextProps.headlineBlock || currentBlock.props?.headlineBlock || {}),
+        ...(patch.fontSize !== undefined ? { fontSize: parseToolbarFontSize(patch.fontSize, textToolbarState.fontSize || 18) } : {}),
+        ...(patch.lineHeight !== undefined ? { lineHeight: normalizeLineHeightValue(patch.lineHeight, textToolbarState.lineHeight || 1.5) } : {}),
+        ...(patch.fontFamily !== undefined ? { fontFamily: String(patch.fontFamily || "Arial") } : {}),
+        ...(patch.fontWeight !== undefined ? { fontWeight: String(patch.fontWeight || "400") } : {}),
+        ...(patch.color !== undefined ? { color: String(patch.color || "#111827") } : {}),
+        ...(patch.textAlign !== undefined ? { alignment: String(patch.textAlign || "left") } : {}),
+      };
+      if (patch.fontSize !== undefined) nextProps.headlineFontSize = nextProps.headlineBlock.fontSize;
+      if (patch.lineHeight !== undefined) nextProps.headlineLineHeight = nextProps.headlineBlock.lineHeight;
+      if (patch.fontFamily !== undefined) nextProps.headlineFontFamily = nextProps.headlineBlock.fontFamily;
+      if (patch.fontWeight !== undefined) nextProps.headlineFontWeight = nextProps.headlineBlock.fontWeight;
+      if (patch.color !== undefined) nextProps.headlineColor = nextProps.headlineBlock.color;
+      if (patch.textAlign !== undefined) nextProps.headlineAlignment = nextProps.headlineBlock.alignment;
+    }
+
+    if (!isFeatureTextBlock && (propName === "subheadline" || propName === "bodyblock.content" || /(subtitle|description|body)/i.test(propName))) {
+      nextProps.bodyBlock = {
+        ...(nextProps.bodyBlock || currentBlock.props?.bodyBlock || {}),
+        ...(patch.fontSize !== undefined ? { fontSize: parseToolbarFontSize(patch.fontSize, textToolbarState.fontSize || 18) } : {}),
+        ...(patch.lineHeight !== undefined ? { lineHeight: normalizeLineHeightValue(patch.lineHeight, textToolbarState.lineHeight || 1.5) } : {}),
+        ...(patch.fontFamily !== undefined ? { fontFamily: String(patch.fontFamily || "Arial") } : {}),
+        ...(patch.fontWeight !== undefined ? { fontWeight: String(patch.fontWeight || "400") } : {}),
+        ...(patch.color !== undefined ? { color: String(patch.color || "#111827") } : {}),
+        ...(patch.textAlign !== undefined ? { alignment: String(patch.textAlign || "left") } : {}),
+      };
+      if (patch.fontSize !== undefined) nextProps.subheadlineFontSize = nextProps.bodyBlock.fontSize;
+      if (patch.lineHeight !== undefined) nextProps.subheadlineLineHeight = nextProps.bodyBlock.lineHeight;
+      if (patch.fontFamily !== undefined) nextProps.fontFamily = nextProps.bodyBlock.fontFamily;
+      if (patch.fontWeight !== undefined) nextProps.fontWeight = nextProps.bodyBlock.fontWeight;
+      if (patch.color !== undefined) nextProps.textColor = nextProps.bodyBlock.color;
+      if (patch.textAlign !== undefined) nextProps.alignment = nextProps.bodyBlock.alignment;
+    }
+
     pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     const updatedBlocks = latestBlocksRef.current.map((block, idx) => (
@@ -2901,9 +3148,18 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           padding-top: 0;
           padding-bottom: 0;
           border: 0 !important;
-          outline: 0 !important;
           box-shadow: none !important;
           background-clip: padding-box;
+        }
+        [data-builder-canvas="true"] [data-canvas-block-index] [style] {
+          outline: none !important;
+        }
+        [data-builder-canvas="true"] [data-canvas-block-index] [data-website-inline-editor="true"] {
+          outline: none !important;
+        }
+        [data-builder-canvas="true"] [data-canvas-block-index][data-builder-block-active="true"] [data-website-inline-editor="true"]:hover,
+        [data-builder-canvas="true"] [data-canvas-block-index][data-builder-block-selected="true"] [data-website-inline-editor="true"]:focus {
+          outline: 1px solid rgba(14,165,233,0.42) !important;
         }
         [data-builder-canvas="true"] [data-builder-block-list="true"] {
           gap: 0 !important;
@@ -3306,32 +3562,53 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             ) : rightPanelMode === "sections" ? (
               <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
             ) : (
-              <PropertiesPanel
-                block={selectedGlobalBlock || blocks[selectedIndex] || null}
-                index={selectedGlobalBlock ? -1 : selectedIndex}
-                onChange={selectedGlobalBlock
-                  ? (_index, nextProps) => {
-                      if (!selectedGlobalRole || !selectedGlobalBlock) return;
-                      onUpdateGlobalBlock?.(selectedGlobalRole, {
-                        ...selectedGlobalBlock,
-                        props: nextProps,
-                      });
-                    }
-                  : handleUpdateBlock}
-                brandAssets={brandAssets}
-                onUploadImage={selectedGlobalBlock
-                  ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
-                  : handleCanvasImageUpload}
-                onSelectAsset={selectedGlobalBlock
-                  ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
-                  : handleCanvasAssetSelect}
-                onOpenImageEditor={openStructuredImageEditor}
-                onOpenSimpleImageEditor={openSimpleImageEditor}
-                onRefreshAssetLibrary={onRefreshAssetLibrary}
-                project={project}
-                activePage={activePage}
-                currentObjective={currentObjective}
-              />
+              <>
+                <UniversalDesignPanel
+                  block={selectedGlobalBlock || blocks[selectedIndex] || null}
+                  index={selectedGlobalBlock ? -1 : selectedIndex}
+                  onChange={selectedGlobalBlock
+                    ? (_index, nextProps) => {
+                        if (!selectedGlobalRole || !selectedGlobalBlock) return;
+                        onUpdateGlobalBlock?.(selectedGlobalRole, {
+                          ...selectedGlobalBlock,
+                          props: nextProps,
+                        });
+                      }
+                    : handleUpdateBlock}
+                  onUploadImage={selectedGlobalBlock
+                    ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
+                    : handleCanvasImageUpload}
+                  onSelectAsset={selectedGlobalBlock
+                    ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
+                    : handleCanvasAssetSelect}
+                />
+                <PropertiesPanel
+                  block={selectedGlobalBlock || blocks[selectedIndex] || null}
+                  index={selectedGlobalBlock ? -1 : selectedIndex}
+                  onChange={selectedGlobalBlock
+                    ? (_index, nextProps) => {
+                        if (!selectedGlobalRole || !selectedGlobalBlock) return;
+                        onUpdateGlobalBlock?.(selectedGlobalRole, {
+                          ...selectedGlobalBlock,
+                          props: nextProps,
+                        });
+                      }
+                    : handleUpdateBlock}
+                  brandAssets={brandAssets}
+                  onUploadImage={selectedGlobalBlock
+                    ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
+                    : handleCanvasImageUpload}
+                  onSelectAsset={selectedGlobalBlock
+                    ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
+                    : handleCanvasAssetSelect}
+                  onOpenImageEditor={openStructuredImageEditor}
+                  onOpenSimpleImageEditor={openSimpleImageEditor}
+                  onRefreshAssetLibrary={onRefreshAssetLibrary}
+                  project={project}
+                  activePage={activePage}
+                  currentObjective={currentObjective}
+                />
+              </>
             )}
           </div>
         ) : null}

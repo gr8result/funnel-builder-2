@@ -1746,41 +1746,6 @@ function TextPropertiesPanel({ block, index, onChange, brandAssets, onUploadImag
               Reset
             </button>
           </div>
-          {/* Block-level default alignment */}
-          <div style={{ marginTop: 12 }}>
-            <label style={{ ...styles.propertyLabel, fontSize: 13, marginBottom: 6, display: "block" }}>Default alignment</label>
-            <div style={{ display: "flex", gap: 4 }}>
-              {[
-                { value: "left",    icon: "⬅", label: "Left"    },
-                { value: "center",  icon: "↔", label: "Centre"  },
-                { value: "right",   icon: "➡", label: "Right"   },
-                { value: "justify", icon: "☰", label: "Justify" },
-              ].map(({ value, icon, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  title={label}
-                  onClick={() => update({ alignment: value })}
-                  style={{
-                    ...styles.secondaryBtn,
-                    flex: 1,
-                    padding: "5px 0",
-                    minHeight: 0,
-                    background: (props.alignment || "left") === value
-                      ? "rgba(14,165,233,0.22)" : undefined,
-                    borderColor: (props.alignment || "left") === value
-                      ? "rgba(14,165,233,0.6)" : undefined,
-                    color: (props.alignment || "left") === value ? "#38bdf8" : undefined,
-                  }}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-              The inline toolbar can override alignment per-paragraph.
-            </p>
-          </div>
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Spacing</label>

@@ -1,0 +1,2519 @@
+{
+  "projectId": "2208a52a-8175-477e-823c-fc6de7fe4afe",
+  "pageName": "Project Hub",
+  "blocks": [
+    {
+      "id": "ph3-nav",
+      "type": "nav-bar",
+      "props": {
+        "brand": "GR8 Result",
+        "showLogo": true,
+        "variant": "split-dark",
+        "stickyMode": "sticky-transparent",
+        "fullWidthBackground": true,
+        "links": [
+          {
+            "label": "Overview",
+            "href": "#overview",
+            "highlighted": true,
+            "id": "ph3-nav-0",
+            "slug": "overview",
+            "children": []
+          },
+          {
+            "label": "Estimator",
+            "href": "#estimator",
+            "id": "ph3-nav-1",
+            "slug": "estimator",
+            "children": []
+          },
+          {
+            "label": "Gantt",
+            "href": "#gantt",
+            "id": "ph3-nav-2",
+            "slug": "gantt",
+            "children": []
+          },
+          {
+            "label": "Job Board",
+            "href": "#jobboard",
+            "id": "ph3-nav-3",
+            "slug": "jobboard",
+            "children": []
+          },
+          {
+            "label": "Integrations",
+            "href": "#integrations",
+            "id": "ph3-nav-4",
+            "slug": "integrations",
+            "children": []
+          },
+          {
+            "label": "Demo",
+            "href": "#demo",
+            "id": "ph3-nav-5",
+            "slug": "demo",
+            "children": []
+          }
+        ],
+        "ctaText": "Start Free Trial",
+        "ctaLink": "#trial",
+        "backgroundColor": "rgba(2,6,23,0.92)",
+        "textColor": "#e5eefb",
+        "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+        "buttonTextColor": "#0f172a",
+        "borderColor": "rgba(148,163,184,0.24)"
+      }
+    },
+    {
+      "id": 1783113691144,
+      "type": "hero",
+      "props": {
+        "backgroundStyle": "image",
+        "minHeight": "1064px",
+        "baseLayoutWidth": 1500,
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "a84093fe-2a95-4391-86e1-6d755c512e78",
+        "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1783113602630-4f8f0f61-fd4b-4311-ae38-fdc7f415c063.png",
+        "backgroundPosition": "top center",
+        "headline": "",
+        "subheadline": ""
+      }
+    },
+    {
+      "id": "ph3-problem-text",
+      "type": "text",
+      "props": {
+        "text": "<h2 style=\"font-size:44px;font-weight:900;color:#ffffff;margin-bottom:28px;line-height:1.1;\">The Hidden Cost of Managing Projects Across Five Disconnected Tools</h2><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:24px;\">Most trade, construction and service businesses are losing tens of thousands of dollars every year to a problem they have completely normalised. Their quoting tool does not talk to their scheduling tool. Their scheduling tool does not talk to their job board. Their job board has no connection to their documents folder. Their documents folder is not linked to their communication history. And none of it feeds reliable information into their accounting or reporting systems. Every handover between these disconnected systems is an opportunity for scope to be misunderstood, deadlines to slip, variations to disappear and owners to lose visibility over what is actually happening on their jobs.</p><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:24px;\">The administrative overhead alone is staggering. Scope gets retyped from the quote into the project plan. Dates are manually entered into the scheduling tool after the project is confirmed. Client information is duplicated across the CRM, the estimating software and the project management app. Variations are agreed informally and sometimes invoiced and sometimes forgotten. Reports are built at the end of every month by pulling data from five different places and presenting it in yet another document that is already out of date by the time it is read. Staff spend hours every week moving information between tools that were never designed to work together and the business pays the cost of that wasted time in every single project.</p><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:0;\">Project Hub exists to end that fragmentation permanently. It gives growing businesses the connected operational platform they need to run projects like the best-managed companies in their industry, without paying enterprise software prices, without forcing the team through months of painful implementation and without accepting that disconnected tools are simply the cost of doing business. The game has changed. Your project management platform should change with it.</p>",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "textColor": "#e2e8f0",
+        "textFontSize": 19,
+        "textLineHeight": 1.8,
+        "alignment": "left",
+        "paddingTop": 110,
+        "paddingBottom": 90,
+        "baseLayoutWidth": 1020
+      }
+    },
+    {
+      "id": "ph3-cost-stats",
+      "type": "stats",
+      "props": {
+        "title": "What disconnected project management actually costs your business",
+        "subtitle": "These are not abstract numbers. They are the real, compounding costs paid by every project-based business running jobs across a fragmented stack of tools that were never designed to work together.",
+        "statsVariant": "editorial-band",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#0f172a,#1e1b4b 48%,#064e3b)",
+        "textColor": "#f8fafc",
+        "cardBackgroundColor": "rgba(15,23,42,0.88)",
+        "borderColor": "rgba(148,163,184,0.22)",
+        "accentColor": "#f97316",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "stats": [
+          {
+            "number": "8+ hrs",
+            "label": "Admin waste per project",
+            "detail": "Hours spent re-entering data, chasing status updates, reformatting quotes and manually rebuilding reports across disconnected systems that should share the same data automatically."
+          },
+          {
+            "number": "12-15%",
+            "label": "Margin lost to scope creep",
+            "detail": "Variations agreed informally and never logged properly erode profit on almost every project-based job. Without a connected commercial record, scope changes disappear into conversation threads."
+          },
+          {
+            "number": "3-5 tools",
+            "label": "Average disconnected stack",
+            "detail": "Most growing businesses pay separately for quoting software, a task management app, a cloud storage folder, a scheduling tool and a calendar application that were never designed to communicate with each other."
+          },
+          {
+            "number": "Weeks",
+            "label": "Delay cost per missed milestone",
+            "detail": "A blocked dependency that goes unseen for even a few days can push a completion date by weeks and a cash position by thousands. Without connected visibility, the problem is discovered too late to fix cheaply."
+          },
+          {
+            "number": "20+ hrs",
+            "label": "Monthly reporting time",
+            "detail": "Without connected data, building a monthly report means pulling information from multiple sources, reconciling inconsistencies and presenting a document that represents the past rather than the present."
+          },
+          {
+            "number": "Zero",
+            "label": "Single source of truth",
+            "detail": "When the project record lives across five tools, no single version of the truth exists. Decisions get made with incomplete information and accountability becomes impossible to maintain."
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-image-stack-intro",
+      "type": "image-stack",
+      "props": {
+        "title": "One platform. Every project tool connected and working together.",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#020617,#111827 40%,#042f2e)",
+        "minHeight": "880px",
+        "images": [
+          {
+            "id": "ims1-a",
+            "kind": "image",
+            "src": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+            "x": 28,
+            "y": 50,
+            "width": 400,
+            "height": 280,
+            "rotation": -4,
+            "radius": 28,
+            "zIndex": 1
+          },
+          {
+            "id": "ims1-b",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+            "x": 455,
+            "y": 62,
+            "width": 420,
+            "height": 270,
+            "rotation": 3,
+            "radius": 26,
+            "zIndex": 3
+          },
+          {
+            "id": "ims1-c",
+            "kind": "image",
+            "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
+            "x": 910,
+            "y": 88,
+            "width": 290,
+            "height": 400,
+            "rotation": 5,
+            "radius": 28,
+            "zIndex": 2
+          },
+          {
+            "id": "ims1-d",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/111827/38bdf8?text=Project+Hub+Dashboard",
+            "x": 180,
+            "y": 358,
+            "width": 560,
+            "height": 320,
+            "rotation": 0,
+            "radius": 26,
+            "zIndex": 4
+          },
+          {
+            "id": "ims1-e",
+            "kind": "text",
+            "content": "Estimates, Gantt, Job Board, CRM, Documents and Automation — all connected.",
+            "x": 790,
+            "y": 530,
+            "width": 360,
+            "height": 160,
+            "rotation": -2,
+            "radius": 24,
+            "zIndex": 5,
+            "fontSize": 24,
+            "fontWeight": "900",
+            "textAlign": "left",
+            "verticalAlign": "center",
+            "textColor": "#f8fafc",
+            "background": "rgba(2,6,23,0.9)"
+          }
+        ],
+        "baseLayoutWidth": 1400
+      }
+    },
+    {
+      "id": "ph3-why-exists",
+      "type": "columns-2",
+      "props": {
+        "title": "The operational command centre your business has been missing",
+        "leftTitle": "Why Project Hub changes how work actually gets done",
+        "leftContent": "<p>Every successful project-based business eventually hits the same ceiling. The team is working hard, the owner is staying late, jobs are being delivered — but the margins are tighter than they should be, communication keeps slipping, deadlines are being pushed and the business feels harder to manage than it ought to. The cause is almost always the same: the information needed to run the business is fragmented across too many systems that were never designed to share data with each other.</p><p>Project Hub is the answer to that fragmentation. It is the layer of the GR8 Result platform specifically designed to connect the commercial side of a job with the operational side. The quote that was sold, the plan that was made, the tasks that were assigned, the documents that were shared, the updates that were sent and the reports the owner needs should not live in five different places. They should all belong to the same connected project record, accessible by everyone who needs them, updated in real time and trusted as the one true picture of the job.</p><p>When that connection exists, the business changes in ways that are immediately felt. Administrative overhead drops because data is captured once and flows everywhere it is needed. Deadline visibility improves because the full timeline is in one place rather than spread across a calendar, a spreadsheet and someone's memory. Team accountability becomes real because tasks have owners, due dates and status that everyone can see. Clients get better answers because your team can speak from a live operational picture rather than a verbal estimate. Owners stop spending their mornings chasing information and start making decisions with confidence.</p><p>That is the promise of Project Hub — and it is built into the same platform that handles your marketing, CRM, email, SMS, automation, website builder and reporting. The business that runs its projects on GR8 Result is the business that finally operates from one source of truth.</p>",
+        "rightImage": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1800&q=88",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#0f172a,#020617)",
+        "cardBackgroundColor": "rgba(15,23,42,0.86)",
+        "textColor": "#f8fafc",
+        "borderColor": "rgba(56,189,248,0.32)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-modules-overview",
+      "type": "feature-list",
+      "props": {
+        "title": "Five Connected Project Tools. One Unified Platform.",
+        "subtitle": "Project Hub is not a standalone app bolted onto the side of the GR8 Result platform. It is a connected suite of purpose-built project management tools that share data, context and workflow at every stage of the job lifecycle. Every module makes the others more powerful.",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 340,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "itemBackgroundColor": "rgba(15,23,42,0.92)",
+        "borderColor": "rgba(56,189,248,0.22)",
+        "textColor": "#f8fafc",
+        "headingAlign": "center",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "items": [
+          {
+            "title": "Estimate Builder",
+            "body": "",
+            "image": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet",
+            "textBlocks": [
+              {
+                "text": "Estimate Builder",
+                "style": {}
+              },
+              {
+                "text": "<span>Build professional, detailed estimates with itemised line items, quantity-based calculations, labour allowances, material costs, subcontractor rates, markups, margin controls, provisional sums, optional extras and staged payment schedules. Every estimate is designed to become a live project record the moment the client approves — without your team having to retype a single piece of scope, pricing or client information into a separate system. The Estimate Builder is the commercial foundation that every other module in Project Hub builds on.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Gantt Chart Planner",
+            "body": "",
+            "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+            "textBlocks": [
+              {
+                "text": "Gantt Chart Planner",
+                "style": {}
+              },
+              {
+                "text": "<span>Visualise the entire project as a connected timeline with phases, task dependencies, critical path milestones, resource allocations, deadlines and live progress tracking. The Gantt Planner helps your team understand what needs to happen next, what is blocked, where the schedule is exposed and which delays are about to compound into something expensive. It connects directly to the Job Board so the timeline and the day-to-day execution always stay in alignment, even when the real world changes the plan.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Job Board",
+            "body": "",
+            "image": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files",
+            "textBlocks": [
+              {
+                "text": "Job Board",
+                "style": {}
+              },
+              {
+                "text": "<span>Move work through clear visual stages — from pending through in progress, waiting, under review and completed — using a drag-and-drop kanban board that every team member can see and update in real time. Each task card carries the full context the assigned person needs: ownership, priority level, due date, file attachments, comments, status history and connection to the broader project record. The Job Board is where the plan becomes execution, where accountability becomes visible and where bottlenecks can be caught before they cost the business money.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Production Flow",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/2dd4bf?text=Production+Flow+Steps",
+            "textBlocks": [
+              {
+                "text": "Production Flow",
+                "style": {}
+              },
+              {
+                "text": "<span>Track the procurement and production steps for every component of a job: quote submitted, sample approved, order placed, delivery confirmed, installation started and sign-off completed. Production Flow gives businesses that manage materials, subcontractors and staged delivery a clear operational view of where every job component stands so nothing gets missed in the gap between quote completion and job handover. When procurement steps and production milestones are tracked in the same system as the rest of the project, the business stops losing margin to supply chain confusion.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Reports and Visibility",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Analytics",
+            "textBlocks": [
+              {
+                "text": "Reports and Visibility",
+                "style": {}
+              },
+              {
+                "text": "<span>Owners and managers get a live operational picture across every active job without holding status meetings or manually assembling reports from multiple sources. Project status, task progress, document history, communication activity, milestone tracking, variation records and timeline performance all belong to the same connected data environment. Reporting becomes observation rather than construction. The business stops spending twenty hours a month pulling data from five places and starts spending that time making the decisions that actually grow the business.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-workflow-ribbon",
+      "type": "stats",
+      "props": {
+        "title": "The complete job lifecycle. One connected system from start to finish.",
+        "subtitle": "Project Hub is designed around the full lifecycle of a project-based job. Every stage belongs to the same platform, which means no information is lost between steps, no scope is misunderstood at handover and no team member is working from a different version of the truth.",
+        "statsVariant": "data-ribbon",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#020617,#1e1b4b 46%,#064e3b)",
+        "textColor": "#f8fafc",
+        "accentColor": "#2dd4bf",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "stats": [
+          {
+            "number": "01",
+            "label": "Lead Captured",
+            "detail": "The CRM records the relationship so client information follows the job from first contact through to final invoice without being retyped anywhere."
+          },
+          {
+            "number": "02",
+            "label": "Quote Built",
+            "detail": "The Estimate Builder structures scope, labour allowances, material costs, margins, optional extras and variations into a professional client-ready proposal."
+          },
+          {
+            "number": "03",
+            "label": "Client Approves",
+            "detail": "The winning proposal becomes the commercial record that feeds directly into the project workspace without requiring manual data transfer or team briefings."
+          },
+          {
+            "number": "04",
+            "label": "Project Created",
+            "detail": "The team gets a live connected workspace for tasks, documents, schedule, client communications and project updates all in one place."
+          },
+          {
+            "number": "05",
+            "label": "Timeline Planned",
+            "detail": "The Gantt Chart maps phases, dependencies, milestones, resource allocations and deadlines so the schedule is understood by everyone before the first task begins."
+          },
+          {
+            "number": "06",
+            "label": "Tasks Assigned",
+            "detail": "The Job Board gives every team member a clear view of their work queue with context, ownership, priority levels, due dates and the files they need."
+          },
+          {
+            "number": "07",
+            "label": "Progress Tracked",
+            "detail": "Updates, comments, photos, approvals and file attachments keep the project record current as the job moves forward through production."
+          },
+          {
+            "number": "08",
+            "label": "Variations Logged",
+            "detail": "Scope changes are captured in the commercial record as they happen so nothing is forgotten, nothing is disputed and margin is protected through to completion."
+          },
+          {
+            "number": "09",
+            "label": "Job Completed",
+            "detail": "Sign-off documentation, completion photos, handover materials and client approvals all belong to the same connected project record."
+          },
+          {
+            "number": "10",
+            "label": "Invoice and Report",
+            "detail": "Completion status, financial context, variation records and delivery performance feed directly into billing and business reporting without additional manual work."
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-cta-mid1",
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "No more fragmented workflows",
+        "title": "See how Project Hub replaces your entire disconnected tool stack",
+        "description": "Book a live walkthrough with the GR8 Result team and see the full connected project workflow in action. From first estimate through to completion reporting — in one platform, in thirty minutes.",
+        "text": "Book a Free Demo",
+        "link": "#demo",
+        "note": "No commitment required. See the full platform in action before you decide anything.",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 52%,#22c55e)",
+        "textColor": "#ffffff",
+        "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+        "buttonTextColor": "#111827",
+        "borderColor": "rgba(255,255,255,0.18)"
+      }
+    },
+    {
+      "id": "ph3-estimator-deep",
+      "type": "columns-2",
+      "props": {
+        "title": "Estimate Builder: the commercial foundation of every project",
+        "leftTitle": "Build quotes that protect your margin and convert directly into live projects without re-entering a single piece of data",
+        "leftContent": "<p>The Estimate Builder is not a price calculator you use once and forget about. It is the commercial engine at the heart of Project Hub — the system that determines whether a job starts with accurate scope, realistic labour assumptions, properly priced materials and the margin protection your business depends on. Every detail entered during the quoting process becomes the foundation of the project that follows, which means the quality of the estimate directly determines the quality of the delivery.</p><p>This matters because the biggest source of project problems is the gap between what was quoted and what the delivery team was actually told to do. When the estimate lives in a quoting tool and the project plan lives in a separate system, that gap opens up immediately after approval. Labour assumptions get lost in translation. Material quantities become vague references rather than specific scope items. Variation accountability disappears into email threads that nobody can find months later. Margin that was built into the original price quietly evaporates between systems that do not talk to each other.</p><p>Project Hub closes that gap permanently. When a client approves the proposal, the commercial information flows directly into the project workspace. The scope that was priced becomes the basis for the Gantt timeline. The labour assumptions inform the scheduling. The materials context sits next to the procurement tasks on the Job Board. That connected handover from quote to delivery is one of the biggest operational advantages Project Hub offers over competitors who treat estimating and project management as entirely separate workflows that need separate software.</p><p>Beyond the numbers, the Estimate Builder supports client-ready proposals with professional structure, cover pages, terms and conditions, optional extras presented clearly and variation tracking built in from the beginning. Your team sends a document that reflects the quality of the business, tracks whether the client has opened it and can follow up with a clear next step — all without leaving the platform.</p><ul><li>Itemised line items with quantities and unit costs</li><li>Labour rates, allowances and role-based costing</li><li>Material costs connected to specific scope items</li><li>Markup and margin controls at line and total level</li><li>Provisional sums, optional extras and staged pricing</li><li>Variation tracking built into the commercial record</li><li>Client-ready proposal with approval workflow</li><li>Approved quotes convert directly into live project workspaces</li></ul>",
+        "rightImage": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet+%2B+Proposal",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "cardBackgroundColor": "rgba(15,23,42,0.86)",
+        "textColor": "#f8fafc",
+        "borderColor": "rgba(34,197,94,0.36)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-estimator-features",
+      "type": "feature-list",
+      "props": {
+        "title": "Estimator capabilities that protect profit before the job ever begins",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 340,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#0f172a,#052e2b)",
+        "itemBackgroundColor": "rgba(15,23,42,0.92)",
+        "borderColor": "rgba(34,197,94,0.26)",
+        "textColor": "#f8fafc",
+        "headingAlign": "center",
+        "accentColor": "#22c55e",
+        "paddingTop": 92,
+        "paddingBottom": 92,
+        "items": [
+          {
+            "title": "Labour visibility that survives the handover",
+            "body": "",
+            "image": "https://placehold.co/1600x980/08251c/22c55e?text=Labour+Rates+Roles+Allowances",
+            "textBlocks": [
+              {
+                "text": "Labour visibility that survives the handover",
+                "style": {}
+              },
+              {
+                "text": "<span>Most margin leakage on project-based jobs happens in labour, not materials. Estimates are built with one set of labour assumptions and delivered with another because nothing connected the two systems. Project Hub keeps labour allowances, role types, rates and cost assumptions visible from quote right through to delivery so the team executing the job can see exactly where the margins were set and how the current performance compares to those original assumptions.</span><span>When labour thinking is preserved through the handover rather than lost in translation, the business has a genuine chance of finishing the job at the margin it was originally priced at. That is a structural advantage that most businesses with disconnected tools never achieve.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Materials with real scope accountability",
+            "body": "",
+            "image": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+            "textBlocks": [
+              {
+                "text": "Materials with real scope accountability",
+                "style": {}
+              },
+              {
+                "text": "<span>Material quantities and costs need to be tied to specific scope items, not buried in a single line total that means nothing to the person doing procurement. When the Estimate Builder connects materials to the work being priced, the person responsible for ordering supplies understands exactly what was included in the quote, what quantities were assumed, what the cost expectations are and where the risk sits if prices have moved since the estimate was prepared.</span><span>That connection reduces over-ordering, under-ordering and the uncomfortable conversations that happen when delivery costs more than the quote anticipated because nobody checked what was actually included in the original price.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Markup, margin and variation control that actually works",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Markup+Margin+Variation+Tracking",
+            "textBlocks": [
+              {
+                "text": "Markup, margin and variation control that actually works",
+                "style": {}
+              },
+              {
+                "text": "<span>Margins are easy to protect when the commercial structure is transparent and variations are treated as part of the official record rather than informal side agreements. Project Hub supports markup and margin settings that apply across the entire estimate so pricing decisions are deliberate and documented. When a client requests additional scope, that variation enters the commercial record with its own pricing, approval status and connection to the original quote.</span><span>Every variation that is agreed, requested, declined or pending should have a paper trail. When it does not, that is money the business is giving away without even knowing it. Variation control is one of the highest-impact commercial capabilities in any real-world project management system.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-gantt-deep",
+      "type": "columns-2",
+      "props": {
+        "title": "Gantt Charts: turn complex delivery into a timeline your whole team can follow",
+        "leftImage": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+        "rightTitle": "Plan dependencies, milestones and the critical path before delays cost you money",
+        "rightContent": "<p>Most project failures do not happen because the team stopped trying. They happen because the schedule was never properly planned, the dependencies between tasks were not visible and the first delay was not caught early enough to prevent it cascading into something far more expensive and complicated to recover from. The Gantt Chart in Project Hub is designed to solve that problem at its source — not after the damage has already been done.</p><p>Visual timeline planning gives your team and your clients a shared understanding of the work. Every phase, task, milestone and deadline is mapped so that the relationship between activities is immediately clear. When Task B cannot start until Task A is finished, that dependency is visible in the chart. When a dependent task slips, the team can see which downstream tasks are now at risk and respond before the impact reaches the client relationship or the final completion date.</p><p>Critical path visibility is one of the most powerful capabilities in professional project management. The critical path is the sequence of tasks that directly controls when the project finishes. When any task on the critical path is delayed, the project end date moves. When the critical path is visible in the system, the team knows precisely where to focus protective attention to keep the timeline intact. Most project management tools show you a nice chart. Project Hub shows you where the real risk is hiding.</p><p>Resource planning is the other major advantage of proper Gantt scheduling. When you can see who is assigned to what, when their capacity is fully allocated and when multiple tasks are competing for the same person or equipment, you can make smarter scheduling decisions before the conflict reaches the job site. That is the difference between reactive project management and genuine operational control that protects both delivery dates and client relationships.</p><ul><li>Full timeline view across all project phases</li><li>Task dependencies and predecessor relationships</li><li>Critical path identification and monitoring</li><li>Milestone markers with accountability owners</li><li>Resource allocation across the team</li><li>Delay visibility before it cascades</li><li>Progress tracking against the original plan</li><li>Connected to the Job Board for daily execution alignment</li></ul>",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "cardBackgroundColor": "rgba(15,23,42,0.86)",
+        "textColor": "#f8fafc",
+        "borderColor": "rgba(167,139,250,0.38)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-gantt-features",
+      "type": "feature-list",
+      "props": {
+        "title": "Scheduling intelligence for projects that change in the real world",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 340,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#15162b,#020617)",
+        "itemBackgroundColor": "rgba(17,24,39,0.94)",
+        "borderColor": "rgba(167,139,250,0.28)",
+        "textColor": "#f8fafc",
+        "headingAlign": "center",
+        "accentColor": "#a78bfa",
+        "paddingTop": 92,
+        "paddingBottom": 92,
+        "items": [
+          {
+            "title": "Dependencies that make risk visible before it becomes expensive",
+            "body": "",
+            "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Dependencies+Critical+Path+View",
+            "textBlocks": [
+              {
+                "text": "Dependencies that make risk visible before it becomes expensive",
+                "style": {}
+              },
+              {
+                "text": "<span>Dependencies are the relationships between tasks that determine whether the schedule will hold when reality deviates from the plan. When Task B cannot start until Task A is complete, and Task A slips by three days, the team needs to understand that impact immediately — not after the schedule has already unravelled and the client is asking uncomfortable questions about the new completion date.</span><span>Project Hub makes dependency chains visible so project managers can think ahead. They can see the knock-on effect of a single delay, communicate it to stakeholders before it becomes a crisis and adjust the plan while there are still options available. That early visibility is worth more than any other scheduling feature, because it is the difference between managing a problem and being managed by it.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Milestones that create real accountability across the team",
+            "body": "",
+            "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Milestones+Deadlines+Progress",
+            "textBlocks": [
+              {
+                "text": "Milestones that create real accountability across the team",
+                "style": {}
+              },
+              {
+                "text": "<span>Milestones mark the moments in a project that matter most. They are the dates clients measure progress against, the checkpoints that trigger staged payments, the events that define whether a project is running to plan or quietly falling behind schedule. When milestones are built into the Gantt structure rather than written on a whiteboard, accountability follows automatically.</span><span>Project Hub builds milestones into the operational plan so they are not aspirational dates on a slide deck or a line in an email somewhere. They are part of the live schedule, visible to the whole team and connected to the specific tasks that determine whether they will be achieved on time. When a milestone is at risk, the system shows exactly which task is creating that risk.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Progress owners can understand without calling a meeting",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Progress+Tracking+Owner+Dashboard",
+            "textBlocks": [
+              {
+                "text": "Progress owners can understand without calling a meeting",
+                "style": {}
+              },
+              {
+                "text": "<span>Project visibility should not require a status meeting. When the Gantt chart is maintained as part of the daily workflow rather than updated sporadically before a client review, owners and managers can look at the plan at any moment and immediately understand which phases are complete, which are actively in progress, which are delayed and which are approaching risk territory.</span><span>That transparency reduces the time spent on update calls, status requests and internal progress meetings. It also builds significantly stronger trust with clients. When a project manager can speak confidently about exactly where the job stands, backed by a live operational picture rather than a verbal estimate from memory, the client relationship becomes more professional and more resilient when things change.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-jobboard-deep",
+      "type": "columns-2",
+      "props": {
+        "title": "Job Board: the live operational centre for every active job in the business",
+        "leftTitle": "Move work through the business without losing context, accountability or momentum",
+        "leftContent": "<p>The Job Board is where the project plan becomes daily execution. It is the place your team comes to understand what needs to happen today, what they are currently working on, what is blocked, what is waiting on someone else and what has been successfully completed. Without a clear, shared, real-time view of the work queue, jobs stall at handover points, accountability disappears between team members and supervisors spend most of their day chasing people for updates instead of actually managing the business and protecting its margins.</p><p>Project Hub's Job Board organises every task and every job into visual stages that the whole team can see and interact with. Work moves through customisable kanban columns — from pending through in-progress, waiting on external, under review and complete — using simple drag-and-drop task management that every team member can master in minutes. Each task card carries the full context the assigned person needs: who owns it, when it is due, what priority level it is, what files are attached, what comments have been added and what the current status is in the broader project timeline.</p><p>The most valuable aspect of a well-designed job board is not just what it shows when everything is working. It is what it reveals when something is wrong. Tasks sitting in the wrong column for too long. Work that has been waiting for a client approval for three days. Stages that have accumulated too many items because upstream work is bottlenecked. These are early warning signals that the job needs attention and management intervention. Project Hub makes those signals impossible to miss.</p><p>For businesses managing multiple active projects simultaneously — construction companies running four sites, trade businesses juggling six concurrent jobs, commercial fit-out teams handling different client schedules — the Job Board provides the visibility that makes multi-project management possible without the chaos. Every job has its own board, every task has a clear owner and the overall business picture is always available without needing to call a meeting or wait for someone to compile a report.</p><ul><li>Kanban-style visual task stages</li><li>Drag-and-drop task movement between stages</li><li>Ownership assignments with due dates and priority levels</li><li>File attachments directly on task cards</li><li>Threaded comments and update history</li><li>Status visibility for owners, supervisors and team members</li><li>Multi-project overview across all active jobs</li><li>Connected to the Gantt timeline for schedule alignment</li></ul>",
+        "rightImage": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files+Comments",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "cardBackgroundColor": "rgba(15,23,42,0.86)",
+        "textColor": "#f8fafc",
+        "borderColor": "rgba(249,115,22,0.34)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-jobboard-features",
+      "type": "feature-list",
+      "props": {
+        "title": "Job Board features that keep teams moving and owners properly informed",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 340,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#2b1908,#111827)",
+        "itemBackgroundColor": "rgba(15,23,42,0.92)",
+        "borderColor": "rgba(249,115,22,0.28)",
+        "textColor": "#f8fafc",
+        "headingAlign": "center",
+        "accentColor": "#f97316",
+        "paddingTop": 92,
+        "paddingBottom": 92,
+        "items": [
+          {
+            "title": "Assignments with genuine ownership and accountability",
+            "body": "",
+            "image": "https://placehold.co/1600x980/2b1908/f97316?text=Task+Assignments+Due+Dates+Priority",
+            "textBlocks": [
+              {
+                "text": "Assignments with genuine ownership and accountability",
+                "style": {}
+              },
+              {
+                "text": "<span>A task without a clear owner is a task that will probably not get done — or will get done poorly because no single person felt fully responsible for its outcome. Assignments in Project Hub remove the ambiguity that causes work to stall between office staff, site supervisors and management teams. Every task has one owner, a due date and a priority level so the responsibility is absolutely clear from the moment the task is created to the moment it is completed.</span><span>When someone is assigned a task in Project Hub, they know it is their responsibility. When a due date approaches, it is visible to the whole team. When a task becomes overdue, it stands out. That simple, unambiguous clarity eliminates one of the most common and costly sources of delivery failure in project-based businesses of every size.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Files and comments where the actual work happens",
+            "body": "",
+            "image": "https://placehold.co/1600x980/172554/60a5fa?text=Files+Comments+Approvals+Photos",
+            "textBlocks": [
+              {
+                "text": "Files and comments where the actual work happens",
+                "style": {}
+              },
+              {
+                "text": "<span>Project context should live near the project work — not in a separate email thread, not in a WhatsApp group and not in a shared drive folder with seventeen versions of the same document. When photos, approval documents, specifications, site plans, subcontractor quotes and client sign-offs are attached directly to the relevant task in Project Hub, the person doing that work has everything they need without wasting time searching through unrelated conversations and cloud folders.</span><span>Comments on task cards create a conversation thread that belongs permanently to the work itself. When a supervisor needs to understand why something was done a particular way three months later, the answer is in the task history. When a client disputes an aspect of the delivery, the documentation is attached to the relevant card with timestamps. That record reduces misunderstandings and protects the business in the conversations that matter most.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Status columns that make bottlenecks immediately visible",
+            "body": "",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+            "textBlocks": [
+              {
+                "text": "Status columns that make bottlenecks immediately visible",
+                "style": {}
+              },
+              {
+                "text": "<span>The most valuable thing about a well-designed job board is not what it shows when the team is performing well and work is flowing smoothly. It is what it reveals when something is breaking down and needs immediate management attention. Tasks that are stuck in the wrong column for too long, approval requests that have been waiting days without response, stages that have accumulated too many cards because upstream work has bottlenecked — all of these are early warning signals that the job is at risk.</span><span>Project Hub's status columns make those warning signals impossible to ignore. A supervisor or business owner looking at the board for sixty seconds can see whether the team is flowing, blocked or falling behind. That visibility creates the ability to intervene early rather than discovering the problem after the deadline has already been missed and the client relationship is under strain.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-impact-ribbon",
+      "type": "stats",
+      "props": {
+        "title": "The measurable operational impact of a connected project platform",
+        "subtitle": "When your estimate, timeline, task board, documents, communication and reporting all live in the same system, the performance improvements are immediate, measurable and compounding over time.",
+        "statsVariant": "data-ribbon",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#0f172a,#312e81 48%,#042f2e)",
+        "textColor": "#f8fafc",
+        "accentColor": "#22c55e",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "stats": [
+          {
+            "number": "60%",
+            "label": "Admin time reduced",
+            "detail": "Less time re-entering data, manually chasing status updates and assembling reports from multiple disconnected tools that should share the same information automatically."
+          },
+          {
+            "number": "3x",
+            "label": "Faster quote-to-project handover",
+            "detail": "Approved quotes flow directly into live project workspaces without requiring a team meeting to re-explain scope, reconfirm labour assumptions or rebuild the task list from scratch."
+          },
+          {
+            "number": "90%",
+            "label": "Fewer missed variations",
+            "detail": "Scope changes captured in the Project Hub commercial record are tracked and visible. Variations that live in email threads or verbal agreements disappear and erode margin silently."
+          },
+          {
+            "number": "50%",
+            "label": "Fewer status meetings required",
+            "detail": "When the team can see the Job Board, the Gantt timeline and the project reports without asking someone to compile them, most internal status meetings become unnecessary overhead."
+          },
+          {
+            "number": "1",
+            "label": "Source of truth for every job",
+            "detail": "All project information — commercial scope, operational tasks, communication history and client documents — lives in a single connected record that the whole team trusts."
+          },
+          {
+            "number": "100%",
+            "label": "Mobile and desktop access",
+            "detail": "The platform works on any device so supervisors on site, office staff at their desk and owners travelling can all see the same live operational picture at any moment."
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-comparison-traditional",
+      "type": "columns-2",
+      "props": {
+        "title": "Traditional project management vs GR8 Result Project Hub",
+        "leftTitle": "How most project-based businesses are operating right now",
+        "leftContent": "<p>A new lead comes in and gets entered into the CRM. Then the quote is built in a separate estimating tool by a different person. When the quote is approved, it gets manually summarised in an email to the project manager who creates a new entry in the project management app. The team is briefed in a kick-off meeting that covers ground the estimate already captured. Tasks are distributed via email, WhatsApp or verbal instruction. Files go into a shared cloud folder that half the team cannot find. Updates come through calls and text messages. Variations are discussed and sometimes logged and sometimes not. Reports are assembled manually at the end of every month by pulling data from the quoting tool, the project app, the accounting software and the email history.</p><p>Every handover between those steps is an opportunity for information to be lost, duplicated, misunderstood or simply not transferred at all. Every additional tool is a subscription cost and a training overhead. Every manual step is time that the business is paying for that does not directly contribute to project delivery or client satisfaction. The compounding effect of all those inefficiencies is what constrains growth, compresses margins and makes the business feel like it is always running on the edge of out of control.</p><ul><li>Quote and project management completely separate</li><li>Schedule and task board disconnected from each other</li><li>Files stored across multiple folders with no project context</li><li>Variations agreed informally and partially captured</li><li>Reporting assembled manually from multiple sources every month</li><li>Three to five separate subscription costs running simultaneously</li><li>Communication scattered across email, SMS, WhatsApp and apps</li><li>Owners cannot see the business picture without asking multiple people</li></ul>",
+        "rightTitle": "How businesses run on GR8 Result Project Hub",
+        "rightContent": "<p>A new lead enters the CRM. The estimate is built directly inside Project Hub using the integrated Estimate Builder with itemised scope, labour, materials, markups and a professional client proposal. When the client approves, the same commercial information flows automatically into a connected project workspace. The Gantt Chart shows the planned timeline with phases and dependencies. The Job Board organises the tasks with clear owners, priorities and due dates. Documents, photos and updates attach directly to the relevant task cards. Variations are captured as entries in the commercial record with approval status and pricing. Clients receive professional SMS and email communications through the automation layer. Reports are visible in the same system without manual data assembly.</p><p>The business runs from one platform. The team does not switch between five tools with five different logins and five different learning curves. The owner can see the status of every active job without calling anyone or waiting for someone to compile a report. Admin drops because data is captured once and flows automatically to everywhere it is needed. Margin is protected because nothing falls through the gaps between systems that do not communicate.</p><ul><li>Estimate and project management connected in one platform</li><li>Gantt timeline and Job Board aligned and supporting each other</li><li>Files attached directly to the relevant project context</li><li>Variations captured in the official commercial record automatically</li><li>Reporting visible without manual construction or data gathering</li><li>One platform subscription covering every project management module</li><li>SMS, email, automation and communication built into the same system</li><li>Owners see the full business picture at any moment without asking</li></ul>",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#f1f5f9,#e2e8f0)",
+        "cardBackgroundColor": "#ffffff",
+        "textColor": "#0f172a",
+        "borderColor": "rgba(14,165,233,0.28)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-integrations",
+      "type": "feature-list",
+      "props": {
+        "title": "One platform advantage: every module strengthens Project Hub",
+        "subtitle": "The most powerful feature of Project Hub is not any single tool. It is the fact that every other module in the GR8 Result platform connects to it. Sales, marketing, CRM, communication, automation and reporting all feed into the project record. That is a structural advantage no standalone project management tool can match.",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 300,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+        "itemBackgroundColor": "rgba(255,255,255,0.07)",
+        "borderColor": "rgba(148,163,184,0.2)",
+        "textColor": "#e5eefb",
+        "headingAlign": "center",
+        "accentColor": "#38bdf8",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "items": [
+          {
+            "title": "CRM Integration",
+            "body": "",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-1.png",
+            "textBlocks": [
+              {
+                "text": "CRM Integration",
+                "style": {}
+              },
+              {
+                "text": "<span>Client records, lead history, pipeline stages and relationship notes connect directly to project records inside the same platform. When a prospect becomes a client and a quote becomes a job, the information follows without duplication, without retyping and without the context that was captured during the sales process being lost at the moment the delivery team most needs it.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Calendar Sync",
+            "body": "",
+            "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Calendar+Sync+Scheduling+Resources",
+            "textBlocks": [
+              {
+                "text": "Calendar Sync",
+                "style": {}
+              },
+              {
+                "text": "<span>Project milestones, task due dates, site visit bookings, team scheduling and client appointments can all align within the same calendar layer. Deadlines do not exist in isolation from people's availability. When the calendar is connected to the project timeline, scheduling conflicts become visible before they reach the job site rather than after someone has already committed to an impossible date.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "SMS Automation",
+            "body": "",
+            "image": "https://placehold.co/1600x980/052e2b/2dd4bf?text=SMS+Automation+Notifications",
+            "textBlocks": [
+              {
+                "text": "SMS Automation",
+                "style": {}
+              },
+              {
+                "text": "<span>Automated SMS reminders for project milestones, appointment confirmations, delivery notifications, approval requests and client progress updates can be triggered from within the project workflow without switching to a separate messaging tool. SMS automation is particularly valuable for trade businesses where clients and subcontractors are frequently in the field and respond to text messages faster and more reliably than email.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Email Campaigns and Automation",
+            "body": "",
+            "image": "https://placehold.co/1600x980/172554/60a5fa?text=Email+Campaigns+Automation",
+            "textBlocks": [
+              {
+                "text": "Email Campaigns and Automation",
+                "style": {}
+              },
+              {
+                "text": "<span>Project status updates, proposal follow-up sequences, onboarding communications, completion notifications and re-engagement campaigns can all be automated through the same platform that manages the project itself. Removing the need to switch between a project management tool and a separate email marketing platform reduces friction, ensures consistent communication and eliminates the manual work of keeping clients informed throughout the delivery process.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Document Management",
+            "body": "",
+            "image": "https://placehold.co/1600x980/172554/38bdf8?text=Documents+Files+Proposals+Contracts",
+            "textBlocks": [
+              {
+                "text": "Document Management",
+                "style": {}
+              },
+              {
+                "text": "<span>Proposals, contracts, specifications, site plans, subcontractor agreements, compliance certificates, site photos, variation approvals and handover documents all belong near the work they relate to rather than scattered across shared drives with names like 'Final v3 REVISED'. Document management connected to the project record means the whole team always has the right version of the right document available exactly when they need it, with no searching, no duplication and no version confusion.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Workflow Automation",
+            "body": "",
+            "image": "https://placehold.co/1600x980/052e2b/22c55e?text=Automation+Workflows+Triggers",
+            "textBlocks": [
+              {
+                "text": "Workflow Automation",
+                "style": {}
+              },
+              {
+                "text": "<span>Repetitive project management tasks — sending milestone notifications when a task moves to complete, assigning follow-up work when a stage is finished, triggering approval requests when a variation is submitted, updating client records when a project status changes — can all be automated through the GR8 Result automation engine. When routine process steps are handled automatically, the team spends their time on the judgment-dependent work that actually requires human attention and professional expertise.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Reporting and Analytics",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+            "textBlocks": [
+              {
+                "text": "Reporting and Analytics",
+                "style": {}
+              },
+              {
+                "text": "<span>Business performance summaries, project status overviews, completion rate tracking, revenue forecasting, team productivity metrics and profitability analysis can all be drawn from the same connected data environment. When business data lives in one platform, reporting becomes real-time observation rather than manual monthly construction. Owners get a clearer, more current and more trustworthy picture of the business without the spreadsheet work that most project-based businesses accept as an unavoidable overhead.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Communities and Client Portals",
+            "body": "",
+            "image": "/assets/young-team-working-together-gr8-result.jpg",
+            "textBlocks": [
+              {
+                "text": "Communities and Client Portals",
+                "style": {}
+              },
+              {
+                "text": "<span>Client portals, team communities and subcontractor coordination spaces can operate within the broader GR8 Result ecosystem. Giving clients transparent visibility into their project progress through a dedicated communication space reduces inbound status calls, builds professional trust and elevates the client experience in a way that no generic project management tool can replicate. When the client relationship and the project delivery live in the same platform, service quality improves as a natural consequence.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Funnels and Website Builder",
+            "body": "",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "textBlocks": [
+              {
+                "text": "Funnels and Website Builder",
+                "style": {}
+              },
+              {
+                "text": "<span>The platform that runs your project management is the same one that powers your lead generation funnels, your marketing landing pages and your public website. A business that starts with a marketing funnel, captures a lead, nurtures it through the CRM, closes it into an estimate, delivers it through Project Hub and reports on it through the analytics dashboard is running every function of the business inside one connected ecosystem. No other platform in this market offers that complete integration at this price point.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-image-stack-platform",
+      "type": "image-stack",
+      "props": {
+        "title": "The project record becomes the single source of truth for the entire business",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#111827,#0f172a 45%,#312e81)",
+        "minHeight": "880px",
+        "images": [
+          {
+            "id": "plt-a",
+            "kind": "image",
+            "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "x": 42,
+            "y": 62,
+            "width": 440,
+            "height": 280,
+            "rotation": -3,
+            "radius": 28,
+            "zIndex": 2
+          },
+          {
+            "id": "plt-b",
+            "kind": "image",
+            "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+            "x": 508,
+            "y": 75,
+            "width": 360,
+            "height": 240,
+            "rotation": 4,
+            "radius": 24,
+            "zIndex": 3
+          },
+          {
+            "id": "plt-c",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+            "x": 830,
+            "y": 220,
+            "width": 360,
+            "height": 240,
+            "rotation": -4,
+            "radius": 24,
+            "zIndex": 2
+          },
+          {
+            "id": "plt-d",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies",
+            "x": 175,
+            "y": 375,
+            "width": 560,
+            "height": 320,
+            "rotation": 1,
+            "radius": 28,
+            "zIndex": 4
+          },
+          {
+            "id": "plt-e",
+            "kind": "text",
+            "content": "When every update belongs to the same project record, the business stops paying for confusion.",
+            "x": 800,
+            "y": 570,
+            "width": 360,
+            "height": 170,
+            "rotation": 2,
+            "radius": 24,
+            "zIndex": 5,
+            "fontSize": 26,
+            "fontWeight": "900",
+            "textAlign": "left",
+            "verticalAlign": "center",
+            "textColor": "#ffffff",
+            "background": "rgba(2,6,23,0.92)"
+          }
+        ],
+        "baseLayoutWidth": 1400
+      }
+    },
+    {
+      "id": "ph3-one-platform-stats",
+      "type": "stats",
+      "props": {
+        "title": "Why one connected platform outperforms a stack of specialist tools",
+        "subtitle": "The business case for consolidation is not just about reducing subscription costs. It is about the operational intelligence that becomes possible when all your business data lives in the same system and every tool can see what every other tool knows.",
+        "statsVariant": "editorial-band",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#f8fafc,#ffffff)",
+        "textColor": "#0f172a",
+        "cardBackgroundColor": "#ffffff",
+        "borderColor": "rgba(148,163,184,0.24)",
+        "accentColor": "#1d4ed8",
+        "paddingTop": 100,
+        "paddingBottom": 100,
+        "stats": [
+          {
+            "number": "Data",
+            "label": "Connected intelligence",
+            "detail": "When sales, project, communication and financial data all live together, patterns and problems become visible that no single specialist tool can show on its own."
+          },
+          {
+            "number": "Cost",
+            "label": "Subscription consolidation",
+            "detail": "Replacing three to five specialist subscriptions with one connected platform typically reduces the total monthly software spend while delivering more capability than the sum of those individual tools."
+          },
+          {
+            "number": "Team",
+            "label": "One system for everyone",
+            "detail": "Training overhead, onboarding time and the daily productivity cost of context-switching between different applications all drop substantially when the entire team operates from a single platform."
+          },
+          {
+            "number": "Speed",
+            "label": "Faster decisions everywhere",
+            "detail": "Owners and managers make better decisions faster when the information they need is available in one place rather than waiting for someone to extract it from three different systems and compile it into a document."
+          },
+          {
+            "number": "Scale",
+            "label": "Grows with the business",
+            "detail": "A platform that handles marketing, CRM, project management, communication, automation and reporting can support the business through every stage of growth without requiring a platform migration at the worst possible moment."
+          },
+          {
+            "number": "Trust",
+            "label": "One version of the truth",
+            "detail": "When every team member works from the same live data, disagreements about project status, scope boundaries and performance metrics become far less common and far easier to resolve when they do occur."
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-competitor-positioning",
+      "type": "columns-2",
+      "props": {
+        "title": "Built for the businesses that the big project management platforms consistently underserve",
+        "leftImage": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1800&q=88",
+        "rightTitle": "Enterprise-grade project management without the enterprise complexity, cost or implementation burden",
+        "rightContent": "<p>Procore and Autodesk Construction Cloud are extraordinary platforms — for large enterprise construction companies with million-dollar IT budgets, dedicated platform administrators and full-time implementation specialists. They are sophisticated, powerful and almost completely inaccessible for the growing trade or construction business that needs genuine project management discipline without the enterprise overhead that comes with it. The complexity is a feature for the businesses those platforms were designed for. For everyone else, it is a barrier that prevents adoption and creates its own cost in time and training.</p><p>Monday.com, ClickUp and Asana are capable generic work management platforms that can be configured to handle project-based workflows with enough effort and integration work. But they do not understand the trade and construction workflow natively. Quoting, estimating, materials procurement, site management and project-specific reporting require workarounds, custom configurations and third-party integrations that create their own ongoing maintenance overhead and still leave critical gaps between systems that need to share data.</p><p>Buildertrend and JobTread are purpose-built for the construction market and are genuinely useful tools — but they remain standalone project management systems that exist outside the marketing, CRM, website and communication stack that runs the commercial side of the business. You win the work somewhere else and push it into the project tool. The two worlds never properly connect, and the value of having everything in one commercial ecosystem is never realised.</p><p>GR8 Result Project Hub is positioned specifically for growing trade, construction and service businesses that have outgrown spreadsheets and WhatsApp management but do not need — and cannot justify — the overhead of enterprise platforms. It provides genuine project management discipline connected to the sales, marketing and communication tools the business already uses, at a price point that makes sense for businesses at every stage of growth.</p>",
+        "ratio": "50-50",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#020617,#111827)",
+        "cardBackgroundColor": "rgba(15,23,42,0.86)",
+        "textColor": "#f8fafc",
+        "borderColor": "rgba(34,211,238,0.28)",
+        "paddingTop": 110,
+        "paddingBottom": 110
+      }
+    },
+    {
+      "id": "ph3-why-gr8-wins",
+      "type": "feature-list",
+      "props": {
+        "title": "What makes GR8 Result Project Hub genuinely different from every alternative",
+        "layout": "columns",
+        "featureVariant": "cards",
+        "featureCardWidth": 320,
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(180deg,#111827,#020617)",
+        "itemBackgroundColor": "rgba(15,23,42,0.92)",
+        "borderColor": "rgba(148,163,184,0.22)",
+        "textColor": "#f8fafc",
+        "headingAlign": "center",
+        "paddingTop": 96,
+        "paddingBottom": 96,
+        "items": [
+          {
+            "title": "Purpose-built for project-based businesses, not adapted from a generic tool",
+            "body": "",
+            "image": "https://images.unsplash.com/photo-1590012314607-cda9d9b699ae?auto=format&fit=crop&w=1800&q=88",
+            "textBlocks": [
+              {
+                "text": "Purpose-built for project-based businesses, not adapted from a generic tool",
+                "style": {}
+              },
+              {
+                "text": "<span>Project Hub is not a horizontal task management platform that has been stretched to handle construction and trade workflows through configuration and workarounds. It is designed from the ground up around the actual lifecycle of a project-based job, with the specific commercial, operational and communication capabilities that trade, construction and service businesses need to run jobs profitably, professionally and at scale.</span><span>The workflow that Project Hub supports — from first estimate through Gantt planning, Job Board execution, variation management, document control and project reporting — reflects the way real project-based businesses actually operate, not the way a generic work management tool thinks they should operate.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Connected to the whole commercial ecosystem, not isolated from it",
+            "body": "",
+            "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "textBlocks": [
+              {
+                "text": "Connected to the whole commercial ecosystem, not isolated from it",
+                "style": {}
+              },
+              {
+                "text": "<span>This is the single most important differentiator that no standalone project management tool can replicate. Project Hub is one module inside the GR8 Result platform, which also handles marketing funnels, website building, CRM, email marketing, SMS automation, business automation, communities, social media, calendar management and business reporting. Running project delivery inside the same platform as sales, marketing and communication creates a structural advantage that compounds in value as the business grows.</span><span>The lead that was captured in the CRM becomes the client whose project runs in the Hub. The estimate that was approved by the proposal tool becomes the project brief that the Job Board executes against. The completion that is signed off flows into the reporting that the owner uses to make the next investment decision. That is a complete commercial ecosystem, not a collection of separate tools.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Designed for the owner, the manager and the team member simultaneously",
+            "body": "",
+            "image": "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=1800&q=88",
+            "textBlocks": [
+              {
+                "text": "Designed for the owner, the manager and the team member simultaneously",
+                "style": {}
+              },
+              {
+                "text": "<span>Most project management platforms are optimised for one user type. Construction-specific tools are often built for project managers who live in the software full-time. Generic tools are often built for knowledge workers at agency-style businesses. Neither type is optimised for the reality of a growing trade or construction business where the owner needs high-level profit visibility, the project manager needs operational control of the schedule and the team members on site or in the workshop need simple, fast task clarity.</span><span>Project Hub is built to serve all three simultaneously. The owner gets the reporting view they need without asking for it. The project manager gets the Gantt and Job Board control they need to protect the schedule. The team member gets the task clarity they need to execute without ambiguity. When every stakeholder has the right information for their role, the business runs better at every level.</span>",
+                "style": {}
+              }
+            ]
+          },
+          {
+            "title": "Priced for growth at every stage, not just for enterprise budgets",
+            "body": "",
+            "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Pricing+Plans+Growth+Scale",
+            "textBlocks": [
+              {
+                "text": "Priced for growth at every stage, not just for enterprise budgets",
+                "style": {}
+              },
+              {
+                "text": "<span>Enterprise project management platforms can cost thousands of dollars per month before implementation, training, custom development and ongoing support are added to the subscription cost. The total cost of ownership for a Procore or Autodesk Construction Cloud implementation is out of reach for the vast majority of the businesses that need real project management discipline the most — the growing trade business, the commercial fit-out team, the residential construction company trying to scale past five concurrent projects without losing control.</span><span>GR8 Result is priced to be genuinely accessible at every stage of business growth, from the first project manager through to a full multi-project organisation running dozens of jobs simultaneously. The platform grows with the business rather than waiting for the business to grow large enough to justify the subscription.</span>",
+                "style": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ph3-cta-final",
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "The decision is straightforward",
+        "title": "Start managing projects the way the best businesses in your industry already do",
+        "description": "Every week you spend managing projects across disconnected tools is a week of admin overhead, margin risk and missed visibility that your competitors are not paying. GR8 Result Project Hub gives you the connected operational platform to change that — starting today.",
+        "text": "Start Your Free Trial",
+        "link": "#trial",
+        "note": "No credit card required. Full access from day one. Setup takes less than ten minutes.",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "fullWidthBackground": true,
+        "backgroundColor": "linear-gradient(135deg,#020617,#1e1b4b 48%,#042f2e)",
+        "textColor": "#ffffff",
+        "buttonColor": "linear-gradient(135deg,#22c55e,#38bdf8)",
+        "buttonTextColor": "#02111f",
+        "borderColor": "rgba(255,255,255,0.18)"
+      }
+    },
+    {
+      "id": "6b6f8c68-649b-4104-8d24-5989dfc11b5c",
+      "type": "space",
+      "props": {
+        "height": "42px",
+        "fullWidthBackground": false
+      }
+    },
+    {
+      "id": 1783113859277,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    },
+    {
+      "id": "ph3-final-hero",
+      "type": "hero",
+      "props": {
+        "eyebrow": "GR8 Result Project Hub",
+        "headline": "Stop Losing Margin to Disconnected Project Management. Start Today.",
+        "headlineBlock": {
+          "content": "Stop Losing Margin to Disconnected Project Management. Start Today.",
+          "fontSize": 60,
+          "fontWeight": "900",
+          "lineHeight": 1.04,
+          "color": "#ffffff",
+          "alignment": "center"
+        },
+        "subheadline": "Join the trade, construction and service businesses that have replaced their fragmented tool stack with GR8 Result Project Hub. Connect your estimates, Gantt timelines, job boards, CRM, documents, SMS automation, email campaigns and business reporting in one premium platform built specifically for modern project-based businesses that are serious about delivery, profitability and sustainable growth.",
+        "bodyBlock": {
+          "content": "Join the trade, construction and service businesses that have replaced their fragmented tool stack with GR8 Result Project Hub. Connect your estimates, Gantt timelines, job boards, CRM, documents, SMS automation, email campaigns and business reporting in one premium platform built specifically for modern project-based businesses that are serious about delivery, profitability and sustainable growth.",
+          "fontSize": 20,
+          "lineHeight": 1.7,
+          "color": "#e0f2fe",
+          "alignment": "center"
+        },
+        "ctaText": "Start Free Trial",
+        "ctaLink": "#trial",
+        "secondaryCtaText": "Book a Live Demo",
+        "secondaryCtaLink": "#demo",
+        "backgroundStyle": "image",
+        "backgroundImage": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=2000&q=88",
+        "backgroundOverlayColor": "#020617",
+        "backgroundOverlayOpacity": 0.8,
+        "fullWidthBackground": true,
+        "minHeight": "780px",
+        "contentWidth": 1020,
+        "headlineAlignment": "center",
+        "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+        "buttonTextColor": "#0f172a",
+        "sectionAnimation": "fade-up"
+      }
+    },
+    {
+      "id": "ph3-footer",
+      "type": "text",
+      "props": {
+        "text": "Project Hub by GR8 Result Digital Solutions. Estimate, plan, schedule, assign, communicate, complete and report from one connected platform designed for modern project-based businesses. &copy; GR8 Result Digital Solutions. All rights reserved.",
+        "alignment": "center",
+        "fullWidthBackground": true,
+        "backgroundColor": "#020617",
+        "textColor": "#94a3b8",
+        "textFontSize": 14,
+        "paddingTop": 32,
+        "paddingBottom": 32
+      }
+    },
+    {
+      "id": 1783113880084,
+      "type": "cta-button",
+      "props": {
+        "eyebrow": "<br>",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "link": "https://gr8result.digital/login.",
+        "note": "<br>",
+        "style": "stacked-card",
+        "size": "large",
+        "alignment": "center",
+        "backgroundColor": "#121c26",
+        "textColor": "#ffffff",
+        "buttonColor": "#00b0f0",
+        "buttonTextColor": "#1f2937",
+        "borderColor": "rgba(255,255,255,0.18)",
+        "fullWidthBackground": true,
+        "baseLayoutWidth": 1500
+      }
+    }
+  ],
+  "html": "",
+  "chaiData": {
+    "blocks": [
+      {
+        "id": "ph3-nav",
+        "type": "nav-bar",
+        "props": {
+          "brand": "GR8 Result",
+          "showLogo": true,
+          "variant": "split-dark",
+          "stickyMode": "sticky-transparent",
+          "fullWidthBackground": true,
+          "links": [
+            {
+              "label": "Overview",
+              "href": "#overview",
+              "highlighted": true,
+              "id": "ph3-nav-0",
+              "slug": "overview",
+              "children": []
+            },
+            {
+              "label": "Estimator",
+              "href": "#estimator",
+              "id": "ph3-nav-1",
+              "slug": "estimator",
+              "children": []
+            },
+            {
+              "label": "Gantt",
+              "href": "#gantt",
+              "id": "ph3-nav-2",
+              "slug": "gantt",
+              "children": []
+            },
+            {
+              "label": "Job Board",
+              "href": "#jobboard",
+              "id": "ph3-nav-3",
+              "slug": "jobboard",
+              "children": []
+            },
+            {
+              "label": "Integrations",
+              "href": "#integrations",
+              "id": "ph3-nav-4",
+              "slug": "integrations",
+              "children": []
+            },
+            {
+              "label": "Demo",
+              "href": "#demo",
+              "id": "ph3-nav-5",
+              "slug": "demo",
+              "children": []
+            }
+          ],
+          "ctaText": "Start Free Trial",
+          "ctaLink": "#trial",
+          "backgroundColor": "rgba(2,6,23,0.92)",
+          "textColor": "#e5eefb",
+          "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+          "buttonTextColor": "#0f172a",
+          "borderColor": "rgba(148,163,184,0.24)"
+        }
+      },
+      {
+        "id": 1783113691144,
+        "type": "hero",
+        "props": {
+          "backgroundStyle": "image",
+          "minHeight": "1064px",
+          "baseLayoutWidth": 1500,
+          "fullWidthBackground": true,
+          "backgroundImageAssetId": "a84093fe-2a95-4391-86e1-6d755c512e78",
+          "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1783113602630-4f8f0f61-fd4b-4311-ae38-fdc7f415c063.png",
+          "backgroundPosition": "top center",
+          "headline": "",
+          "subheadline": ""
+        }
+      },
+      {
+        "id": "ph3-problem-text",
+        "type": "text",
+        "props": {
+          "text": "<h2 style=\"font-size:44px;font-weight:900;color:#ffffff;margin-bottom:28px;line-height:1.1;\">The Hidden Cost of Managing Projects Across Five Disconnected Tools</h2><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:24px;\">Most trade, construction and service businesses are losing tens of thousands of dollars every year to a problem they have completely normalised. Their quoting tool does not talk to their scheduling tool. Their scheduling tool does not talk to their job board. Their job board has no connection to their documents folder. Their documents folder is not linked to their communication history. And none of it feeds reliable information into their accounting or reporting systems. Every handover between these disconnected systems is an opportunity for scope to be misunderstood, deadlines to slip, variations to disappear and owners to lose visibility over what is actually happening on their jobs.</p><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:24px;\">The administrative overhead alone is staggering. Scope gets retyped from the quote into the project plan. Dates are manually entered into the scheduling tool after the project is confirmed. Client information is duplicated across the CRM, the estimating software and the project management app. Variations are agreed informally and sometimes invoiced and sometimes forgotten. Reports are built at the end of every month by pulling data from five different places and presenting it in yet another document that is already out of date by the time it is read. Staff spend hours every week moving information between tools that were never designed to work together and the business pays the cost of that wasted time in every single project.</p><p style=\"font-size:19px;line-height:1.8;color:#cbd5e1;margin-bottom:0;\">Project Hub exists to end that fragmentation permanently. It gives growing businesses the connected operational platform they need to run projects like the best-managed companies in their industry, without paying enterprise software prices, without forcing the team through months of painful implementation and without accepting that disconnected tools are simply the cost of doing business. The game has changed. Your project management platform should change with it.</p>",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "textColor": "#e2e8f0",
+          "textFontSize": 19,
+          "textLineHeight": 1.8,
+          "alignment": "left",
+          "paddingTop": 110,
+          "paddingBottom": 90,
+          "baseLayoutWidth": 1020
+        }
+      },
+      {
+        "id": "ph3-cost-stats",
+        "type": "stats",
+        "props": {
+          "title": "What disconnected project management actually costs your business",
+          "subtitle": "These are not abstract numbers. They are the real, compounding costs paid by every project-based business running jobs across a fragmented stack of tools that were never designed to work together.",
+          "statsVariant": "editorial-band",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#0f172a,#1e1b4b 48%,#064e3b)",
+          "textColor": "#f8fafc",
+          "cardBackgroundColor": "rgba(15,23,42,0.88)",
+          "borderColor": "rgba(148,163,184,0.22)",
+          "accentColor": "#f97316",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "stats": [
+            {
+              "number": "8+ hrs",
+              "label": "Admin waste per project",
+              "detail": "Hours spent re-entering data, chasing status updates, reformatting quotes and manually rebuilding reports across disconnected systems that should share the same data automatically."
+            },
+            {
+              "number": "12-15%",
+              "label": "Margin lost to scope creep",
+              "detail": "Variations agreed informally and never logged properly erode profit on almost every project-based job. Without a connected commercial record, scope changes disappear into conversation threads."
+            },
+            {
+              "number": "3-5 tools",
+              "label": "Average disconnected stack",
+              "detail": "Most growing businesses pay separately for quoting software, a task management app, a cloud storage folder, a scheduling tool and a calendar application that were never designed to communicate with each other."
+            },
+            {
+              "number": "Weeks",
+              "label": "Delay cost per missed milestone",
+              "detail": "A blocked dependency that goes unseen for even a few days can push a completion date by weeks and a cash position by thousands. Without connected visibility, the problem is discovered too late to fix cheaply."
+            },
+            {
+              "number": "20+ hrs",
+              "label": "Monthly reporting time",
+              "detail": "Without connected data, building a monthly report means pulling information from multiple sources, reconciling inconsistencies and presenting a document that represents the past rather than the present."
+            },
+            {
+              "number": "Zero",
+              "label": "Single source of truth",
+              "detail": "When the project record lives across five tools, no single version of the truth exists. Decisions get made with incomplete information and accountability becomes impossible to maintain."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-image-stack-intro",
+        "type": "image-stack",
+        "props": {
+          "title": "One platform. Every project tool connected and working together.",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#020617,#111827 40%,#042f2e)",
+          "minHeight": "880px",
+          "images": [
+            {
+              "id": "ims1-a",
+              "kind": "image",
+              "src": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+              "x": 28,
+              "y": 50,
+              "width": 400,
+              "height": 280,
+              "rotation": -4,
+              "radius": 28,
+              "zIndex": 1
+            },
+            {
+              "id": "ims1-b",
+              "kind": "image",
+              "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+              "x": 455,
+              "y": 62,
+              "width": 420,
+              "height": 270,
+              "rotation": 3,
+              "radius": 26,
+              "zIndex": 3
+            },
+            {
+              "id": "ims1-c",
+              "kind": "image",
+              "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
+              "x": 910,
+              "y": 88,
+              "width": 290,
+              "height": 400,
+              "rotation": 5,
+              "radius": 28,
+              "zIndex": 2
+            },
+            {
+              "id": "ims1-d",
+              "kind": "image",
+              "src": "https://placehold.co/1600x980/111827/38bdf8?text=Project+Hub+Dashboard",
+              "x": 180,
+              "y": 358,
+              "width": 560,
+              "height": 320,
+              "rotation": 0,
+              "radius": 26,
+              "zIndex": 4
+            },
+            {
+              "id": "ims1-e",
+              "kind": "text",
+              "content": "Estimates, Gantt, Job Board, CRM, Documents and Automation — all connected.",
+              "x": 790,
+              "y": 530,
+              "width": 360,
+              "height": 160,
+              "rotation": -2,
+              "radius": 24,
+              "zIndex": 5,
+              "fontSize": 24,
+              "fontWeight": "900",
+              "textAlign": "left",
+              "verticalAlign": "center",
+              "textColor": "#f8fafc",
+              "background": "rgba(2,6,23,0.9)"
+            }
+          ],
+          "baseLayoutWidth": 1400
+        }
+      },
+      {
+        "id": "ph3-why-exists",
+        "type": "columns-2",
+        "props": {
+          "title": "The operational command centre your business has been missing",
+          "leftTitle": "Why Project Hub changes how work actually gets done",
+          "leftContent": "<p>Every successful project-based business eventually hits the same ceiling. The team is working hard, the owner is staying late, jobs are being delivered — but the margins are tighter than they should be, communication keeps slipping, deadlines are being pushed and the business feels harder to manage than it ought to. The cause is almost always the same: the information needed to run the business is fragmented across too many systems that were never designed to share data with each other.</p><p>Project Hub is the answer to that fragmentation. It is the layer of the GR8 Result platform specifically designed to connect the commercial side of a job with the operational side. The quote that was sold, the plan that was made, the tasks that were assigned, the documents that were shared, the updates that were sent and the reports the owner needs should not live in five different places. They should all belong to the same connected project record, accessible by everyone who needs them, updated in real time and trusted as the one true picture of the job.</p><p>When that connection exists, the business changes in ways that are immediately felt. Administrative overhead drops because data is captured once and flows everywhere it is needed. Deadline visibility improves because the full timeline is in one place rather than spread across a calendar, a spreadsheet and someone's memory. Team accountability becomes real because tasks have owners, due dates and status that everyone can see. Clients get better answers because your team can speak from a live operational picture rather than a verbal estimate. Owners stop spending their mornings chasing information and start making decisions with confidence.</p><p>That is the promise of Project Hub — and it is built into the same platform that handles your marketing, CRM, email, SMS, automation, website builder and reporting. The business that runs its projects on GR8 Result is the business that finally operates from one source of truth.</p>",
+          "rightImage": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1800&q=88",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#0f172a,#020617)",
+          "cardBackgroundColor": "rgba(15,23,42,0.86)",
+          "textColor": "#f8fafc",
+          "borderColor": "rgba(56,189,248,0.32)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-modules-overview",
+        "type": "feature-list",
+        "props": {
+          "title": "Five Connected Project Tools. One Unified Platform.",
+          "subtitle": "Project Hub is not a standalone app bolted onto the side of the GR8 Result platform. It is a connected suite of purpose-built project management tools that share data, context and workflow at every stage of the job lifecycle. Every module makes the others more powerful.",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 340,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "itemBackgroundColor": "rgba(15,23,42,0.92)",
+          "borderColor": "rgba(56,189,248,0.22)",
+          "textColor": "#f8fafc",
+          "headingAlign": "center",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "items": [
+            {
+              "title": "Estimate Builder",
+              "body": "",
+              "image": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet",
+              "textBlocks": [
+                {
+                  "text": "Estimate Builder",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Build professional, detailed estimates with itemised line items, quantity-based calculations, labour allowances, material costs, subcontractor rates, markups, margin controls, provisional sums, optional extras and staged payment schedules. Every estimate is designed to become a live project record the moment the client approves — without your team having to retype a single piece of scope, pricing or client information into a separate system. The Estimate Builder is the commercial foundation that every other module in Project Hub builds on.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Gantt Chart Planner",
+              "body": "",
+              "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+              "textBlocks": [
+                {
+                  "text": "Gantt Chart Planner",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Visualise the entire project as a connected timeline with phases, task dependencies, critical path milestones, resource allocations, deadlines and live progress tracking. The Gantt Planner helps your team understand what needs to happen next, what is blocked, where the schedule is exposed and which delays are about to compound into something expensive. It connects directly to the Job Board so the timeline and the day-to-day execution always stay in alignment, even when the real world changes the plan.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Job Board",
+              "body": "",
+              "image": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files",
+              "textBlocks": [
+                {
+                  "text": "Job Board",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Move work through clear visual stages — from pending through in progress, waiting, under review and completed — using a drag-and-drop kanban board that every team member can see and update in real time. Each task card carries the full context the assigned person needs: ownership, priority level, due date, file attachments, comments, status history and connection to the broader project record. The Job Board is where the plan becomes execution, where accountability becomes visible and where bottlenecks can be caught before they cost the business money.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Production Flow",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/2dd4bf?text=Production+Flow+Steps",
+              "textBlocks": [
+                {
+                  "text": "Production Flow",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Track the procurement and production steps for every component of a job: quote submitted, sample approved, order placed, delivery confirmed, installation started and sign-off completed. Production Flow gives businesses that manage materials, subcontractors and staged delivery a clear operational view of where every job component stands so nothing gets missed in the gap between quote completion and job handover. When procurement steps and production milestones are tracked in the same system as the rest of the project, the business stops losing margin to supply chain confusion.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Reports and Visibility",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Analytics",
+              "textBlocks": [
+                {
+                  "text": "Reports and Visibility",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Owners and managers get a live operational picture across every active job without holding status meetings or manually assembling reports from multiple sources. Project status, task progress, document history, communication activity, milestone tracking, variation records and timeline performance all belong to the same connected data environment. Reporting becomes observation rather than construction. The business stops spending twenty hours a month pulling data from five places and starts spending that time making the decisions that actually grow the business.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-workflow-ribbon",
+        "type": "stats",
+        "props": {
+          "title": "The complete job lifecycle. One connected system from start to finish.",
+          "subtitle": "Project Hub is designed around the full lifecycle of a project-based job. Every stage belongs to the same platform, which means no information is lost between steps, no scope is misunderstood at handover and no team member is working from a different version of the truth.",
+          "statsVariant": "data-ribbon",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#020617,#1e1b4b 46%,#064e3b)",
+          "textColor": "#f8fafc",
+          "accentColor": "#2dd4bf",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "stats": [
+            {
+              "number": "01",
+              "label": "Lead Captured",
+              "detail": "The CRM records the relationship so client information follows the job from first contact through to final invoice without being retyped anywhere."
+            },
+            {
+              "number": "02",
+              "label": "Quote Built",
+              "detail": "The Estimate Builder structures scope, labour allowances, material costs, margins, optional extras and variations into a professional client-ready proposal."
+            },
+            {
+              "number": "03",
+              "label": "Client Approves",
+              "detail": "The winning proposal becomes the commercial record that feeds directly into the project workspace without requiring manual data transfer or team briefings."
+            },
+            {
+              "number": "04",
+              "label": "Project Created",
+              "detail": "The team gets a live connected workspace for tasks, documents, schedule, client communications and project updates all in one place."
+            },
+            {
+              "number": "05",
+              "label": "Timeline Planned",
+              "detail": "The Gantt Chart maps phases, dependencies, milestones, resource allocations and deadlines so the schedule is understood by everyone before the first task begins."
+            },
+            {
+              "number": "06",
+              "label": "Tasks Assigned",
+              "detail": "The Job Board gives every team member a clear view of their work queue with context, ownership, priority levels, due dates and the files they need."
+            },
+            {
+              "number": "07",
+              "label": "Progress Tracked",
+              "detail": "Updates, comments, photos, approvals and file attachments keep the project record current as the job moves forward through production."
+            },
+            {
+              "number": "08",
+              "label": "Variations Logged",
+              "detail": "Scope changes are captured in the commercial record as they happen so nothing is forgotten, nothing is disputed and margin is protected through to completion."
+            },
+            {
+              "number": "09",
+              "label": "Job Completed",
+              "detail": "Sign-off documentation, completion photos, handover materials and client approvals all belong to the same connected project record."
+            },
+            {
+              "number": "10",
+              "label": "Invoice and Report",
+              "detail": "Completion status, financial context, variation records and delivery performance feed directly into billing and business reporting without additional manual work."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-cta-mid1",
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "No more fragmented workflows",
+          "title": "See how Project Hub replaces your entire disconnected tool stack",
+          "description": "Book a live walkthrough with the GR8 Result team and see the full connected project workflow in action. From first estimate through to completion reporting — in one platform, in thirty minutes.",
+          "text": "Book a Free Demo",
+          "link": "#demo",
+          "note": "No commitment required. See the full platform in action before you decide anything.",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#111827,#1d4ed8 52%,#22c55e)",
+          "textColor": "#ffffff",
+          "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+          "buttonTextColor": "#111827",
+          "borderColor": "rgba(255,255,255,0.18)"
+        }
+      },
+      {
+        "id": "ph3-estimator-deep",
+        "type": "columns-2",
+        "props": {
+          "title": "Estimate Builder: the commercial foundation of every project",
+          "leftTitle": "Build quotes that protect your margin and convert directly into live projects without re-entering a single piece of data",
+          "leftContent": "<p>The Estimate Builder is not a price calculator you use once and forget about. It is the commercial engine at the heart of Project Hub — the system that determines whether a job starts with accurate scope, realistic labour assumptions, properly priced materials and the margin protection your business depends on. Every detail entered during the quoting process becomes the foundation of the project that follows, which means the quality of the estimate directly determines the quality of the delivery.</p><p>This matters because the biggest source of project problems is the gap between what was quoted and what the delivery team was actually told to do. When the estimate lives in a quoting tool and the project plan lives in a separate system, that gap opens up immediately after approval. Labour assumptions get lost in translation. Material quantities become vague references rather than specific scope items. Variation accountability disappears into email threads that nobody can find months later. Margin that was built into the original price quietly evaporates between systems that do not talk to each other.</p><p>Project Hub closes that gap permanently. When a client approves the proposal, the commercial information flows directly into the project workspace. The scope that was priced becomes the basis for the Gantt timeline. The labour assumptions inform the scheduling. The materials context sits next to the procurement tasks on the Job Board. That connected handover from quote to delivery is one of the biggest operational advantages Project Hub offers over competitors who treat estimating and project management as entirely separate workflows that need separate software.</p><p>Beyond the numbers, the Estimate Builder supports client-ready proposals with professional structure, cover pages, terms and conditions, optional extras presented clearly and variation tracking built in from the beginning. Your team sends a document that reflects the quality of the business, tracks whether the client has opened it and can follow up with a clear next step — all without leaving the platform.</p><ul><li>Itemised line items with quantities and unit costs</li><li>Labour rates, allowances and role-based costing</li><li>Material costs connected to specific scope items</li><li>Markup and margin controls at line and total level</li><li>Provisional sums, optional extras and staged pricing</li><li>Variation tracking built into the commercial record</li><li>Client-ready proposal with approval workflow</li><li>Approved quotes convert directly into live project workspaces</li></ul>",
+          "rightImage": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet+%2B+Proposal",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "cardBackgroundColor": "rgba(15,23,42,0.86)",
+          "textColor": "#f8fafc",
+          "borderColor": "rgba(34,197,94,0.36)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-estimator-features",
+        "type": "feature-list",
+        "props": {
+          "title": "Estimator capabilities that protect profit before the job ever begins",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 340,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#0f172a,#052e2b)",
+          "itemBackgroundColor": "rgba(15,23,42,0.92)",
+          "borderColor": "rgba(34,197,94,0.26)",
+          "textColor": "#f8fafc",
+          "headingAlign": "center",
+          "accentColor": "#22c55e",
+          "paddingTop": 92,
+          "paddingBottom": 92,
+          "items": [
+            {
+              "title": "Labour visibility that survives the handover",
+              "body": "",
+              "image": "https://placehold.co/1600x980/08251c/22c55e?text=Labour+Rates+Roles+Allowances",
+              "textBlocks": [
+                {
+                  "text": "Labour visibility that survives the handover",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Most margin leakage on project-based jobs happens in labour, not materials. Estimates are built with one set of labour assumptions and delivered with another because nothing connected the two systems. Project Hub keeps labour allowances, role types, rates and cost assumptions visible from quote right through to delivery so the team executing the job can see exactly where the margins were set and how the current performance compares to those original assumptions.</span><span>When labour thinking is preserved through the handover rather than lost in translation, the business has a genuine chance of finishing the job at the margin it was originally priced at. That is a structural advantage that most businesses with disconnected tools never achieve.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Materials with real scope accountability",
+              "body": "",
+              "image": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+              "textBlocks": [
+                {
+                  "text": "Materials with real scope accountability",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Material quantities and costs need to be tied to specific scope items, not buried in a single line total that means nothing to the person doing procurement. When the Estimate Builder connects materials to the work being priced, the person responsible for ordering supplies understands exactly what was included in the quote, what quantities were assumed, what the cost expectations are and where the risk sits if prices have moved since the estimate was prepared.</span><span>That connection reduces over-ordering, under-ordering and the uncomfortable conversations that happen when delivery costs more than the quote anticipated because nobody checked what was actually included in the original price.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Markup, margin and variation control that actually works",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Markup+Margin+Variation+Tracking",
+              "textBlocks": [
+                {
+                  "text": "Markup, margin and variation control that actually works",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Margins are easy to protect when the commercial structure is transparent and variations are treated as part of the official record rather than informal side agreements. Project Hub supports markup and margin settings that apply across the entire estimate so pricing decisions are deliberate and documented. When a client requests additional scope, that variation enters the commercial record with its own pricing, approval status and connection to the original quote.</span><span>Every variation that is agreed, requested, declined or pending should have a paper trail. When it does not, that is money the business is giving away without even knowing it. Variation control is one of the highest-impact commercial capabilities in any real-world project management system.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-gantt-deep",
+        "type": "columns-2",
+        "props": {
+          "title": "Gantt Charts: turn complex delivery into a timeline your whole team can follow",
+          "leftImage": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+          "rightTitle": "Plan dependencies, milestones and the critical path before delays cost you money",
+          "rightContent": "<p>Most project failures do not happen because the team stopped trying. They happen because the schedule was never properly planned, the dependencies between tasks were not visible and the first delay was not caught early enough to prevent it cascading into something far more expensive and complicated to recover from. The Gantt Chart in Project Hub is designed to solve that problem at its source — not after the damage has already been done.</p><p>Visual timeline planning gives your team and your clients a shared understanding of the work. Every phase, task, milestone and deadline is mapped so that the relationship between activities is immediately clear. When Task B cannot start until Task A is finished, that dependency is visible in the chart. When a dependent task slips, the team can see which downstream tasks are now at risk and respond before the impact reaches the client relationship or the final completion date.</p><p>Critical path visibility is one of the most powerful capabilities in professional project management. The critical path is the sequence of tasks that directly controls when the project finishes. When any task on the critical path is delayed, the project end date moves. When the critical path is visible in the system, the team knows precisely where to focus protective attention to keep the timeline intact. Most project management tools show you a nice chart. Project Hub shows you where the real risk is hiding.</p><p>Resource planning is the other major advantage of proper Gantt scheduling. When you can see who is assigned to what, when their capacity is fully allocated and when multiple tasks are competing for the same person or equipment, you can make smarter scheduling decisions before the conflict reaches the job site. That is the difference between reactive project management and genuine operational control that protects both delivery dates and client relationships.</p><ul><li>Full timeline view across all project phases</li><li>Task dependencies and predecessor relationships</li><li>Critical path identification and monitoring</li><li>Milestone markers with accountability owners</li><li>Resource allocation across the team</li><li>Delay visibility before it cascades</li><li>Progress tracking against the original plan</li><li>Connected to the Job Board for daily execution alignment</li></ul>",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "cardBackgroundColor": "rgba(15,23,42,0.86)",
+          "textColor": "#f8fafc",
+          "borderColor": "rgba(167,139,250,0.38)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-gantt-features",
+        "type": "feature-list",
+        "props": {
+          "title": "Scheduling intelligence for projects that change in the real world",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 340,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#15162b,#020617)",
+          "itemBackgroundColor": "rgba(17,24,39,0.94)",
+          "borderColor": "rgba(167,139,250,0.28)",
+          "textColor": "#f8fafc",
+          "headingAlign": "center",
+          "accentColor": "#a78bfa",
+          "paddingTop": 92,
+          "paddingBottom": 92,
+          "items": [
+            {
+              "title": "Dependencies that make risk visible before it becomes expensive",
+              "body": "",
+              "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Dependencies+Critical+Path+View",
+              "textBlocks": [
+                {
+                  "text": "Dependencies that make risk visible before it becomes expensive",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Dependencies are the relationships between tasks that determine whether the schedule will hold when reality deviates from the plan. When Task B cannot start until Task A is complete, and Task A slips by three days, the team needs to understand that impact immediately — not after the schedule has already unravelled and the client is asking uncomfortable questions about the new completion date.</span><span>Project Hub makes dependency chains visible so project managers can think ahead. They can see the knock-on effect of a single delay, communicate it to stakeholders before it becomes a crisis and adjust the plan while there are still options available. That early visibility is worth more than any other scheduling feature, because it is the difference between managing a problem and being managed by it.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Milestones that create real accountability across the team",
+              "body": "",
+              "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Milestones+Deadlines+Progress",
+              "textBlocks": [
+                {
+                  "text": "Milestones that create real accountability across the team",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Milestones mark the moments in a project that matter most. They are the dates clients measure progress against, the checkpoints that trigger staged payments, the events that define whether a project is running to plan or quietly falling behind schedule. When milestones are built into the Gantt structure rather than written on a whiteboard, accountability follows automatically.</span><span>Project Hub builds milestones into the operational plan so they are not aspirational dates on a slide deck or a line in an email somewhere. They are part of the live schedule, visible to the whole team and connected to the specific tasks that determine whether they will be achieved on time. When a milestone is at risk, the system shows exactly which task is creating that risk.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Progress owners can understand without calling a meeting",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Progress+Tracking+Owner+Dashboard",
+              "textBlocks": [
+                {
+                  "text": "Progress owners can understand without calling a meeting",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Project visibility should not require a status meeting. When the Gantt chart is maintained as part of the daily workflow rather than updated sporadically before a client review, owners and managers can look at the plan at any moment and immediately understand which phases are complete, which are actively in progress, which are delayed and which are approaching risk territory.</span><span>That transparency reduces the time spent on update calls, status requests and internal progress meetings. It also builds significantly stronger trust with clients. When a project manager can speak confidently about exactly where the job stands, backed by a live operational picture rather than a verbal estimate from memory, the client relationship becomes more professional and more resilient when things change.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-jobboard-deep",
+        "type": "columns-2",
+        "props": {
+          "title": "Job Board: the live operational centre for every active job in the business",
+          "leftTitle": "Move work through the business without losing context, accountability or momentum",
+          "leftContent": "<p>The Job Board is where the project plan becomes daily execution. It is the place your team comes to understand what needs to happen today, what they are currently working on, what is blocked, what is waiting on someone else and what has been successfully completed. Without a clear, shared, real-time view of the work queue, jobs stall at handover points, accountability disappears between team members and supervisors spend most of their day chasing people for updates instead of actually managing the business and protecting its margins.</p><p>Project Hub's Job Board organises every task and every job into visual stages that the whole team can see and interact with. Work moves through customisable kanban columns — from pending through in-progress, waiting on external, under review and complete — using simple drag-and-drop task management that every team member can master in minutes. Each task card carries the full context the assigned person needs: who owns it, when it is due, what priority level it is, what files are attached, what comments have been added and what the current status is in the broader project timeline.</p><p>The most valuable aspect of a well-designed job board is not just what it shows when everything is working. It is what it reveals when something is wrong. Tasks sitting in the wrong column for too long. Work that has been waiting for a client approval for three days. Stages that have accumulated too many items because upstream work is bottlenecked. These are early warning signals that the job needs attention and management intervention. Project Hub makes those signals impossible to miss.</p><p>For businesses managing multiple active projects simultaneously — construction companies running four sites, trade businesses juggling six concurrent jobs, commercial fit-out teams handling different client schedules — the Job Board provides the visibility that makes multi-project management possible without the chaos. Every job has its own board, every task has a clear owner and the overall business picture is always available without needing to call a meeting or wait for someone to compile a report.</p><ul><li>Kanban-style visual task stages</li><li>Drag-and-drop task movement between stages</li><li>Ownership assignments with due dates and priority levels</li><li>File attachments directly on task cards</li><li>Threaded comments and update history</li><li>Status visibility for owners, supervisors and team members</li><li>Multi-project overview across all active jobs</li><li>Connected to the Gantt timeline for schedule alignment</li></ul>",
+          "rightImage": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files+Comments",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "cardBackgroundColor": "rgba(15,23,42,0.86)",
+          "textColor": "#f8fafc",
+          "borderColor": "rgba(249,115,22,0.34)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-jobboard-features",
+        "type": "feature-list",
+        "props": {
+          "title": "Job Board features that keep teams moving and owners properly informed",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 340,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#2b1908,#111827)",
+          "itemBackgroundColor": "rgba(15,23,42,0.92)",
+          "borderColor": "rgba(249,115,22,0.28)",
+          "textColor": "#f8fafc",
+          "headingAlign": "center",
+          "accentColor": "#f97316",
+          "paddingTop": 92,
+          "paddingBottom": 92,
+          "items": [
+            {
+              "title": "Assignments with genuine ownership and accountability",
+              "body": "",
+              "image": "https://placehold.co/1600x980/2b1908/f97316?text=Task+Assignments+Due+Dates+Priority",
+              "textBlocks": [
+                {
+                  "text": "Assignments with genuine ownership and accountability",
+                  "style": {}
+                },
+                {
+                  "text": "<span>A task without a clear owner is a task that will probably not get done — or will get done poorly because no single person felt fully responsible for its outcome. Assignments in Project Hub remove the ambiguity that causes work to stall between office staff, site supervisors and management teams. Every task has one owner, a due date and a priority level so the responsibility is absolutely clear from the moment the task is created to the moment it is completed.</span><span>When someone is assigned a task in Project Hub, they know it is their responsibility. When a due date approaches, it is visible to the whole team. When a task becomes overdue, it stands out. That simple, unambiguous clarity eliminates one of the most common and costly sources of delivery failure in project-based businesses of every size.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Files and comments where the actual work happens",
+              "body": "",
+              "image": "https://placehold.co/1600x980/172554/60a5fa?text=Files+Comments+Approvals+Photos",
+              "textBlocks": [
+                {
+                  "text": "Files and comments where the actual work happens",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Project context should live near the project work — not in a separate email thread, not in a WhatsApp group and not in a shared drive folder with seventeen versions of the same document. When photos, approval documents, specifications, site plans, subcontractor quotes and client sign-offs are attached directly to the relevant task in Project Hub, the person doing that work has everything they need without wasting time searching through unrelated conversations and cloud folders.</span><span>Comments on task cards create a conversation thread that belongs permanently to the work itself. When a supervisor needs to understand why something was done a particular way three months later, the answer is in the task history. When a client disputes an aspect of the delivery, the documentation is attached to the relevant card with timestamps. That record reduces misunderstandings and protects the business in the conversations that matter most.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Status columns that make bottlenecks immediately visible",
+              "body": "",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+              "textBlocks": [
+                {
+                  "text": "Status columns that make bottlenecks immediately visible",
+                  "style": {}
+                },
+                {
+                  "text": "<span>The most valuable thing about a well-designed job board is not what it shows when the team is performing well and work is flowing smoothly. It is what it reveals when something is breaking down and needs immediate management attention. Tasks that are stuck in the wrong column for too long, approval requests that have been waiting days without response, stages that have accumulated too many cards because upstream work has bottlenecked — all of these are early warning signals that the job is at risk.</span><span>Project Hub's status columns make those warning signals impossible to ignore. A supervisor or business owner looking at the board for sixty seconds can see whether the team is flowing, blocked or falling behind. That visibility creates the ability to intervene early rather than discovering the problem after the deadline has already been missed and the client relationship is under strain.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-impact-ribbon",
+        "type": "stats",
+        "props": {
+          "title": "The measurable operational impact of a connected project platform",
+          "subtitle": "When your estimate, timeline, task board, documents, communication and reporting all live in the same system, the performance improvements are immediate, measurable and compounding over time.",
+          "statsVariant": "data-ribbon",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#0f172a,#312e81 48%,#042f2e)",
+          "textColor": "#f8fafc",
+          "accentColor": "#22c55e",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "stats": [
+            {
+              "number": "60%",
+              "label": "Admin time reduced",
+              "detail": "Less time re-entering data, manually chasing status updates and assembling reports from multiple disconnected tools that should share the same information automatically."
+            },
+            {
+              "number": "3x",
+              "label": "Faster quote-to-project handover",
+              "detail": "Approved quotes flow directly into live project workspaces without requiring a team meeting to re-explain scope, reconfirm labour assumptions or rebuild the task list from scratch."
+            },
+            {
+              "number": "90%",
+              "label": "Fewer missed variations",
+              "detail": "Scope changes captured in the Project Hub commercial record are tracked and visible. Variations that live in email threads or verbal agreements disappear and erode margin silently."
+            },
+            {
+              "number": "50%",
+              "label": "Fewer status meetings required",
+              "detail": "When the team can see the Job Board, the Gantt timeline and the project reports without asking someone to compile them, most internal status meetings become unnecessary overhead."
+            },
+            {
+              "number": "1",
+              "label": "Source of truth for every job",
+              "detail": "All project information — commercial scope, operational tasks, communication history and client documents — lives in a single connected record that the whole team trusts."
+            },
+            {
+              "number": "100%",
+              "label": "Mobile and desktop access",
+              "detail": "The platform works on any device so supervisors on site, office staff at their desk and owners travelling can all see the same live operational picture at any moment."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-comparison-traditional",
+        "type": "columns-2",
+        "props": {
+          "title": "Traditional project management vs GR8 Result Project Hub",
+          "leftTitle": "How most project-based businesses are operating right now",
+          "leftContent": "<p>A new lead comes in and gets entered into the CRM. Then the quote is built in a separate estimating tool by a different person. When the quote is approved, it gets manually summarised in an email to the project manager who creates a new entry in the project management app. The team is briefed in a kick-off meeting that covers ground the estimate already captured. Tasks are distributed via email, WhatsApp or verbal instruction. Files go into a shared cloud folder that half the team cannot find. Updates come through calls and text messages. Variations are discussed and sometimes logged and sometimes not. Reports are assembled manually at the end of every month by pulling data from the quoting tool, the project app, the accounting software and the email history.</p><p>Every handover between those steps is an opportunity for information to be lost, duplicated, misunderstood or simply not transferred at all. Every additional tool is a subscription cost and a training overhead. Every manual step is time that the business is paying for that does not directly contribute to project delivery or client satisfaction. The compounding effect of all those inefficiencies is what constrains growth, compresses margins and makes the business feel like it is always running on the edge of out of control.</p><ul><li>Quote and project management completely separate</li><li>Schedule and task board disconnected from each other</li><li>Files stored across multiple folders with no project context</li><li>Variations agreed informally and partially captured</li><li>Reporting assembled manually from multiple sources every month</li><li>Three to five separate subscription costs running simultaneously</li><li>Communication scattered across email, SMS, WhatsApp and apps</li><li>Owners cannot see the business picture without asking multiple people</li></ul>",
+          "rightTitle": "How businesses run on GR8 Result Project Hub",
+          "rightContent": "<p>A new lead enters the CRM. The estimate is built directly inside Project Hub using the integrated Estimate Builder with itemised scope, labour, materials, markups and a professional client proposal. When the client approves, the same commercial information flows automatically into a connected project workspace. The Gantt Chart shows the planned timeline with phases and dependencies. The Job Board organises the tasks with clear owners, priorities and due dates. Documents, photos and updates attach directly to the relevant task cards. Variations are captured as entries in the commercial record with approval status and pricing. Clients receive professional SMS and email communications through the automation layer. Reports are visible in the same system without manual data assembly.</p><p>The business runs from one platform. The team does not switch between five tools with five different logins and five different learning curves. The owner can see the status of every active job without calling anyone or waiting for someone to compile a report. Admin drops because data is captured once and flows automatically to everywhere it is needed. Margin is protected because nothing falls through the gaps between systems that do not communicate.</p><ul><li>Estimate and project management connected in one platform</li><li>Gantt timeline and Job Board aligned and supporting each other</li><li>Files attached directly to the relevant project context</li><li>Variations captured in the official commercial record automatically</li><li>Reporting visible without manual construction or data gathering</li><li>One platform subscription covering every project management module</li><li>SMS, email, automation and communication built into the same system</li><li>Owners see the full business picture at any moment without asking</li></ul>",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#f1f5f9,#e2e8f0)",
+          "cardBackgroundColor": "#ffffff",
+          "textColor": "#0f172a",
+          "borderColor": "rgba(14,165,233,0.28)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-integrations",
+        "type": "feature-list",
+        "props": {
+          "title": "One platform advantage: every module strengthens Project Hub",
+          "subtitle": "The most powerful feature of Project Hub is not any single tool. It is the fact that every other module in the GR8 Result platform connects to it. Sales, marketing, CRM, communication, automation and reporting all feed into the project record. That is a structural advantage no standalone project management tool can match.",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 300,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
+          "itemBackgroundColor": "rgba(255,255,255,0.07)",
+          "borderColor": "rgba(148,163,184,0.2)",
+          "textColor": "#e5eefb",
+          "headingAlign": "center",
+          "accentColor": "#38bdf8",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "items": [
+            {
+              "title": "CRM Integration",
+              "body": "",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-1.png",
+              "textBlocks": [
+                {
+                  "text": "CRM Integration",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Client records, lead history, pipeline stages and relationship notes connect directly to project records inside the same platform. When a prospect becomes a client and a quote becomes a job, the information follows without duplication, without retyping and without the context that was captured during the sales process being lost at the moment the delivery team most needs it.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Calendar Sync",
+              "body": "",
+              "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Calendar+Sync+Scheduling+Resources",
+              "textBlocks": [
+                {
+                  "text": "Calendar Sync",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Project milestones, task due dates, site visit bookings, team scheduling and client appointments can all align within the same calendar layer. Deadlines do not exist in isolation from people's availability. When the calendar is connected to the project timeline, scheduling conflicts become visible before they reach the job site rather than after someone has already committed to an impossible date.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "SMS Automation",
+              "body": "",
+              "image": "https://placehold.co/1600x980/052e2b/2dd4bf?text=SMS+Automation+Notifications",
+              "textBlocks": [
+                {
+                  "text": "SMS Automation",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Automated SMS reminders for project milestones, appointment confirmations, delivery notifications, approval requests and client progress updates can be triggered from within the project workflow without switching to a separate messaging tool. SMS automation is particularly valuable for trade businesses where clients and subcontractors are frequently in the field and respond to text messages faster and more reliably than email.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Email Campaigns and Automation",
+              "body": "",
+              "image": "https://placehold.co/1600x980/172554/60a5fa?text=Email+Campaigns+Automation",
+              "textBlocks": [
+                {
+                  "text": "Email Campaigns and Automation",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Project status updates, proposal follow-up sequences, onboarding communications, completion notifications and re-engagement campaigns can all be automated through the same platform that manages the project itself. Removing the need to switch between a project management tool and a separate email marketing platform reduces friction, ensures consistent communication and eliminates the manual work of keeping clients informed throughout the delivery process.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Document Management",
+              "body": "",
+              "image": "https://placehold.co/1600x980/172554/38bdf8?text=Documents+Files+Proposals+Contracts",
+              "textBlocks": [
+                {
+                  "text": "Document Management",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Proposals, contracts, specifications, site plans, subcontractor agreements, compliance certificates, site photos, variation approvals and handover documents all belong near the work they relate to rather than scattered across shared drives with names like 'Final v3 REVISED'. Document management connected to the project record means the whole team always has the right version of the right document available exactly when they need it, with no searching, no duplication and no version confusion.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Workflow Automation",
+              "body": "",
+              "image": "https://placehold.co/1600x980/052e2b/22c55e?text=Automation+Workflows+Triggers",
+              "textBlocks": [
+                {
+                  "text": "Workflow Automation",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Repetitive project management tasks — sending milestone notifications when a task moves to complete, assigning follow-up work when a stage is finished, triggering approval requests when a variation is submitted, updating client records when a project status changes — can all be automated through the GR8 Result automation engine. When routine process steps are handled automatically, the team spends their time on the judgment-dependent work that actually requires human attention and professional expertise.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Reporting and Analytics",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+              "textBlocks": [
+                {
+                  "text": "Reporting and Analytics",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Business performance summaries, project status overviews, completion rate tracking, revenue forecasting, team productivity metrics and profitability analysis can all be drawn from the same connected data environment. When business data lives in one platform, reporting becomes real-time observation rather than manual monthly construction. Owners get a clearer, more current and more trustworthy picture of the business without the spreadsheet work that most project-based businesses accept as an unavoidable overhead.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Communities and Client Portals",
+              "body": "",
+              "image": "/assets/young-team-working-together-gr8-result.jpg",
+              "textBlocks": [
+                {
+                  "text": "Communities and Client Portals",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Client portals, team communities and subcontractor coordination spaces can operate within the broader GR8 Result ecosystem. Giving clients transparent visibility into their project progress through a dedicated communication space reduces inbound status calls, builds professional trust and elevates the client experience in a way that no generic project management tool can replicate. When the client relationship and the project delivery live in the same platform, service quality improves as a natural consequence.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Funnels and Website Builder",
+              "body": "",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "textBlocks": [
+                {
+                  "text": "Funnels and Website Builder",
+                  "style": {}
+                },
+                {
+                  "text": "<span>The platform that runs your project management is the same one that powers your lead generation funnels, your marketing landing pages and your public website. A business that starts with a marketing funnel, captures a lead, nurtures it through the CRM, closes it into an estimate, delivers it through Project Hub and reports on it through the analytics dashboard is running every function of the business inside one connected ecosystem. No other platform in this market offers that complete integration at this price point.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-image-stack-platform",
+        "type": "image-stack",
+        "props": {
+          "title": "The project record becomes the single source of truth for the entire business",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#111827,#0f172a 45%,#312e81)",
+          "minHeight": "880px",
+          "images": [
+            {
+              "id": "plt-a",
+              "kind": "image",
+              "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "x": 42,
+              "y": 62,
+              "width": 440,
+              "height": 280,
+              "rotation": -3,
+              "radius": 28,
+              "zIndex": 2
+            },
+            {
+              "id": "plt-b",
+              "kind": "image",
+              "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+              "x": 508,
+              "y": 75,
+              "width": 360,
+              "height": 240,
+              "rotation": 4,
+              "radius": 24,
+              "zIndex": 3
+            },
+            {
+              "id": "plt-c",
+              "kind": "image",
+              "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+              "x": 830,
+              "y": 220,
+              "width": 360,
+              "height": 240,
+              "rotation": -4,
+              "radius": 24,
+              "zIndex": 2
+            },
+            {
+              "id": "plt-d",
+              "kind": "image",
+              "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies",
+              "x": 175,
+              "y": 375,
+              "width": 560,
+              "height": 320,
+              "rotation": 1,
+              "radius": 28,
+              "zIndex": 4
+            },
+            {
+              "id": "plt-e",
+              "kind": "text",
+              "content": "When every update belongs to the same project record, the business stops paying for confusion.",
+              "x": 800,
+              "y": 570,
+              "width": 360,
+              "height": 170,
+              "rotation": 2,
+              "radius": 24,
+              "zIndex": 5,
+              "fontSize": 26,
+              "fontWeight": "900",
+              "textAlign": "left",
+              "verticalAlign": "center",
+              "textColor": "#ffffff",
+              "background": "rgba(2,6,23,0.92)"
+            }
+          ],
+          "baseLayoutWidth": 1400
+        }
+      },
+      {
+        "id": "ph3-one-platform-stats",
+        "type": "stats",
+        "props": {
+          "title": "Why one connected platform outperforms a stack of specialist tools",
+          "subtitle": "The business case for consolidation is not just about reducing subscription costs. It is about the operational intelligence that becomes possible when all your business data lives in the same system and every tool can see what every other tool knows.",
+          "statsVariant": "editorial-band",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#f8fafc,#ffffff)",
+          "textColor": "#0f172a",
+          "cardBackgroundColor": "#ffffff",
+          "borderColor": "rgba(148,163,184,0.24)",
+          "accentColor": "#1d4ed8",
+          "paddingTop": 100,
+          "paddingBottom": 100,
+          "stats": [
+            {
+              "number": "Data",
+              "label": "Connected intelligence",
+              "detail": "When sales, project, communication and financial data all live together, patterns and problems become visible that no single specialist tool can show on its own."
+            },
+            {
+              "number": "Cost",
+              "label": "Subscription consolidation",
+              "detail": "Replacing three to five specialist subscriptions with one connected platform typically reduces the total monthly software spend while delivering more capability than the sum of those individual tools."
+            },
+            {
+              "number": "Team",
+              "label": "One system for everyone",
+              "detail": "Training overhead, onboarding time and the daily productivity cost of context-switching between different applications all drop substantially when the entire team operates from a single platform."
+            },
+            {
+              "number": "Speed",
+              "label": "Faster decisions everywhere",
+              "detail": "Owners and managers make better decisions faster when the information they need is available in one place rather than waiting for someone to extract it from three different systems and compile it into a document."
+            },
+            {
+              "number": "Scale",
+              "label": "Grows with the business",
+              "detail": "A platform that handles marketing, CRM, project management, communication, automation and reporting can support the business through every stage of growth without requiring a platform migration at the worst possible moment."
+            },
+            {
+              "number": "Trust",
+              "label": "One version of the truth",
+              "detail": "When every team member works from the same live data, disagreements about project status, scope boundaries and performance metrics become far less common and far easier to resolve when they do occur."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-competitor-positioning",
+        "type": "columns-2",
+        "props": {
+          "title": "Built for the businesses that the big project management platforms consistently underserve",
+          "leftImage": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1800&q=88",
+          "rightTitle": "Enterprise-grade project management without the enterprise complexity, cost or implementation burden",
+          "rightContent": "<p>Procore and Autodesk Construction Cloud are extraordinary platforms — for large enterprise construction companies with million-dollar IT budgets, dedicated platform administrators and full-time implementation specialists. They are sophisticated, powerful and almost completely inaccessible for the growing trade or construction business that needs genuine project management discipline without the enterprise overhead that comes with it. The complexity is a feature for the businesses those platforms were designed for. For everyone else, it is a barrier that prevents adoption and creates its own cost in time and training.</p><p>Monday.com, ClickUp and Asana are capable generic work management platforms that can be configured to handle project-based workflows with enough effort and integration work. But they do not understand the trade and construction workflow natively. Quoting, estimating, materials procurement, site management and project-specific reporting require workarounds, custom configurations and third-party integrations that create their own ongoing maintenance overhead and still leave critical gaps between systems that need to share data.</p><p>Buildertrend and JobTread are purpose-built for the construction market and are genuinely useful tools — but they remain standalone project management systems that exist outside the marketing, CRM, website and communication stack that runs the commercial side of the business. You win the work somewhere else and push it into the project tool. The two worlds never properly connect, and the value of having everything in one commercial ecosystem is never realised.</p><p>GR8 Result Project Hub is positioned specifically for growing trade, construction and service businesses that have outgrown spreadsheets and WhatsApp management but do not need — and cannot justify — the overhead of enterprise platforms. It provides genuine project management discipline connected to the sales, marketing and communication tools the business already uses, at a price point that makes sense for businesses at every stage of growth.</p>",
+          "ratio": "50-50",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#020617,#111827)",
+          "cardBackgroundColor": "rgba(15,23,42,0.86)",
+          "textColor": "#f8fafc",
+          "borderColor": "rgba(34,211,238,0.28)",
+          "paddingTop": 110,
+          "paddingBottom": 110
+        }
+      },
+      {
+        "id": "ph3-why-gr8-wins",
+        "type": "feature-list",
+        "props": {
+          "title": "What makes GR8 Result Project Hub genuinely different from every alternative",
+          "layout": "columns",
+          "featureVariant": "cards",
+          "featureCardWidth": 320,
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(180deg,#111827,#020617)",
+          "itemBackgroundColor": "rgba(15,23,42,0.92)",
+          "borderColor": "rgba(148,163,184,0.22)",
+          "textColor": "#f8fafc",
+          "headingAlign": "center",
+          "paddingTop": 96,
+          "paddingBottom": 96,
+          "items": [
+            {
+              "title": "Purpose-built for project-based businesses, not adapted from a generic tool",
+              "body": "",
+              "image": "https://images.unsplash.com/photo-1590012314607-cda9d9b699ae?auto=format&fit=crop&w=1800&q=88",
+              "textBlocks": [
+                {
+                  "text": "Purpose-built for project-based businesses, not adapted from a generic tool",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Project Hub is not a horizontal task management platform that has been stretched to handle construction and trade workflows through configuration and workarounds. It is designed from the ground up around the actual lifecycle of a project-based job, with the specific commercial, operational and communication capabilities that trade, construction and service businesses need to run jobs profitably, professionally and at scale.</span><span>The workflow that Project Hub supports — from first estimate through Gantt planning, Job Board execution, variation management, document control and project reporting — reflects the way real project-based businesses actually operate, not the way a generic work management tool thinks they should operate.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Connected to the whole commercial ecosystem, not isolated from it",
+              "body": "",
+              "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+              "textBlocks": [
+                {
+                  "text": "Connected to the whole commercial ecosystem, not isolated from it",
+                  "style": {}
+                },
+                {
+                  "text": "<span>This is the single most important differentiator that no standalone project management tool can replicate. Project Hub is one module inside the GR8 Result platform, which also handles marketing funnels, website building, CRM, email marketing, SMS automation, business automation, communities, social media, calendar management and business reporting. Running project delivery inside the same platform as sales, marketing and communication creates a structural advantage that compounds in value as the business grows.</span><span>The lead that was captured in the CRM becomes the client whose project runs in the Hub. The estimate that was approved by the proposal tool becomes the project brief that the Job Board executes against. The completion that is signed off flows into the reporting that the owner uses to make the next investment decision. That is a complete commercial ecosystem, not a collection of separate tools.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Designed for the owner, the manager and the team member simultaneously",
+              "body": "",
+              "image": "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=1800&q=88",
+              "textBlocks": [
+                {
+                  "text": "Designed for the owner, the manager and the team member simultaneously",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Most project management platforms are optimised for one user type. Construction-specific tools are often built for project managers who live in the software full-time. Generic tools are often built for knowledge workers at agency-style businesses. Neither type is optimised for the reality of a growing trade or construction business where the owner needs high-level profit visibility, the project manager needs operational control of the schedule and the team members on site or in the workshop need simple, fast task clarity.</span><span>Project Hub is built to serve all three simultaneously. The owner gets the reporting view they need without asking for it. The project manager gets the Gantt and Job Board control they need to protect the schedule. The team member gets the task clarity they need to execute without ambiguity. When every stakeholder has the right information for their role, the business runs better at every level.</span>",
+                  "style": {}
+                }
+              ]
+            },
+            {
+              "title": "Priced for growth at every stage, not just for enterprise budgets",
+              "body": "",
+              "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Pricing+Plans+Growth+Scale",
+              "textBlocks": [
+                {
+                  "text": "Priced for growth at every stage, not just for enterprise budgets",
+                  "style": {}
+                },
+                {
+                  "text": "<span>Enterprise project management platforms can cost thousands of dollars per month before implementation, training, custom development and ongoing support are added to the subscription cost. The total cost of ownership for a Procore or Autodesk Construction Cloud implementation is out of reach for the vast majority of the businesses that need real project management discipline the most — the growing trade business, the commercial fit-out team, the residential construction company trying to scale past five concurrent projects without losing control.</span><span>GR8 Result is priced to be genuinely accessible at every stage of business growth, from the first project manager through to a full multi-project organisation running dozens of jobs simultaneously. The platform grows with the business rather than waiting for the business to grow large enough to justify the subscription.</span>",
+                  "style": {}
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "ph3-cta-final",
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "The decision is straightforward",
+          "title": "Start managing projects the way the best businesses in your industry already do",
+          "description": "Every week you spend managing projects across disconnected tools is a week of admin overhead, margin risk and missed visibility that your competitors are not paying. GR8 Result Project Hub gives you the connected operational platform to change that — starting today.",
+          "text": "Start Your Free Trial",
+          "link": "#trial",
+          "note": "No credit card required. Full access from day one. Setup takes less than ten minutes.",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "fullWidthBackground": true,
+          "backgroundColor": "linear-gradient(135deg,#020617,#1e1b4b 48%,#042f2e)",
+          "textColor": "#ffffff",
+          "buttonColor": "linear-gradient(135deg,#22c55e,#38bdf8)",
+          "buttonTextColor": "#02111f",
+          "borderColor": "rgba(255,255,255,0.18)"
+        }
+      },
+      {
+        "id": "6b6f8c68-649b-4104-8d24-5989dfc11b5c",
+        "type": "space",
+        "props": {
+          "height": "42px",
+          "fullWidthBackground": false
+        }
+      },
+      {
+        "id": 1783113859277,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500
+        }
+      },
+      {
+        "id": "ph3-final-hero",
+        "type": "hero",
+        "props": {
+          "eyebrow": "GR8 Result Project Hub",
+          "headline": "Stop Losing Margin to Disconnected Project Management. Start Today.",
+          "headlineBlock": {
+            "content": "Stop Losing Margin to Disconnected Project Management. Start Today.",
+            "fontSize": 60,
+            "fontWeight": "900",
+            "lineHeight": 1.04,
+            "color": "#ffffff",
+            "alignment": "center"
+          },
+          "subheadline": "Join the trade, construction and service businesses that have replaced their fragmented tool stack with GR8 Result Project Hub. Connect your estimates, Gantt timelines, job boards, CRM, documents, SMS automation, email campaigns and business reporting in one premium platform built specifically for modern project-based businesses that are serious about delivery, profitability and sustainable growth.",
+          "bodyBlock": {
+            "content": "Join the trade, construction and service businesses that have replaced their fragmented tool stack with GR8 Result Project Hub. Connect your estimates, Gantt timelines, job boards, CRM, documents, SMS automation, email campaigns and business reporting in one premium platform built specifically for modern project-based businesses that are serious about delivery, profitability and sustainable growth.",
+            "fontSize": 20,
+            "lineHeight": 1.7,
+            "color": "#e0f2fe",
+            "alignment": "center"
+          },
+          "ctaText": "Start Free Trial",
+          "ctaLink": "#trial",
+          "secondaryCtaText": "Book a Live Demo",
+          "secondaryCtaLink": "#demo",
+          "backgroundStyle": "image",
+          "backgroundImage": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=2000&q=88",
+          "backgroundOverlayColor": "#020617",
+          "backgroundOverlayOpacity": 0.8,
+          "fullWidthBackground": true,
+          "minHeight": "780px",
+          "contentWidth": 1020,
+          "headlineAlignment": "center",
+          "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
+          "buttonTextColor": "#0f172a",
+          "sectionAnimation": "fade-up"
+        }
+      },
+      {
+        "id": "ph3-footer",
+        "type": "text",
+        "props": {
+          "text": "Project Hub by GR8 Result Digital Solutions. Estimate, plan, schedule, assign, communicate, complete and report from one connected platform designed for modern project-based businesses. &copy; GR8 Result Digital Solutions. All rights reserved.",
+          "alignment": "center",
+          "fullWidthBackground": true,
+          "backgroundColor": "#020617",
+          "textColor": "#94a3b8",
+          "textFontSize": 14,
+          "paddingTop": 32,
+          "paddingBottom": 32
+        }
+      },
+      {
+        "id": 1783113880084,
+        "type": "cta-button",
+        "props": {
+          "eyebrow": "<br>",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "link": "https://gr8result.digital/login.",
+          "note": "<br>",
+          "style": "stacked-card",
+          "size": "large",
+          "alignment": "center",
+          "backgroundColor": "#121c26",
+          "textColor": "#ffffff",
+          "buttonColor": "#00b0f0",
+          "buttonTextColor": "#1f2937",
+          "borderColor": "rgba(255,255,255,0.18)",
+          "fullWidthBackground": true,
+          "baseLayoutWidth": 1500
+        }
+      }
+    ],
+    "theme": {
+      "preset": "executive"
+    },
+    "designTokens": {}
+  },
+  "savedAt": "2026-07-03T21:25:25.808Z",
+  "source": "autosave"
+}
