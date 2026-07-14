@@ -71,7 +71,7 @@ export default function AIReviewPanel({
         <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
         <div style={S.emptyTitle}>No AI suggestions yet</div>
         <div style={S.emptyText}>
-          Click <strong>Analyse Plan With AI</strong> in the toolbar to detect walls, rooms, doors and windows.
+          Automatic wall and corner detection is disabled while the plan viewer foundation is being stabilised.
         </div>
       </div>
     );

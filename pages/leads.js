@@ -7,8 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabase-client";
-import { useWorkspace } from "../hooks/useWorkspace";
-import EditListModal from "../components/lists/EditListModal";
+import { useApiFetch, useWorkspace } from "../hooks/useWorkspace";
 
 // ✅ Shared avatar logic (single source of truth)
 import { getAvatarForLead } from "../utils/avatar";
@@ -16,6 +15,63 @@ import SubscriberAvatar from "../components/crm/SubscriberAvatar";
 import LeadDetailsModal from "../components/crm/LeadDetailsModal";
 
 const TEAM_STORAGE_KEY_PREFIX = "crm:pipeline:teams:";
+
+const IMPORT_FIELDS = [
+  { key: "first_name", label: "First Name", aliases: ["first name", "firstname", "first"] },
+  { key: "last_name", label: "Last Name", aliases: ["last name", "lastname", "surname", "last"] },
+  { key: "email", label: "Email", aliases: ["email", "email address", "e-mail"] },
+  { key: "phone", label: "Phone", aliases: ["phone", "phone number", "telephone"] },
+  { key: "company", label: "Company", aliases: ["company", "business", "organisation", "organization"] },
+  { key: "notes", label: "Notes", aliases: ["notes", "note", "comments"] },
+  { key: "lead_source", label: "Source", aliases: ["source", "lead source", "origin"] },
+  { key: "tags", label: "Tags", aliases: ["tags", "tag"] },
+];
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (ch === '"' && quoted && next === '"') {
+      cell += '"';
+      i += 1;
+    } else if (ch === '"') {
+      quoted = !quoted;
+    } else if (ch === "," && !quoted) {
+      row.push(cell);
+      cell = "";
+    } else if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && next === "\n") i += 1;
+      row.push(cell);
+      if (row.some((value) => String(value).trim())) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+  row.push(cell);
+  if (row.some((value) => String(value).trim())) rows.push(row);
+  return rows;
+}
+
+function detectMapping(headers) {
+  const mapping = {};
+  headers.forEach((header) => {
+    const key = String(header || "").trim().toLowerCase().replace(/[_-]+/g, " ");
+    const field = IMPORT_FIELDS.find((item) => item.aliases.includes(key));
+    mapping[header] = field?.key || "";
+  });
+  return mapping;
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
 
 function readStoredJson(key, fallback) {
   if (typeof window === "undefined") return fallback;
@@ -51,6 +107,7 @@ function isNewLead(lead) {
 }
 
 export default function LeadsPage() {
+  const apiFetch = useApiFetch();
   const { workspaceId } = useWorkspace();
   const [lists, setLists] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -78,7 +135,21 @@ export default function LeadsPage() {
 
   // List Modal
   const [showListModal, setShowListModal] = useState(false);
-  const [editingList, setEditingList] = useState(null);
+  const [listForm, setListForm] = useState({ name: "", color: "#2563eb" });
+  const [listSaving, setListSaving] = useState(false);
+
+  // CSV import modal
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importListId, setImportListId] = useState("");
+  const [importNewListName, setImportNewListName] = useState("");
+  const [importHeaders, setImportHeaders] = useState([]);
+  const [importRows, setImportRows] = useState([]);
+  const [importMapping, setImportMapping] = useState({});
+  const [importDuplicateMode, setImportDuplicateMode] = useState("update");
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResult, setImportResult] = useState(null);
 
   // Lead details CRM modal
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
@@ -206,46 +277,60 @@ export default function LeadsPage() {
     }
   }
 
-  async function loadLists() {
+  async function loadLists(preferredListId = "", options = {}) {
+    const loadSelectedLeads = options.loadSelectedLeads !== false;
     if (!workspaceId) {
       setLists([]);
       setLeads([]);
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
-      .from("lead_lists")
-      .select("id,name")
-      .eq("workspace_id", workspaceId)
-      .order("created_at");
+    const res = await apiFetch(`/api/crm/lead-lists?workspace_id=${encodeURIComponent(workspaceId)}`);
+    const json = await res.json().catch(() => ({}));
 
-    if (error) console.error(error);
-    setLists(data || []);
+    if (!res.ok || !json.ok) {
+      console.error(json.error || "Load lists failed");
+      showMsg(`List load failed: ${json.error || res.statusText}`);
+      setLoading(false);
+      return;
+    }
+
+    const data = json.lists || [];
+    setLists(data);
 
     if (data?.length) {
-      setSelectedList(data[0]);
-      await loadLeads(data[0].id);
+      const nextSelected = preferredListId
+        ? data.find((list) => String(list.id) === String(preferredListId)) || data[0]
+        : selectedList
+        ? data.find((list) => list.id === selectedList.id) || data[0]
+        : data[0];
+      setSelectedList(nextSelected);
+      if (loadSelectedLeads) await loadLeads(nextSelected.id, true);
     } else {
       setLeads([]);
       setLoading(false);
     }
+    return data;
   }
 
-  async function loadLeads(listId) {
+  async function loadLeads(listId, forceListMode = false) {
     setLoading(true);
 
-    const query = supabase.from("leads").select("*").eq("workspace_id", workspaceId);
+    const params = new URLSearchParams({
+      workspace_id: workspaceId,
+      limit: "2000",
+    });
+    if (listId && (forceListMode || !allMode)) params.set("list_id", listId);
+    const res = await apiFetch(`/api/crm/leads?${params.toString()}`);
+    const json = await res.json().catch(() => ({}));
 
-    if (!allMode) {
-      query.eq("list_id", listId);
+    if (!res.ok || !json.ok) {
+      console.error("Load leads error:", json.error || res.statusText);
+      showMsg(`Load leads failed: ${json.error || res.statusText}`);
+      setLeads([]);
+    } else {
+      setLeads(json.leads || []);
     }
-
-    query.order(sortField, { ascending: sortDir === "asc" });
-
-    const { data, error } = await query;
-
-    if (error) console.error("Load leads error:", error);
-    setLeads(data || []);
     setSelectedIds([]);
     setLoading(false);
   }
@@ -255,15 +340,16 @@ export default function LeadsPage() {
     setSelectedList(null);
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order(sortField, { ascending: sortDir === "asc" });
+    const res = await apiFetch(`/api/crm/leads?workspace_id=${encodeURIComponent(workspaceId)}&limit=2000`);
+    const json = await res.json().catch(() => ({}));
 
-    if (error) console.error(error);
-
-    setLeads(data || []);
+    if (!res.ok || !json.ok) {
+      console.error(json.error || "Load all leads failed");
+      showMsg(`Load leads failed: ${json.error || res.statusText}`);
+      setLeads([]);
+    } else {
+      setLeads(json.leads || []);
+    }
     setSelectedIds([]);
     setLoading(false);
   }
@@ -333,7 +419,141 @@ export default function LeadsPage() {
   }
 
   // CSV IMPORT – uses shared avatar helper
-  async function handleImport() {
+  function handleImport() {
+    setImportFile(null);
+    setImportListId(selectedList?.id || "");
+    setImportNewListName("");
+    setImportHeaders([]);
+    setImportRows([]);
+    setImportMapping({});
+    setImportDuplicateMode("update");
+    setImportProgress(0);
+    setImportResult(null);
+    setShowImportModal(true);
+  }
+
+  async function handleCSVSelected(file) {
+    setImportFile(file || null);
+    setImportResult(null);
+    if (!file) return;
+    const text = await file.text();
+    const parsed = parseCSV(text);
+    if (!parsed.length) {
+      setImportHeaders([]);
+      setImportRows([]);
+      showMsg("Empty CSV file.");
+      return;
+    }
+    const headers = parsed[0].map((header, index) => String(header || `Column ${index + 1}`).trim());
+    const rows = parsed.slice(1).map((row) =>
+      headers.reduce((acc, header, index) => {
+        acc[header] = row[index] || "";
+        return acc;
+      }, {})
+    );
+    setImportHeaders(headers);
+    setImportRows(rows);
+    setImportMapping(detectMapping(headers));
+  }
+
+  async function runCSVImport() {
+    if (!importRows.length) return showMsg("Select a CSV file first.");
+    if (!importListId && !importNewListName.trim()) {
+      return showMsg("Select a list or enter a new list name.");
+    }
+
+    setImporting(true);
+    setImportProgress(10);
+    setImportResult(null);
+    try {
+      let listId = importListId;
+      let openedList = lists.find((list) => String(list.id) === String(listId));
+      const createNewListName = importNewListName.trim();
+
+      const mappedRows = importRows.map((row) => {
+        const lead = {};
+        importHeaders.forEach((header) => {
+          const target = importMapping[header];
+          if (!target) return;
+          lead[target] = row[header];
+        });
+        return lead;
+      });
+
+      setImportProgress(45);
+      const res = await apiFetch("/api/lead/import-csv", {
+        method: "POST",
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          list_id: listId,
+          createNewListName: listId ? "" : createNewListName,
+          listColor: "#2563eb",
+          leads: mappedRows,
+          duplicateMode: importDuplicateMode,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        const failedRow = Array.isArray(json.failedRows) && json.failedRows[0]
+          ? ` Row ${json.failedRows[0].row}${json.failedRows[0].email ? ` (${json.failedRows[0].email})` : ""}: ${json.failedRows[0].error}`
+          : "";
+        const debug = json.debug
+          ? ` [table=${json.debug.table || "leads"} list_id=${json.debug.list_id || ""} user_id=${json.debug.user_id || ""} workspace_id=${json.debug.workspace_id || ""}]`
+          : "";
+        throw new Error(`${json.error || "CSV import failed."}${failedRow}${json.details ? ` Details: ${typeof json.details === "string" ? json.details : JSON.stringify(json.details)}` : ""}${debug}`);
+      }
+      const importedList = json.list || null;
+      listId = json.list_id || importedList?.id || listId;
+      if (!listId) throw new Error("Import completed but no list id was returned.");
+      openedList = importedList || openedList;
+
+      const report = json.report || {
+        totalRows: json.processedCount || importRows.length,
+        importedRows: json.importedCount || 0,
+        updatedRows: json.updatedCount || 0,
+        skippedDuplicateRows: json.skippedDuplicates || 0,
+        invalidRows: json.invalidRows?.length || 0,
+        failedRows: json.failedRows?.length || 0,
+        skippedRows: json.skippedRows || [],
+        invalidRowDetails: json.invalidRows || [],
+        failedRowDetails: json.failedRows || [],
+      };
+      setImportProgress(100);
+      setImportResult({ ...json, report });
+      setAllMode(false);
+      const returnedLeads = Array.isArray(json.leads) ? json.leads : [];
+      const refreshedLists = await loadLists(listId, { loadSelectedLeads: false });
+      const nextSelected =
+        (refreshedLists || []).find((list) => String(list.id) === String(listId)) ||
+          openedList ||
+          lists.find((list) => String(list.id) === String(listId)) ||
+          null;
+      setSelectedList(nextSelected);
+      if (nextSelected) {
+        const leadCount = returnedLeads.length || report.importedRows + report.updatedRows;
+        setLists((current) => {
+          const updatedList = { ...nextSelected, lead_count: leadCount };
+          const exists = current.some((list) => String(list.id) === String(nextSelected.id));
+          if (!exists) return [...current, updatedList];
+          return current.map((list) => String(list.id) === String(nextSelected.id) ? { ...list, lead_count: leadCount } : list);
+        });
+      }
+      if (returnedLeads.length) {
+        setLeads(returnedLeads);
+        setLoading(false);
+      } else {
+        await loadLeads(listId, true);
+      }
+      showMsg(`Import complete. Total rows: ${report.totalRows}. Imported: ${report.importedRows}. Updated: ${report.updatedRows}. Skipped duplicates: ${report.skippedDuplicateRows}. Invalid: ${report.invalidRows}. Failed: ${report.failedRows}.`);
+    } catch (err) {
+      setImportResult({ ok: false, error: err.message || "CSV import failed." });
+      showMsg(`CSV import failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function handleImportLegacyDisabled() {
     if (!selectedList) return showMsg("⚠️ Please select a list first.");
 
     const { pipelineId, stageId } = await getDefaultPipelineAndStage();
@@ -452,11 +672,56 @@ export default function LeadsPage() {
       showMsg("⚠️ Missing user – please log in again.");
       return;
     }
-    setEditingList(null);
+    setListForm({ name: "", color: "#2563eb" });
     setShowListModal(true);
   }
 
   // 🔁 DUPLICATE LIST + LEADS (uses full original row so constraints are satisfied)
+  async function createList({ name, color = "#2563eb", silent = false }) {
+    if (!workspaceId) throw new Error("No active workspace.");
+    const listName = String(name || "").trim();
+    if (!listName) throw new Error("List name is required.");
+
+    const res = await apiFetch("/api/crm/lead-lists", {
+      method: "POST",
+      body: JSON.stringify({
+        workspace_id: workspaceId,
+        name: listName,
+        color,
+        source_type: "manual",
+        actionType: "CRM",
+        auto_add_crm: true,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok || !json.list) {
+      throw new Error(json.error || `Create list failed (${res.status})`);
+    }
+
+    setLists((prev) => {
+      if (prev.some((list) => list.id === json.list.id)) return prev;
+      return [...prev, json.list];
+    });
+    setAllMode(false);
+    setSelectedList(json.list);
+    setLeads([]);
+    if (!silent) showMsg(`Created list "${json.list.name}".`);
+    return json.list;
+  }
+
+  async function saveNewList() {
+    setListSaving(true);
+    try {
+      const created = await createList(listForm);
+      setShowListModal(false);
+      await loadLeads(created.id);
+    } catch (err) {
+      showMsg(err.message || "Could not create list.");
+    } finally {
+      setListSaving(false);
+    }
+  }
+
   async function duplicateList(list) {
     if (!list) return;
 
@@ -818,7 +1083,10 @@ export default function LeadsPage() {
                       moveLeadToList(draggedLeadId, list.id);
                     }}
                   >
-                    <span>{list.name}</span>
+                    <span>
+                      {list.name}
+                      <small className="list-count">{Number(list.lead_count || 0).toLocaleString()}</small>
+                    </span>
                     <div className="list-actions">
                       <span
                         className="copy"
@@ -1078,12 +1346,203 @@ export default function LeadsPage() {
 
         {/* LIST MODAL */}
         {showListModal && (
-          <EditListModal
-            userId={userId}
-            list={editingList}
-            onClose={() => setShowListModal(false)}
-            onSaved={loadLists}
-          />
+          <div className="modal-overlay" onClick={() => setShowListModal(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Create List</h3>
+              <div className="input-group">
+                <label>List name</label>
+                <input
+                  type="text"
+                  value={listForm.name}
+                  onChange={(e) => setListForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Prelaunch Test"
+                />
+              </div>
+              <div className="input-group">
+                <label>Colour tag</label>
+                <input
+                  type="color"
+                  value={listForm.color}
+                  onChange={(e) => setListForm((prev) => ({ ...prev, color: e.target.value }))}
+                />
+              </div>
+              <div className="modal-actions">
+                <button className="btn save" onClick={saveNewList} disabled={listSaving}>
+                  {listSaving ? "Saving..." : "Save List"}
+                </button>
+                <button className="btn cancel" onClick={() => setShowListModal(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV IMPORT MODAL */}
+        {showImportModal && (
+          <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+            <div className="modal import-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Import CSV</h3>
+              <div className="import-grid">
+                <div className="input-group">
+                  <label>Existing list</label>
+                  <select
+                    value={importListId}
+                    onChange={(e) => {
+                      setImportListId(e.target.value);
+                      if (e.target.value) setImportNewListName("");
+                    }}
+                  >
+                    <option value="">Select list...</option>
+                    {lists.map((list) => (
+                      <option key={list.id} value={list.id}>
+                        {list.name} ({Number(list.lead_count || 0).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label>Or create new list</label>
+                  <input
+                    value={importNewListName}
+                    onChange={(e) => {
+                      setImportNewListName(e.target.value);
+                      if (e.target.value.trim()) setImportListId("");
+                    }}
+                    placeholder="Prelaunch Test"
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Duplicates</label>
+                  <select value={importDuplicateMode} onChange={(e) => setImportDuplicateMode(e.target.value)}>
+                    <option value="update">Update existing contacts</option>
+                    <option value="merge">Merge duplicates</option>
+                    <option value="ignore">Skip duplicates</option>
+                    <option value="allow">Allow duplicates</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label>CSV file</label>
+                <input type="file" accept=".csv,text/csv" onChange={(e) => handleCSVSelected(e.target.files?.[0])} />
+              </div>
+
+              {importHeaders.length > 0 && (
+                <>
+                  <h4>Column mapping</h4>
+                  <div className="mapping-grid">
+                    {importHeaders.map((header) => (
+                      <label key={header}>
+                        <span>{header}</span>
+                        <select
+                          value={importMapping[header] || ""}
+                          onChange={(e) => setImportMapping((prev) => ({ ...prev, [header]: e.target.value }))}
+                        >
+                          <option value="">Do not import</option>
+                          {IMPORT_FIELDS.map((field) => (
+                            <option key={field.key} value={field.key}>
+                              {field.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+
+                  <h4>Preview first 10 rows</h4>
+                  <div className="preview-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          {importHeaders.map((header) => (
+                            <th key={header}>{header}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importRows.slice(0, 10).map((row, index) => (
+                          <tr key={index}>
+                            {importHeaders.map((header) => (
+                              <td key={header}>{row[header]}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {(importing || importProgress > 0) && (
+                <div className="import-progress">
+                  <div style={{ width: `${importProgress}%` }} />
+                </div>
+              )}
+
+              {importResult && (
+                <div className={importResult.ok === false ? "import-result error" : "import-result"}>
+                  {importResult.ok === false ? (
+                    <strong>{importResult.error}</strong>
+                  ) : (
+                    <>
+                      <strong>Imported {Number(importResult.importedCount || 0).toLocaleString()} leads.</strong>
+                      <span>
+                        Updated {Number(importResult.updatedCount || 0).toLocaleString()} · Skipped duplicates {Number(importResult.skippedDuplicates || 0).toLocaleString()} · Invalid rows {Number(importResult.invalidRows?.length || 0).toLocaleString()}
+                      </span>
+                      <strong>Total rows: {Number(importResult.report?.totalRows ?? importResult.processedCount ?? 0).toLocaleString()}</strong>
+                      <span>Imported: {Number(importResult.report?.importedRows ?? importResult.importedCount ?? 0).toLocaleString()}</span>
+                      <span>Updated: {Number(importResult.report?.updatedRows ?? importResult.updatedCount ?? 0).toLocaleString()}</span>
+                      <span>Skipped duplicates: {Number(importResult.report?.skippedDuplicateRows ?? importResult.skippedDuplicates ?? 0).toLocaleString()}</span>
+                      <span>Invalid rows: {Number(importResult.report?.invalidRows ?? importResult.invalidRows?.length ?? 0).toLocaleString()}</span>
+                      <span>Failed rows: {Number(importResult.report?.failedRows ?? importResult.failedRows?.length ?? 0).toLocaleString()}</span>
+                      {Boolean(importResult.report?.updatedRowDetails?.length) && (
+                        <div>
+                          <strong>Updated existing rows</strong>
+                          {importResult.report.updatedRowDetails.map((row) => (
+                            <span key={`updated-${row.row}-${row.email}`}>Row {row.row}: {row.reason}{row.phone ? ` / phone ${row.phone}` : ""}</span>
+                          ))}
+                        </div>
+                      )}
+                      {Boolean(importResult.report?.skippedRows?.length) && (
+                        <div>
+                          <strong>Skipped duplicate rows</strong>
+                          {importResult.report.skippedRows.map((row) => (
+                            <span key={`skip-${row.row}-${row.email}`}>Row {row.row}: {row.reason}{row.phone ? ` / phone ${row.phone}` : ""}</span>
+                          ))}
+                        </div>
+                      )}
+                      {Boolean(importResult.report?.invalidRowDetails?.length) && (
+                        <div>
+                          <strong>Invalid rows</strong>
+                          {importResult.report.invalidRowDetails.map((row) => (
+                            <span key={`invalid-${row.row}-${row.email}`}>Row {row.row}: {row.reason}{row.email ? ` / ${row.email}` : ""}{row.phone ? ` / phone ${row.phone}` : ""}</span>
+                          ))}
+                        </div>
+                      )}
+                      {Boolean(importResult.report?.failedRowDetails?.length) && (
+                        <div>
+                          <strong>Failed rows</strong>
+                          {importResult.report.failedRowDetails.map((row) => (
+                            <span key={`failed-${row.row}-${row.email}`}>Row {row.row}: {row.error}{row.email ? ` / ${row.email}` : ""}</span>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button className="btn save" onClick={runCSVImport} disabled={importing}>
+                  {importing ? "Importing..." : `Import ${importRows.length ? importRows.length.toLocaleString() : ""}`}
+                </button>
+                <button className="btn cancel" onClick={() => setShowImportModal(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* CRM LEAD DETAILS MODAL */}
@@ -1234,6 +1693,18 @@ export default function LeadsPage() {
           display: flex;
           align-items: center;
           gap: 8px;
+        }
+        .list-count {
+          display: inline-flex;
+          min-width: 28px;
+          justify-content: center;
+          margin-left: 8px;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.14);
+          color: #e5e7eb;
+          font-size: 12px;
+          font-weight: 800;
         }
         .list-item .del,
         .list-item .copy {
@@ -1451,6 +1922,86 @@ export default function LeadsPage() {
           background: #0f172a;
           color: #fff;
           font-size: 16px;
+        }
+        .input-group select {
+          padding: 8px;
+          border-radius: 6px;
+          border: 1px solid #334155;
+          background: #0f172a;
+          color: #fff;
+          font-size: 16px;
+        }
+        .import-modal {
+          width: 980px;
+          max-width: 94vw;
+          max-height: 90vh;
+          overflow: auto;
+        }
+        .import-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 220px;
+          gap: 12px;
+        }
+        .mapping-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .mapping-grid label {
+          display: grid;
+          gap: 4px;
+          color: #cbd5e1;
+          font-size: 13px;
+        }
+        .mapping-grid select {
+          padding: 8px;
+          border-radius: 6px;
+          border: 1px solid #334155;
+          background: #0f172a;
+          color: #fff;
+        }
+        .preview-table {
+          max-height: 260px;
+          overflow: auto;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          margin-bottom: 12px;
+        }
+        .preview-table table {
+          min-width: 100%;
+          font-size: 13px;
+        }
+        .preview-table th,
+        .preview-table td {
+          padding: 8px;
+          white-space: nowrap;
+        }
+        .import-progress {
+          height: 12px;
+          border-radius: 999px;
+          background: #1f2937;
+          overflow: hidden;
+          margin-bottom: 12px;
+        }
+        .import-progress div {
+          height: 100%;
+          background: #22c55e;
+        }
+        .import-result {
+          display: grid;
+          gap: 4px;
+          margin-bottom: 12px;
+          padding: 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(34, 197, 94, 0.4);
+          background: rgba(34, 197, 94, 0.1);
+          color: #dcfce7;
+        }
+        .import-result.error {
+          border-color: rgba(239, 68, 68, 0.5);
+          background: rgba(239, 68, 68, 0.12);
+          color: #fecaca;
         }
         .modal-actions {
           display: flex;

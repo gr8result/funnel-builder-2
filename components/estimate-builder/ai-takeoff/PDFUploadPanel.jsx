@@ -6,10 +6,19 @@ import { createPage, LEVEL_OPTIONS } from "./takeoffTypes";
 import { getPixelsPerUnit } from "./takeoffUtils";
 import {
   loadPdfJs,
-  renderPdfPageToDataUrl,
   renderPdfDataUrlPage,
   normalizePlanRotation,
+  getFinalPlanRotation,
+  DEFAULT_PDF_TARGET_DPI,
+  rotateRasterImageDataUrl,
 } from "./pdfPlanRendering";
+import { renderPdfPageToRaster } from "../takeoff-engine/import/pdfToRaster.js";
+import { analyzeRasterOrientation, applyOrientationAnalysisToRaster } from "../takeoff-engine/analysis/imageOrientationAnalysis.js";
+import {
+  rotateRasterImageDataUrl as rotateEngineRasterImageDataUrl,
+} from "../takeoff-engine/import/imageNormalizer.js";
+
+const ROTATION_RESET_WARNING = "This page was rotated. Scale and measurements were reset because the coordinate system changed.";
 
 const PLAN_TYPES = [
   { value: "floor-plan", label: "Floor plan" },
@@ -52,31 +61,162 @@ function renderImageToDataUrl(file) {
   });
 }
 
+async function renderImageFileWithEngineAnalysis(file) {
+  const rendered = await renderImageToDataUrl(file);
+  const orientationAnalysis = await analyzeRasterOrientation({
+    imageDataUrl: rendered.dataUrl,
+    imageWidth: rendered.width,
+    imageHeight: rendered.height,
+  });
+  const rotated = await applyOrientationAnalysisToRaster({
+    imageDataUrl: rendered.dataUrl,
+    imageWidth: rendered.width,
+    imageHeight: rendered.height,
+    orientationAnalysis,
+    rotateRaster: rotateEngineRasterImageDataUrl,
+  });
+  const selectedRotation = normalizePlanRotation(rotated.rotation ?? rotated.appliedRotation ?? orientationAnalysis.selectedRotation);
+
+  return {
+    imageDataUrl: rotated.imageDataUrl || rotated.dataUrl || rendered.dataUrl,
+    imageWidth: rotated.imageWidth || rotated.width || rendered.width,
+    imageHeight: rotated.imageHeight || rotated.height || rendered.height,
+    originalWidth: rendered.width,
+    originalHeight: rendered.height,
+    metadataRotation: 0,
+    detectedRotation: selectedRotation,
+    userRotation: 0,
+    finalRotation: selectedRotation,
+    renderScale: 1,
+    dpi: 300,
+    format: "PNG",
+    sourcePdfPageNumber: 1,
+    orientationMethod: "raster-orientation-analysis",
+    orientationConfidence: orientationAnalysis.confidence,
+    orientationScores: orientationAnalysis.scores,
+    orientationAnalysis,
+    detectedScaleText: "",
+  };
+}
+
+function engineRasterToLegacyPage(rendered, file, pageNum, originalFileUrl) {
+  const pg = createPage(pageNum);
+  const orientation = rendered.orientation || {};
+  const metadata = rendered.metadata || {};
+  const analysis = metadata.orientationAnalysis || rendered.orientationAnalysis || null;
+  const imageWidth = rendered.imageWidth || rendered.normalizedWidth || 0;
+  const imageHeight = rendered.imageHeight || rendered.normalizedHeight || 0;
+  const metadataRotation = normalizePlanRotation(orientation.metadataRotation || rendered.metadataRotation || 0);
+  const detectedRotation = normalizePlanRotation(orientation.detectedRotation || rendered.detectedRotation || 0);
+  const userRotation = normalizePlanRotation(orientation.userRotation || rendered.userRotation || 0);
+  const finalRotation = normalizePlanRotation(orientation.finalRotation ?? rendered.finalRotation ?? getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation }));
+
+  pg.sourceType = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
+  pg.sourceFileName = file.name;
+  pg.imageDataUrl = rendered.imageDataUrl;
+  pg.naturalWidth = imageWidth;
+  pg.naturalHeight = imageHeight;
+  pg.normalizedWidth = imageWidth;
+  pg.normalizedHeight = imageHeight;
+  pg.imageWidth = imageWidth;
+  pg.imageHeight = imageHeight;
+  pg.metadataRotation = metadataRotation;
+  pg.detectedRotation = detectedRotation;
+  pg.userRotation = userRotation;
+  pg.finalRotation = finalRotation;
+  pg.planRotation = finalRotation;
+  pg.renderScale = rendered.renderScale || (DEFAULT_PDF_TARGET_DPI / 72);
+  pg.dpi = rendered.dpi || DEFAULT_PDF_TARGET_DPI;
+  pg.format = rendered.format || "PNG";
+  pg.sourcePdfPageNumber = rendered.sourcePdfPageNumber || pageNum;
+  pg.orientationMethod = orientation.method || rendered.orientationMethod || "raster-orientation-analysis";
+  pg.orientationConfidence = orientation.confidence || rendered.orientationConfidence || "unknown";
+  pg.orientationScores = orientation.scores || rendered.orientationScores || analysis?.scores || null;
+  pg.orientationAnalysis = analysis;
+  pg.orientationConfirmed = false;
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[AI takeoff orientation import]", {
+      metadataRotation,
+      analysisSelectedRotation: analysis?.selectedRotation ?? detectedRotation,
+      appliedRotation: analysis?.diagnostics?.appliedRotation ?? finalRotation,
+      finalRotation,
+      confidence: orientation.confidence || analysis?.confidence || rendered.orientationConfidence || "unknown",
+      reason: analysis?.reason || "",
+      imageWidth: pg.imageWidth,
+      imageHeight: pg.imageHeight,
+      pdfJsAlreadyAppliedRotation: Boolean(analysis?.diagnostics?.pdfJsAlreadyAppliedRotation),
+      rasterNormalizerAppliedRotation: Boolean(analysis?.diagnostics?.rasterNormalizerAppliedRotation),
+    });
+  }
+  pg.detectedScaleText = metadata.detectedScaleText || rendered.detectedScaleText || "";
+  pg.originalFileName = file.name;
+  pg.originalFileUrl = originalFileUrl;
+  pg.originalWidth = metadata.originalImageWidth || rendered.originalWidth || imageWidth;
+  pg.originalHeight = metadata.originalImageHeight || rendered.originalHeight || imageHeight;
+  pg.normalisedImageData = rendered.imageDataUrl;
+  pg.normalisedImageUrl = rendered.imageDataUrl;
+  return pg;
+}
+
 function isPdfPage(page) {
   const name = `${page?.originalFileName || page?.planFileName || ""}`.toLowerCase();
   return Boolean(page?.originalFileUrl && name.endsWith(".pdf"));
 }
 
 async function renderPageWithPlanRotation(page, rotationDegrees) {
-  const planRotation = normalizePlanRotation(rotationDegrees);
+  const userRotation = normalizePlanRotation(rotationDegrees);
+  const rotationState = {
+    metadataRotation: page.metadataRotation || 0,
+    detectedRotation: page.detectedRotation || 0,
+    userRotation,
+    orientationMethod: page.orientationMethod,
+    orientationConfidence: page.orientationConfidence,
+    orientationScores: page.orientationScores,
+  };
+  const finalRotation = getFinalPlanRotation(rotationState);
   if (!isPdfPage(page)) {
     return {
       ...page,
-      planRotation,
+      userRotation,
+      finalRotation,
+      planRotation: finalRotation,
+      scale: null,
+      overlays: [],
+      rotationResetWarning: ROTATION_RESET_WARNING,
     };
   }
 
-  const rendered = await renderPdfDataUrlPage(page.originalFileUrl, page.pageNumber || 1, planRotation, 2.0);
+  const rendered = await renderPdfDataUrlPage(page.originalFileUrl, page.pageNumber || 1, rotationState, page.dpi || DEFAULT_PDF_TARGET_DPI);
   return {
     ...page,
     imageDataUrl: rendered.dataUrl,
-    naturalWidth: rendered.width,
-    naturalHeight: rendered.height,
-    originalWidth: rendered.width,
-    originalHeight: rendered.height,
+    naturalWidth: rendered.normalizedWidth,
+    naturalHeight: rendered.normalizedHeight,
+    originalWidth: rendered.originalWidth,
+    originalHeight: rendered.originalHeight,
+    metadataRotation: rendered.metadataRotation,
+    detectedRotation: rendered.detectedRotation,
+    userRotation: rendered.userRotation,
+    finalRotation: rendered.finalRotation,
+    renderScale: rendered.renderScale,
+    dpi: rendered.dpi,
+    orientationMethod: rendered.orientationMethod,
+    orientationConfidence: rendered.orientationConfidence,
+    orientationConfirmed: false,
+    orientationScores: rendered.orientationScores,
+    normalizedWidth: rendered.normalizedWidth,
+    normalizedHeight: rendered.normalizedHeight,
+    imageWidth: rendered.imageWidth,
+    imageHeight: rendered.imageHeight,
+    format: rendered.format,
+    sourcePdfPageNumber: rendered.sourcePdfPageNumber,
+    detectedScaleText: rendered.detectedScaleText,
     normalisedImageData: rendered.dataUrl,
     normalisedImageUrl: rendered.dataUrl,
-    planRotation: rendered.planRotation,
+    planRotation: rendered.finalRotation,
+    scale: null,
+    overlays: [],
+    rotationResetWarning: ROTATION_RESET_WARNING,
   };
 }
 
@@ -91,6 +231,8 @@ function createPlanRecord(file, firstPage, index, jobId = "") {
     originalFileUrl: firstPage?.originalFileUrl || "",
     originalWidth: firstPage?.originalWidth || firstPage?.naturalWidth || 0,
     originalHeight: firstPage?.originalHeight || firstPage?.naturalHeight || 0,
+    normalizedWidth: firstPage?.normalizedWidth || firstPage?.naturalWidth || 0,
+    normalizedHeight: firstPage?.normalizedHeight || firstPage?.naturalHeight || 0,
     fileUrl: firstPage?.imageDataUrl || "",
     normalisedImageData: firstPage?.normalisedImageData || firstPage?.imageDataUrl || "",
     normalisedImageUrl: firstPage?.normalisedImageUrl || firstPage?.imageDataUrl || "",
@@ -98,7 +240,21 @@ function createPlanRecord(file, firstPage, index, jobId = "") {
     planType: inferred.planType,
     levelLabel: inferred.levelLabel,
     includedInTakeoff: true,
-    planRotation: normalizePlanRotation(firstPage?.planRotation || 0),
+    metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
+    detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
+    userRotation: normalizePlanRotation(firstPage?.userRotation || 0),
+    finalRotation: normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
+    planRotation: normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
+    imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || 0,
+    imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || 0,
+    renderScale: firstPage?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+    dpi: firstPage?.dpi || DEFAULT_PDF_TARGET_DPI,
+    format: firstPage?.format || "PNG",
+    sourcePdfPageNumber: firstPage?.sourcePdfPageNumber || firstPage?.pageNumber || 1,
+    orientationMethod: firstPage?.orientationMethod || "",
+    orientationConfidence: firstPage?.orientationConfidence || "",
+    orientationConfirmed: Boolean(firstPage?.orientationConfirmed),
+    detectedScaleText: firstPage?.detectedScaleText || "",
     detectedScale: firstPage?.detectedScale || null,
     scale: firstPage?.scale || null,
     scaleConfidence: firstPage?.scaleConfidence || firstPage?.detectedScale?.confidence || 0,
@@ -134,6 +290,7 @@ export default function PDFUploadPanel({
   jobId = "",
   onPagesChange,
   onPlansChange,
+  onTakeoffDataChange,
   onSelectPage,
   selectedPageId,
 }) {
@@ -162,7 +319,7 @@ export default function PDFUploadPanel({
           continue;
         }
 
-        setProgress(`Processing ${file.name}...`);
+        setProgress(`Converting ${file.name} to high-resolution plan image...`);
         const originalFileUrl = await readFileAsDataUrl(file).catch(() => "");
         const createdPages = [];
 
@@ -171,30 +328,23 @@ export default function PDFUploadPanel({
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum += 1) {
-            setProgress(`Rendering ${file.name} page ${pageNum} of ${pdfDoc.numPages}...`);
-            const rendered = await renderPdfPageToDataUrl(pdfDoc, pageNum, 2.0, 0);
-            const pg = createPage(pageNum);
-            pg.imageDataUrl = rendered.dataUrl;
-            pg.naturalWidth = rendered.width;
-            pg.naturalHeight = rendered.height;
-            pg.planRotation = rendered.planRotation || 0;
-            pg.originalFileName = file.name;
-            pg.originalFileUrl = originalFileUrl;
-            pg.originalWidth = rendered.width;
-            pg.originalHeight = rendered.height;
+            setProgress(`Detecting orientation for ${file.name} page ${pageNum} of ${pdfDoc.numPages}...`);
+            const pdfPage = await pdfDoc.getPage(pageNum);
+            const rendered = await renderPdfPageToRaster(pdfPage, {
+              pageNumber: pageNum,
+              sourceFileName: file.name,
+              dpi: DEFAULT_PDF_TARGET_DPI,
+              onProgress: (update) => {
+                if (update?.message) setProgress(update.message);
+              },
+            });
+            const pg = engineRasterToLegacyPage(rendered, file, pageNum, originalFileUrl);
             createdPages.push(pg);
           }
         } else {
-          const rendered = await renderImageToDataUrl(file);
-          const pg = createPage(1);
-          pg.imageDataUrl = rendered.dataUrl;
-          pg.naturalWidth = rendered.width;
-          pg.naturalHeight = rendered.height;
-          pg.planRotation = 0;
-          pg.originalFileName = file.name;
-          pg.originalFileUrl = originalFileUrl;
-          pg.originalWidth = rendered.width;
-          pg.originalHeight = rendered.height;
+          setProgress(`Analysing orientation for ${file.name}...`);
+          const rendered = await renderImageFileWithEngineAnalysis(file);
+          const pg = engineRasterToLegacyPage(rendered, file, 1, originalFileUrl);
           createdPages.push(pg);
         }
 
@@ -211,9 +361,25 @@ export default function PDFUploadPanel({
         plan.originalFileName = file.name;
         plan.originalWidth = createdPages[0]?.originalWidth || createdPages[0]?.naturalWidth || plan.originalWidth || 0;
         plan.originalHeight = createdPages[0]?.originalHeight || createdPages[0]?.naturalHeight || plan.originalHeight || 0;
+        plan.normalizedWidth = createdPages[0]?.normalizedWidth || createdPages[0]?.naturalWidth || plan.normalizedWidth || 0;
+        plan.normalizedHeight = createdPages[0]?.normalizedHeight || createdPages[0]?.naturalHeight || plan.normalizedHeight || 0;
+        plan.imageWidth = createdPages[0]?.imageWidth || plan.normalizedWidth;
+        plan.imageHeight = createdPages[0]?.imageHeight || plan.normalizedHeight;
         plan.normalisedImageData = createdPages[0]?.normalisedImageData || createdPages[0]?.imageDataUrl || "";
         plan.normalisedImageUrl = createdPages[0]?.normalisedImageUrl || createdPages[0]?.imageDataUrl || "";
-        plan.planRotation = normalizePlanRotation(createdPages[0]?.planRotation || 0);
+        plan.metadataRotation = normalizePlanRotation(createdPages[0]?.metadataRotation || 0);
+        plan.detectedRotation = normalizePlanRotation(createdPages[0]?.detectedRotation || 0);
+        plan.userRotation = normalizePlanRotation(createdPages[0]?.userRotation || 0);
+        plan.finalRotation = normalizePlanRotation(createdPages[0]?.finalRotation ?? createdPages[0]?.planRotation ?? 0);
+        plan.planRotation = plan.finalRotation;
+        plan.renderScale = createdPages[0]?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72);
+        plan.dpi = createdPages[0]?.dpi || DEFAULT_PDF_TARGET_DPI;
+        plan.format = createdPages[0]?.format || "PNG";
+        plan.sourcePdfPageNumber = createdPages[0]?.sourcePdfPageNumber || 1;
+        plan.orientationMethod = createdPages[0]?.orientationMethod || "";
+        plan.orientationConfidence = createdPages[0]?.orientationConfidence || "";
+        plan.orientationConfirmed = Boolean(createdPages[0]?.orientationConfirmed);
+        plan.detectedScaleText = createdPages[0]?.detectedScaleText || "";
         plan.detectedScale = createdPages[0]?.detectedScale || null;
         plan.scale = createdPages[0]?.scale || null;
         plan.scaleConfidence = createdPages[0]?.scaleConfidence || createdPages[0]?.detectedScale?.confidence || 0;
@@ -226,16 +392,21 @@ export default function PDFUploadPanel({
         nextPages.push(...createdPages);
       }
 
-      onPlansChange(nextPlans);
-      onPagesChange(nextPages);
+      if (onTakeoffDataChange) {
+        onTakeoffDataChange(nextPages, nextPlans);
+      } else {
+        onPlansChange(nextPlans);
+        onPagesChange(nextPages);
+      }
       if (!selectedPageId && nextPages[0]) onSelectPage(nextPages[0].id);
+      setProgress("Plan ready for scale calibration.");
     } catch (err) {
       setError(`Failed to process plan file: ${err.message}`);
     } finally {
       setLoading(false);
       setProgress("");
     }
-  }, [jobId, onPagesChange, onPlansChange, onSelectPage, pages, plans, selectedPageId]);
+  }, [jobId, onPagesChange, onPlansChange, onSelectPage, onTakeoffDataChange, pages, plans, selectedPageId]);
 
   const handleFileInput = useCallback((event) => {
     processFiles(event.target.files);
@@ -261,12 +432,16 @@ export default function PDFUploadPanel({
   const deletePlan = useCallback((planId) => {
     const nextPlans = plans.filter((plan) => plan.id !== planId);
     const nextPages = pages.filter((page) => page.planId !== planId);
-    onPlansChange(nextPlans);
-    onPagesChange(nextPages);
+    if (onTakeoffDataChange) {
+      onTakeoffDataChange(nextPages, nextPlans);
+    } else {
+      onPlansChange(nextPlans);
+      onPagesChange(nextPages);
+    }
     if (selectedPageId && !nextPages.some((page) => page.id === selectedPageId)) {
       onSelectPage(nextPages[0]?.id || null);
     }
-  }, [onPagesChange, onPlansChange, onSelectPage, pages, plans, selectedPageId]);
+  }, [onPagesChange, onPlansChange, onSelectPage, onTakeoffDataChange, pages, plans, selectedPageId]);
 
   const rotatePlan = useCallback(async (planId, rotationDegrees) => {
     const degrees = normalizePlanRotation(rotationDegrees);
@@ -275,19 +450,59 @@ export default function PDFUploadPanel({
     try {
       const rotatedPages = await Promise.all(pages.map(async (page) => {
         if (page.planId !== planId) return page;
-        const nextRotation = normalizePlanRotation((page.planRotation || 0) + degrees);
+        const nextRotation = normalizePlanRotation((page.userRotation || 0) + degrees);
+        if (page.imageDataUrl) {
+          const rotated = await rotateRasterImageDataUrl(page.imageDataUrl, degrees);
+          return {
+            ...page,
+            imageDataUrl: rotated.dataUrl,
+            naturalWidth: rotated.width,
+            naturalHeight: rotated.height,
+            normalizedWidth: rotated.width,
+            normalizedHeight: rotated.height,
+            imageWidth: rotated.width,
+            imageHeight: rotated.height,
+            userRotation: nextRotation,
+            finalRotation: getFinalPlanRotation({ metadataRotation: page.metadataRotation || 0, detectedRotation: page.detectedRotation || 0, userRotation: nextRotation }),
+            planRotation: getFinalPlanRotation({ metadataRotation: page.metadataRotation || 0, detectedRotation: page.detectedRotation || 0, userRotation: nextRotation }),
+            orientationMethod: "manual",
+            orientationConfidence: "manual",
+            orientationConfirmed: false,
+            scale: null,
+            overlays: [],
+            rotationResetWarning: ROTATION_RESET_WARNING,
+          };
+        }
         return renderPageWithPlanRotation(page, nextRotation);
       }));
       const firstPage = rotatedPages.find((page) => page.planId === planId);
-      const planRotation = normalizePlanRotation(firstPage?.planRotation || 0);
+      const planRotation = normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
       const nextPlans = plans.map((plan) => plan.id === planId ? {
         ...plan,
+        metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
+        detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
+        userRotation: normalizePlanRotation(firstPage?.userRotation || 0),
+        finalRotation: planRotation,
         planRotation,
+        imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || plan.imageWidth,
+        imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || plan.imageHeight,
+        renderScale: firstPage?.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: firstPage?.dpi || plan.dpi,
+        format: firstPage?.format || plan.format || "PNG",
+        sourcePdfPageNumber: firstPage?.sourcePdfPageNumber || plan.sourcePdfPageNumber,
+        orientationMethod: firstPage?.orientationMethod || plan.orientationMethod,
+        orientationConfidence: firstPage?.orientationConfidence || plan.orientationConfidence,
+        orientationConfirmed: Boolean(firstPage?.orientationConfirmed),
         fileUrl: firstPage?.imageDataUrl || plan.fileUrl,
         normalisedImageData: firstPage?.normalisedImageData || firstPage?.imageDataUrl || plan.normalisedImageData,
         normalisedImageUrl: firstPage?.normalisedImageUrl || firstPage?.imageDataUrl || plan.normalisedImageUrl,
-        originalWidth: firstPage?.originalWidth || firstPage?.naturalWidth || plan.originalWidth,
-        originalHeight: firstPage?.originalHeight || firstPage?.naturalHeight || plan.originalHeight,
+        originalWidth: firstPage?.originalWidth || plan.originalWidth,
+        originalHeight: firstPage?.originalHeight || plan.originalHeight,
+        normalizedWidth: firstPage?.normalizedWidth || firstPage?.naturalWidth || plan.normalizedWidth,
+        normalizedHeight: firstPage?.normalizedHeight || firstPage?.naturalHeight || plan.normalizedHeight,
+        scale: null,
+        scaleNeedsReview: true,
+        rotationResetWarning: ROTATION_RESET_WARNING,
       } : plan);
       onPagesChange(rotatedPages);
       onPlansChange(nextPlans);
@@ -309,20 +524,56 @@ export default function PDFUploadPanel({
         page.planId === planId ? renderPageWithPlanRotation(page, 0) : page
       )));
       const firstPage = resetPages.find((page) => page.planId === planId);
+      const finalRotation = normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
       const nextPlans = plans.map((plan) => plan.id === planId ? {
         ...plan,
-        planRotation: 0,
+        metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
+        detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
+        userRotation: 0,
+        finalRotation,
+        planRotation: finalRotation,
+        imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || plan.imageWidth,
+        imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || plan.imageHeight,
+        renderScale: firstPage?.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: firstPage?.dpi || plan.dpi,
+        format: firstPage?.format || plan.format || "PNG",
+        sourcePdfPageNumber: firstPage?.sourcePdfPageNumber || plan.sourcePdfPageNumber,
+        orientationMethod: firstPage?.orientationMethod || plan.orientationMethod,
+        orientationConfidence: firstPage?.orientationConfidence || plan.orientationConfidence,
         fileUrl: firstPage?.imageDataUrl || plan.fileUrl,
         normalisedImageData: firstPage?.normalisedImageData || firstPage?.imageDataUrl || plan.normalisedImageData,
         normalisedImageUrl: firstPage?.normalisedImageUrl || firstPage?.imageDataUrl || plan.normalisedImageUrl,
-        originalWidth: firstPage?.originalWidth || firstPage?.naturalWidth || plan.originalWidth,
-        originalHeight: firstPage?.originalHeight || firstPage?.naturalHeight || plan.originalHeight,
+        originalWidth: firstPage?.originalWidth || plan.originalWidth,
+        originalHeight: firstPage?.originalHeight || plan.originalHeight,
+        normalizedWidth: firstPage?.normalizedWidth || firstPage?.naturalWidth || plan.normalizedWidth,
+        normalizedHeight: firstPage?.normalizedHeight || firstPage?.naturalHeight || plan.normalizedHeight,
+        scale: null,
+        scaleNeedsReview: true,
+        rotationResetWarning: ROTATION_RESET_WARNING,
       } : plan);
       onPagesChange(resetPages);
       onPlansChange(nextPlans);
     } finally {
       setProgress("");
     }
+  }, [onPagesChange, onPlansChange, pages, plans]);
+
+  const confirmPlanOrientation = useCallback((planId) => {
+    const nextPages = pages.map((page) => page.planId === planId ? {
+      ...page,
+      orientationConfirmed: true,
+      orientationMethod: page.orientationMethod || "manual-confirmed",
+      orientationConfidence: "confirmed",
+    } : page);
+    const firstPage = nextPages.find((page) => page.planId === planId);
+    const nextPlans = plans.map((plan) => plan.id === planId ? {
+      ...plan,
+      orientationConfirmed: true,
+      orientationMethod: firstPage?.orientationMethod || plan.orientationMethod || "manual-confirmed",
+      orientationConfidence: "confirmed",
+    } : plan);
+    onPagesChange(nextPages);
+    onPlansChange(nextPlans);
   }, [onPagesChange, onPlansChange, pages, plans]);
 
   const updatePageLevel = useCallback((pageId, level) => {
@@ -377,7 +628,9 @@ export default function PDFUploadPanel({
               onDelete={() => deletePlan(plan.id)}
               onRotateLeft={() => rotatePlan(plan.id, 270)}
               onRotateRight={() => rotatePlan(plan.id, 90)}
+              onRotate180={() => rotatePlan(plan.id, 180)}
               onResetRotation={() => resetPlanRotation(plan.id)}
+              onConfirmOrientation={() => confirmPlanOrientation(plan.id)}
               onPageSelect={onSelectPage}
               onPageLevelChange={updatePageLevel}
             />
@@ -390,8 +643,13 @@ export default function PDFUploadPanel({
   );
 }
 
-function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onDelete, onRotateLeft, onRotateRight, onResetRotation, onPageSelect, onPageLevelChange }) {
-  const scaleSet = Boolean(plan.scale?.accepted || getPixelsPerUnit(plan.scale) || plan.scale?.preset);
+function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onDelete, onRotateLeft, onRotateRight, onRotate180, onResetRotation, onConfirmOrientation, onPageSelect, onPageLevelChange }) {
+  const firstPage = pages[0] || {};
+  const scaleSet = Boolean(firstPage.scale?.accepted || getPixelsPerUnit(firstPage.scale) || firstPage.scale?.preset);
+  const warning = pages.find((page) => page.rotationResetWarning)?.rotationResetWarning || plan.rotationResetWarning || "";
+  const orientationConfirmed = Boolean(firstPage.orientationConfirmed || plan.orientationConfirmed);
+  const orientationConfidence = firstPage.orientationConfidence || plan.orientationConfidence || "";
+  const showOrientationCheck = !orientationConfirmed && !["high", "confirmed", "manual"].includes(String(orientationConfidence).toLowerCase());
   return (
     <div style={S.planCard}>
       <div style={S.planHeader}>
@@ -402,7 +660,7 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
             checked={plan.includedInTakeoff !== false}
             onChange={(event) => onUpdate({ includedInTakeoff: event.target.checked })}
           />
-          AI
+          Include
         </label>
       </div>
       <div style={S.planMeta}>
@@ -410,6 +668,16 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
         <span style={S.scaleMeta}>Scale: {scaleSet ? "set" : "not set"}</span>
         {!scaleSet && <span style={S.reviewBadge}>Needs scale</span>}
       </div>
+      <div style={S.importDetails}>
+        <span>DPI: {Math.round(firstPage.dpi || plan.dpi || 300)}</span>
+        <span>Format: {firstPage.format || plan.format || "PNG"}</span>
+        <span>Orientation: {orientationConfirmed ? "Confirmed" : (firstPage.orientationMethod || plan.orientationMethod) === "manual" ? "Manual" : "Auto"}</span>
+      </div>
+      {showOrientationCheck && <div style={S.orientationCheck}>Orientation may need checking</div>}
+      {(firstPage.detectedScaleText || plan.detectedScaleText) && (
+        <div style={S.scaleTextFound}>Scale text found: {firstPage.detectedScaleText || plan.detectedScaleText} (not applied)</div>
+      )}
+      {warning && <div style={S.rotationWarning}>{warning}</div>}
       <label style={S.fieldLabel}>
         Plan type
         <select style={S.select} value={plan.planType || "floor-plan"} onChange={(event) => onUpdate({ planType: event.target.value })}>
@@ -422,8 +690,10 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
       </label>
       <div style={S.planActions}>
         <button type="button" style={S.previewButton} onClick={onPreview}>Preview</button>
-        <button type="button" style={S.rotateButton} onClick={onRotateLeft}>Rotate left</button>
-        <button type="button" style={S.rotateButton} onClick={onRotateRight}>Rotate right</button>
+        <button type="button" style={S.quickRotateButton} onClick={onRotateRight}>Rotate 90°</button>
+        <button type="button" style={S.quickRotateButton} onClick={onRotate180}>Rotate 180°</button>
+        <button type="button" style={S.quickRotateButton} onClick={onRotateLeft}>Rotate 270°</button>
+        <button type="button" style={S.confirmOrientationButton} onClick={onConfirmOrientation}>Set as correct orientation</button>
         <button type="button" style={S.rotateButton} onClick={onResetRotation}>Reset rotation</button>
         <button type="button" style={S.deleteButton} onClick={onDelete}>Delete</button>
       </div>
@@ -459,7 +729,7 @@ function PageThumb({ page, selected, onSelect, onLevelChange }) {
         <div style={S.thumbLabel}>Page {page.pageNumber}</div>
         {overlayCount > 0 && <div style={S.thumbStats}>{confirmedCount}/{overlayCount} confirmed</div>}
         {!page.scale && <div style={S.thumbNoScale}>No scale</div>}
-        {page.scale && <div style={S.thumbScale}>{page.scale.method === "preset" ? page.scale.preset : `${getPixelsPerUnit(page.scale).toFixed(0)} px/unit`}</div>}
+        {page.scale && <div style={S.thumbScale}>{page.scale.method === "preset" ? page.scale.preset : "Scale set"}</div>}
         <select
           value={page.level}
           onChange={(event) => { event.stopPropagation(); onLevelChange(event.target.value); }}
@@ -512,12 +782,18 @@ const S = {
   includeToggle: { display: "inline-flex", alignItems: "center", gap: 4, color: "#0f766e", fontSize: 12, fontWeight: 900, cursor: "pointer" },
   planMeta: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, color: "#64748b", fontSize: 11 },
   scaleMeta: { color: "#334155", fontWeight: 800 },
+  importDetails: { display: "flex", flexWrap: "wrap", gap: 6, color: "#475569", fontSize: 11, fontWeight: 800 },
+  scaleTextFound: { padding: "5px 7px", borderRadius: 6, background: "#eef2ff", color: "#3730a3", fontSize: 11, fontWeight: 800 },
+  orientationCheck: { padding: "7px 8px", borderRadius: 7, background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa", fontSize: 12, fontWeight: 900 },
   reviewBadge: { display: "inline-flex", alignItems: "center", border: "1px solid #fbbf24", borderRadius: 999, padding: "2px 7px", background: "#fffbeb", color: "#92400e", fontWeight: 900 },
+  rotationWarning: { border: "1px solid #fbbf24", borderRadius: 7, padding: "7px 8px", background: "#fffbeb", color: "#92400e", fontSize: 11, fontWeight: 800, lineHeight: 1.35 },
   fieldLabel: { display: "grid", gap: 4, color: "#475569", fontSize: 11, fontWeight: 800 },
   select: { width: "100%", border: "1.5px solid #cbd5e1", borderRadius: 6, background: "#f8fafc", color: "#0f172a", padding: "7px 8px", fontSize: 12 },
   input: { width: "100%", boxSizing: "border-box", border: "1.5px solid #cbd5e1", borderRadius: 6, background: "#ffffff", color: "#0f172a", padding: "7px 8px", fontSize: 12 },
   planActions: { display: "flex", flexWrap: "wrap", gap: 6 },
   previewButton: { flex: 1, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
+  quickRotateButton: { flex: "1 1 76px", border: "1px solid #fdba74", background: "#fff7ed", color: "#c2410c", borderRadius: 7, padding: "8px 8px", fontSize: 12, fontWeight: 900, cursor: "pointer" },
+  confirmOrientationButton: { flex: "1 1 100%", border: "1px solid #86efac", background: "#dcfce7", color: "#166534", borderRadius: 7, padding: "8px 8px", fontSize: 12, fontWeight: 900, cursor: "pointer" },
   rotateButton: { border: "1px solid #cbd5e1", background: "#f8fafc", color: "#334155", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   deleteButton: { border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   pageStrip: { display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid #e2e8f0" },

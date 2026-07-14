@@ -1,8 +1,9 @@
 // takeoffUtils.js - geometry, scale, measurements, storage.
 
 import { OT } from "./takeoffTypes";
+import { calculatePixelsPerMetre, distancePx, pxToMetres } from "./planCoordinateUtils";
 
-export const dist = (a, b) => Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+export const dist = distancePx;
 export const r2 = (n) => Math.round((n || 0) * 100) / 100;
 
 export function polyLen(pts = []) {
@@ -62,16 +63,15 @@ export function presetToPpm(ratio) {
 }
 
 export function calibToPpm(ptA, ptB, realM) {
-  const px = dist(ptA, ptB);
-  return px > 0 && realM > 0 ? px / realM : null;
+  return calculatePixelsPerMetre(ptA, ptB, realM);
 }
 
 export const calibrationToPpm = calibToPpm;
-export const pxToM = (px, ppm) => (ppm > 0 ? px / ppm : null);
+export const pxToM = pxToMetres;
 export const pxToM2 = (px, ppm) => (ppm > 0 ? px / (ppm * ppm) : null);
 
 export function getPixelsPerUnit(scale) {
-  return Number(scale?.pixelsPerUnit || scale?.pixelsPerMetre || 0);
+  return Number(scale?.pixelsPerMetre || scale?.pixelsPerUnit || 0);
 }
 
 export function overlayMeasure(ov, ppm) {
@@ -162,11 +162,12 @@ const KEY = "gr8:takeoff:v1";
 
 export function saveProject(project) {
   try {
-    const all = loadAll();
-    const index = all.findIndex((item) => item.id === project.id);
+    const all = loadAll().filter((item) => {
+      if (!project?.jobId) return item.id !== project.id;
+      return item.id !== project.id && item.jobId !== project.jobId;
+    });
     const next = { ...project, updatedAt: new Date().toISOString() };
-    if (index >= 0) all[index] = next;
-    else all.push(next);
+    all.push(next);
     localStorage.setItem(KEY, JSON.stringify(all));
   } catch {}
 }

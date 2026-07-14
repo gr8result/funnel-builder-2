@@ -4,24 +4,38 @@ import { createEstimateBuilderWorkbookDefaults, windowDoorSizeCodeForRow } from 
 import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations.js";
 import { withWindowDoorApproximateRate } from "../../lib/construction-estimation/windowDoorApproximatePricing.js";
 import { doorScheduleRangeOptions, humeEntryDoorRows, humeEntryDoorSize, isDoorScheduleRangeRow, isHumeEntryDoorRow, isLegacyEntryDoorScheduleRow, supplementalEntryDoorRows, withDoorScheduleSelection, withHumeEntryDoorSelection } from "../../lib/construction-estimation/humeEntryDoorPricing.js";
+import { normaliseEstimateInclusions } from "../../lib/builders/estimateInclusions.js";
+import { normaliseStandardInclusions } from "../../lib/builders/standardInclusions.js";
 
 const ESTIMATE_BUILDER_PAGES = [
-  { key: "aiPlanTakeoff",  label: "AI Plan Takeoff"  },
-  { key: "dataInput",      label: "Data Input"      },
-  { key: "windowsDoors",   label: "Windows & Doors" },
-  { key: "formulaSheet",   label: "Formula Sheet"   },
-  { key: "quotation",      label: "Quotation"       },
-  { key: "summary",        label: "Summary"         },
-  { key: "clientPage",     label: "Quote Proposal"  },
-  { key: "cashflowSummary",label: "Cashflow Summary"},
-  { key: "procurement",    label: "Procurement"     },
-  { key: "gantt",          label: "AI Gantt Builder" },
+  { key: "projectDashboard", label: "Project Dashboard" },
+  { key: "aiPlanTakeoff", label: "AI Plan Takeoff" },
+  { key: "dataInput", label: "Project Setup" },
+  { key: "windowsDoors", label: "Windows & Doors" },
+  { key: "quotation", label: "Quotation Builder" },
+  { key: "standardInclusions", label: "Standard Inclusions" },
+  { key: "productLibrary", label: "Product Library" },
+  { key: "projectEstimate", label: "Project Estimate" },
+  { key: "supplierQuotations", label: "Supplier Quotations" },
+  { key: "boq", label: "BOQ" },
+  { key: "clientSelections", label: "Client Selections" },
+  { key: "variations", label: "Variations" },
+  { key: "purchaseOrders", label: "Purchase Orders" },
+  { key: "procurement", label: "Procurement" },
+  { key: "supplierInvoices", label: "Supplier Invoices" },
+  { key: "budgetVsActual", label: "Budget vs Actual" },
+  { key: "quoteApprovals", label: "Quote Approvals" },
+  { key: "documentVault", label: "Document Vault" },
+  { key: "rfis", label: "RFIs" },
+  { key: "cashflowSummary", label: "Cashflow Summary" },
+  { key: "summary", label: "Summary" },
 ];
 
-const REMOVED_QUOTE_SECTION_NAMES = new Set(["upper level framing", "roof cover - colourbond", "lock up materials", "quick render estimate", "project management", "entry doors", "entry doors - complete", "standard 820 entrace door", "plasterer", "fixout", "specials", "internal door complete", "internal cavity sliding door complete", "internal doors"]);
+const REMOVED_QUOTE_SECTION_NAMES = new Set(["upper level framing", "roof cover - colourbond", "lock up materials", "quick render estimate", "project management", "entry doors", "entry doors - complete", "standard 820 entrace door", "plasterer", "fixout", "specials", "internal door complete", "internal cavity sliding door complete", "internal doors", "plumber's fit off costs", "electrician's fit off costs"]);
 const JOB_SET_OUT_LABOUR_ROW_IDS = new Set(["quote-245", "quote-246", "quote-247"]);
 const JOB_SET_OUT_LABOUR_SOURCE_ROWS = new Set([245, 246, 247]);
-const REMOVED_IMPORTED_QUOTE_SOURCE_ROWS = new Set([161, 162, 163, 1248, 1250, 1251, 1350, 1351]);
+const REMOVED_IMPORTED_QUOTE_SOURCE_ROWS = new Set([161, 162, 163, 30076, 30077, 30080, 1248, 1250, 1251, 1350, 1351]);
+const REMOVED_QUOTE_ROW_IDS = new Set(["quote-161", "quote-162", "quote-30076", "quote-30077", "quote-30080"]);
 const QUOTE_ROWS_WITHOUT_IMPORTED_DATA = new Set([1272, 1373, 1374, 1380, 1381, 1382]);
 const STANDARD_THREE_DOOR_ROBE_SECTION = "STANDARD 3 DOOR ROBE UP TO 3.6M WIDE";
 const STANDARD_TWO_DOOR_LINEN_SECTION = "STANDARD 2 DOOR LINEN UP TO 2.4M WIDE";
@@ -141,9 +155,31 @@ function estimateBuilderLog(event, details = {}) {
   console.info(`[Estimate Builder] ${event}`, details);
 }
 
+function takeoffPersistenceCounts(workbook = {}) {
+  return {
+    workbookPages: Array.isArray(workbook?.aiTakeoffProject?.pages) ? workbook.aiTakeoffProject.pages.length : 0,
+    reducerPages: null,
+    activePageId: workbook?.aiTakeoffProject?.activePageId || workbook?.aiTakeoffProject?.pages?.[0]?.id || null,
+    localStoragePages: (() => {
+      if (typeof window === "undefined") return null;
+      try {
+        const jobId = workbook?.openedFileName || workbook?.id || "";
+        const projects = JSON.parse(window.localStorage.getItem("gr8:takeoff:v1") || "[]");
+        const project = Array.isArray(projects) ? projects.find((item) => item?.jobId === jobId) : null;
+        return Array.isArray(project?.pages) ? project.pages.length : 0;
+      } catch {
+        return null;
+      }
+    })(),
+    workbookPlans: Array.isArray(workbook?.plans) ? workbook.plans.length : 0,
+    indexedDBPages: Array.isArray(workbook?.aiTakeoffProject?.pages) ? workbook.aiTakeoffProject.pages.length : 0,
+  };
+}
+
 export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const previewMode = Boolean(options.previewMode);
   const [workbook, setWorkbook] = useState(() => initialWorkbook(initialValues, { previewMode }));
+  const [activeWorkbookPage, setActiveWorkbookPage] = useState(() => resolveLastActiveWorkbookPage(initialWorkbook(initialValues, { previewMode })));
   const [lineSearch, setLineSearch] = useState("");
   const [hideUnused, setHideUnused] = useState(false);
   const [activeDataTab, setActiveDataTab] = useState("inputs");
@@ -159,6 +195,10 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   const workbookRef = useRef(workbook);
   workbookRef.current = workbook;
   const deferredWorkbook = useDeferredValue(workbook);
+  const displayWorkbook = useMemo(() => ({
+    ...workbook,
+    page: ESTIMATE_BUILDER_PAGE_KEYS.has(activeWorkbookPage) ? activeWorkbookPage : "projectDashboard",
+  }), [workbook, activeWorkbookPage]);
   const preview = useMemo(() => calculateEstimateBuilderWorkbook(deferredWorkbook), [deferredWorkbook]);
   const quoteSections = useMemo(
     () => orderedQuoteSections(workbook.quotation || {}, workbook.quotationSectionOrder || []),
@@ -216,7 +256,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
           templateName: MASTER_TEMPLATE_NAME,
           mode: "job",
         });
-        setWorkbook(normalizeWorkbook(registeredWorkbook));
+        const nextWorkbook = normalizeWorkbook(registeredWorkbook);
+        setWorkbook(nextWorkbook);
+        setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
         setLastSavedAt(savedAt);
         setRecentJobs(loadRecentEstimateJobs());
       }).catch(() => {});
@@ -224,17 +266,14 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         cancelled = true;
       };
     }
-    loadActiveStoredJob().then(async (storedJob) => {
+    loadLastActiveOrRecentStoredJob().then(async (storedJob) => {
       if (cancelled) return;
       if (!storedJob?.workbook) {
         estimateBuilderLog("loading workbook", {
           source: "no-active-job",
-          destination: "project-hub",
+          destination: "builder-dashboard",
           mode: "none",
         });
-        if (shouldRedirectToProjectHubOnMissingActiveJob()) {
-          window.location.replace("/modules/construction");
-        }
         return;
       }
       estimateBuilderLog("loading workbook", {
@@ -243,6 +282,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         templateKey: storedJob.workbook?.templateKey || "",
         templateName: storedJob.workbook?.templateName || "",
         mode: "job",
+        ...takeoffPersistenceCounts(storedJob.workbook),
       });
       const storedSavedAt = String(storedJob.savedAt || storedJob.workbook?.savedAt || "");
       if (needsMasterTemplateMigration(storedJob.workbook)) {
@@ -250,7 +290,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       }
       const workbookWithTemplateDefaults = await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook));
       if (cancelled) return;
-      setWorkbook(normalizeWorkbook(workbookWithTemplateDefaults));
+      const nextWorkbook = normalizeWorkbook(workbookWithTemplateDefaults);
+      setWorkbook(nextWorkbook);
+      setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
       setLastSavedAt(storedSavedAt);
     }).catch(() => {});
     return () => {
@@ -304,13 +346,23 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
   }, [workbook, previewMode]);
 
   function setPage(page) {
-    setWorkbook((current) => ({ ...current, page }));
+    if (!ESTIMATE_BUILDER_PAGE_KEYS.has(page)) return;
+    setActiveWorkbookPage(page);
+    saveLastActiveWorkbookPage(workbookRef.current, page);
   }
 
   function updatePlans(plans = []) {
+    const safePlans = Array.isArray(plans) ? plans : [];
     setWorkbook((current) => ({
       ...current,
-      plans: Array.isArray(plans) ? plans : [],
+      plans: safePlans,
+      aiTakeoffProject: current.aiTakeoffProject && typeof current.aiTakeoffProject === "object"
+        ? {
+          ...current.aiTakeoffProject,
+          plans: safePlans,
+          updatedAt: new Date().toISOString(),
+        }
+        : current.aiTakeoffProject,
     }));
   }
 
@@ -319,6 +371,13 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       ...current,
       aiTakeoffProject: project && typeof project === "object" ? project : current.aiTakeoffProject,
       plans: Array.isArray(project?.plans) ? project.plans : current.plans,
+    }));
+  }
+
+  function updateTakeoffEngineState(engineState = {}) {
+    setWorkbook((current) => ({
+      ...current,
+      takeoffEngine: engineState && typeof engineState === "object" ? engineState : current.takeoffEngine,
     }));
   }
 
@@ -677,7 +736,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       ...current,
       quotation: {
         ...current.quotation,
-        [section]: { ...current.quotation[section], collapsed: !current.quotation[section].collapsed },
+        ...(current.quotation?.[section]
+          ? { [section]: { ...current.quotation[section], collapsed: !Boolean(current.quotation[section].collapsed) } }
+          : {}),
       },
     }));
   }
@@ -765,6 +826,113 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
         ...(current.clientPage || {}),
         [key]: value,
       },
+    }));
+  }
+
+  function updateEstimateInclusions(nextInclusions) {
+    setWorkbook((current) => ({
+      ...current,
+      estimateInclusions: normaliseEstimateInclusions(nextInclusions, current.builderId || "local-builder"),
+    }));
+  }
+
+  function updateEstimateInclusionPackage(packageId, key, value) {
+    if (!packageId || !key) return;
+    setWorkbook((current) => {
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        estimateInclusions: {
+          ...estimateInclusions,
+          packages: estimateInclusions.packages.map((item) => item.id === packageId ? { ...item, [key]: value } : item),
+        },
+      };
+    });
+  }
+
+  function updateEstimateInclusionSection(sectionId, key, value) {
+    if (!sectionId || !key) return;
+    setWorkbook((current) => {
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        estimateInclusions: {
+          ...estimateInclusions,
+          sections: estimateInclusions.sections.map((item) => item.id === sectionId ? { ...item, [key]: value } : item),
+        },
+      };
+    });
+  }
+
+  function updateEstimateInclusionSupplier(supplierId, key, value) {
+    if (!supplierId || !key) return;
+    setWorkbook((current) => {
+      const estimateInclusions = normaliseEstimateInclusions(current.estimateInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        estimateInclusions: {
+          ...estimateInclusions,
+          suppliers: estimateInclusions.suppliers.map((item) => item.id === supplierId ? { ...item, [key]: value } : item),
+        },
+      };
+    });
+  }
+
+  function updateStandardInclusions(nextInclusions) {
+    setWorkbook((current) => {
+      const standardInclusions = normaliseStandardInclusions(nextInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        standardInclusions,
+        selected_standard_inclusions_package_id: standardInclusions.selectedPackageId,
+      };
+    });
+  }
+
+  function updateStandardInclusionPackage(packageId, key, value) {
+    if (!packageId || !key) return;
+    setWorkbook((current) => {
+      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        standardInclusions: {
+          ...standardInclusions,
+          packages: standardInclusions.packages.map((item) => item.id === packageId ? { ...item, [key]: value } : item),
+        },
+      };
+    });
+  }
+
+  function updateStandardInclusionSection(sectionId, key, value) {
+    if (!sectionId || !key) return;
+    setWorkbook((current) => {
+      const standardInclusions = normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder");
+      return {
+        ...current,
+        standardInclusions: {
+          ...standardInclusions,
+          sections: standardInclusions.sections.map((item) => item.id === sectionId ? { ...item, [key]: value } : item),
+        },
+      };
+    });
+  }
+
+  function selectStandardInclusionsPackage(packageId) {
+    if (!packageId) return;
+    setWorkbook((current) => ({
+      ...current,
+      selected_standard_inclusions_package_id: packageId,
+      standardInclusions: {
+        ...normaliseStandardInclusions(current.standardInclusions, current.builderId || "local-builder"),
+        selectedPackageId: packageId,
+      },
+    }));
+  }
+
+  function updateProductLibrary(nextLibrary) {
+    setWorkbook((current) => ({
+      ...current,
+      productLibrary: normalizeProductLibrary(nextLibrary),
     }));
   }
 
@@ -1179,10 +1347,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
-  async function saveDraft() {
+  async function saveDraft(sourceWorkbook = null) {
     if (typeof window === "undefined") return { ok: false, message: "Jobs are not available here." };
     const savedAt = new Date().toISOString();
-    const draft = prepareWorkbookForJobSave(workbook, savedAt);
+    const workbookToSave = sourceWorkbook || workbook;
+    const draft = prepareWorkbookForJobSave(workbookToSave, savedAt);
     estimateBuilderLog("saving job", {
       source: "current workbook",
       destination: "IndexedDB job store + localStorage metadata",
@@ -1195,7 +1364,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     await saveStoredJob(draft, savedAt);
     rememberRecentJob(draft, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
-    if (draft.templateKey || draft.templateName) setWorkbook((current) => ({ ...current, templateKey: draft.templateKey, templateName: draft.templateName, savedAt }));
+    if (sourceWorkbook) {
+      setWorkbook((current) => ({
+        ...current,
+        clientPage: sourceWorkbook.clientPage || current.clientPage,
+        savedAt,
+      }));
+    } else if (draft.templateKey || draft.templateName) {
+      setWorkbook((current) => ({ ...current, templateKey: draft.templateKey, templateName: draft.templateName, savedAt }));
+    }
     setLastSavedAt(savedAt);
     return { ok: true, message: "Job saved.", key: workbookJobKey(draft) };
   }
@@ -1224,7 +1401,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     if (needsMasterTemplateMigration(storedJob.workbook)) {
       await saveJobBackup(storedJob.workbook, new Date().toISOString()).catch(() => {});
     }
-    setWorkbook(normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook))));
+    const nextWorkbook = normalizeWorkbook(await applyTemplateDefaultsToJob(migrateWorkbookToMasterTemplate(storedJob.workbook)));
+    setWorkbook(nextWorkbook);
+    setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
     setLastSavedAt(storedJob.savedAt || storedJob.workbook?.savedAt || "");
     rememberRecentJob(storedJob.workbook, storedJob.savedAt || storedJob.workbook?.savedAt || "");
     setRecentJobs(loadRecentEstimateJobs());
@@ -1398,6 +1577,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     rememberRecentJob(draft, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
     setWorkbook(jobWorkbook);
+    setActiveWorkbookPage(resolveLastActiveWorkbookPage(jobWorkbook));
     setLastSavedAt(savedAt);
     await refreshTemplateSummaries();
     return { ok: true, message: "New job created from master template.", key: MASTER_TEMPLATE_KEY, workbook: jobWorkbook };
@@ -1490,7 +1670,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
       if (!template) {
         return { ok: false, message: "Template could not be found." };
       }
-      setWorkbook(normalizeWorkbook({ ...template, page: "dataInput" }));
+      const nextWorkbook = normalizeWorkbook({ ...template, page: "projectDashboard" });
+      setWorkbook(nextWorkbook);
+      setActiveWorkbookPage("projectDashboard");
       setLastSavedAt(template.savedAt || "");
       await saveStoredTemplatePointer(template.templateKey || selectedKey);
       await refreshTemplateSummaries();
@@ -1562,6 +1744,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     rememberRecentJob(nextWorkbook, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
     setWorkbook(nextWorkbook);
+    setActiveWorkbookPage(resolveLastActiveWorkbookPage(nextWorkbook));
     setLastSavedAt(savedAt);
     return { ok: true, message: "Saved job opened.", key: record.key };
   }
@@ -1572,6 +1755,11 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     }
     const parsed = JSON.parse(text);
     const workbookFromFile = parsed?.workbook || parsed;
+    estimateBuilderLog("loading workbook", {
+      source: "job file",
+      fileName,
+      ...takeoffPersistenceCounts(workbookFromFile),
+    });
     if (isCorruptEstimateJobWorkbook(workbookFromFile)) {
       throw new Error("estimate-job.json is blocked and cannot be opened.");
     }
@@ -1586,7 +1774,9 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
     await saveStoredJob(draft, savedAt);
-    setWorkbook(normalizeWorkbook(nextWorkbook));
+    const normalisedWorkbook = normalizeWorkbook(nextWorkbook);
+    setWorkbook(normalisedWorkbook);
+    setActiveWorkbookPage(resolveLastActiveWorkbookPage(normalisedWorkbook));
     setLastSavedAt(parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     rememberRecentJob(nextWorkbook, parsed?.savedAt || nextWorkbook?.savedAt || savedAt);
     setRecentJobs(loadRecentEstimateJobs());
@@ -1601,7 +1791,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     dataInputSections,
     quoteSections,
     windowTypes: V4_WINDOW_TYPES,
-    workbook,
+    workbook: displayWorkbook,
     previewMode,
     preview,
     lineSearch,
@@ -1618,6 +1808,7 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     setPage,
     updatePlans,
     updateTakeoffProject,
+    updateTakeoffEngineState,
     toggleDataSection,
     updateData,
     updateSubcontractorQuote,
@@ -1643,6 +1834,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     updateQuoteSectionMeta,
     updateSummaryAdjustment,
     updateClientPage,
+    updateEstimateInclusions,
+    updateEstimateInclusionPackage,
+    updateEstimateInclusionSection,
+    updateEstimateInclusionSupplier,
+    updateStandardInclusions,
+    updateStandardInclusionPackage,
+    updateStandardInclusionSection,
+    selectStandardInclusionsPackage,
+    updateProductLibrary,
     updateCashflowPayment,
     generateProcurementListFromQuote,
     refreshProcurementListFromQuote,
@@ -1751,7 +1951,7 @@ function createBlankPreviewWorkbook(initialValues = {}) {
   const workbook = normalizeWorkbook(createEstimateBuilderWorkbookDefaults(initialValues));
   return {
     ...workbook,
-    page: "dataInput",
+    page: "projectDashboard",
     data: Object.fromEntries(Object.entries(workbook.data || {}).map(([sectionKey, section]) => [
       sectionKey,
       {
@@ -1811,6 +2011,11 @@ function normalizeWorkbook(workbook = {}) {
     ? ensureRequiredFormulaRows(migratedFormulaRows.rows, defaults.formulaRows || [])
     : defaults.formulaRows || [];
   const quotation = normalizeQuotation(workbook.quotation, defaults.quotation);
+  const selectedStandardInclusionsPackageId = workbook.selected_standard_inclusions_package_id || workbook.standardInclusions?.selectedPackageId || defaults.selected_standard_inclusions_package_id || "std-mid-range-standard-inclusions";
+  const standardInclusions = normaliseStandardInclusions({
+    ...(workbook.standardInclusions || defaults.standardInclusions),
+    selectedPackageId: selectedStandardInclusionsPackageId,
+  }, workbook.builderId || defaults.builderId || "local-builder");
   return {
     ...defaults,
     ...workbook,
@@ -1819,10 +2024,48 @@ function normalizeWorkbook(workbook = {}) {
     quotation,
     quotationSectionOrder: normalizeQuoteSectionOrder(workbook.quotationSectionOrder || defaults.quotationSectionOrder || [], quotation),
     cashflowPayments: normalizeCashflowPayments(workbook.cashflowPayments, defaults.cashflowPayments),
+    estimateInclusions: normaliseEstimateInclusions(workbook.estimateInclusions || defaults.estimateInclusions, workbook.builderId || defaults.builderId || "local-builder"),
+    standardInclusions,
+    selected_standard_inclusions_package_id: standardInclusions.selectedPackageId,
+    productLibrary: normalizeProductLibrary(workbook.productLibrary || defaults.productLibrary),
     formulas: normalizeFormulas(defaults.formulas || {}, migratedFormulaRows.formulas),
     formulaNotes: { ...(defaults.formulaNotes || {}), ...(workbook.formulaNotes || {}) },
     formulaRows,
   };
+}
+
+function normalizeProductLibrary(library = {}) {
+  const products = Array.isArray(library.products) ? library.products : [];
+  return {
+    products: products.map((item, index) => ({
+      id: item.id || `product-${Date.now().toString(36)}-${index + 1}`,
+      product_code: String(item.product_code || item.productCode || "").trim(),
+      category: String(item.category || "").trim(),
+      subcategory: String(item.subcategory || "").trim(),
+      product_name: String(item.product_name || item.productName || item.name || "").trim(),
+      description: String(item.description || "").trim(),
+      unit: String(item.unit || "").trim(),
+      supplier: String(item.supplier || "").trim(),
+      brand: String(item.brand || "").trim(),
+      cost_price: String(item.cost_price || item.costPrice || "").trim(),
+      sell_price: String(item.sell_price || item.sellPrice || item.rate || "").trim(),
+      margin_percent: String(item.margin_percent || item.marginPercent || "").trim(),
+      gst: String(item.gst || "").trim(),
+      allowance_item: booleanText(item.allowance_item ?? item.allowanceItem),
+      active: booleanText(item.active ?? true),
+      notes: String(item.notes || "").trim(),
+    })),
+    importedAt: library.importedAt || "",
+    updatedAt: library.updatedAt || "",
+  };
+}
+
+function booleanText(value) {
+  if (value === false) return "no";
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["false", "no", "n", "0", "inactive"].includes(text)) return "no";
+  if (["true", "yes", "y", "1", "active"].includes(text)) return "yes";
+  return value === undefined || value === null || value === "" ? "yes" : String(value);
 }
 
 function normalizeCashflowPayments(savedPayments = {}, defaultPayments = {}) {
@@ -2158,74 +2401,9 @@ function normalizeQuotation(savedQuotation = {}, defaultQuotation = {}) {
     normalized[sectionName] = { ...section, collapsed: true };
   });
   normalizeRoughInsSection(normalized);
-  normalizePlumbersFitOffSection(normalized);
   moveFixOutOpeningRowsIntoFixOut(normalized);
   normalizeApplianceWhiteGoodsSections(normalized);
   return normalized;
-}
-
-function normalizePlumbersFitOffSection(quotation = {}) {
-  const sectionName = Object.keys(quotation || {}).find((section) => quoteSectionBaseName(section) === "plumbers fit off costs") || "PLUMBER'S FIT OFF COSTS";
-  const section = quotation[sectionName] || {
-    collapsed: true,
-    columns: ["Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"],
-    rows: [],
-  };
-  const rows = Array.isArray(section.rows) ? section.rows : [];
-  const quoteRow = rows.find(isPlumberQuoteInputRow) || manualPlumberQuoteInputRow(sectionName);
-  const fitOffRow = rows.find(isPlumberFitOffBalanceRow) || manualPlumberFitOffBalanceRow(sectionName);
-  const ordered = [
-    { ...quoteRow, section: sectionName },
-    { ...fitOffRow, section: sectionName },
-    ...rows.filter((row) => !isPlumberQuoteInputRow(row) && !isPlumberFitOffBalanceRow(row)),
-  ];
-  quotation[sectionName] = {
-    ...section,
-    collapsed: typeof section.collapsed === "boolean" ? section.collapsed : true,
-    rows: uniqueQuoteRowsByIdentity(ordered),
-  };
-  return quotation;
-}
-
-function manualPlumberQuoteInputRow(sectionName) {
-  return manualGeneratedQuoteRow(30080, "Plumber's Quote", "QUOTE", sectionName);
-}
-
-function manualPlumberFitOffBalanceRow(sectionName) {
-  return manualGeneratedQuoteRow(30076, "Plumber's fit off costs", "ITEM", sectionName);
-}
-
-function manualGeneratedQuoteRow(sourceRow, item, unit, sectionName) {
-  return {
-    id: `quote-${sourceRow}`,
-    excelRow: sourceRow,
-    importedWorkbookRow: false,
-    section: sectionName,
-    values: [item, "", "", unit, "", "", ""],
-    formulas: {},
-    item,
-    quantity: "",
-    importedQuantity: "",
-    quantityKey: "",
-    unit,
-    excelRate: "",
-    supplierCatalogueRate: "",
-    quotedSupplierRate: "",
-    manualRate: "",
-    supplierQuote: "",
-    sourceOfRate: "manual",
-    rawText: item,
-    notes: "",
-  };
-}
-
-function isPlumberQuoteInputRow(row = {}) {
-  return quoteRowSourceNumber(row) === 30080 || String(row.item || "").trim().toLowerCase() === "plumber's quote";
-}
-
-function isPlumberFitOffBalanceRow(row = {}) {
-  const text = `${row.item || ""} ${row.rawText || ""}`.toLowerCase();
-  return quoteRowSourceNumber(row) === 30076 || (text.includes("plumber") && text.includes("fit off"));
 }
 
 function normalizeRoughInsSection(quotation = {}) {
@@ -2429,8 +2607,6 @@ function isRequiredDefaultQuoteSectionName(sectionName) {
     "concrete and landscaping",
     "underslab and drainage",
     "rough-ins",
-    "plumbers fit off costs",
-    "electricians fit off costs",
   ].includes(quoteSectionBaseName(sectionName));
 }
 
@@ -3993,7 +4169,15 @@ function removeRoofingMaterialsRemovedRows(sectionName, rows = []) {
 }
 
 function removeRemovedImportedQuoteRows(rows = []) {
-  return rows.filter((row) => !REMOVED_IMPORTED_QUOTE_SOURCE_ROWS.has(quoteRowSourceNumber(row)));
+  return rows.filter((row) => !isRemovedQuoteRow(row));
+}
+
+function isRemovedQuoteRow(row = {}) {
+  if (REMOVED_QUOTE_ROW_IDS.has(String(row?.id || ""))) return true;
+  if (REMOVED_IMPORTED_QUOTE_SOURCE_ROWS.has(quoteRowSourceNumber(row))) return true;
+  if (isRemovedQuoteSection(row?.section)) return true;
+  const text = `${row?.item || ""} ${row?.rawText || ""} ${Array.isArray(row?.values) ? row.values.join(" ") : ""}`.toLowerCase();
+  return (text.includes("plumber") || text.includes("electrician")) && text.includes("fit off");
 }
 
 function orderQuoteRows(rows = []) {
@@ -4704,16 +4888,11 @@ function normalizeQuoteSectionOrder(savedOrder = [], quotation = {}) {
   return moveFixOutMaterialsGroupAfterStairs(moveQuoteSectionNamesAfter(
     moveQuoteSectionNamesAfter(
       moveQuoteSectionNamesAfter(
-        moveQuoteSectionNamesAfterNumber(
           moveQuoteSectionNamesAfter(
             moveQuoteSectionNamesAfter(ordered, ["underslab and drainage"], "bulk earthworks"),
             ["rough-ins"],
             "wall frames",
           ),
-          ["plumbers fit off costs", "electricians fit off costs"],
-          136,
-          quotation,
-        ),
         ["job set-out"],
         "underslab and drainage",
       ),
@@ -5010,7 +5189,22 @@ function dataValue(workbook, key) {
 }
 
 function shouldTrackQuoteChange(key) {
-  return ["active", "quantity", "unit", "manualRate", "supplierQuote", "lineType", "quoteRequired", "notes", "item"].includes(key);
+  return [
+    "active",
+    "quantity",
+    "unit",
+    "manualRate",
+    "supplierQuote",
+    "lineType",
+    "quoteRequired",
+    "notes",
+    "item",
+    "selectionImageUrl",
+    "selectionSpec",
+    "selectionAllowanceAmount",
+    "selectionSelectedCost",
+    "selectionAdjustment",
+  ].includes(key);
 }
 
 function appendQuoteHistory(history = [], entry = {}) {
@@ -5228,7 +5422,7 @@ function sanitizeWorkbookForTemplate(sourceWorkbook = {}, options = {}) {
   const workbook = normalizeWorkbook(sourceWorkbook);
   return compactWorkbookForStorage(normalizeWorkbook({
     ...workbook,
-    page: "dataInput",
+    page: "projectDashboard",
     savedAt,
     templateName: name,
     templateKey,
@@ -5362,6 +5556,7 @@ function applyRegisteredJobToWorkbook(workbook = {}, job = {}, savedAt = new Dat
         if (rowKey === "projectName") return [rowKey, { ...row, value: projectName }];
         if (rowKey === "projectAddress") return [rowKey, { ...row, value: projectAddress }];
         if (rowKey === "clientName") return [rowKey, { ...row, value: job.clientName || "" }];
+        if (rowKey === "jobNumber") return [rowKey, { ...row, value: job.jobNumber || "" }];
         return [rowKey, row];
       })),
     },
@@ -5744,6 +5939,7 @@ const TEMPLATE_POINTER_KEY = "active-template-key";
 const JOB_STORE_NAME = "jobs";
 const ACTIVE_JOB_KEY = "active-job";
 const RECENT_JOBS_STORAGE_KEY = "estimate-builder-recent-jobs";
+const ACTIVE_WORKBOOK_PAGE_STORAGE_KEY = "estimate-builder-active-workbook-pages";
 const CORRUPT_ESTIMATE_JOB_FILE_NAME = "estimate-job.json";
 const LAST_LINKED_TEMPLATE_STORAGE_KEY = "estimate-builder-last-linked-template";
 const ALLOW_UNLINKED_JOB_SAVE_STORAGE_KEY = "estimate-builder-allow-unlinked-job-save";
@@ -5751,6 +5947,7 @@ const MASTER_TEMPLATE_KEY = "template:master-estimate-template";
 const MASTER_TEMPLATE_NAME = "Master Estimate Template";
 const LEGACY_MASTER_TEMPLATE_KEY = "template:single-storey-dwelling-rendered-bv-waffle-pod-slab";
 const REPAIR_TEMPLATE_KEY = MASTER_TEMPLATE_KEY;
+const ESTIMATE_BUILDER_PAGE_KEYS = new Set(ESTIMATE_BUILDER_PAGES.map((page) => page.key));
 const REPAIR_TEMPLATE_NAME = MASTER_TEMPLATE_NAME;
 
 function openTemplateDb() {
@@ -5881,22 +6078,45 @@ function saveAllowUnlinkedJobSave(value) {
   } catch {}
 }
 
-function shouldRedirectToProjectHubOnMissingActiveJob() {
-  if (typeof window === "undefined") return false;
-  try {
-    const mode = new URLSearchParams(window.location.search || "").get("mode");
-    return mode !== "open-job" && mode !== "open-recent";
-  } catch {
-    return true;
-  }
-}
-
 function workbookJobKey(workbook = {}) {
   const registeredId = String(workbook?.registeredJob?.jobId || "").trim();
   if (registeredId) return `job:${registeredId}`;
   const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "new-job";
   const slugged = slug(projectName) || "new-job";
   return `job:${slugged}`;
+}
+
+function loadActiveWorkbookPageMap() {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLastActiveWorkbookPage(workbook = {}, page = "") {
+  if (typeof window === "undefined") return;
+  if (!ESTIMATE_BUILDER_PAGE_KEYS.has(page)) return;
+  const key = workbookJobKey(workbook);
+  if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) return;
+  try {
+    const pageMap = loadActiveWorkbookPageMap();
+    window.sessionStorage.setItem(ACTIVE_WORKBOOK_PAGE_STORAGE_KEY, JSON.stringify({
+      ...pageMap,
+      [key]: page,
+    }));
+  } catch {}
+}
+
+function resolveLastActiveWorkbookPage(workbook = {}) {
+  const fallbackPage = ESTIMATE_BUILDER_PAGE_KEYS.has(workbook?.page) ? workbook.page : "projectDashboard";
+  if (typeof window === "undefined") return fallbackPage;
+  const key = workbookJobKey(workbook);
+  if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) return fallbackPage;
+  const page = loadActiveWorkbookPageMap()[key];
+  return ESTIMATE_BUILDER_PAGE_KEYS.has(page) ? page : fallbackPage;
 }
 
 function workbookJobName(workbook = {}) {
@@ -5917,6 +6137,10 @@ async function saveStoredJob(workbook, savedAt = new Date().toISOString()) {
     return;
   }
   const savedWorkbook = compactWorkbookForStorage({ ...workbook, savedAt });
+  estimateBuilderLog("Saving workbook", {
+    source: "IndexedDB stored job",
+    ...takeoffPersistenceCounts(savedWorkbook),
+  });
   const key = workbookJobKey(savedWorkbook);
   const record = {
     type: "job",
@@ -6107,6 +6331,33 @@ async function loadActiveStoredJob() {
       reject(transaction.error || new Error("Could not read active estimate job"));
     };
   });
+}
+
+async function loadLastActiveOrRecentStoredJob() {
+  const activeJob = await loadActiveStoredJob().catch(() => null);
+  if (activeJob?.workbook) return activeJob;
+  const recentJobs = loadRecentEstimateJobs();
+  for (const recent of recentJobs) {
+    const key = String(recent?.key || "").trim();
+    if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) continue;
+    const record = await loadStoredJob(key).catch(() => null);
+    if (!record?.workbook || record.type !== "job") continue;
+    if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record)) continue;
+    await setActiveStoredJob(record).catch(() => {});
+    return record;
+  }
+  const storedJobs = await listStoredJobs().catch(() => []);
+  for (const job of storedJobs) {
+    const key = String(job?.key || "").trim();
+    if (!key || isBlockedEstimateBuilderJobKey(key) || isSnapshotJobKey(key)) continue;
+    const record = await loadStoredJob(key).catch(() => null);
+    if (!record?.workbook || record.type !== "job") continue;
+    if (isCorruptEstimateJobRecord(record) || isBlockedEstimateBuilderActiveJob(record)) continue;
+    await setActiveStoredJob(record).catch(() => {});
+    rememberRecentJob(record.workbook, record.savedAt || record.workbook?.savedAt || "");
+    return record;
+  }
+  return null;
 }
 
 function isCorruptEstimateJobFileName(fileName = "") {

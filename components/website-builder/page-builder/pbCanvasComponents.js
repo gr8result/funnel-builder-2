@@ -122,9 +122,9 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
   const def = BlockDefinitions[block.type];
-  const showOverlay = selected || hovered;
+  const showOverlay = selected || (allowHoverOverlay && hovered);
   const resizeStateRef = useRef(null);
   const [hoveredSlot, setHoveredSlot] = useState(null);
   const isDragTarget = false;
@@ -169,6 +169,9 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   };
 
   const isEditingVideoHero = selected && block?.type === BlockTypes.VIDEO_HERO;
+  const shouldIgnoreSelectionPointer = (target) => !!target?.closest?.(
+    "button,input,select,textarea,label,[contenteditable='true'],[data-no-canvas-drag='true'],[data-builder-block-controls='true'],[data-wb-tiptap-toolbar='true'],.wb-tiptap-shell"
+  );
 
   return (
     <div
@@ -201,6 +204,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       data-builder-block-active={showOverlay ? "true" : "false"}
       data-builder-block-selected={selected ? "true" : "false"}
       draggable={!isEditingVideoHero}
+      onPointerDownCapture={(e) => {
+        if (shouldIgnoreSelectionPointer(e.target)) return;
+        onSelect(index);
+      }}
       onDragStart={(e) => {
         if (e.target?.closest?.("button,input,select,textarea,label,[data-no-canvas-drag='true']")) {
           e.preventDefault();
@@ -216,7 +223,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         setHoveredSlot(null);
         onBlockDragEnd?.();
       }}
-      onClick={() => onSelect(index)}
+      onClick={(e) => {
+        if (shouldIgnoreSelectionPointer(e.target)) return;
+        onSelect(index);
+      }}
       onMouseEnter={() => onHover?.(index)}
       onMouseLeave={() => onHover?.(null)}
       onDragOver={(e) => {
@@ -229,7 +239,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       }}
     >
       {showOverlay ? (
-        <div style={styles.blockActionBar}>
+        <div style={styles.blockActionBar} data-builder-block-controls="true">
           <div style={styles.blockActionLeft}>
             <span style={styles.blockActionLabel}>{def?.name || block.type}</span>
           </div>
@@ -592,6 +602,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
   return (
     <div
       data-global-block-preview="true"
+      data-global-role={role}
       style={{
         ...styles.globalBlockPreviewWrap,
         ...(selected ? styles.globalBlockPreviewWrapSelected : {}),
@@ -608,7 +619,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
       onMouseLeave={() => setHovered(false)}
     >
       {showOverlay ? (
-        <div style={styles.blockActionBar}>
+        <div style={styles.blockActionBar} data-builder-block-controls="true">
           <div style={styles.blockActionLeft}>
             <span style={styles.blockActionLabel}>{label}</span>
           </div>
@@ -3884,6 +3895,11 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     };
     const vhHeight = String(vp.heightMode || "full");
     const vhFixed  = Number(vp.minHeight) || 620;
+    const vhAutoplay = vp.autoplay !== false;
+    const vhMuted = vp.muted !== false;
+    const vhLoop = vp.loop !== false;
+    const vhShowControls = vp.showControls === true || vp.controls === true;
+    const vhStartWithAudio = vp.startWithAudio === true || vp.playAudioOnInteraction === true || vp.unmuteOnScroll === true;
     const vhOverlayOpacity = Number(vp.overlayOpacity ?? 0.42);
     const vhObjectFit  = String(vp.objectFit || "cover");
     const vhObjectPos  = String(vp.objectPosition || "top center");
@@ -3930,7 +3946,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 Uploading video to CDN…
               </div>
             ) : vp.videoSrc ? (
-              <video src={vp.videoSrc} poster={vp.posterSrc || undefined} muted autoPlay playsInline preload="auto"
+              <video
+                src={vp.videoSrc}
+                poster={vp.posterSrc || undefined}
+                muted={vhMuted}
+                autoPlay={vhAutoplay}
+                loop={vhLoop}
+                controls={vhShowControls}
+                playsInline
+                preload={vhAutoplay ? "auto" : "metadata"}
                 style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8, background: "#000" }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3962,6 +3986,40 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   onClick={() => updateVH({ posterSrc: "" })}>Remove</button>
               ) : null}
             </div>
+          </div>
+
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Playback</label>
+            <div style={{ display: "grid", gap: 10 }}>
+              <label style={styles.inlineToggle}>
+                <input type="checkbox" checked={vhAutoplay} onChange={(e) => updateVH({ autoplay: e.target.checked })} style={styles.checkboxInput} />
+                Autoplay
+              </label>
+              <label style={styles.inlineToggle}>
+                <input type="checkbox" checked={vhMuted} onChange={(e) => updateVH({ muted: e.target.checked })} style={styles.checkboxInput} />
+                Muted
+              </label>
+              <label style={styles.inlineToggle}>
+                <input type="checkbox" checked={vhLoop} onChange={(e) => updateVH({ loop: e.target.checked })} style={styles.checkboxInput} />
+                Loop
+              </label>
+              <label style={styles.inlineToggle}>
+                <input type="checkbox" checked={vhShowControls} onChange={(e) => updateVH({ showControls: e.target.checked, controls: e.target.checked })} style={styles.checkboxInput} />
+                Show controls
+              </label>
+              <label style={styles.inlineToggle}>
+                <input
+                  type="checkbox"
+                  checked={vhStartWithAudio}
+                  onChange={(e) => updateVH({ startWithAudio: e.target.checked, playAudioOnInteraction: e.target.checked, unmuteOnScroll: e.target.checked })}
+                  style={styles.checkboxInput}
+                />
+                Start with audio when allowed
+              </label>
+            </div>
+            <p style={{ margin: "10px 0 0", fontSize: 12, lineHeight: 1.45, color: "#64748b" }}>
+              Browsers usually block autoplay with sound until the visitor interacts with the page. Use muted autoplay for the most reliable loading, or enable audio after interaction when the browser allows it.
+            </p>
           </div>
 
           {/* ── Text overlay ── */}

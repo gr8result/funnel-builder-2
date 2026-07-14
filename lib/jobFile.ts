@@ -162,7 +162,7 @@ export async function writeJob(handle: JobFileHandle, job: Partial<JobFileData>)
         data: payload,
       };
     } catch (error: unknown) {
-      if ((error as { name?: string })?.name === "AbortError") {
+      if (isAbortLikeFileSystemError(error)) {
         return { ok: true, cancelled: true, handle, data: payload };
       }
       throw error;
@@ -190,7 +190,7 @@ export async function createNewJob(job: Partial<JobFileData>): Promise<JobFileRe
     if (!handle) return { ok: true, cancelled: true, data: payload };
     return writeJob(handle, payload);
   } catch (error: unknown) {
-    if ((error as { name?: string })?.name === "AbortError") {
+    if (isAbortLikeFileSystemError(error)) {
       return { ok: true, cancelled: true, data: payload };
     }
     throw error;
@@ -214,7 +214,7 @@ export async function openJob(): Promise<JobFileResult> {
         data,
       };
     } catch (error: unknown) {
-      if ((error as { name?: string })?.name === "AbortError") {
+      if (isAbortLikeFileSystemError(error)) {
         return { ok: true, cancelled: true };
       }
       if ((error as Error)?.message === "This job file could not be opened.") {
@@ -234,11 +234,32 @@ export async function openJob(): Promise<JobFileResult> {
   }
 }
 
-export async function saveJob(job: Partial<JobFileData>, currentHandle: JobFileHandle): Promise<JobFileResult> {
+export async function saveJob(job: Partial<JobFileData>, currentHandle: JobFileHandle, options: { fallbackToSaveAs?: boolean } = {}): Promise<JobFileResult> {
+  const fallbackToSaveAs = options.fallbackToSaveAs !== false;
   if (!currentHandle) {
-    return saveJobAs(job);
+    return fallbackToSaveAs ? saveJobAs(job) : { ok: false, message: "No active job file handle." };
   }
-  return writeJob(currentHandle, job);
+  try {
+    return await writeJob(currentHandle, job);
+  } catch (error: unknown) {
+    const message = String((error as Error)?.message || "");
+    if (isAbortLikeFileSystemError(error)) {
+      return { ok: true, cancelled: true };
+    }
+    if (fallbackToSaveAs && isStaleFileHandleError(message)) {
+      return saveJobAs(job);
+    }
+    throw error;
+  }
+}
+
+function isStaleFileHandleError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes("state cached in an interface object is obsolete")
+    || lower.includes("depends on state cached in an interface object")
+    || lower.includes("changed since it was read from disk")
+    || lower.includes("file has changed")
+    || lower.includes("notreadableerror");
 }
 
 export async function saveJobAs(job: Partial<JobFileData>): Promise<JobFileResult> {
@@ -257,11 +278,21 @@ export async function saveJobAs(job: Partial<JobFileData>): Promise<JobFileResul
     if (!handle) return { ok: true, cancelled: true, data: payload };
     return writeJob(handle, payload);
   } catch (error: unknown) {
-    if ((error as { name?: string })?.name === "AbortError") {
+    if (isAbortLikeFileSystemError(error)) {
       return { ok: true, cancelled: true, data: payload };
     }
     throw error;
   }
+}
+
+export function isAbortLikeFileSystemError(error: unknown): boolean {
+  const name = String((error as { name?: string })?.name || "");
+  const message = String((error as { message?: string })?.message || error || "");
+  const combined = `${name} ${message}`.toLowerCase();
+  return name === "AbortError"
+    || combined.includes("aborterror")
+    || combined.includes("lock broken by another request")
+    || (combined.includes("lock") && combined.includes("steal"));
 }
 
 export function autoSave(params: {

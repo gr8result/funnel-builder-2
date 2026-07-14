@@ -10,16 +10,25 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
-            "label": "Home"
+            "href": "/",
+            "label": "Home",
+            "id": "nav-item-0-0-home",
+            "slug": "home",
+            "children": []
           },
           {
-            "href": "#about-us",
-            "label": "About Us"
+            "href": "/about",
+            "label": "About Us",
+            "id": "nav-item-1-0-about-us",
+            "slug": "about-us",
+            "children": []
           },
           {
-            "href": "#contact",
-            "label": "CONtact"
+            "href": "/contact",
+            "label": "CONtact",
+            "id": "nav-item-2-0-contact",
+            "slug": "contact",
+            "children": []
           }
         ],
         "ctaLink": "#contact",
@@ -51,55 +60,55 @@
       "id": "hero-77ago8l",
       "type": "hero",
       "props": {
+        "contentX": 50,
+        "contentY": 68,
+        "headline": "",
         "alignment": "center",
+        "floatingX": 50,
+        "floatingY": 24,
         "minHeight": "1200px",
+        "subheadline": "",
+        "contentWidth": 760,
+        "contentHeight": 220,
+        "floatingWidth": 176,
+        "floatingHeight": 176,
+        "floatingImages": [
+          {
+            "x": 50,
+            "y": 50,
+            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+            "width": 280,
+            "height": 320,
+            "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+            "rotation": 0,
+            "animation": "sweep-left",
+            "animationDelay": 0.08,
+            "animationSpeed": 1.45
+          }
+        ],
         "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779674274998-creative-team-social-strategy-collaboration-gr8result.jpg",
         "backgroundStyle": "image",
         "baseLayoutWidth": 1500,
-        "fullWidthBackground": true,
-        "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9",
-        "headline": "",
-        "subheadline": "",
-        "floatingImages": [
-          {
-            "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
-            "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
-            "x": 50,
-            "y": 50,
-            "width": 280,
-            "height": 320,
-            "animation": "sweep-left",
-            "animationDelay": 0.08,
-            "animationSpeed": 1.45,
-            "rotation": 0
-          }
-        ],
-        "contentX": 50,
-        "contentY": 68,
-        "contentWidth": 760,
-        "contentHeight": 220,
-        "floatingX": 50,
-        "floatingY": 24,
-        "floatingWidth": 176,
-        "floatingHeight": 176,
         "hideTextOverlay": true,
         "extraTextOverlays": [
           {
-            "id": "txt-1782009741554",
-            "text": "<span style=\"font-size: 84px;\"><span style=\"font-size: 84px; color: rgb(255, 192, 0);\">ABOUT US</span></span>",
             "x": 50,
             "y": 67,
+            "id": "txt-1782009741554",
+            "text": "<span style=\"font-size: 84px;\"><span style=\"font-size: 84px; color: rgb(255, 192, 0);\">ABOUT US</span></span>",
+            "color": "#ffffff",
             "width": 444,
             "height": 124,
             "fontSize": 18,
-            "color": "#ffffff",
-            "fontWeight": "600",
+            "animation": "fade-in",
             "textAlign": "left",
             "background": "transparent",
-            "animation": "fade-in",
+            "fontWeight": "600",
             "animationDelay": 0
           }
-        ]
+        ],
+        "fullWidthBackground": true,
+        "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9"
       }
     },
     {
@@ -341,22 +350,22 @@
       "id": 1782009837718,
       "type": "cta-button",
       "props": {
-        "eyebrow": "<br>",
-        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
-        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
-        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
         "link": "https://gr8result.digital/login.",
         "note": "<br>",
-        "style": "stacked-card",
         "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
         "alignment": "center",
-        "backgroundColor": "#121c26",
         "textColor": "#ffffff",
-        "buttonColor": "#00b0f0",
-        "buttonTextColor": "#1f2937",
         "borderColor": "rgba(255,255,255,0.18)",
-        "fullWidthBackground": true,
-        "baseLayoutWidth": 1500
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
       }
     }
   ],
@@ -371,16 +380,25 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
-              "label": "Home"
+              "href": "/",
+              "label": "Home",
+              "id": "nav-item-0-0-home",
+              "slug": "home",
+              "children": []
             },
             {
-              "href": "#about-us",
-              "label": "About Us"
+              "href": "/about",
+              "label": "About Us",
+              "id": "nav-item-1-0-about-us",
+              "slug": "about-us",
+              "children": []
             },
             {
-              "href": "#contact",
-              "label": "CONtact"
+              "href": "/contact",
+              "label": "CONtact",
+              "id": "nav-item-2-0-contact",
+              "slug": "contact",
+              "children": []
             }
           ],
           "ctaLink": "#contact",
@@ -412,55 +430,55 @@
         "id": "hero-77ago8l",
         "type": "hero",
         "props": {
+          "contentX": 50,
+          "contentY": 68,
+          "headline": "",
           "alignment": "center",
+          "floatingX": 50,
+          "floatingY": 24,
           "minHeight": "1200px",
+          "subheadline": "",
+          "contentWidth": 760,
+          "contentHeight": 220,
+          "floatingWidth": 176,
+          "floatingHeight": 176,
+          "floatingImages": [
+            {
+              "x": 50,
+              "y": 50,
+              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+              "width": 280,
+              "height": 320,
+              "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
+              "rotation": 0,
+              "animation": "sweep-left",
+              "animationDelay": 0.08,
+              "animationSpeed": 1.45
+            }
+          ],
           "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779674274998-creative-team-social-strategy-collaboration-gr8result.jpg",
           "backgroundStyle": "image",
           "baseLayoutWidth": 1500,
-          "fullWidthBackground": true,
-          "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9",
-          "headline": "",
-          "subheadline": "",
-          "floatingImages": [
-            {
-              "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
-              "assetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780970594596-logo-1776030030268-gr8-result-logo-transparant-background.png",
-              "x": 50,
-              "y": 50,
-              "width": 280,
-              "height": 320,
-              "animation": "sweep-left",
-              "animationDelay": 0.08,
-              "animationSpeed": 1.45,
-              "rotation": 0
-            }
-          ],
-          "contentX": 50,
-          "contentY": 68,
-          "contentWidth": 760,
-          "contentHeight": 220,
-          "floatingX": 50,
-          "floatingY": 24,
-          "floatingWidth": 176,
-          "floatingHeight": 176,
           "hideTextOverlay": true,
           "extraTextOverlays": [
             {
-              "id": "txt-1782009741554",
-              "text": "<span style=\"font-size: 84px;\"><span style=\"font-size: 84px; color: rgb(255, 192, 0);\">ABOUT US</span></span>",
               "x": 50,
               "y": 67,
+              "id": "txt-1782009741554",
+              "text": "<span style=\"font-size: 84px;\"><span style=\"font-size: 84px; color: rgb(255, 192, 0);\">ABOUT US</span></span>",
+              "color": "#ffffff",
               "width": 444,
               "height": 124,
               "fontSize": 18,
-              "color": "#ffffff",
-              "fontWeight": "600",
+              "animation": "fade-in",
               "textAlign": "left",
               "background": "transparent",
-              "animation": "fade-in",
+              "fontWeight": "600",
               "animationDelay": 0
             }
-          ]
+          ],
+          "fullWidthBackground": true,
+          "backgroundImageAssetId": "1f5410e3-fed6-44ea-a283-552c1c5276f9"
         }
       },
       {
@@ -702,22 +720,22 @@
         "id": 1782009837718,
         "type": "cta-button",
         "props": {
-          "eyebrow": "<br>",
-          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
-          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
-          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
           "link": "https://gr8result.digital/login.",
           "note": "<br>",
-          "style": "stacked-card",
           "size": "large",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "style": "stacked-card",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "eyebrow": "<br>",
           "alignment": "center",
-          "backgroundColor": "#121c26",
           "textColor": "#ffffff",
-          "buttonColor": "#00b0f0",
-          "buttonTextColor": "#1f2937",
           "borderColor": "rgba(255,255,255,0.18)",
-          "fullWidthBackground": true,
-          "baseLayoutWidth": 1500
+          "buttonColor": "#00b0f0",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "fullWidthBackground": true
         }
       }
     ],
@@ -726,6 +744,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-06-22T19:50:50.063Z",
+  "savedAt": "2026-07-13T07:20:03.961Z",
   "source": "autosave"
 }

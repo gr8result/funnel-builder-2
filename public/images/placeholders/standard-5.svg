@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Cabinetry and storage inclusion image">
+  <rect width="640" height="420" fill="#edf8f1"/>
+  <rect x="96" y="82" width="448" height="252" rx="12" fill="#ffffff"/>
+  <rect x="128" y="112" width="120" height="190" fill="#d7e8de"/>
+  <rect x="260" y="112" width="120" height="190" fill="#cfe1d6"/>
+  <rect x="392" y="112" width="120" height="190" fill="#d7e8de"/>
+  <circle cx="240" cy="206" r="8" fill="#c59b42"/>
+  <circle cx="392" cy="206" r="8" fill="#c59b42"/>
+  <path d="M112 350h416" stroke="#174a36" stroke-width="10" stroke-linecap="round"/>
+</svg>

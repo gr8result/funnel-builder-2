@@ -165,6 +165,32 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
+    function closeMenus(event) {
+      if (!openDropdown && !mobileOpen) return;
+      const root = wrapperRef.current || shellRef.current;
+      if (root?.contains?.(event.target)) return;
+      setOpenDropdown(null);
+      setMobileOpen(false);
+    }
+
+    function closeOnEscape(event) {
+      if (event.key !== "Escape") return;
+      setOpenDropdown(null);
+      setMobileOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeMenus);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeMenus);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileOpen, openDropdown]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
     const syncCurrentPage = () => setBrowserPageKey(resolveCurrentPageKey());
     syncCurrentPage();
 
@@ -273,6 +299,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
           const isCurrentPage = isCurrentNavLink(item, currentPageKey);
           const isHighlighted = shouldHighlightNavLink(item, currentPageKey);
           const linkState = { ...item, __isCurrentPage: isHighlighted };
+          const itemHref = editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext);
+          const itemDisabled = !editor && itemHref === "#__missing-page";
 
           return (
             <div
@@ -287,23 +315,33 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                 {hasChildren ? (
-                  <button
-                    type="button"
+                  <a
+                    href={itemDisabled ? undefined : itemHref}
+                    aria-disabled={itemDisabled}
                     style={{
                       ...asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted)),
-                      border: "none",
-                      cursor: "pointer",
+                      color: itemDisabled ? "rgba(226,232,240,0.45)" : asStyleObject(buildNavLinkStyle(blockProps, navTheme, isHighlighted)).color,
+                      cursor: itemDisabled ? "not-allowed" : undefined,
+                      textDecoration: "none",
                     }}
                     onMouseEnter={(event) => applyNavHoverEffect(event, blockProps, isHighlighted)}
                     onMouseLeave={(event) => resetNavHoverEffect(event, blockProps, linkState)}
                     onClick={(event) => {
-                      event.preventDefault();
-                      setOpenDropdown((value) => (value === idx ? null : idx));
+                      if (itemDisabled) {
+                        event.preventDefault();
+                        return;
+                      }
+                      if (editor) {
+                        event.preventDefault();
+                        setOpenDropdown((value) => (value === idx ? null : idx));
+                        return;
+                      }
+                      setOpenDropdown(null);
+                      if (shouldUseMobileMenu) setMobileOpen(false);
                     }}
-                    aria-expanded={isOpen}
                   >
                     {item?.label || "Menu"}
-                  </button>
+                  </a>
                 ) : (
                   <a
                     href={editor ? (item?.href || "#") : resolvePublishedNavHref(item, navigationContext)}
@@ -327,6 +365,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                       fontWeight: 600,
                       minHeight: MIN_TAP_SIZE,
                       minWidth: MIN_TAP_SIZE,
+                      position: "relative",
+                      zIndex: 2,
                     }}
                     onClick={(event) => {
                       event.preventDefault();
@@ -353,34 +393,46 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                     background: blockProps.backgroundColor || "#0b1220",
                     border: `1px solid ${blockProps.borderColor || "rgba(148,163,184,0.24)"}`,
                     boxShadow: "0 20px 38px rgba(15,23,42,0.18)",
-                    zIndex: 20,
+                    overflow: "visible",
+                    zIndex: 9999,
                   }}
                 >
-                  {asArray(item.children).map((child, childIdx) => (
-                    <a
-                      key={`${child?.label || "child"}-${childIdx}`}
-                      href={editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext)}
-                      onClick={() => {
-                        setOpenDropdown(null);
-                        if (shouldUseMobileMenu) setMobileOpen(false);
-                      }}
-                      style={{
-                        color: blockProps.textColor || "#e2e8f0",
-                        textDecoration: "none",
-                        fontSize: MIN_TEXT_SIZE,
-                        fontWeight: 600,
-                        padding: "8px 10px",
-                        borderRadius: 10,
-                        minHeight: MIN_TAP_SIZE,
-                        minWidth: MIN_TAP_SIZE,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        background: "rgba(255,255,255,0.04)",
-                      }}
-                    >
-                      {child?.label || "Sub link"}
-                    </a>
-                  ))}
+                  {asArray(item.children).map((child, childIdx) => {
+                    const childHref = editor ? (child?.href || "#") : resolvePublishedNavHref(child, navigationContext);
+                    const disabled = !childHref || childHref === "#__missing-page";
+                    return (
+                      <a
+                        key={`${child?.label || "child"}-${childIdx}`}
+                        href={disabled ? undefined : childHref}
+                        aria-disabled={disabled}
+                        onClick={(event) => {
+                          if (disabled) {
+                            event.preventDefault();
+                            return;
+                          }
+                          setOpenDropdown(null);
+                          if (shouldUseMobileMenu) setMobileOpen(false);
+                        }}
+                        style={{
+                          color: disabled ? "rgba(226,232,240,0.45)" : blockProps.textColor || "#e2e8f0",
+                          cursor: disabled ? "not-allowed" : "pointer",
+                          textDecoration: "none",
+                          fontSize: MIN_TEXT_SIZE,
+                          fontWeight: 600,
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          minHeight: MIN_TAP_SIZE,
+                          minWidth: MIN_TAP_SIZE,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: disabled ? "rgba(255,255,255,0.025)" : "rgba(255,255,255,0.04)",
+                        }}
+                        title={disabled ? "This published page is not available." : undefined}
+                      >
+                        {child?.label || "Sub link"}
+                      </a>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
@@ -6496,6 +6548,12 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   const ctaText      = String(props.ctaText      || "");
   const ctaUrl       = String(props.ctaUrl       || "#");
   const accentColor  = String(props.accentColor  || "#6366f1");
+  const autoplay     = props.autoplay !== false;
+  const loop         = props.loop !== false;
+  const showControls = props.showControls === true || props.controls === true;
+  const startWithAudio = props.startWithAudio === true || props.playAudioOnInteraction === true || props.unmuteOnScroll === true;
+  const initialMuted = props.muted !== false;
+  const preloadMode  = autoplay ? "auto" : "metadata";
 
   const paddingTop    = Number(props.paddingTop    ?? 0);
   const paddingBottom = Number(props.paddingBottom ?? 0);
@@ -6505,8 +6563,13 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   const sectionRef   = React.useRef(null);
   const loadedRef = React.useRef(false);
   const loadedSrcRef = React.useRef("");
-  const [muted, setMuted] = React.useState(true);
+  const [muted, setMuted] = React.useState(initialMuted);
   const debugLabel = `video-hero ${block?.id || "unknown"}`;
+
+  React.useEffect(() => {
+    setMuted(initialMuted);
+    if (videoRef.current) videoRef.current.muted = initialMuted;
+  }, [initialMuted, videoSrc]);
 
   React.useEffect(() => {
     const video = videoRef.current;
@@ -6546,11 +6609,15 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
           } else {
             logHeroVideoDebug(debugLabel, "Video source already active", videoRef.current, { videoSrc });
           }
-          const playResult = videoRef.current.play?.();
-          if (playResult && typeof playResult.catch === "function") {
-            playResult.catch((error) => logHeroVideoDebug(debugLabel, "Video play() failed", videoRef.current, { videoSrc, error: error?.message || String(error || "") }));
+          if (autoplay) {
+            const playResult = videoRef.current.play?.();
+            if (playResult && typeof playResult.catch === "function") {
+              playResult.catch((error) => logHeroVideoDebug(debugLabel, "Video play() failed", videoRef.current, { videoSrc, error: error?.message || String(error || "") }));
+            } else {
+              logHeroVideoDebug(debugLabel, "Video play() requested", videoRef.current, { videoSrc });
+            }
           } else {
-            logHeroVideoDebug(debugLabel, "Video play() requested", videoRef.current, { videoSrc });
+            logHeroVideoDebug(debugLabel, "Video autoplay skipped", videoRef.current, { videoSrc });
           }
           obs.disconnect();
         }
@@ -6559,7 +6626,31 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [debugLabel, editor, videoSrc]);
+  }, [autoplay, debugLabel, editor, videoSrc]);
+
+  React.useEffect(() => {
+    if (editor || !startWithAudio || typeof window === "undefined") return undefined;
+
+    const enableAudioAfterInteraction = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.muted = false;
+      setMuted(false);
+      if (autoplay) {
+        const playResult = video.play?.();
+        if (playResult && typeof playResult.catch === "function") {
+          playResult.catch((error) => logHeroVideoDebug(debugLabel, "Audio play after interaction failed", video, { videoSrc, error: error?.message || String(error || "") }));
+        }
+      }
+    };
+
+    window.addEventListener("pointerdown", enableAudioAfterInteraction, { once: true, passive: true });
+    window.addEventListener("keydown", enableAudioAfterInteraction, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", enableAudioAfterInteraction);
+      window.removeEventListener("keydown", enableAudioAfterInteraction);
+    };
+  }, [autoplay, debugLabel, editor, startWithAudio, videoSrc]);
 
   // -- Upload helpers --------------------------------------------------------
   async function handleVideoUpload(file) {
@@ -6631,6 +6722,14 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     whiteSpace: "nowrap",
   });
 
+  const editorToggleStyle = (active) => ({
+    ...editorOptionButtonStyle(active),
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    userSelect: "none",
+  });
+
   // -- EDITOR mode — controls are in the PropertiesPanel right sidebar ---------
   if (false && editor) {
     return (
@@ -6641,7 +6740,12 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
             <video
               src={videoSrc}
               poster={posterSrc || undefined}
-              muted autoPlay playsInline preload="auto"
+              muted={muted}
+              autoPlay={autoplay}
+              loop={loop}
+              controls={showControls}
+              playsInline
+              preload={preloadMode}
               style={{ width: "100%", maxHeight: 220, objectFit: "cover", objectPosition, display: "block" }}
             />
             <div style={overlayStyle} />
@@ -6825,6 +6929,50 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               {label}
             </button>
           ))}
+          <span style={{ width: 1, height: 22, background: "rgba(255,255,255,0.16)" }} />
+          <label
+            data-no-canvas-drag="true"
+            style={editorToggleStyle(autoplay)}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              applyVideoHeroPatch({ autoplay: !autoplay }, event);
+            }}
+          >
+            <input type="checkbox" checked={autoplay} readOnly tabIndex={-1} style={{ margin: 0 }} />
+            Autoplay
+          </label>
+          <label
+            data-no-canvas-drag="true"
+            style={editorToggleStyle(!muted)}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              applyVideoHeroPatch({ muted: !muted }, event);
+            }}
+          >
+            <input type="checkbox" checked={!muted} readOnly tabIndex={-1} style={{ margin: 0 }} />
+            Audio
+          </label>
+          <label
+            data-no-canvas-drag="true"
+            style={editorToggleStyle(startWithAudio)}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const next = !startWithAudio;
+              applyVideoHeroPatch({ startWithAudio: next, playAudioOnInteraction: next, unmuteOnScroll: next }, event);
+            }}
+          >
+            <input type="checkbox" checked={startWithAudio} readOnly tabIndex={-1} style={{ margin: 0 }} />
+            Auto audio
+          </label>
+          <button type="button" draggable={false} onMouseDown={(event) => applyVideoHeroPatch({ loop: !loop }, event)} style={editorOptionButtonStyle(loop)}>
+            Loop
+          </button>
+          <button type="button" draggable={false} onMouseDown={(event) => applyVideoHeroPatch({ showControls: !showControls, controls: !showControls }, event)} style={editorOptionButtonStyle(showControls)}>
+            Controls
+          </button>
         </div>
       ) : null}
 
@@ -6834,9 +6982,11 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
         src={videoSrc || undefined}
         poster={posterSrc || undefined}
         muted={muted}
-        autoPlay
+        autoPlay={autoplay}
+        loop={loop}
+        controls={showControls}
         playsInline
-        preload="auto"
+        preload={preloadMode}
         onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
         onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
         onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}

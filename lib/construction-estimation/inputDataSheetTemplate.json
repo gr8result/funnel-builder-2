@@ -96,6 +96,31 @@
       "fill": ""
     },
     {
+      "key": "expectedBuildDuration",
+      "sourceRow": 6,
+      "section": "Project Setup",
+      "label": "Expected Build Duration",
+      "unit": "",
+      "value": "",
+      "formula": "",
+      "excelFormula": "",
+      "note": "",
+      "userNote": "",
+      "heading": false,
+      "calculated": false,
+      "editable": true,
+      "options": [
+        "12 Weeks",
+        "16 Weeks",
+        "18 Weeks",
+        "22 Weeks",
+        "24 Weeks",
+        "28 Weeks",
+        "Unknown"
+      ],
+      "fill": ""
+    },
+    {
       "key": "heading_floor_types",
       "sourceRow": 7,
       "section": "FLOOR TYPES",

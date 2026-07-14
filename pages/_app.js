@@ -17,9 +17,16 @@ function isBenignDevRuntimeNoise(error) {
   if (process.env.NODE_ENV !== "development") return false;
 
   const message = String(error?.message || error || "");
+  const name = String(error?.name || "");
   const stack = String(error?.stack || "");
+  const combined = `${name} ${message} ${stack}`.toLowerCase();
 
-  if (message.includes("Lock broken by another request with the 'steal' option")) {
+  if (
+    combined.includes("lock broken by another request")
+    || (combined.includes("aborterror") && combined.includes("lock broken"))
+    || (combined.includes("aborterror") && combined.includes("steal"))
+    || (combined.includes("lock") && combined.includes("steal"))
+  ) {
     return true;
   }
 
@@ -27,24 +34,46 @@ function isBenignDevRuntimeNoise(error) {
     && stack.includes("hot-reloader-pages");
 }
 
+let devRuntimeNoiseGuardInstalled = false;
+
+function installDevRuntimeNoiseGuard() {
+  if (process.env.NODE_ENV !== "development" || typeof window === "undefined") return undefined;
+  if (devRuntimeNoiseGuardInstalled) return undefined;
+  devRuntimeNoiseGuardInstalled = true;
+
+  const originalReportError = window.reportError;
+
+  const stopOverlay = (event) => {
+    const error = event?.reason || event?.error || event;
+    if (!isBenignDevRuntimeNoise(error)) return;
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+  };
+
+  window.addEventListener("error", stopOverlay, true);
+  window.addEventListener("unhandledrejection", stopOverlay, true);
+  if (typeof originalReportError === "function") {
+    window.reportError = (error) => {
+      if (isBenignDevRuntimeNoise(error)) return;
+      return originalReportError.call(window, error);
+    };
+  }
+
+  return () => {
+    window.removeEventListener("error", stopOverlay, true);
+    window.removeEventListener("unhandledrejection", stopOverlay, true);
+    if (typeof originalReportError === "function") {
+      window.reportError = originalReportError;
+    }
+    devRuntimeNoiseGuardInstalled = false;
+  };
+}
+
+installDevRuntimeNoiseGuard();
+
 function DevRuntimeNoiseGuard() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "development" || typeof window === "undefined") return undefined;
-
-    const stopOverlay = (event) => {
-      const error = event?.reason || event?.error;
-      if (!isBenignDevRuntimeNoise(error)) return;
-      event.preventDefault?.();
-      event.stopImmediatePropagation?.();
-    };
-
-    window.addEventListener("error", stopOverlay, true);
-    window.addEventListener("unhandledrejection", stopOverlay, true);
-
-    return () => {
-      window.removeEventListener("error", stopOverlay, true);
-      window.removeEventListener("unhandledrejection", stopOverlay, true);
-    };
+    return installDevRuntimeNoiseGuard();
   }, []);
 
   return null;

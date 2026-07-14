@@ -330,6 +330,15 @@ export default function EmailMarketingHub() {
                 ]}
               />
               <Card
+                colour="#2563eb"
+                icon="✉"
+                title="Compose Email"
+                blurb="Send a normal one-off business email."
+                actions={[
+                  { href: "/modules/email/compose", label: "Open Composer" },
+                ]}
+              />
+              <Card
                 colour="#a855f7"
                 icon="⏱️"
                 title="Autoresponders"

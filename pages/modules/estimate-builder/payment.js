@@ -1,10 +1,16 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { isDeveloperAccount } from "../../../lib/estimate-builder/developerBypass";
 
 export default function EstimateJobPaymentPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [job, setJob] = useState(null);
   const [method, setMethod] = useState("stripe");
+  const developerBypass = isDeveloperAccount(user?.email);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -13,6 +19,41 @@ export default function EstimateJobPaymentPage() {
       if (raw) setJob(JSON.parse(raw));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (loading || !developerBypass || typeof window === "undefined") return;
+    if (!job) {
+      router.replace("/modules/estimate-builder/register-job");
+      return;
+    }
+
+    // DEV ONLY / OWNER TESTING BYPASS: support@gr8result.com skips Payment
+    // Access and opens the estimate workbook without Stripe or credit usage.
+    const jobId = job.jobId || `builder-job-${Date.now()}`;
+    const registeredJob = {
+      ...job,
+      jobId,
+      registeredAt: job.registeredAt || new Date().toISOString(),
+      creditCharged: 0,
+      developerBypass: true,
+      status: "registered",
+    };
+    try {
+      const jobs = JSON.parse(window.localStorage.getItem("estimate-builder-registered-jobs") || "[]");
+      window.localStorage.setItem("estimate-builder-registered-jobs", JSON.stringify([...jobs, registeredJob]));
+      window.localStorage.setItem("estimate-builder-active-registered-job", JSON.stringify(registeredJob));
+      window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify({
+        storageMode: "registered-job",
+        savedAt: registeredJob.registeredAt,
+        registeredJobId: registeredJob.jobId,
+        projectName: registeredJob.jobName,
+        templateKey: "template:master-estimate-template",
+        templateName: "Master Estimate Template",
+      }));
+      window.localStorage.removeItem("estimate-builder-pending-job");
+    } catch {}
+    router.replace("/modules/estimate-builder");
+  }, [developerBypass, job, loading, router]);
 
   return (
     <>
@@ -42,9 +83,19 @@ export default function EstimateJobPaymentPage() {
           </div>
 
           <div style={styles.confirmBox}>
-            <p style={styles.confirmText}>You hereby confirm you are about to pay the amount of</p>
-            <div style={styles.amount}>$59.00</div>
-            <p style={styles.confirmText}>for the above job.</p>
+            {developerBypass ? (
+              <>
+                <p style={styles.confirmText}>DEV ONLY / OWNER TESTING BYPASS is active for support@gr8result.com.</p>
+                <div style={styles.amount}>Unlimited</div>
+                <p style={styles.confirmText}>No Stripe payment or job credit is required. Opening the estimate workbook.</p>
+              </>
+            ) : (
+              <>
+                <p style={styles.confirmText}>You hereby confirm you are about to pay the amount of</p>
+                <div style={styles.amount}>$59.00</div>
+                <p style={styles.confirmText}>for the above job.</p>
+              </>
+            )}
           </div>
 
           <div style={styles.paymentBox}>
@@ -64,8 +115,8 @@ export default function EstimateJobPaymentPage() {
               </span>
             </label>
 
-            <button style={styles.primaryButton} onClick={() => {}}>
-              Confirm {method === "stripe" ? "Stripe" : "PayPal"} Payment
+            <button style={developerBypass ? styles.primaryButtonDisabled : styles.primaryButton} onClick={() => {}} disabled={developerBypass}>
+              {developerBypass ? "Payment Skipped" : `Confirm ${method === "stripe" ? "Stripe" : "PayPal"} Payment`}
             </button>
           </div>
         </section>
@@ -140,4 +191,5 @@ const styles = {
   method: { border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, display: "flex", gap: 12, alignItems: "center", cursor: "pointer" },
   methodActive: { border: "2px solid #f59e0b", borderRadius: 10, padding: 13, display: "flex", gap: 12, alignItems: "center", cursor: "pointer", background: "#fffbeb" },
   primaryButton: { marginTop: 4, background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 8, padding: "12px 16px", fontWeight: 900, cursor: "pointer" },
+  primaryButtonDisabled: { marginTop: 4, background: "#94a3b8", color: "#ffffff", border: "1px solid #94a3b8", borderRadius: 8, padding: "12px 16px", fontWeight: 900, cursor: "not-allowed" },
 };

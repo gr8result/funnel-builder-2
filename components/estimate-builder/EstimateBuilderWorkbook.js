@@ -1,10 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import {
+  BarChart3,
+  Briefcase,
+  Building2,
+  Calculator,
+  ClipboardList,
+  FileText,
+  FolderKanban,
+  Handshake,
+  Home,
+  LayoutDashboard,
+  Package,
+  Presentation,
+  RefreshCw,
+  Ruler,
+  Settings,
+  Truck,
+} from "lucide-react";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import { useJobFile } from "../../hooks/useJobFile";
-import { V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
+import { supabase } from "../../utils/supabase-client";
+import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
+import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
+import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
+import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
+import { createPremierInclusionsDocument } from "../document-engine/templates/standardInclusionsTemplate";
+import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
+import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
+
+export const USE_NEW_TAKEOFF_ENGINE = true;
 
 // AI Plan Takeoff — loaded client-side only (uses canvas, PDF.js, localStorage)
 const AIPlanTakeoffPage = dynamic(() => import("./ai-takeoff/AIPlanTakeoffPage"), {
@@ -18,10 +46,304 @@ const GanttBuilderPage = dynamic(() => import("./gantt/GanttBuilderPage"), {
   loading: () => <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading AI Gantt Builder…</div>,
 });
 
+const CommercialBoqPage = dynamic(() => import("../../pages/modules/builders/boq"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="BOQ" />,
+});
+
+const CommercialPurchaseOrdersPage = dynamic(() => import("../../pages/modules/builders/purchase-orders"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Purchase Orders" />,
+});
+
+const CommercialVariationsPage = dynamic(() => import("../../pages/modules/builders/variations"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Variations" />,
+});
+
+const CommercialBudgetVsActualPage = dynamic(() => import("../../pages/modules/builders/budget-vs-actual"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Budget vs Actual" />,
+});
+
+const CommercialSupplierInvoicesPage = dynamic(() => import("../../pages/modules/builders/supplier-invoices"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Supplier Invoices" />,
+});
+
+const CommercialProcurementSchedulePage = dynamic(() => import("../../pages/modules/builders/procurement-schedule"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Procurement Schedule" />,
+});
+
+const CommercialClientSelectionsPage = dynamic(() => import("../../pages/modules/builders/selections-book"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Selections Book" />,
+});
+
+const PremierInclusionsCanvasEditor = dynamic(() => import("./standard-inclusions/PremierInclusionsCanvasEditor"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading editable Premier Inclusions page...</div>,
+});
+
+const DocumentPageBuilder = dynamic(() => import("../document-engine/editor/DocumentPageBuilder"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading document page builder...</div>,
+});
+
+const CommercialQuoteApprovalsPage = dynamic(() => import("../../pages/modules/builders/quote-approvals"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Quote Approvals" />,
+});
+
+const CommercialDocumentVaultPage = dynamic(() => import("../../pages/modules/builders/document-vault"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Document Vault" />,
+});
+
+const CommercialRfisPage = dynamic(() => import("../../pages/modules/builders/rfis"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="RFIs" />,
+});
+
 const DATA_INPUT_SECTIONS_FOR_LOOKUP = V4_DATA_SECTIONS || [];
+const SUPPLIER_QUOTATION_SECTION_KEY = "subcontractorQuotes";
+
+const WORKSPACE_VISUALS = {
+  projectDashboard: {
+    title: "Project Workspace",
+    subtitle: "A premium command centre for the estimate, takeoff, BOQ, procurement, selections and client approvals.",
+    color: "#2563eb",
+    soft: "#eff6ff",
+    border: "#bfdbfe",
+    gradient: "linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)",
+    Icon: LayoutDashboard,
+  },
+  jobDetails: {
+    title: "Job Details",
+    subtitle: "Manage project name, client, address, builder and estimate basics.",
+    color: "#2563eb",
+    soft: "#eff6ff",
+    border: "#bfdbfe",
+    gradient: "linear-gradient(135deg, #2563eb 0%, #38bdf8 100%)",
+    Icon: Briefcase,
+  },
+  dataInput: {
+    title: "Project Setup",
+    subtitle: "The source of truth for construction assumptions, quantities and linked workbook inputs.",
+    color: "#0d9488",
+    soft: "#f0fdfa",
+    border: "#99f6e4",
+    gradient: "linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)",
+    Icon: Building2,
+  },
+  aiPlanTakeoff: {
+    title: "Takeoff Engine",
+    subtitle: "Upload plans, measure areas, scale drawings and create takeoff quantities.",
+    color: "#7c3aed",
+    soft: "#f5f3ff",
+    border: "#ddd6fe",
+    gradient: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+    Icon: Ruler,
+  },
+  windowsDoors: {
+    title: "Windows & Doors",
+    subtitle: "Review window, door and opening schedules linked to the estimate.",
+    color: "#0284c7",
+    soft: "#f0f9ff",
+    border: "#bae6fd",
+    gradient: "linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)",
+    Icon: Home,
+  },
+  boq: {
+    title: "BOQ",
+    subtitle: "Review quantities, trade categories, materials, labour and estimate build-up.",
+    color: "#16a34a",
+    soft: "#f0fdf4",
+    border: "#bbf7d0",
+    gradient: "linear-gradient(135deg, #16a34a 0%, #84cc16 100%)",
+    Icon: ClipboardList,
+  },
+  quotation: {
+    title: "Quotation Builder",
+    subtitle: "Build the detailed quote and final quotation workflow with line items, margins, GST, allowances and totals.",
+    color: "#f97316",
+    soft: "#fff7ed",
+    border: "#fed7aa",
+    gradient: "linear-gradient(135deg, #f97316 0%, #f59e0b 100%)",
+    Icon: Calculator,
+  },
+  standardInclusions: {
+    title: "Standard Inclusions",
+    subtitle: "Edit the builder baseline inclusions package used to price Project Estimates.",
+    color: "#15803d",
+    soft: "#f0fdf4",
+    border: "#bbf7d0",
+    gradient: "linear-gradient(135deg, #166534 0%, #22c55e 100%)",
+    Icon: FileText,
+  },
+  productLibrary: {
+    title: "Product Library",
+    subtitle: "Manage reusable product records imported from the Quote Sheet CSV.",
+    color: "#0f766e",
+    soft: "#ecfdf5",
+    border: "#99f6e4",
+    gradient: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)",
+    Icon: Package,
+  },
+  projectEstimate: {
+    title: "Project Estimate",
+    subtitle: "Prepare the client-facing estimate pack with cover, summary, pricing, inclusions, terms and acceptance.",
+    color: "#b7791f",
+    soft: "#fffbeb",
+    border: "#fde68a",
+    gradient: "linear-gradient(135deg, #92400e 0%, #d97706 100%)",
+    Icon: FileText,
+  },
+  supplierQuotations: {
+    title: "Supplier Quotations",
+    subtitle: "Track supplier and subcontractor quotes before converting them to costs or purchase orders.",
+    color: "#0891b2",
+    soft: "#ecfeff",
+    border: "#a5f3fc",
+    gradient: "linear-gradient(135deg, #0891b2 0%, #22d3ee 100%)",
+    Icon: Handshake,
+  },
+  procurement: {
+    title: "Procurement",
+    subtitle: "Manage materials, ordering dates, delivery status and supplier follow-up.",
+    color: "#059669",
+    soft: "#ecfdf5",
+    border: "#a7f3d0",
+    gradient: "linear-gradient(135deg, #059669 0%, #34d399 100%)",
+    Icon: Truck,
+  },
+  budgetVsActual: {
+    title: "Budget vs Actual",
+    subtitle: "Compare original estimate, approved changes, committed costs, invoices and remaining budget.",
+    color: "#65a30d",
+    soft: "#f7fee7",
+    border: "#d9f99d",
+    gradient: "linear-gradient(135deg, #65a30d 0%, #84cc16 100%)",
+    Icon: BarChart3,
+  },
+  purchaseOrders: {
+    title: "Purchase Orders",
+    subtitle: "Create and track supplier, subcontractor and material purchase orders.",
+    color: "#d97706",
+    soft: "#fffbeb",
+    border: "#fde68a",
+    gradient: "linear-gradient(135deg, #d97706 0%, #fbbf24 100%)",
+    Icon: Package,
+  },
+  supplierInvoices: {
+    title: "Supplier Invoices",
+    subtitle: "Record supplier invoices and feed actual costs into budget tracking.",
+    color: "#b45309",
+    soft: "#fffbeb",
+    border: "#fde68a",
+    gradient: "linear-gradient(135deg, #b45309 0%, #f59e0b 100%)",
+    Icon: FileText,
+  },
+  variations: {
+    title: "Variations",
+    subtitle: "Create, approve and track client changes and cost adjustments.",
+    color: "#db2777",
+    soft: "#fdf2f8",
+    border: "#fbcfe8",
+    gradient: "linear-gradient(135deg, #db2777 0%, #f472b6 100%)",
+    Icon: RefreshCw,
+  },
+  clientSelections: {
+    title: "Client Selections",
+    subtitle: "Open the premium tablet-friendly Selections Book for finishes, fixtures, colours and client choices.",
+    color: "#4f46e5",
+    soft: "#eef2ff",
+    border: "#c7d2fe",
+    gradient: "linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)",
+    Icon: Home,
+  },
+  clientPage: {
+    title: "Estimate Pack",
+    subtitle: "Prepare the client-facing estimate pack with summary, pricing, inclusions, terms and acceptance.",
+    color: "#8b5cf6",
+    soft: "#f5f3ff",
+    border: "#ddd6fe",
+    gradient: "linear-gradient(135deg, #8b5cf6 0%, #c084fc 100%)",
+    Icon: Presentation,
+  },
+  quoteApprovals: {
+    title: "Quote Approvals",
+    subtitle: "Track signed quote, variation, selection and change authority approvals.",
+    color: "#7c3aed",
+    soft: "#f5f3ff",
+    border: "#ddd6fe",
+    gradient: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
+    Icon: ClipboardList,
+  },
+  documentVault: {
+    title: "Document Vault",
+    subtitle: "Store plans, approvals, signed documents, warranties, contracts and supplier records.",
+    color: "#0f766e",
+    soft: "#f0fdfa",
+    border: "#99f6e4",
+    gradient: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)",
+    Icon: FolderKanban,
+  },
+  rfis: {
+    title: "RFIs",
+    subtitle: "Manage client questions, builder responses, priorities and due dates.",
+    color: "#be123c",
+    soft: "#fff1f2",
+    border: "#fecdd3",
+    gradient: "linear-gradient(135deg, #be123c 0%, #fb7185 100%)",
+    Icon: FileText,
+  },
+  clientPortal: {
+    title: "Client Portal",
+    subtitle: "Share quotes, selections, variations, approvals and project documents with the client.",
+    color: "#0ea5e9",
+    soft: "#f0f9ff",
+    border: "#bae6fd",
+    gradient: "linear-gradient(135deg, #0ea5e9 0%, #7dd3fc 100%)",
+    Icon: FileText,
+  },
+  cashflowSummary: {
+    title: "Reports",
+    subtitle: "Review cashflow, budget, cost, margin and project status reporting.",
+    color: "#65a30d",
+    soft: "#f7fee7",
+    border: "#d9f99d",
+    gradient: "linear-gradient(135deg, #65a30d 0%, #bef264 100%)",
+    Icon: BarChart3,
+  },
+  summary: {
+    title: "Reports",
+    subtitle: "Review totals, margins, allowances, GST and workbook summary reporting.",
+    color: "#65a30d",
+    soft: "#f7fee7",
+    border: "#d9f99d",
+    gradient: "linear-gradient(135deg, #65a30d 0%, #bef264 100%)",
+    Icon: BarChart3,
+  },
+  settings: {
+    title: "Settings",
+    subtitle: "Manage job settings, estimate rules, defaults and workbook options.",
+    color: "#475569",
+    soft: "#f8fafc",
+    border: "#cbd5e1",
+    gradient: "linear-gradient(135deg, #475569 0%, #94a3b8 100%)",
+    Icon: Settings,
+  },
+};
+
+function workspaceVisual(pageKey) {
+  return WORKSPACE_VISUALS[pageKey] || WORKSPACE_VISUALS.projectDashboard;
+}
 
 export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "" } = {}) {
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
+  const { workspaceId, loading: workspaceLoading } = useWorkspace();
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
@@ -33,16 +355,18 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const [newJobForm, setNewJobForm] = useState({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
   const [jobFileError, setJobFileError] = useState("");
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
-  const currentPage = sheet.pages.find((page) => page.key === sheet.workbook.page);
+  const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
+  const [showDeveloperControls, setShowDeveloperControls] = useState(false);
   const jobFilePayload = useMemo(() => workbookToJobFileData(sheet.workbook), [sheet.workbook]);
   const jobFile = useJobFile({
     enabled: !previewMode,
     jobData: jobFilePayload,
     autoSaveDelayMs: 3000,
     onError: (message) => {
-      if (message) setJobFileError(message);
+      if (message && !isWorkbookLoaded(sheet.workbook)) setJobFileError(message);
     },
     onOpenJob: async (job, fileName) => {
+      setJobFileError("");
       const nextWorkbook = {
         ...(job.workbook || {}),
         jobFileMeta: {
@@ -58,13 +382,34 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       await sheet.loadJobFileText(JSON.stringify({ ...job, workbook: nextWorkbook }), fileName || "job.gr8job");
     },
   });
-  const openFileName = jobFile.currentFileName || openWorkbookFileName(sheet.workbook);
   const lockHandlers = previewMode ? previewProtectionHandlers : {};
+
+  useEffect(() => {
+    if (jobFileError && isWorkbookLoaded(sheet.workbook)) setJobFileError("");
+  }, [jobFileError, sheet.workbook]);
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
+  const isCommercialSyncing = commercialSyncStatus.state === "syncing";
+  const activeVisual = workspaceVisual(sheet.workbook.page);
+  const ActivePageIcon = activeVisual.Icon;
+  const openJobDetails = openJobHeaderDetails(sheet.workbook);
+  const commercialModuleContext = useMemo(() => ({
+    embedded: true,
+    workspaceId,
+    workbook: sheet.workbook,
+    calculated: sheet.preview,
+    projectId: commercialSyncStatus.projectId || "",
+    estimateSnapshotId: commercialSyncStatus.snapshotId || "",
+    snapshotId: commercialSyncStatus.snapshotId || "",
+    onSyncSnapshot: handleCommercialSnapshotSync,
+  }), [workspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    setShowDeveloperControls(window.localStorage.getItem("estimate-builder-show-developer-controls") === "true");
   }, []);
 
   async function runSaveAction(label, action) {
@@ -125,6 +470,49 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     }
   }
 
+  async function handleCommercialSnapshotSync() {
+    if (previewMode || isCommercialSyncing) return;
+    if (!workspaceId) {
+      setCommercialSyncStatus({
+        state: "error",
+        message: workspaceLoading ? "Workspace is still loading. Please try again in a moment." : "Choose an active workspace before syncing to Project Commercials.",
+        projectId: "",
+        snapshotId: "",
+        syncedAt: "",
+      });
+      return;
+    }
+
+    setCommercialSyncStatus({ state: "syncing", message: "Syncing commercial snapshot...", projectId: "", snapshotId: "", syncedAt: "" });
+    try {
+      const calculated = calculateEstimateBuilderWorkbook(sheet.workbook);
+      const result = await syncCommercialSnapshot({
+        workspace_id: workspaceId,
+        project: commercialProjectMetadataFromWorkbook(sheet.workbook, jobFilePayload),
+        workbook: sheet.workbook,
+        calculated,
+      });
+      const projectId = result?.project_id || result?.data?.project?.id || "";
+      const snapshotId = result?.snapshot_id || result?.data?.snapshot?.id || "";
+      const syncedAt = result?.data?.snapshot?.created_at || new Date().toISOString();
+      setCommercialSyncStatus({
+        state: "success",
+        message: `Commercial snapshot synced${snapshotId ? `: ${snapshotId}` : ""}`,
+        projectId,
+        snapshotId,
+        syncedAt,
+      });
+    } catch (error) {
+      setCommercialSyncStatus({
+        state: "error",
+        message: error?.message || "Commercial snapshot sync failed.",
+        projectId: "",
+        snapshotId: "",
+        syncedAt: "",
+      });
+    }
+  }
+
   useEffect(() => {
     if (previewMode || !mode) return;
     const key = `${mode}:${recentId || ""}`;
@@ -133,42 +521,85 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
 
     if (mode === "open-job") {
       jobFile.open().then((result) => {
-        if (!result.ok && result.message) setJobFileError(result.message);
+        if (result.ok) setJobFileError("");
+        else if (result.message && !isWorkbookLoaded(sheet.workbook)) setJobFileError(result.message);
       }).catch(() => {
-        setJobFileError("This job file could not be opened.");
+        if (!isWorkbookLoaded(sheet.workbook)) setJobFileError("This job file could not be opened.");
+      }).finally(() => {
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", "/modules/estimate-builder");
+        }
       });
     }
     if (mode === "open-recent" && recentId) {
       jobFile.openRecent(recentId).then((result) => {
-        if (!result.ok && result.message) setJobFileError(result.message);
+        if (result.ok) setJobFileError("");
+        else if (result.message && !isWorkbookLoaded(sheet.workbook)) setJobFileError(result.message);
       }).catch(() => {
-        setJobFileError("This job file could not be opened.");
+        if (!isWorkbookLoaded(sheet.workbook)) setJobFileError("This job file could not be opened.");
+      }).finally(() => {
+        if (typeof window !== "undefined") {
+          window.history.replaceState({}, "", "/modules/estimate-builder");
+        }
       });
-    }
-
-    if (typeof window !== "undefined") {
-      window.history.replaceState({}, "", "/modules/estimate-builder");
     }
   }, [mode, recentId, previewMode, jobFile]);
 
   return (
     <div style={{ ...styles.shell, ...(previewMode ? styles.previewShell : {}) }} {...lockHandlers}>
+      <style jsx global>{`
+        .project-workspace-nav-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+        }
+        .project-workspace-nav-button:hover .project-workspace-nav-icon,
+        .project-workspace-card:hover .project-workspace-card-icon {
+          transform: scale(1.06) rotate(-2deg);
+        }
+        .project-workspace-card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
+        }
+      `}</style>
       <aside style={styles.nav}>
-        <div style={styles.eyebrow}>Estimate Builder</div>
-        <h2 style={styles.navTitle}>{previewMode ? "Preview" : "Workbook"}</h2>
-        {sheet.pages.map((page) => (
+        <div style={styles.navBrand}>
+          <span style={styles.navBrandIcon}><FolderKanban size={30} strokeWidth={2.4} /></span>
+          <span>
+            <span style={styles.navEyebrow}>Projects Hub</span>
+            <strong style={styles.navTitle}>{previewMode ? "Preview" : "Project Workspace"}</strong>
+          </span>
+        </div>
+        <div style={styles.navQuoteTotalLine}>
+          <span>Current quote total</span>
+          <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
+        </div>
+        {sheet.pages.map((page) => {
+          const visual = workspaceVisual(page.key);
+          const NavIcon = visual.Icon;
+          const active = sheet.workbook.page === page.key;
+          return (
           <button
             key={page.key}
-            style={{ ...styles.navButton, ...(sheet.workbook.page === page.key ? styles.navButtonActive : {}) }}
+            className="project-workspace-nav-button"
+            style={{
+              ...styles.navButton,
+              borderColor: visual.color,
+              color: active ? "#ffffff" : visual.color,
+              background: active ? visual.color : "#ffffff",
+              boxShadow: active ? `0 14px 28px ${visual.color}33` : "0 8px 18px rgba(15, 23, 42, 0.05)",
+            }}
             onClick={() => sheet.setPage(page.key)}
           >
-            {page.label}
+            <span className="project-workspace-nav-icon" style={{ ...styles.navButtonIcon, background: active ? "rgba(255,255,255,0.18)" : visual.soft }}>
+              <NavIcon size={22} strokeWidth={2.4} />
+            </span>
+            <span>{page.label}</span>
           </button>
-        ))}
+        );})}
         <div style={styles.navNote}>
           {previewMode
             ? "Preview mode is blank and locked. Data entry, editing, copying, saving, and exports are disabled."
-            : "Data Input feeds calculations, quotation rows, subtotals, margin, GST, and final quote total. Rates stay editable in the quotation sheet."}
+            : "Project Setup remains the source of truth. Dashboard fields, quote totals, supplier quotes, and workbook pages stay linked to the same estimate data."}
         </div>
         {!previewMode && (
           <FloatingSaveJob
@@ -179,16 +610,9 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       </aside>
 
       <main style={styles.main}>
-        <div style={styles.topbar}>
-          <div>
-            <div style={styles.eyebrow}>Clean workbook import</div>
-            <h1 style={styles.pageTitle}>{currentPage?.label}</h1>
-          </div>
-          <div style={styles.openFileBanner}>
-            <span style={styles.openFileLabel}>Open file</span>
-            <span style={styles.openFileName}>{previewMode ? "Preview - blank locked estimator" : openFileName}</span>
-          </div>
+        <div style={styles.compactControlRow}>
           <div style={styles.topControls}>
+            <a href="/modules/construction" style={styles.bannerBackButton}>Back to Projects Hub</a>
             {previewMode ? (
               <span style={styles.lockedBadge}>Locked Preview</span>
             ) : (
@@ -221,28 +645,54 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
               onClose={() => setTemplateMenuOpen(false)}
               onSaveAction={runSaveAction}
               busy={isSaving}
+              showDeveloperControls={showDeveloperControls}
             />
+            {showDeveloperControls ? (
+              <button
+                type="button"
+                style={{ ...styles.commercialSyncButton, ...(isCommercialSyncing ? styles.commercialSyncButtonDisabled : {}) }}
+                disabled={isCommercialSyncing || workspaceLoading}
+                onClick={handleCommercialSnapshotSync}
+              >
+                {isCommercialSyncing ? "Syncing..." : "Sync to Project Commercials"}
+              </button>
+            ) : null}
             {saveStatus.state !== "idle" ? (
               <SaveProgress status={saveStatus} />
             ) : sheet.lastSavedAt ? (
               <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
             ) : null}
-            {sheet.workbook.page === "quotation" && (
+            {(sheet.workbook.page === "quotation" || sheet.workbook.page === "clientSelections") && (
               <div style={styles.quoteSearchControls}>
-                <input
-                  style={styles.searchInput}
-                  placeholder="Search line item"
-                  value={sheet.lineSearch}
-                  onChange={(event) => sheet.setLineSearch(event.target.value)}
-                />
-                <label style={styles.checkLabel}>
-                  <input
-                    type="checkbox"
-                    checked={sheet.hideUnused}
-                    onChange={(event) => sheet.setHideUnused(event.target.checked)}
-                  />
-                  Hide unused
-                </label>
+                {sheet.workbook.page === "quotation" ? (
+                  <>
+                    <input
+                      style={styles.searchInput}
+                      placeholder="Search line item"
+                      value={sheet.lineSearch}
+                      onChange={(event) => sheet.setLineSearch(event.target.value)}
+                    />
+                    <label style={styles.checkLabel}>
+                      <input
+                        type="checkbox"
+                        checked={sheet.hideUnused}
+                        onChange={(event) => sheet.setHideUnused(event.target.checked)}
+                      />
+                      Hide unused
+                    </label>
+                    <button type="button" style={styles.secondaryButton} onClick={() => exportQuoteSelectionsCsv(sheet)}>
+                      Export to Selections CSV
+                    </button>
+                  </>
+                ) : null}
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => exportQuoteSheetCsv(sheet)}
+                  title="Download the current quote sheet line items as a CSV"
+                >
+                  Download Quote Sheet CSV
+                </button>
               </div>
             )}
               </>
@@ -250,14 +700,56 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           </div>
         </div>
 
+        {showDeveloperControls && commercialSyncStatus.state !== "idle" && (
+          <div
+            style={{
+              ...styles.commercialSyncStatus,
+              ...(commercialSyncStatus.state === "error" ? styles.commercialSyncStatusError : {}),
+              ...(commercialSyncStatus.state === "success" ? styles.commercialSyncStatusSuccess : {}),
+            }}
+            role={commercialSyncStatus.state === "error" ? "alert" : "status"}
+          >
+            <strong>{commercialSyncStatus.state === "success" ? "Synced" : commercialSyncStatus.state === "error" ? "Sync failed" : "Syncing"}</strong>
+            <span>{commercialSyncStatus.message}</span>
+            {commercialSyncStatus.syncedAt ? <small>{new Date(commercialSyncStatus.syncedAt).toLocaleString()}</small> : null}
+          </div>
+        )}
+
+        <section style={{ ...styles.topbar, background: activeVisual.gradient }}>
+          <div style={styles.pageBannerTitleGroup}>
+            <span style={styles.pageBannerIcon}><ActivePageIcon size={34} strokeWidth={2.3} /></span>
+            <span>
+              <span style={styles.pageBannerEyebrow}>Estimate Builder</span>
+              <h1 style={styles.pageTitle}>{activeVisual.title}</h1>
+              <p style={styles.pageBannerSubtitle}>{activeVisual.subtitle}</p>
+            </span>
+          </div>
+          <div style={styles.openFileBanner}>
+            <span style={styles.openFileLabel}>Current saved file</span>
+            <span style={styles.openFileName}>{openJobDetails.fileName}</span>
+          </div>
+          <div style={styles.openJobBanner}>
+            <OpenJobHeaderField label="Open Job" value={openJobDetails.projectName} />
+            <OpenJobHeaderField label="Job #" value={openJobDetails.jobNumber} />
+            <OpenJobHeaderField label="Address" value={openJobDetails.projectAddress} wide />
+          </div>
+        </section>
+
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
+            {sheet.workbook.page === "projectDashboard" && (
+              <ProjectDashboardSheet sheet={sheet} />
+            )}
             {sheet.workbook.page === "dataInput" && (
               <DataInputSheet
                 sheet={sheet}
+                sections={dataInputWorkbookSections(sheet)}
                 formulaTarget={formulaTarget}
                 onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
                 canEditFormulas={isAdminMode}
               />
+            )}
+            {sheet.workbook.page === "supplierQuotations" && (
+              <SupplierQuotationsSheet sheet={sheet} />
             )}
             {sheet.workbook.page === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
             {sheet.workbook.page === "formulaSheet" && (
@@ -267,14 +759,27 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                 onPickFormulaReference={(key) => insertQuoteQuantityReference(sheet, formulaTarget, key)}
                 canEditFormulas={isAdminMode}
               />
-            )}
+          )}
           {sheet.workbook.page === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
+          {sheet.workbook.page === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
+          {sheet.workbook.page === "productLibrary" && <ProductLibrarySheet sheet={sheet} />}
+          {sheet.workbook.page === "estimateInclusions" && <EstimateInclusionsSheet sheet={sheet} />}
           {sheet.workbook.page === "summary" && <SummarySheet sheet={sheet} />}
+          {sheet.workbook.page === "projectEstimate" && <ProjectEstimateSheet sheet={sheet} />}
           {sheet.workbook.page === "clientPage" && <ClientPageSheet sheet={sheet} />}
+          {sheet.workbook.page === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "clientSelections" && <CommercialClientSelectionsPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "documentVault" && <CommercialDocumentVaultPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "rfis" && <CommercialRfisPage {...commercialModuleContext} />}
           {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
-          {sheet.workbook.page === "procurement" && <ProcurementSheet sheet={sheet} />}
+          {sheet.workbook.page === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
           {sheet.workbook.page === "aiPlanTakeoff" && (
-            <AIPlanTakeoffPage sheet={sheet} />
+            <AIPlanTakeoffPage sheet={sheet} useNewTakeoffEngine={USE_NEW_TAKEOFF_ENGINE} />
           )}
           {sheet.workbook.page === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
@@ -287,10 +792,10 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       </main>
 
       <aside style={styles.summary}>
-        {sheet.workbook.page === "clientPage" || sheet.workbook.page === "cashflowSummary" ? (
+        {sheet.workbook.page === "projectEstimate" || sheet.workbook.page === "clientPage" || sheet.workbook.page === "cashflowSummary" ? (
           <>
-            <div style={styles.eyebrow}>{sheet.workbook.page === "cashflowSummary" ? "Cashflow" : "Client Quote"}</div>
-            <h2 style={styles.navTitle}>{sheet.workbook.page === "cashflowSummary" ? "Contract Total" : "Presentation Total"}</h2>
+            <div style={styles.eyebrow}>{sheet.workbook.page === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
+            <h2 style={styles.navTitle}>{sheet.workbook.page === "cashflowSummary" ? "Contract Total" : "Estimate Total"}</h2>
             <div style={styles.finalBox}>
               <span>Total quoted price</span>
               <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
@@ -315,7 +820,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             </div>
           </>
         )}
-        {sheet.workbook.page !== "clientPage" && sheet.workbook.page !== "cashflowSummary" && sheet.workbook.page !== "procurement" && (
+        {sheet.workbook.page !== "projectEstimate" && sheet.workbook.page !== "clientPage" && sheet.workbook.page !== "cashflowSummary" && sheet.workbook.page !== "procurement" && (
           <>
             <Panel title="Missing Required Inputs">
               {sheet.preview.missingRequired.length ? (
@@ -372,11 +877,298 @@ function FloatingSaveJob({ saveStatus, onSaveJob }) {
   );
 }
 
-function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
-  const readonly = sheet.previewMode;
+function CommercialModuleLoading({ label }) {
+  return (
+    <div style={styles.commercialModuleLoading}>
+      <strong>Loading {label}</strong>
+      <span>Opening inside the Estimate Builder workspace...</span>
+    </div>
+  );
+}
+
+function OpenJobHeaderField({ label, value, wide = false }) {
+  return (
+    <span style={{ ...styles.openJobField, ...(wide ? styles.openJobFieldWide : {}) }}>
+      <span style={styles.openJobLabel}>{label}</span>
+      <strong style={styles.openJobValue}>{value}</strong>
+    </span>
+  );
+}
+
+function dataInputWorkbookSections(sheet) {
+  return (sheet.dataInputSections || []).filter((section) => section.key !== SUPPLIER_QUOTATION_SECTION_KEY);
+}
+
+function supplierQuotationWorkbookSections(sheet) {
+  return (sheet.dataInputSections || []).filter((section) => section.key === SUPPLIER_QUOTATION_SECTION_KEY);
+}
+
+const DASHBOARD_GENERAL_FIELDS = [
+  { label: "Project Name", key: "projectName" },
+  { label: "Project Address", key: "projectAddress" },
+  { label: "Client", key: "clientName" },
+  { label: "Job Number", key: "jobNumber" },
+  { label: "Builder", key: "builderName" },
+  { label: "Estimator", key: "estimatorName" },
+  { label: "Quote Date", key: "quoteDate" },
+  { label: "Status", key: "projectStatus" },
+];
+
+const DASHBOARD_WORKSPACE_CARDS = [
+  {
+    title: "Job Details",
+    subtitle: "Manage project name, client, address, builder and estimate basics.",
+    page: "projectDashboard",
+    visualKey: "jobDetails",
+    badge: "Here",
+  },
+  {
+    title: "Project Setup",
+    subtitle: "Enter detailed construction assumptions, areas, wall types, floor systems and formula inputs.",
+    page: "dataInput",
+    visualKey: "dataInput",
+    badge: "Source",
+  },
+  {
+    title: "Takeoff Engine",
+    subtitle: "Upload plans, measure areas, scale drawings and create takeoff quantities.",
+    page: "aiPlanTakeoff",
+    visualKey: "aiPlanTakeoff",
+    badge: "Plans",
+  },
+  {
+    title: "BOQ",
+    subtitle: "Review quantities, trade categories, materials, labour and estimate build-up.",
+    page: "boq",
+    visualKey: "boq",
+    badge: "Quantities",
+  },
+  {
+    title: "Quotation Builder",
+    subtitle: "Build the detailed quote and final quotation workflow with line items, margins, GST, allowances and totals.",
+    page: "quotation",
+    visualKey: "quotation",
+    badge: "Quote",
+  },
+  {
+    title: "Standard Inclusions",
+    subtitle: "Edit the builder baseline inclusions schedule used to price Project Estimates.",
+    page: "standardInclusions",
+    visualKey: "standardInclusions",
+    badge: "Base",
+  },
+  {
+    title: "Product Library",
+    subtitle: "Download, edit, re-upload and manage reusable products converted from the Quote Sheet.",
+    page: "productLibrary",
+    visualKey: "productLibrary",
+    badge: "CSV",
+  },
+  {
+    title: "Project Estimate",
+    subtitle: "Prepare the estimate pack with cover, summary, price/trade summary, standard inclusions, terms and acceptance.",
+    page: "projectEstimate",
+    visualKey: "projectEstimate",
+    badge: "Pack",
+  },
+  {
+    title: "Supplier Quotations",
+    subtitle: "Track supplier and subcontractor quotes before converting them to costs or purchase orders.",
+    page: "supplierQuotations",
+    visualKey: "supplierQuotations",
+    badge: "Quotes",
+  },
+  {
+    title: "Procurement",
+    subtitle: "Manage required materials, ordering dates, delivery status and supplier follow-up.",
+    page: "procurement",
+    visualKey: "procurement",
+    badge: "Orders",
+  },
+  {
+    title: "Budget vs Actual",
+    subtitle: "Compare the estimate, variations, purchase orders, supplier invoices and remaining budget.",
+    page: "budgetVsActual",
+    visualKey: "budgetVsActual",
+    badge: "Cost",
+  },
+  {
+    title: "Purchase Orders",
+    subtitle: "Create and track purchase orders for suppliers, subcontractors and materials.",
+    page: "purchaseOrders",
+    visualKey: "purchaseOrders",
+    badge: "Drafts",
+  },
+  {
+    title: "Supplier Invoices",
+    subtitle: "Record invoice costs against suppliers and purchase orders.",
+    page: "supplierInvoices",
+    visualKey: "supplierInvoices",
+    badge: "Actuals",
+  },
+  {
+    title: "Variations",
+    subtitle: "Create, approve and track client changes and cost adjustments.",
+    page: "variations",
+    visualKey: "variations",
+    badge: "Changes",
+  },
+  {
+    title: "Client Selections",
+    subtitle: "Open the premium tablet-friendly Selections Book for finishes, fixtures, colours and client choices.",
+    page: "clientSelections",
+    visualKey: "clientSelections",
+    badge: "Choices",
+  },
+  {
+    title: "Quote Approvals",
+    subtitle: "Create durable signed approval records for quotes, variations and selections.",
+    page: "quoteApprovals",
+    visualKey: "quoteApprovals",
+    badge: "Signed",
+  },
+  {
+    title: "Document Vault",
+    subtitle: "Manage project plans, signed documents, contracts, warranties and supplier records.",
+    page: "documentVault",
+    visualKey: "documentVault",
+    badge: "Files",
+  },
+  {
+    title: "RFIs",
+    subtitle: "Track client questions, responses, priorities and required response dates.",
+    page: "rfis",
+    visualKey: "rfis",
+    badge: "Questions",
+  },
+  {
+    title: "Reports",
+    subtitle: "View budget, cost, margin, procurement and project status reports.",
+    page: "summary",
+    visualKey: "summary",
+    badge: "Reports",
+  },
+  {
+    title: "Settings",
+    subtitle: "Manage job settings, estimate rules, defaults and workbook options.",
+    page: "dataInput",
+    visualKey: "settings",
+    badge: "Defaults",
+  },
+];
+
+function ProjectDashboardSheet({ sheet }) {
+  return (
+    <div style={styles.dashboardShell}>
+      <section style={styles.dashboardTopGrid}>
+        <div style={styles.dashboardPanel}>
+          <div style={styles.dashboardPanelHeader}>
+            <div>
+              <h3 style={styles.dashboardPanelTitle}>General</h3>
+              <p style={styles.dashboardPanelSubtitle}>Linked directly to Project Setup. Updating these fields updates the workbook source data.</p>
+            </div>
+            <button type="button" style={styles.dashboardSmallNavButton} onClick={() => sheet.setPage("dataInput")}>Open Project Setup</button>
+          </div>
+          <div style={styles.dashboardFieldGrid}>
+            {DASHBOARD_GENERAL_FIELDS.map((field) => (
+              <DashboardLinkedField key={`general-${field.label}`} sheet={sheet} field={field} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section style={styles.dashboardCardGrid}>
+        {DASHBOARD_WORKSPACE_CARDS.map((card) => {
+          const visual = workspaceVisual(card.visualKey || card.page);
+          const CardIcon = visual.Icon;
+          return (
+          <button
+            key={`${card.title}-${card.page}`}
+            type="button"
+            className="project-workspace-card"
+            style={{ ...styles.dashboardWorkspaceCard, background: visual.soft, borderColor: visual.border }}
+            onClick={() => sheet.setPage(card.page)}
+          >
+            <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: visual.color, borderColor: visual.color }}>
+              <CardIcon size={30} strokeWidth={2.3} />
+            </span>
+            <span style={styles.dashboardCardCopy}>
+              <span style={styles.dashboardCardTitle}>{card.title}</span>
+              <span style={styles.dashboardCardSubtitle}>{card.subtitle}</span>
+            </span>
+            <span style={{ ...styles.dashboardCardBadge, background: "#ffffff", borderColor: visual.border, color: visual.color }}>{card.badge}</span>
+          </button>
+        );})}
+      </section>
+    </div>
+  );
+}
+
+function DashboardLinkedField({ sheet, field }) {
+  const row = dashboardDataInputRow(sheet, field.key);
+  if (!row) {
+    return (
+      <label style={styles.dashboardField}>
+        <span>{field.label}</span>
+        <div style={styles.dashboardUnavailable}>Not in Project Setup yet</div>
+      </label>
+    );
+  }
+  const saved = sheet.workbook.data?.inputDataSheet?.rows?.[row.key] || {};
+  const displayValue = row.calculated ? value(sheet.preview.quantities[row.key]) : editableInputValue(sheet, row, saved);
+  return (
+    <label style={styles.dashboardField}>
+      <span>{field.label}</span>
+      {row.calculated ? (
+        <div style={styles.dashboardReadOnly}>{displayValue || "-"}</div>
+      ) : row.options ? (
+        <select
+          style={styles.dashboardInput}
+          value={selectInputValue(row, saved)}
+          onChange={(event) => sheet.updateData("inputDataSheet", row.key, "value", event.target.value)}
+        >
+          {row.options.map((option) => <option key={option}>{option}</option>)}
+        </select>
+      ) : (
+        <BufferedInput
+          style={styles.dashboardInput}
+          value={displayValue}
+          onCommit={(next) => sheet.updateData("inputDataSheet", row.key, "value", next)}
+        />
+      )}
+    </label>
+  );
+}
+
+function WorkspacePlaceholderSheet({ title }) {
   return (
     <div style={styles.pageStack}>
-      {sheet.dataInputSections.map((section) => (
+      <section style={styles.section}>
+        <div style={styles.staticSectionHeader}>
+          <span>{title}</span>
+          <span>Workspace page</span>
+        </div>
+        <div style={styles.workspacePlaceholder}>
+          This workspace area is available in the navigation and will use the existing workbook data as it is connected. No estimating data has been duplicated or moved.
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function dashboardDataInputRow(sheet, key) {
+  if (!key) return null;
+  return (sheet.dataInputSections || [])
+    .flatMap((section) => section.rows || [])
+    .find((row) => row.key === key) || null;
+}
+
+function DataInputSheet({ sheet, sections = null, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
+  const readonly = sheet.previewMode;
+  const visibleSections = sections || sheet.dataInputSections || [];
+  return (
+    <div style={styles.pageStack}>
+      {visibleSections.map((section) => (
         <section key={section.key} style={styles.section}>
           <button style={styles.sectionHeader} onClick={() => sheet.toggleDataSection(section.key)}>
             <span>{section.label}</span>
@@ -498,6 +1290,25 @@ function DataInputSheet({ sheet, formulaTarget, onPickFormulaReference, canEditF
             </Spreadsheet>
             </>
             )
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function SupplierQuotationsSheet({ sheet }) {
+  const supplierSections = supplierQuotationWorkbookSections(sheet);
+  return (
+    <div style={styles.pageStack}>
+      {supplierSections.map((section) => (
+        <section key={section.key} style={styles.section}>
+          <button style={styles.sectionHeader} onClick={() => sheet.toggleDataSection(section.key)}>
+            <span>{section.label}</span>
+            <span>{sheet.workbook.data?.[section.key]?.collapsed ? "Show" : "Hide"}</span>
+          </button>
+          {!sheet.workbook.data?.[section.key]?.collapsed && (
+            <SubcontractorQuotesSection sheet={sheet} section={section} />
           )}
         </section>
       ))}
@@ -855,6 +1666,9 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
   const [moveSectionNumber, setMoveSectionNumber] = useState("");
   const [moveAfterNumber, setMoveAfterNumber] = useState("");
   const [openApplianceBrands, setOpenApplianceBrands] = useState({});
+  const [previewProduct, setPreviewProduct] = useState(null);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
+  const [productLightbox, setProductLightbox] = useState(null);
 
   function openOrderManager() {
     setDraftOrder(topLevelQuoteSections(sheet.quoteSections));
@@ -927,6 +1741,18 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
     setOpenApplianceBrands((current) => ({ ...current, [brandKey]: !current[brandKey] }));
   }
 
+  function showProductPreview(section, row) {
+    setPreviewProduct(productPreviewFromQuoteRow(section, row));
+    setPreviewImageIndex(0);
+  }
+
+  function updatePreviewImageUrl(next) {
+    if (!previewProduct) return;
+    sheet.updateQuote(previewProduct.section, previewProduct.rowId, "selectionImageUrl", next);
+    setPreviewProduct((current) => current ? productPreviewFromQuoteRow(current.section, { ...current.row, selectionImageUrl: next }) : current);
+    setPreviewImageIndex(0);
+  }
+
   const displayNumbering = quoteDisplayNumbering(sheet, openApplianceBrands);
 
   function renderQuoteSection(section, options = {}) {
@@ -934,6 +1760,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
     const savedSection = sheet.workbook.quotation?.[section] || {};
     const sectionTotal = options.total ?? previewSection?.subtotal ?? 0;
     const rows = (previewSection?.rows || []).filter((row) => {
+      if (isRemovedQuoteOutput(section, row)) return false;
       if (quoteFeeType(row)) return false;
       if (isHiddenQuoteRow(row)) return false;
       if (!isQuoteRowRelevantForFloorCount(row, sheet.workbook)) return false;
@@ -970,8 +1797,13 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             onClick={(event) => event.stopPropagation()}
           />
           <button
+            type="button"
             style={styles.sectionHeaderButton}
-            onClick={() => sheet.toggleQuoteSection(section)}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              sheet.toggleQuoteSection(section);
+            }}
           >
               <span>{quoteSectionDisplayLabel(options.label || section)}</span>
             <span style={styles.sectionTotalStack}>
@@ -983,7 +1815,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
         {!sheet.workbook.quotation?.[section]?.collapsed && showQuoteRows && (
         <>
         <Spreadsheet
-          headers={readonly ? ["", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes"] : ["Move", "", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Notes", "Actions"]}
+          headers={readonly ? ["", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Selection", "Notes"] : ["Move", "", "Item", "Qty", "Unit", "Rate", "Cost", "Source", "Selection", "Notes", "Actions"]}
           compactColumns={readonly ? [0] : [0, 1]}
         >
           {renderedRows.map((row, rowIndex) => {
@@ -1016,6 +1848,7 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                   <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />
                   <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />
                   <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />
+                  <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />
                   {!readonly && <Cell subheading={row.applianceHeadingLevel !== 1} heading={row.applianceHeadingLevel === 1} />}
                 </tr>
               );
@@ -1027,6 +1860,8 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                 onDragStart={(event) => dragStart(event, section, row.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => dropLine(event, section, row.id, "before")}
+                onMouseEnter={() => showProductPreview(section, row)}
+                onClick={() => showProductPreview(section, row)}
                 style={styles.draggableRow}
               >
                 {!readonly && <Cell compact><span style={styles.dragHandle} title="Drag row">::</span></Cell>}
@@ -1053,8 +1888,15 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
                 <Cell final>{quoteCost(row)}</Cell>
                 <Cell>{row.sourceOfRate}</Cell>
                 <Cell>
+                  <QuoteSelectionReferenceCell
+                    row={row}
+                    readonly={readonly}
+                    onChange={(key, next) => sheet.updateQuote(section, row.id, key, next)}
+                  />
+                </Cell>
+                <Cell>
                   <BufferedInput
-                    style={styles.input}
+                    style={{ ...styles.input, ...styles.quoteNotesInput }}
                     value={row.notes || ""}
                     onCommit={(next) => sheet.updateQuote(section, row.id, "notes", next)}
                   />
@@ -1070,15 +1912,19 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
             );
           })}
           {readonly ? (
-            <tr><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /></tr>
+            <tr><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /></tr>
           ) : (
-            <tr><Cell /><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /></tr>
+            <tr><Cell /><Cell /><Cell strong>Section total</Cell><Cell /><Cell /><Cell /><Cell final>{money(previewSection?.subtotal || 0)}</Cell><Cell /><Cell /><Cell /><Cell /></tr>
           )}
         </Spreadsheet>
         {!readonly && (
           <div style={styles.sectionFooterActions}>
             <button style={styles.addLineButton} onClick={() => sheet.addQuoteLine(section)}>Add line</button>
-            <button style={styles.closeSectionButton} onClick={() => sheet.toggleQuoteSection(section)}>Close section</button>
+            <button type="button" style={styles.closeSectionButton} onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              sheet.toggleQuoteSection(section);
+            }}>Close section</button>
           </div>
         )}
         </>
@@ -1154,97 +2000,206 @@ function QuotationSheet({ sheet, onFormulaTarget }) {
           </div>
         </div>
       )}
-      {topLevelQuoteSections(sheet.quoteSections).map((section) => {
-        const wallFramesParent = sheet.quoteSections.find((item) => isWallFramesSection(item));
-        const roofFramingParent = sheet.quoteSections.find((item) => isRoofFramingSection(item));
-        const hardwareParent = sheet.quoteSections.find((item) => isHardwareSection(item));
-        const roofingMaterialsParent = sheet.quoteSections.find((item) => isRoofingMaterialsSection(item));
-        const externalCladdingParent = sheet.quoteSections.find((item) => isExternalCladdingSection(item));
-        const entryDoorsParent = sheet.quoteSections.find((item) => isEntryDoorsSection(item));
-        const tilingParent = sheet.quoteSections.find((item) => isTilingSection(item));
-        const plumbingFittingsParent = sheet.quoteSections.find((item) => isPlumbingFittingsSection(item));
-        const electricalParent = sheet.quoteSections.find((item) => isElectricalSection(item));
-        const painterParent = sheet.quoteSections.find((item) => isPainterSection(item));
-        const floorcoveringsParent = sheet.quoteSections.find((item) => isFloorcoveringsSection(item));
-        const mirrorsShowerScreensParent = sheet.quoteSections.find((item) => isMirrorsShowerScreensSection(item));
-        const faceBrickworkParent = sheet.quoteSections.find((item) => isFaceBrickworkSection(item));
-        const renderingParent = sheet.quoteSections.find((item) => isRenderingSection(item));
-        const plasterSupplyInstallParent = sheet.quoteSections.find((item) => isPlasterSupplyInstallSection(item));
-        const fixOutMaterialsParent = sheet.quoteSections.find((item) => isFixOutMaterialsSection(item));
-        const cabinetMakerParent = sheet.quoteSections.find((item) => isCabinetMakerSection(item));
-        const appliancePackageParent = sheet.quoteSections.find((item) => isAppliancePackageSection(item));
-        if (isConcreteSlabSubsection(section)) return null;
-        if (wallFramesParent && isWallFramesSubsection(section)) return null;
-        if (roofFramingParent && isRoofFramingSubsection(section)) return null;
-        if (hardwareParent && isHardwareSubsection(section)) return null;
-        if (roofingMaterialsParent && isRoofingMaterialsSubsection(section)) return null;
-        if (externalCladdingParent && isExternalCladdingSubsection(section)) return null;
-        if (entryDoorsParent && isEntryDoorsSubsection(section)) return null;
-        if (tilingParent && isTilingSubsection(section)) return null;
-        if (plumbingFittingsParent && isPlumbingFittingsSubsection(section)) return null;
-        if (electricalParent && isElectricalSubsection(section)) return null;
-        if (painterParent && isPainterSubsection(section)) return null;
-        if (floorcoveringsParent && isFloorcoveringsSubsection(section)) return null;
-        if (mirrorsShowerScreensParent && isMirrorsShowerScreensSubsection(section)) return null;
-        if (faceBrickworkParent && isFaceBrickworkSubsection(section)) return null;
-        if (renderingParent && isRenderingSubsection(section)) return null;
-        if (plasterSupplyInstallParent && isPlasterSupplyInstallSubsection(section)) return null;
-        if (fixOutMaterialsParent && isFixOutMaterialsSubsection(section)) return null;
-        if (cabinetMakerParent && isCabinetMakerSubsection(section)) return null;
-        if (appliancePackageParent && isApplianceBrandSubsection(section)) return null;
-        const childSections = isConcreteSlabSection(section)
-          ? sheet.quoteSections.filter((item) => isConcreteSlabSubsection(item))
-          : isWallFramesSection(section)
-            ? orderedFramingSubsections(sheet.quoteSections)
-            : isRoofFramingSection(section)
-              ? sheet.quoteSections.filter((item) => isRoofFramingSubsection(item))
-              : isHardwareSection(section)
-                ? sheet.quoteSections.filter((item) => isHardwareSubsection(item))
-                : isRoofingMaterialsSection(section)
-                  ? sheet.quoteSections.filter((item) => isRoofingMaterialsSubsection(item))
-                  : isExternalCladdingSection(section)
-                    ? sheet.quoteSections.filter((item) => isExternalCladdingSubsection(item))
-                    : isEntryDoorsSection(section)
-                      ? sheet.quoteSections.filter((item) => isEntryDoorsSubsection(item))
-                      : isTilingSection(section)
-                        ? orderedTilingSubsections(sheet.quoteSections.filter((item) => isTilingSubsection(item)))
-                        : isPlumbingFittingsSection(section)
-                          ? orderedPlumbingFittingsSubsections(sheet.quoteSections.filter((item) => isPlumbingFittingsSubsection(item)))
-                          : isElectricalSection(section)
-                            ? orderedElectricalSubsections(sheet.quoteSections.filter((item) => isElectricalSubsection(item)))
-                            : isPainterSection(section)
-                              ? orderedPainterSubsections(sheet.quoteSections.filter((item) => isPainterSubsection(item)))
-                              : isFloorcoveringsSection(section)
-                                ? orderedFloorcoveringsSubsections(sheet.quoteSections.filter((item) => isFloorcoveringsSubsection(item)))
-                                : isMirrorsShowerScreensSection(section)
-                                  ? orderedMirrorsShowerScreensSubsections(sheet.quoteSections.filter((item) => isMirrorsShowerScreensSubsection(item)))
-                                  : isFaceBrickworkSection(section)
-                                    ? sheet.quoteSections.filter((item) => isFaceBrickworkSubsection(item))
-                                    : isRenderingSection(section)
-                                      ? sheet.quoteSections.filter((item) => isRenderingSubsection(item))
-                                      : isPlasterSupplyInstallSection(section)
-                                        ? sheet.quoteSections.filter((item) => isPlasterSupplyInstallSubsection(item))
-                                        : isFixOutMaterialsSection(section)
-                                          ? orderedFixOutSubsections(sheet.quoteSections)
-                                          : isCabinetMakerSection(section)
-                                            ? orderedCabinetMakerSubsections(sheet.quoteSections.filter((item) => isCabinetMakerSubsection(item)))
-                                            : isAppliancePackageSection(section)
-                                              ? orderedApplianceBrandSubsections(sheet.quoteSections)
-                                              : [];
-        const sectionTotal = childSections.length
-          ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
-          : undefined;
-        return (
-          <div key={section} style={styles.quoteGroup}>
-            {renderQuoteSection(section, { total: sectionTotal, label: wallFramesDisplayLabel(section) || quoteSectionDisplayLabel(section) })}
-            {childSections.length > 0 && !sheet.workbook.quotation?.[section]?.collapsed && (
-              <div style={styles.nestedQuoteStack}>
-                {childSections.map((child) => renderQuoteSection(child, { nested: true, label: quoteSectionDisplayLabel(child) }))}
+      <div style={styles.quotationWorkspace}>
+        <div style={styles.quotationTablePane}>
+          {topLevelQuoteSections(sheet.quoteSections).map((section) => {
+            const wallFramesParent = sheet.quoteSections.find((item) => isWallFramesSection(item));
+            const roofFramingParent = sheet.quoteSections.find((item) => isRoofFramingSection(item));
+            const hardwareParent = sheet.quoteSections.find((item) => isHardwareSection(item));
+            const roofingMaterialsParent = sheet.quoteSections.find((item) => isRoofingMaterialsSection(item));
+            const externalCladdingParent = sheet.quoteSections.find((item) => isExternalCladdingSection(item));
+            const entryDoorsParent = sheet.quoteSections.find((item) => isEntryDoorsSection(item));
+            const tilingParent = sheet.quoteSections.find((item) => isTilingSection(item));
+            const plumbingFittingsParent = sheet.quoteSections.find((item) => isPlumbingFittingsSection(item));
+            const electricalParent = sheet.quoteSections.find((item) => isElectricalSection(item));
+            const painterParent = sheet.quoteSections.find((item) => isPainterSection(item));
+            const floorcoveringsParent = sheet.quoteSections.find((item) => isFloorcoveringsSection(item));
+            const mirrorsShowerScreensParent = sheet.quoteSections.find((item) => isMirrorsShowerScreensSection(item));
+            const faceBrickworkParent = sheet.quoteSections.find((item) => isFaceBrickworkSection(item));
+            const renderingParent = sheet.quoteSections.find((item) => isRenderingSection(item));
+            const plasterSupplyInstallParent = sheet.quoteSections.find((item) => isPlasterSupplyInstallSection(item));
+            const fixOutMaterialsParent = sheet.quoteSections.find((item) => isFixOutMaterialsSection(item));
+            const cabinetMakerParent = sheet.quoteSections.find((item) => isCabinetMakerSection(item));
+            const appliancePackageParent = sheet.quoteSections.find((item) => isAppliancePackageSection(item));
+            if (isConcreteSlabSubsection(section)) return null;
+            if (wallFramesParent && isWallFramesSubsection(section)) return null;
+            if (roofFramingParent && isRoofFramingSubsection(section)) return null;
+            if (hardwareParent && isHardwareSubsection(section)) return null;
+            if (roofingMaterialsParent && isRoofingMaterialsSubsection(section)) return null;
+            if (externalCladdingParent && isExternalCladdingSubsection(section)) return null;
+            if (entryDoorsParent && isEntryDoorsSubsection(section)) return null;
+            if (tilingParent && isTilingSubsection(section)) return null;
+            if (plumbingFittingsParent && isPlumbingFittingsSubsection(section)) return null;
+            if (electricalParent && isElectricalSubsection(section)) return null;
+            if (painterParent && isPainterSubsection(section)) return null;
+            if (floorcoveringsParent && isFloorcoveringsSubsection(section)) return null;
+            if (mirrorsShowerScreensParent && isMirrorsShowerScreensSubsection(section)) return null;
+            if (faceBrickworkParent && isFaceBrickworkSubsection(section)) return null;
+            if (renderingParent && isRenderingSubsection(section)) return null;
+            if (plasterSupplyInstallParent && isPlasterSupplyInstallSubsection(section)) return null;
+            if (fixOutMaterialsParent && isFixOutMaterialsSubsection(section)) return null;
+            if (cabinetMakerParent && isCabinetMakerSubsection(section)) return null;
+            if (appliancePackageParent && isApplianceBrandSubsection(section)) return null;
+            const childSections = isConcreteSlabSection(section)
+              ? sheet.quoteSections.filter((item) => isConcreteSlabSubsection(item))
+              : isWallFramesSection(section)
+                ? orderedFramingSubsections(sheet.quoteSections)
+                : isRoofFramingSection(section)
+                  ? sheet.quoteSections.filter((item) => isRoofFramingSubsection(item))
+                  : isHardwareSection(section)
+                    ? sheet.quoteSections.filter((item) => isHardwareSubsection(item))
+                    : isRoofingMaterialsSection(section)
+                      ? sheet.quoteSections.filter((item) => isRoofingMaterialsSubsection(item))
+                      : isExternalCladdingSection(section)
+                        ? sheet.quoteSections.filter((item) => isExternalCladdingSubsection(item))
+                        : isEntryDoorsSection(section)
+                          ? sheet.quoteSections.filter((item) => isEntryDoorsSubsection(item))
+                          : isTilingSection(section)
+                            ? orderedTilingSubsections(sheet.quoteSections.filter((item) => isTilingSubsection(item)))
+                            : isPlumbingFittingsSection(section)
+                              ? orderedPlumbingFittingsSubsections(sheet.quoteSections.filter((item) => isPlumbingFittingsSubsection(item)))
+                              : isElectricalSection(section)
+                                ? orderedElectricalSubsections(sheet.quoteSections.filter((item) => isElectricalSubsection(item)))
+                                : isPainterSection(section)
+                                  ? orderedPainterSubsections(sheet.quoteSections.filter((item) => isPainterSubsection(item)))
+                                  : isFloorcoveringsSection(section)
+                                    ? orderedFloorcoveringsSubsections(sheet.quoteSections.filter((item) => isFloorcoveringsSubsection(item)))
+                                    : isMirrorsShowerScreensSection(section)
+                                      ? orderedMirrorsShowerScreensSubsections(sheet.quoteSections.filter((item) => isMirrorsShowerScreensSubsection(item)))
+                                      : isFaceBrickworkSection(section)
+                                        ? sheet.quoteSections.filter((item) => isFaceBrickworkSubsection(item))
+                                        : isRenderingSection(section)
+                                          ? sheet.quoteSections.filter((item) => isRenderingSubsection(item))
+                                          : isPlasterSupplyInstallSection(section)
+                                            ? sheet.quoteSections.filter((item) => isPlasterSupplyInstallSubsection(item))
+                                            : isFixOutMaterialsSection(section)
+                                              ? orderedFixOutSubsections(sheet.quoteSections)
+                                              : isCabinetMakerSection(section)
+                                                ? orderedCabinetMakerSubsections(sheet.quoteSections.filter((item) => isCabinetMakerSubsection(item)))
+                                                : isAppliancePackageSection(section)
+                                                  ? orderedApplianceBrandSubsections(sheet.quoteSections)
+                                                  : [];
+            const sectionTotal = childSections.length
+              ? childSections.reduce((sum, item) => sum + (sheet.preview.quotation[item]?.subtotal || 0), sheet.preview.quotation[section]?.subtotal || 0)
+              : undefined;
+            return (
+              <div key={section} style={styles.quoteGroup}>
+                {renderQuoteSection(section, { total: sectionTotal, label: wallFramesDisplayLabel(section) || quoteSectionDisplayLabel(section) })}
+                {childSections.length > 0 && !sheet.workbook.quotation?.[section]?.collapsed && (
+                  <div style={styles.nestedQuoteStack}>
+                    {childSections.map((child) => renderQuoteSection(child, { nested: true, label: quoteSectionDisplayLabel(child) }))}
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })}
+        </div>
+        <QuoteProductPreviewPanel
+          product={previewProduct}
+          imageIndex={previewImageIndex}
+          readonly={readonly}
+          onImageIndex={setPreviewImageIndex}
+          onChangeImageUrl={updatePreviewImageUrl}
+          onOpenLightbox={(payload) => setProductLightbox(payload)}
+        />
+      </div>
+      {productLightbox ? (
+        <ProductGalleryLightbox
+          product={productLightbox.product}
+          imageIndex={productLightbox.imageIndex}
+          onImageIndex={(nextIndex) => setProductLightbox((current) => current ? { ...current, imageIndex: nextIndex } : current)}
+          onClose={() => setProductLightbox(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function QuoteProductPreviewPanel({ product, imageIndex, readonly, onImageIndex, onChangeImageUrl, onOpenLightbox }) {
+  const images = product?.images || [];
+  const safeIndex = images.length ? Math.min(Math.max(imageIndex, 0), images.length - 1) : 0;
+  const imageUrl = images[safeIndex] || "";
+  return (
+    <aside style={styles.productPreviewPanel}>
+      <div style={styles.productPreviewHeader}>
+        <span>Product Preview</span>
+        <strong>{product?.productName || "Hover a product row"}</strong>
+      </div>
+      {imageUrl ? (
+        <button
+          type="button"
+          style={{ ...styles.productPreviewImageButton, backgroundImage: `url(${imageUrl})` }}
+          title="Open larger gallery"
+          onClick={() => onOpenLightbox({ product, imageIndex: safeIndex })}
+        />
+      ) : (
+        <div style={styles.productPreviewEmpty}>
+          <strong>No product image</strong>
+          <span>Hover or click a quotation row to preview its selected product.</span>
+        </div>
+      )}
+      {images.length > 1 ? (
+        <>
+          <div style={styles.productPreviewNav}>
+            <button type="button" style={styles.smallButton} onClick={() => onImageIndex((safeIndex - 1 + images.length) % images.length)}>Previous</button>
+            <span>{safeIndex + 1} / {images.length}</span>
+            <button type="button" style={styles.smallButton} onClick={() => onImageIndex((safeIndex + 1) % images.length)}>Next</button>
           </div>
-        );
-      })}
+          <div style={styles.productPreviewThumbs}>
+            {images.map((url, index) => (
+              <button
+                key={`${url}-${index}`}
+                type="button"
+                style={{ ...styles.productPreviewThumb, ...(index === safeIndex ? styles.productPreviewThumbActive : {}), backgroundImage: `url(${url})` }}
+                onClick={() => onImageIndex(index)}
+                title={`Show image ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+      {!readonly && product ? (
+        <label style={styles.productPreviewField}>
+          Image URL
+          <BufferedInput
+            style={styles.productPreviewInput}
+            value={product.row?.selectionImageUrl || product.row?.productImageUrl || product.row?.imageUrl || ""}
+            placeholder="Paste product image URL"
+            onCommit={onChangeImageUrl}
+          />
+        </label>
+      ) : null}
+      <div style={styles.productPreviewMeta}>
+        <div><span>Supplier</span><strong>{product?.supplier || "-"}</strong></div>
+        <div><span>SKU</span><strong>{product?.sku || "-"}</strong></div>
+        <div><span>Manufacturer</span><strong>{product?.manufacturer || "-"}</strong></div>
+      </div>
+      <div style={styles.productPreviewDescription}>
+        <span>Description</span>
+        <p style={styles.productPreviewDescriptionText}>{product?.description || "No product description recorded."}</p>
+      </div>
+    </aside>
+  );
+}
+
+function ProductGalleryLightbox({ product, imageIndex, onImageIndex, onClose }) {
+  const images = product?.images || [];
+  const safeIndex = images.length ? Math.min(Math.max(imageIndex, 0), images.length - 1) : 0;
+  const imageUrl = images[safeIndex] || "";
+  return (
+    <div style={styles.imageModalBackdrop} onClick={onClose}>
+      <div style={styles.imageModal} onClick={(event) => event.stopPropagation()}>
+        <button type="button" style={styles.imageModalClose} onClick={onClose}>Close</button>
+        {imageUrl ? <img src={imageUrl} alt={product?.productName || "Product preview"} style={styles.imageModalImg} /> : null}
+        <strong>{product?.productName || "Product image"}</strong>
+        {images.length > 1 ? (
+          <div style={styles.productPreviewNav}>
+            <button type="button" style={styles.smallButton} onClick={() => onImageIndex((safeIndex - 1 + images.length) % images.length)}>Previous</button>
+            <span>{safeIndex + 1} / {images.length}</span>
+            <button type="button" style={styles.smallButton} onClick={() => onImageIndex((safeIndex + 1) % images.length)}>Next</button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -1392,290 +2347,1625 @@ function SummarySheet({ sheet }) {
 
 function ClientPageSheet({ sheet }) {
   const readonly = sheet.previewMode;
-  const logoFileInputRef = useRef(null);
-  const heroFileInputRef = useRef(null);
-  const showcaseFileInputRef = useRef(null);
-  const designFileInputRef = useRef(null);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [activeProposalPage, setActiveProposalPage] = useState("cover");
-  const client = clientPageValues(sheet);
-  const pricingGroups = clientBuildStageGroups(sheet);
-  const proposalPages = QUOTE_PROPOSAL_PAGES;
-  const printProposal = () => {
-    if (typeof window !== "undefined") {
-      window.setTimeout(() => {
-        window.print();
-      }, 0);
+  const { workspaceId } = useWorkspace();
+  const [activePageId, setActivePageId] = useState("");
+  const [selectedBlockId, setSelectedBlockId] = useState("");
+  const [draggedBlockId, setDraggedBlockId] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [editingBlockId, setEditingBlockId] = useState("");
+  const [documentLibraryOpen, setDocumentLibraryOpen] = useState(null);
+  const [documentLibraryRows, setDocumentLibraryRows] = useState([]);
+  const [documentLibraryLoading, setDocumentLibraryLoading] = useState(false);
+  const saveTimerRef = useRef(null);
+  const draftRef = useRef(null);
+  const dirtyRef = useRef(false);
+  const exportPagesRef = useRef(null);
+  const themeUploadTargetRef = useRef("");
+  const inclusionsInputRef = useRef(null);
+  const modifiedInclusionsInputRef = useRef(null);
+  const plansInputRef = useRef(null);
+  const client = useMemo(
+    () => clientPageValues(sheet),
+    [sheet.workbook.clientPage, sheet.workbook.data, sheet.preview.summary.finalQuoteTotal, sheet.preview.summary.gst]
+  );
+  const linkedFields = useMemo(() => quoteProposalLinkedFields(sheet, client), [sheet, client]);
+  const sourceBuilder = useMemo(
+    () => normaliseQuoteProposalBuilder(sheet.workbook.clientPage?.proposalBuilder, client, sheet),
+    [sheet.workbook.clientPage?.proposalBuilder, client]
+  );
+  const [builder, setBuilder] = useState(sourceBuilder);
+  const activePage = builder.pages.find((page) => page.id === activePageId) || builder.pages[0];
+  const selectedBlock = activePage?.blocks?.find((block) => block.id === selectedBlockId) || activePage?.blocks?.[0] || null;
+  const logoInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const backgroundInputRef = useRef(null);
+  const estimateDocuments = builder.importedDocuments || {};
+  const inclusionsDocument = estimateDocuments.inclusions || null;
+  const pricedPlans = estimateDocuments.pricedPlans || { files: [], pages: [] };
+
+  useEffect(() => {
+    draftRef.current = builder;
+  }, [builder]);
+
+  useEffect(() => {
+    if (dirtyRef.current) return;
+    setBuilder(sourceBuilder);
+    draftRef.current = sourceBuilder;
+  }, [sourceBuilder]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activePageId && builder.pages[0]?.id) setActivePageId(builder.pages[0].id);
+  }, [activePageId, builder.pages]);
+
+  useEffect(() => {
+    if (activePage && !activePage.blocks.some((block) => block.id === selectedBlockId)) {
+      setSelectedBlockId(activePage.blocks[0]?.id || "");
     }
+  }, [activePage, selectedBlockId]);
+
+  const persistBuilder = async (nextBuilder, { message = "Proposal autosaved.", fullWorkbookSaveTriggered = true } = {}) => {
+    if (readonly) return;
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const nextWorkbook = {
+      ...sheet.workbook,
+      clientPage: {
+        ...(sheet.workbook.clientPage || {}),
+        proposalBuilder: nextBuilder,
+      },
+    };
+    sheet.updateClientPage("proposalBuilder", nextBuilder);
+    if (fullWorkbookSaveTriggered) {
+      await Promise.resolve(sheet.saveDraft?.(nextWorkbook));
+    }
+    dirtyRef.current = false;
+    setStatusMessage(message);
+    proposalPerfLog("save time", {
+      ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
+      fullWorkbookSaveTriggered,
+    });
   };
-  const saveProposal = () => sheet.saveDraft?.();
-  const uploadSingleImage = (event, key) => {
+
+  const scheduleBuilderSave = (nextBuilder, message = "Proposal autosaved.") => {
+    if (readonly) return;
+    dirtyRef.current = true;
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      persistBuilder(draftRef.current || nextBuilder, { message, fullWorkbookSaveTriggered: true }).catch((error) => {
+        console.error("Quote proposal autosave failed", error);
+        setStatusMessage("Save failed");
+      });
+    }, 1200);
+  };
+
+  const saveBuilder = (nextBuilder, message = "Proposal updated.") => {
+    setBuilder(nextBuilder);
+    draftRef.current = nextBuilder;
+    setStatusMessage("Editing...");
+    scheduleBuilderSave(nextBuilder, message);
+  };
+
+  const saveBuilderImmediate = async (nextBuilder, message = "Proposal updated.") => {
+    const updatedBuilder = { ...nextBuilder, updatedAt: new Date().toISOString() };
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    setBuilder(updatedBuilder);
+    draftRef.current = updatedBuilder;
+    dirtyRef.current = false;
+    await persistBuilder(updatedBuilder, { message, fullWorkbookSaveTriggered: true });
+    return updatedBuilder;
+  };
+
+  const updateBuilder = (updater, message) => {
+    const next = updater(draftRef.current || builder);
+    saveBuilder({ ...next, updatedAt: new Date().toISOString() }, message);
+  };
+
+  const updatePage = (pageId, changes) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === pageId ? { ...page, ...changes } : page),
+    }), "Page saved.");
+  };
+
+  const updateBlock = (blockId, changes) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: page.blocks.map((block) => block.id === blockId ? { ...block, ...changes } : block),
+      } : page),
+    }), "Block saved.");
+  };
+
+  const updateBlockContent = (blockId, key, value) => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const block = activePage.blocks.find((item) => item.id === blockId);
+    updateBlock(blockId, { content: { ...(block?.content || {}), [key]: value } });
+    proposalPerfLog("text edit latency", {
+      ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
+      blockId,
+      field: key,
+      fullWorkbookSaveTriggered: false,
+    });
+  };
+
+  const updateBlockDesign = (blockId, key, value) => {
+    const block = activePage.blocks.find((item) => item.id === blockId);
+    updateBlock(blockId, { design: { ...(block?.design || {}), [key]: value } });
+  };
+
+  const updateTheme = (changes) => {
+    updateBuilder((current) => ({
+      ...current,
+      theme: { ...defaultLuxuryProposalTheme(client), ...(current.theme || {}), ...changes },
+    }), "Proposal theme updated.");
+  };
+
+  const updateThemeStat = (index, key, value) => {
+    const theme = { ...defaultLuxuryProposalTheme(client), ...(draftRef.current?.theme || builder.theme || {}) };
+    const stats = [...(theme.stats || [])];
+    stats[index] = { ...(stats[index] || {}), [key]: value };
+    updateTheme({ stats });
+  };
+
+  const openThemeImageUpload = (target) => {
+    themeUploadTargetRef.current = target;
+    imageInputRef.current?.click();
+  };
+
+  const addBlock = (type) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: [...page.blocks, createProposalBuilderBlock(type, linkedFields, page.blocks.length)],
+      } : page),
+    }), "Block added.");
+  };
+
+  const removeBlock = (blockId) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: page.blocks.filter((block) => block.id !== blockId),
+      } : page),
+    }), "Block removed.");
+  };
+
+  const duplicateBlock = (blockId) => {
+    const block = activePage.blocks.find((item) => item.id === blockId);
+    if (!block) return;
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: page.blocks.flatMap((item) => item.id === blockId ? [item, { ...item, id: proposalBuilderId("block"), content: { ...item.content }, design: { ...item.design } }] : [item]),
+      } : page),
+    }), "Block duplicated.");
+  };
+
+  const moveBlock = (blockId, direction) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => {
+        if (page.id !== activePage.id) return page;
+        const blocks = [...page.blocks];
+        const index = blocks.findIndex((block) => block.id === blockId);
+        const nextIndex = index + direction;
+        if (index < 0 || nextIndex < 0 || nextIndex >= blocks.length) return page;
+        const [block] = blocks.splice(index, 1);
+        blocks.splice(nextIndex, 0, block);
+        return { ...page, blocks };
+      }),
+    }), "Block moved.");
+  };
+
+  const moveBlockToIndex = (blockId, targetIndex) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => {
+        if (page.id !== activePage.id) return page;
+        const blocks = [...page.blocks];
+        const fromIndex = blocks.findIndex((block) => block.id === blockId);
+        if (fromIndex < 0 || targetIndex < 0 || targetIndex >= blocks.length || fromIndex === targetIndex) return page;
+        const [block] = blocks.splice(fromIndex, 1);
+        blocks.splice(targetIndex, 0, block);
+        return { ...page, blocks };
+      }),
+    }), "Block moved.");
+  };
+
+  const uploadImageForBlock = async (event, purpose) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !file.type?.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      sheet.updateClientPage(key, String(reader.result || ""));
-    };
-    reader.readAsDataURL(file);
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    setStatusMessage("Preparing image...");
+    try {
+      const url = await prepareProposalImageDataUrl(file, {
+        maxDimension: purpose === "logo" ? 900 : 1800,
+        quality: 0.84,
+      });
+      if (purpose === "theme") {
+        const target = themeUploadTargetRef.current || "heroImageUrl";
+        themeUploadTargetRef.current = "";
+        updateTheme({ [target]: url });
+      } else if (purpose === "background") {
+        updatePage(activePage.id, { design: { ...activePage.design, backgroundImageUrl: url } });
+      } else if (selectedBlock) {
+        updateBlockContent(selectedBlock.id, purpose === "logo" ? "logoUrl" : "imageUrl", url);
+      }
+      proposalPerfLog("image import", {
+        ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
+        purpose,
+        originalKb: Math.round(file.size / 102.4) / 10,
+        storedKb: Math.round(url.length / 102.4) / 10,
+      });
+    } catch (error) {
+      console.error("Proposal image import failed", error);
+      setStatusMessage("Image could not be imported.");
+      themeUploadTargetRef.current = "";
+    }
   };
-  const uploadImageGallery = (event, key) => {
-    const files = Array.from(event.target.files || []).filter((file) => file.type?.startsWith("image/"));
-    event.target.value = "";
-    if (!files.length) return;
-    Promise.all(files.map((file) => new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.readAsDataURL(file);
-    }))).then((images) => {
-      sheet.updateClientPage(key, [...(client[key] || []), ...images]);
+
+  const saveTemplate = async () => {
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    setStatusMessage("Saving template...");
+    const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const nextBuilder = { ...(draftRef.current || builder), updatedAt: new Date().toISOString() };
+    const nextWorkbook = {
+      ...sheet.workbook,
+      clientPage: {
+        ...(sheet.workbook.clientPage || {}),
+        proposalBuilder: nextBuilder,
+      },
+    };
+    sheet.updateClientPage("proposalBuilder", nextBuilder);
+    dirtyRef.current = false;
+    await Promise.resolve(sheet.saveDraft?.(nextWorkbook));
+    setStatusMessage("Template saved.");
+    proposalPerfLog("save time", {
+      ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
+      explicit: true,
+      fullWorkbookSaveTriggered: true,
     });
   };
-  const removeGalleryImage = (key, index) => {
-    sheet.updateClientPage(key, (client[key] || []).filter((_, imageIndex) => imageIndex !== index));
+
+  const uploadProposalPdf = async (file, sourceType) => {
+    const selectedPdf = await validateSelectedPdfFile(file);
+    if (!selectedPdf.ok) {
+      setStatusMessage(selectedPdf.error);
+      return null;
+    }
+    setStatusMessage("Uploading PDF...");
+    const metadataResult = await readProposalPdfMetadata(file)
+      .then((metadata) => ({ ok: true, metadata }))
+      .catch(async (error) => {
+        const repaired = await repairPdfFile(file).catch(() => null);
+        if (!repaired?.file) {
+          return { ok: false, error: error?.message || "The selected file is not a valid PDF" };
+        }
+        try {
+          const metadata = await readProposalPdfMetadata(repaired.file);
+          return { ok: true, metadata, file: repaired.file };
+        } catch (repairError) {
+          return { ok: false, error: repairError?.message || error?.message || "The selected file is not a valid PDF" };
+        }
+      });
+    if (!metadataResult.ok) {
+      setStatusMessage(metadataResult.error || "The selected file is not a valid PDF");
+      return null;
+    }
+    const uploadFile = metadataResult.file || file;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token || "";
+    const form = new FormData();
+    form.append("file", uploadFile, uploadFile.name || file.name || "document.pdf");
+    form.append("sourceType", sourceType);
+    form.append("workspaceId", workspaceId || "");
+    form.append("projectId", sheet.workbook?.commercialProjectId || sheet.workbook?.projectId || "");
+    form.append("estimateId", sheet.workbook?.estimateSnapshotId || sheet.workbook?.id || "");
+    form.append("metadata", JSON.stringify(metadataResult.metadata));
+    const headers = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const response = await fetch("/api/builders/proposal-document-upload", {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    const responseType = response.headers.get("content-type") || "";
+    if (!responseType.includes("application/json")) {
+      const body = await response.text().catch(() => "");
+      setStatusMessage(responseType.includes("text/html")
+        ? "The upload returned JSON/HTML instead of a PDF"
+        : `The upload returned ${responseType || "an unknown response type"} instead of JSON.`);
+      console.error("Unexpected PDF upload response", { status: response.status, responseType, body: body.slice(0, 500) });
+      return null;
+    }
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) {
+      setStatusMessage(payload.error || `PDF upload failed with HTTP ${response.status}.`);
+      return null;
+    }
+    const uploadedPdf = await validateUploadedPdfDocument(payload.document);
+    if (!uploadedPdf.ok) {
+      setStatusMessage(uploadedPdf.error);
+      return null;
+    }
+    return payload.document;
   };
-  const generateAiText = () => {
-    const next = proposalAiText(client);
-    Object.entries(next).forEach(([key, text]) => sheet.updateClientPage(key, text));
+
+  const importInclusionsPdf = async (event, sourceType = "standard_inclusions") => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const document = await uploadProposalPdf(file, sourceType);
+      if (!document) return;
+      await saveBuilderImmediate(replaceActiveInclusionsDocument(draftRef.current || builder, document, sourceType), "Inclusions schedule imported.");
+      setStatusMessage("Inclusions schedule imported.");
+    } catch (error) {
+      console.error("Inclusions import failed", error);
+      setStatusMessage(error?.message || "Inclusions import failed.");
+    }
   };
-  const saveTemplate = () => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(QUOTE_PROPOSAL_TEMPLATE_KEY, JSON.stringify(quoteProposalTemplateFromClient(client)));
-    window.alert("Quote proposal template saved for future jobs.");
+
+  const importPlanPdfs = async (event) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type === "application/pdf");
+    event.target.value = "";
+    if (!files.length) return;
+    try {
+      const document = await uploadProposalPdf(files[0], "priced_plans");
+      if (!document) return;
+      updateBuilder((current) => {
+        const nextPages = (document.pages || []).map((page, index) => ({
+          ...page,
+          documentId: document.id,
+          fileName: document.fileName,
+          publicUrl: document.publicUrl,
+          storagePath: document.storagePath,
+          sourceType: "priced_plans",
+          order: index + 1,
+        }));
+        return {
+          ...current,
+          importedDocuments: {
+            ...(current.importedDocuments || {}),
+            pricedPlans: { ...document, pages: nextPages, importedAt: new Date().toISOString() },
+          },
+        };
+      }, "Concept plans PDF imported.");
+      setStatusMessage("Concept plans PDF imported.");
+    } catch (error) {
+      console.error("Plan import failed", error);
+      setStatusMessage(error?.message || "Plan import failed.");
+    }
   };
-  const applyTemplate = () => {
-    if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(QUOTE_PROPOSAL_TEMPLATE_KEY);
-    if (!saved) {
-      window.alert("No saved quote proposal template found yet.");
+
+  const removeInclusionsDocument = async () => {
+    const activeDocument = (draftRef.current || builder).importedDocuments?.inclusions || null;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      if (activeDocument?.id || activeDocument?.storagePath) {
+        const response = await fetch("/api/builders/proposal-document-remove", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            documentId: activeDocument.id || "",
+            storagePath: activeDocument.storagePath || "",
+            workspaceId: workspaceId || "",
+            projectId: proposalProjectId(sheet),
+            removeAllProjectInclusions: true,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not remove inclusions schedule.");
+      }
+      await saveBuilderImmediate(clearActiveInclusionsDocument(draftRef.current || builder), "Inclusions schedule removed completely.");
+      setStatusMessage("Inclusions schedule removed completely.");
+    } catch (error) {
+      console.error("Inclusions removal failed", error);
+      setStatusMessage(error?.message || "Inclusions removal failed.");
+    }
+  };
+
+  const removePlansDocument = () => {
+    updateBuilder((current) => ({
+      ...current,
+      importedDocuments: { ...(current.importedDocuments || {}), pricedPlans: null },
+    }), "Plans removed.");
+  };
+
+  const exportMergedProposalPdf = async () => {
+    setStatusMessage("Preparing PDF...");
+    try {
+      const rawBuilder = draftRef.current || builder;
+      const rawInclusionsCheck = validateActiveInclusionsState(rawBuilder.importedDocuments || {});
+      if (!rawInclusionsCheck.ok) throw new Error(rawInclusionsCheck.error);
+      if (rawInclusionsCheck.legacyFound) {
+        throw new Error("Legacy inclusions schedule data was found. Remove the existing schedule completely, then upload the correct schedule again.");
+      }
+      const exportBuilder = {
+        ...rawBuilder,
+        importedDocuments: normaliseProposalImportedDocuments(rawBuilder.importedDocuments || {}),
+      };
+      const inclusionsCheck = validateActiveInclusionsState(exportBuilder.importedDocuments || {});
+      if (!inclusionsCheck.ok) throw new Error(inclusionsCheck.error);
+      await saveBuilderImmediate(exportBuilder, "Latest estimate pack saved for PDF export.");
+      console.info("[Project Estimate PDF export] active inclusions", {
+        fileName: inclusionsCheck.document?.fileName || "",
+        publicUrl: inclusionsCheck.document?.publicUrl || "",
+        storagePath: inclusionsCheck.document?.storagePath || "",
+        fileHash: inclusionsCheck.document?.fileHash || "",
+        version: inclusionsCheck.document?.version || "",
+        pageCount: inclusionsCheck.document?.pageCount || 0,
+        projectId: proposalProjectId(sheet),
+        legacyInclusionsFound: inclusionsCheck.legacyFound,
+      });
+      const renderedPages = await renderProposalPagesForPdf(exportPagesRef.current);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const exportPayload = {
+        name: exportBuilder.name || "Estimate Pack",
+        fileName: proposalPdfFileName(sheet, exportBuilder),
+        renderedPages,
+        importedDocuments: exportBuilder.importedDocuments || {},
+        workspaceId: workspaceId || "",
+        projectId: proposalProjectId(sheet),
+        estimateId: proposalEstimateId(sheet),
+      };
+      const requestBody = JSON.stringify(exportPayload);
+      JSON.parse(requestBody);
+      console.info("[Project Estimate PDF export] outgoing request", {
+        url: "/api/builders/proposal-document-export",
+        contentType: "application/json",
+        byteLength: new Blob([requestBody]).size,
+        pageCount: renderedPages.length,
+        uploadedInclusionsSchedule: exportPayload.importedDocuments?.inclusions || null,
+        uploadedPlans: exportPayload.importedDocuments?.pricedPlans || null,
+        payloadKeys: Object.keys(exportPayload),
+      });
+      const response = await fetch("/api/builders/proposal-document-export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/pdf, application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: requestBody,
+      });
+      const responseType = response.headers.get("content-type") || "";
+      if (!response.ok) {
+        const message = await formatProposalExportErrorResponse(response, responseType);
+        throw new Error(message);
+      }
+      if (!responseType.includes("application/pdf")) {
+        const message = await formatProposalExportErrorResponse(response, responseType, { responseOk: true });
+        throw new Error(message);
+      }
+      const blob = await response.blob();
+      const downloadName = proposalPdfFileName(sheet, exportBuilder);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = downloadName;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatusMessage("PDF downloaded.");
+    } catch (error) {
+      console.error("Merged PDF export failed", error);
+      setStatusMessage(error?.message || "PDF export failed.");
+    }
+  };
+
+  const openDocumentLibrary = async (sourceType) => {
+    setDocumentLibraryOpen(sourceType);
+    setDocumentLibraryLoading(true);
+    try {
+      if (!workspaceId) throw new Error("Choose an active workspace first.");
+      const dbTypes = sourceType === "priced_plans" ? ["general"] : ["other", "general"];
+      const { data, error } = await supabase
+        .from("builder_project_documents")
+        .select("id, title, file_name, storage_path, public_url, document_type, metadata, status, created_at")
+        .eq("workspace_id", workspaceId)
+        .in("document_type", dbTypes)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(40);
+      if (error) throw error;
+      setDocumentLibraryRows(data || []);
+    } catch (error) {
+      setStatusMessage(error?.message || "Could not load document library.");
+      setDocumentLibraryRows([]);
+    } finally {
+      setDocumentLibraryLoading(false);
+    }
+  };
+
+  const selectLibraryDocument = async (row) => {
+    const sourceType = documentLibraryOpen;
+    setDocumentLibraryOpen(null);
+    if (!row?.public_url) {
+      setStatusMessage("Selected document has no accessible file URL.");
       return;
     }
-    try {
-      const template = JSON.parse(saved);
-      Object.entries(template).forEach(([key, value]) => sheet.updateClientPage(key, value));
-    } catch {
-      window.alert("Saved proposal template could not be applied.");
+    const pageCount = Number(row.metadata?.pageCount || 1) || 1;
+    const pageOrientations = Array.isArray(row.metadata?.pageOrientation) ? row.metadata.pageOrientation : [];
+    const pageRotations = Array.isArray(row.metadata?.pageRotation) ? row.metadata.pageRotation : [];
+    const pageSizes = Array.isArray(row.metadata?.pageSizes) ? row.metadata.pageSizes : [];
+    const document = {
+      id: row.id,
+      fileName: row.file_name || row.title || "Library document.pdf",
+      title: row.title || row.file_name || "Library document",
+      publicUrl: row.public_url,
+      storagePath: row.storage_path || "",
+      sourceType,
+      status: row.status || "active",
+      active: true,
+      fileHash: row.metadata?.fileHash || "",
+      version: row.metadata?.version || row.metadata?.fileVersion || "",
+      projectId: row.metadata?.projectId || "",
+      estimateId: row.metadata?.estimateId || "",
+      pageCount,
+      pages: Array.from({ length: pageCount }, (_, index) => ({
+        pageNumber: index + 1,
+        order: index + 1,
+        orientation: pageOrientations[index] || "portrait",
+        rotation: Number(pageRotations[index] || 0),
+        metadataRotation: Number(pageRotations[index] || 0),
+        width: Number(pageSizes[index]?.width || 595),
+        height: Number(pageSizes[index]?.height || 842),
+      })),
+    };
+    if (sourceType === "priced_plans") {
+      updateBuilder((current) => ({
+        ...current,
+        importedDocuments: {
+          ...(current.importedDocuments || {}),
+          pricedPlans: {
+            ...document,
+            pages: document.pages.map((page, index) => ({ ...page, documentId: document.id, fileName: document.fileName, publicUrl: document.publicUrl, storagePath: document.storagePath, order: index + 1 })),
+          },
+        },
+      }), "Library concept plans inserted.");
+    } else {
+      await saveBuilderImmediate(replaceActiveInclusionsDocument(draftRef.current || builder, document, sourceType || "standard_inclusions"), "Library inclusions inserted.");
     }
   };
-  const acceptQuote = () => {
-    sheet.updateClientPage("quoteAcceptedAt", new Date().toISOString());
-    sheet.updateClientPage("termsAcknowledged", true);
-  };
+
   return (
-    <div style={styles.quoteProposalShell}>
+    <div style={styles.proposalBuilderShell}>
       <style>{`
         @media print {
           body * { visibility: hidden; }
-          .quote-proposal-print, .quote-proposal-print * { visibility: visible; }
-          .quote-proposal-print { position: absolute; inset: 0; width: 100%; background: #f8fafc; }
-          .quote-proposal-tools, .quote-proposal-editor { display: none !important; }
-          .quote-proposal-page { break-after: page; page-break-after: always; box-shadow: none !important; border-radius: 0 !important; }
+          .proposal-builder-print, .proposal-builder-print * { visibility: visible; }
+          .proposal-builder-print { position: absolute; inset: 0; width: 100%; background: #e5e7eb; }
+          .proposal-builder-tools, .proposal-builder-sidebar, .proposal-builder-panel { display: none !important; }
+          .proposal-builder-page { break-after: page; page-break-after: always; box-shadow: none !important; border-radius: 0 !important; margin: 0 auto 20px !important; }
+          .proposal-builder-page-landscape { size: A4 landscape; width: 297mm !important; height: 210mm !important; }
         }
       `}</style>
-      <div className="quote-proposal-tools" style={styles.quoteProposalToolbar}>
-        <button style={styles.primaryButton} disabled={readonly} onClick={generateAiText}>Generate AI Text</button>
+      <div className="proposal-builder-tools" style={styles.proposalBuilderToolbar}>
+        <strong>Estimate Pack</strong>
         <button style={styles.secondaryButton} disabled={readonly} onClick={saveTemplate}>Save Template</button>
-        <button style={styles.secondaryButton} disabled={readonly} onClick={applyTemplate}>Apply Template</button>
-        <button style={styles.secondaryButton} onClick={() => setPreviewMode((current) => !current)}>Preview Quote</button>
-        <button style={styles.secondaryButton} onClick={printProposal}>Export PDF</button>
-        {!readonly && <button style={styles.primaryButton} onClick={saveProposal}>Save Proposal</button>}
+        <button style={styles.secondaryButton} onClick={exportMergedProposalPdf}>Download PDF</button>
       </div>
-      <div style={styles.quoteProposalWorkspace}>
-        {!previewMode && (
-          <nav className="quote-proposal-editor" style={styles.quoteProposalNav}>
-            {proposalPages.map((page) => (
+      {statusMessage ? <div style={styles.proposalBuilderStatus}>{statusMessage}</div> : null}
+      <div style={styles.proposalBuilderLayout}>
+          <aside className="proposal-builder-sidebar" style={styles.proposalBuilderSidebar}>
+            <h3>Pages</h3>
+            {builder.pages.map((page) => (
               <button
-                key={page.key}
-                style={{ ...styles.quoteProposalNavButton, ...(activeProposalPage === page.key ? styles.quoteProposalNavButtonActive : {}) }}
-                onClick={() => setActiveProposalPage(page.key)}
+                key={page.id}
+                style={{ ...styles.proposalPageListButton, ...(activePage.id === page.id ? styles.proposalPageListButtonActive : {}) }}
+                onClick={() => setActivePageId(page.id)}
               >
-                <span>{page.label}</span>
+                <span>{page.title}</span>
+                <small>{page.page_type}</small>
               </button>
             ))}
-          </nav>
+            <ProposalImportSidebarStatus
+              page={activePage}
+              inclusionsDocument={inclusionsDocument}
+              pricedPlans={pricedPlans}
+              editing={!readonly}
+              onInsertStandard={() => inclusionsInputRef.current?.click()}
+              onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
+              onInsertPlans={() => plansInputRef.current?.click()}
+              onReplaceInclusions={() => inclusionsInputRef.current?.click()}
+              onRemoveInclusions={removeInclusionsDocument}
+              onReplacePlans={() => plansInputRef.current?.click()}
+              onRemovePlans={removePlansDocument}
+              onOpenLibrary={openDocumentLibrary}
+            />
+            <div style={styles.proposalThemeHint}>
+              <strong>Client document pages</strong>
+              <span>Download PDF exports the same rendered pages shown in this editor.</span>
+            </div>
+          </aside>
+        <main className="proposal-builder-print" style={styles.proposalBuilderCanvas}>
+          {expandProposalPagesForImportedDocuments([activePage], builder.importedDocuments || {}, { editing: true }).map((page) => (
+            isProposalImportPage(page) ? (
+                <ProposalImportedDocumentPage
+                  key={page.id}
+                  page={page}
+                  inclusionsDocument={inclusionsDocument}
+                  pricedPlans={pricedPlans}
+                  editing={!readonly}
+                  onInsertStandard={() => inclusionsInputRef.current?.click()}
+                  onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
+                  onInsertPlans={() => plansInputRef.current?.click()}
+                  onReplaceInclusions={() => inclusionsInputRef.current?.click()}
+                  onRemoveInclusions={removeInclusionsDocument}
+                  onReplacePlans={() => plansInputRef.current?.click()}
+                  onRemovePlans={removePlansDocument}
+                  onOpenLibrary={openDocumentLibrary}
+                />
+              ) : (
+                <ProjectEstimatePackPage
+                key={page.id}
+                page={page}
+                theme={builder.theme}
+                linkedFields={linkedFields}
+                Brochure={EstimateInclusionsBrochure}
+                ProgressDiagnostic={ProgressPaymentDiagnostic}
+                />
+              )
+          ))}
+        </main>
+          <aside className="proposal-builder-panel" style={styles.proposalBuilderPanel}>
+              <LuxuryProposalThemePanel
+                theme={builder.theme}
+                linkedFields={linkedFields}
+                readonly={readonly}
+                onThemeChange={updateTheme}
+                onThemeStatChange={updateThemeStat}
+                onUploadImage={openThemeImageUpload}
+              />
+            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
+            <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : "image")} />
+            <input ref={backgroundInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "background")} />
+            <input ref={inclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "standard_inclusions")} />
+            <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "modified_inclusions")} />
+            <input ref={plansInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPlanPdfs} />
+          </aside>
+      </div>
+      <div ref={exportPagesRef} style={styles.proposalExportSource} aria-hidden="true">
+        {expandProposalPagesForImportedDocuments(builder.pages, builder.importedDocuments || {}, { editing: false }).map((page) => (
+          <div
+            key={`export-${page.id}`}
+            data-proposal-export-page="true"
+            data-orientation={proposalPageOrientation(page)}
+            data-page-type={page.page_type || ""}
+            data-source-file={page.importedDocument?.fileName || page.importedDocument?.title || ""}
+            data-source-path={page.importedDocument?.storagePath || page.importedDocument?.publicUrl || ""}
+            data-source-page-number={page.importedPageNumber || page.importedDocument?.pageNumber || ""}
+          >
+            {isProposalImportPage(page) ? (
+              <ProposalImportedDocumentPage page={page} inclusionsDocument={inclusionsDocument} pricedPlans={pricedPlans} editing={false} />
+            ) : (
+              <ProjectEstimatePackPage
+                page={page}
+                theme={builder.theme}
+                linkedFields={linkedFields}
+                Brochure={EstimateInclusionsBrochure}
+                ProgressDiagnostic={ProgressPaymentDiagnostic}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {documentLibraryOpen ? (
+        <ProposalDocumentLibraryModal
+          rows={documentLibraryRows}
+          loading={documentLibraryLoading}
+          onClose={() => setDocumentLibraryOpen(null)}
+          onSelect={selectLibraryDocument}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function LuxuryProposalThemePanel({ theme, linkedFields, readonly, onThemeChange, onThemeStatChange, onUploadImage }) {
+  const resolvedTheme = { ...defaultLuxuryProposalTheme({}), ...(theme || {}) };
+  return (
+    <div style={styles.proposalPropertiesStack}>
+      <h3>Luxury Residential Theme</h3>
+      <div style={styles.proposalThemeLinkedBox}>
+        <strong>Workbook linked fields</strong>
+        <span>Client: {linkedFields.clientName?.value || "Not entered"}</span>
+        <span>Site: {linkedFields.projectAddress?.value || "Not entered"}</span>
+        <span>Builder: {linkedFields.companyName?.value || "Not entered"}</span>
+        <span>Quote: {linkedFields.quoteNumber?.value || "Not entered"} / {linkedFields.quoteDate?.value || "Not entered"}</span>
+      </div>
+      <ProposalPanelColor label="Accent colour" value={resolvedTheme.accentColor} disabled={readonly} onChange={(value) => onThemeChange({ accentColor: value })} />
+      <button style={styles.secondaryButton} disabled={readonly} onClick={() => onUploadImage("logoUrl")}>Change logo</button>
+      <button style={styles.secondaryButton} disabled={readonly} onClick={() => onUploadImage("heroImageUrl")}>Change cover hero image</button>
+      <button style={styles.secondaryButton} disabled={readonly} onClick={() => onUploadImage("aboutImageUrl")}>Change About image</button>
+      <button style={styles.secondaryButton} disabled={readonly} onClick={() => onUploadImage("designImageUrl")}>Change Scope / Design image</button>
+      <button style={styles.secondaryButton} disabled={readonly} onClick={() => onUploadImage("thankYouImageUrl")}>Change Thank You image</button>
+      <ProposalPanelInput label="Client name override" value={resolvedTheme.clientNameOverride || ""} disabled={readonly} onCommit={(value) => onThemeChange({ clientNameOverride: value })} />
+      <ProposalPanelTextarea label="Site address override" value={resolvedTheme.siteAddressOverride || ""} disabled={readonly} onCommit={(value) => onThemeChange({ siteAddressOverride: value })} />
+      <ProposalPanelTextarea label="Company story" value={resolvedTheme.companyStory || ""} disabled={readonly} onCommit={(value) => onThemeChange({ companyStory: value })} />
+      <ProposalPanelTextarea label="Testimonial" value={resolvedTheme.testimonial || ""} disabled={readonly} onCommit={(value) => onThemeChange({ testimonial: value })} />
+      <ProposalPanelTextarea label="Design notes" value={resolvedTheme.designNotes || ""} disabled={readonly} onCommit={(value) => onThemeChange({ designNotes: value })} />
+      <ProposalPanelTextarea label="Thank you message" value={resolvedTheme.thankYouMessage || ""} disabled={readonly} onCommit={(value) => onThemeChange({ thankYouMessage: value })} />
+      <h3>Stats</h3>
+      {(resolvedTheme.stats || []).slice(0, 4).map((stat, index) => (
+        <div key={`stat-${index}`} style={styles.proposalStatEditor}>
+          <ProposalPanelInput label={`Stat ${index + 1} number`} value={stat.value || ""} disabled={readonly} onCommit={(value) => onThemeStatChange(index, "value", value)} />
+          <ProposalPanelInput label={`Stat ${index + 1} label`} value={stat.label || ""} disabled={readonly} onCommit={(value) => onThemeStatChange(index, "label", value)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function isProposalImportPage(page = {}) {
+  return ["standardInclusions", "pricedPlans", "importedInclusionsPdf", "importedPlanPdf"].includes(page.page_type);
+}
+
+function expandProposalPagesForImportedDocuments(pages = [], importedDocuments = {}, { editing = false } = {}) {
+  const inclusions = importedDocuments.inclusions || null;
+  const planPages = Array.isArray(importedDocuments.pricedPlans?.pages) ? importedDocuments.pricedPlans.pages : [];
+  return (pages || []).flatMap((page) => {
+    if (page.page_type === "standardInclusions") {
+      if (!inclusions?.publicUrl) return editing ? [page] : [];
+      const count = Number(inclusions.pageCount || inclusions.pages?.length || 1) || 1;
+      const importedPages = Array.from({ length: count }, (_, index) => ({
+        ...page,
+        id: `imported-inclusions-${inclusions.id || "doc"}-${index + 1}`,
+        page_type: "importedInclusionsPdf",
+        title: `Standard Inclusions Schedule ${index + 1}`,
+        importedDocument: {
+          ...(inclusions.pages?.[index] || {}),
+          documentId: inclusions.id,
+          fileName: inclusions.fileName,
+          publicUrl: inclusions.publicUrl,
+          storagePath: inclusions.storagePath,
+        },
+        importedPageNumber: index + 1,
+      }));
+      return importedPages;
+    }
+    if (page.page_type === "pricedPlans") {
+      if (!planPages.length) return editing ? [page] : [];
+      const importedPages = planPages.map((planPage, index) => ({
+        ...page,
+        id: `imported-plan-${planPage.documentId || "doc"}-${planPage.pageNumber || index + 1}-${index}`,
+        page_type: "importedPlanPdf",
+        title: `Priced Plan ${index + 1}`,
+        importedDocument: planPage,
+        importedPageNumber: planPage.pageNumber || index + 1,
+        planIndex: index,
+      }));
+      return importedPages;
+    }
+    return [page];
+  });
+}
+
+function ProposalImportSidebarStatus({
+  page,
+  inclusionsDocument,
+  pricedPlans,
+  editing,
+  onInsertStandard,
+  onInsertModified,
+  onInsertPlans,
+  onReplaceInclusions,
+  onRemoveInclusions,
+  onReplacePlans,
+  onRemovePlans,
+  onOpenLibrary,
+}) {
+  if (!editing || !["standardInclusions", "pricedPlans"].includes(page?.page_type)) return null;
+  const planPages = Array.isArray(pricedPlans?.pages) ? pricedPlans.pages : [];
+  if (page.page_type === "pricedPlans") {
+    return (
+      <div style={styles.proposalThemeHint}>
+        <strong>Plans Used to Prepare This Estimate</strong>
+        {planPages.length ? (
+          <>
+            <span>{pricedPlans.fileName || pricedPlans.title || planPages[0]?.fileName || "Concept Plans PDF"}</span>
+            <span>{planPages.length} page{planPages.length === 1 ? "" : "s"} imported</span>
+            <div style={styles.importButtonRow}>
+              <button type="button" style={styles.secondaryButton} onClick={onReplacePlans}>Replace</button>
+              <button type="button" style={styles.dangerButton} onClick={onRemovePlans}>Remove</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span>No plans PDF uploaded.</span>
+            <div style={styles.importButtonRow}>
+              <button type="button" style={styles.primaryButton} onClick={onInsertPlans}>Insert Plans PDF</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("priced_plans")}>Select from Library</button>
+            </div>
+          </>
         )}
-        <div className="quote-proposal-print" style={styles.quoteProposalDocument}>
-          {(previewMode ? proposalPages : proposalPages.filter((page) => page.key === activeProposalPage)).map((page) => {
-            if (page.key === "cover") {
-              return (
-                <QuoteProposalPage key={page.key} title="Cover Page">
-                  <div style={styles.proposalCoverGrid}>
-                    <div style={styles.proposalCoverBrand}>
-                      <div style={styles.proposalLogoBox}>
-                        {client.logoUrl ? <img src={client.logoUrl} alt="Builder logo" style={styles.proposalLogoImage} /> : <span>Builder Logo</span>}
-                      </div>
-                      {!previewMode && <button style={styles.secondaryButton} disabled={readonly} onClick={() => logoFileInputRef.current?.click()}>Upload Logo</button>}
-                      <input ref={logoFileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadSingleImage(event, "logoUrl")} />
-                    </div>
-                    <div style={styles.proposalCoverDetails}>
-                      <QuoteField label="Builder / Company Name" value={client.companyName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("companyName", next)} />
-                      <QuoteField label="Client Name" value={client.clientName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("clientName", next)} />
-                      <QuoteField label="Project Address" value={client.projectAddress} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("projectAddress", next)} />
-                      <QuoteField label="Quote Title" value={client.estimateTitle} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("estimateTitle", next)} />
-                      <div style={styles.proposalMiniGrid}>
-                        <QuoteField label="Quote Number" value={client.quoteNumber} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("quoteNumber", next)} />
-                        <QuoteField label="Quote Date" value={client.quoteDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("quoteDate", next)} />
-                        <QuoteField label="Expiry Date" value={client.expiryDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("expiryDate", next)} />
-                      </div>
-                    </div>
-                  </div>
-                  <div style={styles.proposalHero}>
-                    {client.heroImageUrl ? <img src={client.heroImageUrl} alt="Quote proposal hero" style={styles.proposalHeroImage} /> : <div style={styles.proposalImagePlaceholder}>Hero image upload area</div>}
-                    {!previewMode && (
-                      <>
-                        <button style={styles.secondaryButton} disabled={readonly} onClick={() => heroFileInputRef.current?.click()}>Upload Hero Image</button>
-                        <input ref={heroFileInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadSingleImage(event, "heroImageUrl")} />
-                      </>
-                    )}
-                  </div>
-                  <ProposalGallery title="Past Project / Showcase Images" images={client.showcaseImages} readonly={readonly || previewMode} onUpload={() => showcaseFileInputRef.current?.click()} onRemove={(index) => removeGalleryImage("showcaseImages", index)} />
-                  <input ref={showcaseFileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageGallery(event, "showcaseImages")} />
-                </QuoteProposalPage>
-              );
-            }
-            if (page.key === "about") {
-              return (
-                <QuoteProposalPage key={page.key} title="About Us">
-                  <ProposalTextEditor label="About Us" value={client.aboutUs} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("aboutUs", next)} />
-                  <div style={styles.proposalThreeColumns}>
-                    <ProposalTextEditor label="Why Choose Us" value={client.whyChooseUs} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("whyChooseUs", next)} />
-                    <ProposalTextEditor label="Building Your Dream Home" value={client.buildingYourDreamHome} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("buildingYourDreamHome", next)} />
-                    <ProposalTextEditor label="Trust, Quality & Communication" value={client.trustQualityCommunication} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("trustQualityCommunication", next)} />
-                  </div>
-                </QuoteProposalPage>
-              );
-            }
-            if (page.key === "design") {
-              return (
-                <QuoteProposalPage key={page.key} title="Project Design">
-                  <ProposalTextEditor label="Project Design Introduction" value={client.projectDesignIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("projectDesignIntro", next)} />
-                  <ProposalGallery title="Floorplans, Facade Renders & Project Images" images={client.designImages} readonly={readonly || previewMode} onUpload={() => designFileInputRef.current?.click()} onRemove={(index) => removeGalleryImage("designImages", index)} large />
-                  <input ref={designFileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" style={{ display: "none" }} onChange={(event) => uploadImageGallery(event, "designImages")} />
-                </QuoteProposalPage>
-              );
-            }
-            if (page.key === "inclusions") {
-              return (
-                <QuoteProposalPage key={page.key} title="Inclusions Schedule">
-                  <ProposalTextEditor label="Inclusions Schedule Placeholder" value={client.inclusionsScheduleIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("inclusionsScheduleIntro", next)} />
-                  <div style={styles.proposalPlaceholderPanel}>
-                    <strong>Full inclusions schedule coming next.</strong>
-                    <span>This page is ready to connect to the inclusions system once the structured inclusions data is built.</span>
-                  </div>
-                </QuoteProposalPage>
-              );
-            }
-            if (page.key === "pricing") {
-              return (
-                <QuoteProposalPage key={page.key} title="Price Breakdown">
-                  <ProposalTextEditor label="Pricing Introduction" value={client.pricingIntro} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("pricingIntro", next)} />
-                  <div style={styles.proposalPriceGrid}>
-                    {pricingGroups.map((group) => (
-                      <div key={group.stageNumber} style={styles.proposalPriceCard}>
-                        <span>{group.stageNumber} - {group.label}</span>
-                        <strong>{money(group.total)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={styles.proposalTotalsCard}>
-                    <ClientMeta label="Allowances / base subtotal" value={money(sheet.preview.summary.baseLineItemSubtotal ?? sheet.preview.summary.subtotalBeforeMargin)} />
-                    <ClientMeta label="GST" value={money(sheet.preview.summary.gst)} />
-                    <ClientMeta label="Final Quote Total" value={money(sheet.preview.summary.finalQuoteTotal)} />
-                  </div>
-                </QuoteProposalPage>
-              );
-            }
-            if (page.key === "acceptance") {
-              return (
-                <QuoteProposalPage key={page.key} title="Quote Acceptance">
-                  <ProposalTextEditor label="Acceptance Wording" value={client.acceptance} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptance", next)} />
-                  <div style={styles.proposalAcceptanceGrid}>
-                    <QuoteField label="Client Name" value={client.acceptanceClientName} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptanceClientName", next)} />
-                    <QuoteField label="Date" value={client.acceptanceDate} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("acceptanceDate", next)} />
-                    <div style={styles.proposalSignatureBox}>Signature area</div>
-                  </div>
-                  <label style={styles.proposalTermsCheck}>
-                    <input type="checkbox" disabled={readonly || previewMode} checked={Boolean(client.termsAcknowledged)} onChange={(event) => sheet.updateClientPage("termsAcknowledged", event.target.checked)} />
-                    <span>I acknowledge the quote, scope, exclusions, and terms.</span>
-                  </label>
-                  {!previewMode && <button style={styles.primaryButton} disabled={readonly || !client.termsAcknowledged} onClick={acceptQuote}>Accept Quote</button>}
-                </QuoteProposalPage>
-              );
-            }
-            return (
-              <QuoteProposalPage key={page.key} title="Thank You">
-                <div style={styles.proposalThankYou}>
-                  {client.logoUrl ? <img src={client.logoUrl} alt="Builder logo" style={styles.proposalLogoImage} /> : <div style={styles.clientLogoMark}>LOGO</div>}
-                  <h2>Thank you for choosing {client.companyName || "our team"}</h2>
-                  <ProposalTextEditor label="Thank You / Closing Text" value={client.thankYouText} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("thankYouText", next)} />
-                  <QuoteField label="Contact Details" value={client.contactDetails} readonly={readonly || previewMode} onCommit={(next) => sheet.updateClientPage("contactDetails", next)} />
-                  {client.finalImageUrl && <img src={client.finalImageUrl} alt="Closing quote image" style={styles.proposalHeroImage} />}
+      </div>
+    );
+  }
+  return (
+    <div style={styles.proposalThemeHint}>
+      <strong>Standard Inclusions Schedule</strong>
+      {inclusionsDocument?.publicUrl ? (
+        <>
+          <span>Active inclusions schedule:</span>
+          <span>{inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</span>
+          <span>{Number(inclusionsDocument.pageCount || 1)} page{Number(inclusionsDocument.pageCount || 1) === 1 ? "" : "s"} imported</span>
+          <span>Uploaded {formatProposalDate(inclusionsDocument.uploadedAt || inclusionsDocument.importedAt)}</span>
+          {inclusionsDocument.version || inclusionsDocument.fileHash ? (
+            <span>Version {inclusionsDocument.version || String(inclusionsDocument.fileHash).slice(0, 12)}</span>
+          ) : null}
+          <div style={styles.importButtonRow}>
+            <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace</button>
+            <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove Existing Schedule Completely</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <span>No inclusions PDF uploaded.</span>
+          <div style={styles.importButtonRow}>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Insert Standard</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Insert Modified</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Select from Library</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProposalImportedDocumentPage({
+  page,
+  inclusionsDocument,
+  pricedPlans,
+  editing,
+  onInsertStandard,
+  onInsertModified,
+  onInsertPlans,
+  onReplaceInclusions,
+  onRemoveInclusions,
+  onReplacePlans,
+  onRemovePlans,
+  onOpenLibrary,
+}) {
+  if (page.page_type === "importedPlanPdf") {
+    const doc = page.importedDocument || {};
+    const isLandscape = planPageOrientation(doc) === "landscape";
+    return (
+      <section className={`proposal-builder-page ${isLandscape ? "proposal-builder-page-landscape" : ""}`} style={isLandscape ? styles.importedPdfLandscapePage : styles.importedPdfPortraitPage}>
+        <ImportedPdfPageImage document={doc} pageNumber={page.importedPageNumber || 1} title={page.title} />
+      </section>
+    );
+  }
+
+  if (page.page_type === "importedInclusionsPdf") {
+    const doc = page.importedDocument || {};
+    const isLandscape = planPageOrientation(doc) === "landscape";
+    return (
+      <section className={`proposal-builder-page ${isLandscape ? "proposal-builder-page-landscape" : ""}`} style={isLandscape ? styles.importedPdfLandscapePage : styles.importedPdfPortraitPage}>
+        <ImportedPdfPageImage document={doc} pageNumber={page.importedPageNumber || 1} title={page.title} />
+      </section>
+    );
+  }
+
+  if (page.page_type === "pricedPlans") {
+    const pages = Array.isArray(pricedPlans?.pages) ? pricedPlans.pages : [];
+    return (
+      <section className="proposal-builder-page" style={{ ...styles.luxuryPage, ...styles.importPlaceholderPage }}>
+        <div style={styles.importPlaceholderContent}>
+          <h1 style={styles.importPlaceholderTitle}>Plans Used to Prepare This Estimate</h1>
+          <p style={styles.importPlaceholderText}>Insert the concept plans or drawings used as the basis of this estimate.</p>
+          {pages.length ? (
+            <div style={styles.importedSummaryBox}>
+              <strong>{pricedPlans.fileName || pricedPlans.title || pages[0]?.fileName || "Concept Plans PDF"}</strong>
+              <span>{pages.length} page{pages.length === 1 ? "" : "s"}</span>
+              {editing ? (
+                <div style={styles.importButtonRow}>
+                  <button type="button" style={styles.secondaryButton} onClick={onReplacePlans}>Replace Concept Plans PDF</button>
+                  <button type="button" style={styles.dangerButton} onClick={onRemovePlans}>Remove Concept Plans PDF</button>
                 </div>
-              </QuoteProposalPage>
-            );
-          })}
+              ) : null}
+            </div>
+          ) : editing ? (
+            <div style={styles.importButtonRow}>
+              <button type="button" style={styles.primaryButton} onClick={onInsertPlans}>Insert Concept Plans PDF</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("priced_plans")}>Select from Document Library</button>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="proposal-builder-page" style={{ ...styles.luxuryPage, ...styles.importPlaceholderPage }}>
+      <div style={styles.importPlaceholderContent}>
+        <h1 style={styles.importPlaceholderTitle}>Standard Inclusions Schedule</h1>
+        <p style={styles.importPlaceholderText}>Insert the inclusions schedule applicable to this project.</p>
+        {inclusionsDocument?.publicUrl ? (
+          <div style={styles.importedSummaryBox}>
+            <strong>{inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</strong>
+            <span>{Number(inclusionsDocument.pageCount || 1)} page{Number(inclusionsDocument.pageCount || 1) === 1 ? "" : "s"}</span>
+            {editing ? (
+              <div style={styles.importButtonRow}>
+                <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace Inclusions Schedule</button>
+                <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove Inclusions Schedule</button>
+              </div>
+            ) : null}
+          </div>
+        ) : editing ? (
+          <div style={styles.importButtonRow}>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Insert Standard Inclusions Schedule</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Insert Modified Inclusions Schedule</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Select from Document Library</button>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function planPageOrientation(page = {}) {
+  if (page.orientation === "portrait" || page.orientation === "landscape") return page.orientation;
+  const rotation = Number(page.rotation || page.metadataRotation || 0);
+  const width = Number(page.width || 0);
+  const height = Number(page.height || 0);
+  const rotated = Math.abs(rotation % 180) === 90;
+  const displayWidth = rotated ? height : width;
+  const displayHeight = rotated ? width : height;
+  return displayWidth >= displayHeight ? "landscape" : "portrait";
+}
+
+function proposalPageOrientation(page = {}) {
+  if (page.page_type === "importedPlanPdf" || page.page_type === "importedInclusionsPdf") {
+    return planPageOrientation(page.importedDocument || page);
+  }
+  return page.orientation === "landscape" ? "landscape" : "portrait";
+}
+
+function safePdfNamePart(value = "") {
+  return String(value || "")
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function proposalPdfFileName(sheet, builder = {}) {
+  const clientName = safePdfNamePart(clientWorkbookDataValue(sheet, "clientName") || builder.theme?.clientNameOverride || "Client");
+  const quoteNumber = safePdfNamePart(clientWorkbookDataValue(sheet, "quoteNumber") || clientWorkbookDataValue(sheet, "estimateNumber") || "");
+  const parts = [clientName, quoteNumber, "Project Estimate"].filter(Boolean);
+  return `${parts.join(" - ")}.pdf`;
+}
+
+function nextAnimationFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+async function waitForProposalExportReady(container) {
+  await nextAnimationFrame();
+  const deadline = Date.now() + 4500;
+  while (Date.now() < deadline) {
+    const images = Array.from(container.querySelectorAll("img"));
+    const imagesReady = images.every((image) => !image.src || (image.complete && image.naturalWidth > 0));
+    const loadingText = String(container.textContent || "").includes("Loading PDF page");
+    if (imagesReady && !loadingText) return;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+}
+
+async function renderProposalPagesForPdf(container) {
+  if (!container) throw new Error("The rendered document is not ready for PDF export.");
+  await waitForProposalExportReady(container);
+  const html2canvas = (await import("html2canvas")).default;
+  const pageElements = Array.from(container.querySelectorAll("[data-proposal-export-page='true']"));
+  if (!pageElements.length) throw new Error("No rendered document pages were found for PDF export.");
+  const renderedPages = [];
+  for (const [index, element] of pageElements.entries()) {
+    try {
+      const canvas = await html2canvas(element, {
+        backgroundColor: "#ffffff",
+        scale: 2.4,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        windowWidth: Math.ceil(element.scrollWidth),
+        windowHeight: Math.ceil(element.scrollHeight),
+      });
+      renderedPages.push({
+        pageIndex: index + 1,
+        pageType: element.dataset.pageType || "",
+        sourceFile: element.dataset.sourceFile || "",
+        sourcePath: element.dataset.sourcePath || "",
+        sourcePageNumber: Number(element.dataset.sourcePageNumber || 0) || null,
+        orientation: element.dataset.orientation === "landscape" ? "landscape" : "portrait",
+        imageData: canvas.toDataURL("image/jpeg", 0.96),
+      });
+    } catch (error) {
+      const sourceFile = element.dataset.sourceFile || element.dataset.sourcePath || `rendered page ${index + 1}`;
+      const sourcePage = element.dataset.sourcePageNumber ? ` page ${element.dataset.sourcePageNumber}` : "";
+      console.error("Proposal PDF page render failed", {
+        pageIndex: index + 1,
+        pageType: element.dataset.pageType || "",
+        sourceFile,
+        sourcePath: element.dataset.sourcePath || "",
+        sourcePageNumber: element.dataset.sourcePageNumber || "",
+        error,
+      });
+      throw new Error(`PDF page render failed on ${sourceFile}${sourcePage}: ${error?.stack || error?.message || String(error)}`);
+    }
+  }
+  return renderedPages;
+}
+
+async function formatProposalExportErrorResponse(response, responseType = "", { responseOk = false } = {}) {
+  const statusLine = `HTTP ${response.status} ${response.statusText || ""}`.trim();
+  const body = await response.text().catch((error) => `Could not read response body: ${error?.message || String(error)}`);
+  const trimmedBody = body.trim();
+  const isFrameworkInvalidJson = trimmedBody === "Invalid JSON";
+  console.error("Project Estimate PDF export response body", {
+    status: response.status,
+    statusText: response.statusText,
+    contentType: responseType,
+    body,
+  });
+  if (isFrameworkInvalidJson) {
+    return [
+      `Project Estimate PDF export failed (${statusLine}).`,
+      "The server returned the framework JSON-parser failure before the export handler could run.",
+      "Restart the Next dev server so the export API uses its manual JSON parser, then retry the download.",
+    ].join("\n\n");
+  }
+  if (responseType.includes("application/json") || /^[\[{]/.test(trimmedBody)) {
+    try {
+      const payload = JSON.parse(body || "{}");
+      const formatPayloadValue = (value) => typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      return [
+        responseOk ? `Project Estimate PDF export returned JSON instead of a PDF (${statusLine}).` : `Project Estimate PDF export failed (${statusLine}).`,
+        payload.error ? `Server error: ${payload.error}` : "",
+        payload.exception ? `Exception: ${payload.exception}` : "",
+        payload.stack ? `Stack:\n${payload.stack}` : "",
+        payload.pdfLibError ? `pdf-lib error:\n${formatPayloadValue(payload.pdfLibError)}` : "",
+        payload.mergeError ? `Merge error:\n${formatPayloadValue(payload.mergeError)}` : "",
+        payload.outputPath ? `Output path: ${payload.outputPath}` : "",
+        payload.uploadedPdfPaths ? `Uploaded PDF paths:\n${JSON.stringify(payload.uploadedPdfPaths, null, 2)}` : "",
+        payload.pageCount !== undefined ? `Page count: ${payload.pageCount}` : "",
+        payload.details ? `Details:\n${JSON.stringify(payload.details, null, 2)}` : "",
+        `Response body:\n${body}`,
+      ].filter(Boolean).join("\n\n");
+    } catch (error) {
+      return [
+        `Project Estimate PDF export failed (${statusLine}).`,
+        `Expected JSON but could not parse the response body: ${error?.message || String(error)}`,
+        `Response body:\n${body || "(empty)"}`,
+      ].join("\n\n");
+    }
+  }
+  if (/text\/html/i.test(responseType) || /^\s*<!doctype html|^\s*<html/i.test(body)) {
+    return [
+      `Project Estimate PDF export failed (${statusLine}).`,
+      `Server returned HTML instead of JSON/PDF. Content-Type: ${responseType || "missing"}`,
+      `Response body:\n${body}`,
+    ].join("\n\n");
+  }
+  return [
+    `Project Estimate PDF export failed (${statusLine}).`,
+    `Server returned a non-JSON/non-PDF response. Content-Type: ${responseType || "missing"}`,
+    `Response body:\n${body || "(empty)"}`,
+  ].join("\n\n");
+}
+
+function bytesStartWithPdf(bytes) {
+  if (!bytes || bytes.length < 5) return false;
+  return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d;
+}
+
+async function validateSelectedPdfFile(file) {
+  if (!file) return { ok: false, error: "Please choose a PDF document." };
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || "");
+  if (file.size <= 0) return { ok: false, error: "The selected file is not a valid PDF" };
+  if (type && type !== "application/pdf" && !/\.pdf$/i.test(name)) return { ok: false, error: "The selected file is not a valid PDF" };
+  if (!type && !/\.pdf$/i.test(name)) return { ok: false, error: "The selected file is not a valid PDF" };
+  const firstBytes = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  if (!bytesStartWithPdf(firstBytes)) return { ok: false, error: "The selected file is not a valid PDF" };
+  return { ok: true };
+}
+
+async function repairPdfFile(file) {
+  const { PDFDocument } = await import("pdf-lib");
+  const sourceBytes = await file.arrayBuffer();
+  const sourcePdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+  const repairedBytes = await sourcePdf.save({ useObjectStreams: false });
+  const repairedFile = new File([repairedBytes], file.name || "document.pdf", { type: "application/pdf" });
+  return { file: repairedFile };
+}
+
+async function readProposalPdfMetadata(file) {
+  const pdfjsLib = await loadPdfJs();
+  const data = await file.arrayBuffer();
+  const bytes = new Uint8Array(data);
+  if (!bytesStartWithPdf(bytes)) throw new Error("The selected file is not a valid PDF");
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const pages = [];
+  for (let index = 1; index <= pdf.numPages; index += 1) {
+    const page = await pdf.getPage(index);
+    const viewport = page.getViewport({ scale: 1 });
+    const rotation = Number(page.rotate || viewport.rotation || 0);
+    const width = Number(viewport.width || 595);
+    const height = Number(viewport.height || 842);
+    pages.push({
+      pageNumber: index,
+      order: index,
+      width,
+      height,
+      rotation,
+      metadataRotation: rotation,
+      orientation: width >= height ? "landscape" : "portrait",
+    });
+  }
+  return {
+    pageCount: pages.length,
+    pages,
+  };
+}
+
+async function fetchVerifiedPdfBytes(url) {
+  if (!url) throw new Error("The upload did not return a PDF URL.");
+  const response = await fetch(url, { cache: "no-store" });
+  const contentType = response.headers.get("content-type") || "";
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(body || `Could not read uploaded PDF. HTTP ${response.status}.`);
+  }
+  if (/application\/json|text\/html/i.test(contentType)) {
+    const body = await response.text().catch(() => "");
+    console.error("Uploaded PDF URL returned non-PDF content", { contentType, body: body.slice(0, 500) });
+    throw new Error("The upload returned JSON/HTML instead of a PDF");
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytesStartWithPdf(bytes)) throw new Error("The upload returned JSON/HTML instead of a PDF");
+  return bytes;
+}
+
+async function validateUploadedPdfDocument(document = {}) {
+  try {
+    const bytes = await fetchVerifiedPdfBytes(document.publicUrl);
+    const pdfjsLib = await loadPdfJs();
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const expectedPageCount = Number(document.pageCount || 0);
+    if (expectedPageCount && pdf.numPages !== expectedPageCount) {
+      return { ok: false, error: `Uploaded PDF page count mismatch: expected ${expectedPageCount}, received ${pdf.numPages}.` };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error?.message || "The uploaded PDF could not be parsed." };
+  }
+}
+
+async function loadUploadedPdfDocument(url) {
+  const bytes = await fetchVerifiedPdfBytes(url);
+  try {
+    const pdfjsLib = await loadPdfJs();
+    return await pdfjsLib.getDocument({ data: bytes }).promise;
+  } catch (error) {
+    throw new Error(error?.message || "The uploaded PDF could not be parsed.");
+  }
+}
+
+function ImportedPdfPageImage({ document, pageNumber, title }) {
+  const [state, setState] = useState({ status: "loading", dataUrl: "", width: 0, height: 0, error: "" });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function renderPage() {
+      try {
+        setState({ status: "loading", dataUrl: "", width: 0, height: 0, error: "" });
+        const pdf = await loadUploadedPdfDocument(document.publicUrl);
+        const pdfPage = await pdf.getPage(pageNumber);
+        const viewport = pdfPage.getViewport({ scale: 2.2 });
+        const canvas = window.document.createElement("canvas");
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        const context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = true;
+        await pdfPage.render({ canvasContext: context, viewport }).promise;
+        if (!cancelled) {
+          setState({
+            status: "ready",
+            dataUrl: canvas.toDataURL("image/png"),
+            width: canvas.width,
+            height: canvas.height,
+            error: "",
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setState({ status: "error", dataUrl: "", width: 0, height: 0, error: error?.message || "Could not render PDF page." });
+        }
+      }
+    }
+    if (document?.publicUrl) renderPage();
+    else setState({ status: "error", dataUrl: "", width: 0, height: 0, error: "Missing PDF URL." });
+    return () => {
+      cancelled = true;
+    };
+  }, [document?.publicUrl, pageNumber]);
+
+  if (state.status === "ready") {
+    return <img src={state.dataUrl} alt={title || `PDF page ${pageNumber}`} style={styles.importedPdfImage} />;
+  }
+  return (
+    <div style={styles.importedPdfLoading}>
+      {state.status === "error" ? state.error : "Rendering plan page..."}
+    </div>
+  );
+}
+
+function ProposalDocumentLibraryModal({ rows, loading, onClose, onSelect }) {
+  return (
+    <div style={styles.modalOverlay}>
+      <div style={styles.documentLibraryModal}>
+        <div style={styles.documentLibraryHeader}>
+          <strong>Select platform document</strong>
+          <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
+        </div>
+        {loading ? <div style={styles.empty}>Loading documents...</div> : null}
+        {!loading && !rows.length ? <div style={styles.empty}>No matching document library records found.</div> : null}
+        <div style={styles.documentLibraryList}>
+          {rows.map((row) => (
+            <button key={row.id} type="button" style={styles.documentLibraryRow} onClick={() => onSelect(row)}>
+              <strong>{row.title || row.file_name || "Untitled document"}</strong>
+              <span>{row.file_name || row.public_url || row.storage_path || "PDF document"}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function QuoteProposalPage({ title, children }) {
+function ProposalDocumentPage({ page, linkedFields, selectedBlockId, editingBlockId, previewMode, onSelectBlock, onEditBlock, onBlockContent, onDragStart, onDropBlock }) {
   return (
-    <section className="quote-proposal-page" style={styles.quoteProposalPage}>
-      <div style={styles.quoteProposalPageHeader}>
-        <span>Quote Proposal</span>
-        <h2>{title}</h2>
-      </div>
-      {children}
+    <section
+      className="proposal-builder-page"
+      style={{
+        ...styles.proposalDocumentPage,
+        background: page.design?.backgroundColor || "#ffffff",
+        backgroundImage: page.design?.backgroundImageUrl ? `linear-gradient(rgba(15,23,42,${page.design.overlayOpacity || 0}), rgba(15,23,42,${page.design.overlayOpacity || 0})), url(${page.design.backgroundImageUrl})` : undefined,
+      }}
+    >
+      {page.blocks.map((block) => (
+        <div
+          key={block.id}
+          draggable={!previewMode}
+          onDragStart={() => onDragStart(block.id)}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={() => onDropBlock(block.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelectBlock(block.id);
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            if (!previewMode && ["heading", "text"].includes(block.type)) onEditBlock(block.id);
+          }}
+          style={{ ...styles.proposalCanvasBlock, ...(selectedBlockId === block.id && !previewMode ? styles.proposalCanvasBlockSelected : {}) }}
+        >
+          <ProposalBlockRenderer
+            block={block}
+            linkedFields={linkedFields}
+            editing={editingBlockId === block.id && !previewMode}
+            onTextChange={(value) => onBlockContent(block.id, "text", value)}
+            onFinishEditing={() => onEditBlock("")}
+          />
+        </div>
+      ))}
     </section>
   );
 }
 
-function QuoteField({ label, value, readonly, onCommit }) {
+function ProposalBlockRenderer({ block, linkedFields, editing = false, onTextChange, onFinishEditing }) {
+  const textAlign = block.design?.textAlign || "left";
+  const textStyle = {
+    color: block.design?.color || (block.type === "heading" ? "#0f172a" : "#334155"),
+    fontSize: Number(block.design?.fontSize || (block.type === "heading" ? 40 : 17)),
+    fontWeight: Number(block.design?.fontWeight || (block.type === "heading" ? 800 : 400)),
+    lineHeight: block.design?.lineHeight || (block.type === "heading" ? 1.12 : 1.6),
+    textAlign,
+    whiteSpace: "pre-line",
+  };
+  if (block.type === "heading") {
+    return editing ? (
+      <ProposalInlineTextEditor value={block.content?.text || ""} style={{ ...textStyle, margin: 0 }} onChange={onTextChange} onFinish={onFinishEditing} />
+    ) : (
+      <h1 style={textStyle}>{resolveProposalText(block.content?.text, linkedFields)}</h1>
+    );
+  }
+  if (block.type === "text") {
+    return editing ? (
+      <ProposalInlineTextEditor value={block.content?.text || ""} style={textStyle} onChange={onTextChange} onFinish={onFinishEditing} />
+    ) : (
+      <p style={textStyle}>{resolveProposalText(block.content?.text, linkedFields)}</p>
+    );
+  }
+  if (block.type === "image") {
+    return block.content?.imageUrl ? <img src={block.content.imageUrl} alt={block.content?.alt || "Proposal image"} style={{ ...styles.proposalBuilderImage, objectFit: block.design?.objectFit || "cover" }} /> : <div style={styles.proposalImagePlaceholder}>Image block</div>;
+  }
+  if (block.type === "logo") {
+    return block.content?.logoUrl
+      ? <img src={block.content.logoUrl} alt="Builder logo" style={{ ...styles.proposalBuilderLogo, width: Number(block.design?.width || 210), height: Number(block.design?.height || 130) }} />
+      : <div style={{ ...styles.proposalLogoBox, width: Number(block.design?.width || 210), height: Number(block.design?.height || 130) }}>Builder Logo</div>;
+  }
+  if (block.type === "quote_field") {
+    const field = linkedFields[block.content?.fieldKey] || { label: "Linked field", value: "" };
+    return <div style={{ ...styles.proposalLinkedField, textAlign }}><span>{block.content?.label || field.label}</span><strong>{field.value || "-"}</strong></div>;
+  }
+  if (block.type === "pricing_summary") {
+    return (
+      <div style={styles.proposalPricingSummary}>
+        <h3>{block.content?.heading || "Pricing Summary"}</h3>
+        {linkedFields.pricingGroups.value.map((group) => <div key={group.stageNumber} style={styles.proposalPriceCard}><span>{group.stageNumber} - {group.label}</span><strong>{money(group.total)}</strong></div>)}
+        <div style={styles.proposalTotalLine}><span>Final Quote Total</span><strong>{linkedFields.quoteTotal.value}</strong></div>
+      </div>
+    );
+  }
+  if (block.type === "inclusions") {
+    return <ProposalSimpleList title={block.content?.heading || "Inclusions"} intro={block.content?.intro || ""} rows={(block.content?.items || []).length ? block.content.items : linkedFields.inclusions.value} />;
+  }
+  if (block.type === "signature") {
+    return <div style={styles.proposalSignaturePanel}><h3>{block.content?.heading || "Acceptance"}</h3><p style={styles.proposalMultilineText}>{block.content?.text || "I/we accept this proposal and authorise the works to proceed."}</p><div style={styles.proposalSignatureLine}>Client signature</div></div>;
+  }
+  if (block.type === "spacer") {
+    return <div style={{ height: Number(block.design?.height || 32) }} />;
+  }
+  if (block.type === "divider") {
+    return <hr style={{ border: 0, borderTop: `${block.design?.thickness || 2}px solid ${block.design?.color || "#cbd5e1"}` }} />;
+  }
+  return null;
+}
+
+function ProposalInlineTextEditor({ value, style, onChange, onFinish }) {
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    const node = editorRef.current;
+    if (!node) return;
+    node.focus();
+    node.selectionStart = node.value.length;
+    node.selectionEnd = node.value.length;
+  }, []);
+
   return (
-    <label style={styles.proposalField}>
-      <span>{label}</span>
-      {readonly ? (
-        <strong>{value || "-"}</strong>
-      ) : (
-        <BufferedInput commitOnChange style={styles.proposalInput} value={value || ""} onCommit={onCommit} />
-      )}
-    </label>
+    <textarea
+      ref={editorRef}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onBlur={onFinish}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onFinish();
+        }
+      }}
+      style={{
+        ...styles.proposalInlineTextarea,
+        ...style,
+        textAlign: style?.textAlign || "left",
+      }}
+    />
   );
 }
 
-function ProposalTextEditor({ label, value, readonly, onCommit }) {
+function ProposalSimpleList({ title, intro, rows }) {
   return (
-    <label style={styles.proposalTextBlock}>
-      <span>{label}</span>
-      {readonly ? (
-        <p>{value || "-"}</p>
-      ) : (
-        <BufferedTextarea style={styles.proposalTextarea} value={value || ""} onCommit={onCommit} />
-      )}
-    </label>
-  );
-}
-
-function ProposalGallery({ title, images = [], readonly, onUpload, onRemove, large = false }) {
-  return (
-    <div style={styles.proposalGallery}>
-      <div style={styles.proposalGalleryHeader}>
-        <strong>{title}</strong>
-        {!readonly && <button type="button" style={styles.secondaryButton} onClick={onUpload}>Upload Images</button>}
-      </div>
-      <div style={{ ...styles.proposalImageGrid, ...(large ? styles.proposalImageGridLarge : {}) }}>
-        {images.length ? images.map((image, index) => (
-          <div key={`${image}-${index}`} style={styles.proposalImageTile}>
-            <img src={image} alt={`${title} ${index + 1}`} style={styles.proposalGalleryImage} />
-            {!readonly && <button type="button" style={styles.proposalImageRemove} onClick={() => onRemove(index)}>Remove</button>}
-          </div>
-        )) : (
-          <div style={styles.proposalImagePlaceholder}>Upload images to build this page.</div>
-        )}
-      </div>
+    <div style={styles.proposalListBlock}>
+      <h3>{title}</h3>
+      {intro ? <p style={styles.proposalMultilineText}>{intro}</p> : null}
+      <ul>{rows.map((row, index) => <li key={`${row}-${index}`}>{row}</li>)}</ul>
     </div>
+  );
+}
+
+function EstimateInclusionsBrochure({ packageData, accent = "#c89d4a", compact = false }) {
+  const data = packageData?.package ? packageData : selectedEstimateInclusionsPackage(packageData);
+  const sections = (data.sections || []).slice(0, compact ? 4 : 10);
+  const suppliers = data.suppliers || [];
+  return (
+    <div style={{ ...styles.estimateBrochure, ...(compact ? styles.estimateBrochureCompact : {}) }}>
+      <div style={styles.estimateBrochureIntro}>
+        <span style={{ ...styles.luxuryEyebrow, color: accent }}>{data.package?.name || "Luxury Inclusions"}</span>
+        <h2 style={styles.luxurySectionTitle}>Standard Inclusions Schedule</h2>
+        <p style={styles.luxuryBodyText}>{data.package?.description || "A premium inclusions package tailored by the builder for this estimate."}</p>
+      </div>
+      <div style={styles.estimateBrochureSectionGrid}>
+        {sections.map((section, index) => (
+          <article key={section.id} style={{ ...styles.estimateBrochureSection, ...(index === 0 ? styles.estimateBrochureSectionFeature : {}) }}>
+            <div style={styles.estimateBrochureImageWrap}>
+              {section.hero_image_url || section.image_url ? (
+                <img src={section.hero_image_url || section.image_url} alt={section.title} style={styles.estimateBrochureImage} />
+              ) : (
+                <div style={styles.estimateBrochureImagePlaceholder}>{section.title}</div>
+              )}
+            </div>
+            <div style={styles.estimateBrochureCopy}>
+              <span style={{ color: accent }}>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{section.title}</h3>
+              {section.subtitle ? <strong>{section.subtitle}</strong> : null}
+              {section.body ? <p>{section.body}</p> : null}
+              <ul>
+                {(section.bullets || []).slice(0, compact ? 4 : 6).map((bullet, bulletIndex) => (
+                  <li key={`${section.id}-${bulletIndex}`}>{bullet}</li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+      {suppliers.length ? (
+        <div style={styles.estimateBrochureSuppliers}>
+          <strong>Supplier network</strong>
+          <div>
+            {suppliers.slice(0, compact ? 4 : 10).map((supplier) => (
+              <span key={supplier.id} style={styles.estimateBrochureSupplierLogo}>
+                {supplier.logo_url ? <img src={supplier.logo_url} alt={supplier.supplier_name} /> : null}
+                <b>{supplier.supplier_name || supplier.category || "Supplier"}</b>
+                {supplier.category ? <small>{supplier.category}</small> : null}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProposalPropertiesPanel({ page, block, linkedFields, readonly, onPageChange, onBlockContent, onBlockDesign, onMoveBlock, onDuplicateBlock, onRemoveBlock, onUploadLogo, onUploadImage, onUploadBackground }) {
+  return (
+    <div style={styles.proposalPropertiesStack}>
+      <h3>Page</h3>
+      <ProposalPanelInput label="Page title" value={page.title} disabled={readonly} onCommit={(value) => onPageChange({ title: value })} />
+      <ProposalPanelColor label="Background colour" value={page.design?.backgroundColor || "#ffffff"} disabled={readonly} onChange={(value) => onPageChange({ design: { ...page.design, backgroundColor: value } })} />
+      <ProposalPanelInput label="Background image URL" value={page.design?.backgroundImageUrl || ""} disabled={readonly} onCommit={(value) => onPageChange({ design: { ...page.design, backgroundImageUrl: value } })} />
+      <button style={styles.secondaryButton} disabled={readonly} onClick={onUploadBackground}>Upload background</button>
+      <ProposalPanelInput label="Overlay opacity" type="number" value={page.design?.overlayOpacity || 0} disabled={readonly} onCommit={(value) => onPageChange({ design: { ...page.design, overlayOpacity: value } })} />
+      <h3>Selected Block</h3>
+      {!block ? <p style={styles.mutedText}>Select a block on the canvas.</p> : (
+        <>
+          <div style={styles.proposalSelectedBlockHeader}>
+            <strong>{proposalBlockLabel(block.type)}</strong>
+            <div style={styles.proposalMiniActions}>
+              <button disabled={readonly} onClick={() => onMoveBlock(block.id, -1)}>Up</button>
+              <button disabled={readonly} onClick={() => onMoveBlock(block.id, 1)}>Down</button>
+              <button disabled={readonly} onClick={() => onDuplicateBlock(block.id)}>Duplicate</button>
+              <button disabled={readonly} onClick={() => onRemoveBlock(block.id)}>Delete</button>
+            </div>
+          </div>
+          <ProposalBlockFields block={block} linkedFields={linkedFields} readonly={readonly} onBlockContent={onBlockContent} onBlockDesign={onBlockDesign} onUploadLogo={onUploadLogo} onUploadImage={onUploadImage} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProposalBlockFields({ block, linkedFields, readonly, onBlockContent, onBlockDesign, onUploadLogo, onUploadImage }) {
+  const blockId = block.id;
+  return (
+    <div style={styles.proposalPropertiesStack}>
+      {["heading", "text"].includes(block.type) && (
+        <>
+          <ProposalPanelTextarea label="Text" value={block.content?.text || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "text", value)} />
+          <ProposalPanelInput label="Font size" type="number" value={block.design?.fontSize || ""} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "fontSize", value)} />
+          <ProposalPanelInput label="Font weight" type="number" value={block.design?.fontWeight || (block.type === "heading" ? 800 : 400)} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "fontWeight", value)} />
+          <ProposalPanelInput label="Line height" type="number" value={block.design?.lineHeight || 1.6} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "lineHeight", value)} />
+          <ProposalPanelColor label="Text colour" value={block.design?.color || "#0f172a"} disabled={readonly} onChange={(value) => onBlockDesign(blockId, "color", value)} />
+          <ProposalPanelSelect label="Alignment" value={block.design?.textAlign || "left"} disabled={readonly} options={["left", "center", "right"]} onChange={(value) => onBlockDesign(blockId, "textAlign", value)} />
+        </>
+      )}
+      {block.type === "quote_field" && (
+        <>
+          <ProposalPanelSelect label="Linked workbook field" value={block.content?.fieldKey || "clientName"} disabled={readonly} options={Object.keys(linkedFields).filter((key) => !["pricingGroups", "inclusions"].includes(key))} labels={linkedFields} onChange={(value) => onBlockContent(blockId, "fieldKey", value)} />
+          <ProposalPanelInput label="Display label" value={block.content?.label || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "label", value)} />
+          <ProposalPanelSelect label="Alignment" value={block.design?.textAlign || "left"} disabled={readonly} options={["left", "center", "right"]} onChange={(value) => onBlockDesign(blockId, "textAlign", value)} />
+        </>
+      )}
+      {block.type === "image" && (
+        <>
+          <ProposalPanelInput label="Image URL" value={block.content?.imageUrl || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "imageUrl", value)} />
+          <button style={styles.secondaryButton} disabled={readonly} onClick={onUploadImage}>Upload image</button>
+          <ProposalPanelSelect label="Object fit" value={block.design?.objectFit || "cover"} disabled={readonly} options={["cover", "contain"]} onChange={(value) => onBlockDesign(blockId, "objectFit", value)} />
+        </>
+      )}
+      {block.type === "logo" && (
+        <>
+          <ProposalPanelInput label="Logo URL" value={block.content?.logoUrl || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "logoUrl", value)} />
+          <button style={styles.secondaryButton} disabled={readonly} onClick={onUploadLogo}>Upload logo</button>
+          <ProposalPanelInput label="Logo width" type="number" value={block.design?.width || 210} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "width", value)} />
+          <ProposalPanelInput label="Logo height" type="number" value={block.design?.height || 130} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "height", value)} />
+        </>
+      )}
+      {block.type === "pricing_summary" && <ProposalPanelInput label="Heading" value={block.content?.heading || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "heading", value)} />}
+      {block.type === "inclusions" && (
+        <>
+          <ProposalPanelInput label="Heading" value={block.content?.heading || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "heading", value)} />
+          <ProposalPanelTextarea label="Manual inclusions override, one per line" value={(block.content?.items || []).join("\n")} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "items", value.split("\n").filter(Boolean))} />
+        </>
+      )}
+      {block.type === "signature" && (
+        <>
+          <ProposalPanelInput label="Heading" value={block.content?.heading || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "heading", value)} />
+          <ProposalPanelTextarea label="Acceptance text" value={block.content?.text || ""} disabled={readonly} onCommit={(value) => onBlockContent(blockId, "text", value)} />
+        </>
+      )}
+      {block.type === "spacer" && <ProposalPanelInput label="Height" type="number" value={block.design?.height || 32} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "height", value)} />}
+      {block.type === "divider" && (
+        <>
+          <ProposalPanelColor label="Colour" value={block.design?.color || "#cbd5e1"} disabled={readonly} onChange={(value) => onBlockDesign(blockId, "color", value)} />
+          <ProposalPanelInput label="Thickness" type="number" value={block.design?.thickness || 2} disabled={readonly} onCommit={(value) => onBlockDesign(blockId, "thickness", value)} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProposalPanelInput({ label, value, onCommit, disabled, type = "text" }) {
+  return <label style={styles.proposalPanelField}><span>{label}</span><BufferedInput commitOnChange disabled={disabled} type={type} style={styles.proposalPanelInput} value={value ?? ""} onCommit={onCommit} /></label>;
+}
+
+function NumberCommitInput({ label, value, onCommit, disabled }) {
+  return (
+    <label style={styles.proposalPanelField}>
+      <span>{label}</span>
+      <BufferedInput
+        commitOnChange
+        disabled={disabled}
+        type="number"
+        step="0.5"
+        style={styles.proposalPanelInput}
+        value={value ?? 0}
+        onCommit={(nextValue) => onCommit?.(Number(nextValue) || 0)}
+      />
+    </label>
+  );
+}
+
+function ProposalPanelTextarea({ label, value, onCommit, disabled }) {
+  return <label style={styles.proposalPanelField}><span>{label}</span><BufferedTextarea commitOnChange disabled={disabled} style={styles.proposalPanelTextarea} value={value || ""} onCommit={onCommit} /></label>;
+}
+
+function ProposalPanelColor({ label, value, onChange, disabled }) {
+  return <label style={styles.proposalPanelField}><span>{label}</span><input disabled={disabled} type="color" value={value || "#ffffff"} onChange={(event) => onChange(event.target.value)} /></label>;
+}
+
+function ProposalPanelSelect({ label, value, options, labels = {}, onChange, disabled }) {
+  return (
+    <label style={styles.proposalPanelField}>
+      <span>{label}</span>
+      <select disabled={disabled} style={styles.proposalPanelInput} value={value || ""} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => <option key={option} value={option}>{labels[option]?.label || pretty(option)}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -1698,6 +3988,1511 @@ function ClientTextBlock({ title, value, summary, collapsed, onToggle }) {
       </button>
       {!collapsed && <p style={styles.clientParagraph}>{value}</p>}
     </section>
+  );
+}
+
+function ProjectEstimateSheet({ sheet }) {
+  const standardSource = workbookStandardInclusionsSource(sheet.workbook);
+  const standardOptions = normaliseStandardInclusions(standardSource, sheet.workbook.builderId || "local-builder");
+  const standard = selectedStandardInclusionsPackage(standardSource);
+  return (
+    <div style={styles.projectEstimateShell}>
+      <div style={styles.projectEstimateBaselineBar}>
+        <strong>Priced using: {standard.package?.name || "Premier Range Inclusions"}</strong>
+        <select
+          style={styles.selectInput}
+          value={sheet.workbook.selected_standard_inclusions_package_id || standard.selectedPackageId || ""}
+          onChange={(event) => sheet.selectStandardInclusionsPackage?.(event.target.value)}
+        >
+          {standardOptions.packages.map((item) => (
+            <option key={item.id} value={item.id}>{item.name}</option>
+          ))}
+        </select>
+      </div>
+      <ClientPageSheet sheet={sheet} />
+    </div>
+  );
+}
+
+function ProductLibrarySheet({ sheet }) {
+  const readonly = sheet.previewMode;
+  const fileRef = useRef(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("active");
+  const [preview, setPreview] = useState(null);
+  const [message, setMessage] = useState("");
+  const [bulkSupplier, setBulkSupplier] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkActive, setBulkActive] = useState("");
+  const products = useMemo(() => productLibraryProducts(sheet), [sheet.workbook.productLibrary, sheet.preview, sheet.quoteSections]);
+  const savedCount = sheet.workbook.productLibrary?.products?.length || 0;
+  const categories = useMemo(() => uniqueProductValues(products, "category"), [products]);
+  const suppliers = useMemo(() => uniqueProductValues(products, "supplier"), [products]);
+  const filteredProducts = useMemo(() => filterProductLibraryProducts(products, { search, categoryFilter, supplierFilter, activeFilter }), [products, search, categoryFilter, supplierFilter, activeFilter]);
+  const stats = productLibraryStats(products);
+
+  function saveProducts(nextProducts, extra = {}) {
+    sheet.updateProductLibrary?.({
+      ...(sheet.workbook.productLibrary || {}),
+      products: nextProducts,
+      updatedAt: new Date().toISOString(),
+      ...extra,
+    });
+  }
+
+  function updateProduct(id, key, value) {
+    saveProducts(products.map((product) => product.id === id ? { ...product, [key]: value } : product));
+  }
+
+  function addProduct() {
+    saveProducts([blankProductLibraryRecord(products.length + 1), ...products]);
+    setMessage("Added a blank product row.");
+  }
+
+  function seedFromQuoteSheet() {
+    const nextProducts = deriveProductLibraryFromQuoteSheet(sheet);
+    saveProducts(nextProducts, { importedAt: new Date().toISOString() });
+    setMessage(`Seeded Product Library from ${nextProducts.length} Quote Sheet rows.`);
+  }
+
+  function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCsvObjects(String(reader.result || ""));
+        const nextPreview = previewProductLibraryImport(products, rows);
+        setPreview(nextPreview);
+        setMessage(`Import preview ready: ${nextPreview.newProducts.length} new, ${nextPreview.updatedProducts.length} updated, ${nextPreview.removedProducts.length} removed/deactivated, ${nextPreview.unchangedProducts.length} unchanged, ${nextPreview.invalidRows.length} invalid.`);
+      } catch (error) {
+        setPreview(null);
+        setMessage(error?.message || "Product Library CSV could not be imported.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function confirmImport() {
+    if (!preview) return;
+    saveProducts(applyProductLibraryImport(products, preview), { importedAt: new Date().toISOString() });
+    setMessage(`Product Library updated: ${preview.newProducts.length} new, ${preview.updatedProducts.length} updated, ${preview.removedProducts.length} deactivated.`);
+    setPreview(null);
+  }
+
+  function applyBulkUpdate() {
+    if (!bulkSupplier && !bulkCategory && !bulkActive) {
+      setMessage("Choose at least one bulk update value first.");
+      return;
+    }
+    const visibleIds = new Set(filteredProducts.map((product) => product.id));
+    saveProducts(products.map((product) => visibleIds.has(product.id) ? {
+      ...product,
+      ...(bulkSupplier ? { supplier: bulkSupplier } : {}),
+      ...(bulkCategory ? { category: bulkCategory } : {}),
+      ...(bulkActive ? { active: bulkActive } : {}),
+    } : product));
+    setMessage(`Bulk updated ${visibleIds.size} visible products.`);
+  }
+
+  return (
+    <div style={styles.productLibraryShell}>
+      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.productLibrary.gradient }}>
+        <div style={styles.dashboardHeroCopy}>
+          <span style={styles.dashboardHeroIcon}><Package size={38} strokeWidth={2.4} /></span>
+          <div>
+            <div style={styles.dashboardEyebrow}>Builder Catalogue</div>
+            <h2 style={styles.dashboardTitle}>Product Library</h2>
+            <p style={styles.dashboardSubtitle}>Start from the current Quote Sheet, then export, edit, re-upload, add, update or deactivate product records.</p>
+          </div>
+        </div>
+        <div style={styles.dashboardTotalCard}>
+          <span>{savedCount ? "Saved products" : "Quote Sheet starter rows"}</span>
+          <strong>{products.length}</strong>
+        </div>
+      </section>
+
+      <section style={styles.productLibraryToolbar}>
+        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, supplier, brand, notes" />
+        <select style={styles.productLibrarySelect} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <option value="all">All categories</option>
+          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        <select style={styles.productLibrarySelect} value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}>
+          <option value="all">All suppliers</option>
+          {suppliers.map((supplier) => <option key={supplier} value={supplier}>{supplier}</option>)}
+        </select>
+        <select style={styles.productLibrarySelect} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="all">Active & inactive</option>
+        </select>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={addProduct}>Add product</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={seedFromQuoteSheet}>Seed from Quote Sheet</button>
+      </section>
+
+      <section style={styles.productLibraryActions}>
+        <button type="button" style={styles.secondaryButton} onClick={() => exportProductLibraryCsv(products, sheet)}>Export CSV</button>
+        <button type="button" style={styles.secondaryButton} onClick={downloadProductLibraryTemplate}>Download CSV template</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => fileRef.current?.click()}>Upload CSV</button>
+        <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleImportFile} />
+        <span style={styles.productLibraryStatus}>{message || `${stats.active} active, ${stats.inactive} inactive, ${filteredProducts.length} visible.`}</span>
+      </section>
+
+      <section style={styles.productLibraryBulkBar}>
+        <strong>Bulk update visible rows</strong>
+        <input style={styles.productLibraryMiniInput} value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value)} placeholder="Set category" />
+        <input style={styles.productLibraryMiniInput} value={bulkSupplier} onChange={(event) => setBulkSupplier(event.target.value)} placeholder="Set supplier" />
+        <select style={styles.productLibrarySelect} value={bulkActive} onChange={(event) => setBulkActive(event.target.value)}>
+          <option value="">Leave active status</option>
+          <option value="yes">Set active yes</option>
+          <option value="no">Set active no</option>
+        </select>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={applyBulkUpdate}>Apply bulk update</button>
+      </section>
+
+      {preview ? <ProductLibraryImportPreview preview={preview} onConfirm={confirmImport} onCancel={() => setPreview(null)} readonly={readonly} /> : null}
+
+      <section style={styles.productLibraryTableWrap}>
+        <div style={styles.productLibraryTable}>
+          <div style={{ ...styles.productLibraryRow, ...styles.productLibraryHeaderRow }}>
+            {PRODUCT_LIBRARY_HEADERS.map((header) => <strong key={header}>{header}</strong>)}
+            <strong>Actions</strong>
+          </div>
+          {filteredProducts.map((product) => (
+            <div key={product.id} style={styles.productLibraryRow}>
+              <ProductLibraryCell value={product.product_code} disabled={readonly} onCommit={(value) => updateProduct(product.id, "product_code", value)} />
+              <ProductLibraryCell value={product.category} disabled={readonly} onCommit={(value) => updateProduct(product.id, "category", value)} />
+              <ProductLibraryCell value={product.subcategory} disabled={readonly} onCommit={(value) => updateProduct(product.id, "subcategory", value)} />
+              <ProductLibraryCell value={product.product_name} disabled={readonly} onCommit={(value) => updateProduct(product.id, "product_name", value)} />
+              <ProductLibraryCell value={product.description} disabled={readonly} onCommit={(value) => updateProduct(product.id, "description", value)} />
+              <ProductLibraryCell value={product.unit} disabled={readonly} onCommit={(value) => updateProduct(product.id, "unit", value)} />
+              <ProductLibraryCell value={product.supplier} disabled={readonly} onCommit={(value) => updateProduct(product.id, "supplier", value)} />
+              <ProductLibraryCell value={product.brand} disabled={readonly} onCommit={(value) => updateProduct(product.id, "brand", value)} />
+              <ProductLibraryCell value={product.cost_price} disabled={readonly} onCommit={(value) => updateProduct(product.id, "cost_price", value)} />
+              <ProductLibraryCell value={product.sell_price} disabled={readonly} onCommit={(value) => updateProduct(product.id, "sell_price", value)} />
+              <ProductLibraryCell value={product.margin_percent} disabled={readonly} onCommit={(value) => updateProduct(product.id, "margin_percent", value)} />
+              <ProductLibraryCell value={product.gst} disabled={readonly} onCommit={(value) => updateProduct(product.id, "gst", value)} />
+              <ProductLibraryYesNo value={product.allowance_item} disabled={readonly} onCommit={(value) => updateProduct(product.id, "allowance_item", value)} />
+              <ProductLibraryYesNo value={product.active} disabled={readonly} onCommit={(value) => updateProduct(product.id, "active", value)} />
+              <ProductLibraryCell value={product.notes} disabled={readonly} onCommit={(value) => updateProduct(product.id, "notes", value)} />
+              <span style={styles.productLibraryActionCell}>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => updateProduct(product.id, "active", "no")}>Deactivate</button>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => saveProducts(products.filter((item) => item.id !== product.id))}>Delete</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ProductLibraryCell({ value: currentValue, onCommit, disabled = false }) {
+  const [draft, setDraft] = useState(currentValue || "");
+  useEffect(() => setDraft(currentValue || ""), [currentValue]);
+  return (
+    <input
+      disabled={disabled}
+      style={styles.productLibraryCellInput}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => onCommit?.(draft)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+      }}
+    />
+  );
+}
+
+function ProductLibraryYesNo({ value, onCommit, disabled = false }) {
+  return (
+    <select disabled={disabled} style={styles.productLibraryCellInput} value={yesNo(value)} onChange={(event) => onCommit?.(event.target.value)}>
+      <option value="yes">yes</option>
+      <option value="no">no</option>
+    </select>
+  );
+}
+
+function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly }) {
+  const groups = [
+    ["New products", preview.newProducts],
+    ["Updated products", preview.updatedProducts],
+    ["Removed/deactivated products", preview.removedProducts],
+    ["Unchanged products", preview.unchangedProducts],
+    ["Invalid rows", preview.invalidRows],
+  ];
+  return (
+    <section style={styles.productLibraryPreview}>
+      <div style={styles.dashboardPanelHeader}>
+        <div>
+          <h3 style={styles.dashboardPanelTitle}>CSV Import Preview</h3>
+          <p style={styles.dashboardPanelSubtitle}>Review the CSV changes before saving them into the workbook.</p>
+        </div>
+        <span>
+          <button type="button" disabled={readonly || preview.invalidRows.length > 0} style={styles.primaryButton} onClick={onConfirm}>Confirm import</button>
+          <button type="button" style={styles.secondaryButton} onClick={onCancel}>Cancel</button>
+        </span>
+      </div>
+      <div style={styles.productLibraryPreviewGrid}>
+        {groups.map(([label, rows]) => (
+          <div key={label} style={styles.productLibraryPreviewCard}>
+            <strong>{label}: {rows.length}</strong>
+            <div style={styles.productLibraryPreviewList}>
+              {rows.slice(0, 8).map((item, index) => <span key={`${label}-${index}`}>{productLibraryPreviewLabel(item)}</span>)}
+              {rows.length > 8 ? <span>+ {rows.length - 8} more</span> : null}
+              {!rows.length ? <span>None</span> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      {preview.invalidRows.length ? <p style={styles.errorText}>Fix invalid rows and upload again before confirming the import.</p> : null}
+    </section>
+  );
+}
+
+function StandardInclusionsSheet({ sheet }) {
+  const readonly = sheet.previewMode;
+  const pdfUploadRef = useRef(null);
+  const pptxUploadRef = useRef(null);
+  const replacePageRef = useRef(null);
+  const elementFileRef = useRef(null);
+  const exportPagesRef = useRef(null);
+  const elementUploadTargetRef = useRef(null);
+  const [status, setStatus] = useState("");
+  const [selectedElementId, setSelectedElementId] = useState("");
+  const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
+  const pages = normalisePremierPdfPages(standard.pdfPages);
+  const selectedPageId = standard.selectedPdfPageId || pages[0]?.id || "";
+  const selectedPage = pages.find((page) => page.id === selectedPageId) || pages[0] || null;
+  const selectedPageIndex = pages.findIndex((page) => page.id === selectedPage?.id);
+  const usesEditableCanvasEditor = Boolean(selectedPage);
+  const selectedElement = selectedPage?.elements?.find((element) => element.id === selectedElementId) || null;
+
+  function saveStandard(next) {
+    sheet.updateStandardInclusions?.({
+      ...standard,
+      ...next,
+      pdfEditorMode: "document-page-builder",
+    });
+  }
+
+  const documentBuilder = standard.documentBuilder || createPremierInclusionsDocument({
+    name: standard.packages?.find((item) => item.id === standard.selectedPackageId)?.name || "Premier Inclusions Schedule",
+  });
+
+  function saveDocumentBuilder(nextDocument) {
+    saveStandard({
+      documentBuilder: nextDocument,
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    });
+    setStatus("Standard Inclusions document saved.");
+  }
+
+  return (
+    <div style={styles.standardPdfShell}>
+      <section style={styles.standardPdfToolbar}>
+        <div>
+          <div style={styles.eyebrow}>Document Page Builder</div>
+          <h2 style={styles.cashflowTitle}>Standard Inclusions</h2>
+          <p style={styles.dashboardPanelSubtitle}>
+            Build printable document pages from editable text, image, logo, shape, table and icon blocks using the shared document page builder.
+          </p>
+        </div>
+        {status ? <div style={styles.proposalBuilderStatus}>{status}</div> : null}
+      </section>
+      <DocumentPageBuilder
+        document={documentBuilder}
+        workbook={sheet.workbook}
+        readonly={readonly}
+        onChange={saveDocumentBuilder}
+        onStatus={setStatus}
+      />
+    </div>
+  );
+
+  function savePages(nextPages, nextSelectedId = selectedPageId, message = "") {
+    const ordered = normalisePremierPdfPages(nextPages).map((page, index) => ({ ...page, order: index + 1 }));
+    saveStandard({
+      pdfPages: ordered,
+      selectedPdfPageId: nextSelectedId || ordered[0]?.id || "",
+    });
+    if (message) setStatus(message);
+  }
+
+  async function renderPdfToPageRecords(file) {
+    const pdfjsLib = await loadPdfJs();
+    const bytes = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+    const importedPages = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 2.25 });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext("2d", { alpha: false });
+      await page.render({ canvasContext: context, viewport }).promise;
+      importedPages.push({
+        id: `premier-inclusions-page-${Date.now()}-${pageNumber}`,
+        name: `Premier-Inclusions-Page-${String(pageNumber).padStart(2, "0")}`,
+        order: pageNumber,
+        backgroundImage: canvas.toDataURL("image/jpeg", 0.96),
+        width: canvas.width,
+        height: canvas.height,
+        elements: [],
+      });
+    }
+    return importedPages;
+  }
+
+  async function renderPptxToEditablePageRecords(file) {
+    const [{ default: JSZip }, fabricModule] = await Promise.all([
+      import("jszip"),
+      import("fabric"),
+    ]);
+    const fabric = fabricModule.fabric || fabricModule.default?.fabric || fabricModule.default || fabricModule;
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const parser = new DOMParser();
+    const presentationXml = await zip.file("ppt/presentation.xml")?.async("text");
+    if (!presentationXml) throw new Error("PowerPoint file is missing ppt/presentation.xml.");
+    const presentationDoc = parser.parseFromString(presentationXml, "application/xml");
+    const presentationRels = await readPptxRelationships(zip, "ppt/_rels/presentation.xml.rels", parser);
+    const slideSize = pptxSlideSize(presentationDoc);
+    const slidePaths = pptxSlidePaths(zip, presentationDoc, presentationRels);
+    if (!slidePaths.length) throw new Error("No slides found in the PowerPoint template.");
+
+    const pages = [];
+    for (let index = 0; index < slidePaths.length; index += 1) {
+      const slidePath = slidePaths[index];
+      const slideXml = await zip.file(slidePath)?.async("text");
+      if (!slideXml) continue;
+      const slideDoc = parser.parseFromString(slideXml, "application/xml");
+      const relPath = pptxSlideRelPath(slidePath);
+      const rels = await readPptxRelationships(zip, relPath, parser);
+      const canvasElement = document.createElement("canvas");
+      canvasElement.width = 794;
+      canvasElement.height = 1123;
+      const canvas = new fabric.Canvas(canvasElement, {
+        width: 794,
+        height: 1123,
+        backgroundColor: "#ffffff",
+        preserveObjectStacking: true,
+      });
+      await addPptxSlideObjectsToCanvas({ zip, fabric, canvas, slideDoc, slidePath, rels, slideSize, pageNumber: index + 1 });
+      const canvasJson = canvas.toJSON(["id", "name", "role", "assetKind"]);
+      const renderedImage = canvas.toDataURL({ format: "jpeg", quality: 0.96, multiplier: 2 });
+      canvas.dispose();
+      pages.push({
+        id: `premier-inclusions-pptx-page-${Date.now()}-${index + 1}`,
+        name: `Premier-Inclusions-Page-${String(index + 1).padStart(2, "0")}`,
+        order: index + 1,
+        backgroundImage: "",
+        renderedImage,
+        width: 794,
+        height: 1123,
+        canvasJson,
+        editableTemplate: true,
+        templateKind: "pptx-editable-slide",
+        elements: [],
+      });
+    }
+    const uniqueOrders = new Set(pages.map((page) => page.order));
+    if (uniqueOrders.size !== pages.length) throw new Error("PowerPoint import created duplicate slide order records.");
+    return pages;
+  }
+
+  async function importPremierPdf(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || file.type !== "application/pdf") return;
+    setStatus("Importing Premier Inclusions PDF...");
+    try {
+      const importedPages = await renderPdfToPageRecords(file);
+      saveStandard({
+        pdfSourceName: file.name,
+        pdfPages: importedPages,
+        selectedPdfPageId: importedPages[0]?.id || "",
+      });
+      setSelectedElementId("");
+      setStatus(`Imported ${importedPages.length} standalone page${importedPages.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error("Premier Inclusions PDF import failed", error);
+      setStatus(error?.message || "PDF import failed.");
+    }
+  }
+
+  async function importPremierPowerPoint(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !String(file.name || "").toLowerCase().endsWith(".pptx")) return;
+    setStatus("Importing PowerPoint template as editable pages...");
+    try {
+      const importedPages = await renderPptxToEditablePageRecords(file);
+      saveStandard({
+        pptxSourceName: file.name,
+        pdfSourceName: "",
+        pdfPages: importedPages,
+        selectedPdfPageId: importedPages[0]?.id || "",
+      });
+      setSelectedElementId("");
+      setStatus(importedPages.length === 10
+        ? "PowerPoint import complete: all 10 slides imported once as 10 editable pages."
+        : `PowerPoint import complete: ${importedPages.length} editable page${importedPages.length === 1 ? "" : "s"} imported. Expected 10 slides.`);
+    } catch (error) {
+      console.error("Premier Inclusions PowerPoint import failed", error);
+      setStatus(error?.message || "PowerPoint import failed.");
+    }
+  }
+
+  async function replaceSelectedPage(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !selectedPage) return;
+    setStatus("Replacing selected page...");
+    try {
+      let replacement = null;
+      if (file.type === "application/pdf") {
+        replacement = (await renderPdfToPageRecords(file))[0] || null;
+      } else if (file.type?.startsWith("image/")) {
+        const imageUrl = await readFileAsDataUrl(file);
+        replacement = {
+          ...selectedPage,
+          backgroundImage: imageUrl,
+        };
+      }
+      if (!replacement) throw new Error("Upload a PDF page or image file.");
+      savePages(pages.map((page) => page.id === selectedPage.id ? {
+        ...selectedPage,
+        backgroundImage: replacement.backgroundImage,
+        width: replacement.width || selectedPage.width,
+        height: replacement.height || selectedPage.height,
+      } : page), selectedPage.id, "Selected page replaced.");
+    } catch (error) {
+      console.error("Replace Premier Inclusions page failed", error);
+      setStatus(error?.message || "Page replacement failed.");
+    }
+  }
+
+  async function handleElementFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    const target = elementUploadTargetRef.current;
+    elementUploadTargetRef.current = null;
+    if (!file || !file.type?.startsWith("image/") || !selectedPage || !target) return;
+    const imageUrl = await readFileAsDataUrl(file);
+    if (target.mode === "replace" && selectedElement) {
+      updateSelectedElement({ type: target.type, imageSrc: imageUrl });
+      return;
+    }
+    addElement(target.type, { imageSrc: imageUrl });
+  }
+
+  function selectPage(pageId) {
+    saveStandard({ selectedPdfPageId: pageId });
+    setSelectedElementId("");
+  }
+
+  function updateSelectedPage(patch) {
+    if (!selectedPage) return;
+    savePages(pages.map((page) => page.id === selectedPage.id ? { ...page, ...patch } : page), selectedPage.id);
+  }
+
+  function saveEditablePage(nextPage) {
+    if (!selectedPage || !nextPage) return;
+    savePages(pages.map((page) => page.id === selectedPage.id ? { ...page, ...nextPage } : page), selectedPage.id, `${nextPage.name || selectedPage.name} saved.`);
+  }
+
+  async function ensureEditablePremierPages(sourcePages = pages) {
+    const { createEditablePremierPageRecord } = await import("./standard-inclusions/PremierInclusionsCanvasEditor");
+    const ordered = normalisePremierPdfPages(sourcePages);
+    const editablePages = [];
+    for (let index = 0; index < ordered.length; index += 1) {
+      editablePages.push(await createEditablePremierPageRecord(ordered[index], index));
+    }
+    return normalisePremierPdfPages(editablePages);
+  }
+
+  async function saveAsMasterTemplate() {
+    setStatus("Saving editable Premier Inclusions master template...");
+    const editablePages = await ensureEditablePremierPages(pages);
+    const masterPages = clonePremierPages(editablePages);
+    const masterTemplate = {
+      id: "premier-inclusions-master-template",
+      name: "Premier Inclusions Master Template",
+      savedAt: new Date().toISOString(),
+      pdfPages: masterPages,
+      selectedPdfPageId: masterPages[Math.max(0, selectedPageIndex)]?.id || masterPages[0]?.id || "",
+      pdfEditorMode: "editable-canvas-pages",
+    };
+    saveStandard({ masterTemplate, pdfPages: editablePages });
+    try {
+      window.localStorage.setItem("premier-inclusions-master-template", JSON.stringify(masterTemplate));
+    } catch {}
+    setStatus("Premier Inclusions master template saved.");
+  }
+
+  async function createBuilderCopy() {
+    setStatus("Creating builder copy from the Premier Inclusions master template...");
+    const source = standard.masterTemplate?.pdfPages?.length ? standard.masterTemplate : {
+      id: "premier-inclusions-master-template",
+      name: "Premier Inclusions Master Template",
+      pdfPages: await ensureEditablePremierPages(pages),
+      selectedPdfPageId,
+    };
+    const copyId = `builder-premier-inclusions-${Date.now()}`;
+    const sourcePages = await ensureEditablePremierPages(source.pdfPages || []);
+    const copiedPages = clonePremierPages(sourcePages, copyId);
+    const builderCopy = {
+      id: copyId,
+      builderId: sheet.workbook.builderId || "local-builder",
+      name: "Builder Premier Inclusions Copy",
+      createdAt: new Date().toISOString(),
+      pdfPages: copiedPages,
+      selectedPdfPageId: copiedPages[0]?.id || "",
+      sourceMasterTemplateId: source.id || "premier-inclusions-master-template",
+    };
+    saveStandard({
+      builderCopies: [...(standard.builderCopies || []), builderCopy],
+      activeBuilderCopyId: copyId,
+      pdfPages: copiedPages,
+      selectedPdfPageId: builderCopy.selectedPdfPageId,
+    });
+    setSelectedElementId("");
+    setStatus("Builder copy created from the master template.");
+  }
+
+  function addElement(type, patch = {}) {
+    if (!selectedPage) return;
+    const element = {
+      id: `premier-element-${Date.now()}`,
+      type,
+      text: type === "text" ? "New text" : "",
+      imageSrc: patch.imageSrc || "",
+      x: 12,
+      y: 12,
+      width: type === "text" ? 34 : 22,
+      height: type === "text" ? 8 : 12,
+      fontSize: 18,
+      color: "#0f172a",
+      background: "transparent",
+      ...patch,
+    };
+    updateSelectedPage({ elements: [...(selectedPage.elements || []), element] });
+    setSelectedElementId(element.id);
+  }
+
+  function updateSelectedElement(patch) {
+    if (!selectedPage || !selectedElement) return;
+    updateSelectedPage({
+      elements: selectedPage.elements.map((element) => element.id === selectedElement.id ? { ...element, ...patch } : element),
+    });
+  }
+
+  function deleteSelectedElement() {
+    if (!selectedPage || !selectedElement) return;
+    updateSelectedPage({ elements: selectedPage.elements.filter((element) => element.id !== selectedElement.id) });
+    setSelectedElementId("");
+  }
+
+  function duplicatePage() {
+    if (!selectedPage) return;
+    const copy = {
+      ...selectedPage,
+      id: `premier-inclusions-page-${Date.now()}`,
+      name: `${selectedPage.name} Copy`,
+      elements: (selectedPage.elements || []).map((element) => ({ ...element, id: `premier-element-${Date.now()}-${Math.random().toString(16).slice(2)}` })),
+    };
+    const index = pages.findIndex((page) => page.id === selectedPage.id);
+    const nextPages = [...pages];
+    nextPages.splice(index + 1, 0, copy);
+    savePages(nextPages, copy.id, "Page duplicated.");
+  }
+
+  function deletePage() {
+    if (!selectedPage) return;
+    const nextPages = pages.filter((page) => page.id !== selectedPage.id);
+    savePages(nextPages, nextPages[0]?.id || "", "Page deleted.");
+    setSelectedElementId("");
+  }
+
+  function addPage() {
+    const pageNumber = pages.length + 1;
+    const page = {
+      id: `premier-inclusions-page-${Date.now()}`,
+      name: `Premier-Inclusions-Page-${String(pageNumber).padStart(2, "0")}`,
+      order: pageNumber,
+      backgroundImage: "",
+      width: 794,
+      height: 1123,
+      elements: [],
+    };
+    savePages([...pages, page], page.id, "Blank page added.");
+  }
+
+  function movePage(pageId, direction) {
+    const index = pages.findIndex((page) => page.id === pageId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= pages.length) return;
+    const nextPages = [...pages];
+    const [page] = nextPages.splice(index, 1);
+    nextPages.splice(nextIndex, 0, page);
+    savePages(nextPages, selectedPageId, "Page order updated.");
+  }
+
+  async function downloadPremierInclusionsPdf() {
+    if (!exportPagesRef.current) return;
+    setStatus("Preparing Premier Inclusions PDF...");
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const pageElements = Array.from(exportPagesRef.current.querySelectorAll("[data-premier-pdf-page='true']"));
+      if (!pageElements.length) throw new Error("No Premier Inclusions pages found to export.");
+      const renderedPages = [];
+      for (const element of pageElements) {
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#ffffff",
+          scale: 2.4,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          windowWidth: Math.ceil(element.scrollWidth),
+          windowHeight: Math.ceil(element.scrollHeight),
+        });
+        renderedPages.push({
+          orientation: "portrait",
+          imageData: canvas.toDataURL("image/jpeg", 0.96),
+        });
+      }
+      const response = await fetch("/api/builders/proposal-document-export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/pdf, application/json" },
+        body: JSON.stringify({
+          name: "Premier Inclusions Schedule",
+          fileName: "Premier Inclusions Schedule.pdf",
+          renderedPages,
+        }),
+      });
+      const responseType = response.headers.get("content-type") || "";
+      if (!response.ok) {
+        throw new Error(await formatProposalExportErrorResponse(response, responseType));
+      }
+      if (!responseType.includes("application/pdf")) {
+        throw new Error(await formatProposalExportErrorResponse(response, responseType, { responseOk: true }));
+      }
+      const blob = await response.blob();
+      downloadBlob(blob, "Premier Inclusions Schedule.pdf");
+      setStatus("Premier Inclusions PDF downloaded.");
+    } catch (error) {
+      console.error("Premier Inclusions PDF export failed", error);
+      setStatus(error?.message || "Premier Inclusions PDF export failed.");
+    }
+  }
+
+  return (
+    <div style={styles.standardPdfShell}>
+      <section style={styles.standardPdfToolbar}>
+        <div>
+          <div style={styles.eyebrow}>Editable Standard Inclusions</div>
+          <h2 style={styles.cashflowTitle}>Premier Inclusions Schedule</h2>
+          <p style={styles.dashboardPanelSubtitle}>Page 1 is rebuilt as independent editable text, image, logo and shape objects. Imported PDF pages remain visual references until each page is rebuilt.</p>
+        </div>
+        <div style={styles.proposalMiniActions}>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={() => pdfUploadRef.current?.click()}>Upload Premier Inclusions PDF</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pptxUploadRef.current?.click()}>Upload PowerPoint Template</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Replace Entire PDF</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
+          <button type="button" disabled={!pages.length} style={styles.secondaryButton} onClick={() => setStatus("Use the Up and Down controls in the page list to reorder pages.")}>Reorder Pages</button>
+          <button type="button" disabled={readonly || !pages.length} style={styles.secondaryButton} onClick={saveAsMasterTemplate}>Save as Master Template</button>
+          <button type="button" disabled={readonly || !pages.length} style={styles.secondaryButton} onClick={createBuilderCopy}>Create Builder Copy</button>
+          <button type="button" disabled={!pages.length} style={styles.primaryButton} onClick={downloadPremierInclusionsPdf}>Download Premier Inclusions PDF</button>
+        </div>
+        {status ? <div style={styles.proposalBuilderStatus}>{status}</div> : null}
+      </section>
+
+      <div style={{ ...styles.standardPdfLayout, ...(usesEditableCanvasEditor ? styles.standardPdfLayoutEditable : {}) }}>
+        <aside style={styles.standardPdfPageList}>
+          <strong>Pages</strong>
+          {!pages.length ? <p style={styles.dashboardPanelSubtitle}>Upload one multi-page PDF to create standalone page records.</p> : null}
+          {pages.map((page, index) => (
+            <div key={page.id} style={styles.standardPdfPageListRow}>
+              <button type="button" style={{ ...styles.standardPdfPageButton, ...(selectedPage?.id === page.id ? styles.standardPdfPageButtonActive : {}) }} onClick={() => selectPage(page.id)}>
+                <span>{index + 1}. {page.name}</span>
+                <small>{page.editableTemplate ? `${page.canvasJson?.objects?.length || 0} editable object${(page.canvasJson?.objects?.length || 0) === 1 ? "" : "s"}` : `${page.elements?.length || 0} overlay${(page.elements?.length || 0) === 1 ? "" : "s"}`}</small>
+              </button>
+              <span style={styles.standardPdfReorderButtons}>
+                <button type="button" disabled={readonly || index === 0} style={styles.miniButton} onClick={() => movePage(page.id, -1)}>Up</button>
+                <button type="button" disabled={readonly || index === pages.length - 1} style={styles.miniButton} onClick={() => movePage(page.id, 1)}>Down</button>
+              </span>
+            </div>
+          ))}
+        </aside>
+
+        <main style={styles.standardPdfPreviewPanel}>
+          {selectedPage ? (
+            <PremierInclusionsCanvasEditor page={selectedPage} pageIndex={selectedPageIndex} readonly={readonly} onSavePage={saveEditablePage} />
+          ) : (
+            <div style={styles.standardPdfEmptyState}>Upload Premier Inclusions PDF</div>
+          )}
+        </main>
+
+        {!usesEditableCanvasEditor ? <aside style={styles.standardPdfEditorPanel}>
+          <h3>Page Editor</h3>
+          {selectedPage ? (
+            <>
+              <ProposalPanelInput label="Page name" value={selectedPage.name} disabled={readonly} onCommit={(value) => updateSelectedPage({ name: value || selectedPage.name })} />
+              <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => replacePageRef.current?.click()}>Replace this page</button>
+              <div style={styles.proposalMiniActions}>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => addElement("text")}>Add text</button>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => {
+                  elementUploadTargetRef.current = { type: "image", mode: "add" };
+                  elementFileRef.current?.click();
+                }}>Replace image</button>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => {
+                  elementUploadTargetRef.current = { type: "logo", mode: "add" };
+                  elementFileRef.current?.click();
+                }}>Replace logo</button>
+              </div>
+
+              {selectedElement ? (
+                <div style={styles.standardPdfElementEditor}>
+                  <strong>Selected element</strong>
+                  {selectedElement.type === "text" ? (
+                    <>
+                      <ProposalPanelTextarea label="Edit selected text" value={selectedElement.text || ""} disabled={readonly} onCommit={(value) => updateSelectedElement({ text: value })} />
+                      <ProposalPanelInput label="Text colour" value={selectedElement.color || "#0f172a"} disabled={readonly} onCommit={(value) => updateSelectedElement({ color: value })} />
+                      <NumberCommitInput label="Font size" value={selectedElement.fontSize || 18} disabled={readonly} onCommit={(value) => updateSelectedElement({ fontSize: value })} />
+                    </>
+                  ) : (
+                    <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => {
+                      elementUploadTargetRef.current = { type: selectedElement.type, mode: "replace" };
+                      elementFileRef.current?.click();
+                    }}>Replace selected {selectedElement.type}</button>
+                  )}
+                  <div style={styles.standardPdfGeometryGrid}>
+                    <NumberCommitInput label="X %" value={selectedElement.x} disabled={readonly} onCommit={(value) => updateSelectedElement({ x: value })} />
+                    <NumberCommitInput label="Y %" value={selectedElement.y} disabled={readonly} onCommit={(value) => updateSelectedElement({ y: value })} />
+                    <NumberCommitInput label="Width %" value={selectedElement.width} disabled={readonly} onCommit={(value) => updateSelectedElement({ width: value })} />
+                    <NumberCommitInput label="Height %" value={selectedElement.height} disabled={readonly} onCommit={(value) => updateSelectedElement({ height: value })} />
+                  </div>
+                  <button type="button" disabled={readonly} style={styles.dangerButton} onClick={deleteSelectedElement}>Delete selected element</button>
+                </div>
+              ) : (
+                <p style={styles.dashboardPanelSubtitle}>Select a text, image or logo overlay on the page to edit, move, resize or delete it.</p>
+              )}
+
+              <div style={styles.proposalMiniActions}>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={duplicatePage}>Duplicate page</button>
+                <button type="button" disabled={readonly} style={styles.dangerButton} onClick={deletePage}>Delete page</button>
+                <button type="button" disabled={readonly} style={styles.primaryButton} onClick={() => setStatus(`${selectedPage.name} saved.`)}>Save page</button>
+              </div>
+            </>
+          ) : (
+            <p style={styles.dashboardPanelSubtitle}>No page selected.</p>
+          )}
+        </aside> : null}
+      </div>
+
+      <div ref={exportPagesRef} style={styles.standardPdfExportStack} aria-hidden="true">
+        {pages.map((page) => <PremierPdfPageCanvas key={`export-${page.id}`} page={page} exportMode />)}
+      </div>
+
+      <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPremierPdf} />
+      <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={importPremierPowerPoint} />
+      <input ref={replacePageRef} type="file" accept="application/pdf,image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={replaceSelectedPage} />
+      <input ref={elementFileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={handleElementFile} />
+    </div>
+  );
+}
+
+function PremierPdfPageCanvas({ page, selectedElementId = "", onSelectElement = null, exportMode = false }) {
+  const backgroundImage = page.renderedImage || page.backgroundImage;
+  return (
+    <article data-premier-pdf-page="true" style={styles.standardPdfCanvas} onClick={() => !exportMode && onSelectElement?.("")}>
+      {backgroundImage ? (
+        <img src={backgroundImage} alt="" style={styles.standardPdfBackgroundImage} />
+      ) : (
+        <div style={styles.standardPdfBlankPage}>Blank Premier Inclusions page</div>
+      )}
+      {(page.elements || []).map((element) => {
+        const ElementTag = exportMode ? "div" : "button";
+        return (
+          <ElementTag
+            key={element.id}
+            type={exportMode ? undefined : "button"}
+            style={{
+              ...styles.standardPdfOverlayElement,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: `${element.width}%`,
+              height: `${element.height}%`,
+              ...(selectedElementId === element.id && !exportMode ? styles.standardPdfOverlayElementSelected : {}),
+            }}
+            onClick={exportMode ? undefined : (event) => {
+              event.stopPropagation();
+              onSelectElement?.(element.id);
+            }}
+          >
+            {element.type === "text" ? (
+              <span style={{ ...styles.standardPdfTextOverlay, color: element.color || "#0f172a", fontSize: element.fontSize || 18 }}>{element.text}</span>
+            ) : element.imageSrc ? (
+              <img src={element.imageSrc} alt="" style={styles.standardPdfOverlayImage} />
+            ) : null}
+          </ElementTag>
+        );
+      })}
+    </article>
+  );
+}
+
+async function readPptxRelationships(zip, relPath, parser) {
+  const relXml = await zip.file(relPath)?.async("text");
+  if (!relXml) return {};
+  const relDoc = parser.parseFromString(relXml, "application/xml");
+  const rels = {};
+  Array.from(relDoc.getElementsByTagName("Relationship")).forEach((rel) => {
+    const id = rel.getAttribute("Id");
+    if (!id) return;
+    rels[id] = {
+      target: rel.getAttribute("Target") || "",
+      type: rel.getAttribute("Type") || "",
+    };
+  });
+  return rels;
+}
+
+function pptxSlideSize(presentationDoc) {
+  const size = firstByLocalName(presentationDoc, "sldSz");
+  return {
+    cx: Number(size?.getAttribute("cx")) || 9144000,
+    cy: Number(size?.getAttribute("cy")) || 12801600,
+  };
+}
+
+function pptxSlidePaths(zip, presentationDoc, presentationRels) {
+  const slideIds = Array.from(firstByLocalName(presentationDoc, "sldIdLst")?.childNodes || [])
+    .filter((node) => node.nodeType === 1 && localName(node) === "sldId");
+  const ordered = slideIds
+    .map((slideId) => presentationRels[attrByLocalName(slideId, "id")]?.target)
+    .filter(Boolean)
+    .map((target) => normaliseZipPath("ppt", target));
+  if (ordered.length) return ordered;
+  return Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name))
+    .sort((a, b) => Number(a.match(/slide(\d+)\.xml/i)?.[1] || 0) - Number(b.match(/slide(\d+)\.xml/i)?.[1] || 0));
+}
+
+function pptxSlideRelPath(slidePath) {
+  const parts = slidePath.split("/");
+  const fileName = parts.pop();
+  return `${parts.join("/")}/_rels/${fileName}.rels`;
+}
+
+async function addPptxSlideObjectsToCanvas({ zip, fabric, canvas, slideDoc, slidePath, rels, slideSize, pageNumber }) {
+  const spTree = firstByLocalName(slideDoc, "spTree");
+  const elements = Array.from(spTree?.childNodes || []).filter((node) => node.nodeType === 1);
+  for (const element of elements) {
+    const name = localName(element);
+    if (name === "pic") {
+      await addPptxPicture({ zip, fabric, canvas, element, slidePath, rels, slideSize, pageNumber });
+    } else if (name === "sp") {
+      addPptxShapeOrText({ fabric, canvas, element, slideSize, pageNumber });
+    } else if (name === "cxnSp") {
+      addPptxLine({ fabric, canvas, element, slideSize, pageNumber });
+    }
+  }
+}
+
+function addPptxShapeOrText({ fabric, canvas, element, slideSize, pageNumber }) {
+  const box = pptxElementBox(element, slideSize);
+  const text = pptxText(element);
+  const fill = pptxSolidFill(element) || "transparent";
+  const stroke = pptxLineColor(element) || "transparent";
+  const name = pptxElementName(element) || (text ? "PowerPoint text" : "PowerPoint shape");
+  if (text) {
+    if (fill !== "transparent" || stroke !== "transparent") {
+      canvas.add(new fabric.Rect({
+        id: `pptx-page-${pageNumber}-text-panel-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: `${name} panel`,
+        role: "shape",
+        left: box.left,
+        top: box.top,
+        width: Math.max(1, box.width),
+        height: Math.max(1, box.height),
+        fill,
+        stroke,
+        strokeWidth: stroke === "transparent" ? 0 : 1.5,
+      }));
+    }
+    canvas.add(new fabric.Textbox(text, {
+      id: `pptx-page-${pageNumber}-text-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      role: "text",
+      left: box.left,
+      top: box.top,
+      width: Math.max(20, box.width),
+      height: Math.max(12, box.height),
+      fontFamily: pptxFontFamily(element) || "Arial",
+      fontSize: pptxFontSize(element, box.height),
+      fontWeight: pptxIsBold(element) ? "800" : "600",
+      fill: pptxTextColor(element) || "#0b2545",
+      textAlign: pptxTextAlign(element),
+      lineHeight: 1.12,
+      editable: true,
+    }));
+    return;
+  }
+  if (fill !== "transparent" || stroke !== "transparent") {
+    canvas.add(new fabric.Rect({
+      id: `pptx-page-${pageNumber}-shape-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      role: "shape",
+      left: box.left,
+      top: box.top,
+      width: Math.max(1, box.width),
+      height: Math.max(1, box.height),
+      fill,
+      stroke,
+      strokeWidth: stroke === "transparent" ? 0 : 1.5,
+      rx: 0,
+      ry: 0,
+    }));
+  }
+}
+
+async function addPptxPicture({ zip, fabric, canvas, element, slidePath, rels, slideSize, pageNumber }) {
+  const box = pptxElementBox(element, slideSize);
+  const blip = firstByLocalName(element, "blip");
+  const embedId = attrByLocalName(blip, "embed") || attrByLocalName(blip, "link");
+  const target = rels[embedId]?.target;
+  if (!target) return;
+  const mediaPath = normaliseZipPath(slidePath.split("/").slice(0, -1).join("/"), target);
+  const media = zip.file(mediaPath);
+  if (!media) return;
+  const ext = mediaPath.split(".").pop()?.toLowerCase() || "png";
+  const mime = pptxMimeType(ext);
+  const dataUrl = `data:${mime};base64,${await media.async("base64")}`;
+  await new Promise((resolve) => {
+    fabric.Image.fromURL(dataUrl, (image) => {
+      image.set({
+        id: `pptx-page-${pageNumber}-image-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: pptxElementName(element) || "PowerPoint image",
+        role: /logo/i.test(pptxElementName(element)) ? "logo" : "image",
+        assetKind: /logo/i.test(pptxElementName(element)) ? "logo" : "image",
+        left: box.left,
+        top: box.top,
+        selectable: true,
+        evented: true,
+      });
+      image.set({
+        scaleX: Math.max(1, box.width) / Math.max(1, image.width || 1),
+        scaleY: Math.max(1, box.height) / Math.max(1, image.height || 1),
+      });
+      canvas.add(image);
+      resolve();
+    }, { crossOrigin: "anonymous" });
+  });
+}
+
+function addPptxLine({ fabric, canvas, element, slideSize, pageNumber }) {
+  const box = pptxElementBox(element, slideSize);
+  const stroke = pptxLineColor(element) || "#d29a37";
+  canvas.add(new fabric.Line([box.left, box.top, box.left + box.width, box.top + box.height], {
+    id: `pptx-page-${pageNumber}-line-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: pptxElementName(element) || "PowerPoint line",
+    role: "shape",
+    stroke,
+    strokeWidth: 1.5,
+  }));
+}
+
+function pptxElementBox(element, slideSize) {
+  const xfrm = firstByLocalName(element, "xfrm");
+  const off = firstByLocalName(xfrm, "off");
+  const ext = firstByLocalName(xfrm, "ext");
+  const x = Number(off?.getAttribute("x")) || 0;
+  const y = Number(off?.getAttribute("y")) || 0;
+  const cx = Number(ext?.getAttribute("cx")) || 0;
+  const cy = Number(ext?.getAttribute("cy")) || 0;
+  return {
+    left: (x / slideSize.cx) * 794,
+    top: (y / slideSize.cy) * 1123,
+    width: (cx / slideSize.cx) * 794,
+    height: (cy / slideSize.cy) * 1123,
+  };
+}
+
+function pptxText(element) {
+  const paragraphs = descendantsByLocalName(element, "p")
+    .map((paragraph) => descendantsByLocalName(paragraph, "t").map((node) => node.textContent || "").join(""))
+    .filter((text) => text.trim());
+  return paragraphs.join("\n").trim();
+}
+
+function pptxFontSize(element, fallbackHeight = 30) {
+  const rPr = firstByLocalName(element, "rPr");
+  const sz = Number(rPr?.getAttribute("sz"));
+  if (Number.isFinite(sz) && sz > 0) return Math.max(5, Math.round((sz / 100) * 1.15));
+  return Math.max(9, Math.min(48, Math.round(fallbackHeight / 2.4)));
+}
+
+function pptxFontFamily(element) {
+  return firstByLocalName(element, "latin")?.getAttribute("typeface") || "";
+}
+
+function pptxIsBold(element) {
+  return firstByLocalName(element, "rPr")?.getAttribute("b") === "1";
+}
+
+function pptxTextAlign(element) {
+  const algn = firstByLocalName(element, "pPr")?.getAttribute("algn") || "l";
+  if (algn === "ctr" || algn === "center") return "center";
+  if (algn === "r" || algn === "right") return "right";
+  return "left";
+}
+
+function pptxTextColor(element) {
+  return pptxSolidFill(firstByLocalName(element, "rPr")) || "#0b2545";
+}
+
+function pptxSolidFill(element) {
+  const solid = firstByLocalName(element, "solidFill");
+  const srgb = firstByLocalName(solid, "srgbClr")?.getAttribute("val");
+  if (srgb) return `#${srgb}`;
+  const scheme = firstByLocalName(solid, "schemeClr")?.getAttribute("val");
+  return pptxSchemeColor(scheme);
+}
+
+function pptxLineColor(element) {
+  return pptxSolidFill(firstByLocalName(element, "ln"));
+}
+
+function pptxSchemeColor(value = "") {
+  const map = {
+    tx1: "#0f172a",
+    tx2: "#334155",
+    bg1: "#ffffff",
+    bg2: "#f8fafc",
+    accent1: "#0b2545",
+    accent2: "#d29a37",
+    accent3: "#166534",
+  };
+  return map[value] || "";
+}
+
+function pptxElementName(element) {
+  return firstByLocalName(element, "cNvPr")?.getAttribute("name") || "";
+}
+
+function pptxMimeType(ext) {
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "svg") return "image/svg+xml";
+  return "image/png";
+}
+
+function normaliseZipPath(baseDir, target = "") {
+  const raw = target.startsWith("/") ? target.slice(1) : `${baseDir}/${target}`;
+  const parts = [];
+  raw.split("/").forEach((part) => {
+    if (!part || part === ".") return;
+    if (part === "..") parts.pop();
+    else parts.push(part);
+  });
+  return parts.join("/");
+}
+
+function localName(node) {
+  return node?.localName || String(node?.nodeName || "").split(":").pop();
+}
+
+function firstByLocalName(node, name) {
+  if (!node) return null;
+  return descendantsByLocalName(node, name)[0] || null;
+}
+
+function descendantsByLocalName(node, name) {
+  if (!node) return [];
+  const matches = [];
+  const visit = (current) => {
+    Array.from(current?.childNodes || []).forEach((child) => {
+      if (child.nodeType === 1) {
+        if (localName(child) === name) matches.push(child);
+        visit(child);
+      }
+    });
+  };
+  visit(node);
+  return matches;
+}
+
+function attrByLocalName(node, name) {
+  if (!node?.attributes) return "";
+  const attr = Array.from(node.attributes).find((item) => localName(item) === name);
+  return attr?.value || "";
+}
+
+function normalisePremierPdfPages(pages = []) {
+  return (Array.isArray(pages) ? pages : [])
+    .map((page, index) => ({
+      id: page.id || `premier-inclusions-page-${index + 1}`,
+      name: page.name || `Premier-Inclusions-Page-${String(index + 1).padStart(2, "0")}`,
+      order: Number(page.order || index + 1),
+      backgroundImage: page.backgroundImage || "",
+      renderedImage: page.renderedImage || "",
+      width: Number(page.width || 794),
+      height: Number(page.height || 1123),
+      canvasJson: page.canvasJson || null,
+      editableTemplate: Boolean(page.editableTemplate),
+      templateKind: page.templateKind || "",
+      elements: Array.isArray(page.elements) ? page.elements : [],
+    }))
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function clonePremierPages(pages = [], ownerPrefix = "master") {
+  return normalisePremierPdfPages(pages).map((page, index) => ({
+    ...page,
+    id: `${ownerPrefix}-premier-inclusions-page-${String(index + 1).padStart(2, "0")}-${Date.now()}`,
+    order: index + 1,
+    elements: Array.isArray(page.elements) ? page.elements.map((element) => ({
+      ...element,
+      id: `${ownerPrefix}-premier-element-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    })) : [],
+  }));
+}
+
+function workbookStandardInclusionsSource(workbook = {}) {
+  return {
+    ...(workbook.standardInclusions || {}),
+    selectedPackageId: workbook.selected_standard_inclusions_package_id || workbook.standardInclusions?.selectedPackageId,
+  };
+}
+
+function EstimateInclusionsSheet({ sheet }) {
+  const readonly = sheet.previewMode;
+  const fileInputRef = useRef(null);
+  const uploadTargetRef = useRef(null);
+  const estimateInclusions = normaliseEstimateInclusions(sheet.workbook.estimateInclusions, sheet.workbook.builderId || "local-builder");
+  const selectedPackage = estimateInclusions.packages.find((item) => item.id === estimateInclusions.selectedPackageId) || estimateInclusions.packages[0];
+  const sections = estimateInclusions.sections
+    .filter((section) => section.package_id === selectedPackage?.id)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  const suppliers = estimateInclusions.suppliers
+    .filter((supplier) => supplier.package_id === selectedPackage?.id)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+
+  const saveInclusions = (next) => sheet.updateEstimateInclusions?.(next);
+  const selectPackage = (packageId) => saveInclusions({ ...estimateInclusions, selectedPackageId: packageId });
+  const updatePackage = (key, value) => sheet.updateEstimateInclusionPackage?.(selectedPackage.id, key, value);
+  const updateSection = (sectionId, key, value) => sheet.updateEstimateInclusionSection?.(sectionId, key, value);
+  const updateSupplier = (supplierId, key, value) => sheet.updateEstimateInclusionSupplier?.(supplierId, key, value);
+
+  function addPackage() {
+    const packageId = `pkg-${Date.now()}`;
+    const nextPackage = {
+      id: packageId,
+      builder_id: sheet.workbook.builderId || "local-builder",
+      name: "Custom Inclusions",
+      description: "Editable builder inclusions package for this estimate pack.",
+      is_default: false,
+      active: true,
+    };
+    const nextSections = BUILDER_INCLUSION_SECTION_TITLES.map((title, index) => ({
+      id: `sec-${Date.now()}-${index + 1}`,
+      package_id: packageId,
+      title,
+      subtitle: "",
+      body: "",
+      bullets: [],
+      hero_image_url: "",
+      layout_type: index % 2 ? "image_right" : "image_left",
+      sort_order: index + 1,
+      active: true,
+    }));
+    saveInclusions({
+      ...estimateInclusions,
+      selectedPackageId: packageId,
+      packages: [...estimateInclusions.packages, nextPackage],
+      sections: [...estimateInclusions.sections, ...nextSections],
+    });
+  }
+
+  function duplicatePackage() {
+    if (!selectedPackage) return;
+    const packageId = `pkg-${Date.now()}`;
+    const sectionIdMap = new Map();
+    const copiedSections = sections.map((section, index) => {
+      const sectionId = `sec-${Date.now()}-${index + 1}`;
+      sectionIdMap.set(section.id, sectionId);
+      return {
+        ...section,
+        id: sectionId,
+        package_id: packageId,
+        sort_order: index + 1,
+      };
+    });
+    const copiedMedia = estimateInclusions.media
+      .filter((item) => sectionIdMap.has(item.section_id))
+      .map((item, index) => ({ ...item, id: `media-${Date.now()}-${index + 1}`, section_id: sectionIdMap.get(item.section_id) }));
+    const copiedSuppliers = suppliers.map((supplier, index) => ({ ...supplier, id: `supplier-${Date.now()}-${index + 1}`, package_id: packageId }));
+    saveInclusions({
+      ...estimateInclusions,
+      selectedPackageId: packageId,
+      packages: [
+        ...estimateInclusions.packages,
+        { ...selectedPackage, id: packageId, name: `${selectedPackage.name || "Inclusions"} Copy`, is_default: false },
+      ],
+      sections: [...estimateInclusions.sections, ...copiedSections],
+      media: [...estimateInclusions.media, ...copiedMedia],
+      suppliers: [...estimateInclusions.suppliers, ...copiedSuppliers],
+    });
+  }
+
+  function setPackageDefault(packageId) {
+    if (!packageId) return;
+    saveInclusions({
+      ...estimateInclusions,
+      packages: estimateInclusions.packages.map((item) => ({ ...item, is_default: item.id === packageId })),
+    });
+  }
+
+  function addSection() {
+    if (!selectedPackage) return;
+    const next = {
+      id: `sec-${Date.now()}`,
+      package_id: selectedPackage.id,
+      title: "New Section",
+      subtitle: "",
+      body: "",
+      bullets: ["New inclusion item"],
+      hero_image_url: "",
+      layout_type: "image_left",
+      sort_order: sections.length + 1,
+      active: true,
+    };
+    saveInclusions({ ...estimateInclusions, sections: [...estimateInclusions.sections, next] });
+  }
+
+  function removeSection(sectionId) {
+    saveInclusions({
+      ...estimateInclusions,
+      sections: estimateInclusions.sections.filter((item) => item.id !== sectionId),
+      media: estimateInclusions.media.filter((item) => item.section_id !== sectionId),
+    });
+  }
+
+  function addBullet(section) {
+    updateSection(section.id, "bullets", [...(section.bullets || []), "New inclusion item"]);
+  }
+
+  function updateBullet(section, index, value) {
+    updateSection(section.id, "bullets", (section.bullets || []).map((bullet, bulletIndex) => bulletIndex === index ? value : bullet));
+  }
+
+  function removeBullet(section, index) {
+    updateSection(section.id, "bullets", (section.bullets || []).filter((_, bulletIndex) => bulletIndex !== index));
+  }
+
+  function addMedia(section) {
+    const next = {
+      id: `media-${Date.now()}`,
+      section_id: section.id,
+      image_url: "",
+      caption: "New image",
+      media_type: "image",
+      sort_order: estimateInclusions.media.filter((item) => item.section_id === section.id).length + 1,
+    };
+    saveInclusions({ ...estimateInclusions, media: [...estimateInclusions.media, next] });
+  }
+
+  function updateMedia(mediaId, key, value) {
+    saveInclusions({
+      ...estimateInclusions,
+      media: estimateInclusions.media.map((item) => item.id === mediaId ? { ...item, [key]: value } : item),
+    });
+  }
+
+  function removeMedia(mediaId) {
+    saveInclusions({ ...estimateInclusions, media: estimateInclusions.media.filter((item) => item.id !== mediaId) });
+  }
+
+  function addSupplier() {
+    const next = {
+      id: `supplier-${Date.now()}`,
+      package_id: selectedPackage.id,
+      supplier_name: "New supplier",
+      logo_url: "",
+      category: "Supplier",
+      sort_order: suppliers.length + 1,
+    };
+    saveInclusions({ ...estimateInclusions, suppliers: [...estimateInclusions.suppliers, next] });
+  }
+
+  function removeSupplier(supplierId) {
+    saveInclusions({ ...estimateInclusions, suppliers: estimateInclusions.suppliers.filter((item) => item.id !== supplierId) });
+  }
+
+  function moveSection(section, direction) {
+    const ordered = sections.map((item) => ({ ...item }));
+    const index = ordered.findIndex((item) => item.id === section.id);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= ordered.length) return;
+    const [item] = ordered.splice(index, 1);
+    ordered.splice(nextIndex, 0, item);
+    const resequenced = ordered.map((item, orderIndex) => ({ ...item, sort_order: orderIndex + 1 }));
+    saveInclusions({
+      ...estimateInclusions,
+      sections: estimateInclusions.sections.map((item) => resequenced.find((section) => section.id === item.id) || item),
+    });
+  }
+
+  async function handleImageUpload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    const target = uploadTargetRef.current;
+    uploadTargetRef.current = null;
+    if (!file || !file.type?.startsWith("image/") || !target) return;
+    const url = await readFileAsDataUrl(file);
+    if (target.type === "section") updateSection(target.id, "hero_image_url", url);
+    if (target.type === "media") updateMedia(target.id, "image_url", url);
+    if (target.type === "supplier") updateSupplier(target.id, "logo_url", url);
+  }
+
+  function openUpload(target) {
+    uploadTargetRef.current = target;
+    fileInputRef.current?.click();
+  }
+
+  return (
+    <div style={styles.estimateInclusionsShell}>
+      <section style={styles.estimateInclusionsHero}>
+        <div>
+          <div style={styles.eyebrow}>Estimate Pack</div>
+          <h2 style={styles.cashflowTitle}>Standard Inclusions Schedule</h2>
+          <p style={styles.dashboardPanelSubtitle}>This is the editable brochure-style inclusions schedule inserted after the price summary in the estimate pack. It is separate from Client Selections and does not affect quote totals.</p>
+        </div>
+        <div style={styles.estimateInclusionsPackageCard}>
+          <label style={styles.fieldWrap}>
+            <span style={styles.label}>Inclusion package</span>
+            <select disabled={readonly} style={styles.selectInput} value={selectedPackage?.id || ""} onChange={(event) => selectPackage(event.target.value)}>
+              {estimateInclusions.packages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <div style={styles.proposalMiniActions}>
+            <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPackage}>New package</button>
+            <button type="button" disabled={readonly || !selectedPackage} style={styles.secondaryButton} onClick={duplicatePackage}>Duplicate</button>
+          </div>
+          <div style={styles.proposalMiniActions}>
+            <label style={styles.estimateInlineCheck}>
+              <input type="checkbox" disabled={readonly || !selectedPackage} checked={selectedPackage?.active !== false} onChange={(event) => updatePackage("active", event.target.checked)} />
+              Active
+            </label>
+            <label style={styles.estimateInlineCheck}>
+              <input type="checkbox" disabled={readonly || !selectedPackage} checked={Boolean(selectedPackage?.is_default)} onChange={() => setPackageDefault(selectedPackage?.id)} />
+              Default
+            </label>
+          </div>
+          <BufferedInput disabled={readonly} style={styles.input} value={selectedPackage?.name || ""} onCommit={(value) => updatePackage("name", value)} />
+          <BufferedTextarea disabled={readonly} style={styles.estimateInclusionsDescription} value={selectedPackage?.description || ""} onCommit={(value) => updatePackage("description", value)} />
+        </div>
+      </section>
+
+      <section style={styles.estimateInclusionsPreviewPanel}>
+        <h3 style={styles.dashboardPanelTitle}>Estimate Pack Preview</h3>
+        <EstimateInclusionsBrochure packageData={selectedEstimateInclusionsPackage(estimateInclusions)} compact />
+      </section>
+
+      <section style={styles.estimateInclusionEditorCard}>
+        <div style={styles.estimateInclusionEditorHeader}>
+          <strong>Package Sections</strong>
+          <button type="button" disabled={readonly || !selectedPackage} style={styles.secondaryButton} onClick={addSection}>Add section</button>
+        </div>
+        <p style={styles.dashboardPanelSubtitle}>Sections can be reordered, hidden, edited and filled with bullet inclusions, image cards and supplier references.</p>
+      </section>
+
+      <section style={styles.estimateInclusionsEditorGrid}>
+        {sections.map((section) => {
+          const sectionMedia = estimateInclusions.media
+            .filter((item) => item.section_id === section.id)
+            .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+          return (
+            <article key={section.id} style={styles.estimateInclusionEditorCard}>
+              <div style={styles.estimateInclusionEditorHeader}>
+                <strong>{section.sort_order}. {section.title}</strong>
+                <div style={styles.proposalMiniActions}>
+                  <button disabled={readonly} type="button" onClick={() => moveSection(section, -1)}>Up</button>
+                  <button disabled={readonly} type="button" onClick={() => moveSection(section, 1)}>Down</button>
+                  <button disabled={readonly} type="button" onClick={() => updateSection(section.id, "active", !section.active)}>{section.active ? "Active" : "Inactive"}</button>
+                  <button disabled={readonly} type="button" onClick={() => removeSection(section.id)}>Remove</button>
+                </div>
+              </div>
+              <div style={styles.estimateInclusionFormGrid}>
+                <ProposalPanelInput label="Heading" value={section.title} disabled={readonly} onCommit={(value) => updateSection(section.id, "title", value)} />
+                <ProposalPanelInput label="Subtitle" value={section.subtitle} disabled={readonly} onCommit={(value) => updateSection(section.id, "subtitle", value)} />
+                <ProposalPanelInput label="Hero image URL" value={section.hero_image_url} disabled={readonly} onCommit={(value) => updateSection(section.id, "hero_image_url", value)} />
+                <ProposalPanelSelect label="Layout" value={section.layout_type} disabled={readonly} options={["image_left", "image_right", "feature", "supplier_grid"]} onChange={(value) => updateSection(section.id, "layout_type", value)} />
+              </div>
+              <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => openUpload({ type: "section", id: section.id })}>Upload hero image</button>
+              <ProposalPanelTextarea label="Intro text" value={section.body} disabled={readonly} onCommit={(value) => updateSection(section.id, "body", value)} />
+              <div style={styles.estimateBulletEditor}>
+                <strong>Bullet inclusions</strong>
+                {(section.bullets || []).map((bullet, index) => (
+                  <div key={`${section.id}-bullet-${index}`} style={styles.estimateBulletRow}>
+                    <BufferedInput disabled={readonly} style={styles.input} value={bullet} onCommit={(value) => updateBullet(section, index, value)} />
+                    <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => removeBullet(section, index)}>Remove</button>
+                  </div>
+                ))}
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => addBullet(section)}>Add bullet</button>
+              </div>
+              <div style={styles.estimateMediaEditor}>
+                <div style={styles.estimateInclusionEditorHeader}>
+                  <strong>Product / image cards</strong>
+                  <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => addMedia(section)}>Add card</button>
+                </div>
+                {sectionMedia.map((media) => (
+                  <div key={media.id} style={styles.estimateMediaRow}>
+                    <ProposalPanelInput label="Image URL" value={media.image_url} disabled={readonly} onCommit={(value) => updateMedia(media.id, "image_url", value)} />
+                    <ProposalPanelInput label="Caption" value={media.caption} disabled={readonly} onCommit={(value) => updateMedia(media.id, "caption", value)} />
+                    <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => openUpload({ type: "media", id: media.id })}>Upload</button>
+                    <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => removeMedia(media.id)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
+      <section style={styles.estimateInclusionEditorCard}>
+        <div style={styles.estimateInclusionEditorHeader}>
+          <strong>Supplier Logos</strong>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addSupplier}>Add supplier</button>
+        </div>
+        <div style={styles.estimateSupplierEditorGrid}>
+          {suppliers.map((supplier) => (
+            <div key={supplier.id} style={styles.estimateSupplierEditorCard}>
+              <ProposalPanelInput label="Supplier name" value={supplier.supplier_name} disabled={readonly} onCommit={(value) => updateSupplier(supplier.id, "supplier_name", value)} />
+              <ProposalPanelInput label="Category" value={supplier.category} disabled={readonly} onCommit={(value) => updateSupplier(supplier.id, "category", value)} />
+              <ProposalPanelInput label="Logo URL" value={supplier.logo_url} disabled={readonly} onCommit={(value) => updateSupplier(supplier.id, "logo_url", value)} />
+              <div style={styles.proposalMiniActions}>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => openUpload({ type: "supplier", id: supplier.id })}>Upload logo</button>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => removeSupplier(supplier.id)}>Remove</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={handleImageUpload} />
+    </div>
   );
 }
 
@@ -1756,6 +5551,23 @@ function CashflowSummarySheet({ sheet }) {
         </Spreadsheet>
       </section>
     </div>
+  );
+}
+
+function ProgressPaymentDiagnostic({ rows = [], compact = false, dark = false }) {
+  if (!rows.length) return null;
+  return (
+    <details style={{ ...styles.progressPaymentDiagnostic, ...(compact ? styles.progressPaymentDiagnosticCompact : {}), ...(dark ? styles.progressPaymentDiagnosticDark : {}) }}>
+      <summary>Progress payment source diagnostics</summary>
+      <div style={styles.progressPaymentDiagnosticGrid}>
+        {rows.map((row) => (
+          <span key={`progress-source-${row.stageNumber}`}>
+            <strong>{row.stageNumber} {row.label}</strong>
+            <small>{row.sourceKey}: {row.percentDisplay} / {money(row.amount ?? row.incoming)}</small>
+          </span>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -2059,19 +5871,35 @@ const CLIENT_BLOCK_SUMMARIES = {
 const QUOTE_PROPOSAL_TEMPLATE_KEY = "estimate-builder-quote-proposal-template";
 
 const QUOTE_PROPOSAL_PAGES = [
-  { key: "cover", label: "Cover" },
-  { key: "about", label: "About" },
-  { key: "design", label: "Design" },
-  { key: "inclusions", label: "Inclusions" },
-  { key: "pricing", label: "Pricing" },
+  { key: "cover", label: "Cover Page" },
+  { key: "estimateSummary", label: "Estimate Summary" },
+  { key: "about", label: "About GoodBuild / Why Build With Us" },
+  { key: "standardInclusions", label: "Standard Inclusions" },
+  { key: "pricedPlans", label: "Plans Used to Prepare This Estimate" },
+  { key: "pricing", label: "Pricing / Investment Summary" },
+  { key: "termsNotes", label: "Terms / Notes" },
   { key: "acceptance", label: "Acceptance" },
-  { key: "thankYou", label: "Thank You" },
+];
+
+const PROPOSAL_BUILDER_BLOCKS = [
+  { type: "heading", label: "Heading" },
+  { type: "text", label: "Text" },
+  { type: "image", label: "Image" },
+  { type: "logo", label: "Logo" },
+  { type: "quote_field", label: "Linked Quote Field" },
+  { type: "pricing_summary", label: "Pricing Summary" },
+  { type: "inclusions", label: "Inclusions" },
+  { type: "signature", label: "Signature / Acceptance" },
+  { type: "spacer", label: "Spacer" },
+  { type: "divider", label: "Divider" },
 ];
 
 const QUOTE_PROPOSAL_TEMPLATE_FIELDS = [
   "companyName",
   "logoUrl",
   "estimateTitle",
+  "projectName",
+  "estimatorName",
   "aboutUs",
   "whyChooseUs",
   "buildingYourDreamHome",
@@ -2101,17 +5929,51 @@ const CLIENT_STAGE_SUMMARIES = {
 
 function clientPageValues(sheet) {
   const saved = sheet.workbook.clientPage || {};
-  const companyName = saved.companyName || "";
-  const clientName = saved.clientName || clientWorkbookDataValue(sheet, "clientName");
-  const projectAddress = saved.projectAddress || clientWorkbookDataValue(sheet, "projectAddress");
+  const projectName = clientWorkbookDataValue(sheet, "projectName") || saved.projectName || "";
+  const companyName = clientWorkbookDataValue(sheet, "builderName") || saved.companyName || "";
+  const estimatorName = clientWorkbookDataValue(sheet, "estimatorName") || saved.estimatorName || "";
+  const clientName = clientWorkbookDataValue(sheet, "clientName") || saved.clientName || "";
+  const projectAddress = clientWorkbookDataValue(sheet, "projectAddress") || saved.projectAddress || "";
+  const jobNumber = clientWorkbookDataValue(sheet, "jobNumber") || saved.quoteNumber || "";
+  const quoteDate = clientWorkbookDataValue(sheet, "quoteDate") || saved.quoteDate || "";
+  const constructionType = clientWorkbookDataValue(sheet, "constructionType") || clientWorkbookDataValue(sheet, "projectType") || saved.constructionType || "";
+  const storeys = clientWorkbookDataValue(sheet, "floorCount") || clientWorkbookDataValue(sheet, "storeys") || saved.storeys || "";
+  const facade = clientWorkbookDataValue(sheet, "facade") || clientWorkbookDataValue(sheet, "facadeType") || saved.facade || "";
+  const roofType = clientWorkbookDataValue(sheet, "roofType") || clientWorkbookDataValue(sheet, "roofCover") || saved.roofType || "";
+  const engineering = clientWorkbookDataValue(sheet, "engineeringRequirements") || clientWorkbookDataValue(sheet, "engineering") || clientWorkbookDataValue(sheet, "engineeringStatus") || saved.engineering || "";
+  const buildingApprovalDate = clientWorkbookDataValueByKeysOrLabels(sheet, [
+    "buildingApprovalDate",
+    "buildingApproval",
+    "buildingApprovalReceivedDate",
+    "buildingApprovalIssuedDate",
+    "approvalDate",
+    "baDate",
+  ], [
+    "Building Approval Date",
+    "Building Approval",
+    "Building Approval Received Date",
+    "Building Approval Issued Date",
+    "BA Date",
+  ]);
+  const estimatedStart = estimatedStartFromBuildingApproval(buildingApprovalDate);
+  const estimatedDuration = clientWorkbookDataValue(sheet, "expectedBuildDuration") || clientWorkbookDataValue(sheet, "estimatedDuration") || clientWorkbookDataValue(sheet, "buildDuration") || saved.estimatedDuration || "";
   return {
+    projectName,
     companyName,
+    estimatorName,
     logoUrl: saved.logoUrl || "",
-    estimateTitle: saved.estimateTitle || "Residential Building Quote Proposal",
+    estimateTitle: saved.estimateTitle || projectName || "Residential Building Quote Proposal",
     clientName,
     projectAddress,
-    quoteNumber: saved.quoteNumber || "",
-    quoteDate: saved.quoteDate || new Date().toLocaleDateString("en-AU"),
+    quoteNumber: jobNumber,
+    quoteDate: quoteDate || new Date().toLocaleDateString("en-AU"),
+    constructionType,
+    storeys,
+    facade,
+    roofType,
+    engineering,
+    estimatedStart,
+    estimatedDuration,
     expiryDate: saved.expiryDate || "",
     introduction: saved.introduction || "Thank you for the opportunity to provide this quotation.",
     scopeOfWorks: saved.scopeOfWorks || "This quote includes the works listed below.",
@@ -2164,12 +6026,510 @@ function quoteProposalTemplateFromClient(client = {}) {
   }, {});
 }
 
+function normaliseQuoteProposalBuilder(savedBuilder, client, sheet) {
+  if (savedBuilder?.version === 2 && Array.isArray(savedBuilder.pages)) {
+    const defaultBuilder = defaultQuoteProposalBuilder(client, sheet);
+    return {
+      ...defaultBuilder,
+      ...savedBuilder,
+      theme: { ...defaultBuilder.theme, ...(savedBuilder.theme || {}) },
+      importedDocuments: normaliseProposalImportedDocuments(savedBuilder.importedDocuments),
+      pages: QUOTE_PROPOSAL_PAGES.map((definition) => {
+        const fallback = defaultQuoteProposalPage(definition.key, client, sheet);
+        const saved = savedBuilder.pages.find((page) => page.page_type === definition.key || page.id === definition.key) || {};
+        return {
+          ...fallback,
+          ...saved,
+          id: saved.id || fallback.id,
+          page_type: definition.key,
+          title: saved.title || fallback.title,
+          design: { ...fallback.design, ...(saved.design || {}) },
+          blocks: Array.isArray(saved.blocks) && saved.blocks.length ? saved.blocks.map((block) => normaliseProposalBuilderBlock(block)) : fallback.blocks,
+        };
+      }),
+    };
+  }
+  if (savedBuilder && typeof savedBuilder === "object" && !Array.isArray(savedBuilder)) {
+    return defaultQuoteProposalBuilder({ ...client, ...savedBuilder }, sheet);
+  }
+  return defaultQuoteProposalBuilder(client, sheet);
+}
+
+function defaultQuoteProposalBuilder(client, sheet) {
+  return {
+    version: 2,
+    name: client.estimateTitle || "Estimate Pack",
+    templateName: "Estimate Pack",
+    theme: defaultLuxuryProposalTheme(client),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    importedDocuments: normaliseProposalImportedDocuments(),
+    pages: QUOTE_PROPOSAL_PAGES.map((page) => defaultQuoteProposalPage(page.key, client, sheet)),
+  };
+}
+
+function normaliseProposalImportedDocuments(importedDocuments = {}) {
+  const inclusions = importedDocuments?.inclusions && typeof importedDocuments.inclusions === "object"
+    ? normaliseImportedProposalDocument(importedDocuments.inclusions)
+    : null;
+  const pricedPlans = importedDocuments?.pricedPlans && typeof importedDocuments.pricedPlans === "object"
+    ? importedDocuments.pricedPlans
+    : null;
+  return {
+    inclusions,
+    pricedPlans: pricedPlans ? normaliseImportedProposalDocument(pricedPlans) : null,
+  };
+}
+
+function proposalProjectId(sheet) {
+  return sheet?.workbook?.commercialProjectId || sheet?.workbook?.projectId || "";
+}
+
+function proposalEstimateId(sheet) {
+  return sheet?.workbook?.estimateSnapshotId || sheet?.workbook?.id || "";
+}
+
+function proposalLegacyInclusionsKeys(importedDocuments = {}) {
+  return Object.keys(importedDocuments || {}).filter((key) => (
+    key !== "inclusions"
+    && /inclusion/i.test(key)
+    && importedDocuments[key]
+  ));
+}
+
+function activeInclusionsCandidates(importedDocuments = {}) {
+  const candidates = [];
+  if (importedDocuments?.inclusions && typeof importedDocuments.inclusions === "object") {
+    candidates.push(normaliseImportedProposalDocument(importedDocuments.inclusions));
+  }
+  for (const key of proposalLegacyInclusionsKeys(importedDocuments)) {
+    const value = importedDocuments[key];
+    if (value && typeof value === "object" && (value.publicUrl || value.public_url || value.storagePath || value.storage_path)) {
+      candidates.push(normaliseImportedProposalDocument(value));
+    }
+  }
+  return candidates.filter((document) => document.active !== false && (document.publicUrl || document.storagePath));
+}
+
+function validateActiveInclusionsState(importedDocuments = {}) {
+  const candidates = activeInclusionsCandidates(importedDocuments);
+  const legacyKeys = proposalLegacyInclusionsKeys(importedDocuments);
+  if (candidates.length > 1) {
+    return { ok: false, error: "More than one active inclusions schedule exists. Remove the old schedule before exporting.", legacyFound: legacyKeys.length > 0 };
+  }
+  return { ok: true, document: candidates[0] || null, legacyFound: legacyKeys.length > 0 };
+}
+
+function replaceActiveInclusionsDocument(builder = {}, document = {}, sourceType = "standard_inclusions") {
+  const importedDocuments = { ...(builder.importedDocuments || {}) };
+  const {
+    inclusions: _oldInclusions,
+    inclusionsPdf: _oldInclusionsPdf,
+    importedInclusionsPdf: _oldImportedInclusionsPdf,
+    standardInclusionsPdf: _oldStandardInclusionsPdf,
+    modifiedInclusionsPdf: _oldModifiedInclusionsPdf,
+    ...remainingDocuments
+  } = importedDocuments;
+  return {
+    ...builder,
+    importedDocuments: {
+      ...remainingDocuments,
+      inclusions: {
+        ...normaliseImportedProposalDocument(document),
+        sourceType,
+        active: true,
+        status: "active",
+        importedAt: new Date().toISOString(),
+      },
+    },
+  };
+}
+
+function clearActiveInclusionsDocument(builder = {}) {
+  const importedDocuments = { ...(builder.importedDocuments || {}) };
+  const {
+    inclusions: _oldInclusions,
+    inclusionsPdf: _oldInclusionsPdf,
+    importedInclusionsPdf: _oldImportedInclusionsPdf,
+    standardInclusionsPdf: _oldStandardInclusionsPdf,
+    modifiedInclusionsPdf: _oldModifiedInclusionsPdf,
+    ...remainingDocuments
+  } = importedDocuments;
+  return {
+    ...builder,
+    importedDocuments: {
+      ...remainingDocuments,
+      inclusions: null,
+    },
+  };
+}
+
+function normaliseImportedProposalDocument(document = {}) {
+  const pages = Array.isArray(document.pages) ? document.pages : [];
+  return {
+    id: document.id || proposalBuilderId("pdf"),
+    title: document.title || document.fileName || "Imported PDF",
+    fileName: document.fileName || document.file_name || document.name || "document.pdf",
+    publicUrl: document.publicUrl || document.public_url || document.url || "",
+    storagePath: document.storagePath || document.storage_path || "",
+    sourceType: document.sourceType || document.source_type || "",
+    status: document.status || (document.active === false ? "inactive" : "active"),
+    active: document.active !== false && document.status !== "inactive" && document.status !== "removed",
+    fileHash: document.fileHash || document.file_hash || document.hash || "",
+    version: document.version || document.fileVersion || document.file_version || "",
+    projectId: document.projectId || document.project_id || "",
+    estimateId: document.estimateId || document.estimate_id || "",
+    pageCount: Number(document.pageCount || document.page_count || pages.length || 1),
+    uploadedAt: document.uploadedAt || document.uploaded_at || document.importedAt || "",
+    uploadedBy: document.uploadedBy || document.uploaded_by || "",
+    pages: pages.map((page, index) => ({
+      ...page,
+      order: Number(page.order || index + 1),
+      rotation: Number(page.rotation || page.metadataRotation || 0),
+      metadataRotation: Number(page.metadataRotation || page.rotation || 0),
+      orientation: page.orientation || planPageOrientation(page),
+    })),
+  };
+}
+
+function defaultLuxuryProposalTheme(client = {}) {
+  const builder = client.companyName || "Your Building Team";
+  return {
+    name: "Luxury Residential Proposal",
+    accentColor: "#c89d4a",
+    logoUrl: client.logoUrl || "",
+    heroImageUrl: client.heroImageUrl || "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1500&q=80",
+    aboutImageUrl: client.showcaseImages?.[0] || "https://images.unsplash.com/photo-1600210492493-0946911123ea?auto=format&fit=crop&w=1400&q=80",
+    aboutDetailImageUrl: client.showcaseImages?.[1] || "",
+    projectInfoImageUrl: client.showcaseImages?.[2] || "",
+    whyImageUrl: client.showcaseImages?.[3] || "",
+    designImageUrl: client.designImages?.[0] || "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1500&q=80",
+    thankYouImageUrl: client.finalImageUrl || client.heroImageUrl || "",
+    clientNameOverride: "",
+    siteAddressOverride: "",
+    companyStory: client.aboutUs || "We understand that building a home is about far more than bricks and mortar. It is about creating a place where your family will make memories for years to come. Our commitment is to deliver a home built with craftsmanship, honesty and clear communication every step of the way.",
+    testimonial: client.testimonial || "",
+    designNotes: client.projectDesignIntro || "The proposed scope is shaped around the plans, selections, site requirements, and the lifestyle outcome the client wants to achieve.",
+    acceptanceNote: client.terms || "Acceptance is subject to final contract documentation, confirmed selections, site conditions, authority requirements, engineering and any agreed variations.",
+    thankYouMessage: client.thankYouText || `Thank you for considering ${builder}. We appreciate the opportunity to help bring this project to life.`,
+    stats: [
+      { value: "18+", label: "Years Experience" },
+      { value: "250+", label: "Homes Completed" },
+      { value: "98%", label: "Client Satisfaction" },
+      { value: "4.9/5", label: "Average Rating" },
+    ],
+  };
+}
+
+function defaultQuoteProposalPage(pageType, client, sheet) {
+  const title = QUOTE_PROPOSAL_PAGES.find((page) => page.key === pageType)?.label || pretty(pageType);
+  const base = {
+    id: pageType,
+    page_type: pageType,
+    title,
+    design: {
+      backgroundColor: "#ffffff",
+      backgroundImageUrl: "",
+      overlayOpacity: 0,
+    },
+    blocks: [],
+  };
+  const linked = quoteProposalLinkedFields(sheet, client);
+  const accent = "#c89d4a";
+  const navy = "#07111f";
+  const ink = "#0f172a";
+  const soft = "#f5f1e8";
+  const projectLine = "{{clientName}}\n{{projectAddress}}";
+  const promiseLine = "A considered building proposal designed to feel clear, premium, and ready to move from plans to reality.";
+  if (pageType === "cover") {
+    return {
+      ...base,
+      design: { ...base.design, backgroundColor: navy, backgroundImageUrl: client.heroImageUrl || "", overlayOpacity: client.heroImageUrl ? 0.62 : 0 },
+      blocks: [
+        createProposalBuilderBlock("logo", linked, 0, { content: { logoUrl: client.logoUrl || "" }, design: { width: 190, height: 108 } }),
+        createProposalBuilderBlock("spacer", linked, 1, { design: { height: 140 } }),
+        createProposalBuilderBlock("text", linked, 2, { content: { text: "RESIDENTIAL BUILDING PROPOSAL" }, design: { color: accent, fontSize: 15, fontWeight: 900, lineHeight: 1.35, textAlign: "left" } }),
+        createProposalBuilderBlock("heading", linked, 3, { content: { text: "{{quoteTitle}}" }, design: { color: "#ffffff", fontSize: 62, fontWeight: 900, lineHeight: 0.98, textAlign: "left" } }),
+        createProposalBuilderBlock("divider", linked, 4, { design: { color: accent, thickness: 5 } }),
+        createProposalBuilderBlock("text", linked, 5, { content: { text: projectLine }, design: { color: "#f8fafc", fontSize: 24, fontWeight: 700, lineHeight: 1.35, textAlign: "left" } }),
+        createProposalBuilderBlock("text", linked, 6, { content: { text: promiseLine }, design: { color: "#cbd5e1", fontSize: 17, fontWeight: 500, lineHeight: 1.55, textAlign: "left" } }),
+        createProposalBuilderBlock("quote_field", linked, 7, { content: { fieldKey: "quoteNumber", label: "Quote Number" }, design: { textAlign: "left" } }),
+        createProposalBuilderBlock("quote_field", linked, 8, { content: { fieldKey: "quoteDate", label: "Quote Date" }, design: { textAlign: "left" } }),
+      ],
+    };
+  }
+  if (pageType === "about") {
+    return { ...base, design: { ...base.design, backgroundColor: "#fbfaf6" }, blocks: [
+      createProposalBuilderBlock("logo", linked, 0, { content: { logoUrl: client.logoUrl || "" }, design: { width: 170, height: 94 } }),
+      createProposalBuilderBlock("text", linked, 1, { content: { text: "WHY THIS BUILDER" }, design: { color: accent, fontSize: 14, fontWeight: 900, lineHeight: 1.35 } }),
+      createProposalBuilderBlock("heading", linked, 2, { content: { text: "Built around trust, detail, and a finish you will be proud to come home to." }, design: { color: ink, fontSize: 42, fontWeight: 900, lineHeight: 1.08 } }),
+      createProposalBuilderBlock("divider", linked, 3, { design: { color: accent, thickness: 4 } }),
+      createProposalBuilderBlock("text", linked, 4, { content: { text: client.aboutUs } , design: { color: "#334155", fontSize: 18, fontWeight: 500, lineHeight: 1.65 } }),
+      createProposalBuilderBlock("image", linked, 5, { content: { imageUrl: client.showcaseImages?.[0] || client.heroImageUrl || "", alt: "Completed home detail" }, design: { objectFit: "cover" } }),
+      createProposalBuilderBlock("text", linked, 6, { content: { text: "20+ Years Experience     150+ Projects Completed     98% Client Satisfaction     100% Safety Focus" }, design: { color: navy, fontSize: 21, fontWeight: 900, lineHeight: 1.55, textAlign: "center" } }),
+    ] };
+  }
+  if (pageType === "design") {
+    return { ...base, design: { ...base.design, backgroundColor: "#f8fafc" }, blocks: [
+      createProposalBuilderBlock("text", linked, 0, { content: { text: "DESIGN INTENT" }, design: { color: accent, fontSize: 14, fontWeight: 900 } }),
+      createProposalBuilderBlock("heading", linked, 1, { content: { text: "A home shaped around lifestyle, light, proportion, and everyday comfort." }, design: { color: ink, fontSize: 44, fontWeight: 900, lineHeight: 1.08 } }),
+      createProposalBuilderBlock("image", linked, 2, { content: { imageUrl: client.designImages?.[0] || client.heroImageUrl || "", alt: "Project design image" }, design: { objectFit: "cover" } }),
+      createProposalBuilderBlock("text", linked, 3, { content: { text: client.projectDesignIntro || client.scopeOfWorks }, design: { color: "#334155", fontSize: 18, fontWeight: 500, lineHeight: 1.62 } }),
+      createProposalBuilderBlock("divider", linked, 4, { design: { color: accent, thickness: 3 } }),
+      createProposalBuilderBlock("text", linked, 5, { content: { text: "Clear scope. Thoughtful selections. Confident delivery." }, design: { color: navy, fontSize: 26, fontWeight: 900, textAlign: "center", lineHeight: 1.25 } }),
+    ] };
+  }
+  if (pageType === "standardInclusions") {
+    return { ...base, title: "Standard Inclusions Schedule", design: { ...base.design, backgroundColor: soft }, blocks: [] };
+  }
+  if (pageType === "pricedPlans") {
+    return { ...base, title: "Plans Used to Prepare This Estimate", design: { ...base.design, backgroundColor: "#ffffff" }, blocks: [] };
+  }
+  if (pageType === "termsNotes") {
+    return { ...base, title: "Terms / Notes", design: { ...base.design, backgroundColor: "#ffffff" }, blocks: [] };
+  }
+  if (pageType === "inclusions") {
+    return { ...base, design: { ...base.design, backgroundColor: soft }, blocks: [
+      createProposalBuilderBlock("text", linked, 0, { content: { text: "WHAT IS INCLUDED" }, design: { color: accent, fontSize: 14, fontWeight: 900 } }),
+      createProposalBuilderBlock("heading", linked, 1, { content: { text: "A clear inclusions story, so your client understands the value behind the number." }, design: { color: ink, fontSize: 40, fontWeight: 900, lineHeight: 1.1 } }),
+      createProposalBuilderBlock("text", linked, 2, { content: { text: "This proposal brings together the major building stages, allowances, selections, and trade items that shape the finished home." }, design: { color: "#475569", fontSize: 19, fontWeight: 550, lineHeight: 1.55 } }),
+      createProposalBuilderBlock("inclusions", linked, 3, { content: { heading: "Included in this proposal", intro: client.inclusionsScheduleIntro, items: [] } }),
+      createProposalBuilderBlock("text", linked, 4, { content: { text: "Every allowance and inclusion can be refined as selections are confirmed." }, design: { color: navy, fontSize: 18, fontWeight: 800, textAlign: "center" } }),
+    ] };
+  }
+  if (pageType === "pricing") {
+    return { ...base, design: { ...base.design, backgroundColor: "#07111f" }, blocks: [
+      createProposalBuilderBlock("text", linked, 0, { content: { text: "PRICE / TRADE SUMMARY" }, design: { color: accent, fontSize: 14, fontWeight: 900 } }),
+      createProposalBuilderBlock("heading", linked, 1, { content: { text: "A transparent summary of the estimate value and staged payment structure." }, design: { color: "#ffffff", fontSize: 42, fontWeight: 900, lineHeight: 1.08 } }),
+      createProposalBuilderBlock("text", linked, 2, { content: { text: client.pricingIntro }, design: { color: "#cbd5e1", fontSize: 18, fontWeight: 500, lineHeight: 1.6 } }),
+      createProposalBuilderBlock("pricing_summary", linked, 3, { content: { heading: "Project Investment" } }),
+      createProposalBuilderBlock("text", linked, 4, { content: { text: "Final Quote Total: {{quoteTotal}}" }, design: { color: "#ffffff", fontSize: 30, fontWeight: 900, textAlign: "center" } }),
+    ] };
+  }
+  if (pageType === "acceptance") {
+    return { ...base, design: { ...base.design, backgroundColor: "#fbfaf6" }, blocks: [
+      createProposalBuilderBlock("text", linked, 0, { content: { text: "NEXT STEP" }, design: { color: accent, fontSize: 14, fontWeight: 900 } }),
+      createProposalBuilderBlock("heading", linked, 1, { content: { text: "Ready to move from proposal to project." }, design: { color: ink, fontSize: 48, fontWeight: 900, lineHeight: 1.05 } }),
+      createProposalBuilderBlock("text", linked, 2, { content: { text: "Once accepted, the project can move into final documentation, selections, scheduling, and contract preparation." }, design: { color: "#334155", fontSize: 20, fontWeight: 550, lineHeight: 1.55 } }),
+      createProposalBuilderBlock("signature", linked, 3, { content: { heading: "Quote Acceptance", text: client.acceptance } }),
+      createProposalBuilderBlock("text", linked, 4, { content: { text: client.terms }, design: { color: "#64748b", fontSize: 14, fontWeight: 500, lineHeight: 1.55 } }),
+    ] };
+  }
+  return { ...base, blocks: [
+    createProposalBuilderBlock("spacer", linked, 0, { design: { height: 120 } }),
+    createProposalBuilderBlock("logo", linked, 1, { content: { logoUrl: client.logoUrl || "" }, design: { width: 180, height: 105 } }),
+    createProposalBuilderBlock("text", linked, 2, { content: { text: "THANK YOU" }, design: { color: accent, textAlign: "center", fontSize: 15, fontWeight: 900 } }),
+    createProposalBuilderBlock("heading", linked, 3, { content: { text: "Let’s build something worth coming home to." }, design: { color: ink, textAlign: "center", fontSize: 52, fontWeight: 900, lineHeight: 1.04 } }),
+    createProposalBuilderBlock("divider", linked, 4, { design: { color: accent, thickness: 4 } }),
+    createProposalBuilderBlock("text", linked, 5, { content: { text: client.thankYouText }, design: { color: "#334155", textAlign: "center", fontSize: 21, fontWeight: 500, lineHeight: 1.55 } }),
+    createProposalBuilderBlock("quote_field", linked, 6, { content: { fieldKey: "companyName", label: "Prepared by" }, design: { textAlign: "center" } }),
+  ] };
+}
+
+function createProposalBuilderBlock(type, linkedFields, order = 0, overrides = {}) {
+  const base = {
+    id: proposalBuilderId("block"),
+    type,
+    order,
+    content: {},
+    design: {
+      color: "#0f172a",
+      fontSize: type === "heading" ? 34 : 17,
+      lineHeight: 1.6,
+      textAlign: "left",
+    },
+  };
+  const defaults = {
+    heading: { content: { text: "Heading" } },
+    text: { content: { text: "Add proposal text here." } },
+    image: { content: { imageUrl: "", alt: "" }, design: { objectFit: "cover" } },
+    logo: { content: { logoUrl: linkedFields.logoUrl?.value || "" }, design: { width: 210, height: 130 } },
+    quote_field: { content: { fieldKey: "clientName", label: "Client Name" } },
+    pricing_summary: { content: { heading: "Pricing Summary" } },
+    inclusions: { content: { heading: "Inclusions", intro: "", items: [] } },
+    signature: { content: { heading: "Acceptance", text: "I/we accept this proposal and authorise the works to proceed." } },
+    spacer: { design: { height: 32 } },
+    divider: { design: { color: "#cbd5e1", thickness: 2 } },
+  }[type] || {};
+  return normaliseProposalBuilderBlock({
+    ...base,
+    ...defaults,
+    ...overrides,
+    content: { ...base.content, ...(defaults.content || {}), ...(overrides.content || {}) },
+    design: { ...base.design, ...(defaults.design || {}), ...(overrides.design || {}) },
+  });
+}
+
+function normaliseProposalBuilderBlock(block) {
+  return {
+    id: block.id || proposalBuilderId("block"),
+    type: block.type || "text",
+    order: block.order || 0,
+    content: { ...(block.content || {}) },
+    design: { ...(block.design || {}) },
+  };
+}
+
+function proposalBuilderId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function quoteProposalLinkedFields(sheet, client) {
+  return {
+    projectName: { label: "Project name", value: client.projectName },
+    companyName: { label: "Company name", value: client.companyName },
+    estimatorName: { label: "Estimator", value: client.estimatorName },
+    logoUrl: { label: "Logo URL", value: client.logoUrl },
+    quoteTitle: { label: "Quote title", value: client.estimateTitle },
+    clientName: { label: "Client name", value: client.clientName },
+    projectAddress: { label: "Project address", value: client.projectAddress },
+    quoteNumber: { label: "Quote number", value: client.quoteNumber },
+    quoteDate: { label: "Quote date", value: client.quoteDate },
+    constructionType: { label: "Construction type", value: client.constructionType },
+    storeys: { label: "Storeys", value: client.storeys },
+    facade: { label: "Facade", value: client.facade },
+    roofType: { label: "Roof type", value: client.roofType },
+    engineering: { label: "Engineering", value: client.engineering },
+    estimatedStart: { label: "Estimated start", value: client.estimatedStart },
+    estimatedDuration: { label: "Estimated duration", value: client.estimatedDuration },
+    quoteTotal: { label: "Quote total", value: money(sheet.preview.summary.finalQuoteTotal) },
+    gst: { label: "GST", value: money(sheet.preview.summary.gst) },
+    pricingGroups: { label: "Pricing groups", value: proposalProgressPaymentRowsFromCashflow(sheet) },
+    inclusions: { label: "Inclusions", value: proposalInclusionRows(sheet, client) },
+    estimateInclusionsPackage: { label: "Estimate inclusions package", value: selectedEstimateInclusionsPackage(sheet.workbook.estimateInclusions) },
+    standardInclusionsPackage: { label: "Standard inclusions package", value: selectedStandardInclusionsPackage(sheet.workbook.standardInclusions) },
+    scopeOfWorks: { label: "Scope of works", value: client.scopeOfWorks },
+    exclusions: { label: "Exclusions", value: client.exclusions },
+  };
+}
+
+function proposalInclusionRows(sheet, client) {
+  const explicit = String(client.inclusionsScheduleIntro || "").split("\n").map((line) => line.trim()).filter(Boolean);
+  if (explicit.length > 1) return explicit;
+  return clientBuildStageGroups(sheet).slice(0, 8).map((group) => `${group.label}: ${money(group.total)}`);
+}
+
+function resolveProposalText(value, linkedFields) {
+  return String(value || "").replace(/\{\{(\w+)\}\}/g, (_, key) => linkedFields[key]?.value ?? "");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Image could not be loaded."));
+    image.src = src;
+  });
+}
+
+async function prepareProposalImageDataUrl(file, { maxDimension = 1800, quality = 0.84 } = {}) {
+  const original = await readFileAsDataUrl(file);
+  if (file.type === "image/svg+xml") return original;
+  if (typeof document === "undefined") return original;
+
+  const image = await loadImageElement(original);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const largest = Math.max(width, height);
+  if (!width || !height || largest <= maxDimension) return original;
+
+  const ratio = maxDimension / largest;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * ratio));
+  canvas.height = Math.max(1, Math.round(height * ratio));
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) return original;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
+function proposalPerfLog(label, details = {}) {
+  if (process.env.NODE_ENV === "production") return;
+  if (typeof console === "undefined") return;
+  if (typeof window !== "undefined" && window.localStorage?.getItem("estimate-builder-proposal-perf") !== "true") return;
+  console.debug("[QuoteProposalBuilder]", label, details);
+}
+
+function proposalBlockLabel(type) {
+  return PROPOSAL_BUILDER_BLOCKS.find((block) => block.type === type)?.label || pretty(type);
+}
+
 function clientWorkbookDataValue(sheet, key) {
   for (const section of Object.values(sheet.workbook.data || {})) {
     const row = section?.rows?.[key];
     if (row?.value !== undefined && row?.value !== null && row.value !== "") return row.value;
   }
   return "";
+}
+
+function clientWorkbookDataValueByKeysOrLabels(sheet, keys = [], labels = []) {
+  for (const key of keys) {
+    const value = clientWorkbookDataValue(sheet, key);
+    if (String(value || "").trim()) return value;
+  }
+  const wanted = new Set(labels.map(normaliseWorkbookLookupText));
+  for (const section of Object.values(sheet.workbook.data || {})) {
+    for (const row of Object.values(section?.rows || {})) {
+      const label = normaliseWorkbookLookupText(row?.label || row?.title || row?.name);
+      if (!wanted.has(label)) continue;
+      if (row?.value !== undefined && row?.value !== null && row.value !== "") return row.value;
+    }
+  }
+  return "";
+}
+
+function normaliseWorkbookLookupText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function estimatedStartFromBuildingApproval(value) {
+  const date = parseWorkbookDate(value);
+  if (!date) return "Approximately 2 weeks after Building Approval";
+  date.setDate(date.getDate() + 14);
+  return formatIsoDate(date);
+}
+
+function parseWorkbookDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return validDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const au = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (au) {
+    const year = Number(au[3].length === 2 ? `20${au[3]}` : au[3]);
+    return validDate(year, Number(au[2]), Number(au[1]));
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function validDate(year, month, day) {
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
+function formatIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function hasProjectInfoValue(value) {
+  const text = String(value || "").trim();
+  return Boolean(text) && text !== "Not entered";
 }
 
 function clientStageSummary(group) {
@@ -2253,10 +6613,26 @@ function cashflowSummaryRows(sheet) {
       percent,
       percentDisplay: cashflowPercentDisplay(hasSavedPercent ? savedPercent : "", percent),
       incoming,
+      amount: incoming,
       outgoing,
       surplus: roundMoney(incoming - outgoing),
+      sourceKey: hasSavedPercent ? `workbook.cashflowPayments.${group.stageNumber}` : `DEFAULT_CASHFLOW_PROGRESS_PAYMENTS.${group.stageNumber}`,
+      sourceDescription: "Cashflow Summary progress payment table",
     };
   });
+}
+
+function proposalProgressPaymentRowsFromCashflow(sheet) {
+  return cashflowSummaryRows(sheet).map((row) => ({
+    stageNumber: row.stageNumber,
+    label: row.label,
+    percent: row.percent,
+    percentDisplay: row.percentDisplay,
+    amount: row.incoming,
+    total: row.incoming,
+    sourceKey: `cashflowSummary.stage-${row.stageNumber}`,
+    sourceDescription: row.sourceDescription,
+  }));
 }
 
 function cashflowPercent(value, fallback = 0) {
@@ -2527,6 +6903,25 @@ function findPreviewQuoteRowBySource(quotation = {}, sourceRow) {
     .find((row) => quoteRowSourceNumber(row) === sourceRow) || null;
 }
 
+function QuoteSelectionReferenceCell({ row, readonly, onChange }) {
+  const adjustment = quoteSelectionAdjustment(row);
+  return (
+    <div style={styles.selectionReferenceCell}>
+      <BufferedInput
+        disabled={readonly}
+        style={styles.selectionSpecInput}
+        value={quoteSelectionSpec(row)}
+        onCommit={(next) => onChange("selectionSpec", next)}
+      />
+      <div style={styles.selectionReferenceMeta}>
+        <span>Allowance {money(numberValue(row.selectionAllowanceAmount))}</span>
+        <span>Selected {money(numberValue(row.selectionSelectedCost))}</span>
+        {adjustment ? <strong style={adjustment > 0 ? styles.selectionAdjustmentBad : styles.selectionAdjustmentGood}>{money(adjustment)}</strong> : null}
+      </div>
+    </div>
+  );
+}
+
 function Spreadsheet({ headers, children, compactColumns = [] }) {
   const compactSet = new Set(compactColumns);
   return (
@@ -2543,7 +6938,7 @@ function Cell({ children, strong, heading, subheading, compact, calc, final, ton
   return <td style={{ ...styles.td, ...(compact ? styles.compactColumn : {}), ...(tone ? styles[tone] : {}), ...(strong ? styles.strongCell : {}), ...(tone && strong ? styles[`${tone}Strong`] : {}), ...(heading ? styles.headingCell : {}), ...(subheading ? styles.subheadingCell : {}), ...(calc ? styles.calcCell : {}), ...(final ? styles.finalCell : {}) }}>{children}</td>;
 }
 
-function BufferedInput({ value, onCommit, onFocus, commitOnChange = false, ...props }) {
+const BufferedInput = memo(function BufferedInput({ value, onCommit, onFocus, commitOnChange = false, ...props }) {
   const [draft, setDraft] = useState(value ?? "");
 
   useEffect(() => {
@@ -2575,9 +6970,9 @@ function BufferedInput({ value, onCommit, onFocus, commitOnChange = false, ...pr
       }}
     />
   );
-}
+});
 
-function BufferedTextarea({ value, onCommit, ...props }) {
+const BufferedTextarea = memo(function BufferedTextarea({ value, onCommit, commitOnChange = false, ...props }) {
   const [draft, setDraft] = useState(value ?? "");
 
   useEffect(() => {
@@ -2593,11 +6988,15 @@ function BufferedTextarea({ value, onCommit, ...props }) {
     <textarea
       {...props}
       value={draft}
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        if (commitOnChange && next !== String(value ?? "")) onCommit(next);
+      }}
       onBlur={commit}
     />
   );
-}
+});
 
 function Panel({ title, children }) {
   return <div style={styles.panel}><div style={styles.panelTitle}>{title}</div><div style={styles.panelBody}>{children}</div></div>;
@@ -2637,7 +7036,7 @@ function insertQuoteQuantityReference(sheet, target, key) {
   sheet.setPage("quotation");
 }
 
-function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy = false }) {
+function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy = false, showDeveloperControls = false }) {
   const simpleTemplateName = "Master Estimate Template";
   const simpleTemplateKey = "template:master-estimate-template";
   const [simpleMessage, setSimpleMessage] = useState("");
@@ -2832,61 +7231,69 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
           >
             {busy ? "Saving..." : "Save As New Template"}
           </button>
-          <button
-            type="button"
-            style={styles.templateMenuItem}
-            disabled={busy}
-            onClick={() => run(() => sheet.relinkCurrentJobToExistingTemplate(), false, "Relinking job")}
-          >
-            {busy ? "Working..." : "Relink Current Job To Existing Template"}
-          </button>
-          <div style={styles.templateDebugPanel}>
-            <TemplateDebugRow label="Current job" value={currentJobName} />
-            <TemplateDebugRow label="Current template" value={currentTemplateName} />
-            <TemplateDebugRow label="Template key" value={currentTemplateKey} />
-            <TemplateDebugRow label="Last job saved" value={formatTemplateDate(sheet.lastSavedAt)} />
-            <TemplateDebugRow label="Last template saved" value={formatTemplateDate(lastTemplateSavedAt)} />
-          </div>
-          <div style={styles.templateMenuDivider} />
-          <div style={styles.templateListHeading}>Section CSV</div>
-          <label style={styles.templateNameField}>
-            <span>Selected section</span>
-            <select style={styles.templateNameInput} value={selectedSection} onChange={(event) => setSelectedSection(event.target.value)}>
-              {quoteSectionNames.map((section) => <option key={section} value={section}>{section}</option>)}
-            </select>
-          </label>
-          <div style={styles.templateActionRow}>
+          {showDeveloperControls ? (
             <button
               type="button"
-              style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
-              disabled={!selectedSectionExists}
-              onClick={() => exportSectionCsv(sheet, selectedSection)}
+              style={styles.templateMenuItem}
+              disabled={busy}
+              onClick={() => run(() => sheet.relinkCurrentJobToExistingTemplate(), false, "Relinking job")}
             >
-              Export Section CSV
+              {busy ? "Working..." : "Relink Current Job To Existing Template"}
             </button>
-            <button
-              type="button"
-              style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
-              disabled={!selectedSectionExists}
-              onClick={() => sectionImportInputRef.current?.click()}
-            >
-              Import Section CSV
-            </button>
-          </div>
-          <button
-            type="button"
-            style={styles.templateMenuItem}
-            onClick={() => run(() => restoreSectionBackupFromPrompt(sheet))}
-          >
-            Restore Section Backup
-          </button>
-          <input
-            ref={sectionImportInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            style={{ display: "none" }}
-            onChange={(event) => importSectionCsvFile(event, sheet, selectedSection, setMessage)}
-          />
+          ) : null}
+          {showDeveloperControls ? (
+            <div style={styles.templateDebugPanel}>
+              <TemplateDebugRow label="Current job" value={currentJobName} />
+              <TemplateDebugRow label="Current template" value={currentTemplateName} />
+              <TemplateDebugRow label="Template key" value={currentTemplateKey} />
+              <TemplateDebugRow label="Last job saved" value={formatTemplateDate(sheet.lastSavedAt)} />
+              <TemplateDebugRow label="Last template saved" value={formatTemplateDate(lastTemplateSavedAt)} />
+            </div>
+          ) : null}
+          {showDeveloperControls ? (
+            <>
+              <div style={styles.templateMenuDivider} />
+              <div style={styles.templateListHeading}>Section CSV</div>
+              <label style={styles.templateNameField}>
+                <span>Selected section</span>
+                <select style={styles.templateNameInput} value={selectedSection} onChange={(event) => setSelectedSection(event.target.value)}>
+                  {quoteSectionNames.map((section) => <option key={section} value={section}>{section}</option>)}
+                </select>
+              </label>
+              <div style={styles.templateActionRow}>
+                <button
+                  type="button"
+                  style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
+                  disabled={!selectedSectionExists}
+                  onClick={() => exportSectionCsv(sheet, selectedSection)}
+                >
+                  Export Section CSV
+                </button>
+                <button
+                  type="button"
+                  style={{ ...styles.templateMenuItem, ...(!selectedSectionExists ? styles.templateMenuItemDisabled : {}) }}
+                  disabled={!selectedSectionExists}
+                  onClick={() => sectionImportInputRef.current?.click()}
+                >
+                  Import Section CSV
+                </button>
+              </div>
+              <button
+                type="button"
+                style={styles.templateMenuItem}
+                onClick={() => run(() => restoreSectionBackupFromPrompt(sheet))}
+              >
+                Restore Section Backup
+              </button>
+              <input
+                ref={sectionImportInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                style={{ display: "none" }}
+                onChange={(event) => importSectionCsvFile(event, sheet, selectedSection, setMessage)}
+              />
+            </>
+          ) : null}
           <div style={styles.templateMenuDivider} />
           <div style={styles.templateListHeading}>Open Existing Template</div>
           {templates.length ? (
@@ -2936,6 +7343,20 @@ function suggestedUiTemplateName(workbook) {
   return workbook?.projectName || workbook?.data?.project?.rows?.projectName?.value || "Estimate template";
 }
 
+function openJobHeaderDetails(workbook = {}) {
+  return {
+    projectName: valueOrNotEntered(workbookDataValue(workbook, "projectName")),
+    jobNumber: valueOrNotEntered(workbookDataValue(workbook, "jobNumber")),
+    projectAddress: valueOrNotEntered(workbookDataValue(workbook, "projectAddress")),
+    fileName: valueOrNotEntered(workbook?.openedFileName || workbook?.sourceFileName),
+  };
+}
+
+function valueOrNotEntered(value) {
+  const text = String(value || "").trim();
+  return text || "Not entered";
+}
+
 function currentJobDisplayName(workbook) {
   return workbook?.data?.project?.rows?.projectName?.value
     || workbook?.registeredJob?.jobName
@@ -2944,9 +7365,33 @@ function currentJobDisplayName(workbook) {
     || "simple.gr8job";
 }
 
+function estimateTakeoffPersistenceCounts(workbook = {}) {
+  return {
+    workbookPages: Array.isArray(workbook?.aiTakeoffProject?.pages) ? workbook.aiTakeoffProject.pages.length : 0,
+    reducerPages: null,
+    activePageId: workbook?.aiTakeoffProject?.activePageId || workbook?.aiTakeoffProject?.pages?.[0]?.id || null,
+    workbookPlans: Array.isArray(workbook?.plans) ? workbook.plans.length : 0,
+    localStoragePages: (() => {
+      if (typeof window === "undefined") return null;
+      try {
+        const jobId = workbook?.openedFileName || workbook?.id || "";
+        const projects = JSON.parse(window.localStorage.getItem("gr8:takeoff:v1") || "[]");
+        const project = Array.isArray(projects) ? projects.find((item) => item?.jobId === jobId) : null;
+        return Array.isArray(project?.pages) ? project.pages.length : 0;
+      } catch {
+        return null;
+      }
+    })(),
+    indexedDBPages: Array.isArray(workbook?.aiTakeoffProject?.pages) ? workbook.aiTakeoffProject.pages.length : 0,
+  };
+}
+
 function workbookToJobFileData(workbook = {}) {
   const meta = workbook?.jobFileMeta || {};
   const now = new Date().toISOString();
+  if (typeof window !== "undefined") {
+    console.info("[Estimate Builder] Saving workbook", estimateTakeoffPersistenceCounts(workbook));
+  }
   return {
     jobName: meta.jobName || workbookDataValue(workbook, "projectName") || workbook?.projectName || "",
     clientName: meta.clientName || workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || "",
@@ -2959,6 +7404,37 @@ function workbookToJobFileData(workbook = {}) {
     created: meta.created || workbook?.createdFromMasterTemplateAt || now,
     lastModified: workbook?.savedAt || meta.lastModified || now,
     workbook,
+  };
+}
+
+function isWorkbookLoaded(workbook = {}) {
+  return Boolean(
+    workbook?.quotation && Object.keys(workbook.quotation || {}).length
+    || workbook?.data && Object.keys(workbook.data || {}).length
+    || workbook?.openedFileName
+    || workbook?.sourceFileName
+    || workbook?.registeredJob
+  );
+}
+
+function commercialProjectMetadataFromWorkbook(workbook = {}, jobFilePayload = {}) {
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  const clientPage = workbook?.clientPage || {};
+  return {
+    projectName: jobFilePayload.jobName || meta.jobName || registeredJob.jobName || workbookDataValue(workbook, "projectName") || workbook?.projectName || "",
+    clientName: jobFilePayload.clientName || meta.clientName || registeredJob.clientName || clientPage.clientName || workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || "",
+    clientEmail: registeredJob.clientEmail || "",
+    clientPhone: registeredJob.clientPhone || "",
+    address: jobFilePayload.address || meta.address || registeredJob.siteAddress || clientPage.projectAddress || workbookDataValue(workbook, "siteAddress") || workbookDataValue(workbook, "address") || "",
+    notes: jobFilePayload.notes || meta.notes || registeredJob.jobDescription || "",
+    sourceWorkbookJobId: workbook?.id || workbook?.jobId || meta.jobNumber || "",
+    sourceWorkbookFileName: workbook?.openedFileName || workbook?.sourceFileName || "",
+    sourceRegisteredJobId: registeredJob.jobId || workbook?.registeredJobId || "",
+    quoteNumber: clientPage.quoteNumber || meta.jobNumber || registeredJob.jobNumber || workbookDataValue(workbook, "quoteNumber") || "",
+    quoteDate: clientPage.quoteDate || "",
+    templateKey: workbook?.templateKey || "",
+    templateName: workbook?.templateName || "",
   };
 }
 
@@ -2982,6 +7458,12 @@ function formatTemplateDate(value) {
   if (!value) return "Not recorded";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+}
+
+function formatProposalDate(value) {
+  if (!value) return "unknown date";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "unknown date" : date.toLocaleString();
 }
 
 function FileMenu({ open, items, recentJobs = [], onOpenRecentJob, onToggle, onClose, busy = false }) {
@@ -3282,6 +7764,274 @@ function exportProcurementCsv(sheet) {
   downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${slug(openWorkbookFileName(sheet.workbook))}-procurement.csv`);
 }
 
+function exportQuoteSelectionsCsv(sheet) {
+  const rows = quoteSelectionsCsvRows(sheet);
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${slug(openWorkbookFileName(sheet.workbook))}-selections-bridge.csv`);
+}
+
+function exportQuoteSheetCsv(sheet) {
+  const rows = quoteSheetCsvRows(sheet);
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), quoteSheetExportFileName(sheet));
+}
+
+const PRODUCT_LIBRARY_HEADERS = [
+  "Product Code",
+  "Category",
+  "Subcategory",
+  "Product Name",
+  "Description",
+  "Unit",
+  "Supplier",
+  "Brand",
+  "Cost Price",
+  "Sell Price",
+  "Margin %",
+  "GST",
+  "Allowance Item",
+  "Active",
+  "Notes",
+];
+
+const PRODUCT_LIBRARY_FIELDS = [
+  "product_code",
+  "category",
+  "subcategory",
+  "product_name",
+  "description",
+  "unit",
+  "supplier",
+  "brand",
+  "cost_price",
+  "sell_price",
+  "margin_percent",
+  "gst",
+  "allowance_item",
+  "active",
+  "notes",
+];
+
+const PRODUCT_LIBRARY_SEARCH_KEYS = ["product_code", "category", "subcategory", "product_name", "description", "supplier", "brand", "notes"];
+
+function productLibraryProducts(sheet) {
+  const saved = sheet.workbook.productLibrary?.products || [];
+  return saved.length ? saved.map(normaliseProductLibraryRecord) : deriveProductLibraryFromQuoteSheet(sheet);
+}
+
+function deriveProductLibraryFromQuoteSheet(sheet) {
+  const [headers, ...rows] = quoteSheetCsvRows(sheet);
+  return rows.map((row, index) => {
+    const source = Object.fromEntries(headers.map((header, cellIndex) => [header, row[cellIndex] || ""]));
+    return normaliseProductLibraryRecord({
+      id: `quote-product-${index + 1}`,
+      product_code: `QS-${String(index + 1).padStart(4, "0")}`,
+      category: source.category || source.section || "",
+      subcategory: source.subcategory || "",
+      product_name: source.quote_item || source.description || "",
+      description: source.description || source.quote_item || "",
+      unit: source.unit || "",
+      supplier: source.supplier || "",
+      brand: source.brand || "",
+      cost_price: "",
+      sell_price: source.current_rate || "",
+      margin_percent: "",
+      gst: "",
+      allowance_item: yesNo(source.standard_allowance || source.selection_required === "TRUE" ? "yes" : "no"),
+      active: "yes",
+      notes: source.notes || "",
+    });
+  }).filter((product) => product.product_name || product.description);
+}
+
+function normaliseProductLibraryRecord(product = {}, index = 0) {
+  return {
+    id: product.id || `product-${Date.now().toString(36)}-${index + 1}`,
+    product_code: String(product.product_code || product.productCode || "").trim(),
+    category: String(product.category || "").trim(),
+    subcategory: String(product.subcategory || "").trim(),
+    product_name: String(product.product_name || product.productName || product.name || "").trim(),
+    description: String(product.description || "").trim(),
+    unit: String(product.unit || "").trim(),
+    supplier: String(product.supplier || "").trim(),
+    brand: String(product.brand || "").trim(),
+    cost_price: String(product.cost_price || product.costPrice || "").trim(),
+    sell_price: String(product.sell_price || product.sellPrice || product.rate || "").trim(),
+    margin_percent: String(product.margin_percent || product.marginPercent || "").trim(),
+    gst: String(product.gst || "").trim(),
+    allowance_item: yesNo(product.allowance_item ?? product.allowanceItem ?? "no"),
+    active: yesNo(product.active ?? "yes"),
+    notes: String(product.notes || "").trim(),
+  };
+}
+
+function blankProductLibraryRecord(index = 1) {
+  return normaliseProductLibraryRecord({
+    id: `product-${Date.now().toString(36)}-${index}`,
+    product_code: `PRD-${String(index).padStart(4, "0")}`,
+    product_name: "New product",
+    active: "yes",
+  });
+}
+
+function exportProductLibraryCsv(products, sheet) {
+  const rows = [PRODUCT_LIBRARY_HEADERS, ...products.map(productLibraryCsvRow)];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${slug(openWorkbookFileName(sheet.workbook))}-product-library.csv`);
+}
+
+function downloadProductLibraryTemplate() {
+  const rows = [PRODUCT_LIBRARY_HEADERS, productLibraryTemplateRow()];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "product-library-template.csv");
+}
+
+function productLibraryCsvRow(product = {}) {
+  const item = normaliseProductLibraryRecord(product);
+  return PRODUCT_LIBRARY_FIELDS.map((field) => item[field] || "");
+}
+
+function productLibraryTemplateRow() {
+  return ["PRD-0001", "Kitchen", "Appliances", "Example product", "Editable product description", "each", "Supplier name", "Brand", "0.00", "0.00", "", "", "yes", "yes", ""];
+}
+
+function previewProductLibraryImport(existingProducts, csvRows) {
+  const existing = existingProducts.map(normaliseProductLibraryRecord);
+  const existingByCode = new Map(existing.filter((product) => product.product_code).map((product) => [product.product_code.toLowerCase(), product]));
+  const existingByComposite = new Map(existing.map((product) => [productLibraryCompositeKey(product), product]).filter(([key]) => key));
+  const matchedIds = new Set();
+  const newProducts = [];
+  const updatedProducts = [];
+  const unchangedProducts = [];
+  const invalidRows = [];
+
+  csvRows.forEach((row, index) => {
+    const product = productLibraryRecordFromCsv(row, index);
+    const invalidReason = productLibraryInvalidReason(product);
+    if (invalidReason) {
+      invalidRows.push({ rowNumber: index + 2, reason: invalidReason, product });
+      return;
+    }
+    const match = product.product_code
+      ? existingByCode.get(product.product_code.toLowerCase()) || existingByComposite.get(productLibraryCompositeKey(product))
+      : existingByComposite.get(productLibraryCompositeKey(product));
+    if (!match) {
+      newProducts.push(product);
+      return;
+    }
+    matchedIds.add(match.id);
+    const merged = { ...match, ...product, id: match.id };
+    if (productLibraryChanged(match, merged)) updatedProducts.push({ before: match, after: merged });
+    else unchangedProducts.push(match);
+  });
+
+  const removedProducts = existing
+    .filter((product) => yesNo(product.active) !== "no" && !matchedIds.has(product.id))
+    .map((product) => ({ before: product, after: { ...product, active: "no" } }));
+
+  return { newProducts, updatedProducts, removedProducts, unchangedProducts, invalidRows };
+}
+
+function applyProductLibraryImport(existingProducts, preview) {
+  const updatedById = new Map([
+    ...preview.updatedProducts.map((item) => [item.before.id, item.after]),
+    ...preview.removedProducts.map((item) => [item.before.id, item.after]),
+  ]);
+  const nextExisting = existingProducts.map((product) => updatedById.get(product.id) || product);
+  return [...nextExisting, ...preview.newProducts].map(normaliseProductLibraryRecord);
+}
+
+function productLibraryRecordFromCsv(row, index) {
+  const get = (...labels) => {
+    for (const label of labels) {
+      const value = row[label] ?? row[normaliseCsvHeader(label)] ?? row[label.toLowerCase()];
+      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    }
+    return "";
+  };
+  const keyedRow = Object.fromEntries(Object.entries(row).map(([key, value]) => [normaliseCsvHeader(key), value]));
+  const source = { ...keyedRow, ...row };
+  return normaliseProductLibraryRecord({
+    id: `import-product-${Date.now().toString(36)}-${index + 1}`,
+    product_code: source.product_code || source.productcode || get("Product Code"),
+    category: source.category || get("Category"),
+    subcategory: source.subcategory || get("Subcategory"),
+    product_name: source.product_name || source.productname || get("Product Name"),
+    description: source.description || get("Description"),
+    unit: source.unit || get("Unit"),
+    supplier: source.supplier || get("Supplier"),
+    brand: source.brand || get("Brand"),
+    cost_price: source.cost_price || source.costprice || get("Cost Price"),
+    sell_price: source.sell_price || source.sellprice || get("Sell Price"),
+    margin_percent: source.margin_percent || source.margin || source.marginpercent || get("Margin %"),
+    gst: source.gst || get("GST"),
+    allowance_item: source.allowance_item || source.allowanceitem || get("Allowance Item"),
+    active: source.active || get("Active") || "yes",
+    notes: source.notes || get("Notes"),
+  }, index);
+}
+
+function normaliseCsvHeader(header) {
+  return String(header || "").trim().toLowerCase().replace(/[%]/g, "percent").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function productLibraryInvalidReason(product) {
+  if (!product.product_name) return "Product Name is required.";
+  if (!product.product_code && (!product.category || !product.supplier)) return "Rows without Product Code need Category and Supplier for matching.";
+  return "";
+}
+
+function productLibraryCompositeKey(product = {}) {
+  const category = String(product.category || "").trim().toLowerCase();
+  const name = String(product.product_name || "").trim().toLowerCase();
+  const supplier = String(product.supplier || "").trim().toLowerCase();
+  if (!category || !name) return "";
+  return `${category}::${name}::${supplier}`;
+}
+
+function productLibraryChanged(before = {}, after = {}) {
+  return PRODUCT_LIBRARY_FIELDS.some((field) => String(before[field] || "") !== String(after[field] || ""));
+}
+
+function productLibraryPreviewLabel(item) {
+  const product = item.product || item.after || item.before || item;
+  const prefix = item.rowNumber ? `Row ${item.rowNumber}: ` : "";
+  const reason = item.reason ? ` (${item.reason})` : "";
+  return `${prefix}${product.product_code ? `${product.product_code} - ` : ""}${product.product_name || product.description || "Unnamed product"}${reason}`;
+}
+
+function filterProductLibraryProducts(products, filters) {
+  const q = String(filters.search || "").trim().toLowerCase();
+  return products.filter((product) => {
+    const isActive = yesNo(product.active) !== "no";
+    if (filters.activeFilter === "active" && !isActive) return false;
+    if (filters.activeFilter === "inactive" && isActive) return false;
+    if (filters.categoryFilter !== "all" && product.category !== filters.categoryFilter) return false;
+    if (filters.supplierFilter !== "all" && product.supplier !== filters.supplierFilter) return false;
+    if (!q) return true;
+    return PRODUCT_LIBRARY_SEARCH_KEYS.some((key) => String(product[key] || "").toLowerCase().includes(q));
+  });
+}
+
+function uniqueProductValues(products, key) {
+  return [...new Set(products.map((product) => product[key]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function productLibraryStats(products) {
+  return products.reduce((stats, product) => {
+    if (yesNo(product.active) === "no") stats.inactive += 1;
+    else stats.active += 1;
+    return stats;
+  }, { active: 0, inactive: 0 });
+}
+
+function yesNo(value) {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["false", "no", "n", "0", "inactive"].includes(text)) return "no";
+  if (["true", "yes", "y", "1", "active"].includes(text)) return "yes";
+  return text || "no";
+}
+
 function procurementCsvRows(sheet) {
   const items = sheet.workbook.procurement?.items || [];
   return [
@@ -3489,6 +8239,7 @@ function quotationCsvRows(sheet) {
   sheet.quoteSections.forEach((section) => {
     const previewSection = sheet.preview.quotation[section];
     (previewSection?.rows || []).forEach((row, rowIndex) => {
+      if (isRemovedQuoteOutput(section, row)) return;
       if (quoteFeeType(row)) return;
       if (isHiddenQuoteRow(row)) return;
       rows.push([
@@ -4183,6 +8934,325 @@ function quoteCost(row) {
   return money(row?.cost);
 }
 
+function quoteSelectionsCsvRows(sheet) {
+  const rows = [[
+    "source_quote_row_id",
+    "section",
+    "item",
+    "description",
+    "quantity",
+    "unit",
+    "current_rate",
+    "current_total",
+    "supplier",
+    "current_specification",
+    "allowance_amount",
+    "selected_product",
+    "selected_brand",
+    "selected_model",
+    "selected_colour",
+    "selected_supplier",
+    "selected_cost",
+    "upgrade_downgrade",
+    "image_url",
+    "notes",
+    "selection_status",
+  ]];
+
+  sheet.quoteSections.forEach((section) => {
+    const previewSection = sheet.preview.quotation[section];
+    (previewSection?.rows || []).forEach((row) => {
+      if (quoteFeeType(row) || isHiddenQuoteRow(row) || isApplianceHeadingQuoteRow(row)) return;
+      const qty = quoteInputQty(row, sheet) || row.qty || row.quantity || "";
+      const currentRate = row.finalRateUsed || row.manualRate || row.supplierQuote || row.excelRate || "";
+      const currentTotal = row.cost || "";
+      const allowance = row.selectionAllowanceAmount || currentTotal || currentRate || "";
+      const selectedCost = row.selectionSelectedCost || "";
+      rows.push([
+        quoteRowSourceNumber(row) || row.id || "",
+        section,
+        quoteItem(row),
+        row.description || row.rawText || quoteItem(row),
+        qty,
+        row.unit || "",
+        value(currentRate),
+        value(currentTotal),
+        row.supplier || row.sourceOfRate || "",
+        quoteSelectionSpec(row) || row.notes || "",
+        value(allowance),
+        row.selectedProductName || row.selectionSpec || "",
+        row.selectedBrand || row.selectedDetails?.brand || "",
+        row.selectedModel || row.selectedDetails?.model || "",
+        row.selectedColour || row.selectedDetails?.colour || "",
+        row.selectedSupplier || row.selectedDetails?.supplier || "",
+        value(selectedCost),
+        value(row.selectionAdjustment || quoteSelectionAdjustment(row) || ""),
+        quoteSelectionImageUrl(row),
+        row.notes || "",
+        row.selectionStatus || "",
+      ]);
+    });
+  });
+  return rows;
+}
+
+function quoteSheetCsvRows(sheet) {
+  const rows = [[
+    "sort_order",
+    "section",
+    "category",
+    "subcategory",
+    "room",
+    "quote_item",
+    "description",
+    "unit",
+    "quantity",
+    "standard_allowance",
+    "current_rate",
+    "current_total",
+    "supplier",
+    "brand",
+    "model_or_colour",
+    "selection_required",
+    "selection_type",
+    "standard_inclusion",
+    "notes",
+  ]];
+
+  const parentByChild = quoteParentByChildSection(sheet.quoteSections);
+  let sortOrder = 1;
+  quoteSheetExportSections(sheet).forEach((section) => {
+    const previewSection = sheet.preview?.quotation?.[section];
+    (previewSection?.rows || []).forEach((row) => {
+      if (isRemovedQuoteOutput(section, row)) return;
+      if (quoteFeeType(row) || isHiddenQuoteRow(row) || isApplianceHeadingQuoteRow(row)) return;
+      const item = quoteItem(row);
+      const parentSection = parentByChild[section] || "";
+      const category = parentSection || section;
+      const subcategory = parentSection ? section : "";
+      const qty = quoteInputQty(row, sheet) || row.qty || row.quantity || "";
+      const currentRate = row.finalRateUsed || row.manualRate || row.supplierQuote || row.excelRate || "";
+      const currentTotal = row.cost || "";
+      const selectionType = quoteSelectionType(section, row);
+      const selectionRequired = quoteSelectionRequired(section, row, selectionType);
+      const standardAllowance = row.standardAllowance || row.selectionAllowanceAmount || row.allowanceAmount || currentTotal || currentRate || "";
+      rows.push([
+        sortOrder,
+        quoteSectionDisplayLabel(section),
+        quoteSectionDisplayLabel(category),
+        subcategory ? quoteSectionDisplayLabel(subcategory) : "",
+        quoteExportRoom(section, row),
+        item,
+        row.description || row.rawText || item,
+        row.unit || "",
+        qty,
+        value(standardAllowance),
+        value(currentRate),
+        value(currentTotal),
+        row.supplier || row.selectedSupplier || row.selectedDetails?.supplier || "",
+        row.brand || row.selectedBrand || row.selectedDetails?.brand || row.applianceBrand || applianceBrandFromSection(section) || "",
+        quoteModelOrColour(row),
+        selectionRequired ? "TRUE" : "FALSE",
+        selectionType,
+        quoteStandardInclusion(row) ? "TRUE" : "FALSE",
+        row.notes || "",
+      ]);
+      sortOrder += 1;
+    });
+  });
+  return rows;
+}
+
+function quoteSheetExportSections(sheet) {
+  const ordered = [];
+  const add = (section) => {
+    if (section && !isRemovedQuoteOutput(section, {}) && !ordered.includes(section)) ordered.push(section);
+  };
+  topLevelQuoteSections(sheet.quoteSections).forEach((section) => {
+    add(section);
+    quoteChildSectionsForParent(section, sheet.quoteSections, sheet).forEach(add);
+  });
+  sheet.quoteSections.forEach(add);
+  return ordered;
+}
+
+function quoteSheetExportFileName(sheet) {
+  const workbook = sheet?.workbook || {};
+  const projectName = workbookDataValue(workbook, "projectName")
+    || workbook?.projectName
+    || workbook?.jobDetails?.jobName
+    || workbook?.jobFileMeta?.jobName
+    || "project";
+  const snapshotName = workbook?.snapshotName
+    || workbook?.snapshot_label
+    || workbook?.snapshotLabel
+    || workbook?.estimateSnapshotName
+    || workbook?.jobFileMeta?.lastModified
+    || workbook?.lastSavedAt
+    || workbook?.savedAt
+    || "current";
+  return `quote-sheet-export-${slug(projectName)}-${slug(snapshotName)}.csv`;
+}
+
+function quoteModelOrColour(row = {}) {
+  return firstQuoteText(
+    row.modelOrColour,
+    row.model_or_colour,
+    row.selectedModel,
+    row.selectedColour,
+    row.selectedDetails?.model,
+    row.selectedDetails?.colour,
+    row.colour,
+    row.color,
+    row.model
+  );
+}
+
+function quoteExportRoom(section, row = {}) {
+  const explicit = firstQuoteText(row.room, row.area, row.location, row.space);
+  if (explicit) return explicit;
+  const text = `${section || ""} ${row.item || ""} ${row.rawText || ""}`.toLowerCase();
+  if (text.includes("kitchen")) return "Kitchen";
+  if (text.includes("laundry")) return "Laundry";
+  if (text.includes("ensuite")) return "Ensuite";
+  if (text.includes("bathroom") || text.includes("bath ")) return "Bathroom";
+  if (text.includes("powder")) return "Powder Room";
+  if (text.includes("bedroom")) return "Bedroom";
+  if (text.includes("robe") || text.includes("wardrobe")) return "Bedroom";
+  if (text.includes("garage")) return "Garage";
+  if (text.includes("external") || text.includes("facade")) return "External";
+  if (text.includes("roof")) return "Roof";
+  return "";
+}
+
+function quoteSelectionType(section, row = {}) {
+  const text = `${section || ""} ${row.item || ""} ${row.rawText || ""} ${row.description || ""}`.toLowerCase();
+  const matches = [
+    ["air_conditioning", ["air conditioning", "air-condition", "aircondition", "air con"]],
+    ["hot_water", ["hot water"]],
+    ["shower_screen", ["shower screen"]],
+    ["plumbing", ["plumbing", "plumber", "tap", "mixer", "basin", "toilet", "bath", "shower", "sink"]],
+    ["appliance", ["appliance", "oven", "cooktop", "rangehood", "dishwasher", "microwave", "white goods"]],
+    ["tile", ["tile", "tiling"]],
+    ["flooring", ["flooring", "vinyl", "hybrid floor", "timber floor", "floorcovering"]],
+    ["carpet", ["carpet"]],
+    ["cabinetry", ["cabinet", "joinery", "vanity", "benchtop", "butlers pantry", "butler's pantry"]],
+    ["stone", ["stone", "caesarstone", "quantum quartz", "smartstone"]],
+    ["paint", ["paint", "painter"]],
+    ["lighting", ["lighting", "light fitting", "downlight", "pendant"]],
+    ["electrical", ["electrical", "electrician", "power point", "switch", "fan"]],
+    ["door", ["door", "entry door", "internal door", "cavity sliding"]],
+    ["window", ["window", "glazing", "aluminium frame"]],
+    ["hardware", ["hardware", "handle", "lock", "hinge", "privacy set"]],
+    ["roofing", ["roofing", "roof cover", "colorbond", "gutter", "fascia", "downpipe"]],
+    ["cladding", ["cladding", "weatherboard", "linea", "stria"]],
+    ["concrete", ["concrete", "slab", "driveway", "footing"]],
+    ["robe", ["robe", "wardrobe", "linen"]],
+    ["mirror", ["mirror"]],
+    ["stairs", ["stair"]],
+    ["balustrade", ["balustrade", "handrail"]],
+  ];
+  return matches.find(([, needles]) => needles.some((needle) => text.includes(needle)))?.[0] || "other";
+}
+
+function quoteSelectionRequired(section, row = {}, selectionType = "other") {
+  if (row.selectionRequired !== undefined) return booleanValue(row.selectionRequired);
+  if (row.selection_required !== undefined) return booleanValue(row.selection_required);
+  if (row.requiresSelection !== undefined) return booleanValue(row.requiresSelection);
+  if (row.quoteRequired || row.selectionSpec || row.selectedProductName || row.selectedDetails) return true;
+  const typeRequiresSelection = !["other", "concrete"].includes(selectionType);
+  if (!typeRequiresSelection) return false;
+  const text = `${section || ""} ${row.item || ""} ${row.rawText || ""} ${row.description || ""}`.toLowerCase();
+  if (["labour", "labor", "install", "fix", "frame", "structural", "earthworks", "termite", "waterproofing", "insulation", "sisalation"].some((needle) => text.includes(needle))) {
+    return false;
+  }
+  return true;
+}
+
+function quoteStandardInclusion(row = {}) {
+  if (row.standardInclusion !== undefined) return booleanValue(row.standardInclusion);
+  if (row.standard_inclusion !== undefined) return booleanValue(row.standard_inclusion);
+  if (row.optional || row.upgradeOnly || row.excluded) return false;
+  return true;
+}
+
+function booleanValue(value) {
+  if (typeof value === "boolean") return value;
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["false", "no", "n", "0", "off"].includes(text)) return false;
+  if (["true", "yes", "y", "1", "on"].includes(text)) return true;
+  return Boolean(value);
+}
+
+function quoteSelectionSpec(row = {}) {
+  return row.selectionSpec || row.selectedProductSpecification || row.selectedProductName || row.selectedDetails?.default_selection_specification || row.selectedDetails?.model || "";
+}
+
+function firstQuoteText(...values) {
+  const found = values.find((value) => String(value ?? "").trim());
+  return found === undefined ? "" : String(found).trim();
+}
+
+function imageCandidateUrl(candidate) {
+  if (typeof candidate === "string") return candidate.trim();
+  if (!candidate || typeof candidate !== "object") return "";
+  return String(candidate.url || candidate.src || candidate.imageUrl || candidate.image_url || "").trim();
+}
+
+function quoteProductImages(row = {}) {
+  const details = row.selectedDetails || {};
+  const arrays = [
+    row.productImages,
+    row.images,
+    row.selectionImages,
+    details.images,
+    details.productImages,
+    details.product_images,
+  ].filter(Array.isArray);
+  const candidates = [
+    row.selectionImageUrl,
+    row.productImageUrl,
+    row.imageUrl,
+    details.product_image_url,
+    details.productImageUrl,
+    details.imageUrl,
+    details.image_url,
+    ...arrays.flat(),
+  ];
+  return Array.from(new Set(candidates.map(imageCandidateUrl).filter(Boolean)));
+}
+
+function productPreviewFromQuoteRow(section, row = {}) {
+  const details = row.selectedDetails || {};
+  return {
+    section,
+    rowId: row.id,
+    row,
+    images: quoteProductImages(row),
+    productName: firstQuoteText(
+      quoteSelectionSpec(row),
+      row.productName,
+      row.selectedProductName,
+      details.product_name,
+      details.productName,
+      quoteItem(row),
+      "No product selected",
+    ),
+    supplier: firstQuoteText(row.supplier, row.rateSource, row.sourceOfRate, details.supplier, details.supplier_name),
+    sku: firstQuoteText(row.sku, row.productSku, row.selectedSku, details.sku, details.product_sku, details.productSku),
+    manufacturer: firstQuoteText(row.manufacturer, row.productManufacturer, row.brand, details.manufacturer, details.brand, details.brand_name),
+    description: firstQuoteText(row.productDescription, row.description, row.rawText, details.description, details.product_description),
+  };
+}
+
+function quoteSelectionAdjustment(row = {}) {
+  if (row.selectionAdjustment !== undefined && row.selectionAdjustment !== "") return numberValue(row.selectionAdjustment);
+  const selected = numberValue(row.selectionSelectedCost);
+  const allowance = numberValue(row.selectionAllowanceAmount);
+  if (!selected && !allowance) return 0;
+  return selected - allowance;
+}
+
 function quoteInputQty(row, sheet = null) {
   if (quoteRowNumber(row) === 1210) return "";
   const floorSystemQty = floorSystemQuoteDisplayQty(row, sheet);
@@ -4269,6 +9339,14 @@ function floorSystemText(value) {
 
 function quoteRowNumber(row, rowIndex = 0) {
   return row?.excelRow || row?.sourceRow || row?.values?.sourceRow || rowIndex + 1;
+}
+
+function isRemovedQuoteOutput(section, row = {}) {
+  const rowNumber = Number(quoteRowNumber(row, 0));
+  if ([161, 162, 163, 30076, 30077, 30080].includes(rowNumber)) return true;
+  if (["quote-161", "quote-162", "quote-30076", "quote-30077", "quote-30080"].includes(String(row?.id || ""))) return true;
+  const text = `${section || ""} ${row?.section || ""} ${row?.item || ""} ${row?.rawText || ""} ${Array.isArray(row?.values) ? row.values.join(" ") : ""}`.toLowerCase();
+  return (text.includes("plumber") || text.includes("electrician")) && text.includes("fit off");
 }
 
 function displayQuoteRowNumber(row, rowIndex = 0) {
@@ -5124,28 +10202,89 @@ function pretty(v) {
 }
 
 const styles = {
-  shell: { display: "grid", gridTemplateColumns: "240px minmax(760px, 1fr) 310px", gap: 16, alignItems: "start", fontSize: 16 },
+  shell: { display: "grid", gridTemplateColumns: "280px minmax(880px, 1fr) 330px", gap: 22, alignItems: "start", fontSize: 16, fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" },
   previewShell: { userSelect: "none", WebkitUserSelect: "none" },
-  nav: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, position: "sticky", top: 16, maxHeight: "calc(100vh - 32px)", overflowY: "auto" },
+  nav: { background: "#ffffff", border: "1px solid rgba(148, 163, 184, 0.35)", borderRadius: 18, padding: 16, position: "sticky", top: 16, maxHeight: "calc(100vh - 32px)", overflowY: "auto", boxShadow: "0 24px 60px rgba(15, 23, 42, 0.10)" },
   main: { minWidth: 0 },
-  summary: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, position: "sticky", top: 16 },
+  summary: { background: "#ffffff", border: "1px solid rgba(148, 163, 184, 0.35)", borderRadius: 18, padding: 18, position: "sticky", top: 16, boxShadow: "0 24px 60px rgba(15, 23, 42, 0.10)" },
   eyebrow: { color: "#0f766e", fontSize: 28, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" },
-  navTitle: { margin: "4px 0 12px", color: "#0f172a", fontSize: 28, fontWeight: 600 },
-  navButton: { width: "100%", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 11px", marginBottom: 8, textAlign: "left", color: "#0f172a", fontWeight: 600, cursor: "pointer" },
+  navBrand: { display: "grid", gridTemplateColumns: "54px minmax(0, 1fr)", gap: 12, alignItems: "center", marginBottom: 18 },
+  navBrandIcon: { width: 54, height: 54, borderRadius: 16, color: "#ffffff", background: "linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 16px 30px rgba(37, 99, 235, 0.30)" },
+  navEyebrow: { display: "block", color: "#64748b", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" },
+  navTitle: { display: "block", margin: "2px 0 0", color: "#0f172a", fontSize: 22, lineHeight: 1.1, fontWeight: 900 },
+  navQuoteTotalLine: { margin: "0 0 14px", border: "1px solid #99f6e4", background: "#ecfdf5", color: "#0f766e", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, fontSize: 14, fontWeight: 900 },
+  navButton: { width: "100%", border: "2px solid #cbd5e1", borderRadius: 14, padding: "11px 12px", marginBottom: 10, textAlign: "left", fontSize: 15, fontWeight: 900, cursor: "pointer", display: "grid", gridTemplateColumns: "38px minmax(0, 1fr)", gap: 10, alignItems: "center", transition: "transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease" },
+  navButtonIcon: { width: 38, height: 38, borderRadius: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "transform 180ms ease" },
   navButtonActive: { background: "#0f766e", borderColor: "#0f766e", color: "#ffffff" },
   navNote: { marginTop: 12, color: "#475569", fontSize: 16, lineHeight: 1.5 },
+  dashboardShell: { display: "grid", gap: 22 },
+  dashboardHero: { border: "1px solid rgba(255,255,255,0.55)", color: "#ffffff", borderRadius: 24, padding: 26, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 22, alignItems: "center", boxShadow: "0 28px 70px rgba(37, 99, 235, 0.22)", overflow: "hidden" },
+  dashboardHeroCopy: { display: "grid", gridTemplateColumns: "72px minmax(0, 1fr)", gap: 18, alignItems: "center" },
+  dashboardHeroIcon: { width: 72, height: 72, borderRadius: 20, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.24)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)" },
+  dashboardEyebrow: { color: "rgba(255,255,255,0.78)", fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" },
+  dashboardTitle: { margin: "2px 0", color: "#ffffff", fontSize: 48, fontWeight: 600, lineHeight: 1.05 },
+  dashboardSubtitle: { margin: 0, color: "rgba(255,255,255,0.88)", fontSize: 18, fontWeight: 650, maxWidth: 820, lineHeight: 1.45 },
+  dashboardTotalCard: { border: "1px solid rgba(255,255,255,0.30)", background: "rgba(255,255,255,0.18)", color: "#ffffff", borderRadius: 18, padding: 20, display: "grid", gap: 6, textAlign: "right", backdropFilter: "blur(14px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)" },
+  dashboardTopGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 18, alignItems: "start" },
+  dashboardPanel: { border: "1px solid rgba(148, 163, 184, 0.32)", background: "#ffffff", borderRadius: 18, padding: 20, display: "grid", gap: 16, boxShadow: "0 18px 44px rgba(15, 23, 42, 0.08)" },
+  dashboardPanelHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 },
+  dashboardPanelTitle: { margin: 0, color: "#0f172a", fontSize: 24, fontWeight: 900 },
+  dashboardPanelSubtitle: { margin: "5px 0 0", color: "#64748b", fontSize: 16, fontWeight: 650, lineHeight: 1.45 },
+  dashboardSmallNavButton: { border: "1px solid #0f766e", background: "#0f766e", color: "#ffffff", borderRadius: 12, padding: "11px 14px", fontSize: 14, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 12px 26px rgba(15, 118, 110, 0.20)" },
+  dashboardFieldGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 },
+  dashboardField: { display: "grid", gap: 6, color: "#334155", fontSize: 14, fontWeight: 900 },
+  dashboardInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 10, padding: "11px 12px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 800 },
+  dashboardReadOnly: { minHeight: 42, boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 10, padding: "11px 12px", color: "#0f172a", background: "#f8fafc", fontSize: 16, fontWeight: 900 },
+  dashboardUnavailable: { minHeight: 42, boxSizing: "border-box", border: "1px dashed #cbd5e1", borderRadius: 10, padding: "11px 12px", color: "#64748b", background: "#f8fafc", fontSize: 16, fontWeight: 800 },
+  dashboardCardGrid: { display: "grid", gridTemplateColumns: "repeat(5, minmax(190px, 1fr))", gap: 18 },
+  dashboardWorkspaceCard: { minHeight: 188, border: "1px solid #d8e0ea", color: "#0f172a", borderRadius: 20, padding: 20, cursor: "pointer", textAlign: "left", display: "grid", gridTemplateColumns: "64px minmax(0, 1fr)", gridTemplateRows: "auto 1fr", gap: "15px 14px", boxShadow: "0 14px 34px rgba(15, 23, 42, 0.08)", transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease" },
+  dashboardCardIcon: { width: 62, height: 62, borderRadius: 18, color: "#ffffff", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid #bae6fd", boxShadow: "0 16px 28px rgba(15, 23, 42, 0.14)", transition: "transform 180ms ease" },
+  dashboardCardCopy: { display: "grid", gap: 6, alignSelf: "start" },
+  dashboardCardTitle: { fontSize: 22, fontWeight: 900, color: "#0f172a", lineHeight: 1.15 },
+  dashboardCardSubtitle: { fontSize: 16, fontWeight: 650, color: "#475569", lineHeight: 1.42 },
+  dashboardCardBadge: { gridColumn: "2 / 3", justifySelf: "start", alignSelf: "end", border: "1px solid #bbf7d0", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 950 },
+  productLibraryShell: { display: "grid", gap: 14 },
+  productLibraryToolbar: { border: "1px solid #ccfbf1", background: "#f0fdfa", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" },
+  productLibraryActions: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" },
+  productLibraryBulkBar: { border: "1px solid #d8dee8", background: "#f8fafc", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", color: "#0f172a" },
+  productLibrarySelect: { border: "1px solid #94a3b8", borderRadius: 8, padding: "8px 10px", color: "#0f172a", background: "#ffffff", fontWeight: 800, minHeight: 38 },
+  productLibraryMiniInput: { border: "1px solid #94a3b8", borderRadius: 8, padding: "8px 10px", color: "#0f172a", background: "#ffffff", fontWeight: 750, minHeight: 38 },
+  productLibraryStatus: { color: "#334155", fontSize: 13, fontWeight: 850 },
+  productLibraryTableWrap: { overflow: "auto", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 14, boxShadow: "0 14px 34px rgba(15,23,42,0.08)" },
+  productLibraryTable: { minWidth: 1960, display: "grid" },
+  productLibraryRow: { display: "grid", gridTemplateColumns: "120px 140px 140px 180px 260px 90px 150px 130px 110px 110px 100px 90px 116px 90px 220px 190px", gap: 0, borderBottom: "1px solid #e2e8f0", alignItems: "stretch" },
+  productLibraryHeaderRow: { position: "sticky", top: 0, zIndex: 1, background: "#0f766e", color: "#ffffff", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.04em" },
+  productLibraryCellInput: { width: "100%", minHeight: 38, boxSizing: "border-box", border: 0, borderRight: "1px solid #e2e8f0", borderRadius: 0, padding: "8px 9px", color: "#0f172a", background: "#ffffff", fontSize: 13, fontWeight: 700, fontFamily: "inherit" },
+  productLibraryActionCell: { display: "flex", alignItems: "center", gap: 6, padding: 6, borderRight: "1px solid #e2e8f0", background: "#ffffff" },
+  productLibraryPreview: { border: "1px solid #99f6e4", background: "#f0fdfa", borderRadius: 14, padding: 14, display: "grid", gap: 12 },
+  productLibraryPreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
+  productLibraryPreviewCard: { border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gap: 8, color: "#0f172a", fontSize: 13 },
+  productLibraryPreviewList: { display: "grid", gap: 4, color: "#475569", fontSize: 12, lineHeight: 1.35 },
+  errorText: { margin: 0, color: "#b91c1c", fontWeight: 900 },
+  workspacePlaceholder: { border: "1px dashed #cbd5e1", background: "#f8fafc", color: "#475569", borderRadius: 8, padding: 18, fontWeight: 800, lineHeight: 1.5 },
   floatingSaveJob: { position: "sticky", top: 0, zIndex: 4, marginTop: 14, background: "#ffffff", padding: "8px 0", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" },
   floatingSaveJobButton: { width: "100%", background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 7, padding: "10px 11px", fontWeight: 900, cursor: "pointer" },
-  topbar: { position: "sticky", top: 16, zIndex: 5, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", marginBottom: 12, display: "grid", gridTemplateColumns: "minmax(180px, 0.75fr) minmax(180px, 240px) minmax(420px, 1.4fr)", gap: 12, alignItems: "center" },
-  pageTitle: { margin: "2px 0 0", color: "#0f172a", fontSize: 48, fontWeight: 600 },
-  openFileBanner: { justifySelf: "stretch", minWidth: 0, textAlign: "center", border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 8, padding: "7px 10px" },
-  openFileLabel: { display: "block", color: "#64748b", fontSize: 24, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
-  openFileName: { display: "block", color: "#0f172a", fontSize: 24, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  compactControlRow: { position: "sticky", top: 12, zIndex: 5, marginBottom: 12, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 },
+  topbar: { position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.45)", borderRadius: 24, padding: "22px 24px", marginBottom: 22, display: "grid", gridTemplateColumns: "minmax(420px, 1fr) minmax(210px, 300px) minmax(360px, 0.95fr)", gap: 18, alignItems: "center", boxShadow: "0 28px 70px rgba(15, 23, 42, 0.18)", color: "#ffffff" },
+  pageBannerTitleGroup: { display: "grid", gridTemplateColumns: "72px minmax(0, 1fr)", gap: 18, alignItems: "center", minWidth: 0 },
+  pageBannerIcon: { width: 72, height: 72, borderRadius: 20, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.24)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)" },
+  pageBannerEyebrow: { color: "rgba(255,255,255,0.78)", fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" },
+  pageTitle: { margin: "1px 0 0", color: "#ffffff", fontSize: 48, lineHeight: 1.05, fontWeight: 600 },
+  pageBannerSubtitle: { margin: "5px 0 0", color: "rgba(255,255,255,0.88)", fontSize: 18, lineHeight: 1.35, fontWeight: 650 },
+  openFileBanner: { justifySelf: "stretch", minWidth: 0, textAlign: "left", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.18)", borderRadius: 18, padding: "13px 14px", backdropFilter: "blur(14px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)" },
+  openFileLabel: { display: "block", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" },
+  openFileName: { display: "block", color: "#ffffff", fontSize: 18, fontWeight: 850, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  openJobBanner: { minWidth: 0, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 },
+  openJobField: { minWidth: 0, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.16)", borderRadius: 14, padding: "10px 12px", display: "grid", gap: 3, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)" },
+  openJobFieldWide: { gridColumn: "1 / -1" },
+  openJobLabel: { color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" },
+  openJobValue: { color: "#ffffff", fontSize: 16, lineHeight: 1.25, fontWeight: 900, overflowWrap: "anywhere" },
   topControls: { minWidth: 0, display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" },
+  bannerBackButton: { minHeight: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#0f172a", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: "8px 12px", fontSize: 14, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" },
   lockedBadge: { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", borderRadius: 999, padding: "8px 12px", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
   previewFieldset: { border: 0, padding: 0, margin: 0, minWidth: 0 },
   fileMenuWrap: { position: "relative", display: "inline-flex" },
-  fileMenuButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 8, padding: "9px 14px", fontWeight: 600, cursor: "pointer", minWidth: 76 },
+  fileMenuButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 12, padding: "9px 14px", fontWeight: 900, cursor: "pointer", minWidth: 76, boxShadow: "0 8px 18px rgba(15, 118, 110, 0.18)" },
   fileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 20, minWidth: 190, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 6 },
   fileMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: 0, borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 600, cursor: "pointer" },
   fileMenuItemPrimary: { background: "#ecfdf5", color: "#0f766e" },
@@ -5171,7 +10310,7 @@ const styles = {
   saveSpinner: { width: 10, height: 10, borderRadius: 999, background: "#0f766e", boxShadow: "0 0 0 4px rgba(15, 118, 110, 0.14)" },
   templateButton: { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 8, padding: "9px 12px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
   templateFileWrap: { position: "relative", display: "inline-flex" },
-  templateFileButton: { width: 190, maxWidth: 190, background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 8, padding: "7px 10px", fontWeight: 800, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, whiteSpace: "nowrap", overflow: "hidden" },
+  templateFileButton: { width: 190, maxWidth: 190, background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 12, padding: "7px 10px", fontWeight: 900, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, whiteSpace: "nowrap", overflow: "hidden", boxShadow: "0 8px 18px rgba(154, 52, 18, 0.10)" },
   templateFileButtonLabel: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
   templateFileButtonName: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
   templateFileMenuSimple: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, width: 300, maxWidth: "calc(100vw - 32px)", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10, display: "grid", gap: 10 },
@@ -5222,7 +10361,12 @@ const styles = {
   versionButton: { border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 6, padding: "5px 8px", fontWeight: 800, cursor: "pointer" },
   templateEmpty: { color: "#64748b", fontWeight: 800, padding: 16 },
   templateModalFooter: { display: "flex", justifyContent: "flex-end", gap: 10, padding: "12px 18px", borderTop: "1px solid #e2e8f0", background: "#ffffff" },
-  savedText: { color: "#475569", fontSize: 16, fontWeight: 600, whiteSpace: "nowrap" },
+  savedText: { color: "#0f766e", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" },
+  commercialSyncButton: { background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", borderRadius: 12, padding: "9px 12px", fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap" },
+  commercialSyncButtonDisabled: { opacity: 0.65, cursor: "not-allowed" },
+  commercialSyncStatus: { margin: "10px 0 0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff", color: "#1e3a8a", padding: "9px 11px", fontSize: 14, fontWeight: 700 },
+  commercialSyncStatusSuccess: { borderColor: "#99f6e4", background: "#ecfdf5", color: "#0f766e" },
+  commercialSyncStatusError: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
   quoteSearchControls: { display: "flex", gap: 8, alignItems: "center", flex: "1 1 260px", minWidth: 260 },
   searchInput: { border: "1px solid #64748b", borderRadius: 7, padding: "8px 10px", color: "#0f172a", fontWeight: 600, minWidth: 0, flex: "1 1 180px" },
   checkLabel: { color: "#334155", fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 },
@@ -5289,6 +10433,10 @@ const styles = {
   cashflowMetricPositive: { background: "#ecfdf5", borderColor: "#99f6e4" },
   cashflowMetricNegative: { background: "#fff1f2", borderColor: "#fecaca" },
   cashflowPercentInput: { width: 96, boxSizing: "border-box", border: "1px solid #64748b", borderRadius: 5, padding: "7px 8px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 800, textAlign: "right" },
+  progressPaymentDiagnostic: { marginTop: 14, border: "1px dashed #94a3b8", borderRadius: 10, padding: 12, background: "#f8fafc", color: "#334155", fontSize: 12, lineHeight: 1.35 },
+  progressPaymentDiagnosticCompact: { marginTop: 8, padding: 10, fontSize: 11 },
+  progressPaymentDiagnosticDark: { borderColor: "rgba(248,213,138,0.45)", background: "rgba(255,255,255,0.08)", color: "#e2e8f0" },
+  progressPaymentDiagnosticGrid: { marginTop: 9, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 },
   adjustmentsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10, padding: 12, background: "#ffffff" },
   adjustmentField: { display: "flex", flexDirection: "column", gap: 5, color: "#334155", fontWeight: 700 },
   adjustmentLabel: { fontSize: 14, textTransform: "uppercase" },
@@ -5332,6 +10480,219 @@ const styles = {
   proposalSignatureBox: { minHeight: 92, border: "1px solid #94a3b8", borderRadius: 10, background: "#f8fafc", color: "#64748b", display: "flex", alignItems: "flex-end", padding: 12, fontWeight: 900 },
   proposalTermsCheck: { display: "flex", alignItems: "center", gap: 10, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 12, color: "#0f172a", fontSize: 16, fontWeight: 800 },
   proposalThankYou: { minHeight: 620, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, textAlign: "center" },
+  projectEstimateShell: { display: "grid", gap: 12 },
+  projectEstimateTabs: { display: "inline-flex", width: "fit-content", gap: 6, border: "1px solid #f3d08a", borderRadius: 10, background: "#fff7ed", padding: 6 },
+  projectEstimateTab: { border: "1px solid transparent", borderRadius: 8, background: "transparent", color: "#92400e", padding: "9px 13px", fontSize: 13, fontWeight: 950, cursor: "pointer" },
+  projectEstimateTabActive: { background: "#92400e", borderColor: "#92400e", color: "#ffffff", boxShadow: "0 8px 18px rgba(146,64,14,0.18)" },
+  projectEstimateBaselineBar: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 12, alignItems: "center", border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: 12, fontWeight: 950 },
+  standardPricedUsing: { border: "2px solid #15803d", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: "10px 12px", fontSize: 16, fontWeight: 950 },
+  standardInclusionsShell: { display: "grid", gap: 16 },
+  standardInclusionsHero: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 410px", gap: 18, alignItems: "stretch", border: "1px solid #bbf7d0", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)", borderRadius: 18, padding: 22, boxShadow: "0 18px 44px rgba(22,101,52,0.10)" },
+  standardPackagePanel: { display: "grid", gap: 10, border: "1px solid #bbf7d0", background: "#ffffff", borderRadius: 14, padding: 14 },
+  standardInclusionsLayout: { display: "grid", gridTemplateColumns: "minmax(680px, 1fr) 380px", gap: 14, alignItems: "start" },
+  standardPreviewPanel: { border: "1px solid #cbd5e1", background: "#e5e7eb", borderRadius: 16, padding: 16, overflow: "auto", maxHeight: "calc(100vh - 170px)" },
+  standardEditorPanel: { position: "sticky", top: 90, maxHeight: "calc(100vh - 110px)", overflowY: "auto", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 14, padding: 14, display: "grid", gap: 10 },
+  standardFeatureEditorCard: { border: "1px solid #d8dee8", background: "#f8fafc", borderRadius: 10, padding: 10, display: "grid", gap: 8 },
+  standardSectionList: { display: "grid", gap: 6 },
+  standardSectionButton: { border: "1px solid #d1fae5", background: "#f0fdf4", color: "#14532d", borderRadius: 8, padding: "8px 10px", textAlign: "left", fontWeight: 900, cursor: "pointer" },
+  standardSectionButtonActive: { background: "#166534", color: "#ffffff", borderColor: "#166534" },
+  standardSectionEditor: { display: "grid", gap: 9, border: "1px solid #bbf7d0", background: "#f8fff8", borderRadius: 10, padding: 10 },
+  estimateInclusionsShell: { display: "grid", gap: 18 },
+  estimateInclusionsHero: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 380px", gap: 18, alignItems: "stretch", border: "1px solid #fde68a", background: "linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%)", borderRadius: 18, padding: 22, boxShadow: "0 18px 44px rgba(146,64,14,0.10)" },
+  estimateInclusionsPackageCard: { display: "grid", gap: 10, border: "1px solid #f3d08a", background: "#ffffff", borderRadius: 14, padding: 14 },
+  estimateInclusionsDescription: { width: "100%", minHeight: 82, boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 8, padding: "9px 10px", color: "#0f172a", background: "#ffffff", fontSize: 14, fontWeight: 650, fontFamily: "inherit", resize: "vertical" },
+  estimateInclusionsPreviewPanel: { border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 16, padding: 18, display: "grid", gap: 14 },
+  estimateInclusionsEditorGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 14 },
+  estimateInclusionEditorCard: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 14, padding: 14, display: "grid", gap: 12, boxShadow: "0 14px 32px rgba(15,23,42,0.07)" },
+  estimateInclusionEditorHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, color: "#0f172a", fontSize: 16, fontWeight: 900 },
+  estimateInclusionFormGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 },
+  estimateBulletEditor: { border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 10, padding: 10, display: "grid", gap: 8 },
+  estimateBulletRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" },
+  estimateMediaEditor: { display: "grid", gap: 8 },
+  estimateMediaRow: { border: "1px solid #e2e8f0", borderRadius: 10, background: "#fbfdff", padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) auto auto", gap: 8, alignItems: "end" },
+  estimateSupplierEditorGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 },
+  estimateSupplierEditorCard: { border: "1px solid #e2e8f0", borderRadius: 10, background: "#f8fafc", padding: 10, display: "grid", gap: 8 },
+  estimateInlineCheck: { display: "inline-flex", alignItems: "center", gap: 7, color: "#334155", fontSize: 13, fontWeight: 900 },
+  estimateBrochure: { display: "grid", gap: 18, minHeight: 0 },
+  estimateBrochureCompact: { maxHeight: 720, overflow: "auto", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, background: "#fbfaf6" },
+  estimateBrochureIntro: { display: "grid", gridTemplateColumns: "0.7fr 1fr", gap: 18, alignItems: "end", borderBottom: "1px solid rgba(15,23,42,0.12)", paddingBottom: 16 },
+  estimateBrochureSectionGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 },
+  estimateBrochureSection: { minHeight: 250, display: "grid", gridTemplateColumns: "0.9fr 1.1fr", gap: 0, overflow: "hidden", border: "1px solid rgba(200,157,74,0.32)", borderRadius: 18, background: "#ffffff", boxShadow: "0 16px 34px rgba(15,23,42,0.08)" },
+  estimateBrochureSectionFeature: { gridColumn: "1 / -1", minHeight: 310, gridTemplateColumns: "1.05fr 1fr" },
+  estimateBrochureImageWrap: { minHeight: 220, background: "#e2e8f0" },
+  estimateBrochureImage: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  estimateBrochureImagePlaceholder: { width: "100%", height: "100%", minHeight: 220, display: "grid", placeItems: "center", color: "#64748b", fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em" },
+  estimateBrochureCopy: { padding: 18, display: "grid", gap: 8, alignContent: "start", color: "#334155" },
+  estimateBrochureSuppliers: { borderTop: "2px solid rgba(200,157,74,0.45)", paddingTop: 14, display: "grid", gap: 12 },
+  estimateBrochureSupplierLogo: { minHeight: 74, border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 12, padding: 10, display: "grid", placeItems: "center", gap: 4, textAlign: "center", color: "#0f172a", fontWeight: 900 },
+  fieldWrap: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 13, fontWeight: 900 },
+  proposalBuilderShell: { display: "flex", flexDirection: "column", gap: 12, minHeight: 760 },
+  proposalBuilderToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#0f172a", color: "#ffffff", border: "1px solid #1e293b", borderRadius: 10, padding: 10 },
+  proposalBuilderStatus: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#075985", borderRadius: 8, padding: "9px 12px", fontWeight: 800, whiteSpace: "pre-wrap", overflowWrap: "anywhere" },
+  proposalBuilderLayout: { display: "grid", gridTemplateColumns: "230px minmax(680px, 1fr) 330px", gap: 12, alignItems: "start" },
+  proposalPreviewLayout: { display: "grid", gridTemplateColumns: "1fr", gap: 12 },
+  proposalBuilderSidebar: { position: "sticky", top: 90, maxHeight: "calc(100vh - 110px)", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
+  proposalBuilderPanel: { position: "sticky", top: 90, maxHeight: "calc(100vh - 110px)", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12 },
+  proposalPageListButton: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: "10px 11px", marginBottom: 7, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, fontWeight: 900, cursor: "pointer" },
+  proposalPageListButtonActive: { background: "#0f3f75", borderColor: "#0f3f75", color: "#ffffff" },
+  proposalBlockPalette: { marginTop: 16, borderTop: "1px solid #e2e8f0", paddingTop: 12, display: "grid", gap: 7 },
+  proposalBlockAddButton: { border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff", color: "#1e3a8a", padding: "9px 10px", textAlign: "left", fontWeight: 900, cursor: "pointer" },
+  proposalBuilderCanvas: { display: "flex", flexDirection: "column", alignItems: "center", gap: 18, minWidth: 0, background: "#dbe4ee", border: "1px solid #94a3b8", borderRadius: 10, padding: 18, overflow: "auto" },
+  proposalExportSource: { position: "fixed", left: -12000, top: 0, zIndex: 0, width: "max-content", height: "auto", overflow: "visible", pointerEvents: "none", background: "#ffffff", display: "grid", gap: 0 },
+  proposalDocumentPage: { width: 794, minHeight: 1123, boxSizing: "border-box", color: "#0f172a", backgroundSize: "cover", backgroundPosition: "center", boxShadow: "0 22px 55px rgba(15,23,42,0.22)", padding: 54, display: "flex", flexDirection: "column", gap: 18, flex: "0 0 auto" },
+  proposalCanvasBlock: { border: "1px solid transparent", borderRadius: 8, padding: 6, cursor: "grab" },
+  proposalCanvasBlockSelected: { borderColor: "#0ea5e9", background: "rgba(14,165,233,0.08)", boxShadow: "0 0 0 3px rgba(14,165,233,0.14)" },
+  proposalBuilderImage: { width: "100%", minHeight: 240, maxHeight: 430, borderRadius: 14, border: "1px solid #cbd5e1", display: "block" },
+  proposalBuilderLogo: { maxWidth: 210, maxHeight: 130, objectFit: "contain" },
+  importPlaceholderPage: { justifyContent: "center", alignItems: "center", background: "#fbfaf6" },
+  importPlaceholderContent: { width: "100%", maxWidth: 610, display: "grid", gap: 18, textAlign: "center", justifyItems: "center" },
+  importPlaceholderTitle: { margin: 0, color: "#0f172a", fontSize: 38, lineHeight: 1.08, fontWeight: 950, letterSpacing: 0 },
+  importPlaceholderText: { margin: 0, color: "#475569", fontSize: 18, lineHeight: 1.55, fontWeight: 650 },
+  importButtonRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 9, flexWrap: "wrap" },
+  importedSummaryBox: { width: "100%", border: "1px solid #d6c28b", borderRadius: 10, background: "#fffaf0", color: "#3f321c", padding: 16, display: "grid", gap: 10, justifyItems: "center", fontWeight: 850 },
+  importedPdfPortraitPage: { width: 794, height: 1123, boxSizing: "border-box", background: "#ffffff", boxShadow: "0 22px 55px rgba(15,23,42,0.22)", padding: 28, flex: "0 0 auto" },
+  importedPdfLandscapePage: { width: 1123, height: 794, boxSizing: "border-box", background: "#ffffff", boxShadow: "0 22px 55px rgba(15,23,42,0.22)", padding: 28, flex: "0 0 auto" },
+  importedPdfFrame: { width: "100%", height: "100%", border: "1px solid #cbd5e1", background: "#ffffff", display: "block" },
+  importedPdfImage: { width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#ffffff" },
+  importedPdfLoading: { width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#ffffff", color: "#64748b", fontSize: 16, fontWeight: 850, textAlign: "center", padding: 20, boxSizing: "border-box" },
+  planThumbGrid: { width: "100%", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))", gap: 8 },
+  planThumb: { minHeight: 92, border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", padding: 9, display: "grid", gap: 5, alignContent: "start", color: "#0f172a", textAlign: "left" },
+  planThumbActions: { display: "flex", gap: 5, flexWrap: "wrap" },
+  miniButton: { border: "1px solid #cbd5e1", borderRadius: 6, background: "#f8fafc", color: "#0f172a", padding: "5px 7px", fontSize: 12, fontWeight: 900, cursor: "pointer" },
+  dangerButton: { border: "1px solid #fecaca", borderRadius: 8, background: "#fff1f2", color: "#b91c1c", padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
+  standardPdfShell: { display: "grid", gap: 14 },
+  standardPdfToolbar: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 14, alignItems: "center", border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 16, padding: 16 },
+  standardPdfLayout: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr) 320px", gap: 14, alignItems: "start" },
+  standardPdfLayoutEditable: { gridTemplateColumns: "240px minmax(0, 1fr)" },
+  standardPdfPageList: { position: "sticky", top: 90, maxHeight: "calc(100vh - 120px)", overflow: "auto", display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10 },
+  standardPdfPageListRow: { display: "grid", gap: 5 },
+  standardPdfPageButton: { width: "100%", border: "1px solid #d1fae5", background: "#f8fafc", color: "#0f172a", borderRadius: 8, padding: "9px 10px", display: "grid", gap: 3, textAlign: "left", fontWeight: 900, cursor: "pointer" },
+  standardPdfPageButtonActive: { background: "#166534", color: "#ffffff", borderColor: "#166534" },
+  standardPdfReorderButtons: { display: "flex", gap: 5 },
+  standardPdfPreviewPanel: { minHeight: 720, overflow: "auto", border: "1px solid #cbd5e1", background: "#e5e7eb", borderRadius: 14, padding: 18, display: "grid", justifyItems: "center" },
+  standardPdfEmptyState: { minHeight: 520, width: "100%", display: "grid", placeItems: "center", border: "2px dashed #94a3b8", borderRadius: 12, color: "#64748b", fontWeight: 900, background: "#f8fafc" },
+  standardPdfEditorPanel: { position: "sticky", top: 90, maxHeight: "calc(100vh - 120px)", overflow: "auto", display: "grid", gap: 10, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 12 },
+  standardPdfElementEditor: { display: "grid", gap: 9, border: "1px solid #d1fae5", background: "#f8fff8", borderRadius: 10, padding: 10 },
+  standardPdfGeometryGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 },
+  standardPdfExportStack: { position: "fixed", left: -12000, top: 0, width: 794, display: "grid", gap: 0, pointerEvents: "none", zIndex: 0 },
+  standardPdfCanvas: { position: "relative", width: 794, height: 1123, overflow: "hidden", background: "#ffffff", boxShadow: "0 18px 45px rgba(15,23,42,0.16)", flex: "0 0 auto" },
+  standardPdfBackgroundImage: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", display: "block" },
+  standardPdfBlankPage: { position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#94a3b8", fontWeight: 900, background: "#ffffff" },
+  standardPdfOverlayElement: { position: "absolute", zIndex: 2, border: "1px dashed transparent", background: "transparent", padding: 0, margin: 0, cursor: "pointer", overflow: "hidden", display: "block", boxSizing: "border-box", fontFamily: "inherit" },
+  standardPdfOverlayElementSelected: { borderColor: "#0ea5e9", boxShadow: "0 0 0 2px rgba(14,165,233,0.25)" },
+  standardPdfTextOverlay: { display: "block", width: "100%", height: "100%", whiteSpace: "pre-wrap", textAlign: "left", lineHeight: 1.2, fontWeight: 700 },
+  standardPdfOverlayImage: { width: "100%", height: "100%", objectFit: "contain", display: "block" },
+  modalOverlay: { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,0.46)", display: "grid", placeItems: "center", padding: 18 },
+  documentLibraryModal: { width: "min(760px, 96vw)", maxHeight: "82vh", overflow: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, display: "grid", gap: 12, boxShadow: "0 24px 70px rgba(15,23,42,0.24)" },
+  documentLibraryHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, color: "#0f172a", fontSize: 20 },
+  documentLibraryList: { display: "grid", gap: 8 },
+  documentLibraryRow: { width: "100%", border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: 11, display: "grid", gap: 4, textAlign: "left", cursor: "pointer" },
+  proposalLinkedField: { display: "flex", flexDirection: "column", gap: 5, border: "1px solid rgba(148,163,184,0.55)", background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: 12 },
+  proposalPricingSummary: { display: "grid", gap: 10, border: "1px solid #cbd5e1", borderRadius: 14, background: "rgba(248,250,252,0.95)", padding: 18 },
+  proposalTotalLine: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, background: "#0f3f75", color: "#ffffff", borderRadius: 10, padding: "12px 14px", fontSize: 20, fontWeight: 900 },
+  proposalListBlock: { border: "1px solid #cbd5e1", borderRadius: 14, background: "rgba(255,255,255,0.94)", padding: 18, fontSize: 16, lineHeight: 1.55 },
+  proposalMultilineText: { whiteSpace: "pre-line" },
+  proposalSignaturePanel: { border: "1px solid #cbd5e1", borderRadius: 14, background: "rgba(248,250,252,0.95)", padding: 18, display: "grid", gap: 18 },
+  proposalSignatureLine: { minHeight: 80, borderBottom: "1px solid #64748b", display: "flex", alignItems: "flex-end", color: "#64748b", fontWeight: 800 },
+  proposalPropertiesStack: { display: "grid", gap: 10 },
+  proposalSelectedBlockHeader: { border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", padding: 9, display: "grid", gap: 8 },
+  proposalMiniActions: { display: "flex", flexWrap: "wrap", gap: 5 },
+  proposalPanelField: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 12, fontWeight: 900, textTransform: "uppercase" },
+  proposalPanelInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 7, padding: "8px 9px", color: "#0f172a", background: "#ffffff", fontSize: 14, fontWeight: 700, textTransform: "none" },
+  proposalPanelTextarea: { width: "100%", minHeight: 110, boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 7, padding: "8px 9px", color: "#0f172a", background: "#ffffff", fontSize: 14, fontWeight: 650, fontFamily: "inherit", resize: "vertical", textTransform: "none" },
+  proposalInlineTextarea: { width: "100%", minHeight: 96, boxSizing: "border-box", border: "1px solid #0ea5e9", borderRadius: 8, padding: 8, background: "rgba(255,255,255,0.92)", outline: "3px solid rgba(14,165,233,0.18)", fontFamily: "inherit", resize: "vertical", whiteSpace: "pre-line" },
+  proposalThemeHint: { marginTop: 16, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", color: "#334155", padding: 12, display: "grid", gap: 6, fontSize: 13, lineHeight: 1.45 },
+  proposalThemeLinkedBox: { border: "1px solid #d6c28b", borderRadius: 10, background: "#fffaf0", color: "#3f321c", padding: 12, display: "grid", gap: 6, fontSize: 13, lineHeight: 1.35, textTransform: "none" },
+  proposalStatEditor: { border: "1px solid #e2e8f0", borderRadius: 10, background: "#f8fafc", padding: 10, display: "grid", gap: 8 },
+  luxuryPage: { width: 794, minHeight: 1123, boxSizing: "border-box", color: "#0f172a", background: "#ffffff", boxShadow: "0 22px 55px rgba(15,23,42,0.22)", padding: 54, display: "flex", flexDirection: "column", gap: 24, flex: "0 0 auto", overflow: "hidden", position: "relative" },
+  luxuryProjectInfoPage: { height: 1123, minHeight: 1123, padding: 44, gap: 16 },
+  luxuryCoverPage: { padding: 0, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" },
+  luxuryCoverOverlay: { minHeight: 1123, boxSizing: "border-box", padding: 60, display: "flex", flexDirection: "column", justifyContent: "space-between", color: "#ffffff" },
+  luxuryLogoLockup: { display: "flex", alignItems: "center", gap: 16, minHeight: 76, fontSize: 19, fontWeight: 950, letterSpacing: "0.06em", textTransform: "uppercase" },
+  luxuryLogoImage: { width: 108, height: 74, objectFit: "contain", display: "block", flex: "0 0 auto" },
+  luxuryLogoMark: { width: 74, height: 74, border: "1px solid rgba(200,157,74,0.9)", color: "#c89d4a", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, letterSpacing: 0 },
+  luxuryCoverContent: { maxWidth: 580, display: "grid", gap: 18 },
+  luxuryThankYouContent: { maxWidth: 620, display: "grid", gap: 18, alignSelf: "center", textAlign: "center" },
+  luxuryEyebrow: { fontSize: 13, fontWeight: 950, letterSpacing: "0.16em", textTransform: "uppercase" },
+  luxuryCoverTitle: { margin: 0, color: "#ffffff", fontSize: 62, lineHeight: 0.98, fontWeight: 950, letterSpacing: 0, display: "grid", gap: 6, textShadow: "0 8px 24px rgba(0,0,0,0.42)" },
+  luxuryProjectEstimateCoverTitle: { margin: 0, color: "#ffffff", display: "grid", gap: 6, textAlign: "left", fontFamily: "inherit", textShadow: "0 8px 24px rgba(0,0,0,0.42)" },
+  luxuryProjectEstimateCoverTitleLine: { display: "block", color: "#ffffff", fontSize: 62, lineHeight: 0.98, fontWeight: 950, letterSpacing: 0, fontFamily: "inherit", textAlign: "left", textShadow: "0 8px 24px rgba(0,0,0,0.42)" },
+  luxuryAccentRule: { width: 132, height: 5, borderRadius: 999 },
+  luxuryCoverClient: { margin: 0, color: "#ffffff", fontSize: 25, lineHeight: 1.35, fontWeight: 850, whiteSpace: "pre-line" },
+  luxuryCoverAddress: { margin: 0, color: "#e2e8f0", fontSize: 19, lineHeight: 1.55, fontWeight: 550, whiteSpace: "pre-line" },
+  luxuryCoverMeta: { display: "flex", justifyContent: "space-between", gap: 18, borderTop: "1px solid rgba(255,255,255,0.35)", paddingTop: 18, color: "#f8fafc", fontSize: 16, fontWeight: 800, letterSpacing: "0.03em", textTransform: "uppercase" },
+  luxuryPageHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, minHeight: 76 },
+  luxuryHeaderTitle: { fontSize: 15, fontWeight: 950, letterSpacing: "0.14em", textTransform: "uppercase" },
+  luxurySectionTitle: { margin: 0, color: "#0f172a", fontSize: 40, lineHeight: 1.08, fontWeight: 950, letterSpacing: 0 },
+  luxuryBodyText: { margin: 0, color: "#334155", fontSize: 18, lineHeight: 1.62, fontWeight: 520, whiteSpace: "pre-line" },
+  luxuryFinePrint: { margin: 0, color: "#64748b", fontSize: 14, lineHeight: 1.55, fontWeight: 650 },
+  luxuryProjectIntro: { display: "grid", gridTemplateColumns: "0.74fr 1fr", gap: 24, alignItems: "end", borderBottom: "1px solid #e2e8f0", paddingBottom: 18 },
+  luxuryInfoGrid: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 9 },
+  luxuryInfoCard: { minHeight: 78, border: "1px solid #e2e8f0", borderRadius: 12, background: "#f8fafc", padding: 12, display: "grid", gap: 5, alignContent: "start" },
+  luxuryInfoIcon: { fontSize: 11, fontWeight: 950, letterSpacing: "0.16em", textTransform: "uppercase" },
+  luxuryInfoDetail: { color: "#475569", fontSize: 13, lineHeight: 1.35, fontWeight: 800 },
+  luxuryFeatureBox: { border: "2px solid #c89d4a", borderRadius: 16, background: "#ffffff", padding: 22, display: "grid", gap: 8, color: "#0f172a", fontSize: 17, lineHeight: 1.55 },
+  luxuryProjectInfoFeatureBox: { padding: 16, gap: 4, marginTop: "auto" },
+  luxuryEstimateSummaryPage: { gap: 10, padding: 40 },
+  luxuryEstimateSummaryIntro: { gap: 18, paddingBottom: 12 },
+  luxuryEstimateSummaryTitle: { fontSize: 34, lineHeight: 1.04 },
+  luxuryEstimateSummaryBody: { fontSize: 16, lineHeight: 1.42 },
+  luxuryEstimateSummaryInfoGrid: { gap: 7 },
+  luxuryEstimateSummaryInfoCard: { minHeight: 65, padding: 9, gap: 3, borderRadius: 10 },
+  luxuryEstimateSummaryNoticeBox: { padding: 13, gap: 4 },
+  luxuryNoticeHeading: { margin: 0, fontSize: 22, lineHeight: 1.15, fontWeight: 950 },
+  luxuryNoticeBody: { margin: 0, textAlign: "left", fontSize: 14, lineHeight: 1.38, fontWeight: 550, color: "#334155" },
+  luxuryAboutWhyPage: { height: 1123, minHeight: 1123, padding: 40, gap: 18, background: "#fbfaf6" },
+  luxuryAboutWhyTop: { display: "grid", gridTemplateColumns: "0.95fr 1fr", gap: 24, alignItems: "start", minHeight: 350 },
+  luxuryAboutWhyCopy: { display: "grid", gap: 12, alignContent: "start" },
+  luxuryAboutWhyTitle: { margin: 0, color: "#0f172a", fontSize: 34, lineHeight: 1.04, fontWeight: 950, letterSpacing: 0 },
+  luxuryAboutWhyBody: { margin: 0, color: "#334155", fontSize: 15.5, lineHeight: 1.48, fontWeight: 540, whiteSpace: "pre-line" },
+  luxuryAboutWhyLogoStrip: { marginTop: 8, borderTop: "1px solid #e2e8f0", paddingTop: 12 },
+  luxuryAboutWhyImageStack: { position: "relative", minHeight: 345 },
+  luxuryAboutWhyHeroImage: { width: "86%", height: 300, objectFit: "cover", display: "block", borderRadius: "76px 16px 76px 16px", border: "1px solid #e2e8f0", boxShadow: "0 24px 50px rgba(15,23,42,0.18)" },
+  luxuryAboutWhyImageInset: { position: "absolute", right: 0, bottom: 0, width: "46%", height: 150, objectFit: "cover", display: "block", borderRadius: "16px 54px 16px 54px", border: "6px solid #fbfaf6", boxShadow: "0 18px 38px rgba(15,23,42,0.20)" },
+  luxuryAboutWhyLower: { display: "grid", gap: 14, borderTop: "1px solid #e2e8f0", paddingTop: 18 },
+  luxuryAboutWhySubhead: { margin: "6px 0 0", color: "#0f172a", fontSize: 25, lineHeight: 1.08, fontWeight: 950 },
+  luxuryAboutWhyCardGrid: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 11 },
+  luxuryAboutWhyCard: { minHeight: 112, border: "1px solid #e7dcc5", borderRadius: 14, background: "#ffffff", padding: 10, display: "grid", gap: 5, alignContent: "start", boxShadow: "0 12px 24px rgba(15,23,42,0.07)" },
+  luxuryAboutWhyIcon: { width: 32, height: 32, borderRadius: 999, color: "#07111f", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 950 },
+  luxuryAboutWhyStatsBar: { marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, paddingTop: 14, borderTop: "2px solid #e2e8f0" },
+  luxuryAboutWhyStatCard: { display: "grid", gap: 5, textAlign: "center", color: "#334155", fontSize: 10.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.03em", background: "#fffaf0", border: "1px solid #ead9b5", borderRadius: 12, padding: "10px 6px" },
+  luxuryAboutGrid: { display: "grid", gridTemplateColumns: "1fr 310px", gap: 30, alignItems: "stretch" },
+  luxuryImageFrame: { width: "100%", height: 420, objectFit: "cover", borderRadius: "90px 18px 90px 18px", border: "1px solid #e2e8f0", display: "block" },
+  luxuryImageFrameWide: { height: 320, borderRadius: 20 },
+  luxuryImageFrameTall: { height: 520 },
+  luxuryImageFrameDeep: { height: 610, borderRadius: 22 },
+  luxuryImagePlaceholder: { width: "100%", minHeight: 360, boxSizing: "border-box", border: "2px dashed #cbd5e1", borderRadius: "90px 18px 90px 18px", background: "#f8fafc", color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900 },
+  luxuryAboutImageRow: { marginTop: -8, display: "grid", gridTemplateColumns: "1fr 0.82fr", gap: 16, alignItems: "end" },
+  luxuryStatsBar: { marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, borderTop: "2px solid #e2e8f0", paddingTop: 20 },
+  luxuryStatCard: { display: "grid", gap: 7, textAlign: "center", color: "#334155", fontSize: 15, fontWeight: 850, border: "1px solid #e2e8f0", background: "#fffaf0", borderRadius: 14, padding: "14px 10px" },
+  luxuryQuote: { margin: "22px 0 0", borderLeft: "5px solid #c89d4a", padding: "10px 0 10px 18px", color: "#0f172a", fontSize: 19, lineHeight: 1.5, fontWeight: 800 },
+  luxuryCardGrid: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginTop: 8 },
+  luxuryDarkCard: { border: "1px solid rgba(255,255,255,0.16)", borderRadius: 18, background: "linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.045))", padding: 18, minHeight: 172, display: "grid", gap: 8, alignContent: "start", color: "#e2e8f0", boxShadow: "0 18px 38px rgba(0,0,0,0.18)" },
+  luxuryIconDot: { width: 44, height: 44, borderRadius: 999, color: "#07111f", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 950 },
+  luxuryWhyPage: { backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" },
+  luxuryWhyHero: { maxWidth: 720, display: "grid", gap: 12, color: "#e2e8f0" },
+  luxuryWhyStatsBar: { marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, padding: 16, border: "1px solid rgba(255,255,255,0.42)", background: "linear-gradient(135deg, #c89d4a 0%, #f8d58a 100%)", boxShadow: "0 24px 48px rgba(0,0,0,0.28)" },
+  luxuryWhyStatCard: { display: "grid", gap: 5, textAlign: "center", color: "#07111f", fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" },
+  luxuryTwoColumn: { display: "grid", gridTemplateColumns: "0.95fr 1fr", gap: 26, alignItems: "start" },
+  luxuryDesignTextBlock: { marginTop: 34, paddingTop: 18, display: "grid", gridTemplateColumns: "0.82fr 1fr", gap: 30, alignItems: "end", borderTop: "1px solid #e2e8f0" },
+  luxuryInclusionsLeader: { gap: 16 },
+  luxuryInclusionHero: { position: "relative", display: "grid", gridTemplateColumns: "0.66fr 1.34fr", gap: 24, alignItems: "center", minHeight: 825 },
+  luxuryInclusionTextPanel: { position: "relative", zIndex: 20, display: "grid", gap: 18, color: "#0f172a", background: "rgba(245,241,232,0.92)", border: "1px solid rgba(200,157,74,0.35)", borderRadius: 20, padding: 24, boxShadow: "0 24px 60px rgba(15,23,42,0.12)" },
+  luxuryInclusionScheduleNote: { color: "#07111f", background: "#f8d58a", borderRadius: 999, padding: "10px 14px", display: "inline-flex", width: "fit-content", fontWeight: 950 },
+  luxuryInclusionCollage: { position: "relative", minHeight: 720 },
+  luxuryInclusionImageTile: { margin: 0, position: "absolute", overflow: "hidden", borderRadius: 22, border: "4px solid rgba(255,255,255,0.92)", boxShadow: "0 24px 48px rgba(15,23,42,0.26)", background: "#ffffff" },
+  luxuryInclusionImage: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  luxuryInclusionCaption: { position: "absolute", left: 10, right: 10, bottom: 10, color: "#ffffff", fontSize: 12, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", textShadow: "0 2px 8px rgba(0,0,0,0.55)" },
+  luxuryPriceHero: { border: "1px solid rgba(255,255,255,0.16)", borderRadius: 22, background: "rgba(255,255,255,0.07)", padding: 28, display: "grid", gap: 8, textAlign: "center" },
+  luxuryPriceGrid: { display: "grid", gap: 10 },
+  luxuryProgressHeading: { margin: "6px 0 0", color: "#ffffff", fontSize: 26, lineHeight: 1.15, fontWeight: 950, letterSpacing: 0 },
+  luxuryPriceHeaderRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 90px 150px", alignItems: "center", gap: 16, color: "#f8d58a", fontSize: 12, fontWeight: 950, letterSpacing: "0.12em", textTransform: "uppercase", borderBottom: "1px solid rgba(248,213,138,0.32)", paddingBottom: 8 },
+  luxuryPriceRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 90px 150px", alignItems: "center", gap: 16, borderBottom: "1px solid rgba(255,255,255,0.15)", padding: "13px 0", color: "#e2e8f0", fontSize: 16, fontWeight: 750 },
+  luxurySignatureGrid: { display: "grid", gridTemplateColumns: "1fr 220px", gap: 22, margin: "30px 0" },
+  luxurySignatureLine: { minHeight: 110, borderBottom: "2px solid #0f172a", color: "#64748b", display: "flex", alignItems: "flex-end", paddingBottom: 10, fontWeight: 850 },
+  commercialModuleLoading: { minHeight: 240, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, color: "#475569", fontSize: 16 },
   clientPageShell: { display: "flex", flexDirection: "column", gap: 12 },
   clientToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
   clientEditor: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 },
@@ -5368,7 +10729,32 @@ const styles = {
   clientGrandTotal: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, background: "#0f766e", color: "#ffffff", borderRadius: 8, padding: "13px 15px", fontSize: 22, fontWeight: 800, marginTop: 4 },
   clientSignatureGrid: { display: "grid", gridTemplateColumns: "1fr 220px", gap: 26, marginTop: 18 },
   clientSignatureLine: { borderTop: "1px solid #64748b", paddingTop: 8, color: "#334155", fontWeight: 700 },
-  quoteGroup: { display: "flex", flexDirection: "column", gap: 0 },
+  quotationWorkspace: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 350px", gap: 14, alignItems: "start" },
+  quotationTablePane: { minWidth: 0, display: "flex", flexDirection: "column", gap: 0 },
+  quoteGroup: { display: "flex", flexDirection: "column", gap: 0, minWidth: 0 },
+  quoteNotesInput: { width: 118, maxWidth: 118 },
+  productPreviewPanel: { position: "sticky", top: 88, alignSelf: "start", maxHeight: "calc(100vh - 110px)", overflowY: "auto", border: "1px solid #cbd5e1", borderRadius: 14, background: "#ffffff", padding: 14, display: "grid", gap: 12, boxShadow: "0 20px 48px rgba(15, 23, 42, 0.14)" },
+  productPreviewHeader: { display: "grid", gap: 4, borderBottom: "1px solid #e2e8f0", paddingBottom: 10, color: "#0f172a" },
+  productPreviewImageButton: { width: "100%", aspectRatio: "4 / 3", border: "1px solid #cbd5e1", borderRadius: 12, backgroundColor: "#f8fafc", backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", cursor: "zoom-in", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.55)" },
+  productPreviewEmpty: { minHeight: 240, border: "1px dashed #94a3b8", borderRadius: 12, background: "#f8fafc", color: "#64748b", display: "grid", placeItems: "center", textAlign: "center", padding: 18, gap: 6, fontWeight: 800 },
+  productPreviewNav: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, color: "#475569", fontSize: 13, fontWeight: 900 },
+  productPreviewThumbs: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 },
+  productPreviewThumb: { minHeight: 54, border: "1px solid #cbd5e1", borderRadius: 8, backgroundColor: "#f8fafc", backgroundSize: "cover", backgroundPosition: "center", cursor: "pointer" },
+  productPreviewThumbActive: { borderColor: "#0f766e", boxShadow: "0 0 0 3px rgba(15, 118, 110, 0.18)" },
+  productPreviewField: { display: "grid", gap: 5, color: "#475569", fontSize: 12, fontWeight: 900, textTransform: "uppercase" },
+  productPreviewInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 7, padding: "7px 8px", color: "#0f172a", fontSize: 13, fontWeight: 700, textTransform: "none" },
+  productPreviewMeta: { display: "grid", gap: 7 },
+  productPreviewDescription: { borderTop: "1px solid #e2e8f0", paddingTop: 10, color: "#64748b", fontSize: 12, fontWeight: 900, textTransform: "uppercase" },
+  productPreviewDescriptionText: { margin: "6px 0 0", color: "#334155", fontSize: 14, fontWeight: 650, lineHeight: 1.45, textTransform: "none" },
+  selectionReferenceCell: { minWidth: 210, display: "grid", gap: 5 },
+  selectionSpecInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 5, padding: "6px 7px", color: "#0f172a", fontSize: 13, fontWeight: 700 },
+  selectionReferenceMeta: { display: "flex", flexWrap: "wrap", gap: 5, color: "#475569", fontSize: 11, fontWeight: 800 },
+  selectionAdjustmentBad: { color: "#b45309" },
+  selectionAdjustmentGood: { color: "#15803d" },
+  imageModalBackdrop: { position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,23,42,0.76)", display: "grid", placeItems: "center", padding: 24 },
+  imageModal: { maxWidth: "min(920px, 92vw)", maxHeight: "92vh", background: "#ffffff", borderRadius: 14, padding: 14, display: "grid", gap: 10, boxShadow: "0 28px 80px rgba(0,0,0,0.35)" },
+  imageModalImg: { maxWidth: "100%", maxHeight: "76vh", objectFit: "contain", borderRadius: 10, background: "#f8fafc" },
+  imageModalClose: { justifySelf: "end", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#0f172a", padding: "8px 11px", fontWeight: 900, cursor: "pointer" },
   nestedQuoteStack: { display: "flex", flexDirection: "column", gap: 8, padding: "8px 8px 10px 22px", background: "#f8fafc", border: "1px solid #cbd5e1", borderTop: 0, borderRadius: "0 0 10px 10px" },
   nestedQuoteSection: { background: "#ffffff", border: "1px solid #dbeafe", borderRadius: 8, overflow: "hidden" },
   orderPanel: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 },

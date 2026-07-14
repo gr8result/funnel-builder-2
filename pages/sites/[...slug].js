@@ -382,19 +382,31 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
   // gets the global footer injected consistently with every other page.
   const blocksToRender = injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav;
   const basePath = isDomainRequest ? "" : buildWebsitePath(publication?.slug || project?.name || "site");
+  const pageMap = {};
+  pages.forEach((page) => {
+    const pageSlug = resolvePublishedPageName(page);
+    const href = pageSlug && pageSlug !== "home"
+      ? `${basePath}/${pageSlug}` || `/${pageSlug}`
+      : (basePath || "/");
+    [
+      page.name,
+      page.title,
+      page.slug,
+      page.path,
+      page.alias,
+      pageSlug,
+      ...(Array.isArray(page.aliases) ? page.aliases : []),
+    ].forEach((key) => {
+      const normalized = slugifyPage(key || "");
+      if (normalized) pageMap[normalized] = href;
+    });
+  });
   const navigationContext = {
     basePath,
     appBaseUrl: getPlatformAppUrl().replace(/\/$/, ""),
     currentPageKey: resolvePublishedPageName(activePage) || "home",
-    pageMap: Object.fromEntries(
-      pages.map((page) => {
-        const pageSlug = resolvePublishedPageName(page);
-        const href = pageSlug && pageSlug !== "home"
-          ? `${basePath}/${pageSlug}` || `/${pageSlug}`
-          : (basePath || "/");
-        return [slugifyPage(page.name || page.title || pageSlug), href];
-      })
-    ),
+    pageMap,
+    strictPublishedPages: true,
   };
 
   return (

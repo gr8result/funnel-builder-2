@@ -1,6 +1,6 @@
 // AIPlanTakeoffPage.jsx — AI-assisted Manual Takeoff.
 
-import { useState, useCallback, useReducer, useEffect } from "react";
+import { useState, useCallback, useReducer, useEffect, useRef } from "react";
 
 import PDFUploadPanel        from "./PDFUploadPanel";
 import ScaleCalibrationPanel from "./ScaleCalibrationPanel";
@@ -10,17 +10,90 @@ import RoomPanel             from "./RoomPanel";
 import ObjectPanel           from "./ObjectPanel";
 import AIReviewPanel         from "./AIReviewPanel";
 
-import { TOOLS, createProject } from "./takeoffTypes";
-import { saveProject, loadByJobId, summarise, getPixelsPerUnit } from "./takeoffUtils";
+import { TOOLS } from "./takeoffTypes";
+import { saveProject, loadByJobId, summarise, getPixelsPerUnit, polyLen } from "./takeoffUtils";
+import {
+  activeTakeoffPageId,
+  countTakeoffPages,
+  countTakeoffPlans,
+  hasSavedTakeoffState,
+  resolveTakeoffProject as resolveSavedTakeoffProject,
+  takeoffProjectSignature,
+} from "./aiTakeoffPersistence";
 import { runDetection } from "./aiDetectionService";
-import { renderPdfDataUrlPage, normalizePlanRotation } from "./pdfPlanRendering";
+import { renderPdfDataUrlPage, normalizePlanRotation, getFinalPlanRotation, DEFAULT_PDF_TARGET_DPI, rotateRasterImageDataUrl } from "./pdfPlanRendering";
+
+const ROTATION_RESET_WARNING = "This page was rotated. Scale and measurements were reset because the coordinate system changed.";
 
 // ── Reducer: pages array with undo/redo ───────────────────────────────────────
 
 const initState = (pages) => ({ pages, undo:[], redo:[] });
 
+function normalizePageShape(page = {}) {
+  const metadataRotation = normalizePlanRotation(page.metadataRotation ?? page.pdfMetadataRotation ?? 0);
+  const detectedRotation = normalizePlanRotation(page.detectedRotation ?? 0);
+  const userRotation = normalizePlanRotation(page.userRotation ?? page.planRotation ?? 0);
+  const finalRotation = getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation });
+  const normalizedWidth = Number(page.normalizedWidth || page.naturalWidth || page.originalWidth || 0);
+  const normalizedHeight = Number(page.normalizedHeight || page.naturalHeight || page.originalHeight || 0);
+  return {
+    ...page,
+    sourceType: page.sourceType || (String(page.originalFileName || page.planFileName || "").toLowerCase().endsWith(".pdf") ? "pdf" : "image"),
+    sourceFileName: page.sourceFileName || page.originalFileName || page.planFileName || "",
+    originalWidth: Number(page.originalWidth || page.naturalWidth || normalizedWidth || 0),
+    originalHeight: Number(page.originalHeight || page.naturalHeight || normalizedHeight || 0),
+    metadataRotation,
+    detectedRotation,
+    userRotation,
+    finalRotation,
+    imageWidth: Number(page.imageWidth || page.normalizedWidth || page.naturalWidth || 0),
+    imageHeight: Number(page.imageHeight || page.normalizedHeight || page.naturalHeight || 0),
+    renderScale: Number(page.renderScale || (DEFAULT_PDF_TARGET_DPI / 72)),
+    dpi: Number(page.dpi || DEFAULT_PDF_TARGET_DPI),
+    format: page.format || "PNG",
+    sourcePdfPageNumber: page.sourcePdfPageNumber || page.pageNumber || 1,
+    orientationMethod: page.orientationMethod || "",
+    orientationConfidence: page.orientationConfidence || "",
+    orientationConfirmed: Boolean(page.orientationConfirmed),
+    orientationScores: Array.isArray(page.orientationScores) ? page.orientationScores : [],
+    detectedScaleText: page.detectedScaleText || "",
+    planRotation: finalRotation,
+    normalizedWidth,
+    normalizedHeight,
+    naturalWidth: normalizedWidth,
+    naturalHeight: normalizedHeight,
+    scale: page.scale || null,
+    overlays: Array.isArray(page.overlays) ? page.overlays : [],
+    viewState: page.viewState || null,
+  };
+}
+
+function normalizeProjectShape(project = {}) {
+  return {
+    ...project,
+    pages: Array.isArray(project.pages) ? project.pages.map(normalizePageShape) : [],
+  };
+}
+
+function resolveTakeoffProject(savedTakeoffProject, jobId) {
+  return normalizeProjectShape(resolveSavedTakeoffProject(savedTakeoffProject, jobId));
+}
+
+function getLocalStorageProjectCounts(jobId) {
+  const stored = loadByJobId(jobId);
+  return {
+    pages: countTakeoffPages(stored),
+    plans: countTakeoffPlans(stored),
+  };
+}
+
+function logTakeoffPersistence(event, details = {}) {
+  if (typeof window === "undefined") return;
+  console.info(`[AI Takeoff Persistence] ${event}`, details);
+}
+
 function getPageRotation(page) {
-  return normalizePlanRotation(page?.planRotation || 0);
+  return getFinalPlanRotation(page);
 }
 
 function reducer(state, action) {
@@ -75,10 +148,13 @@ function reducer(state, action) {
 export default function AIPlanTakeoffPage({ sheet }) {
   const jobId = sheet?.workbook?.openedFileName || sheet?.workbook?.id || "";
   const savedTakeoffProject = sheet?.workbook?.aiTakeoffProject;
+  const initialProjectRef = useRef(resolveTakeoffProject(savedTakeoffProject, jobId));
+  const loadedProjectSignatureRef = useRef(takeoffProjectSignature(initialProjectRef.current));
+  const skipNextAutosaveRef = useRef(false);
 
-  const [project, setProject] = useState(() => savedTakeoffProject?.pages ? savedTakeoffProject : loadByJobId(jobId) || createProject(jobId));
-  const [plans, setPlans] = useState(() => Array.isArray(sheet?.workbook?.plans) ? sheet.workbook.plans : project.plans || []);
-  const [state,   dispatch]   = useReducer(reducer, initState(project.pages || []));
+  const [project, setProject] = useState(() => initialProjectRef.current);
+  const [plans, setPlans] = useState(() => initialProjectRef.current.plans || []);
+  const [state,   dispatch]   = useReducer(reducer, initState(initialProjectRef.current.pages || []));
   const pages = state.pages;
 
   // View state
@@ -100,6 +176,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
   const scaleConfirmed = getPixelsPerUnit(selectedPage?.scale) > 0 && selectedPage.scale.accepted !== false;
   const ppm          = scaleConfirmed ? rawPpm : 0;
   const totals       = summarise(overlays, ppm);
+  const measurementOverlays = overlays.filter((overlay) => overlay.type === TOOLS.MEASURE);
   const setupReady = !!selectedPage && scaleConfirmed;
 
   useEffect(() => {
@@ -107,11 +184,71 @@ export default function AIPlanTakeoffPage({ sheet }) {
     setZoom(Number.isFinite(savedZoom) && savedZoom > 0 ? savedZoom : 1);
   }, [selectedPage?.id]);
 
+  useEffect(() => {
+    const incomingProject = resolveTakeoffProject(savedTakeoffProject, jobId);
+    const incomingSignature = takeoffProjectSignature(incomingProject);
+    if (!incomingSignature || incomingSignature === loadedProjectSignatureRef.current) return;
+    if (!hasSavedTakeoffState(incomingProject)) return;
+
+    loadedProjectSignatureRef.current = incomingSignature;
+    skipNextAutosaveRef.current = true;
+    logTakeoffPersistence("load", {
+      source: hasSavedTakeoffState(savedTakeoffProject) ? "workbook.aiTakeoffProject" : "workbook.emptyTakeoffProject",
+      workbookPages: countTakeoffPages(incomingProject),
+      reducerPages: countTakeoffPages({ pages: incomingProject.pages || [] }),
+      localStoragePages: getLocalStorageProjectCounts(jobId).pages,
+      indexedDBPages: countTakeoffPages(incomingProject),
+      pagesCount: countTakeoffPages(incomingProject),
+      activePageId: activeTakeoffPageId(incomingProject),
+      selectedPageId: activeTakeoffPageId(incomingProject),
+      workbookPlans: countTakeoffPlans({ plans: sheet?.workbook?.plans }),
+    });
+    setProject(incomingProject);
+    const incomingPlans = incomingProject.plans || [];
+    setPlans(incomingPlans);
+    dispatch({ type: "RESET", pages: incomingProject.pages || [] });
+    setSelectedPageId((current) => (incomingProject.pages || []).some((page) => page.id === current)
+      ? current
+      : incomingProject.pages?.[0]?.id || null);
+    setSelectedId(null);
+    setCalibrating(null);
+  }, [jobId, savedTakeoffProject, sheet?.workbook?.plans]);
+
   // ── Auto-save ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const p = { ...project, jobId, plans, pages, updatedAt:new Date().toISOString() };
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    const nextActivePageId = pages.some((page) => page.id === selectedPageId) ? selectedPageId : pages[0]?.id || null;
+    const p = {
+      ...project,
+      jobId,
+      plans,
+      pages,
+      activePageId: nextActivePageId,
+      selectedPageId: nextActivePageId,
+      ...(pages.length ? {} : {
+        measurements: [],
+        areas: [],
+        scale: null,
+        orientation: null,
+      }),
+      updatedAt:new Date().toISOString(),
+    };
+    loadedProjectSignatureRef.current = takeoffProjectSignature(p);
     setProject(p);
     saveProject(p);
+    logTakeoffPersistence("Saving workbook", {
+      workbookPages: countTakeoffPages(p),
+      reducerPages: countTakeoffPages({ pages }),
+      localStoragePages: getLocalStorageProjectCounts(jobId).pages,
+      indexedDBPages: countTakeoffPages(p),
+      pagesCount: countTakeoffPages(p),
+      activePageId: activeTakeoffPageId(p, selectedPageId),
+      selectedPageId,
+      workbookPlans: countTakeoffPlans({ plans }),
+    });
     sheet?.updateTakeoffProject?.(p);
   }, [pages, plans]); // eslint-disable-line
 
@@ -124,9 +261,10 @@ export default function AIPlanTakeoffPage({ sheet }) {
 
   // ── PDF upload ─────────────────────────────────────────────────────────────
   const handlePagesChange = useCallback((newPages, filename) => {
-    dispatch({ type:"SET_PAGES", pages:newPages });
+    const normalizedPages = (newPages || []).map(normalizePageShape);
+    dispatch({ type:"SET_PAGES", pages:normalizedPages });
     setProject(p=>({...p,pdfFilename:filename||p.pdfFilename}));
-    setSelectedPageId((current) => newPages.some((page) => page.id === current) ? current : newPages[0]?.id || null);
+    setSelectedPageId((current) => normalizedPages.some((page) => page.id === current) ? current : normalizedPages[0]?.id || null);
     setSelectedId(null);
     setActiveTool(TOOLS.POINTER);
   }, []);
@@ -137,10 +275,60 @@ export default function AIPlanTakeoffPage({ sheet }) {
     sheet?.updatePlans?.(safePlans);
   }, [sheet]);
 
+  const handleTakeoffDataChange = useCallback((newPages, newPlans, filename) => {
+    const normalizedPages = (newPages || []).map(normalizePageShape);
+    const safePlans = Array.isArray(newPlans) ? newPlans : [];
+    const nextActivePageId = normalizedPages[0]?.id || null;
+    const nextProject = {
+      ...project,
+      jobId,
+      plans: safePlans,
+      pages: normalizedPages,
+      pdfFilename: filename || project.pdfFilename,
+      activePageId: nextActivePageId,
+      selectedPageId: nextActivePageId,
+      ...(normalizedPages.length ? {} : {
+        measurements: [],
+        areas: [],
+        scale: null,
+        orientation: null,
+      }),
+      updatedAt: new Date().toISOString(),
+    };
+
+    dispatch({ type: "SET_PAGES", pages: normalizedPages });
+    setPlans(safePlans);
+    setProject(nextProject);
+    setSelectedPageId((current) => normalizedPages.some((page) => page.id === current) ? current : normalizedPages[0]?.id || null);
+    setSelectedId(null);
+    setCalibrating(null);
+    setActiveTool(TOOLS.POINTER);
+    loadedProjectSignatureRef.current = takeoffProjectSignature(nextProject);
+    saveProject(nextProject);
+    sheet?.updatePlans?.(safePlans);
+    sheet?.updateTakeoffProject?.(nextProject);
+    logTakeoffPersistence("Saving workbook", {
+      source: "atomic takeoff data change",
+      workbookPages: countTakeoffPages(nextProject),
+      reducerPages: countTakeoffPages({ pages: normalizedPages }),
+      localStoragePages: getLocalStorageProjectCounts(jobId).pages,
+      indexedDBPages: countTakeoffPages(nextProject),
+      pagesCount: countTakeoffPages(nextProject),
+      activePageId: activeTakeoffPageId(nextProject),
+      selectedPageId: nextActivePageId,
+      workbookPlans: countTakeoffPlans({ plans: safePlans }),
+    });
+  }, [jobId, project, sheet]);
+
   // ── Scale ──────────────────────────────────────────────────────────────────
   const handleScaleChange = useCallback((scale) => {
     if (!selectedPageId) return;
     dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,scale,scaleNeedsReview:!scale?.accepted,scaleConfidence:scale?.confidence||pg.scaleConfidence||0}) });
+    if (scale?.accepted) {
+      setCalibrating(null);
+      setSelectedId(null);
+      setActiveTool(TOOLS.POINTER);
+    }
     const page = pages.find((pg) => pg.id === selectedPageId);
     if (page?.planId) {
       const nextPlans = plans.map((plan) => plan.id === page.planId ? {
@@ -154,7 +342,11 @@ export default function AIPlanTakeoffPage({ sheet }) {
     }
   }, [pages, plans, selectedPageId, sheet]);
 
-  const handleStartCalibration  = useCallback(() => { setCalibrating({points:[]}); }, []);
+  const handleStartCalibration  = useCallback(() => {
+    setSelectedId(null);
+    setActiveTool(TOOLS.POINTER);
+    setCalibrating({points:[]});
+  }, []);
   const handleCancelCalibration = useCallback(() => { setCalibrating(null); }, []);
   const handleCalibrationPoint  = useCallback((pt) => {
     setCalibrating(prev=>({ points:[...(prev?.points||[]),pt].slice(0,2) }));
@@ -182,22 +374,87 @@ export default function AIPlanTakeoffPage({ sheet }) {
     });
   }, [selectedPageId]);
 
-  const renderSelectedPageRotation = useCallback(async (page, nextRotation) => {
-    const planRotation = normalizePlanRotation(nextRotation);
+  const renderSelectedPageRotation = useCallback(async (page, nextUserRotation) => {
+    const userRotation = normalizePlanRotation(nextUserRotation);
+    const rotationState = {
+      metadataRotation: page?.metadataRotation || 0,
+      detectedRotation: page?.detectedRotation || 0,
+      userRotation,
+      orientationMethod: page?.orientationMethod,
+      orientationConfidence: page?.orientationConfidence,
+      orientationScores: page?.orientationScores,
+    };
+    const finalRotation = getFinalPlanRotation(rotationState);
+    if (page?.imageDataUrl) {
+      const delta = normalizePlanRotation(userRotation - normalizePlanRotation(page.userRotation || 0));
+      const rotated = delta ? await rotateRasterImageDataUrl(page.imageDataUrl, delta) : { dataUrl: page.imageDataUrl, width: page.normalizedWidth || page.naturalWidth || 0, height: page.normalizedHeight || page.naturalHeight || 0 };
+      return {
+        imageDataUrl: rotated.dataUrl,
+        naturalWidth: rotated.width,
+        naturalHeight: rotated.height,
+        normalizedWidth: rotated.width,
+        normalizedHeight: rotated.height,
+        imageWidth: rotated.width,
+        imageHeight: rotated.height,
+        userRotation,
+        finalRotation,
+        planRotation: finalRotation,
+        renderScale: page?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: page?.dpi || DEFAULT_PDF_TARGET_DPI,
+        format: page?.format || "PNG",
+        orientationMethod: "manual",
+        orientationConfidence: "manual",
+        orientationConfirmed: false,
+        scale: null,
+        overlays: [],
+        rotationResetWarning: ROTATION_RESET_WARNING,
+      };
+    }
     const fileName = `${page?.originalFileName || page?.planFileName || ""}`.toLowerCase();
     const isPdf = Boolean(page?.originalFileUrl && fileName.endsWith(".pdf"));
-    if (!isPdf) return { planRotation };
+    if (!isPdf) {
+      return {
+        userRotation,
+        finalRotation,
+        planRotation: finalRotation,
+        renderScale: page?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: page?.dpi || DEFAULT_PDF_TARGET_DPI,
+        format: page?.format || "PNG",
+        scale: null,
+        overlays: [],
+        rotationResetWarning: ROTATION_RESET_WARNING,
+      };
+    }
 
-    const rendered = await renderPdfDataUrlPage(page.originalFileUrl, page.pageNumber || 1, planRotation, 2.0);
+    const rendered = await renderPdfDataUrlPage(page.originalFileUrl, page.pageNumber || 1, rotationState, page.dpi || DEFAULT_PDF_TARGET_DPI);
     return {
       imageDataUrl: rendered.dataUrl,
-      naturalWidth: rendered.width,
-      naturalHeight: rendered.height,
-      originalWidth: rendered.width,
-      originalHeight: rendered.height,
+      naturalWidth: rendered.normalizedWidth,
+      naturalHeight: rendered.normalizedHeight,
+      originalWidth: rendered.originalWidth,
+      originalHeight: rendered.originalHeight,
+      metadataRotation: rendered.metadataRotation,
+      detectedRotation: rendered.detectedRotation,
+      userRotation: rendered.userRotation,
+      finalRotation: rendered.finalRotation,
+      renderScale: rendered.renderScale,
+      dpi: rendered.dpi,
+      orientationMethod: rendered.orientationMethod,
+      orientationConfidence: rendered.orientationConfidence,
+      orientationScores: rendered.orientationScores,
+      normalizedWidth: rendered.normalizedWidth,
+      normalizedHeight: rendered.normalizedHeight,
+      imageWidth: rendered.imageWidth,
+      imageHeight: rendered.imageHeight,
       normalisedImageData: rendered.dataUrl,
       normalisedImageUrl: rendered.dataUrl,
-      planRotation: rendered.planRotation,
+      planRotation: rendered.finalRotation,
+      format: rendered.format,
+      sourcePdfPageNumber: rendered.sourcePdfPageNumber,
+      detectedScaleText: rendered.detectedScaleText,
+      scale: null,
+      overlays: [],
+      rotationResetWarning: ROTATION_RESET_WARNING,
     };
   }, []);
 
@@ -205,19 +462,38 @@ export default function AIPlanTakeoffPage({ sheet }) {
     if (!selectedPageId) return;
     const currentPage = pages.find((page) => page.id === selectedPageId);
     if (!currentPage) return;
-    const nextRotation = normalizePlanRotation(getPageRotation(currentPage) + deltaDegrees);
-    const patch = await renderSelectedPageRotation(currentPage, nextRotation);
+    const nextUserRotation = normalizePlanRotation((currentPage.userRotation || 0) + deltaDegrees);
+    const patch = await renderSelectedPageRotation(currentPage, nextUserRotation);
     dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,...patch}) });
 
     if (currentPage.planId) {
       const nextPlans = plans.map((plan) => plan.id === currentPage.planId ? {
         ...plan,
-        planRotation: patch.planRotation,
+        metadataRotation: normalizePlanRotation(patch.metadataRotation || 0),
+        detectedRotation: normalizePlanRotation(patch.detectedRotation || 0),
+        userRotation: normalizePlanRotation(patch.userRotation || 0),
+        finalRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        planRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        imageWidth: patch.imageWidth || patch.normalizedWidth || plan.imageWidth,
+        imageHeight: patch.imageHeight || patch.normalizedHeight || plan.imageHeight,
+        renderScale: patch.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: patch.dpi || plan.dpi,
+        format: patch.format || plan.format || "PNG",
+        sourcePdfPageNumber: patch.sourcePdfPageNumber || plan.sourcePdfPageNumber,
+        orientationMethod: patch.orientationMethod || plan.orientationMethod,
+        orientationConfidence: patch.orientationConfidence || plan.orientationConfidence,
+        orientationConfirmed: Boolean(patch.orientationConfirmed),
+        detectedScaleText: patch.detectedScaleText || plan.detectedScaleText,
         fileUrl: patch.imageDataUrl || plan.fileUrl,
         normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
         normalisedImageUrl: patch.normalisedImageUrl || plan.normalisedImageUrl,
         originalWidth: patch.originalWidth || plan.originalWidth,
         originalHeight: patch.originalHeight || plan.originalHeight,
+        normalizedWidth: patch.normalizedWidth || patch.naturalWidth || plan.normalizedWidth,
+        normalizedHeight: patch.normalizedHeight || patch.naturalHeight || plan.normalizedHeight,
+        scale: null,
+        scaleNeedsReview: true,
+        rotationResetWarning: ROTATION_RESET_WARNING,
       } : plan);
       setPlans(nextPlans);
       sheet?.updatePlans?.(nextPlans);
@@ -234,12 +510,31 @@ export default function AIPlanTakeoffPage({ sheet }) {
     if (currentPage.planId) {
       const nextPlans = plans.map((plan) => plan.id === currentPage.planId ? {
         ...plan,
-        planRotation: 0,
+        metadataRotation: normalizePlanRotation(patch.metadataRotation || 0),
+        detectedRotation: normalizePlanRotation(patch.detectedRotation || 0),
+        userRotation: 0,
+        finalRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        planRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        imageWidth: patch.imageWidth || patch.normalizedWidth || plan.imageWidth,
+        imageHeight: patch.imageHeight || patch.normalizedHeight || plan.imageHeight,
+        renderScale: patch.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
+        dpi: patch.dpi || plan.dpi,
+        format: patch.format || plan.format || "PNG",
+        sourcePdfPageNumber: patch.sourcePdfPageNumber || plan.sourcePdfPageNumber,
+        orientationMethod: patch.orientationMethod || plan.orientationMethod,
+        orientationConfidence: patch.orientationConfidence || plan.orientationConfidence,
+        orientationConfirmed: Boolean(patch.orientationConfirmed),
+        detectedScaleText: patch.detectedScaleText || plan.detectedScaleText,
         fileUrl: patch.imageDataUrl || plan.fileUrl,
         normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
         normalisedImageUrl: patch.normalisedImageUrl || plan.normalisedImageUrl,
         originalWidth: patch.originalWidth || plan.originalWidth,
         originalHeight: patch.originalHeight || plan.originalHeight,
+        normalizedWidth: patch.normalizedWidth || patch.naturalWidth || plan.normalizedWidth,
+        normalizedHeight: patch.normalizedHeight || patch.naturalHeight || plan.normalizedHeight,
+        scale: null,
+        scaleNeedsReview: true,
+        rotationResetWarning: ROTATION_RESET_WARNING,
       } : plan);
       setPlans(nextPlans);
       sheet?.updatePlans?.(nextPlans);
@@ -252,6 +547,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
     dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,overlays:[...(pg.overlays||[]),ov]}) });
     setSelectedId(ov.id);
     if (ov.type==="room") setRightTab("rooms");
+    if (ov.type===TOOLS.MEASURE) setRightTab("properties");
   }, [selectedPageId]);
 
   const deleteOverlay = useCallback((id) => {
@@ -402,6 +698,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
             jobId={jobId}
             onPagesChange={handlePagesChange}
             onPlansChange={handlePlansChange}
+            onTakeoffDataChange={handleTakeoffDataChange}
             onSelectPage={id=>{setSelectedPageId(id);setSelectedId(null);}}
             selectedPageId={selectedPageId}
           />
@@ -474,11 +771,19 @@ export default function AIPlanTakeoffPage({ sheet }) {
               />
             )}
             {rightTab==="properties"&&(
-              <ObjectPanel
-                overlay={selectedOv} ppm={ppm}
-                onUpdate={updateOverlay}
-                onDelete={deleteOverlay}
-              />
+              <>
+                <ObjectPanel
+                  overlay={selectedOv} ppm={ppm}
+                  onUpdate={updateOverlay}
+                  onDelete={deleteOverlay}
+                />
+                <RecentMeasurementsPanel
+                  measurements={measurementOverlays}
+                  ppm={ppm}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              </>
             )}
             {rightTab==="ai"&&(
               <AIReviewPanel
@@ -503,6 +808,46 @@ export default function AIPlanTakeoffPage({ sheet }) {
 }
 
 // ── Takeoff summary (left panel) ──────────────────────────────────────────────
+
+function RecentMeasurementsPanel({ measurements = [], ppm, selectedId, onSelect }) {
+  const recent = measurements.slice(-8).reverse();
+  return (
+    <div style={MR.wrap}>
+      <div style={MR.title}>Recent Measurements</div>
+      {!ppm && <div style={MR.empty}>Scale not set</div>}
+      {ppm > 0 && recent.length === 0 && <div style={MR.empty}>No measured lines yet.</div>}
+      {ppm > 0 && recent.map((measurement) => {
+        const lengthPx = polyLen(measurement.points || []);
+        const metres = lengthPx / ppm;
+        const millimetres = Math.round(metres * 1000);
+        const active = measurement.id === selectedId;
+        return (
+          <button
+            key={measurement.id}
+            type="button"
+            onClick={() => onSelect?.(measurement.id)}
+            style={{ ...MR.row, ...(active ? MR.rowOn : {}) }}
+          >
+            <span style={MR.name}>{measurement.label || "Measured line"}</span>
+            <span style={MR.value}>{millimetres.toLocaleString()} mm ({metres.toFixed(2)} m)</span>
+            {millimetres < 100 && <span style={MR.warning}>This measurement is very small. Did you click both points correctly?</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const MR = {
+  wrap: { marginTop: 12, padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", display: "flex", flexDirection: "column", gap: 6 },
+  title: { fontSize: 11, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" },
+  empty: { fontSize: 12, color: "#64748b" },
+  row: { width: "100%", border: "1px solid #e2e8f0", borderRadius: 7, background: "#fff", padding: "7px 8px", display: "flex", flexDirection: "column", gap: 2, textAlign: "left", cursor: "pointer" },
+  rowOn: { borderColor: "#2563eb", background: "#eff6ff" },
+  name: { fontSize: 12, fontWeight: 700, color: "#334155" },
+  value: { fontSize: 12, fontWeight: 800, color: "#0369a1" },
+  warning: { marginTop: 3, fontSize: 11, fontWeight: 800, color: "#b91c1c" },
+};
 
 function Summary({ totals, ppm }) {
   const r2 = n => (n||0).toFixed(2);
@@ -536,7 +881,7 @@ const SS = {
 };
 
 const S = {
-  root:          {display:"flex",flexDirection:"column",height:"calc(100vh - 120px)",minHeight:520,background:"#f8fafc",fontFamily:"'Manrope','Segoe UI',system-ui,sans-serif"},
+  root:          {display:"flex",flexDirection:"column",height:"calc(100vh - 96px)",minHeight:680,background:"#f8fafc",fontFamily:"'Manrope','Segoe UI',system-ui,sans-serif"},
   aiBanner:      {display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"#faf5ff",borderBottom:"1.5px solid #e9d5ff",fontSize:12,color:"#6d28d9",flexShrink:0},
   aiBannerClose: {marginLeft:"auto",background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#9333ea"},
   body:          {display:"flex",flex:1,overflow:"hidden",minHeight:0},

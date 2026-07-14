@@ -1,7 +1,7 @@
 ﻿// components/email/editor2/ImageLibraryModal.jsx
 // Image library picker — combines the shared media library with legacy email-only images.
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "../../../utils/supabase-client";
+import { emailEditorFetch } from "./emailEditorApi";
 
 export default function ImageLibraryModal({ userId, onPick, onClose }) {
   const [images, setImages] = useState([]);
@@ -21,15 +21,13 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token || "";
-      if (!token) throw new Error("Sign in required to view the image library.");
-
       const [sharedResponse, legacyResponse] = await Promise.all([
-        fetch("/api/assets/list-library", {
-          headers: { Authorization: `Bearer ${token}` },
+        emailEditorFetch("/api/assets/list-library", {}, {
+          authErrorMessage: "Sign in required to view the image library.",
         }),
-        fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`),
+        emailEditorFetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {}, {
+          authErrorMessage: "Sign in required to view the image library.",
+        }),
       ]);
 
       const sharedPayload = await sharedResponse.json().catch(() => ({}));
@@ -90,17 +88,14 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
         return;
       }
 
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token || "";
-      if (!token) throw new Error("Sign in required to upload images.");
-
-      const resp = await fetch("/api/social/save-image", {
+      const resp = await emailEditorFetch("/api/social/save-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ imageUrl: base64, description: file.name || "Uploaded image" }),
+      }, {
+        authErrorMessage: "Sign in required to upload images.",
       });
       const out = await resp.json();
       if (!resp.ok || !out?.ok) throw new Error(out?.error || "Upload failed");
@@ -118,18 +113,18 @@ export default function ImageLibraryModal({ userId, onPick, onClose }) {
       let resp;
 
       if (image?.source === "legacy-email") {
-        resp = await fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {
+        resp = await emailEditorFetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, url: image.url }),
+        }, {
+          authErrorMessage: "Sign in required to delete images.",
         });
       } else {
-        const { data } = await supabase.auth.getSession();
-        const token = data?.session?.access_token || "";
-        if (!token) throw new Error("Sign in required to delete images.");
-        resp = await fetch(`/api/social/delete-image?id=${encodeURIComponent(image.id)}`, {
+        resp = await emailEditorFetch(`/api/social/delete-image?id=${encodeURIComponent(image.id)}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+        }, {
+          authErrorMessage: "Sign in required to delete images.",
         });
       }
 

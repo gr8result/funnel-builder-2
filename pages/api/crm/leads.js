@@ -39,7 +39,7 @@ async function handler(req, res) {
         Math.max(parseInt(String(req.query.limit || "500"), 10) || 500, 1),
         2000
       );
-      const { status, stage, search, owner } = req.query;
+      const { status, stage, search, owner, list_id: listId } = req.query;
 
       let q = supabaseAdmin
         .from("leads")
@@ -51,6 +51,7 @@ async function handler(req, res) {
       if (status && VALID_STATUSES.has(status)) q = q.eq("lead_status", status);
       if (stage) q = q.eq("stage", stage);
       if (owner) q = q.eq("lead_owner_user_id", owner);
+      if (listId) q = q.eq("list_id", listId);
       if (search) {
         q = q.or(
           `name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
@@ -64,7 +65,21 @@ async function handler(req, res) {
         id: r.id,
         name: pickName(r),
         phone: pickPhone(r),
+        mobile: r.mobile || "",
+        company: r.company || "",
         email: r.email || "",
+        first_name: r.first_name || "",
+        last_name: r.last_name || "",
+        address: r.address || "",
+        city: r.city || "",
+        state: r.state || "",
+        postcode: r.postcode || "",
+        country: r.country || "",
+        website: r.website || "",
+        tags: r.tags || "",
+        notes: r.notes || "",
+        source: r.source || r.lead_source || "",
+        list_id: r.list_id || "",
         lead_status: r.lead_status || "new",
         lead_source: r.lead_source || "",
         stage: r.stage || "",

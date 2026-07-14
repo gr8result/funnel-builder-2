@@ -4,7 +4,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { SiTiktok } from 'react-icons/si';
 import { supabase } from '../../../utils/supabase-client';
 
 const PLATFORMS = {
@@ -57,7 +56,7 @@ function PlatformLogo({ platformKey, meta }) {
   if (meta.logoType === 'tiktok') {
     return (
       <div style={S.platformLogoBadge}>
-        <SiTiktok size={48} color="#ffffff" />
+        <TikTokLogo size={48} color="#ffffff" />
       </div>
     );
   }
@@ -71,6 +70,17 @@ function PlatformLogo({ platformKey, meta }) {
   }
 
   return null;
+}
+
+function TikTokLogo({ size = 48, color = '#ffffff' }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
+      <path
+        fill={color}
+        d="M16.6 3c.35 2.03 1.5 3.5 3.4 4.25v3.22c-1.37-.04-2.55-.43-3.55-1.16v5.75c0 3.57-2.24 5.94-5.58 5.94-2.9 0-5.05-1.92-5.05-4.64 0-3.06 2.45-5.04 5.7-4.78v3.3c-1.37-.2-2.34.36-2.34 1.42 0 .86.7 1.43 1.67 1.43 1.29 0 2.02-.82 2.02-2.49V3h3.73Z"
+      />
+    </svg>
+  );
 }
 
 function getFriendlyPlatformName(platform) {

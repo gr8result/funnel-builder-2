@@ -1147,8 +1147,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const selectCanvasBlock = (index) => {
+    setHoveredIndex(null);
     setSelectedGlobalRole(null);
     setSelectedIndex(index);
+    setRightPanelMode("block");
+    setShowProperties(true);
+    requestAnimationFrame(() => {
+      const node = blocksContainerRef.current?.querySelector?.(`[data-canvas-block-index="${index}"]`);
+      node?.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    });
   };
 
   const clearCanvasSelection = () => {
@@ -1158,10 +1165,16 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const selectGlobalBlock = (role) => {
+    setHoveredIndex(null);
     setSelectedIndex(null);
     setShowProperties(true);
     setRightPanelMode("block");
     setSelectedGlobalRole(role);
+    requestAnimationFrame(() => {
+      const selector = `[data-global-block-preview=\"true\"][data-global-role=\"${role}\"]`;
+      const node = blocksContainerRef.current?.querySelector?.(selector);
+      node?.scrollIntoView?.({ block: "start", inline: "nearest", behavior: "smooth" });
+    });
   };
 
   const handleDuplicate = (index) => {
@@ -3496,6 +3509,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
                         selected={selectedIndex === blockIndex}
                         hovered={hoveredIndex === blockIndex}
+                        allowHoverOverlay={!selectedGlobalRole && typeof selectedIndex !== "number"}
                         onSelect={selectCanvasBlock}
                         onHover={(value) => setHoveredIndex(value)}
                         onDelete={handleDelete}
@@ -3562,53 +3576,32 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             ) : rightPanelMode === "sections" ? (
               <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
             ) : (
-              <>
-                <UniversalDesignPanel
-                  block={selectedGlobalBlock || blocks[selectedIndex] || null}
-                  index={selectedGlobalBlock ? -1 : selectedIndex}
-                  onChange={selectedGlobalBlock
-                    ? (_index, nextProps) => {
-                        if (!selectedGlobalRole || !selectedGlobalBlock) return;
-                        onUpdateGlobalBlock?.(selectedGlobalRole, {
-                          ...selectedGlobalBlock,
-                          props: nextProps,
-                        });
-                      }
-                    : handleUpdateBlock}
-                  onUploadImage={selectedGlobalBlock
-                    ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
-                    : handleCanvasImageUpload}
-                  onSelectAsset={selectedGlobalBlock
-                    ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
-                    : handleCanvasAssetSelect}
-                />
-                <PropertiesPanel
-                  block={selectedGlobalBlock || blocks[selectedIndex] || null}
-                  index={selectedGlobalBlock ? -1 : selectedIndex}
-                  onChange={selectedGlobalBlock
-                    ? (_index, nextProps) => {
-                        if (!selectedGlobalRole || !selectedGlobalBlock) return;
-                        onUpdateGlobalBlock?.(selectedGlobalRole, {
-                          ...selectedGlobalBlock,
-                          props: nextProps,
-                        });
-                      }
-                    : handleUpdateBlock}
-                  brandAssets={brandAssets}
-                  onUploadImage={selectedGlobalBlock
-                    ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
-                    : handleCanvasImageUpload}
-                  onSelectAsset={selectedGlobalBlock
-                    ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
-                    : handleCanvasAssetSelect}
-                  onOpenImageEditor={openStructuredImageEditor}
-                  onOpenSimpleImageEditor={openSimpleImageEditor}
-                  onRefreshAssetLibrary={onRefreshAssetLibrary}
-                  project={project}
-                  activePage={activePage}
-                  currentObjective={currentObjective}
-                />
-              </>
+              <PropertiesPanel
+                block={selectedGlobalBlock || blocks[selectedIndex] || null}
+                index={selectedGlobalBlock ? -1 : selectedIndex}
+                onChange={selectedGlobalBlock
+                  ? (_index, nextProps) => {
+                      if (!selectedGlobalRole || !selectedGlobalBlock) return;
+                      onUpdateGlobalBlock?.(selectedGlobalRole, {
+                        ...selectedGlobalBlock,
+                        props: nextProps,
+                      });
+                    }
+                  : handleUpdateBlock}
+                brandAssets={brandAssets}
+                onUploadImage={selectedGlobalBlock
+                  ? (_index, key, file) => handleGlobalImageUpload(selectedGlobalRole, key, file)
+                  : handleCanvasImageUpload}
+                onSelectAsset={selectedGlobalBlock
+                  ? (_index, key, asset) => handleGlobalAssetSelect(selectedGlobalRole, key, asset)
+                  : handleCanvasAssetSelect}
+                onOpenImageEditor={openStructuredImageEditor}
+                onOpenSimpleImageEditor={openSimpleImageEditor}
+                onRefreshAssetLibrary={onRefreshAssetLibrary}
+                project={project}
+                activePage={activePage}
+                currentObjective={currentObjective}
+              />
             )}
           </div>
         ) : null}

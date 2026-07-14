@@ -5,8 +5,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
-import { supabase } from "../../../utils/supabase-client";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
+import { emailEditorFetch } from "./emailEditorApi";
 const ImageEditModal = dynamic(() => import("./ImageEditModal"), { ssr: false });
 const ImageLibraryModal = dynamic(() => import("./ImageLibraryModal"), { ssr: false });
 const AiGenerateModal = dynamic(() => import("./AiGenerateModal"), { ssr: false });
@@ -2344,6 +2344,7 @@ function InlineEditableText({ as = "div", value = "", onChange, style = {}, plac
         isEditingRef.current = true;
         rememberSelection();
         normalize?.(ref.current);
+        commit();
       }}
       onBlur={() => {
         window.setTimeout(() => {
@@ -2598,6 +2599,7 @@ function RichTextCanvas({ props, onPatch, isSelected }) {
           onInput={() => {
             activateApi();
             rememberSelection();
+            commit();
           }}
           onBlur={() => {
             commit();
@@ -5535,7 +5537,9 @@ export default function EmailEditor({
 
       if (live) setLoadingRecentDocs(true);
       try {
-        const resp = await fetch(`/api/email/builder-doc-list?userId=${encodeURIComponent(userId)}`);
+        const resp = await emailEditorFetch(`/api/email/builder-doc-list?userId=${encodeURIComponent(userId)}`, {}, {
+          authErrorMessage: "Sign in required to load recent emails.",
+        });
         const data = await resp.json().catch(() => ({}));
         if (!live) return;
         setRecentDocs(Array.isArray(data?.docs) ? data.docs.slice(0, 4) : []);
@@ -5738,17 +5742,14 @@ export default function EmailEditor({
         r.onerror = rej;
         r.readAsDataURL(file);
       });
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token || "";
-      if (!token) throw new Error("Sign in required to upload images.");
-
-      const resp = await fetch("/api/social/save-image", {
+      const resp = await emailEditorFetch("/api/social/save-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ imageUrl: base64, description: file.name || "upload.png" }),
+      }, {
+        authErrorMessage: "Sign in required to upload images.",
       });
       const payload = await resp.json().catch(() => ({}));
       if (!resp.ok || !payload?.image?.url) throw new Error(payload?.error || "Upload failed");
@@ -5794,10 +5795,12 @@ export default function EmailEditor({
           reader.onload = async (e) => {
             const base64 = e.target.result;
             try {
-              const resp = await fetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {
+              const resp = await emailEditorFetch(`/api/email/editor-images?userId=${encodeURIComponent(userId)}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId, filename: `thumb-${targetDocId}.png`, base64, folder: "builder-docs" }),
+              }, {
+                authErrorMessage: "Sign in required to save thumbnails.",
               });
               const data = await resp.json().catch(() => ({}));
               resolve(data?.url || null);
@@ -5812,6 +5815,29 @@ export default function EmailEditor({
     }
   }, [userId]);
 
+  const buildSavePayload = useCallback((targetDocId, name, thumbUrl = "") => {
+    const emailSettings = normalizeEmailSettings(docSettings);
+    const savedBlocks = packBlocksForSave(blocks, emailSettings);
+    const html = exportFullHtml(savedBlocks, name, emailSettings);
+
+    return {
+      userId,
+      docId: targetDocId,
+      id: targetDocId,
+      name,
+      subject: name,
+      templateName: name,
+      previewText: emailSettings.preheaderText || "",
+      preheaderText: emailSettings.preheaderText || "",
+      emailSettings,
+      templateScope: templateScope || "",
+      templatePath: templatePath || "",
+      blocks: savedBlocks,
+      html,
+      thumbUrl,
+    };
+  }, [userId, blocks, docSettings, templateScope, templatePath]);
+
   // ── Save ───────────────────────────────────────────────────────
   const saveDoc = useCallback(async () => {
     if (!userId) {
@@ -5822,19 +5848,28 @@ export default function EmailEditor({
     }
     setIsSaving(true);
     try {
+      activeRichTextApi?.commit?.();
       // If this editor was opened from an existing template path, save back in place.
       if (templatePath) {
-        const html = exportFullHtml(blocks, docName, docSettings);
-        const resp = await fetch("/api/email/save-base-template", {
+        const savePayload = buildSavePayload(docId, docName);
+        const resp = await emailEditorFetch("/api/email/save-base-template", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId,
             name: docName,
-            html,
+            subject: savePayload.subject,
+            templateName: savePayload.templateName,
+            previewText: savePayload.previewText,
+            preheaderText: savePayload.preheaderText,
+            emailSettings: savePayload.emailSettings,
+            blocks: savePayload.blocks,
+            html: savePayload.html,
             path: templatePath,
             scope: templateScope || "public",
           }),
+        }, {
+          authErrorMessage: "Sign in required to save.",
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data?.ok) throw new Error(data?.error || "Save failed");
@@ -5846,10 +5881,13 @@ export default function EmailEditor({
       }
 
       const thumbUrl = await captureThumbnail(docId);
-      const resp = await fetch("/api/email/builder-doc-save", {
+      const savePayload = buildSavePayload(docId, docName, thumbUrl);
+      const resp = await emailEditorFetch("/api/email/builder-doc-save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, docId, name: docName, blocks: packBlocksForSave(blocks, docSettings), html: exportFullHtml(blocks, docName, docSettings), thumbUrl }),
+        body: JSON.stringify(savePayload),
+      }, {
+        authErrorMessage: "Sign in required to save.",
       });
       const data = await resp.json().catch(() => ({}));
       if (!data.ok) throw new Error(data.error || "Save failed");
@@ -5863,7 +5901,7 @@ export default function EmailEditor({
     } finally {
       setIsSaving(false);
     }
-  }, [userId, docId, docName, blocks, docSettings, showToast, onSaved, captureThumbnail, templatePath, templateScope]);
+  }, [userId, docId, docName, showToast, onSaved, captureThumbnail, templatePath, templateScope, buildSavePayload]);
 
   // ── Save As ────────────────────────────────────────────────────
   const saveAs = useCallback(async () => {
@@ -5878,11 +5916,19 @@ export default function EmailEditor({
     const newId = uid();
     setIsSaving(true);
     try {
+      activeRichTextApi?.commit?.();
       const thumbUrl = await captureThumbnail(newId);
-      const resp = await fetch("/api/email/builder-doc-save", {
+      const savePayload = {
+        ...buildSavePayload(newId, newName, thumbUrl),
+        templateScope: "",
+        templatePath: "",
+      };
+      const resp = await emailEditorFetch("/api/email/builder-doc-save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, docId: newId, name: newName, blocks: packBlocksForSave(blocks, docSettings), html: exportFullHtml(blocks, newName, docSettings), thumbUrl }),
+        body: JSON.stringify(savePayload),
+      }, {
+        authErrorMessage: "Sign in required to save a copy.",
       });
       const data = await resp.json().catch(() => ({}));
       if (!data.ok) throw new Error(data.error || "Save failed");
@@ -5910,7 +5956,7 @@ export default function EmailEditor({
     } finally {
       setIsSaving(false);
     }
-  }, [userId, docId, docName, blocks, docSettings, showToast, onSaved, captureThumbnail]);
+  }, [userId, docName, showToast, onSaved, captureThumbnail, buildSavePayload]);
 
   // ── Export ─────────────────────────────────────────────────────
   const openRecentDoc = useCallback((nextDocId) => {

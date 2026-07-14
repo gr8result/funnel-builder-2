@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Lighting and electrical inclusion image">
+  <rect width="640" height="420" fill="#f1f8ed"/>
+  <rect x="82" y="92" width="476" height="236" rx="22" fill="#ffffff"/>
+  <circle cx="210" cy="196" r="56" fill="#f2d178"/>
+  <circle cx="210" cy="196" r="30" fill="#fff7d6"/>
+  <rect x="338" y="132" width="118" height="160" rx="12" fill="#d8e8dd"/>
+  <rect x="372" y="166" width="50" height="92" rx="8" fill="#174a36"/>
+  <path d="M142 342h356" stroke="#174a36" stroke-width="10" stroke-linecap="round"/>
+</svg>

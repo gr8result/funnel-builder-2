@@ -1,6 +1,7 @@
 ﻿// components/email/editor2/AiGenerateModal.jsx
 // Full-email AI generator modal
 import { useState } from "react";
+import { emailEditorFetch } from "./emailEditorApi";
 
 const GOALS = [
   { value: "welcome",      label: "Welcome / Onboarding" },
@@ -39,10 +40,12 @@ export default function AiGenerateModal({ onClose, onInsert, userId }) {
     setLoading(true);
     setProgressStep("\u270d\ufe0f Writing email copy\u2026");
     try {
-      const resp = await fetch("/api/email/ai-generate", {
+      const resp = await emailEditorFetch("/api/email/ai-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description, brandName, goal, tone, generateImages: generateImages && !!userId, userId }),
+      }, {
+        authErrorMessage: "Sign in required to generate emails.",
       });
       if (generateImages && userId) setProgressStep("\uD83C\uDFA8 Generating images\u2026 (this may take ~30s)");
       const data = await resp.json();

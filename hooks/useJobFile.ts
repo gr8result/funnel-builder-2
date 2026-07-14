@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  autoSave,
   createNewJob,
+  isAbortLikeFileSystemError,
   JOB_FILE_EXTENSION,
   JobFileData,
   JobFileHandle,
@@ -136,12 +136,11 @@ async function ensurePermission(handle: FileSystemFileHandle): Promise<boolean> 
 }
 
 export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
-  const { enabled = true, jobData, onOpenJob, onError, autoSaveDelayMs = 3000 } = options;
+  const { enabled = true, jobData, onOpenJob, onError } = options;
   const [currentHandle, setCurrentHandle] = useState<JobFileHandle>(null);
   const [currentFileName, setCurrentFileName] = useState("");
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>(() => safeRecentJobs());
   const [dirty, setDirty] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataSnapshot = useMemo(() => JSON.stringify(jobData || {}), [jobData]);
   const lastSavedSnapshotRef = useRef(dataSnapshot);
   const initializedRef = useRef(false);
@@ -187,7 +186,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
       }
       await runOpen(result.data, result.fileName, result.handle || null);
       return { ok: true, cancelled: false };
-    } catch {
+    } catch (error) {
+      if (isAbortLikeFileSystemError(error)) return { ok: true, cancelled: true };
       const message = "This job file could not be opened.";
       onError?.(message);
       return { ok: false, message };
@@ -204,7 +204,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
       }
       await runOpen(result.data, result.fileName, result.handle || null);
       return { ok: true, cancelled: false };
-    } catch {
+    } catch (error) {
+      if (isAbortLikeFileSystemError(error)) return { ok: true, cancelled: true };
       const message = "This job file could not be opened.";
       onError?.(message);
       return { ok: false, message };
@@ -254,7 +255,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
       const data = await readJob(handle);
       await runOpen(data, handle.name, handle);
       return { ok: true, cancelled: false };
-    } catch {
+    } catch (error) {
+      if (isAbortLikeFileSystemError(error)) return { ok: true, cancelled: true };
       const message = "This job file could not be opened.";
       onError?.(message);
       return { ok: false, message };
@@ -269,29 +271,8 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
       return;
     }
 
-    const changed = dataSnapshot !== lastSavedSnapshotRef.current;
-    setDirty(changed);
-    if (!changed || !currentHandle) return;
-
-    autoSave({
-      timerRef,
-      delayMs: autoSaveDelayMs,
-      onSave: async () => {
-        const result = await saveJob(jobData, currentHandle);
-        if (!result.ok || result.cancelled || !result.data) return;
-        lastSavedSnapshotRef.current = JSON.stringify(result.data);
-        setDirty(false);
-        if (result.fileName) setCurrentFileName(result.fileName);
-        await pushRecent({ data: result.data, fileName: result.fileName, handle: result.handle || currentHandle });
-      },
-    });
-  }, [enabled, dataSnapshot, currentHandle, autoSaveDelayMs, jobData, pushRecent]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    setDirty(dataSnapshot !== lastSavedSnapshotRef.current);
+  }, [enabled, dataSnapshot]);
 
   return {
     currentHandle,

@@ -13,6 +13,21 @@ const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PUBLIC_BUCKET = "email-assets";
 const USER_BUCKET = "email-user-assets";
 
+function metadataPathFor(filePath) {
+  const clean = String(filePath || "").trim();
+  if (!clean) return "";
+  return /\.html?$/i.test(clean)
+    ? clean.replace(/\.html?$/i, ".json")
+    : `${clean}.json`;
+}
+
+async function downloadText(admin, bucket, path) {
+  const { data, error } = await admin.storage.from(bucket).download(path);
+  if (error || !data) return null;
+  const buf = Buffer.from(await data.arrayBuffer());
+  return buf.toString("utf8");
+}
+
 async function handler(req, res) {
   try {
     if (req.method !== "GET") return res.status(405).json({ ok: false, error: "GET only" });
@@ -35,24 +50,39 @@ async function handler(req, res) {
       auth: { persistSession: false },
     });
 
-    const { data, error } = await admin.storage.from(bucket).download(path);
-    if (error) {
+    const html = await downloadText(admin, bucket, path);
+    if (html == null) {
       return res.status(400).json({
         ok: false,
-        error: `Storage download failed: ${error.message || "unknown"}`,
+        error: "Storage download failed",
         bucket,
         path,
       });
     }
 
-    const buf = Buffer.from(await data.arrayBuffer());
-    const html = buf.toString("utf8");
+    let metadata = null;
+    const metadataPath = metadataPathFor(path);
+    const metadataText = metadataPath ? await downloadText(admin, bucket, metadataPath) : null;
+    if (metadataText) {
+      try {
+        metadata = JSON.parse(metadataText);
+      } catch {
+        metadata = null;
+      }
+    }
 
     return res.status(200).json({
       ok: true,
       bucket,
       path,
+      metadataPath,
       name: name || path.split("/").pop() || "template.html",
+      subject: metadata?.subject || metadata?.name || name || "",
+      templateName: metadata?.templateName || metadata?.name || name || "",
+      previewText: metadata?.previewText || metadata?.preheaderText || "",
+      preheaderText: metadata?.preheaderText || metadata?.previewText || "",
+      emailSettings: metadata?.emailSettings || null,
+      blocks: Array.isArray(metadata?.blocks) ? metadata.blocks : null,
       html,
     });
   } catch (e) {

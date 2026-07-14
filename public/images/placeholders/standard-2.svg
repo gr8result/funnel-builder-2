@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Bathroom inclusion image">
+  <rect width="640" height="420" fill="#ecf8f1"/>
+  <rect x="82" y="70" width="190" height="250" rx="14" fill="#ffffff"/>
+  <rect x="318" y="88" width="230" height="180" rx="12" fill="#d8ebe0"/>
+  <path d="M350 266h170v44H350z" fill="#174a36"/>
+  <path d="M120 120h112v152H120z" fill="#d6e6dc"/>
+  <circle cx="190" cy="304" r="22" fill="#c59b42"/>
+  <path d="M108 350h430" stroke="#174a36" stroke-width="10" stroke-linecap="round"/>
+</svg>

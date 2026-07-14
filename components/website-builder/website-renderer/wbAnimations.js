@@ -549,26 +549,61 @@ function resolvePublishedNavHref(link, navigationContext) {
     "about-us": "/about",
     about: "/about",
     modules: "/modules",
+    "modules-overview": "/modules",
     "contact-us": "/contact",
     contact: "/contact",
+    "email-marketing": "/email",
     email: "/email",
     pricing: "/pricing",
     crm: "/crm",
+    "sms-marketing": "/sms",
     sms: "/sms",
     funnels: "/funnels",
+    "website-builder": "/website-builder",
+    "social-media": "/social-media",
+    "project-hub": "/project-hub",
   };
   if (href.startsWith("#")) {
     const anchorKey = slugifyText(href.slice(1));
-    if (canonicalRoutes[anchorKey]) return canonicalRoutes[anchorKey];
+    if (canonicalRoutes[anchorKey]) {
+      const pageMap = navigationContext?.pageMap || {};
+      if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[anchorKey]) {
+        return "#__missing-page";
+      }
+      return pageMap[anchorKey] || canonicalRoutes[anchorKey];
+    }
   }
   if (/^https?:\/\/localhost(?::\d+)?/i.test(href)) {
     return href.replace(/^https?:\/\/localhost(?::\d+)?/i, "") || "/";
+  }
+  try {
+    const externalUrl = new URL(href);
+    const externalHost = externalUrl.hostname.replace(/^www\./i, "").toLowerCase();
+    const externalPathKey = slugifyText(externalUrl.pathname.replace(/^\/+/, ""));
+    if (
+      ["gr8result.com", "gr8result.digital", "gr8result.solutions", "app.gr8result.digital"].includes(externalHost)
+      && canonicalRoutes[externalPathKey]
+    ) {
+      const pageMap = navigationContext?.pageMap || {};
+      if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[externalPathKey]) {
+        return "#__missing-page";
+      }
+      return pageMap[externalPathKey] || canonicalRoutes[externalPathKey];
+    }
+  } catch {
+    // Relative URL or non-URL value.
   }
   if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
 
   const pageMap = navigationContext?.pageMap || {};
   const basePath = String(navigationContext?.basePath || "").replace(/\/$/, "");
   const normalizedHref = href === "/" ? "home" : slugifyText(href.replace(/^\//, ""));
+  if (canonicalRoutes[normalizedHref]) {
+    if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[normalizedHref]) {
+      return "#__missing-page";
+    }
+    return pageMap[normalizedHref] || canonicalRoutes[normalizedHref];
+  }
   const platformRoutes = new Set([
     "app",
     "login",

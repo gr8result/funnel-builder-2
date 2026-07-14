@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Flooring and internal finishes inclusion image">
+  <rect width="640" height="420" fill="#f0f8ef"/>
+  <rect x="76" y="72" width="488" height="258" rx="16" fill="#ffffff"/>
+  <path d="M104 286h432v44H104z" fill="#174a36"/>
+  <path d="M118 286 250 156h90L210 286zM238 286l130-130h90L328 286zM358 286l108-108h52v108z" fill="#d5b15a" opacity="0.8"/>
+  <rect x="118" y="112" width="124" height="116" fill="#d8e9dd"/>
+  <rect x="278" y="112" width="240" height="74" fill="#e8f1eb"/>
+  <path d="M118 352h404" stroke="#174a36" stroke-width="10" stroke-linecap="round"/>
+</svg>

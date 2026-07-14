@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { supabase } from '../../../../utils/supabase-client';
+import { emailEditorFetch } from '../../../../components/email/editor2/emailEditorApi';
 
 // Heavy editor — code-split so the bundle only downloads when this page is visited
 const EmailEditor = dynamic(
@@ -1231,6 +1232,19 @@ function getStarterBlocks(starter, name = 'Email Template') {
   ];
 }
 
+function withEmailSettingsBlock(blocks = [], emailSettings = null) {
+  const source = Array.isArray(blocks) ? blocks : [];
+  if (!emailSettings || source.some((block) => block?.type === '__emailSettings')) return source;
+  return [
+    {
+      id: 'email-settings',
+      type: '__emailSettings',
+      props: emailSettings,
+    },
+    ...source,
+  ];
+}
+
 export default function EmailEditorPage() {
   const router = useRouter();
   const [userId, setUserId] = useState('');
@@ -1293,19 +1307,24 @@ export default function EmailEditorPage() {
             return;
           }
 
-          const r = await fetch(
+          const r = await emailEditorFetch(
             '/api/templates/import?scope=' +
               encodeURIComponent(qScope) +
               '&path=' +
               encodeURIComponent(qPath) +
               '&name=' +
-              encodeURIComponent(qName)
+              encodeURIComponent(qName),
+            {},
+            { authErrorMessage: 'Sign in required to load this template.' }
           );
           const j = await r.json().catch(() => null);
           if (mounted && r.ok && j?.ok) {
-            setInitialBlocks(htmlToEditorBlocks(j.html || '', { assetBase: getAssetBase(qScope, qPath, qUrl), preserveFullLayout: false }));
+            const importedBlocks = Array.isArray(j.blocks) && j.blocks.length
+              ? withEmailSettingsBlock(j.blocks, j.emailSettings)
+              : htmlToEditorBlocks(j.html || '', { assetBase: getAssetBase(qScope, qPath, qUrl), preserveFullLayout: false });
+            setInitialBlocks(importedBlocks);
             setDocId(null);
-            setDocName(qName);
+            setDocName(j.templateName || j.subject || qName);
             setTemplateScope(qScope);
             setTemplatePath(qPath);
             return;
@@ -1336,15 +1355,20 @@ export default function EmailEditorPage() {
         if (uid && urlId && urlId !== 'blank' && urlId !== 'mode=blank') {
           let loaded = false;
 
-          const r = await fetch(
+          const r = await emailEditorFetch(
             '/api/email/builder-doc-load?userId=' +
               encodeURIComponent(uid) +
               '&docId=' +
-              encodeURIComponent(urlId)
+              encodeURIComponent(urlId),
+            {},
+            { authErrorMessage: 'Sign in required to load this email.' }
           );
           const j = await r.json().catch(() => null);
           if (mounted && j?.ok && Array.isArray(j?.doc?.blocks)) {
-            const savedBlocks = Array.isArray(j.doc.blocks) ? j.doc.blocks : [];
+            const savedBlocks = withEmailSettingsBlock(
+              Array.isArray(j.doc.blocks) ? j.doc.blocks : [],
+              j.doc.emailSettings || null
+            );
             const shouldRehydrateFromHtml =
               savedBlocks.length === 1 &&
               savedBlocks[0]?.type === 'text' &&
@@ -1358,16 +1382,18 @@ export default function EmailEditorPage() {
                 : savedBlocks
             );
             setDocId(urlId);
-            setDocName(j.doc.name || 'Untitled Email');
+            setDocName(j.doc.templateName || j.doc.subject || j.doc.name || 'Untitled Email');
             loaded = true;
           }
 
           if (!loaded) {
-            const fallback = await fetch(
+            const fallback = await emailEditorFetch(
               '/api/email/editor-load?userId=' +
                 encodeURIComponent(uid) +
                 '&templateId=' +
-                encodeURIComponent(urlId)
+                encodeURIComponent(urlId),
+              {},
+              { authErrorMessage: 'Sign in required to load this email.' }
             );
             const alt = await fallback.json().catch(() => null);
             if (mounted && alt?.ok) {

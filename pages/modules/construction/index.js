@@ -4,10 +4,14 @@
 import Link from "next/link";
 import Head from "next/head";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { estimateJobsRemainingLabel, isDeveloperAccount } from "../../../lib/estimate-builder/developerBypass";
 
 export default function ConstructionHub() {
+  const { user } = useAuth();
   const [estimateCredits, setEstimateCredits] = useState(0);
   const [recentJobs, setRecentJobs] = useState([]);
+  const developerBypass = isDeveloperAccount(user?.email);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -65,13 +69,15 @@ export default function ConstructionHub() {
         <section style={S.creditsBox}>
           <div>
             <div style={S.creditsEyebrow}>Estimate credits</div>
-            <h2 style={S.creditsTitle}>Buy job credits for the Estimate Builder</h2>
+            <h2 style={S.creditsTitle}>{developerBypass ? "Unlimited developer estimate access" : "Buy job credits for the Estimate Builder"}</h2>
             <p style={S.creditsText}>
-              Single job credit is $59.00. Buy 5 and get 10% off per job, or buy 10 and get 15% off per job.
+              {developerBypass
+                ? "DEV ONLY / OWNER TESTING BYPASS: support@gr8result.com can register estimate jobs without credits or payment."
+                : "Single job credit is $59.00. Buy 5 and get 10% off per job, or buy 10 and get 15% off per job."}
             </p>
           </div>
-          <Link href="/modules/estimate-builder/buy-credits" style={{ textDecoration: "none" }}>
-            <button style={S.creditsButton}>Buy Credits</button>
+          <Link href={developerBypass ? "/modules/estimate-builder/register-job" : "/modules/estimate-builder/buy-credits"} style={{ textDecoration: "none" }}>
+            <button style={S.creditsButton}>{developerBypass ? "Register New Job" : "Buy Credits"}</button>
           </Link>
         </section>
 
@@ -113,12 +119,12 @@ export default function ConstructionHub() {
 
           <div style={S.estimateGrid}>
             <ToolCard
-              href="/modules/estimate-builder?mode=preview"
+              href="/modules/estimate-builder"
               accent="#14b8a6"
               icon="$"
-              title="Estimate Builder Preview"
-              description="Let users inspect the first half of the estimating workflow before paid module access is required."
-              action="Open Preview"
+              title="Builder Dashboard"
+              description="Open the main builder workspace for estimating, takeoff, BOQ, quotations, procurement, selections, documents and project controls."
+              action="Open Builder Dashboard"
               compact
             />
             <ToolCard
@@ -128,7 +134,7 @@ export default function ConstructionHub() {
               title="Register New Job"
               description="Create a registered estimate job before work starts. This is the step to enforce subscription and per-job billing."
               action="Register Job"
-              badge={`${estimateCredits} ${estimateCredits === 1 ? "job" : "jobs"} remaining`}
+              badge={estimateJobsRemainingLabel(user?.email, estimateCredits)}
               compact
             />
             <ToolCard
@@ -170,7 +176,7 @@ export default function ConstructionHub() {
 
 function ToolCard({ href, accent, icon, title, description, action, badge = "", compact = false }) {
   return (
-    <Link href={href} style={{ textDecoration: "none", flex: compact ? "initial" : 1 }}>
+    <Link href={href} style={compact ? S.estimateCardLink : S.cardLink}>
       <div
         style={compact ? S.estimateCard : S.card}
         onMouseEnter={(event) => {
@@ -188,7 +194,7 @@ function ToolCard({ href, accent, icon, title, description, action, badge = "", 
         </div>
         <h3 style={S.cardTitle}>{title}</h3>
         <p style={S.cardDesc}>{description}</p>
-        <div style={{ ...S.cardFooter, background: accent }}>{action}</div>
+        <div style={{ ...(compact ? S.estimateCardFooter : S.cardFooter), background: accent }}>{action}</div>
       </div>
     </Link>
   );
@@ -303,6 +309,12 @@ const S = {
     maxWidth: 1100,
     flexWrap: "wrap",
   },
+  cardLink: {
+    textDecoration: "none",
+    flex: 1,
+    display: "flex",
+    minWidth: 280,
+  },
   card: {
     background: "#0d1522",
     border: "1px solid #1e293b",
@@ -355,6 +367,13 @@ const S = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: 18,
+    alignItems: "stretch",
+  },
+  estimateCardLink: {
+    textDecoration: "none",
+    display: "flex",
+    height: "100%",
+    minWidth: 0,
   },
   recentWrap: {
     marginTop: 18,
@@ -404,7 +423,10 @@ const S = {
     cursor: "pointer",
     transition: "border-color 0.15s, transform 0.15s",
     overflow: "hidden",
-    minHeight: 250,
+    minHeight: 286,
+    height: "100%",
+    width: "100%",
+    boxSizing: "border-box",
     position: "relative",
   },
   cardBadge: {
@@ -446,10 +468,19 @@ const S = {
     flexGrow: 1,
   },
   cardFooter: {
-    marginTop: 8,
+    marginTop: "auto",
     marginLeft: -28,
     marginRight: -28,
     padding: "12px 28px",
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#fff",
+  },
+  estimateCardFooter: {
+    marginTop: "auto",
+    marginLeft: -22,
+    marginRight: -22,
+    padding: "12px 22px",
     fontSize: 15,
     fontWeight: 700,
     color: "#fff",

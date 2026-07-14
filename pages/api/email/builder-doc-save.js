@@ -23,10 +23,20 @@ async function handler(req, res) {
       return res.status(405).json({ ok: false, error: "POST only" });
     }
 
-    const userId = String(req.body?.userId || "").trim();
+    const userId = String(req.user?.id || req.body?.userId || "").trim();
     const docId = String(req.body?.docId || "").trim();
+    const id = String(req.body?.id || docId).trim() || docId;
     const name = String(req.body?.name || "").trim() || "Untitled Email";
+    const subject = String(req.body?.subject || name).trim() || name;
+    const templateName = String(req.body?.templateName || name).trim() || name;
+    const previewText = String(req.body?.previewText || req.body?.preheaderText || "").trim();
+    const templateScope = String(req.body?.templateScope || "").trim();
+    const templatePath = String(req.body?.templatePath || "").trim();
     const blocks = Array.isArray(req.body?.blocks) ? req.body.blocks : [];
+    const emailSettings =
+      req.body?.emailSettings && typeof req.body.emailSettings === "object"
+        ? req.body.emailSettings
+        : null;
     const html = typeof req.body?.html === "string" ? req.body.html : "";
     const thumbUrl = typeof req.body?.thumbUrl === "string" ? req.body.thumbUrl : "";
 
@@ -37,8 +47,16 @@ async function handler(req, res) {
     const payload = {
       version: 1,
       docId,
+      id,
       userId,
       name,
+      subject,
+      templateName,
+      previewText,
+      preheaderText: previewText,
+      emailSettings,
+      templateScope,
+      templatePath,
       blocks,
       html,
       thumbUrl,

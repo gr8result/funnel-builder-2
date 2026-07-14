@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import ReactCrop from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
-import { supabase } from "../../../utils/supabase-client";
+import { emailEditorFetch } from "./emailEditorApi";
 
 function buildCanvasFromImage(image) {
   if (!image) throw new Error("Image not ready");
@@ -144,16 +144,14 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
 
   async function persistBase64Image(base64, filename = "edited.png") {
     if (!userId || !String(base64 || "").startsWith("data:")) return base64;
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token || "";
-    if (!token) return base64;
-    const resp = await fetch("/api/social/save-image", {
+    const resp = await emailEditorFetch("/api/social/save-image", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ imageUrl: base64, description: filename }),
+    }, {
+      authErrorMessage: "Sign in required to save edited images.",
     });
     const out = await resp.json().catch(() => ({}));
     return out?.image?.url || base64;
@@ -185,10 +183,12 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
       let lastError = "";
 
       try {
-        const byUrl = await fetch("/api/assets/remove-bg", {
+        const byUrl = await emailEditorFetch("/api/assets/remove-bg", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageUrl: currentSrc, userId: userId || undefined }),
+        }, {
+          authErrorMessage: "Sign in required to remove backgrounds.",
         });
         const byUrlData = await byUrl.json().catch(() => ({}));
         if (byUrl.ok && byUrlData?.publicUrl) {
@@ -212,10 +212,12 @@ export default function ImageEditModal({ src, userId, onDone, onCancel }) {
           ctx.drawImage(img, 0, 0);
           const base64 = canvas.toDataURL("image/png");
 
-          const byBase64 = await fetch("/api/assets/remove-bg", {
+          const byBase64 = await emailEditorFetch("/api/assets/remove-bg", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ base64, userId: userId || undefined }),
+          }, {
+            authErrorMessage: "Sign in required to remove backgrounds.",
           });
           const byBase64Data = await byBase64.json().catch(() => ({}));
           if (byBase64.ok && byBase64Data?.publicUrl) {

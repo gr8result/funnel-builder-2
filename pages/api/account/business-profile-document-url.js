@@ -1,6 +1,21 @@
 import { withAuth } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
+function isMissingSchemaError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const hint = String(error?.hint || "").toLowerCase();
+  const text = `${message} ${details} ${hint}`;
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    text.includes("schema cache") ||
+    text.includes("does not exist") ||
+    text.includes("could not find the table") ||
+    text.includes("business_profile_documents")
+  );
+}
+
 async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ ok: false, error: "Method not allowed" });
@@ -19,7 +34,12 @@ async function handler(req, res) {
       .eq("user_id", req.user.id)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      if (isMissingSchemaError(error)) {
+        return res.status(503).json({ ok: false, error: "Vault document records are temporarily unavailable." });
+      }
+      throw error;
+    }
     if (!document) {
       return res.status(404).json({ ok: false, error: "Document not found" });
     }

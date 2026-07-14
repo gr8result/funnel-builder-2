@@ -1,6 +1,7 @@
 // components/email/editor2/AiImageModal.jsx
 // Generate an image with DALL-E 3 and insert it into a block
 import { useState } from "react";
+import { emailEditorFetch } from "./emailEditorApi";
 
 const SIZES = [
   { value: "1024x1024", label: "Square (1024×1024)" },
@@ -21,10 +22,12 @@ export default function AiImageModal({ userId, onClose, onSelect }) {
     setLoading(true);
     setPreview(null);
     try {
-      const resp = await fetch("/api/email/ai-image", {
+      const resp = await emailEditorFetch("/api/email/ai-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, userId, size }),
+      }, {
+        authErrorMessage: "Sign in required to generate images.",
       });
       const data = await resp.json();
       if (!data.ok) throw new Error(data.error || "Image generation failed");

@@ -5,6 +5,45 @@ export default function Document() {
   return (
     <Html>
       <Head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                function isBenignLockAbort(error) {
+                  var message = String((error && error.message) || error || "");
+                  var name = String((error && error.name) || "");
+                  var stack = String((error && error.stack) || "");
+                  var combined = (name + " " + message + " " + stack).toLowerCase();
+                  return combined.indexOf("lock broken by another request") !== -1
+                    || (combined.indexOf("aborterror") !== -1 && combined.indexOf("lock broken") !== -1)
+                    || (combined.indexOf("aborterror") !== -1 && combined.indexOf("steal") !== -1)
+                    || (combined.indexOf("lock") !== -1 && combined.indexOf("steal") !== -1);
+                }
+
+                function stop(event) {
+                  var error = event && (event.reason || event.error || event);
+                  if (!isBenignLockAbort(error)) return;
+                  if (event && typeof event.preventDefault === "function") event.preventDefault();
+                  if (event && typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+                  return false;
+                }
+
+                window.__gr8IsBenignLockAbort = isBenignLockAbort;
+                window.addEventListener("error", stop, true);
+                window.addEventListener("unhandledrejection", stop, true);
+
+                var originalReportError = window.reportError;
+                if (typeof originalReportError === "function" && !window.__gr8ReportErrorPatched) {
+                  window.__gr8ReportErrorPatched = true;
+                  window.reportError = function (error) {
+                    if (isBenignLockAbort(error)) return;
+                    return originalReportError.call(window, error);
+                  };
+                }
+              })();
+            `,
+          }}
+        />
         {/* Google Fonts — loaded once for the whole app, available in canvas + font picker */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

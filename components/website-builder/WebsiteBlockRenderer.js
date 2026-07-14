@@ -868,6 +868,66 @@ function WbTextEditableContent({ props, onChangeBlock, compact }) {
   );
 }
 
+function clampFeatureNumber(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function resolveFeatureContentMaxWidth(props) {
+  const width = String(props?.contentMaxWidth || "").toLowerCase();
+  if (width === "full") return "none";
+  const numeric = Number(props?.contentMaxWidth);
+  if (Number.isFinite(numeric) && numeric > 0) return `${Math.max(320, numeric)}px`;
+  const sectionWidth = String(props?.sectionWidth || "boxed");
+  if (sectionWidth === "full") return "none";
+  if (sectionWidth === "wide") return "1600px";
+  return "1200px";
+}
+
+function resolveFeatureGridStyles(props, compact) {
+  const desktop = clampFeatureNumber(props?.cardsPerRowDesktop ?? (props?.layout === "columns" ? 3 : 1), 3, 1, 6);
+  const tablet = clampFeatureNumber(props?.cardsPerRowTablet, Math.min(3, desktop), 1, 4);
+  const mobile = clampFeatureNumber(props?.cardsPerRowMobile, 1, 1, 2);
+  const horizontalGap = clampFeatureNumber(props?.horizontalGap, 18, 0, 80);
+  const verticalGap = clampFeatureNumber(props?.verticalGap, 18, 0, 80);
+  const customWidth = clampFeatureNumber(props?.customCardWidth || props?.featureCardWidth, 320, 160, 900);
+  const isCustom = String(props?.cardSize || "auto") === "custom";
+  const alignment = String(props?.horizontalAlignment || "stretch");
+  const justifyContent = alignment === "left" ? "start" : alignment === "right" ? "end" : alignment === "center" ? "center" : "stretch";
+  const autoColumns = "repeat(var(--wb-list-columns), minmax(0, 1fr))";
+  const customColumns = alignment === "stretch"
+    ? `repeat(auto-fit, minmax(min(100%, ${customWidth}px), 1fr))`
+    : `repeat(auto-fit, minmax(min(100%, ${customWidth}px), ${customWidth}px))`;
+
+  return {
+    desktop,
+    tablet,
+    mobile,
+    gridStyle: {
+      display: "grid",
+      marginTop: 16,
+      columnGap: horizontalGap,
+      rowGap: verticalGap,
+      gridTemplateColumns: isCustom ? customColumns : autoColumns,
+      justifyContent,
+      justifyItems: alignment === "stretch" ? "stretch" : undefined,
+      alignItems: props?.cardHeightMode === "equal" ? "stretch" : "start",
+      "--wb-list-columns": compact ? mobile : desktop,
+    },
+  };
+}
+
+function resolveFeatureCardHeightStyle(props) {
+  const mode = String(props?.cardHeightMode || "auto");
+  const height = clampFeatureNumber(props?.featureCardHeight, 0, 0, 1600);
+  const maxHeight = clampFeatureNumber(props?.featureCardMaxHeight || props?.featureCardHeight, 0, 0, 1600);
+  if (mode === "equal") return { height: "100%" };
+  if (mode === "min" && height > 0) return { minHeight: height };
+  if (mode === "max" && maxHeight > 0) return { maxHeight, overflow: "hidden" };
+  return {};
+}
+
 export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
   const rawProps = block?.props || {};
   // When a global canvas width (layoutWidth) is provided, enforce it as the content container's
@@ -2008,10 +2068,18 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const featureTitleAlign = ["left", "center", "right", "justify"].includes(String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment || ""))
         ? String(props.headingAlign || props.headlineAlign || props.headlineAlignment || props.textAlign || props.alignment)
         : "left";
+      const featureGrid = resolveFeatureGridStyles(props, compact);
+      const featureScope = `wb-list-${String(block?.id || block?.uid || "feature-list").replace(/[^a-zA-Z0-9_-]/g, "")}`;
+      const featureContentMaxWidth = resolveFeatureContentMaxWidth(props);
+      const featureContentStyle = {
+        ...sectionContentStyle(props, compact),
+        maxWidth: featureContentMaxWidth,
+      };
+      const featureCardHeightStyle = resolveFeatureCardHeightStyle(props);
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor) }}>
-          <div style={sectionContentStyle(props, compact)}>
-          <style>{`.wb-feature-card-body p,.wb-feature-card-body div{margin-top:0!important;margin-bottom:0!important}.wb-feature-card-body{align-content:start!important;justify-content:flex-start!important}`}</style>
+          <div style={featureContentStyle}>
+          <style>{`.${featureScope} .wb-feature-card-body p,.${featureScope} .wb-feature-card-body div{margin-top:0!important;margin-bottom:0!important}.${featureScope} .wb-feature-card-body{align-content:start!important;justify-content:flex-start!important}@media (max-width: 1024px){.${featureScope}{--wb-list-columns:${featureGrid.tablet}!important;}}@media (max-width: 640px){.${featureScope}{--wb-list-columns:${featureGrid.mobile}!important;}}`}</style>
           <h2
             data-website-inline-editor="true"
             data-text-prop="title"
@@ -2031,7 +2099,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Key Features") }}
           />
-          <div style={{ ...sharedStyles.featureList(props.layout, compact, props.featureCardWidth), ...featureVariant.list }}>
+          <div className={featureScope} style={{ ...featureVariant.list, ...featureGrid.gridStyle }}>
             {asArray(props.items).map((rawItem, idx) => {
               const item = normalizeFeatureItem(rawItem, idx);
               const itemTextBlocks = Array.isArray(item.textBlocks) && item.textBlocks.length
@@ -2068,7 +2136,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               };
 
               return (
-                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, alignItems: "stretch", background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
+                <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, ...featureCardHeightStyle, width: "100%", maxWidth: "none", alignItems: "stretch", background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
                   <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
                     <img src={itemImage} alt={item.title || `Feature ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
                   </div>
@@ -4700,8 +4768,45 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const grid3 = { display: "grid", gridTemplateColumns: "1fr 220px 160px", alignItems: "center" };
 
       function CCLogo({ domain, name, src }) {
-        const imgSrc = src || (domain ? `https://logo.clearbit.com/${domain}` : null);
-        if (!imgSrc) return null;
+        const [failed, setFailed] = React.useState(false);
+        const [fallbackAttempted, setFallbackAttempted] = React.useState(false);
+        const safeSrc = String(src || "").trim();
+        const safeDomain = String(domain || "").trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+        const invalidStoredSrc = /^blob:/i.test(safeSrc) || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(safeSrc);
+        const imgSrc = !invalidStoredSrc && safeSrc ? safeSrc : (safeDomain ? `https://www.google.com/s2/favicons?domain=${safeDomain}&sz=64` : "");
+        const initials = String(name || safeDomain || "Tool")
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase() || "T";
+        const fallbackBadge = (
+          <span
+            title={name || safeDomain || "Tool"}
+            aria-label={name || safeDomain || "Tool"}
+            style={{
+              alignItems: "center",
+              background: "linear-gradient(135deg, #2563eb, #22c55e)",
+              border: "1.5px solid rgba(255,255,255,0.2)",
+              borderRadius: "50%",
+              color: "#fff",
+              display: "inline-flex",
+              flexShrink: 0,
+              fontSize: 11,
+              fontWeight: 800,
+              height: 36,
+              justifyContent: "center",
+              minHeight: 36,
+              minWidth: 36,
+              width: 36,
+            }}
+          >
+            {initials}
+          </span>
+        );
+
+        if (!imgSrc || failed) return fallbackBadge;
         return (
           <img
             src={imgSrc}
@@ -4711,10 +4816,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             height={36}
             style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0, width: 36, height: 36, minWidth: 36, minHeight: 36 }}
             onError={e => {
-              if (!src && domain && !e.currentTarget.src.includes("google.com")) {
-                e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+              if (!fallbackAttempted && safeSrc && safeDomain) {
+                setFallbackAttempted(true);
+                e.currentTarget.src = `https://www.google.com/s2/favicons?domain=${safeDomain}&sz=64`;
               } else {
-                e.currentTarget.style.display = "none";
+                setFailed(true);
               }
             }}
           />

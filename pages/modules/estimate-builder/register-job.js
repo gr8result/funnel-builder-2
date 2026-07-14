@@ -2,6 +2,8 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { isDeveloperAccount } from "../../../lib/estimate-builder/developerBypass";
 
 const EMPTY_FORM = {
   clientName: "",
@@ -23,8 +25,10 @@ const EMPTY_FORM = {
 
 export default function RegisterEstimateJobPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [credits, setCredits] = useState(0);
+  const developerBypass = isDeveloperAccount(user?.email);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,16 +63,18 @@ export default function RegisterEstimateJobPage() {
 
   function confirmJob(event) {
     event.preventDefault();
-    if (!requiredComplete) return;
+    if (!requiredComplete || loading) return;
     const jobId = form.jobId || `builder-job-${Date.now()}`;
     const payload = { ...form, jobId, registeredAt: new Date().toISOString() };
     if (typeof window !== "undefined") {
       window.localStorage.setItem("estimate-builder-pending-job", JSON.stringify(payload));
-      if (credits > 0) {
-        const nextCredits = credits - 1;
+      if (developerBypass || credits > 0) {
+        const nextCredits = developerBypass ? credits : credits - 1;
         const jobs = JSON.parse(window.localStorage.getItem("estimate-builder-registered-jobs") || "[]");
-        const registeredJob = { ...payload, creditCharged: 1, status: "registered" };
-        window.localStorage.setItem("estimate-builder-credits", String(nextCredits));
+        // DEV ONLY / OWNER TESTING BYPASS: support@gr8result.com can register
+        // unlimited estimate jobs without consuming credits or requiring Stripe.
+        const registeredJob = { ...payload, creditCharged: developerBypass ? 0 : 1, developerBypass, status: "registered" };
+        if (!developerBypass) window.localStorage.setItem("estimate-builder-credits", String(nextCredits));
         window.localStorage.setItem("estimate-builder-registered-jobs", JSON.stringify([...jobs, registeredJob]));
         window.localStorage.setItem("estimate-builder-active-registered-job", JSON.stringify(registeredJob));
         window.localStorage.setItem("estimate-builder-active-draft", JSON.stringify({
@@ -142,12 +148,14 @@ export default function RegisterEstimateJobPage() {
 
           <div style={styles.actionBar}>
             <div style={styles.actionNote}>
-              {credits > 0
+              {developerBypass
+                ? "Developer testing account: Unlimited jobs available. No payment or credits required."
+                : credits > 0
                 ? `${credits} ${credits === 1 ? "credit" : "credits"} available. Confirming this job will use 1 credit.`
                 : "No credits available. Complete the required fields to proceed to payment."}
             </div>
-            <button type="submit" disabled={!requiredComplete} style={requiredComplete ? styles.primaryButton : styles.primaryButtonDisabled}>
-              {credits > 0 ? "Confirm Job and Open Estimate" : "Proceed to Payment"}
+            <button type="submit" disabled={!requiredComplete || loading} style={requiredComplete && !loading ? styles.primaryButton : styles.primaryButtonDisabled}>
+              {loading ? "Checking Account..." : developerBypass || credits > 0 ? "Confirm Job and Open Estimate" : "Proceed to Payment"}
             </button>
           </div>
         </form>
@@ -254,7 +262,7 @@ const styles = {
   sectionTitle: { margin: "0 0 14px", fontSize: 20, color: "#0f172a" },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 },
   fieldWrap: { display: "grid", gap: 6 },
-  label: { fontSize: 12, fontWeight: 900, color: "#334155", textTransform: "uppercase", letterSpacing: "0.04em" },
+  label: { fontSize: 12, fontWeight: 600, color: "#334155", textTransform: "uppercase", letterSpacing: "0.04em" },
   input: {
     width: "100%",
     border: "1px solid #cbd5e1",
@@ -282,7 +290,7 @@ const styles = {
     border: "1px solid #0f766e",
     borderRadius: 8,
     padding: "12px 16px",
-    fontWeight: 900,
+    fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
@@ -292,7 +300,7 @@ const styles = {
     border: "1px solid #94a3b8",
     borderRadius: 8,
     padding: "12px 16px",
-    fontWeight: 900,
+    fontWeight: 600,
     cursor: "not-allowed",
     whiteSpace: "nowrap",
   },

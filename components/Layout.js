@@ -23,6 +23,28 @@ const PROTECTED_ROUTE_PREFIXES = [
 
 // Routes that approved vendors / affiliates (without a full platform subscription) are allowed to access
 const VENDOR_ONLY_ROUTE_PREFIXES = ["/modules/vendor", "/modules/affiliates"];
+const QA_ROUTE_PREFIXES = ["/modules/social_media"];
+
+function isQaAccessibleRoute(pathname = "") {
+  return QA_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function getBetaTesterEmails() {
+  const raw = String(
+    process.env.NEXT_PUBLIC_BETA_TESTER_EMAILS || process.env.BETA_TESTER_EMAILS || ""
+  );
+  return raw
+    .split(/[;,\s]+/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isBetaTesterEmail(email = "") {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return false;
+  const allow = getBetaTesterEmails();
+  return allow.includes(normalized);
+}
 
 function getMarketplaceAccessEndpoint(pathname) {
   if (pathname.startsWith("/modules/affiliates")) return "/api/marketplace/affiliate-access";
@@ -143,6 +165,7 @@ export default function Layout({ children }) {
   const isVendorOnlyRoute = VENDOR_ONLY_ROUTE_PREFIXES.some((prefix) =>
     path.startsWith(prefix)
   );
+  const isQaRoute = isQaAccessibleRoute(path);
   const marketplaceAccessEndpoint = getMarketplaceAccessEndpoint(path);
   const noNavRoutes = ["/login", "/signup", "/pending-approval"];
   const showNavDefault = !noNavRoutes.includes(path);
@@ -227,7 +250,7 @@ export default function Layout({ children }) {
 
         await ensureUserFolders();
 
-        const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email);
+        const hasDeveloperAccess = isAdminRoute || isDeveloperEmail(user.email) || isBetaTesterEmail(user.email);
         setDeveloperAccess(hasDeveloperAccess);
 
         // 🧾 Load user data from Supabase
@@ -308,7 +331,7 @@ export default function Layout({ children }) {
         setAvatar(verifiedPlatformUser ? finalAvatar : DEFAULT_BRAND_LOGO);
 
         const vendorAllowed = isVendorOnlyRoute && localMarketplaceAllowed;
-        if (!verifiedPlatformUser && !vendorAllowed && isProtectedPlatformRoute && !isAdminRoute) {
+        if (!verifiedPlatformUser && !vendorAllowed && isProtectedPlatformRoute && !isAdminRoute && !isQaRoute) {
           // User is logged in but not fully set up — route them appropriately, never to marketplace
           const approved = data?.is_approved === true || data?.approved === true;
           const status = String(data?.status || "").toLowerCase();
@@ -328,7 +351,7 @@ export default function Layout({ children }) {
         setLoading(false);
       }
     })();
-}, [isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, marketplaceAccessEndpoint, path, router]);
+}, [isAdminRoute, isProtectedPlatformRoute, isVendorOnlyRoute, isQaRoute, marketplaceAccessEndpoint, path, router]);
 
   if (loading) {
     return (
@@ -348,11 +371,12 @@ export default function Layout({ children }) {
   }
   const isVerifiedPlatformUser = isMainPlatformVerified(account);
   const hasPlatformAccess = developerAccess || isVerifiedPlatformUser;
+  const hasQaRouteAccess = !isAdminRoute && isQaRoute;
   const vendorRouteAllowed =
     isVendorOnlyRoute &&
     marketplaceVendorAllowed;
 
-  if (!loading && isProtectedPlatformRoute && !isAdminRoute && !hasPlatformAccess && !vendorRouteAllowed) {
+  if (!loading && isProtectedPlatformRoute && !isAdminRoute && !hasPlatformAccess && !vendorRouteAllowed && !hasQaRouteAccess) {
     return (
       <main
         style={{

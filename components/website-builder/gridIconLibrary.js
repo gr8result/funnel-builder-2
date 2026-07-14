@@ -32,30 +32,21 @@ import {
   FaMicrosoft,
 } from "react-icons/fa";
 import {
-  MdAnalytics, MdAutoAwesome, MdBusiness, MdCampaign, MdContactPage,
-  MdDashboard, MdEmail, MdGroups, MdInsights, MdIntegrationInstructions,
-  MdNotifications, MdPayment, MdPeople, MdSchedule, MdSecurity,
-  MdSmartphone, MdSpeed, MdSupport, MdTrendingUp, MdAccountTree,
-  MdFormatQuote, MdArticle, MdWeb, MdOutlineStorefront, MdOutlineLocalOffer,
-  MdOutlinePrecisionManufacturing, MdOutlineRocketLaunch, MdOutlineVerified,
-  MdOutlineAutoFixHigh,
-} from "react-icons/md";
-import {
   Activity, AlertCircle, AlignLeft, Archive, Award,
   BarChart2, BarChart, Battery, Bell, BellRing, Bookmark,
   Box, Briefcase, Building, Building2, Calendar, CalendarCheck,
   Camera, Check, CheckCircle2, ChevronRight, Clock, Cloud,
   CloudLightning, Code2, Cog, Compass, CreditCard, Database,
   Download, Edit2, Edit3, ExternalLink, Eye, File, FileText,
-  Filter, Flag, Flame, Folder, FolderOpen, Gift, Globe2, Globe,
+  Filter, Flag, Flame, Folder, FolderOpen, Gauge, Gift, GitBranch, Globe2, Globe,
   Grid, Hammer, Hash, Heart, HelpCircle, Home, Image, Inbox,
   Info, Key, Layers, Layout, LifeBuoy, Link, List, Lock,
   LogIn, LogOut, Mail, Map, MapPin, Maximize, Menu, MessageCircle,
   MessageSquare, Mic, MicOff, Minimize, Minus, Monitor, Moon,
   MoreHorizontal, MoreVertical, Music, Navigation, Package,
   Percent, Phone, PhoneCall, PhoneIncoming, Play, Plus,
-  Power, Printer, RefreshCcw, RefreshCw, Search, Send, Server,
-  Settings, Share2, ShieldCheck, ShieldOff, ShoppingBag, ShoppingCart,
+  Power, Printer, RefreshCcw, RefreshCw, Rocket, Search, Send, Server,
+  Settings, Share2, ShieldCheck, ShieldOff, ShoppingBag, ShoppingCart, Store,
   Sliders, Smartphone, Speaker, Star, Sun, Tag, Target, Terminal,
   ThumbsUp, ToggleLeft, ToggleRight, Trash2, TrendingDown, TrendingUp,
   Trophy, Tv, Umbrella, Upload, User, UserCheck, UserMinus, UserPlus,
@@ -65,16 +56,8 @@ import {
   LayoutDashboard, LineChart, Lightbulb, Lock as Lock2, Megaphone,
   PenTool, Rss, Save, Shield, Scissors, Square, Triangle, Circle,
   Hexagon, Octagon, ArrowRight, ArrowLeft, ArrowUp, ArrowDown,
-  CornerDownRight, Move, Repeat, Shuffle, SkipForward,
+  CornerDownRight, Move, Repeat, Shuffle, SkipForward, Wand2,
 } from "lucide-react";
-import {
-  SiTiktok, SiX, SiSlack, SiNotion, SiZapier, SiHubspot,
-  SiMailchimp, SiShopify, SiWordpress, SiWix, SiWebflow,
-  SiStripe, SiPaypal, SiGoogleanalytics, SiGoogle,
-  SiGooglemeet, SiZoom, SiAmazon, SiNetflix,
-  SiSpotify, SiDropbox, SiTrello, SiAsana, SiJira, SiClickup,
-  SiAirtable, SiGoogleads,
-} from "react-icons/si";
 import {
   FiBarChart2, FiCalendar, FiCamera, FiCheckCircle, FiCode, FiFeather,
   FiFlag, FiGlobe, FiHeart, FiLayout, FiLifeBuoy, FiMail, FiMapPin,
@@ -86,6 +69,91 @@ import {
   BsCheckCircle, BsGear, BsGeoAlt, BsGlobe, BsGraphUpArrow, BsMegaphone,
   BsPalette, BsPerson, BsSearch, BsShieldCheck, BsStars, BsTelephone,
 } from "react-icons/bs";
+
+const MdAnalytics = BarChart;
+const MdAutoAwesome = Zap;
+const MdBusiness = Building2;
+const MdCampaign = Megaphone;
+const MdContactPage = FileText;
+const MdDashboard = LayoutDashboard;
+const MdEmail = Mail;
+const MdGroups = Users;
+const MdInsights = LineChart;
+const MdIntegrationInstructions = GitBranch;
+const MdNotifications = Bell;
+const MdPayment = CreditCard;
+const MdPeople = Users;
+const MdSchedule = Calendar;
+const MdSecurity = ShieldCheck;
+const MdSmartphone = Smartphone;
+const MdSpeed = Gauge;
+const MdSupport = LifeBuoy;
+const MdTrendingUp = TrendingUp;
+const MdAccountTree = GitBranch;
+const MdFormatQuote = MessageSquare;
+const MdArticle = FileText;
+const MdWeb = Globe;
+const MdOutlineStorefront = Store;
+const MdOutlineLocalOffer = Tag;
+const MdOutlinePrecisionManufacturing = Hammer;
+const MdOutlineRocketLaunch = Rocket;
+const MdOutlineVerified = CheckCircle2;
+const MdOutlineAutoFixHigh = Wand2;
+
+function makeBrandLetterIcon(label, background = "#111827") {
+  return function BrandLetterIcon({ size = 24, color = "#ffffff", style, ...props }) {
+    const fontSize = String(label || "").length > 1 ? 8 : 12;
+    return (
+      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false" style={{ display: "inline-block", verticalAlign: "middle", ...style }} {...props}>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill={background} />
+        <text x="12" y="16" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="700" fill={color}>
+          {label}
+        </text>
+      </svg>
+    );
+  };
+}
+
+function SiTiktok({ size = 24, color = "currentColor", style, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false" style={{ display: "inline-block", verticalAlign: "middle", ...style }} {...props}>
+      <path fill={color} d="M16.6 3c.35 2.03 1.5 3.5 3.4 4.25v3.22c-1.37-.04-2.55-.43-3.55-1.16v5.75c0 3.57-2.24 5.94-5.58 5.94-2.9 0-5.05-1.92-5.05-4.64 0-3.06 2.45-5.04 5.7-4.78v3.3c-1.37-.2-2.34.36-2.34 1.42 0 .86.7 1.43 1.67 1.43 1.29 0 2.02-.82 2.02-2.49V3h3.73Z" />
+    </svg>
+  );
+}
+
+function SiX({ size = 24, color = "currentColor", style, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false" style={{ display: "inline-block", verticalAlign: "middle", ...style }} {...props}>
+      <path fill={color} d="M13.9 10.5 21.3 2h-1.75l-6.43 7.36L7.98 2H2.06l7.77 11.12L2.06 22h1.75l6.8-7.78L16.04 22h5.92l-8.06-11.5Zm-2.41 2.76-.79-1.11L4.44 3.3h2.7l5.06 7.16.79 1.11 6.56 9.27h-2.7l-5.36-7.58Z" />
+    </svg>
+  );
+}
+
+const SiSlack = makeBrandLetterIcon("S", "#4a154b");
+const SiNotion = makeBrandLetterIcon("N", "#111827");
+const SiZapier = makeBrandLetterIcon("Z", "#ff4a00");
+const SiHubspot = makeBrandLetterIcon("H", "#ff5c35");
+const SiMailchimp = makeBrandLetterIcon("M", "#ffe01b");
+const SiShopify = makeBrandLetterIcon("S", "#95bf47");
+const SiWordpress = makeBrandLetterIcon("W", "#21759b");
+const SiWix = makeBrandLetterIcon("W", "#0c6efc");
+const SiWebflow = makeBrandLetterIcon("W", "#146ef5");
+const SiStripe = makeBrandLetterIcon("S", "#635bff");
+const SiPaypal = makeBrandLetterIcon("P", "#003087");
+const SiGoogleanalytics = makeBrandLetterIcon("GA", "#f9ab00");
+const SiGoogle = makeBrandLetterIcon("G", "#4285f4");
+const SiGooglemeet = makeBrandLetterIcon("GM", "#00897b");
+const SiZoom = makeBrandLetterIcon("Z", "#0b5cff");
+const SiAmazon = makeBrandLetterIcon("A", "#ff9900");
+const SiSpotify = makeBrandLetterIcon("S", "#1db954");
+const SiDropbox = makeBrandLetterIcon("D", "#0061ff");
+const SiTrello = makeBrandLetterIcon("T", "#0079bf");
+const SiAsana = makeBrandLetterIcon("A", "#f06a6a");
+const SiJira = makeBrandLetterIcon("J", "#0052cc");
+const SiClickup = makeBrandLetterIcon("C", "#7b68ee");
+const SiAirtable = makeBrandLetterIcon("A", "#18bfff");
+const SiGoogleads = makeBrandLetterIcon("Ads", "#34a853");
 
 // ─── FontAwesome ──────────────────────────────────────────────────────────────
 const FA_ICONS = [

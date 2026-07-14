@@ -1,7 +1,7 @@
 // ObjectPanel.jsx — Properties of the currently selected overlay.
 
 import { STYLE, FLOOR_FINISHES, WALL_TYPES, LEVELS, OT } from "./takeoffTypes";
-import { overlayMeasure, fmtM, fmtM2, fmtMM } from "./takeoffUtils";
+import { overlayMeasure, fmtM2 } from "./takeoffUtils";
 
 export default function ObjectPanel({ overlay, ppm, onUpdate, onDelete }) {
   if (!overlay) {
@@ -75,10 +75,13 @@ export default function ObjectPanel({ overlay, ppm, onUpdate, onDelete }) {
       {/* Calculated measurements */}
       <div style={S.measBlock}>
         <div style={S.measTitle}>Measurements</div>
-        {m.lengthM   != null && <MRow label="Length"     value={`${fmtM(m.lengthM)}  (${fmtMM(m.lengthM)})`} />}
+        {m.lengthM   != null && <MRow label="Length"     value={formatLength(m.lengthM)} />}
         {m.areaM2    != null && <MRow label="Area"       value={fmtM2(m.areaM2)} />}
-        {m.perimM    != null && <MRow label="Perimeter"  value={fmtM(m.perimM)} />}
-        {m.radiusM   != null && <MRow label="Radius"     value={fmtM(m.radiusM)} />}
+        {m.perimM    != null && <MRow label="Perimeter"  value={formatLength(m.perimM)} />}
+        {m.radiusM   != null && <MRow label="Radius"     value={formatLength(m.radiusM)} />}
+        {m.lengthM != null && m.lengthM * 1000 < 100 && (
+          <div style={S.warnSmall}>This measurement is very small. Did you click both points correctly?</div>
+        )}
         {!ppm && <div style={S.noScale}>Set scale to calculate measurements.</div>}
       </div>
 
@@ -124,6 +127,12 @@ function MRow({ label, value }) {
   );
 }
 
+function formatLength(lengthM) {
+  if (lengthM == null) return "-";
+  const millimetres = Math.round(lengthM * 1000);
+  return `${millimetres.toLocaleString()} mm (${lengthM.toFixed(2)} m)`;
+}
+
 const S = {
   wrap:       { display:"flex", flexDirection:"column", gap:8 },
   typeRow:    { display:"flex", alignItems:"center", gap:8 },
@@ -138,8 +147,9 @@ const S = {
   measTitle:  { fontSize:11, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:2 },
   mRow:       { display:"flex", justifyContent:"space-between", gap:8 },
   mLabel:     { fontSize:12, color:"#64748b" },
-  mVal:       { fontSize:12, fontWeight:700, color:"#0369a1" },
+  mVal:       { fontSize:13, fontWeight:900, color:"#0369a1" },
   noScale:    { fontSize:11, color:"#d97706", fontStyle:"italic" },
+  warnSmall:  { padding:"5px 7px", borderRadius:6, background:"#fef2f2", color:"#b91c1c", fontSize:11, fontWeight:800, lineHeight:1.35 },
   confirmBtn: { padding:"7px 12px", border:"1.5px solid #e2e8f0", borderRadius:7, background:"#fff", color:"#64748b", fontSize:12, fontWeight:600, cursor:"pointer", width:"100%", textAlign:"center" },
   confirmOn:  { background:"#dcfce7", borderColor:"#16a34a", color:"#15803d" },
   idLabel:    { fontSize:10, color:"#cbd5e1" },

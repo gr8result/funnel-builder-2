@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Exterior finishes inclusion image">
+  <rect width="640" height="420" fill="#eef8f0"/>
+  <path d="M92 246 320 94l228 152v116H92z" fill="#1b533d"/>
+  <path d="M74 252 320 76l246 176" fill="none" stroke="#c59b42" stroke-width="18" stroke-linejoin="round"/>
+  <rect x="144" y="250" width="142" height="92" fill="#f7f4e6"/>
+  <rect x="342" y="226" width="142" height="116" fill="#f7f4e6"/>
+  <path d="M90 362h460" stroke="#153b2c" stroke-width="12" stroke-linecap="round"/>
+</svg>

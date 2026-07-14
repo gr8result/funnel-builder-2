@@ -36,9 +36,6 @@ const nextConfig = {
     return [];
   },
 
-  // opt into Turbopack explicitly
-  turbopack: {},
-
   webpack: (config) => {
     config.watchOptions = {
       ...(config.watchOptions || {}),

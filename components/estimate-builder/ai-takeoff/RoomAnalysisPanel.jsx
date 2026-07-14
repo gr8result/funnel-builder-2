@@ -17,7 +17,7 @@ export default function RoomAnalysisPanel({
         <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
         <div style={S.emptyTitle}>No room analysis yet</div>
         <div style={S.emptyText}>
-          Click <strong>Analyse Plan</strong> in the toolbar to detect room labels from the plan image.
+          Automatic room detection is disabled while the plan viewer foundation is being stabilised.
         </div>
       </div>
     );

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" role="img" aria-label="Luxury modern home exterior">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#071827"/>
+      <stop offset="0.56" stop-color="#12314a"/>
+      <stop offset="1" stop-color="#f4efe5"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#f5d27a"/>
+      <stop offset="1" stop-color="#b98522"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="900" fill="url(#sky)"/>
+  <circle cx="1120" cy="150" r="170" fill="#f1c96a" opacity="0.2"/>
+  <path d="M0 690c210-62 392-76 546-42 152 34 278 103 456 78 157-22 282-96 398-162v336H0z" fill="#e8e1d6"/>
+  <path d="M470 384 810 174l410 266v276H470z" fill="#081b2c"/>
+  <path d="M430 405 810 158l452 291" fill="none" stroke="url(#gold)" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="548" y="457" width="232" height="152" fill="#f8f4ea"/>
+  <rect x="830" y="417" width="262" height="192" fill="#f8f4ea"/>
+  <rect x="584" y="492" width="158" height="86" fill="#102b42"/>
+  <rect x="870" y="456" width="180" height="122" fill="#102b42"/>
+  <path d="M560 624h548" stroke="#c99735" stroke-width="9" stroke-linecap="round"/>
+  <path d="M430 716h832" stroke="#061b2d" stroke-width="18" stroke-linecap="round"/>
+  <rect x="116" y="0" width="460" height="900" fill="#ffffff" opacity="0.18"/>
+</svg>

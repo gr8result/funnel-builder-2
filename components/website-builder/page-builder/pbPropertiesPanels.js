@@ -2370,20 +2370,38 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
     "editorial-strip": "Editorial Split",
     "minimal-list": "Minimal Thumb List",
   };
+  const sectionWidthOptions = [
+    ["boxed", "Boxed"],
+    ["wide", "Wide"],
+    ["full", "Full Width"],
+  ];
+  const contentMaxWidthOptions = ["1000", "1200", "1400", "1600", "1800", "full"];
+  const horizontalAlignmentOptions = [
+    ["left", "Left"],
+    ["center", "Centre"],
+    ["right", "Right"],
+    ["stretch", "Stretch"],
+  ];
+  const cardHeightModeOptions = [
+    ["auto", "Auto Height"],
+    ["equal", "Equal Height"],
+    ["min", "Minimum Height"],
+    ["max", "Maximum Height"],
+  ];
 
   useEffect(() => {
-    setCardWidthDraft(String(Math.max(220, Number(props.featureCardWidth) || 320)));
-  }, [props.featureCardWidth]);
+    setCardWidthDraft(String(Math.max(160, Number(props.customCardWidth || props.featureCardWidth) || 320)));
+  }, [props.customCardWidth, props.featureCardWidth]);
 
   useEffect(() => {
     setCardHeightDraft(String(Number(props.featureCardHeight) || ""));
   }, [props.featureCardHeight]);
 
   const commitCardWidthDraft = () => {
-    const nextWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || 320));
+    const nextWidth = Math.max(160, Math.min(900, Number(cardWidthDraft || 0) || 320));
     const nextValue = String(nextWidth);
     setCardWidthDraft(nextValue);
-    update({ featureCardWidth: nextWidth });
+    update({ customCardWidth: nextWidth, featureCardWidth: nextWidth });
   };
 
   const commitCardHeightDraft = () => {
@@ -2393,7 +2411,7 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
     update({ featureCardHeight: next > 0 ? next : null });
   };
 
-  const displayCardWidth = Math.max(220, Math.min(520, Number(cardWidthDraft || 0) || Number(props.featureCardWidth) || 320));
+  const displayCardWidth = Math.max(160, Math.min(900, Number(cardWidthDraft || 0) || Number(props.customCardWidth || props.featureCardWidth) || 320));
 
   return (
     <div style={styles.properties}>
@@ -2449,7 +2467,23 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
                 <option key={option} value={option}>{featureStyleLabels[option] || option}</option>
               ))}
             </select>
-            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Background Width</label>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Section Width</label>
+            <select
+              value={String(props.sectionWidth || "boxed")}
+              onChange={(e) => {
+                const sectionWidth = e.target.value;
+                update({
+                  sectionWidth,
+                  ...(sectionWidth === "full" ? { contentMaxWidth: "full" } : {}),
+                  ...(sectionWidth === "wide" && String(props.contentMaxWidth || "").toLowerCase() === "full" ? { contentMaxWidth: 1600 } : {}),
+                  ...(sectionWidth === "boxed" && String(props.contentMaxWidth || "").toLowerCase() === "full" ? { contentMaxWidth: 1200 } : {}),
+                });
+              }}
+              style={styles.propertyInput}
+            >
+              {sectionWidthOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Full-Width Background</label>
             <label style={styles.inlineToggle}>
               <input
                 type="checkbox"
@@ -2457,44 +2491,98 @@ function FeatureListPropertiesPanel({ block, index, onChange, brandAssets, onOpe
                 onChange={(e) => update({ fullWidthBackground: e.target.checked })}
                 style={styles.checkboxInput}
               />
-              Full width background
+              Stretch section background to browser width
             </label>
-            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
-              Card Width: {Math.round(displayCardWidth)}px
-            </label>
-            <input
-              type="text"
-              value={cardWidthDraft}
-              onChange={(e) => setCardWidthDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
-              onBlur={commitCardWidthDraft}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commitCardWidthDraft();
-                }
-              }}
-              inputMode="numeric"
-              placeholder="320"
-              style={{ ...styles.propertyInput, marginTop: 8 }}
-            />
-            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
-              Card Height (min): {cardHeightDraft ? `${cardHeightDraft}px` : "Auto"}
-            </label>
-            <input
-              type="text"
-              value={cardHeightDraft}
-              onChange={(e) => setCardHeightDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
-              onBlur={commitCardHeightDraft}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commitCardHeightDraft();
-                }
-              }}
-              inputMode="numeric"
-              placeholder="Auto"
-              style={{ ...styles.propertyInput, marginTop: 8 }}
-            />
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Content Max Width</label>
+            <select value={String(props.contentMaxWidth || "1200").toLowerCase()} onChange={(e) => update({ contentMaxWidth: e.target.value === "full" ? "full" : Number(e.target.value) })} style={styles.propertyInput}>
+              {contentMaxWidthOptions.map((value) => <option key={value} value={value}>{value === "full" ? "Full" : value}</option>)}
+            </select>
+            <div style={{ ...styles.colorGrid, marginTop: 12 }}>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Cards Per Row (Desktop)</label>
+                <select value={String(props.cardsPerRowDesktop || (props.layout === "columns" ? 3 : 1))} onChange={(e) => update({ cardsPerRowDesktop: Number(e.target.value), layout: "columns" })} style={styles.propertyInput}>
+                  {[1, 2, 3, 4, 5, 6].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Cards Per Row (Tablet)</label>
+                <select value={String(props.cardsPerRowTablet || 2)} onChange={(e) => update({ cardsPerRowTablet: Number(e.target.value), layout: "columns" })} style={styles.propertyInput}>
+                  {[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Cards Per Row (Mobile)</label>
+                <select value={String(props.cardsPerRowMobile || 1)} onChange={(e) => update({ cardsPerRowMobile: Number(e.target.value), layout: "columns" })} style={styles.propertyInput}>
+                  {[1, 2].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </div>
+              <div style={styles.propertyField}>
+                <label style={styles.propertyLabel}>Horizontal Alignment</label>
+                <select value={String(props.horizontalAlignment || "stretch")} onChange={(e) => update({ horizontalAlignment: e.target.value })} style={styles.propertyInput}>
+                  {horizontalAlignmentOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </div>
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Card Size</label>
+            <select value={String(props.cardSize || "auto")} onChange={(e) => update({ cardSize: e.target.value })} style={styles.propertyInput}>
+              <option value="auto">Auto</option>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+              <option value="custom">Custom</option>
+            </select>
+            {String(props.cardSize || "auto") === "custom" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
+                  Width (px): {Math.round(displayCardWidth)}px
+                </label>
+                <input
+                  type="text"
+                  value={cardWidthDraft}
+                  onChange={(e) => setCardWidthDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
+                  onBlur={commitCardWidthDraft}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitCardWidthDraft();
+                    }
+                  }}
+                  inputMode="numeric"
+                  placeholder="320"
+                  style={{ ...styles.propertyInput, marginTop: 8 }}
+                />
+              </>
+            ) : null}
+            <div style={{ marginTop: 12 }}>
+              <SliderField label="Horizontal Gap" value={Number(props.horizontalGap ?? 18)} min={0} max={80} onChange={(v) => update({ horizontalGap: v })} />
+              <SliderField label="Vertical Gap" value={Number(props.verticalGap ?? 18)} min={0} max={80} onChange={(v) => update({ verticalGap: v })} />
+            </div>
+            <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>Card Height</label>
+            <select value={String(props.cardHeightMode || "auto")} onChange={(e) => update({ cardHeightMode: e.target.value })} style={styles.propertyInput}>
+              {cardHeightModeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            {["min", "max"].includes(String(props.cardHeightMode || "auto")) ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 12, display: "block" }}>
+                  {String(props.cardHeightMode) === "max" ? "Maximum" : "Minimum"} Height: {cardHeightDraft ? `${cardHeightDraft}px` : "Auto"}
+                </label>
+                <input
+                  type="text"
+                  value={cardHeightDraft}
+                  onChange={(e) => setCardHeightDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
+                  onBlur={commitCardHeightDraft}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitCardHeightDraft();
+                    }
+                  }}
+                  inputMode="numeric"
+                  placeholder="Auto"
+                  style={{ ...styles.propertyInput, marginTop: 8 }}
+                />
+              </>
+            ) : null}
           </div>
         ) : null}
         {activeTab === "colours" ? (
@@ -4009,6 +4097,24 @@ function NumberField({ label, value, min = 0, max = 200, step = 1, onChange }) {
   );
 }
 
+function SliderField({ label, value, min = 0, max = 80, step = 1, onChange }) {
+  const numericValue = Math.max(min, Math.min(max, Number(value || 0)));
+  return (
+    <div style={{ ...styles.numberField, gap: 8 }}>
+      <span style={styles.colorLabel}>{label}: {numericValue}px</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={numericValue}
+        onChange={(e) => onChange(Number(e.target.value || 0))}
+        style={{ width: "100%" }}
+      />
+    </div>
+  );
+}
+
 function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor }) {
   const props = block?.props || {};
   const savedImages = [brandAssets?.logo, ...(Array.isArray(brandAssets?.images) ? brandAssets.images : [])].filter(Boolean).slice(0, 8);
@@ -4238,7 +4344,7 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
 
 function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, pages = [] }) {
   const props = block.props || {};
-  const [section, setSection] = useState("setup");
+  const [section, setSection] = useState("menu");
   const navbarSectionShells = [
     { background: "linear-gradient(180deg, #1f3048 0%, #18283d 100%)", borderColor: "rgba(125,211,252,0.28)" },
     { background: "linear-gradient(180deg, #243148 0%, #1a2436 100%)", borderColor: "rgba(167,139,250,0.24)" },
@@ -4396,6 +4502,20 @@ function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
                 style={styles.propertyInput}
                 placeholder="#contact"
               />
+            </div>
+
+            <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
+              <label style={styles.propertyLabel}>Alignment</label>
+              <select
+                value={String(props.alignment || "space-between")}
+                onChange={(e) => update({ alignment: e.target.value })}
+                style={styles.propertyInput}
+              >
+                <option value="left">Left</option>
+                <option value="center">Centre</option>
+                <option value="right">Right</option>
+                <option value="space-between">Space between</option>
+              </select>
             </div>
           </>
         ) : null}
@@ -5664,7 +5784,7 @@ function PageSectionsPanel({ blocks, selectedIndex, onSelect, onMove }) {
               style={{ ...styles.secondaryBtn, width: "100%" }}
               onClick={() => onSelect(index)}
             >
-              Edit Section
+              Select Block
             </button>
           </div>
         ))}

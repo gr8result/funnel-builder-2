@@ -1,6 +1,8 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { estimateJobsRemainingLabel, isDeveloperAccount } from "../../../lib/estimate-builder/developerBypass";
 
 const PACKAGES = [
   { id: "single", credits: 1, discount: 0 },
@@ -11,8 +13,10 @@ const PACKAGES = [
 const BASE_PRICE = 59;
 
 export default function BuyEstimateCreditsPage() {
+  const { user } = useAuth();
   const [selected, setSelected] = useState("five");
   const [credits, setCredits] = useState(0);
+  const developerBypass = isDeveloperAccount(user?.email);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -25,6 +29,7 @@ export default function BuyEstimateCreditsPage() {
 
   function confirmPurchase() {
     if (typeof window === "undefined") return;
+    if (developerBypass) return;
     const nextCredits = credits + pack.credits;
     window.localStorage.setItem("estimate-builder-credits", String(nextCredits));
     setCredits(nextCredits);
@@ -50,10 +55,19 @@ export default function BuyEstimateCreditsPage() {
         <section style={styles.shell}>
           <div style={styles.creditBalance}>
             <span>Current balance</span>
-            <strong>{credits} {credits === 1 ? "job" : "jobs"} remaining</strong>
+            <strong>{estimateJobsRemainingLabel(user?.email, credits)}</strong>
           </div>
 
-          <div style={styles.packageGrid}>
+          {developerBypass ? (
+            <div style={styles.developerNotice}>
+              DEV ONLY / OWNER TESTING BYPASS: support@gr8result.com has unlimited estimate jobs. Buying credits is not required for this account.
+              <Link href="/modules/estimate-builder/register-job" style={{ textDecoration: "none" }}>
+                <button type="button" style={styles.primaryButton}>Register New Job</button>
+              </Link>
+            </div>
+          ) : null}
+
+          <div style={developerBypass ? { ...styles.packageGrid, opacity: 0.55, pointerEvents: "none" } : styles.packageGrid}>
             {PACKAGES.map((item) => {
               const active = selected === item.id;
               const itemPrice = BASE_PRICE * (1 - item.discount);
@@ -72,8 +86,8 @@ export default function BuyEstimateCreditsPage() {
             <div style={styles.summaryLine}><span>Selected package</span><strong>{pack.credits} credits</strong></div>
             <div style={styles.summaryLine}><span>Price per job</span><strong>${pricePerJob.toFixed(2)}</strong></div>
             <div style={styles.totalLine}><span>Total</span><strong>${total.toFixed(2)}</strong></div>
-            <button type="button" style={styles.primaryButton} onClick={confirmPurchase}>
-              Confirm Credit Purchase
+            <button type="button" style={developerBypass ? styles.primaryButtonDisabled : styles.primaryButton} onClick={confirmPurchase} disabled={developerBypass}>
+              {developerBypass ? "Credits Not Required" : "Confirm Credit Purchase"}
             </button>
           </div>
         </section>
@@ -165,4 +179,6 @@ const styles = {
   summaryLine: { display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0", paddingBottom: 10 },
   totalLine: { display: "flex", justifyContent: "space-between", fontSize: 22, fontWeight: 950 },
   primaryButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 8, padding: "12px 16px", fontWeight: 900, cursor: "pointer" },
+  primaryButtonDisabled: { background: "#94a3b8", color: "#ffffff", border: "1px solid #94a3b8", borderRadius: 8, padding: "12px 16px", fontWeight: 900, cursor: "not-allowed" },
+  developerNotice: { background: "#ecfeff", border: "1px solid #67e8f9", borderRadius: 12, padding: 18, color: "#155e75", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14 },
 };

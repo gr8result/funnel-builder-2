@@ -77,9 +77,21 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
     if (!project?.id || !project?.pages?.length) return null;
 
     const pageMap = project.pages.reduce((acc, entry) => {
-      const key = slugify(entry?.name || "");
-      if (!key) return acc;
-      acc[key] = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(key)}&viewport=${encodeURIComponent(previewViewport)}`;
+      const pageKey = slugify(entry?.slug || entry?.name || entry?.title || "");
+      if (!pageKey) return acc;
+      const href = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageKey)}&viewport=${encodeURIComponent(previewViewport)}`;
+      [
+        entry?.name,
+        entry?.title,
+        entry?.slug,
+        entry?.path,
+        entry?.alias,
+        pageKey,
+        ...(Array.isArray(entry?.aliases) ? entry.aliases : []),
+      ].forEach((keyValue) => {
+        const key = slugify(keyValue || "");
+        if (key) acc[key] = href;
+      });
       return acc;
     }, {});
 

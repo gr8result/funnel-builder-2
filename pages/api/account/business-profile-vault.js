@@ -18,12 +18,18 @@ function normalizeStatus(status, fallback = "in_progress") {
 }
 
 function isMissingSchemaError(error) {
-  const message = String(error?.message || error?.details || error?.hint || "");
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const hint = String(error?.hint || "").toLowerCase();
+  const text = `${message} ${details} ${hint}`;
   return (
     error?.code === "42P01" ||
     error?.code === "PGRST205" ||
-    message.includes("schema cache") ||
-    message.includes("does not exist")
+    text.includes("schema cache") ||
+    text.includes("does not exist") ||
+    text.includes("could not find the table") ||
+    text.includes("business_profile_vaults") ||
+    text.includes("business_profile_documents")
   );
 }
 

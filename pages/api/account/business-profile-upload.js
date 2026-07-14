@@ -32,6 +32,22 @@ function safeSegment(value, fallback) {
     .slice(0, 90);
 }
 
+function isMissingSchemaError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const hint = String(error?.hint || "").toLowerCase();
+  const text = `${message} ${details} ${hint}`;
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    text.includes("schema cache") ||
+    text.includes("does not exist") ||
+    text.includes("could not find the table") ||
+    text.includes("business_profile_vaults") ||
+    text.includes("business_profile_documents")
+  );
+}
+
 async function getOrCreateVault(userId) {
   const { data: existing, error } = await supabaseAdmin
     .from("business_profile_vaults")
@@ -39,7 +55,10 @@ async function getOrCreateVault(userId) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    if (isMissingSchemaError(error)) return { id: null, fallback_to_account: true };
+    throw error;
+  }
   if (existing) return existing;
 
   const { data, error: insertError } = await supabaseAdmin
@@ -48,7 +67,10 @@ async function getOrCreateVault(userId) {
     .select("id")
     .single();
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (isMissingSchemaError(insertError)) return { id: null, fallback_to_account: true };
+    throw insertError;
+  }
   return data;
 }
 
@@ -112,7 +134,32 @@ async function handler(req, res) {
         .select("*")
         .single();
 
-      if (docError) throw docError;
+      if (docError) {
+        if (!isMissingSchemaError(docError)) throw docError;
+
+        const fallbackDocument = {
+          id: `fallback-${Date.now()}`,
+          vault_id: vault.id,
+          user_id: req.user.id,
+          section_key: sectionKey,
+          field_key: fieldKey,
+          document_type: documentType || null,
+          storage_bucket: BUCKET,
+          storage_path: objectPath,
+          file_name: originalName,
+          file_size: uploaded.size || null,
+          mime_type: uploaded.mimetype || null,
+          verification_status: "pending",
+          uploaded_at: new Date().toISOString(),
+          fallback_to_storage_only: true,
+        };
+
+        return res.status(200).json({
+          ok: true,
+          document: fallbackDocument,
+          warning: "Vault tables are unavailable; file was uploaded and stored.",
+        });
+      }
 
       return res.status(200).json({ ok: true, document });
     } catch (error) {
