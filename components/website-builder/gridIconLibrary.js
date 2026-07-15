@@ -130,6 +130,46 @@ function SiX({ size = 24, color = "currentColor", style, ...props }) {
   );
 }
 
+function SocialSvgIcon({ size = 24, color = "currentColor", style, children, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false" style={{ display: "inline-block", verticalAlign: "middle", ...style }} {...props}>
+      {children(color)}
+    </svg>
+  );
+}
+
+function FacebookIcon(props) {
+  return <SocialSvgIcon {...props}>{(color) => <path fill={color} d="M14.1 8.25V6.8c0-.7.48-.86.82-.86H17V2.66l-2.86-.01c-3.18 0-3.9 2.38-3.9 3.9v1.7H7.75v3.38h2.49v9.72h3.86v-9.72H17l.38-3.38H14.1Z" />}</SocialSvgIcon>;
+}
+
+function InstagramIcon(props) {
+  return (
+    <SocialSvgIcon {...props}>{(color) => (
+      <>
+        <path fill={color} d="M7.2 2.8h9.6a4.4 4.4 0 0 1 4.4 4.4v9.6a4.4 4.4 0 0 1-4.4 4.4H7.2a4.4 4.4 0 0 1-4.4-4.4V7.2a4.4 4.4 0 0 1 4.4-4.4Zm0 2A2.4 2.4 0 0 0 4.8 7.2v9.6a2.4 2.4 0 0 0 2.4 2.4h9.6a2.4 2.4 0 0 0 2.4-2.4V7.2a2.4 2.4 0 0 0-2.4-2.4H7.2Z" />
+        <path fill={color} d="M12 7.45a4.55 4.55 0 1 1 0 9.1 4.55 4.55 0 0 1 0-9.1Zm0 2a2.55 2.55 0 1 0 0 5.1 2.55 2.55 0 0 0 0-5.1Z" />
+        <circle cx="16.85" cy="7.15" r="1.15" fill={color} />
+      </>
+    )}</SocialSvgIcon>
+  );
+}
+
+function LinkedInIcon(props) {
+  return <SocialSvgIcon {...props}>{(color) => <path fill={color} d="M4.55 8.65h3.38V19.5H4.55V8.65Zm1.7-5.4a1.96 1.96 0 1 1 0 3.92 1.96 1.96 0 0 1 0-3.92ZM10.04 8.65h3.23v1.48h.05c.45-.85 1.55-1.75 3.18-1.75 3.4 0 4.03 2.24 4.03 5.15v5.97h-3.37v-5.3c0-1.26-.02-2.88-1.75-2.88-1.76 0-2.03 1.37-2.03 2.79v5.39h-3.34V8.65Z" />}</SocialSvgIcon>;
+}
+
+function PinterestIcon(props) {
+  return <SocialSvgIcon {...props}>{(color) => <path fill={color} d="M12.2 2.7c-5.05 0-7.6 3.62-7.6 6.64 0 1.83.69 3.45 2.18 4.06.24.1.46 0 .53-.27.05-.18.16-.66.21-.86.07-.27.04-.36-.15-.59-.43-.5-.7-1.14-.7-2.05 0-2.68 2-5.08 5.22-5.08 2.85 0 4.42 1.74 4.42 4.07 0 3.06-1.35 5.64-3.36 5.64-1.1 0-1.94-.91-1.67-2.04.32-1.34.94-2.79.94-3.76 0-.87-.46-1.59-1.43-1.59-1.14 0-2.05 1.18-2.05 2.75 0 1 .34 1.68.34 1.68l-1.37 5.8c-.41 1.73-.06 3.85-.03 4.06.02.12.17.15.24.06.1-.13 1.42-1.76 1.87-3.4.13-.46.74-2.88.74-2.88.37.7 1.44 1.31 2.58 1.31 3.4 0 5.7-3.1 5.7-7.25 0-3.14-2.66-6.07-6.7-6.07Z" />}</SocialSvgIcon>;
+}
+
+function YouTubeIcon(props) {
+  return <SocialSvgIcon {...props}>{(color) => <path fill={color} d="M21.55 7.05a2.5 2.5 0 0 0-1.76-1.78C18.24 4.85 12 4.85 12 4.85s-6.24 0-7.79.42a2.5 2.5 0 0 0-1.76 1.78C2.03 8.62 2.03 11.9 2.03 11.9s0 3.28.42 4.85a2.5 2.5 0 0 0 1.76 1.78c1.55.42 7.79.42 7.79.42s6.24 0 7.79-.42a2.5 2.5 0 0 0 1.76-1.78c.42-1.57.42-4.85.42-4.85s0-3.28-.42-4.85ZM10 14.92V8.88l5.22 3.02L10 14.92Z" />}</SocialSvgIcon>;
+}
+
+function GenericSocialIcon(props) {
+  return <SocialSvgIcon {...props}>{(color) => <path fill={color} d="M7.2 14.45a2.95 2.95 0 1 1 0-4.9l6.66-3.34a3 3 0 1 1 .9 1.8L8.1 11.35a3.1 3.1 0 0 1 0 1.3l6.7 3.35a2.98 2.98 0 1 1-.9 1.8l-6.7-3.35Z" />}</SocialSvgIcon>;
+}
+
 const SiSlack = makeBrandLetterIcon("S", "#4a154b");
 const SiNotion = makeBrandLetterIcon("N", "#111827");
 const SiZapier = makeBrandLetterIcon("Z", "#ff4a00");
@@ -550,19 +590,19 @@ const BOOTSTRAP_GRID_ICONS = [
 
 // ─── Social SVG files ─────────────────────────────────────────────────────────
 const FILE_GRID_ICONS = [
-  { key: "facebook-file",       label: "Facebook",        group: "Social Files", src: "/email-assets/social/facebook.svg" },
-  { key: "facebook-file-png",   label: "Facebook PNG",    group: "Social Files", src: "/email-assets/social/facebook.png" },
-  { key: "instagram-file",      label: "Instagram",       group: "Social Files", src: "/email-assets/social/instagram.svg" },
-  { key: "instagram-file-png",  label: "Instagram PNG",   group: "Social Files", src: "/email-assets/social/instagram.png" },
-  { key: "linkedin-file",       label: "LinkedIn",        group: "Social Files", src: "/email-assets/social/linkedin.svg" },
-  { key: "linkedin-file-png",   label: "LinkedIn PNG",    group: "Social Files", src: "/email-assets/social/linkedin.png" },
-  { key: "pinterest-file",      label: "Pinterest",       group: "Social Files", src: "/email-assets/social/pinterest.svg" },
-  { key: "pinterest-file-png",  label: "Pinterest PNG",   group: "Social Files", src: "/email-assets/social/pinterest.png" },
-  { key: "youtube-file",        label: "YouTube",         group: "Social Files", src: "/email-assets/social/youtube.svg" },
-  { key: "youtube-file-png",    label: "YouTube PNG",     group: "Social Files", src: "/email-assets/social/youtube.png" },
-  { key: "x-file",              label: "X",               group: "Social Files", src: "/email-assets/social/x.svg" },
-  { key: "x-file-png",          label: "X PNG",           group: "Social Files", src: "/email-assets/social/x.png" },
-  { key: "tiktok-file",         label: "TikTok",          group: "Social Files", src: "/email-assets/social/tiktok.svg" },
+  { key: "facebook-file",       label: "Facebook",        group: "Social Files", Icon: FacebookIcon },
+  { key: "facebook-file-png",   label: "Facebook PNG",    group: "Social Files", Icon: FacebookIcon },
+  { key: "instagram-file",      label: "Instagram",       group: "Social Files", Icon: InstagramIcon },
+  { key: "instagram-file-png",  label: "Instagram PNG",   group: "Social Files", Icon: InstagramIcon },
+  { key: "linkedin-file",       label: "LinkedIn",        group: "Social Files", Icon: LinkedInIcon },
+  { key: "linkedin-file-png",   label: "LinkedIn PNG",    group: "Social Files", Icon: LinkedInIcon },
+  { key: "pinterest-file",      label: "Pinterest",       group: "Social Files", Icon: PinterestIcon },
+  { key: "pinterest-file-png",  label: "Pinterest PNG",   group: "Social Files", Icon: PinterestIcon },
+  { key: "youtube-file",        label: "YouTube",         group: "Social Files", Icon: YouTubeIcon },
+  { key: "youtube-file-png",    label: "YouTube PNG",     group: "Social Files", Icon: YouTubeIcon },
+  { key: "x-file",              label: "X",               group: "Social Files", Icon: SiX },
+  { key: "x-file-png",          label: "X PNG",           group: "Social Files", Icon: SiX },
+  { key: "tiktok-file",         label: "TikTok",          group: "Social Files", Icon: SiTiktok },
   { key: "whatsapp-file",       label: "WhatsApp",        group: "Social Files", src: "/email-assets/social/whatsapp.svg" },
   { key: "telegram-file",       label: "Telegram",        group: "Social Files", src: "/email-assets/social/telegram.svg" },
   { key: "discord-file",        label: "Discord",         group: "Social Files", src: "/email-assets/social/discord.svg" },
@@ -588,6 +628,77 @@ export const GRID_ICON_LIBRARY_MAP = GRID_ICON_LIBRARY.reduce((acc, item) => {
   acc[item.key] = item;
   return acc;
 }, {});
+
+const SOCIAL_ICON_COMPONENTS = {
+  facebook: FacebookIcon,
+  instagram: InstagramIcon,
+  linkedin: LinkedInIcon,
+  pinterest: PinterestIcon,
+  tiktok: SiTiktok,
+  youtube: YouTubeIcon,
+  x: SiX,
+  twitter: SiX,
+};
+
+const SOCIAL_ICON_KEYS = {
+  "facebook-file": "facebook",
+  "facebook-file-png": "facebook",
+  "instagram-file": "instagram",
+  "instagram-file-png": "instagram",
+  "linkedin-file": "linkedin",
+  "linkedin-file-png": "linkedin",
+  "pinterest-file": "pinterest",
+  "pinterest-file-png": "pinterest",
+  "youtube-file": "youtube",
+  "youtube-file-png": "youtube",
+  "x-file": "x",
+  "x-file-png": "x",
+  "si-x": "x",
+  "si-tiktok": "tiktok",
+  "tiktok-file": "tiktok",
+};
+
+export function normalizeSocialPlatformName(value = "") {
+  const normalized = String(value || "")
+    .toLowerCase()
+    .replace(/&amp;/g, "and")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  if (!normalized) return "";
+  if (/\bfacebook\b|\bfb\b/.test(normalized)) return "facebook";
+  if (/\binstagram\b|\binsta\b/.test(normalized)) return "instagram";
+  if (/\blinkedin\b|\blinked in\b/.test(normalized)) return "linkedin";
+  if (/\bpinterest\b/.test(normalized)) return "pinterest";
+  if (/\btiktok\b|\btik tok\b/.test(normalized)) return "tiktok";
+  if (/\byoutube\b|\byou tube\b/.test(normalized)) return "youtube";
+  if (normalized === "x" || /\btwitter\b|\bx twitter\b/.test(normalized)) return "x";
+  return "";
+}
+
+export function isUnsafePublishedIconUrl(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (/^(blob:|file:)/i.test(raw)) return true;
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(raw)) return true;
+  if (/^\/(?:email-assets|imported|_next|static|tmp|temp)\//i.test(raw)) return true;
+  return false;
+}
+
+export function resolveSocialPlatformIconKey(item = {}) {
+  const iconKey = SOCIAL_ICON_KEYS[String(item?.iconName || "").trim()];
+  if (iconKey) return iconKey;
+  const legacyIconKey = SOCIAL_ICON_KEYS[String(item?.iconKey || "").trim()];
+  if (legacyIconKey) return legacyIconKey;
+  return normalizeSocialPlatformName([item?.title, item?.label, item?.text, item?.eyebrow, item?.platform, item?.name].filter(Boolean).join(" "));
+}
+
+export function renderSocialPlatformIcon(item = {}, props = {}) {
+  const key = resolveSocialPlatformIconKey(item);
+  const IconComponent = SOCIAL_ICON_COMPONENTS[key] || (key ? GenericSocialIcon : null);
+  if (!IconComponent) return null;
+  return <IconComponent aria-hidden="true" focusable="false" {...props} />;
+}
 
 export function renderGridLibraryIcon(iconName, props = {}) {
   const entry = GRID_ICON_LIBRARY_MAP[String(iconName || "").trim()];

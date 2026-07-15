@@ -6,7 +6,7 @@ import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectSt
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
-import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "../gridIconLibrary";
+import { GRID_ICON_LIBRARY, isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import RichText from "../../RichText";
 import {
   formatLabel, isImageField, isColorField, isLongTextField, getSelectOptions,
@@ -1715,6 +1715,10 @@ function resolveGridIconLibraryName(entry) {
 }
 
 function renderGridEditorIcon(item, color, size) {
+  const socialIcon = renderSocialPlatformIcon(item, { size, color });
+  if (socialIcon) {
+    return socialIcon;
+  }
   const fontIcon = renderGridFontIcon(item, color, size);
   if (fontIcon) {
     return fontIcon;
@@ -2158,7 +2162,10 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
 
         {safeItems.map((item, itemIndex) => {
           const resolvedImage = String(item.image || getAssetFromLibrary(brandAssets, item.imageAssetId)?.src || "");
-          const resolvedIconImage = String(item.iconImage || getAssetFromLibrary(brandAssets, item.iconAssetId)?.src || "");
+          const socialIconPreview = renderSocialPlatformIcon(item, { size: 36, color: "#cbd5e1" });
+          const socialIconLargePreview = renderSocialPlatformIcon(item, { size: 64, color: "#cbd5e1" });
+          const rawResolvedIconImage = String(item.iconImage || getAssetFromLibrary(brandAssets, item.iconAssetId)?.src || "");
+          const resolvedIconImage = isUnsafePublishedIconUrl(rawResolvedIconImage) ? "" : rawResolvedIconImage;
           const isOpen = expandedCardIndex === itemIndex;
           return (
             <div key={`grid-item-panel-${itemIndex}`} style={styles.sectionCard}>
@@ -2186,7 +2193,7 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
                     {resolvedImage ? <img src={resolvedImage} alt={item.imageAlt || item.title || `Card ${itemIndex + 1} image`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 16, fontWeight: 600, color: "#cbd5e1" }}>Image</span>}
                   </div>
                   <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 36, height: 36, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 22)}
+                    {socialIconPreview || (resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 36, height: 36, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 22))}
                   </div>
                   <div style={{ minWidth: 0, display: "grid", gap: 6 }}>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#f8fafc", lineHeight: 1.3, wordBreak: "break-word", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{htmlToPlainText(item.title || item.eyebrow || `Card ${itemIndex + 1}`)}</div>
@@ -2219,7 +2226,7 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
                     >
                       <div style={{ fontSize: 16, fontWeight: 600, color: "#e2e8f0" }}>Icon</div>
                       <div style={{ width: "100%", minHeight: 132, borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "#0d1522", display: "grid", placeItems: "center", overflow: "hidden" }}>
-                        {resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 64, height: 64, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 28)}
+                        {socialIconLargePreview || (resolvedIconImage ? <img src={resolvedIconImage} alt={item.title || `Card ${itemIndex + 1} icon`} style={{ width: 64, height: 64, objectFit: "contain" }} /> : renderGridEditorIcon(item, "#cbd5e1", 28))}
                       </div>
                     </button>
                     {resolvedIconImage ? (

@@ -1,6 +1,6 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
-import { renderGridLibraryIcon } from "../gridIconLibrary";
+import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
 import { FAQAccordionItems, FAQAccordionBlock } from "../../../modules/website-builder/blocks/accordion/AccordionBlock";
 import {
@@ -59,6 +59,7 @@ function logHeroVideoDebug(label, eventName, video, extra = {}) {
 function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
   const wrapperRef = React.useRef(null);
   const shellRef = React.useRef(null);
+  const dropdownCloseTimerRef = React.useRef(null);
   const navTheme = navVariantTheme(blockProps, compact);
   const navProps = { ...blockProps, fullWidthBackground: blockProps?.fullWidthBackground !== false };
   const stickyMode = blockProps.stickyMode || "normal";
@@ -75,6 +76,30 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
   const [navHeight, setNavHeight] = React.useState(0);
   const [stickyPinned, setStickyPinned] = React.useState(false);
   const [fixedFrame, setFixedFrame] = React.useState({ top: 0, left: 0, width: 0 });
+
+  const cancelDropdownClose = React.useCallback(() => {
+    if (dropdownCloseTimerRef.current) {
+      window.clearTimeout(dropdownCloseTimerRef.current);
+      dropdownCloseTimerRef.current = null;
+    }
+  }, []);
+
+  const openDropdownMenu = React.useCallback((idx) => {
+    cancelDropdownClose();
+    setOpenDropdown(idx);
+  }, [cancelDropdownClose]);
+
+  const closeDropdownMenu = React.useCallback((delay = 0) => {
+    cancelDropdownClose();
+    if (delay > 0 && typeof window !== "undefined") {
+      dropdownCloseTimerRef.current = window.setTimeout(() => {
+        setOpenDropdown(null);
+        dropdownCloseTimerRef.current = null;
+      }, delay);
+      return;
+    }
+    setOpenDropdown(null);
+  }, [cancelDropdownClose]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -162,6 +187,13 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
 
+  React.useEffect(() => () => {
+    if (dropdownCloseTimerRef.current) {
+      window.clearTimeout(dropdownCloseTimerRef.current);
+      dropdownCloseTimerRef.current = null;
+    }
+  }, []);
+
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
@@ -169,13 +201,13 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
       if (!openDropdown && !mobileOpen) return;
       const root = wrapperRef.current || shellRef.current;
       if (root?.contains?.(event.target)) return;
-      setOpenDropdown(null);
+      closeDropdownMenu();
       setMobileOpen(false);
     }
 
     function closeOnEscape(event) {
       if (event.key !== "Escape") return;
-      setOpenDropdown(null);
+      closeDropdownMenu();
       setMobileOpen(false);
     }
 
@@ -186,7 +218,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
       document.removeEventListener("pointerdown", closeMenus);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [mobileOpen, openDropdown]);
+  }, [mobileOpen, openDropdown, closeDropdownMenu]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -226,7 +258,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     top: shouldUseFixedNav ? fixedTop : shouldUseStickyEditor ? 0 : navTheme.shell.top,
     left: shouldUseFixedNav ? fixedLeft : navTheme.shell.left,
     right: shouldUseFixedNav ? (editor || !isFullWidthNav ? "auto" : 0) : navTheme.shell.right,
-    zIndex: isAlwaysMode ? (editor ? 28 : 120) : isStickyMode ? (editor ? 24 : 80) : navTheme.shell.zIndex,
+    zIndex: Math.max(Number(navTheme.shell.zIndex) || 0, isAlwaysMode ? (editor ? 28 : 120) : isStickyMode ? (editor ? 24 : 80) : 80, editor ? 80 : 10000),
     backdropFilter: stickyMode === "sticky-transparent" ? "blur(14px)" : navTheme.shell.backdropFilter,
     background:
       stickyMode === "sticky-transparent" && !scrolled
@@ -307,10 +339,10 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
               key={`${item?.label || "link"}-${idx}`}
               style={{ position: "relative", display: shouldUseMobileMenu ? "grid" : "block" }}
               onMouseEnter={() => {
-                if (!isMobile && hasChildren) setOpenDropdown(idx);
+                if (!shouldUseMobileMenu && hasChildren) openDropdownMenu(idx);
               }}
               onMouseLeave={() => {
-                if (!isMobile && hasChildren) setOpenDropdown(null);
+                if (!shouldUseMobileMenu && hasChildren) closeDropdownMenu(240);
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -331,13 +363,12 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                         event.preventDefault();
                         return;
                       }
-                      if (editor) {
+                      if (editor || shouldUseMobileMenu) {
                         event.preventDefault();
                         setOpenDropdown((value) => (value === idx ? null : idx));
                         return;
                       }
-                      setOpenDropdown(null);
-                      if (shouldUseMobileMenu) setMobileOpen(false);
+                      closeDropdownMenu();
                     }}
                   >
                     {item?.label || "Menu"}
@@ -371,6 +402,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
+                      cancelDropdownClose();
                       setOpenDropdown((value) => (value === idx ? null : idx));
                     }}
                   >
@@ -383,7 +415,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                 <div
                   style={{
                     position: isMobile ? "relative" : "absolute",
-                    top: isMobile ? "auto" : "calc(100% + 8px)",
+                    top: isMobile ? "auto" : "100%",
                     left: 0,
                     minWidth: isMobile ? "100%" : 220,
                     display: "grid",
@@ -394,7 +426,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                     border: `1px solid ${blockProps.borderColor || "rgba(148,163,184,0.24)"}`,
                     boxShadow: "0 20px 38px rgba(15,23,42,0.18)",
                     overflow: "visible",
-                    zIndex: 9999,
+                    pointerEvents: "auto",
+                    zIndex: 10050,
                   }}
                 >
                   {asArray(item.children).map((child, childIdx) => {
@@ -410,7 +443,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
                             event.preventDefault();
                             return;
                           }
-                          setOpenDropdown(null);
+                          closeDropdownMenu();
                           if (shouldUseMobileMenu) setMobileOpen(false);
                         }}
                         style={{
@@ -2861,7 +2894,11 @@ function normalizeGridSectionItems(items) {
 }
 
 function renderGridSectionIcon(item, color, size) {
-  if (item?.iconImage) {
+  const socialIcon = renderSocialPlatformIcon(item, { size, color });
+  if (socialIcon) {
+    return socialIcon;
+  }
+  if (item?.iconImage && !isUnsafePublishedIconUrl(item.iconImage)) {
     return <img src={item.iconImage} alt={item?.title || "Grid icon"} style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
   }
   if (item?.iconGlyph && item?.iconFontFamily) {
@@ -2891,7 +2928,7 @@ function renderGridSectionIcon(item, color, size) {
   if (item?.icon) {
     return <span style={{ fontSize: size, lineHeight: 1, color }}>{item.icon}</span>;
   }
-  return null;
+  return renderSocialPlatformIcon({ title: "social" }, { size, color });
 }
 
 function resolveServicesStylePreset(props = {}) {

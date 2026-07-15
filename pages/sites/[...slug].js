@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
-import { buildWebsitePath, getPlatformAppUrl, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
+import { buildWebsitePath, getPlatformAppUrl, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -358,13 +358,13 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
   // No page-level POST needed here.
 
   const project = publication?.site_data || {};
-  const normalizedPageBlocks = normalizeVideoHeroBlocks(project?.pageBlocks || {});
+  const normalizedPageBlocks = normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}));
   const normalizedGlobalNavBlock = project?.globalNavBlock?.type === "video-hero"
     ? normalizeVideoHeroBlocks([project.globalNavBlock])[0]
-    : project?.globalNavBlock;
+    : normalizePublishedWebsiteBlocks([project?.globalNavBlock])[0];
   const normalizedGlobalFooterBlock = project?.globalFooterBlock?.type === "video-hero"
     ? normalizeVideoHeroBlocks([project.globalFooterBlock])[0]
-    : project?.globalFooterBlock;
+    : normalizePublishedWebsiteBlocks([project?.globalFooterBlock])[0];
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";

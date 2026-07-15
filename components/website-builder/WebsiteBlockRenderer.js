@@ -5,7 +5,7 @@ import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import PlatformPricingPlans from "../billing/PlatformPricingPlans";
 import { getPlatformChartPlans } from "../../data/platformPricing";
-import { renderGridLibraryIcon } from "./gridIconLibrary";
+import { renderGridLibraryIcon, renderSocialPlatformIcon } from "./gridIconLibrary";
 import {
   MIN_TEXT_SIZE, MIN_TAP_SIZE, PREMIUM_SHADOW, PREMIUM_BORDER, DEFAULT_LAYOUT_WIDTH,
   websiteBlockKeyframes, getAnimationStyle, ensureWebsiteBlockAnimationStyles, animationState,
@@ -4072,11 +4072,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 // Normalize: plain string → { text: item }, object stays as-is
                 const norm = item && typeof item === "object" ? item : { text: String(item || "") };
                 const itemText = norm.text || "";
-                const itemIconKey = norm.iconKey || null;
+                const itemIconKey = norm.iconName || norm.iconKey || null;
                 const iconSize = Math.round(marqueeFontSize * 1.35);
                 const isOriginal = idx < items.length;
                 const itemKey = `${itemIconKey || ""}:${itemText}-${idx}`;
                 const textContent = itemText ? asRichHtml(itemText) : null;
+                const socialIconNode = renderSocialPlatformIcon({ ...norm, iconName: itemIconKey }, { size: iconSize });
                 return (
                 <div
                   key={itemKey}
@@ -4100,7 +4101,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   <span style={{ color: accent, fontSize: dividerSize, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>{dividerText}</span>
                   {itemIconKey && (
                     <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, color: fill }}>
-                      {renderGridLibraryIcon(itemIconKey, { size: iconSize })}
+                      {socialIconNode || renderGridLibraryIcon(itemIconKey, { size: iconSize })}
                     </span>
                   )}
                   {textContent && (
