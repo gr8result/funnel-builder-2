@@ -90,7 +90,8 @@ function BlockRenderer({ block }) {
   )
 }
 
-export async function getServerSideProps({ params, req }) {
+export async function getServerSideProps({ params, req, res }) {
+  res?.setHeader("Cache-Control", "no-store, max-age=0");
   const requestedPath = [String(params?.slug || '').trim()].filter(Boolean)
   const headers = req?.headers || {}
   const host = normalizeDomain(headers['x-vercel-forwarded-host'] || headers['x-forwarded-host'] || headers.host || '')

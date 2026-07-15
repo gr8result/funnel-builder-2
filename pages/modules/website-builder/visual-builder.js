@@ -543,6 +543,8 @@ export default function VisualBuilderPage() {
   const [authReady, setAuthReady] = useState(false);
   const authTimeoutRef = useRef(null);
   const [publishBusy, setPublishBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [versionStatus, setVersionStatus] = useState(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [showSetupPanel, setShowSetupPanel] = useState(false);
   const [siteSlug, setSiteSlug] = useState("");
@@ -1041,6 +1043,47 @@ export default function VisualBuilderPage() {
     return null;
   }
 
+  function buildClientContentHash(value) {
+    let hash = 0;
+    const text = stableJson(jsonRoundTrip(value ?? null));
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+    }
+    return `client_${Math.abs(hash).toString(16)}`;
+  }
+
+  function summarizeProjectForVersion(projectLike, pageName = activePage) {
+    const blocks = getSavedPageBlocks(projectLike, pageName) || [];
+    return {
+      projectId: projectLike?.id || "",
+      pageId: (Array.isArray(projectLike?.pages) ? projectLike.pages.find((entry) => entry?.name === pageName)?.id || projectLike.pages.find((entry) => entry?.name === pageName)?.slug : "") || pageName,
+      pageName,
+      blockCount: Array.isArray(blocks) ? blocks.length : 0,
+      updatedAt: projectLike?.updatedAt || "",
+      savedAt: projectLike?.savedAt || "",
+      projectVersion: projectLike?.projectVersion || "",
+      contentHash: projectLike?.contentHash || buildClientContentHash({
+        pages: projectLike?.pages || [],
+        pageBlocks: projectLike?.pageBlocks || {},
+        pagesContent: projectLike?.pagesContent || {},
+        chaiData: projectLike?.chaiData || {},
+        globalNavBlock: projectLike?.globalNavBlock || null,
+        globalFooterBlock: projectLike?.globalFooterBlock || null,
+      }),
+      pageHash: buildClientContentHash(blocks),
+    };
+  }
+
+  async function waitForActiveSaveToFinish(timeoutMs = 20000) {
+    const startedAt = Date.now();
+    while (syncInFlightRef.current) {
+      if (Date.now() - startedAt > timeoutMs) {
+        throw new Error("A save is still running. Wait for it to finish before publishing.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+
   function waitForSaveVerification(ms = 750) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -1107,6 +1150,7 @@ export default function VisualBuilderPage() {
     }
 
     syncInFlightRef.current = true;
+    setSaveBusy(true);
 
     try {
       let syncedProject;
@@ -1201,6 +1245,7 @@ export default function VisualBuilderPage() {
     } finally {
       lastSyncAtRef.current = Date.now();
       syncInFlightRef.current = false;
+      setSaveBusy(false);
       // After a forced sync the queue may hold an older autosave snapshot.
       // Sending it would overwrite the server's freshly-committed blocks with
       // stale data, which then races the preview tab's server fetch and can
@@ -1270,12 +1315,24 @@ export default function VisualBuilderPage() {
     setPublishBusy(true);
 
     try {
+      await waitForActiveSaveToFinish();
       let projectForPublish = getWebsiteProject(project.id) || project;
       const savedBeforePublish = await Promise.resolve(previewActionsRef.current?.saveCurrent?.({ saveSource: "publish-preflight" }));
       if (savedBeforePublish?._saveError) {
         throw new Error(savedBeforePublish._saveErrorMessage || "Could not save the latest page before publishing.");
       }
-      projectForPublish = savedBeforePublish || getWebsiteProject(project.id) || projectForPublish;
+      await waitForActiveSaveToFinish();
+      const latestSavedProject = await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName });
+      if (!latestSavedProject?.id) {
+        throw new Error("Could not reload the latest saved project before publishing.");
+      }
+      projectForPublish = latestSavedProject;
+      cacheWebsiteProject(latestSavedProject, { onlyIfNewer: false });
+      setProject(latestSavedProject);
+
+      const saveSummary = summarizeProjectForVersion(projectForPublish, activeProjectPageName);
+      console.info("[website-builder publish] latest saved project selected", saveSummary);
+
       const videoHeroMedia = collectVideoHeroMedia(projectForPublish?.pageBlocks || {});
       console.log("[website-builder publish] Video Hero media being published", {
         projectId: projectForPublish?.id || project.id,
@@ -1324,6 +1381,11 @@ export default function VisualBuilderPage() {
         customDomain: payload.publication?.custom_domain || normalizeDomain(customDomain),
         domainStatus: payload.publication?.domain_status || "generated",
         publishedAt: payload.publication?.published_at || new Date().toISOString(),
+        projectVersion: payload.publication?.projectVersion || projectForPublish?.projectVersion || "",
+        savedAt: payload.publication?.savedAt || projectForPublish?.savedAt || "",
+        publishedVersion: payload.publication?.publishedVersion || payload.publication?.projectVersion || projectForPublish?.projectVersion || "",
+        publishedHash: payload.publication?.publishedHash || payload.verified?.publishedHash || "",
+        contentHash: payload.publication?.contentHash || payload.verified?.savedHash || projectForPublish?.contentHash || "",
         sitePath: payload.sitePath || buildWebsitePath(normalizedSlug),
         liveUrl: payload.liveUrl || (payload.publication?.custom_domain
           ? buildWebsiteUrl({ slug: normalizedSlug, domain: payload.publication?.custom_domain })
@@ -1336,6 +1398,14 @@ export default function VisualBuilderPage() {
         primaryWebsite: payload.primaryWebsite === true,
         rootUrl: payload.rootUrl || "",
       };
+      const nextVersionStatus = {
+        savedVersion: nextPublication.projectVersion || projectForPublish?.projectVersion || "",
+        savedAt: nextPublication.savedAt || projectForPublish?.savedAt || "",
+        publishedVersion: nextPublication.publishedVersion || "",
+        publishedAt: nextPublication.publishedAt || "",
+        matches: !!nextPublication.projectVersion && nextPublication.projectVersion === nextPublication.publishedVersion,
+      };
+      setVersionStatus(nextVersionStatus);
 
       const updated = saveProjectPatch({ publication: nextPublication }, "Website published", { siteOnly: true, saveSource: "publish" });
       if (!updated) {
@@ -1685,6 +1755,7 @@ export default function VisualBuilderPage() {
         resolvedPageName: pageName,
         payload: summarizeBuilderBlocksForSave(normalizedBlocks),
       });
+      console.info("[website-builder save] editor payload", summarizeProjectForVersion(projectToSync, pageName));
 
       // Stage the current edit locally before cloud sync so the async merge below
       // cannot treat an older cache entry as the source of truth and roll blocks back.
@@ -1823,6 +1894,13 @@ export default function VisualBuilderPage() {
         ...((verifiedSaveMatches && serverSynced) || projectWithPatch),
         ...verifiedPagePatch,
       };
+      const savedVersionSummary = summarizeProjectForVersion(projectToStore, pageName);
+      setVersionStatus((current) => ({
+        ...(current || {}),
+        savedVersion: savedVersionSummary.projectVersion,
+        savedAt: savedVersionSummary.savedAt,
+        matches: current?.publishedVersion ? current.publishedVersion === savedVersionSummary.projectVersion : current?.matches,
+      }));
 
       // ── THEN refresh localStorage with the server-normalized project ───────
       const savedProject = updateWebsiteProject(currentProject.id, projectToStore);
@@ -2436,8 +2514,8 @@ export default function VisualBuilderPage() {
               </div>
 
               <div style={styles.publishActionRow}>
-                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || !session}>
-                  {publishBusy ? "Publishing..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
+                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || saveBusy || !session}>
+                  {publishBusy ? "Publishing..." : saveBusy ? "Saving..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
                 </button>
 
                 {resolvedPublicationLiveUrl ? (
@@ -2459,6 +2537,17 @@ export default function VisualBuilderPage() {
                   </div>
                 ) : null}
               </div>
+
+              {(versionStatus || publication?.projectVersion || publication?.publishedVersion) ? (
+                <div style={styles.publishVersionPanel}>
+                  <span>Saved version: <strong>{versionStatus?.savedVersion || publication?.projectVersion || "Unknown"}</strong></span>
+                  <span>Published version: <strong>{versionStatus?.publishedVersion || publication?.publishedVersion || "Not published"}</strong></span>
+                  <span>Published at: <strong>{versionStatus?.publishedAt || publication?.publishedAt || "Not published"}</strong></span>
+                  {(versionStatus?.matches === false || (publication?.projectVersion && publication?.publishedVersion && publication.projectVersion !== publication.publishedVersion)) ? (
+                    <strong style={styles.publishVersionWarning}>Live website is not using the latest saved version.</strong>
+                  ) : null}
+                </div>
+              ) : null}
 
               {publication?.customDomainInstructions ? (
                 <div style={styles.publishDnsCard}>
@@ -2974,6 +3063,21 @@ const styles = {
     gap: 12,
     flexWrap: "wrap",
     alignItems: "stretch",
+  },
+  publishVersionPanel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    fontSize: 12,
+    color: "#cbd5e1",
+    background: "rgba(15,23,42,0.62)",
+    border: "1px solid rgba(148,163,184,0.25)",
+    borderRadius: 8,
+    padding: "8px 10px",
+  },
+  publishVersionWarning: {
+    color: "#fbbf24",
   },
   inlineHighlightBlue: {
     color: "#7dd3fc",

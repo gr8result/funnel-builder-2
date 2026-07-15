@@ -9,6 +9,7 @@ import {
   migrateWebsiteProjectToSplitStorage,
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
+import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
 
 const TABLE_NAME = "published_websites";
 
@@ -242,6 +243,7 @@ async function requireUserId(req, res) {
 }
 
 async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   const userId = await requireUserId(req, res);
   if (!userId) return;
 
@@ -380,11 +382,15 @@ async function handler(req, res) {
     const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
     const now = new Date().toISOString();
+    const versionMeta = buildWebsiteProjectVersion(project, now);
     const nextProject = {
       ...project,
       id: projectId,
       createdAt: project?.createdAt || now,
       updatedAt: now,
+      savedAt: versionMeta.savedAt,
+      projectVersion: versionMeta.projectVersion,
+      contentHash: versionMeta.contentHash,
     };
 
     let splitProject = null;
@@ -495,7 +501,24 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not save website draft") });
     }
 
-    return res.status(200).json({ ok: true, project: splitProject || mapProjectRow(result.data) });
+    const savedProject = splitProject || mapProjectRow(result.data);
+    const pageSummary = summarizeWebsitePage(savedProject, requestedPage);
+    console.info("[website-builder save] saved project", {
+      projectId,
+      draftProjectId,
+      pageId: pageSummary.pageId,
+      pageName: pageSummary.pageName || requestedPage || "",
+      blockCount: pageSummary.blockCount,
+      updatedAt: savedProject?.updatedAt || now,
+      savedAt: savedProject?.savedAt || versionMeta.savedAt,
+      projectVersion: savedProject?.projectVersion || versionMeta.projectVersion,
+      contentHash: savedProject?.contentHash || versionMeta.contentHash,
+      pageHash: pageSummary.pageHash,
+      saveSource,
+      siteOnly,
+    });
+
+    return res.status(200).json({ ok: true, project: savedProject });
   }
 
   if (req.method === "PATCH") {

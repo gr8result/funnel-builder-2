@@ -6,7 +6,9 @@
 
 import Head from "next/head";
 import Link from "next/link";
+import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import BackToTopButton from "../../components/website-builder/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
@@ -313,6 +315,7 @@ function Section({ s }) {
 }
 
 export async function getServerSideProps(ctx) {
+  ctx.res?.setHeader("Cache-Control", "no-store, max-age=0");
   const slugArr = ctx.params?.slug || [];
   const isHostLookup = slugArr[0] === "__host__";
   const siteHost = isHostLookup ? String(ctx.req.headers["x-site-host"] || "") : "";
@@ -408,12 +411,25 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
     pageMap,
     strictPublishedPages: true,
   };
+  const liveDebugInfo = {
+    publicationRowId: publication?.id || "",
+    projectId: publication?.project_id || project?.id || "",
+    publishedVersion: project?.publishedVersion || project?.publication?.publishedVersion || "",
+    publishedAt: publication?.published_at || project?.publishedAt || project?.publication?.publishedAt || "",
+    pageName: activePage?.name || "",
+    blockCount: Array.isArray(pageBlocks) ? pageBlocks.length : 0,
+  };
+
+  useEffect(() => {
+    console.info("[website-live-debug]", liveDebugInfo);
+  }, [liveDebugInfo.publicationRowId, liveDebugInfo.publishedVersion, liveDebugInfo.publishedAt, liveDebugInfo.pageName, liveDebugInfo.blockCount]);
 
   return (
     <>
       <Head>
         <title>{publication?.name || project?.name || "Website"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="website-publication-debug" content={`row=${liveDebugInfo.publicationRowId}; version=${liveDebugInfo.publishedVersion}; published_at=${liveDebugInfo.publishedAt}; page=${liveDebugInfo.pageName}; blocks=${liveDebugInfo.blockCount}`} />
         <style>{`
           [data-published-block] {
             border: none !important;
@@ -518,6 +534,8 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
             })}
           </nav>
         ) : null}
+
+        <BackToTopButton />
       </main>
     </>
   );
@@ -559,6 +577,7 @@ export default function SitePage({ mode, title, sections, publication, requested
           <Section key={s.id || Math.random()} s={s} />
         ))}
       </div>
+      <BackToTopButton />
     </>
   );
 }

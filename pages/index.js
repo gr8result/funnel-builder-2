@@ -53,6 +53,7 @@ export default function Index({ mode, publication }) {
 Index.disableLayout = true;
 
 export async function getServerSideProps(ctx) {
+  ctx.res?.setHeader("Cache-Control", "no-store, max-age=0");
   const headers = ctx.req?.headers || {};
   const host = normalizeDomain(headers.host || "");
   const forwardedHost = normalizeDomain(headers["x-forwarded-host"] || "");
