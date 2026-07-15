@@ -2,6 +2,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { supabase } from "../../../lib/supabaseClient";
 
 const RANGE_OPTIONS = [
   { label: "7 days", value: 7 },
@@ -78,6 +79,10 @@ export default function VisitReportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [subscriberSearch, setSubscriberSearch] = useState("");
+  const [subscribers, setSubscribers] = useState([]);
+  const [subscribersLoading, setSubscribersLoading] = useState(false);
+  const [subscriberError, setSubscriberError] = useState("");
 
   useEffect(() => {
     if (daysParam) setDays(Number(daysParam) || 30);
@@ -98,6 +103,80 @@ export default function VisitReportPage() {
   }, [projectId, days]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadSubscribers = useCallback(async () => {
+    if (!projectId) return;
+    setSubscribersLoading(true);
+    setSubscriberError("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Please log in again to view subscribers.");
+      const params = new URLSearchParams({ projectId: String(projectId) });
+      if (subscriberSearch.trim()) params.set("q", subscriberSearch.trim());
+      const response = await fetch(`/api/website/subscribers?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load subscribers.");
+      setSubscribers(payload.subscribers || []);
+    } catch (err) {
+      setSubscriberError(err?.message || "Could not load subscribers.");
+    } finally {
+      setSubscribersLoading(false);
+    }
+  }, [projectId, subscriberSearch]);
+
+  useEffect(() => { loadSubscribers(); }, [loadSubscribers]);
+
+  async function updateSubscriberStatus(id, status) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) return setSubscriberError("Please log in again.");
+    const response = await fetch("/api/website/subscribers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) return setSubscriberError(payload?.error || "Could not update subscriber.");
+    return loadSubscribers();
+  }
+
+  async function deleteSubscriber(id) {
+    if (!window.confirm("Delete this subscriber?")) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) return setSubscriberError("Please log in again.");
+    const response = await fetch("/api/website/subscribers", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) return setSubscriberError(payload?.error || "Could not delete subscriber.");
+    return loadSubscribers();
+  }
+
+  async function exportSubscribersCsv() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) return setSubscriberError("Please log in again.");
+    const params = new URLSearchParams({ projectId: String(projectId), format: "csv" });
+    if (subscriberSearch.trim()) params.set("q", subscriberSearch.trim());
+    const response = await fetch(`/api/website/subscribers?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = await response.text();
+    if (!response.ok) return setSubscriberError("Could not export subscribers.");
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "website-subscribers.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const title = data?.projectName ? `Visitors — ${data.projectName}` : "Visitor Report";
 
@@ -237,6 +316,61 @@ export default function VisitReportPage() {
                               </tr>
                             )}
                           </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: "#1e293b", borderRadius: 14, padding: "20px 24px", marginTop: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.06em" }}>
+                    WEBSITE SUBSCRIBERS ({subscribers.length})
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  <input
+                    value={subscriberSearch}
+                    onChange={(event) => setSubscriberSearch(event.target.value)}
+                    placeholder="Search email"
+                    style={{ minHeight: 36, borderRadius: 8, border: "1px solid #334155", background: "#0f172a", color: "#e2e8f0", padding: "0 10px", fontSize: 14 }}
+                  />
+                  <button onClick={loadSubscribers} disabled={subscribersLoading} style={{ padding: "8px 12px", borderRadius: 8, border: 0, background: "#334155", color: "#cbd5e1", fontWeight: 700 }}>
+                    {subscribersLoading ? "Loading..." : "Refresh"}
+                  </button>
+                  <button onClick={exportSubscribersCsv} style={{ padding: "8px 12px", borderRadius: 8, border: 0, background: "#0ea5e9", color: "#fff", fontWeight: 700 }}>
+                    Export CSV
+                  </button>
+                </div>
+                {subscriberError ? <div style={{ color: "#fca5a5", marginBottom: 12 }}>{subscriberError}</div> : null}
+                {subscribers.length === 0 ? (
+                  <div style={{ color: "#64748b", textAlign: "center", padding: "24px 0" }}>No website subscribers yet.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid #334155" }}>
+                          {["Email", "Date subscribed", "Website", "Source page", "Status", "Actions"].map((h) => (
+                            <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: "#64748b", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subscribers.map((row, index) => (
+                          <tr key={row.id} style={{ borderBottom: "1px solid #1e293b", background: index % 2 === 0 ? "transparent" : "#172033" }}>
+                            <td style={{ padding: "9px 10px", color: "#e2e8f0", fontWeight: 700 }}>{row.email}</td>
+                            <td style={{ padding: "9px 10px", color: "#94a3b8", whiteSpace: "nowrap" }}>{new Date(row.created_at).toLocaleString()}</td>
+                            <td style={{ padding: "9px 10px", color: "#cbd5e1" }}>{row.website || "—"}</td>
+                            <td style={{ padding: "9px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {row.page_url ? <a href={row.page_url} target="_blank" rel="noopener noreferrer" style={{ color: "#93c5fd" }}>{row.page_url}</a> : "—"}
+                            </td>
+                            <td style={{ padding: "9px 10px", color: row.status === "active" ? "#86efac" : "#fbbf24", fontWeight: 700 }}>{row.status}</td>
+                            <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                              {row.lead_id ? <Link href={`/modules/email/crm/kanban?leadId=${encodeURIComponent(row.lead_id)}`} style={{ color: "#93c5fd", marginRight: 10 }}>Open contact</Link> : null}
+                              {row.status === "active" ? <button onClick={() => updateSubscriberStatus(row.id, "unsubscribed")} style={{ marginRight: 8, border: 0, borderRadius: 6, padding: "5px 8px", background: "#475569", color: "#fff" }}>Unsubscribe</button> : null}
+                              <button onClick={() => deleteSubscriber(row.id)} style={{ border: 0, borderRadius: 6, padding: "5px 8px", background: "#7f1d1d", color: "#fecaca" }}>Delete</button>
+                            </td>
+                          </tr>
                         ))}
                       </tbody>
                     </table>

@@ -29,7 +29,7 @@ import {
   pricingVariantStyles, iconGlyph, normalizePricingPlan,
   navVariantTheme, contactFormVariantStyles, DEFAULT_ENQUIRY_BOOKING_URL, resolveContactBookingUrl,
   trustBadgeVariantStyles, resolveNewsletterButtonUrl, resolveFooterEmailHref,
-  resolveFooterPhoneHref, buildNewsletterMailtoHref,
+  resolveFooterPhoneHref,
   buildNavLinkStyle, applyNavHoverEffect, resetNavHoverEffect,
   findScrollParent, getBrandInitials, BrandMark, sharedStyles,
 } from "./website-renderer/wbVariantStyles";
@@ -57,6 +57,85 @@ import {
 export { websiteBlockKeyframes, getAnimationStyle } from "./website-renderer/wbAnimations";
 
 const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
+
+function FooterNewsletterSignupForm({ editor, props, patchFt, footerPanelBorder, ftLink, ftBtnBg, ftBtnText, siteId }) {
+  const [email, setEmail] = React.useState("");
+  const [status, setStatus] = React.useState("idle");
+  const [message, setMessage] = React.useState("");
+  const busy = status === "submitting";
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (editor) return;
+
+    const value = String(email || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(value)) {
+      setStatus("error");
+      setMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setStatus("submitting");
+    setMessage("");
+    try {
+      const response = await fetch("/api/website/subscribers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: value,
+          source: "Website Footer",
+          websiteId: siteId || "",
+          page: typeof window !== "undefined" ? window.location.toString() : "",
+          submittedAt: new Date().toISOString(),
+          website: "",
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        if (payload?.code === "INVALID_EMAIL") {
+          setStatus("error");
+          setMessage("Please enter a valid email address.");
+          return;
+        }
+        throw new Error(payload?.error || "Subscription failed");
+      }
+      setEmail("");
+      setStatus("success");
+      setMessage(payload?.duplicate ? "You're already subscribed." : "Thanks - you're subscribed.");
+    } catch (_error) {
+      setStatus("error");
+      setMessage("We couldn't complete your subscription. Please try again.");
+    }
+  };
+
+  return (
+    <form style={{ display: "grid", gap: 10, marginTop: 4 }} onSubmit={submit}>
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }} />
+      {editor ? (
+        <div style={{ flex: 1, minWidth: 140, borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 16 }}>Enter your email address</div>
+      ) : (
+        <input
+          type="email"
+          name="footer-newsletter-email"
+          placeholder="Enter your email address"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          disabled={busy}
+          style={{ width: "100%", borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 16, font: "inherit", boxSizing: "border-box", opacity: busy ? 0.78 : 1 }}
+        />
+      )}
+      <button type={editor ? "button" : "submit"} disabled={busy} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 12, padding: "0 16px", minHeight: 46, fontWeight: 600, fontSize: 16, cursor: editor || busy ? "default" : "pointer", whiteSpace: "nowrap", opacity: busy ? 0.7 : 1 }} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}>
+        {busy ? "Subscribing..." : (props.newsletterButtonText || "Subscribe")}
+      </button>
+      {message ? (
+        <div role="status" style={{ color: status === "error" ? "#fecaca" : "#bbf7d0", fontSize: 14, lineHeight: 1.4, fontWeight: 700 }}>
+          {message}
+        </div>
+      ) : null}
+    </form>
+  );
+}
 
 function getHeroVideoDebugState(video) {
   if (!video) return {};
@@ -4435,10 +4514,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const extraLinks = Array.isArray(props.extraLinks) ? props.extraLinks : [];
       const footerEmailHref = resolveFooterEmailHref(props.contactEmail);
       const footerPhoneHref = resolveFooterPhoneHref(props.contactPhone);
-      const newsletterActionHref = resolveNewsletterButtonUrl(props.newsletterActionUrl || "");
-      const newsletterFallbackHref = resolveFooterEmailHref(props.newsletterFallbackEmail || props.contactEmail || "");
-      const newsletterUsesExternalForm = !!newsletterActionHref && !/^mailto:/i.test(newsletterActionHref);
-      const newsletterFormMethod = String(props.newsletterSubmitMethod || "post").toLowerCase() === "get" ? "get" : "post";
       const footerVariant = String(props.footerVariant || "service-grid");
       const contactItems = [props.contactEmail, props.contactPhone, props.contactAddress].filter(Boolean);
       const derivedLinkGroups = [
@@ -4480,22 +4555,6 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         borderRadius: 6,
         padding: editor ? "2px 4px" : 0,
       });
-
-      const handleFooterNewsletterSubmit = (event) => {
-        if (editor) {
-          event.preventDefault();
-          return;
-        }
-        if (newsletterUsesExternalForm) return;
-
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const subscriberEmail = String(formData.get("footer-newsletter-email") || "").trim();
-        const mailtoHref = buildNewsletterMailtoHref(newsletterActionHref || newsletterFallbackHref, subscriberEmail, props.brand || "");
-        if (mailtoHref && typeof window !== "undefined") {
-          window.location.href = mailtoHref;
-        }
-      };
 
       return (
         <ScrollReveal as="footer" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor) }}>
@@ -4554,10 +4613,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
                     <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 600, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
                     {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
-                    <form style={{ display: "grid", gap: 10, marginTop: 4 }} onSubmit={handleFooterNewsletterSubmit} action={editor || !newsletterUsesExternalForm ? undefined : newsletterActionHref} method={editor || !newsletterUsesExternalForm ? undefined : newsletterFormMethod}>
-                      {editor ? <div style={{ flex: 1, minWidth: 140, borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", paddingLeft: 12, color: ftLink, fontSize: 16 }}>Email address</div> : <input type="email" name="footer-newsletter-email" placeholder="Email address" required style={{ width: "100%", borderRadius: 12, minHeight: 46, border: footerPanelBorder, background: "rgba(255,255,255,0.08)", display: "block", padding: "0 12px", color: "#ffffff", fontSize: 16, font: "inherit", boxSizing: "border-box" }} />}
-                      <button type={editor ? "button" : "submit"} style={{ background: ftBtnBg, color: ftBtnText, border: "none", borderRadius: 12, padding: "0 16px", minHeight: 46, fontWeight: 600, fontSize: 16, cursor: editor ? "default" : "pointer", whiteSpace: "nowrap", opacity: editor || newsletterUsesExternalForm || newsletterFallbackHref ? 1 : 0.65 }} contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterButtonText: e.currentTarget.textContent })}>{props.newsletterButtonText || "Subscribe"}</button>
-                    </form>
+                    <FooterNewsletterSignupForm editor={editor} props={props} patchFt={patchFt} footerPanelBorder={footerPanelBorder} ftLink={ftLink} ftBtnBg={ftBtnBg} ftBtnText={ftBtnText} siteId={siteId} />
                   </div>
                 ) : null}
               </div>
