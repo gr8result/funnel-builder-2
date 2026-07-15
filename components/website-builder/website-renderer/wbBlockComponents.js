@@ -1,6 +1,7 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
+import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
 import { FAQAccordionItems, FAQAccordionBlock } from "../../../modules/website-builder/blocks/accordion/AccordionBlock";
 import {
@@ -2931,6 +2932,49 @@ function renderGridSectionIcon(item, color, size) {
   return renderSocialPlatformIcon({ title: "social" }, { size, color });
 }
 
+function resolveAccordionPanelImage(panel = {}) {
+  return String(
+    panel?.imageUrl
+    || panel?.image
+    || panel?.mediaUrl
+    || panel?.imageSrc
+    || panel?.src
+    || panel?.desktopImage
+    || panel?.mobileImage
+    || panel?.backgroundImage
+    || ""
+  ).trim();
+}
+
+function isUnsafeAccordionImageUrl(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (/^(blob:|file:)/i.test(raw)) return true;
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(raw)) return true;
+  return false;
+}
+
+function renderAccordionImageFallback(label = "Image") {
+  return (
+    <div style={{ width: "100%", height: "100%", minHeight: 260, display: "grid", placeItems: "center", background: "linear-gradient(135deg, rgba(14,165,233,0.18), rgba(15,23,42,0.42))", color: "rgba(226,232,240,0.82)", textAlign: "center", padding: 24, boxSizing: "border-box" }}>
+      <div style={{ display: "grid", gap: 8, justifyItems: "center", maxWidth: 280 }}>
+        <span style={{ fontSize: 34, lineHeight: 1 }}>Image</span>
+        <span style={{ fontSize: 15, lineHeight: 1.45, fontWeight: 700 }}>{label || "Panel image"}</span>
+      </div>
+    </div>
+  );
+}
+
+function openAccordionImageLibrary(onPick) {
+  return openSharedMediaPicker({
+    onPick: (asset) => {
+      const src = String(asset?.src || asset?.url || asset?.imageUrl || "").trim();
+      if (!src || isUnsafeAccordionImageUrl(src)) return;
+      onPick?.(src, asset);
+    },
+  });
+}
+
 function resolveServicesStylePreset(props = {}) {
   switch (String(props?.servicesStylePreset || "style-01").trim()) {
     case "style-02":
@@ -5017,7 +5061,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const items = asArray(props.items).map((item, idx) => ({
     id: item?.id || `fa-item-${idx}`,
     label: htmlToPlainText(item?.label || `Section ${idx + 1}`),
-    image: item?.image || "",
+    image: resolveAccordionPanelImage(item),
+    imageUrl: resolveAccordionPanelImage(item),
     imageAlt: htmlToPlainText(item?.imageAlt || ""),
     accentColor: item?.accentColor || null,   // null ? falls back to global accent
     panelBg: item?.panelBg || null,           // null ? falls back to global bg/accent gradient
@@ -5030,6 +5075,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
 
   const [activeIdx, setActiveIdx] = React.useState(0);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [failedImages, setFailedImages] = React.useState({});
   const sectionRef = React.useRef(null);
   const fileInputRefs = React.useRef({});
 
@@ -5107,6 +5153,22 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     patchItems(items.map((item, i) => i !== itemIdx ? item : { ...item, [field]: value }));
   }
 
+  function patchItemImage(itemIdx, value, asset = null) {
+    const nextImage = String(value || "").trim();
+    const failedKey = items[itemIdx]?.id || itemIdx;
+    setFailedImages((prev) => {
+      const next = { ...prev };
+      delete next[failedKey];
+      return next;
+    });
+    patchItems(items.map((item, i) => i !== itemIdx ? item : {
+      ...item,
+      imageUrl: nextImage,
+      image: nextImage,
+      imageAssetId: asset?.id || item.imageAssetId || "",
+    }));
+  }
+
   function patchContentBlock(itemIdx, cbIdx, patch) {
     const newBlocks = items[itemIdx].contentBlocks.map((cb, j) =>
       j !== cbIdx ? cb : { ...cb, ...patch }
@@ -5174,7 +5236,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   async function handleImageUpload(itemIdx, file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage("__fa_item_image__", file));
-    if (asset?.src) patchItemField(itemIdx, "image", asset.src);
+    if (asset?.src) patchItemImage(itemIdx, asset.src, asset);
   }
 
   // -- content block renderer -------------------------------------------------
@@ -5383,13 +5445,18 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
 
   // -- image slot -------------------------------------------------------------
   function renderImageSlot(item, idx, forEditor = false) {
+    const imageSrc = resolveAccordionPanelImage(item);
+    const failedKey = item.id || idx;
+    const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
+    const showImage = !!imageSrc && !imageFailed;
     return (
       <>
-        {item.image ? (
+        {showImage ? (
           <img
-            src={item.image}
+            src={imageSrc}
             alt={item.imageAlt || item.label}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            onError={() => setFailedImages((prev) => ({ ...prev, [failedKey]: true }))}
           />
         ) : (
           <div style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "rgba(255,255,255,0.35)" }}>
@@ -5410,7 +5477,15 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               ↻ Replace
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
             </label>
-            <button type="button" onClick={(e) => { e.stopPropagation(); patchItemField(idx, "image", ""); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); patchItemImage(idx, ""); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
+          </div>
+        ) : null}
+        {forEditor ? (
+          <div style={{ position: "absolute", left: 10, bottom: 10, display: "flex", gap: 6, flexWrap: "wrap", zIndex: 5 }}>
+            <button type="button" onClick={(e) => { e.stopPropagation(); openAccordionImageLibrary((src, asset) => patchItemImage(idx, src, asset)); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(125,211,252,0.35)", color: "#bae6fd", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Media Library</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); openAccordionImageLibrary((src, asset) => patchItemImage(idx, src, asset)); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(125,211,252,0.35)", color: "#bae6fd", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Recent Images</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); const src = window.prompt("Paste image URL", imageSrc || ""); if (src && !isUnsafeAccordionImageUrl(src)) patchItemImage(idx, src); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Paste URL</button>
+            {imageSrc ? <button type="button" onClick={(e) => { e.stopPropagation(); patchItemImage(idx, ""); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove Image</button> : null}
           </div>
         ) : null}
       </>
@@ -5676,7 +5751,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     ctaUrl: p?.ctaUrl ?? "#",
     ctaStyle: p?.ctaStyle ?? "filled",
     buttonFullWidth: p?.buttonFullWidth === true || p?.ctaFullWidth === true,
-    image: p?.image ?? "",
+    image: resolveAccordionPanelImage(p),
+    imageUrl: resolveAccordionPanelImage(p),
     imageAlt: p?.imageAlt ?? "",
     imageStyle: p?.imageStyle ?? "bleed",
     imageCardBg: p?.imageCardBg ?? (p?.accentColor ?? "#0ea5e9"),
@@ -5687,6 +5763,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   }));
 
   const fileInputRefs = React.useRef({});
+  const [failedImages, setFailedImages] = React.useState({});
 
   function patchPanels(newPanels) {
     if (!editor || typeof onChangeBlock !== "function") return;
@@ -5695,6 +5772,21 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   function patchPanel(idx, patch) {
     patchPanels(panels.map((p, i) => i !== idx ? p : { ...p, ...patch }));
+  }
+
+  function patchPanelImage(idx, value, asset = null) {
+    const nextImage = String(value || "").trim();
+    const failedKey = panels[idx]?.id || idx;
+    setFailedImages((prev) => {
+      const next = { ...prev };
+      delete next[failedKey];
+      return next;
+    });
+    patchPanel(idx, {
+      imageUrl: nextImage,
+      image: nextImage,
+      imageAssetId: asset?.id || panels[idx]?.imageAssetId || "",
+    });
   }
 
   function addPanel() {
@@ -5731,7 +5823,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   async function handleImageUpload(panelIdx, file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage("__ss_panel_image__", file));
-    if (asset?.src) patchPanel(panelIdx, { image: asset.src });
+    if (asset?.src) patchPanelImage(panelIdx, asset.src, asset);
   }
 
   // -- Image rendering --------------------------------------------------------
@@ -5739,11 +5831,16 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   // "card"  = inset rounded card with imageCardBg behind image
   function renderImageHalf(panel, idx, forEditor = false, halfHeight = "100%") {
     const isCard = panel.imageStyle === "card";
-    const imageEl = panel.image ? (
+    const imageSrc = resolveAccordionPanelImage(panel);
+    const failedKey = panel.id || idx;
+    const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
+    const showImage = !!imageSrc && !imageFailed;
+    const imageEl = showImage ? (
       <img
-        src={panel.image}
+        src={imageSrc}
         alt={panel.imageAlt || panel.heading}
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: isCard ? 16 : 0 }}
+        onError={() => setFailedImages((prev) => ({ ...prev, [failedKey]: true }))}
       />
     ) : (
       <div style={{
@@ -5765,13 +5862,21 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       </div>
     );
 
-    const replaceControls = forEditor && panel.image ? (
+    const replaceControls = forEditor ? (
       <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6, zIndex: 4 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }} onClick={(e) => e.stopPropagation()}>
           ↻ Replace
           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
         </label>
-        <button type="button" onClick={(e) => { e.stopPropagation(); patchPanel(idx, { image: "" }); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
+        <button type="button" onClick={(e) => { e.stopPropagation(); patchPanelImage(idx, ""); }} title="Remove image" style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>×</button>
+      </div>
+    ) : null;
+    const libraryControls = forEditor ? (
+      <div style={{ position: "absolute", left: 10, bottom: 10, display: "flex", gap: 6, flexWrap: "wrap", zIndex: 4 }}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); openAccordionImageLibrary((src, asset) => patchPanelImage(idx, src, asset)); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(125,211,252,0.35)", color: "#bae6fd", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Media Library</button>
+        <button type="button" onClick={(e) => { e.stopPropagation(); openAccordionImageLibrary((src, asset) => patchPanelImage(idx, src, asset)); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(125,211,252,0.35)", color: "#bae6fd", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Recent Images</button>
+        <button type="button" onClick={(e) => { e.stopPropagation(); const src = window.prompt("Paste image URL", imageSrc || ""); if (src && !isUnsafeAccordionImageUrl(src)) patchPanelImage(idx, src); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Paste URL</button>
+        {imageSrc ? <button type="button" onClick={(e) => { e.stopPropagation(); patchPanelImage(idx, ""); }} style={{ background: "rgba(15,23,42,0.85)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove Image</button> : null}
       </div>
     ) : null;
 
@@ -5782,6 +5887,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
           <div style={{ position: "relative", width: "calc(100% - 48px)", height: "calc(100% - 48px)", borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.2)" }}>
             {imageEl}
             {replaceControls}
+            {libraryControls}
           </div>
         </div>
       );
@@ -5792,6 +5898,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       <div style={{ width: "100%", height: halfHeight, position: "relative", overflow: "hidden" }}>
         {imageEl}
         {replaceControls}
+        {libraryControls}
       </div>
     );
   }

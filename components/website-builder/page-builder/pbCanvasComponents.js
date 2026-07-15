@@ -2422,13 +2422,21 @@ function TemplateShowcasePropertiesPanel({ block, index, onChange }) {
 
 function SideScrollAccordionPropertiesPanel({ block, index, onChange }) {
   const props = block?.props || {};
-  const items = Array.isArray(props.items) ? props.items : [];
+  const items = Array.isArray(props.panels) && props.panels.length ? props.panels : (Array.isArray(props.items) ? props.items : []);
   const update = (patch) => onChange(index, { ...props, ...patch });
   const updateItem = (itemIndex, patch) => {
+    const nextItems = items.map((item, currentIndex) => (
+      currentIndex === itemIndex ? { ...item, ...patch } : item
+    ));
     update({
-      items: items.map((item, currentIndex) => (
-        currentIndex === itemIndex ? { ...item, ...patch } : item
-      )),
+      panels: nextItems,
+      items: nextItems.map((item, currentIndex) => ({
+        ...item,
+        title: item.title || item.heading || `Panel ${currentIndex + 1}`,
+        heading: item.heading || item.title || `Panel ${currentIndex + 1}`,
+        image: item.imageUrl || item.image || "",
+        imageUrl: item.imageUrl || item.image || "",
+      })),
     });
   };
 
@@ -2497,9 +2505,9 @@ function SideScrollAccordionPropertiesPanel({ block, index, onChange }) {
                 <span style={styles.linkRowTitle}>Panel {itemIndex + 1}</span>
               </div>
               <input type="text" value={String(item.eyebrow || "")} onChange={(e) => updateItem(itemIndex, { eyebrow: e.target.value })} style={styles.propertyInput} placeholder="Eyebrow" />
-              <input type="text" value={String(item.title || "")} onChange={(e) => updateItem(itemIndex, { title: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Title" />
+              <input type="text" value={String(item.title || item.heading || "")} onChange={(e) => updateItem(itemIndex, { title: e.target.value, heading: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Title" />
               <textarea value={String(item.body || "")} onChange={(e) => updateItem(itemIndex, { body: e.target.value })} style={{ ...styles.propertyInput, minHeight: 92, resize: "vertical", marginTop: 8 }} placeholder="Body" />
-              <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Image URL" />
+              <input type="text" value={String(item.imageUrl || item.image || item.mediaUrl || item.src || "")} onChange={(e) => updateItem(itemIndex, { imageUrl: e.target.value, image: e.target.value })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="Image URL" />
               <input type="text" value={(Array.isArray(item.tags) ? item.tags : []).join(", ")} onChange={(e) => updateItem(itemIndex, { tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} style={{ ...styles.propertyInput, marginTop: 8 }} placeholder="SEO, local search, bookings" />
             </div>
           ))}

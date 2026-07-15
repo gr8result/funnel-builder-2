@@ -700,17 +700,25 @@ function normalizeSideScrollItems(items) {
     eyebrow: String(item?.eyebrow || item?.kicker || `Step ${index + 1}`),
     title: String(item?.title || item?.heading || `Panel ${index + 1}`),
     body: String(item?.body || item?.content || item?.text || ""),
-    image: String(item?.image || item?.src || ""),
+    image: String(item?.imageUrl || item?.image || item?.mediaUrl || item?.imageSrc || item?.src || item?.desktopImage || item?.backgroundImage || ""),
     ctaText: String(item?.ctaText || item?.buttonText || ""),
     ctaUrl: String(item?.ctaUrl || item?.buttonUrl || item?.link || ""),
+    imageAlt: String(item?.imageAlt || item?.title || item?.heading || ""),
+    imageStyle: String(item?.imageStyle || "bleed"),
+    imagePosition: String(item?.imagePosition || (index % 2 === 0 ? "right" : "left")),
+    showCta: item?.showCta,
+    ctaStyle: String(item?.ctaStyle || ""),
+    buttonFullWidth: item?.buttonFullWidth === true,
     backgroundColor: String(item?.backgroundColor || ""),
+    textColor: String(item?.textColor || ""),
     accentColor: String(item?.accentColor || ""),
     tags: Array.isArray(item?.tags) ? item.tags.map((tag) => String(tag || "")).filter(Boolean) : [],
   }));
 }
 
 function SideScrollAccordionBlock({ props, compact = false, editor = false, onChangeBlock, onUploadImage }) {
-  const items = normalizeSideScrollItems(props.items);
+  const hasCanonicalPanels = Array.isArray(props.panels) && props.panels.length > 0;
+  const items = normalizeSideScrollItems(hasCanonicalPanels ? props.panels : props.items);
   const displayMode = String(props.displayMode || props.mode || "side-stack").toLowerCase();
   if (displayMode !== "marquee") {
     const panels = items.map((item, index) => ({
@@ -719,25 +727,57 @@ function SideScrollAccordionBlock({ props, compact = false, editor = false, onCh
       eyebrowDot: true,
       heading: item.title,
       body: item.body,
-      showCta: props.showButtons === true || props.showCta === true || !!item.ctaText,
+      showCta: item.showCta !== undefined ? item.showCta !== false : (props.showButtons === true || props.showCta === true || !!item.ctaText),
       ctaText: item.ctaText || props.buttonText || "Learn More",
       ctaUrl: item.ctaUrl || props.buttonUrl || "#contact-us",
-      ctaStyle: props.buttonStyle || "pill",
-      buttonFullWidth: props.buttonFullWidth === true,
+      ctaStyle: item.ctaStyle || props.buttonStyle || "pill",
+      buttonFullWidth: item.buttonFullWidth || props.buttonFullWidth === true,
+      imageUrl: item.image,
       image: item.image,
-      imageAlt: item.title,
-      imageStyle: props.imageStyle || "bleed",
-      imagePosition: index % 2 === 0 ? "right" : "left",
+      imageAlt: item.imageAlt || item.title,
+      imageStyle: item.imageStyle || props.imageStyle || "bleed",
+      imagePosition: item.imagePosition || (index % 2 === 0 ? "right" : "left"),
       backgroundColor: item.backgroundColor || props.panelBackgroundColor || "#0f172a",
-      textColor: props.textColor || "#ffffff",
+      textColor: item.textColor || props.textColor || "#ffffff",
       accentColor: item.accentColor || props.accentColor || "#00d5ff",
     }));
+    const handleSideStackChange = (nextProps) => {
+      if (typeof onChangeBlock !== "function") return;
+      const nextPanels = Array.isArray(nextProps?.panels) ? nextProps.panels : panels;
+      const nextItems = nextPanels.map((panel, index) => ({
+        id: panel.id || `side-stack-${index}`,
+        eyebrow: panel.eyebrow || "",
+        title: panel.title || panel.heading || `Panel ${index + 1}`,
+        heading: panel.heading || panel.title || `Panel ${index + 1}`,
+        body: panel.body || panel.content || panel.text || "",
+        tags: Array.isArray(panel.tags) ? panel.tags : [],
+        imageUrl: panel.imageUrl || panel.image || "",
+        image: panel.imageUrl || panel.image || "",
+        imageAlt: panel.imageAlt || panel.heading || panel.title || "",
+        imageStyle: panel.imageStyle || "bleed",
+        imagePosition: panel.imagePosition || (index % 2 === 0 ? "right" : "left"),
+        showCta: panel.showCta,
+        ctaText: panel.ctaText || "",
+        ctaUrl: panel.ctaUrl || "",
+        ctaStyle: panel.ctaStyle || "",
+        buttonFullWidth: panel.buttonFullWidth === true,
+        backgroundColor: panel.backgroundColor || "",
+        textColor: panel.textColor || "",
+        accentColor: panel.accentColor || "",
+      }));
+      onChangeBlock({
+        ...props,
+        ...nextProps,
+        panels: nextPanels,
+        items: nextItems,
+      });
+    };
 
     return (
       <ScrollStackBlock
         compact={compact}
         editor={editor}
-        onChangeBlock={onChangeBlock}
+        onChangeBlock={handleSideStackChange}
         onUploadImage={onUploadImage}
         props={{
           ...props,
