@@ -8,7 +8,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import BackToTopButton from "../../components/website-builder/BackToTopButton";
+import BackToTopButton from "../../components/website-builder/website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
@@ -577,7 +577,6 @@ export default function SitePage({ mode, title, sections, publication, requested
           <Section key={s.id || Math.random()} s={s} />
         ))}
       </div>
-      <BackToTopButton />
     </>
   );
 }

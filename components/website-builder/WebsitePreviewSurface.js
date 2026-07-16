@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useMemo } from "react";
+import BackToTopButton from "./website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 
 function slugify(value) {
@@ -239,6 +240,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
             </div>
           ) : null}
         </div>
+        <BackToTopButton />
       </main>
     </>
   );
