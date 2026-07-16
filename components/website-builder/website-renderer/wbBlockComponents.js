@@ -1,5 +1,6 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { isUnsafeAccordionPanelImageUrl, resolveAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
 import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
@@ -2932,34 +2933,15 @@ function renderGridSectionIcon(item, color, size) {
   return renderSocialPlatformIcon({ title: "social" }, { size, color });
 }
 
-function resolveAccordionPanelImage(panel = {}) {
-  return String(
-    panel?.imageUrl
-    || panel?.image
-    || panel?.mediaUrl
-    || panel?.imageSrc
-    || panel?.src
-    || panel?.desktopImage
-    || panel?.mobileImage
-    || panel?.backgroundImage
-    || ""
-  ).trim();
-}
-
-function isUnsafeAccordionImageUrl(value = "") {
-  const raw = String(value || "").trim();
-  if (!raw) return false;
-  if (/^(blob:|file:)/i.test(raw)) return true;
-  if (/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(raw)) return true;
-  return false;
-}
+const resolveAccordionPanelImage = resolveAccordionPanelImageUrl;
+const isUnsafeAccordionImageUrl = isUnsafeAccordionPanelImageUrl;
 
 function renderAccordionImageFallback(label = "Image") {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: 260, display: "grid", placeItems: "center", background: "linear-gradient(135deg, rgba(14,165,233,0.18), rgba(15,23,42,0.42))", color: "rgba(226,232,240,0.82)", textAlign: "center", padding: 24, boxSizing: "border-box" }}>
       <div style={{ display: "grid", gap: 8, justifyItems: "center", maxWidth: 280 }}>
-        <span style={{ fontSize: 34, lineHeight: 1 }}>Image</span>
-        <span style={{ fontSize: 15, lineHeight: 1.45, fontWeight: 700 }}>{label || "Panel image"}</span>
+        <span style={{ fontSize: 15, lineHeight: 1.45, fontWeight: 700 }}>{label || "Image not available"}</span>
+        <span style={{ fontSize: 13, lineHeight: 1.4, opacity: 0.78 }}>Image not available</span>
       </div>
     </div>
   );
@@ -5449,6 +5431,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     const failedKey = item.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
     const showImage = !!imageSrc && !imageFailed;
+    if (imageSrc && imageFailed && shouldLogHeroVideoDebug()) {
+      console.warn("[accordion image] invalid image URL", { panelId: item.id, index: idx, imageSrc });
+    }
     return (
       <>
         {showImage ? (
@@ -5456,7 +5441,10 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
             src={imageSrc}
             alt={item.imageAlt || item.label}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            onError={() => setFailedImages((prev) => ({ ...prev, [failedKey]: true }))}
+            onError={() => {
+              if (shouldLogHeroVideoDebug()) console.warn("[accordion image] failed to load", { panelId: item.id, index: idx, imageSrc });
+              setFailedImages((prev) => ({ ...prev, [failedKey]: true }));
+            }}
           />
         ) : (
           <div style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.04)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "rgba(255,255,255,0.35)" }}>
@@ -5467,11 +5455,11 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                 <input ref={(el) => { fileInputRefs.current[idx] = el; }} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
               </label>
             ) : (
-              <span style={{ fontSize: 16 }}>No image set</span>
+              <span style={{ fontSize: 16 }}>Image not available</span>
             )}
           </div>
         )}
-        {forEditor && item.image ? (
+        {forEditor && imageSrc ? (
           <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(15,23,42,0.85)", border: "1px solid rgba(255,255,255,0.2)", color: "#e2e8f0", borderRadius: 6, padding: "5px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }} onClick={(e) => e.stopPropagation()}>
               ↻ Replace
@@ -5764,6 +5752,54 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   const fileInputRefs = React.useRef({});
   const [failedImages, setFailedImages] = React.useState({});
+  const sectionRef = React.useRef(null);
+  const stickyRef = React.useRef(null);
+  const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [navH, setNavH] = React.useState(0);
+  const leadOffset = Number(props.stickyTopOffset ?? 0);
+  const stickyTop = navH + leadOffset;
+  const [containerMetrics, setContainerMetrics] = React.useState({ width: 1280, height: 800 });
+
+  React.useEffect(() => {
+    if (editor || compact || typeof window === "undefined") return;
+    function measureNav() {
+      const navShell = document.querySelector("[data-website-nav-shell]");
+      setNavH(navShell ? Math.round(navShell.getBoundingClientRect().height || 0) : 0);
+    }
+    measureNav();
+    window.addEventListener("resize", measureNav);
+    return () => window.removeEventListener("resize", measureNav);
+  }, [editor, compact]);
+
+  React.useEffect(() => {
+    if (editor || compact || typeof window === "undefined") return undefined;
+    let rafId = 0;
+    const measure = () => {
+      window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(() => {
+        const stickyEl = stickyRef.current;
+        const sectionEl = sectionRef.current;
+        const rect = (stickyEl || sectionEl)?.getBoundingClientRect?.();
+        setContainerMetrics({
+          width: Math.max(320, Math.round(rect?.width || sectionEl?.clientWidth || window.innerWidth || 1280)),
+          height: Math.max(360, Math.round(rect?.height || window.innerHeight - stickyTop || 800)),
+        });
+      });
+    };
+    measure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (observer && sectionRef.current) observer.observe(sectionRef.current);
+    if (observer && stickyRef.current) observer.observe(stickyRef.current);
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    document.fonts?.ready?.then(measure).catch(() => {});
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [editor, compact, stickyTop, panels.length]);
 
   function patchPanels(newPanels) {
     if (!editor || typeof onChangeBlock !== "function") return;
@@ -5835,12 +5871,21 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     const failedKey = panel.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
     const showImage = !!imageSrc && !imageFailed;
+    if (imageSrc && imageFailed && shouldLogHeroVideoDebug()) {
+      console.warn("[accordion image] invalid image URL", { panelId: panel.id, index: idx, imageSrc });
+    }
     const imageEl = showImage ? (
       <img
         src={imageSrc}
         alt={panel.imageAlt || panel.heading}
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: isCard ? 16 : 0 }}
-        onError={() => setFailedImages((prev) => ({ ...prev, [failedKey]: true }))}
+        onLoad={() => {
+          if (typeof window !== "undefined") window.dispatchEvent(new Event("resize"));
+        }}
+        onError={() => {
+          if (shouldLogHeroVideoDebug()) console.warn("[accordion image] failed to load", { panelId: panel.id, index: idx, imageSrc });
+          setFailedImages((prev) => ({ ...prev, [failedKey]: true }));
+        }}
       />
     ) : (
       <div style={{
@@ -5857,7 +5902,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
             <input ref={(el) => { fileInputRefs.current[idx] = el; }} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleImageUpload(idx, f); }} />
           </label>
         ) : (
-          <span style={{ fontSize: 16 }}>No image</span>
+          <span style={{ fontSize: 16 }}>Image not available</span>
         )}
       </div>
     );
@@ -6093,21 +6138,6 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   const PEEK = Math.max(48, Math.min(140, Number(props.peekHeight ?? props.cardPeekHeight ?? 52))); // px - visible header strip when stacked
 
-  const sectionRef = React.useRef(null);
-  const [scrollProgress, setScrollProgress] = React.useState(0); // continuous 0..n
-  const [navH, setNavH] = React.useState(0);
-
-  React.useEffect(() => {
-    if (editor || compact || typeof window === "undefined") return;
-    function measureNav() {
-      const navShell = document.querySelector("[data-website-nav-shell]");
-      setNavH(navShell ? Math.round(navShell.getBoundingClientRect().height || 0) : 0);
-    }
-    measureNav();
-    window.addEventListener("resize", measureNav);
-    return () => window.removeEventListener("resize", measureNav);
-  }, [editor, compact]);
-
   React.useEffect(() => {
     if (editor || compact || typeof window === "undefined") return;
     const n = panels.length;
@@ -6137,40 +6167,43 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     window.scrollTo({ top: window.scrollY + (targetScrolledIn - (-rect.top)), behavior: "smooth" });
   }
 
-  const leadOffset = Number(props.stickyTopOffset ?? 0);
-  const stickyTop = navH + leadOffset;
   const cardLead = Number(props.cardLead ?? 0);
   const hInset = Number(props.cardInset ?? 0);
   const n = panels.length;
-  const vp = ((typeof window !== "undefined" && window.innerHeight) || 800) - stickyTop;
-  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+  const vp = Math.max(360, containerMetrics.height);
+  const vw = Math.max(320, containerMetrics.width);
   const stackMode = String(props.stackMode || props.orientation || props.scrollStackMode || "").toLowerCase();
   const useSideStack = stackMode === "side" || stackMode === "horizontal" || stackMode === "right";
 
   if (useSideStack) {
     const SIDE_PEEK = Math.max(58, Math.min(170, Number(props.peekWidth ?? props.cardPeekWidth ?? props.sidePeekWidth ?? PEEK)));
+    const stackSide = String(props.stackSide || props.sideStackSide || props.stackEdge || "left").toLowerCase() === "right" ? "right" : "left";
     return (
       <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative", background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f" }}>
-        <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
+        <div ref={stickyRef} style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
           {panels.map((panel, idx) => {
             const dist = idx - scrollProgress;
-            let x;
+            let xLeft;
             if (dist <= 0) {
-              x = cardLead + idx * SIDE_PEEK;
+              xLeft = cardLead + idx * SIDE_PEEK;
             } else if (dist < 1) {
               const t = 1 - dist;
               const xFuture = vw - (n - idx) * SIDE_PEEK;
-              x = xFuture + t * (cardLead + idx * SIDE_PEEK - xFuture);
+              xLeft = xFuture + t * (cardLead + idx * SIDE_PEEK - xFuture);
             } else {
-              x = vw - (n - idx) * SIDE_PEEK;
+              xLeft = vw - (n - idx) * SIDE_PEEK;
             }
 
-            const visibleContentWidth = Math.max(320, vw - SIDE_PEEK - Math.max(0, x));
+            const panelWidth = Math.max(Math.min(620, vw), vw - Math.max(0, xLeft));
+            const x = stackSide === "right" ? Math.max(0, vw - panelWidth - xLeft) : xLeft;
             const isPast = dist < -0.05;
             const isFuture = dist > 0.05;
             const imageRight = panel.imagePosition !== "left";
             const tc = panel.textColor || "#ffffff";
             const ac = panel.accentColor || "#0ea5e9";
+            const contentGridColumns = imageRight
+              ? "minmax(320px, 1fr) minmax(320px, 1fr)"
+              : "minmax(320px, 1fr) minmax(320px, 1fr)";
 
             return (
               <div
@@ -6179,7 +6212,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   position: "absolute",
                   left: 0,
                   top: 0,
-                  width: "100vw",
+                  width: panelWidth,
                   height: "100%",
                   transform: `translateX(${x}px)`,
                   zIndex: idx + 1,
@@ -6195,7 +6228,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   onClick={() => (isPast || isFuture) ? jumpToCard(idx) : undefined}
                   style={{
                     position: "absolute",
-                    left: 0,
+                    left: stackSide === "left" ? 0 : "auto",
+                    right: stackSide === "right" ? 0 : "auto",
                     top: 0,
                     bottom: 0,
                     width: SIDE_PEEK,
@@ -6206,7 +6240,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                     padding: "22px 0",
                     cursor: (isPast || isFuture) ? "pointer" : "default",
                     background: panel.backgroundColor,
-                    borderRight: props.hideHeaderDivider === true ? "none" : `1px solid ${tc}1a`,
+                    borderRight: stackSide === "left" && props.hideHeaderDivider !== true ? `1px solid ${tc}1a` : "none",
+                    borderLeft: stackSide === "right" && props.hideHeaderDivider !== true ? `1px solid ${tc}1a` : "none",
                     userSelect: "none",
                     boxSizing: "border-box",
                   }}
@@ -6219,11 +6254,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   </div>
                 </div>
 
-                <div style={{ marginLeft: SIDE_PEEK, width: visibleContentWidth, height: "100%", display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden" }}>
-                  <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
+                <div style={{ marginLeft: stackSide === "left" ? SIDE_PEEK : 0, marginRight: stackSide === "right" ? SIDE_PEEK : 0, width: `calc(100% - ${SIDE_PEEK}px)`, minWidth: 0, height: "100%", display: "grid", gridTemplateColumns: contentGridColumns, direction: imageRight ? "ltr" : "rtl", overflow: "hidden" }}>
+                  <div style={{ minWidth: 320, overflow: "hidden", direction: "ltr" }}>
                     {renderImageHalf(panel, idx, false, "100%")}
                   </div>
-                  <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center", overflow: "hidden" }}>
+                  <div style={{ minWidth: 320, display: "flex", alignItems: "center", overflow: "hidden", direction: "ltr" }}>
                     {renderPanelContent(panel, idx)}
                   </div>
                 </div>
@@ -6237,7 +6272,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   return (
     <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative" }}>
-      <div style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
+      <div ref={stickyRef} style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
         {panels.map((panel, idx) => {
           // dist < 0 ? past (settled at top), dist = 0 ? active, dist > 0 ? future
           const dist = idx - scrollProgress;

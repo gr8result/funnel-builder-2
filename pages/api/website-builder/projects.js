@@ -10,6 +10,7 @@ import {
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
 import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
+import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 
 const TABLE_NAME = "published_websites";
 
@@ -183,6 +184,27 @@ function syncPlatformPricingPage(project) {
     ...project,
     pageBlocks,
   };
+}
+
+function normalizeAccordionBlocksForProject(project) {
+  if (!project?.pageBlocks || typeof project.pageBlocks !== "object") return project;
+  const pageBlocks = Object.fromEntries(
+    Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
+      pageName,
+      normalizeAccordionBlocks(blocks),
+    ])
+  );
+  const chaiData = project.chaiData && typeof project.chaiData === "object"
+    ? Object.fromEntries(
+        Object.entries(project.chaiData).map(([pageName, pageData]) => [
+          pageName,
+          pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
+            ? { ...pageData, blocks: normalizeAccordionBlocks(pageData.blocks) }
+            : pageData,
+        ])
+      )
+    : project.chaiData;
+  return { ...project, pageBlocks, chaiData };
 }
 
 function mapProjectRow(row) {
@@ -381,12 +403,13 @@ async function handler(req, res) {
     const siteOnly = req.body?.siteOnly === true;
     const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
+    const normalizedProject = normalizeAccordionBlocksForProject(project);
     const now = new Date().toISOString();
-    const versionMeta = buildWebsiteProjectVersion(project, now);
+    const versionMeta = buildWebsiteProjectVersion(normalizedProject, now);
     const nextProject = {
-      ...project,
+      ...normalizedProject,
       id: projectId,
-      createdAt: project?.createdAt || now,
+      createdAt: normalizedProject?.createdAt || now,
       updatedAt: now,
       savedAt: versionMeta.savedAt,
       projectVersion: versionMeta.projectVersion,

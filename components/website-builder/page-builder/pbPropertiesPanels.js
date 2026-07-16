@@ -6149,6 +6149,7 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
   const chooseLibraryImage = (itemIndex) => {
     openSharedLibraryAssetPicker((asset) => {
       updateItem(itemIndex, {
+        imageUrl: asset.src || "",
         image: asset.src || "",
         imageAssetId: asset.id || "",
         imageAlt: htmlToPlainText(asset.name || items[itemIndex]?.imageAlt || ""),
@@ -6176,13 +6177,13 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
                   <span style={styles.linkRowTitle}>Item {itemIndex + 1}</span>
                 </div>
                 <input type="text" value={htmlToPlainText(item.label || "")} onChange={(e) => updateItem(itemIndex, { label: e.target.value })} style={styles.propertyInput} placeholder="Card tagline / tab label" />
-                <input type="text" value={String(item.image || "")} onChange={(e) => updateItem(itemIndex, { image: e.target.value, imageAssetId: "" })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image URL" />
+                <input type="text" value={String(item.imageUrl || item.image || item.imageSrc || item.mediaUrl || item.src || "")} onChange={(e) => updateItem(itemIndex, { imageUrl: e.target.value, image: e.target.value, imageAssetId: "" })} style={{ ...styles.propertyInput, marginTop: 6 }} placeholder="Image URL" />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                   <button type="button" style={styles.assetLibraryBtn} onClick={() => chooseLibraryImage(itemIndex)}>
                     🖼️ Replace from Library
                   </button>
-                  {item.image ? (
-                    <button type="button" style={styles.assetChip} onClick={() => updateItem(itemIndex, { image: "", imageAssetId: "" })}>
+                  {(item.imageUrl || item.image) ? (
+                    <button type="button" style={styles.assetChip} onClick={() => updateItem(itemIndex, { imageUrl: "", image: "", imageAssetId: "" })}>
                       Clear Image
                     </button>
                   ) : null}
@@ -6195,7 +6196,7 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
                         type="button"
                         style={styles.assetThumbBtn}
                         title={image.name || "Use library image"}
-                        onClick={() => updateItem(itemIndex, { image: image.src || "", imageAssetId: image.id || "", imageAlt: htmlToPlainText(image.name || item.imageAlt || "") })}
+                        onClick={() => updateItem(itemIndex, { imageUrl: image.src || "", image: image.src || "", imageAssetId: image.id || "", imageAlt: htmlToPlainText(image.name || item.imageAlt || "") })}
                       >
                         <img src={image.src} alt={image.name || "Library image"} style={styles.assetThumbPreview} />
                       </button>
@@ -6323,7 +6324,7 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
   async function handleUpload(panelIdx, file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage("__ss_panel_image__", file));
-    if (asset?.src) updatePanel(panelIdx, { image: asset.src });
+    if (asset?.src) updatePanel(panelIdx, { imageUrl: asset.src, image: asset.src });
   }
 
   return (
@@ -6415,7 +6416,7 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                   ) : null}
                   <div style={styles.propertyField}>
                     <label style={styles.propertyLabel}>Image URL</label>
-                    <input type="text" value={String(panel.image || "")} onChange={(e) => updatePanel(panelIdx, { image: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
+                    <input type="text" value={String(panel.imageUrl || panel.image || panel.imageSrc || panel.mediaUrl || panel.src || "")} onChange={(e) => updatePanel(panelIdx, { imageUrl: e.target.value, image: e.target.value })} style={styles.propertyInput} placeholder="https://..." />
                   </div>
                   {typeof onUploadImage === "function" ? (
                     <label style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(14,165,233,0.12)", border: "1px dashed rgba(14,165,233,0.4)", color: "#38bdf8", borderRadius: 6, padding: "7px 12px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>

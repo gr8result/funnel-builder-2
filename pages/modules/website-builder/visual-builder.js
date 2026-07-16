@@ -25,6 +25,7 @@ import {
   updateWebsiteProject,
 } from "../../../lib/website-builder/projectStore";
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
+import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
@@ -1701,7 +1702,7 @@ export default function VisualBuilderPage() {
         return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message, imageIssues };
       }
 
-      const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
+      const safeBlocks = normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : []));
 
       // Build the chai data payload
       const chaiData = {
