@@ -26,6 +26,7 @@ import {
 } from "../../../lib/website-builder/projectStore";
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
+import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
@@ -122,6 +123,35 @@ function summarizeBuilderBlocksForSave(blocks = []) {
         };
       })
       .filter(Boolean),
+  };
+}
+
+function normalizeFooterNavigationForProject(project) {
+  if (!project || typeof project !== "object") return project;
+  const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
+  const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
+    ? Object.fromEntries(
+        Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
+          pageName,
+          normalizeFooterNavigationBlocks(Array.isArray(blocks) ? blocks : [], footerContext),
+        ])
+      )
+    : project.pageBlocks;
+  const chaiData = project.chaiData && typeof project.chaiData === "object"
+    ? Object.fromEntries(
+        Object.entries(project.chaiData).map(([pageName, pageData]) => [
+          pageName,
+          pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
+            ? { ...pageData, blocks: normalizeFooterNavigationBlocks(pageData.blocks, footerContext) }
+            : pageData,
+        ])
+      )
+    : project.chaiData;
+  return {
+    ...project,
+    pageBlocks,
+    chaiData,
+    globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
   };
 }
 
@@ -1323,7 +1353,7 @@ export default function VisualBuilderPage() {
         throw new Error(savedBeforePublish._saveErrorMessage || "Could not save the latest page before publishing.");
       }
       await waitForActiveSaveToFinish();
-      const latestSavedProject = await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName });
+      const latestSavedProject = normalizeFooterNavigationForProject(await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName }));
       if (!latestSavedProject?.id) {
         throw new Error("Could not reload the latest saved project before publishing.");
       }
@@ -1431,15 +1461,16 @@ export default function VisualBuilderPage() {
       currentProject = getWebsiteProject(project.id) || project;
     }
 
-    const savedProject = updateWebsiteProject(project.id, {
+    const nextProjectForPatch = normalizeFooterNavigationForProject({
       ...currentProject,
       ...patch,
       status: "saved",
     });
+    const savedProject = updateWebsiteProject(project.id, nextProjectForPatch);
 
     // Storage quota exceeded — force immediate cloud sync so nothing is lost
     if (savedProject?._localSaveFailed) {
-      const projectToSync = { ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined };
+      const projectToSync = normalizeFooterNavigationForProject({ ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined });
       flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
       void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, saveSource: "manual-save", ...syncOptions }).then((synced) => {
         if (synced) flashNotice("✓ Auto-saved to cloud (local storage full)", "success", 6000);
@@ -1702,7 +1733,8 @@ export default function VisualBuilderPage() {
         return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message, imageIssues };
       }
 
-      const safeBlocks = normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : []));
+      const footerContext = buildFooterNavigationContext({ pages: currentProject.pages, logInvalid: true });
+      const safeBlocks = normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext);
 
       // Build the chai data payload
       const chaiData = {
@@ -1721,7 +1753,7 @@ export default function VisualBuilderPage() {
         status: "saved",
       };
 
-      const projectWithPatch = { ...currentProject, ...patch, updatedAt: new Date().toISOString() };
+      const projectWithPatch = normalizeFooterNavigationForProject({ ...currentProject, ...patch, updatedAt: new Date().toISOString() });
 
       if (!isPreviewSave) {
         await saveEmergencyPageDraft(currentProject.id, pageName, {

@@ -33,6 +33,7 @@ import {
   buildNavLinkStyle, applyNavHoverEffect, resetNavHoverEffect,
   findScrollParent, getBrandInitials, BrandMark, sharedStyles,
 } from "./website-renderer/wbVariantStyles";
+import { normalizeFooterNavigationProps } from "../../lib/website-builder/footerNavigation";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -4502,6 +4503,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
 
     case "footer": {
+      const footerPageMap = navigationContext?.pageMap && typeof navigationContext.pageMap === "object"
+        ? new Map(Object.entries(navigationContext.pageMap).map(([key, href]) => [key, { slug: key, label: key, href }]))
+        : new Map();
+      const footerProps = normalizeFooterNavigationProps(props, { pageMap: footerPageMap, logInvalid: true });
       const ftBg = props.backgroundColor || "#0f172a";
       const ftText = props.textColor || "#e2e8f0";
       const ftLink = props.linkColor || "#94a3b8";
@@ -4510,8 +4515,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const ftBtnText = props.newsletterButtonTextColor || "#ffffff";
       const footerLogoSrc = brandLogoSrc;
       const footerMarkSize = Number(props.logoWidth) || 48;
-      const navLinks = Array.isArray(props.navLinks) ? props.navLinks : [];
-      const extraLinks = Array.isArray(props.extraLinks) ? props.extraLinks : [];
+      const navLinks = Array.isArray(footerProps.navLinks) ? footerProps.navLinks : [];
+      const extraLinks = Array.isArray(footerProps.extraLinks) ? footerProps.extraLinks : [];
       const footerEmailHref = resolveFooterEmailHref(props.contactEmail);
       const footerPhoneHref = resolveFooterPhoneHref(props.contactPhone);
       const footerVariant = String(props.footerVariant || "service-grid");
@@ -4520,7 +4525,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         { heading: props.navHeading || "Navigate", links: navLinks },
         { heading: props.extraHeading || "Legal", links: extraLinks },
       ].filter((group) => Array.isArray(group.links) && group.links.length);
-      const linkGroups = (Array.isArray(props.linkGroups) && props.linkGroups.length ? props.linkGroups : derivedLinkGroups)
+      const linkGroups = (Array.isArray(footerProps.linkGroups) && footerProps.linkGroups.length ? footerProps.linkGroups : derivedLinkGroups)
         .map((group) => ({ heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
         .filter((group) => group.links.length);
       const spotlightItems = Array.isArray(props.spotlightItems) ? props.spotlightItems.filter(Boolean) : [];

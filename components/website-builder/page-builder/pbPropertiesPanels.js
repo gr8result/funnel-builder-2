@@ -29,6 +29,12 @@ import {
   TEXT_SIZE_OPTIONS,
   readCustomStatsPreset, writeCustomStatsPreset, matchesCustomStatsPreset,
 } from "./pbEditorUtils";
+import {
+  buildFooterLinksFromPages,
+  buildFooterNavigationContext,
+  matchFooterLinksToMainNavigationOrder,
+  normalizeFooterNavItems,
+} from "../../../lib/website-builder/footerNavigation";
 
 function BlockPresetPicker({ blockType, onApply }) {
   const presets = BLOCK_STYLE_PRESETS[blockType] || [];
@@ -1379,25 +1385,53 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
   );
 }
 
-function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor }) {
+function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor, project }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
+  const footerContext = buildFooterNavigationContext({ pages: project?.pages, logInvalid: true });
+  const navLinks = normalizeFooterNavItems(props.navLinks, footerContext, { source: "footer.editor.navLinks" });
+  const extraLinks = normalizeFooterNavItems(props.extraLinks, footerContext, { source: "footer.editor.extraLinks" });
+
+  const focusFooterLink = (collection, i) => {
+    if (typeof document === "undefined") return;
+    document.querySelector(`[data-footer-link-input="${collection}-${i}"]`)?.focus?.();
+  };
+
+  const moveFooterLink = (collection, i, direction) => {
+    const links = collection === "extraLinks" ? [...extraLinks] : [...navLinks];
+    const nextIndex = i + direction;
+    if (nextIndex < 0 || nextIndex >= links.length) return;
+    const temp = links[i];
+    links[i] = links[nextIndex];
+    links[nextIndex] = temp;
+    update({ [collection]: links, footerNavManual: true });
+  };
+
+  const matchMainNavigationOrder = () => {
+    const mainLinks = Array.isArray(project?.globalNavBlock?.props?.links) && project.globalNavBlock.props.links.length
+      ? project.globalNavBlock.props.links
+      : buildFooterLinksFromPages(project?.pages || []);
+    update({
+      navLinks: matchFooterLinksToMainNavigationOrder(navLinks, mainLinks, footerContext),
+      footerNavManual: true,
+    });
+  };
 
   const updateNavLink = (i, field, value) => {
-    const links = [...(Array.isArray(props.navLinks) ? props.navLinks : [])];
+    const links = [...navLinks];
     links[i] = { ...links[i], [field]: value };
-    update({ navLinks: links });
+    update({ navLinks: links, footerNavManual: true });
   };
-  const addNavLink = () => update({ navLinks: [...(props.navLinks || []), { label: "New Link", href: "#" }] });
-  const removeNavLink = (i) => update({ navLinks: (props.navLinks || []).filter((_, idx) => idx !== i) });
+  const addNavLink = () => update({ navLinks: [...navLinks, { label: "New Link", href: "#" }], footerNavManual: true });
+  const removeNavLink = (i) => update({ navLinks: navLinks.filter((_, idx) => idx !== i), footerNavManual: true });
 
   const updateExtraLink = (i, field, value) => {
-    const links = [...(Array.isArray(props.extraLinks) ? props.extraLinks : [])];
+    const links = [...extraLinks];
     links[i] = { ...links[i], [field]: value };
-    update({ extraLinks: links });
+    update({ extraLinks: links, footerNavManual: true });
   };
-  const addExtraLink = () => update({ extraLinks: [...(props.extraLinks || []), { label: "New Link", href: "#" }] });
-  const removeExtraLink = (i) => update({ extraLinks: (props.extraLinks || []).filter((_, idx) => idx !== i) });
+  const addExtraLink = () => update({ extraLinks: [...extraLinks, { label: "New Link", href: "#" }], footerNavManual: true });
+  const removeExtraLink = (i) => update({ extraLinks: extraLinks.filter((_, idx) => idx !== i), footerNavManual: true });
 
   return (
     <div style={styles.properties}>
@@ -1486,9 +1520,13 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
           <label style={styles.propertyLabel}>Navigation Heading</label>
           <input type="text" value={String(props.navHeading || "")} onChange={(e) => update({ navHeading: e.target.value })} style={styles.propertyInput} placeholder="Navigation" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Nav Links</label>
-          {(Array.isArray(props.navLinks) ? props.navLinks : []).map((link, i) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
-              <input type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6, width: "100%" }} onClick={matchMainNavigationOrder}>Match Main Navigation Order</button>
+          {navLinks.map((link, i) => (
+            <div key={link.id || i} style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr 1fr auto", gap: 4, marginTop: 6, alignItems: "center" }}>
+              <button type="button" title="Move up" disabled={i === 0} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, -1)}>↑</button>
+              <button type="button" title="Move down" disabled={i === navLinks.length - 1} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === navLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, 1)}>↓</button>
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px" }} onClick={() => focusFooterLink("navLinks", i)}>Edit</button>
+              <input data-footer-link-input={`navLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
               <input type="text" value={link.href || ""} onChange={(e) => updateNavLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
               <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeNavLink(i)}>✕</button>
             </div>
@@ -1501,9 +1539,12 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
           <label style={styles.propertyLabel}>Extra Column Heading</label>
           <input type="text" value={String(props.extraHeading || "")} onChange={(e) => update({ extraHeading: e.target.value })} style={styles.propertyInput} placeholder="Company" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Extra Links</label>
-          {(Array.isArray(props.extraLinks) ? props.extraLinks : []).map((link, i) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 4, marginTop: 6 }}>
-              <input type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
+          {extraLinks.map((link, i) => (
+            <div key={link.id || i} style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr 1fr auto", gap: 4, marginTop: 6, alignItems: "center" }}>
+              <button type="button" title="Move up" disabled={i === 0} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, -1)}>↑</button>
+              <button type="button" title="Move down" disabled={i === extraLinks.length - 1} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === extraLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, 1)}>↓</button>
+              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px" }} onClick={() => focusFooterLink("extraLinks", i)}>Edit</button>
+              <input data-footer-link-input={`extraLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
               <input type="text" value={link.href || ""} onChange={(e) => updateExtraLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
               <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeExtraLink(i)}>✕</button>
             </div>

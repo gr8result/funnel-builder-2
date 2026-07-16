@@ -3566,6 +3566,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         brandAssets={brandAssets}
         onUploadImage={onUploadImage}
         onOpenSimpleImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
+        project={project}
       />
     );
   }

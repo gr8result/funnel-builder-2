@@ -11,6 +11,7 @@ import {
 } from "../../../lib/website-builder/supabaseSiteStorage";
 import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
+import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 
 const TABLE_NAME = "published_websites";
 
@@ -186,25 +187,33 @@ function syncPlatformPricingPage(project) {
   };
 }
 
-function normalizeAccordionBlocksForProject(project) {
-  if (!project?.pageBlocks || typeof project.pageBlocks !== "object") return project;
-  const pageBlocks = Object.fromEntries(
-    Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
-      pageName,
-      normalizeAccordionBlocks(blocks),
-    ])
-  );
+function normalizeProjectBlocksForSave(project) {
+  if (!project || typeof project !== "object") return project;
+  const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
+  const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
+    ? Object.fromEntries(
+        Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
+          pageName,
+          normalizeFooterNavigationBlocks(normalizeAccordionBlocks(blocks), footerContext),
+        ])
+      )
+    : project.pageBlocks;
   const chaiData = project.chaiData && typeof project.chaiData === "object"
     ? Object.fromEntries(
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
           pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
-            ? { ...pageData, blocks: normalizeAccordionBlocks(pageData.blocks) }
+            ? { ...pageData, blocks: normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext) }
             : pageData,
         ])
       )
     : project.chaiData;
-  return { ...project, pageBlocks, chaiData };
+  return {
+    ...project,
+    pageBlocks,
+    chaiData,
+    globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
+  };
 }
 
 function mapProjectRow(row) {
@@ -403,7 +412,7 @@ async function handler(req, res) {
     const siteOnly = req.body?.siteOnly === true;
     const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
 
-    const normalizedProject = normalizeAccordionBlocksForProject(project);
+    const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
     const versionMeta = buildWebsiteProjectVersion(normalizedProject, now);
     const nextProject = {
