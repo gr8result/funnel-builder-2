@@ -3903,6 +3903,8 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   if (block.type === BlockTypes.VIDEO_HERO) {
     const vp = block.props || {};
+    const canonicalVideoUrl = String(vp.videoUrl || vp.videoSrc || vp.videoURL || "");
+    const canonicalPosterUrl = String(vp.posterUrl || vp.posterSrc || vp.posterURL || "");
     const updateVH = (patch) => onChange(index, { ...vp, ...patch });
     const applyVHOption = (patch) => (event) => {
       event.preventDefault();
@@ -3929,7 +3931,14 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
       try {
         const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_src__", file));
         if (asset?.src) {
-          updateVH({ videoSrc: asset.src });
+          updateVH({
+            videoUrl: asset.src,
+            videoSrc: asset.src,
+            videoStoragePath: asset.storagePath || vp.videoStoragePath || "",
+            videoMimeType: asset.type || file.type || "",
+            videoFileName: asset.name || file.name || "",
+            uploadedAt: new Date().toISOString(),
+          });
         } else {
           setVideoUploadError("Upload failed — server returned no URL. Check file format and size.");
         }
@@ -3942,7 +3951,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     const handlePosterUpload = async (file) => {
       if (!file) return;
       const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_poster__", file));
-      if (asset?.src) updateVH({ posterSrc: asset.src });
+      if (asset?.src) updateVH({ posterUrl: asset.src, posterSrc: asset.src });
     };
 
     return (
@@ -3961,10 +3970,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                 <span style={{ display: "inline-block", width: 16, height: 16, border: "2px solid #7dd3fc", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                 Uploading video to CDN…
               </div>
-            ) : vp.videoSrc ? (
+            ) : canonicalVideoUrl ? (
               <video
-                src={vp.videoSrc}
-                poster={vp.posterSrc || undefined}
+                src={canonicalVideoUrl}
+                poster={canonicalPosterUrl || undefined}
                 muted={vhMuted}
                 autoPlay={vhAutoplay}
                 loop={vhLoop}
@@ -3975,31 +3984,31 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <label style={{ ...styles.assetUploadCta, cursor: videoUploading ? "not-allowed" : "pointer", opacity: videoUploading ? 0.5 : 1 }}>
-                📹 {videoUploading ? "Uploading…" : vp.videoSrc ? "Replace Video" : "Upload Video"}
+                📹 {videoUploading ? "Uploading…" : canonicalVideoUrl ? "Replace Video" : "Upload Video"}
                 <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={styles.hiddenInput} disabled={videoUploading}
                   onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
               </label>
-              {vp.videoSrc && !videoUploading ? (
+              {canonicalVideoUrl && !videoUploading ? (
                 <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => updateVH({ videoSrc: "" })}>Remove</button>
+                  onClick={() => updateVH({ videoUrl: "", videoSrc: "" })}>Remove</button>
               ) : null}
             </div>
           </div>
 
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>Poster / Thumbnail</label>
-            {vp.posterSrc ? (
-              <img src={vp.posterSrc} alt="poster" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8 }} />
+            {canonicalPosterUrl ? (
+              <img src={canonicalPosterUrl} alt="poster" style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, display: "block", marginBottom: 8 }} />
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <label style={{ ...styles.assetUploadCta, cursor: "pointer" }}>
-                🖼️ {vp.posterSrc ? "Replace Poster" : "Upload Poster"}
+                🖼️ {canonicalPosterUrl ? "Replace Poster" : "Upload Poster"}
                 <input type="file" accept="image/*" style={styles.hiddenInput}
                   onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handlePosterUpload(f); }} />
               </label>
-              {vp.posterSrc ? (
+              {canonicalPosterUrl ? (
                 <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => updateVH({ posterSrc: "" })}>Remove</button>
+                  onClick={() => updateVH({ posterUrl: "", posterSrc: "" })}>Remove</button>
               ) : null}
             </div>
           </div>

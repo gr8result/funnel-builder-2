@@ -27,6 +27,7 @@ import {
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
@@ -133,7 +134,7 @@ function normalizeFooterNavigationForProject(project) {
     ? Object.fromEntries(
         Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
           pageName,
-          normalizeFooterNavigationBlocks(Array.isArray(blocks) ? blocks : [], footerContext),
+          normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(Array.isArray(blocks) ? blocks : [], footerContext)),
         ])
       )
     : project.pageBlocks;
@@ -142,7 +143,7 @@ function normalizeFooterNavigationForProject(project) {
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
           pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
-            ? { ...pageData, blocks: normalizeFooterNavigationBlocks(pageData.blocks, footerContext) }
+            ? { ...pageData, blocks: normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(pageData.blocks, footerContext)) }
             : pageData,
         ])
       )
@@ -152,6 +153,7 @@ function normalizeFooterNavigationForProject(project) {
     pageBlocks,
     chaiData,
     globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
+    globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
   };
 }
 
@@ -1704,7 +1706,7 @@ export default function VisualBuilderPage() {
       flashNotice(message, "error", 15000);
       return { _saveError: true, _saveErrorMessage: message, imageIssues };
     }
-    const safeBlocks = stripBlobUrls(Array.isArray(blocks) ? blocks : []);
+    const safeBlocks = normalizeVideoHeroBlocksForPersistence(stripBlobUrls(Array.isArray(blocks) ? blocks : []));
     return saveChaiPage({
       ...(currentProject?.chaiData?.[pageName] || {}),
       blocks: safeBlocks,
@@ -1734,7 +1736,7 @@ export default function VisualBuilderPage() {
       }
 
       const footerContext = buildFooterNavigationContext({ pages: currentProject.pages, logInvalid: true });
-      const safeBlocks = normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext);
+      const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext));
 
       // Build the chai data payload
       const chaiData = {
@@ -2146,7 +2148,7 @@ export default function VisualBuilderPage() {
     try {
       // Video bytes go straight to Supabase Storage from the browser; the API
       // only issues a signed upload URL so Vercel never receives the MP4 body.
-      const videoFieldKeys = ["backgroundVideoUrl", "__video_hero_src__"];
+      const videoFieldKeys = ["backgroundVideoUrl", "__video_hero_src__", "videoUrl", "videoSrc"];
       const isVideo = file.type?.startsWith("video/") || videoFieldKeys.includes(String(fieldKey || ""));
       if (isVideo) {
         if (Number(file.size || 0) > WEBSITE_BUILDER_MAX_VIDEO_BYTES) {
@@ -2199,7 +2201,7 @@ export default function VisualBuilderPage() {
           }),
         }).catch(() => {});
 
-        const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src };
+        const asset = { id: json.id || `asset-${Date.now()}`, name: json.name || file.name, type: json.type || file.type, src: json.src, storagePath: json.storagePath };
         const existingVideos = Array.isArray(brandAssets?.videos) ? brandAssets.videos : [];
         const dedupedVideos = existingVideos.filter((video) => video?.src && video.src !== asset.src && video.name !== asset.name);
         persistAssets(mergeWebsiteBuilderAssetSources({

@@ -12,6 +12,7 @@ import {
 import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
 
 const TABLE_NAME = "published_websites";
 
@@ -194,7 +195,7 @@ function normalizeProjectBlocksForSave(project) {
     ? Object.fromEntries(
         Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
           pageName,
-          normalizeFooterNavigationBlocks(normalizeAccordionBlocks(blocks), footerContext),
+          normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(blocks), footerContext)),
         ])
       )
     : project.pageBlocks;
@@ -203,7 +204,7 @@ function normalizeProjectBlocksForSave(project) {
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
           pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
-            ? { ...pageData, blocks: normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext) }
+            ? { ...pageData, blocks: normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext)) }
             : pageData,
         ])
       )
@@ -213,6 +214,7 @@ function normalizeProjectBlocksForSave(project) {
     pageBlocks,
     chaiData,
     globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
+    globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
   };
 }
 

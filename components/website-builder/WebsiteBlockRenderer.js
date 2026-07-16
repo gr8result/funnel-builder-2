@@ -1054,8 +1054,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
   // max-width so all blocks stay within the canvas bounds. Full-bleed backgrounds use
   // fullWidthStyle() which intentionally ignores baseLayoutWidth, so they remain full-screen.
   const props = (layoutWidth && Number(layoutWidth) > 0)
-    ? { ...rawProps, baseLayoutWidth: Math.max(320, Number(layoutWidth)) }
-    : rawProps;
+    ? { ...rawProps, baseLayoutWidth: Math.max(320, Number(layoutWidth)), __blockId: block?.id || "", __blockType: block?.type || "" }
+    : { ...rawProps, __blockId: block?.id || "", __blockType: block?.type || "" };
   const shouldRunAnimations = !editor || animationPreview;
   const sectionAnimationStyle = !shouldRunAnimations
     ? {}

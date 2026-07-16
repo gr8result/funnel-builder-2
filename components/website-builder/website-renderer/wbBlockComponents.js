@@ -1,6 +1,7 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { isUnsafeAccordionPanelImageUrl, resolveAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
+import { resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
@@ -55,6 +56,22 @@ function logHeroVideoDebug(label, eventName, video, extra = {}) {
   console.info(`[HeroVideoDebug] ${label}: ${eventName}`, {
     ...getVideoDebugState(video),
     ...extra,
+  });
+}
+
+function logAccordionRenderDebug({ blockId, blockType, panels, renderer }) {
+  if (!shouldLogHeroVideoDebug()) return;
+  console.info("[AccordionRenderDebug]", {
+    blockId,
+    blockType,
+    panelCount: Array.isArray(panels) ? panels.length : 0,
+    selectedRendererComponent: renderer,
+    panels: (Array.isArray(panels) ? panels : []).map((panel, panelIndex) => ({
+      panelIndex,
+      panelTitle: panel?.heading || panel?.title || panel?.label || "",
+      resolvedImageField: panel?.imageUrl ? "imageUrl" : panel?.image ? "image" : panel?.imageSrc ? "imageSrc" : panel?.mediaUrl ? "mediaUrl" : panel?.src ? "src" : "",
+      resolvedImageUrl: resolveAccordionPanelImageUrl(panel),
+    })),
   });
 }
 
@@ -5055,6 +5072,10 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     })),
   }));
 
+  React.useEffect(() => {
+    logAccordionRenderDebug({ blockId: props.__blockId || props.id || props.blockId || "", blockType: props.__blockType || "feature-accordion", panels: items, renderer: "FeatureAccordionBlock" });
+  }, [props.__blockId, props.__blockType, props.id, props.blockId, items.length]);
+
   const [activeIdx, setActiveIdx] = React.useState(0);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [failedImages, setFailedImages] = React.useState({});
@@ -5750,6 +5771,10 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     accentColor: p?.accentColor ?? "#0ea5e9",
   }));
 
+  React.useEffect(() => {
+    logAccordionRenderDebug({ blockId: props.__blockId || props.id || props.blockId || "", blockType: props.__blockType || (props.stackMode === "side" ? "side-scroll-accordion" : "scroll-stack"), panels, renderer: "ScrollStackBlock" });
+  }, [props.__blockId, props.__blockType, props.id, props.blockId, props.stackMode, panels.length]);
+
   const fileInputRefs = React.useRef({});
   const [failedImages, setFailedImages] = React.useState({});
   const sectionRef = React.useRef(null);
@@ -6178,32 +6203,41 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   if (useSideStack) {
     const SIDE_PEEK = Math.max(58, Math.min(170, Number(props.peekWidth ?? props.cardPeekWidth ?? props.sidePeekWidth ?? PEEK)));
     const stackSide = String(props.stackSide || props.sideStackSide || props.stackEdge || "left").toLowerCase() === "right" ? "right" : "left";
+    const openPanelWidth = Math.min(vw, Math.max(Math.min(720, vw), vw - Math.max(0, n - 1) * SIDE_PEEK));
+    const contentColumns = openPanelWidth - SIDE_PEEK < 760
+      ? "minmax(280px, 0.95fr) minmax(320px, 1.05fr)"
+      : "minmax(340px, 1fr) minmax(380px, 1fr)";
     return (
       <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative", background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f" }}>
         <div ref={stickyRef} style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
           {panels.map((panel, idx) => {
             const dist = idx - scrollProgress;
-            let xLeft;
+            let settledX;
+            let futureX;
+            if (stackSide === "right") {
+              settledX = vw - openPanelWidth - idx * SIDE_PEEK;
+              futureX = (idx - n + 1) * SIDE_PEEK;
+            } else {
+              settledX = idx * SIDE_PEEK;
+              futureX = vw - (n - idx) * SIDE_PEEK;
+            }
+            let x;
             if (dist <= 0) {
-              xLeft = cardLead + idx * SIDE_PEEK;
+              x = cardLead + settledX;
             } else if (dist < 1) {
               const t = 1 - dist;
-              const xFuture = vw - (n - idx) * SIDE_PEEK;
-              xLeft = xFuture + t * (cardLead + idx * SIDE_PEEK - xFuture);
+              x = futureX + t * (cardLead + settledX - futureX);
             } else {
-              xLeft = vw - (n - idx) * SIDE_PEEK;
+              x = futureX;
             }
 
-            const panelWidth = Math.max(Math.min(620, vw), vw - Math.max(0, xLeft));
-            const x = stackSide === "right" ? Math.max(0, vw - panelWidth - xLeft) : xLeft;
+            const panelWidth = openPanelWidth;
             const isPast = dist < -0.05;
             const isFuture = dist > 0.05;
             const imageRight = panel.imagePosition !== "left";
             const tc = panel.textColor || "#ffffff";
             const ac = panel.accentColor || "#0ea5e9";
-            const contentGridColumns = imageRight
-              ? "minmax(320px, 1fr) minmax(320px, 1fr)"
-              : "minmax(320px, 1fr) minmax(320px, 1fr)";
+            const contentGridColumns = contentColumns;
 
             return (
               <div
@@ -6218,9 +6252,9 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   zIndex: idx + 1,
                   background: panel.backgroundColor,
                   color: tc,
-                  borderRadius: idx > 0 ? `${Number(props.cardRadius ?? 18)}px 0 0 ${Number(props.cardRadius ?? 18)}px` : 0,
+                  borderRadius: idx > 0 ? (stackSide === "right" ? `0 ${Number(props.cardRadius ?? 18)}px ${Number(props.cardRadius ?? 18)}px 0` : `${Number(props.cardRadius ?? 18)}px 0 0 ${Number(props.cardRadius ?? 18)}px`) : 0,
                   overflow: "hidden",
-                  boxShadow: idx > 0 ? "-10px 0 34px rgba(0,0,0,0.26)" : "none",
+                  boxShadow: idx > 0 ? (stackSide === "right" ? "10px 0 34px rgba(0,0,0,0.26)" : "-10px 0 34px rgba(0,0,0,0.26)") : "none",
                   border: Number(props.cardBorderWidth ?? 0) > 0 ? `${Number(props.cardBorderWidth)}px solid ${props.cardBorderColor || "#3b82f6"}` : "none",
                 }}
               >
@@ -6711,7 +6745,7 @@ function AvatarMorphBlock({ block, editor = false, compact = false, onChangeBloc
 function VideoHeroBlock({ block, editor = false, compact = false, isSelected = false, onChangeBlock, onUploadImage }) {
   const props = block?.props || {};
 
-  const videoSrc     = String(props.videoSrc     || props.videoUrl || props.videoURL || "");
+  const videoSrc     = String(resolveVideoHeroUrl(props) || "");
   const posterSrc    = String(props.posterSrc    || props.posterUrl || props.posterURL || "");
   const overlayOpacity = Number(props.overlayOpacity ?? 0.42);
   const overlayColor = String(props.overlayColor || "#000000");
@@ -6743,6 +6777,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   const loadedRef = React.useRef(false);
   const loadedSrcRef = React.useRef("");
   const [muted, setMuted] = React.useState(initialMuted);
+  const [videoFailed, setVideoFailed] = React.useState(false);
   const debugLabel = `video-hero ${block?.id || "unknown"}`;
 
   React.useEffect(() => {
@@ -6758,6 +6793,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
 
   React.useEffect(() => {
     logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { videoSrc });
+    setVideoFailed(false);
   }, [debugLabel, videoSrc]);
 
   // React owns the media source; the observer only nudges playback and never
@@ -6837,12 +6873,22 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
     const previousVideoSrc = videoSrc;
     // Show local blob URL immediately so the preview updates before the upload finishes.
     const blobUrl = URL.createObjectURL(file);
-    onChangeBlock?.({ ...props, videoSrc: blobUrl });
+    onChangeBlock?.({ ...props, videoUrl: blobUrl, videoSrc: blobUrl });
     try {
       const asset = await Promise.resolve(onUploadImage("__video_hero_src__", file));
-      if (asset?.src) onChangeBlock?.({ ...props, videoSrc: asset.src });
+      if (asset?.src) {
+        onChangeBlock?.({
+          ...props,
+          videoUrl: asset.src,
+          videoSrc: asset.src,
+          videoStoragePath: asset.storagePath || props.videoStoragePath || "",
+          videoMimeType: asset.type || file.type || props.videoMimeType || "",
+          videoFileName: asset.name || file.name || props.videoFileName || "",
+          uploadedAt: new Date().toISOString(),
+        });
+      }
     } catch (error) {
-      onChangeBlock?.({ ...props, videoSrc: previousVideoSrc || "" });
+      onChangeBlock?.({ ...props, videoUrl: previousVideoSrc || "", videoSrc: previousVideoSrc || "" });
       if (typeof window !== "undefined") {
         window.alert(error?.message || "Video upload failed. Please try again.");
       }
@@ -6854,7 +6900,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   async function handlePosterUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage("__video_hero_poster__", file));
-    if (asset?.src) onChangeBlock?.({ ...props, posterSrc: asset.src });
+    if (asset?.src) onChangeBlock?.({ ...props, posterUrl: asset.src, posterSrc: asset.src });
   }
 
   // -- Shared overlay style --------------------------------------------------
@@ -6954,7 +7000,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
             </label>
             {videoSrc ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove video</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoUrl: "", videoSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove video</button>
             ) : null}
           </div>
 
@@ -7156,30 +7202,41 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
       ) : null}
 
       {/* Video element: stable src prevents re-renders from restarting playback. */}
-      <video
-        ref={videoRef}
-        src={videoSrc || undefined}
-        poster={posterSrc || undefined}
-        muted={muted}
-        autoPlay={autoplay}
-        loop={loop}
-        controls={showControls}
-        playsInline
-        preload={preloadMode}
-        onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
-        onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
-        onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
-        onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
-        onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
-        onError={(event) => logHeroVideoDebug(debugLabel, "Video error", event.currentTarget)}
-        style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          width: "100%", height: "100%",
-          objectFit,
-          objectPosition,
-          display: "block",
-        }}
-      />
+      {videoFailed && posterSrc ? (
+        <img
+          src={posterSrc}
+          alt={title || "Video poster"}
+          style={{ position: "absolute", inset: 0, zIndex: 0, width: "100%", height: "100%", objectFit, objectPosition, display: "block" }}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          src={videoSrc || undefined}
+          poster={posterSrc || undefined}
+          muted={muted}
+          autoPlay={autoplay}
+          loop={loop}
+          controls={showControls}
+          playsInline
+          preload={preloadMode}
+          onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+          onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+          onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+          onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+          onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+          onError={(event) => {
+            logHeroVideoDebug(debugLabel, "Video error", event.currentTarget);
+            if (posterSrc) setVideoFailed(true);
+          }}
+          style={{
+            position: "absolute", inset: 0, zIndex: 0,
+            width: "100%", height: "100%",
+            objectFit,
+            objectPosition,
+            display: "block",
+          }}
+        />
+      )}
 
       {/* Dark overlay for text legibility */}
       <div style={overlayStyle} />
