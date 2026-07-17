@@ -1387,7 +1387,15 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
 
 function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor, project }) {
   const props = block?.props || {};
-  const update = (patch) => onChange(index, { ...props, ...patch });
+  const update = (patch) => {
+    if (Array.isArray(props.navLinks) && props.navLinks.length > 3 && Array.isArray(patch?.navLinks) && patch.navLinks.length <= 1) {
+      if (typeof window !== "undefined") {
+        window.alert("Footer navigation update blocked because it would remove almost all existing links.");
+      }
+      return;
+    }
+    onChange(index, { ...props, ...patch });
+  };
   const footerContext = buildFooterNavigationContext({ pages: project?.pages, logInvalid: true });
   const navLinks = normalizeFooterNavItems(props.navLinks, footerContext, { source: "footer.editor.navLinks" });
   const extraLinks = normalizeFooterNavItems(props.extraLinks, footerContext, { source: "footer.editor.extraLinks" });
@@ -1411,8 +1419,17 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
     const mainLinks = Array.isArray(project?.globalNavBlock?.props?.links) && project.globalNavBlock.props.links.length
       ? project.globalNavBlock.props.links
       : buildFooterLinksFromPages(project?.pages || []);
+    const orderedLinks = matchFooterLinksToMainNavigationOrder(navLinks, mainLinks, footerContext);
+    if (navLinks.length > 3 && orderedLinks.length <= 1) {
+      if (typeof window !== "undefined") {
+        window.alert("Match Main Navigation Order was blocked because it would reduce the footer to one link.");
+      }
+      return;
+    }
+    const preview = orderedLinks.map((link) => link.label || link.href).filter(Boolean).join(" -> ");
+    if (typeof window !== "undefined" && !window.confirm(`Apply this footer order?\n\n${preview}`)) return;
     update({
-      navLinks: matchFooterLinksToMainNavigationOrder(navLinks, mainLinks, footerContext),
+      navLinks: orderedLinks,
       footerNavManual: true,
     });
   };

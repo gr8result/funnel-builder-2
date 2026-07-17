@@ -218,6 +218,13 @@ function normalizeProjectBlocksForSave(project) {
   };
 }
 
+function countFooterNavLinks(project) {
+  const block = project?.globalFooterBlock;
+  if (!block || block.type !== "footer") return 0;
+  const links = block.props?.navLinks;
+  return Array.isArray(links) ? links.length : 0;
+}
+
 function mapProjectRow(row) {
   if (!row) return null;
 
@@ -426,6 +433,21 @@ async function handler(req, res) {
       projectVersion: versionMeta.projectVersion,
       contentHash: versionMeta.contentHash,
     };
+
+    let currentSplitProject = null;
+    try {
+      currentSplitProject = await loadFullSplitWebsiteProject(userId, projectId);
+    } catch {
+      currentSplitProject = null;
+    }
+    const previousFooterLinkCount = countFooterNavLinks(currentSplitProject);
+    const nextFooterLinkCount = countFooterNavLinks(nextProject);
+    if (previousFooterLinkCount > 3 && nextFooterLinkCount <= 1) {
+      return res.status(409).json({
+        ok: false,
+        error: `Footer navigation save blocked because it would reduce ${previousFooterLinkCount} links to ${nextFooterLinkCount}.`,
+      });
+    }
 
     let splitProject = null;
     try {
