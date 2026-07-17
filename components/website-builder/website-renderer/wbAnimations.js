@@ -567,10 +567,13 @@ function resolvePublishedNavHref(link, navigationContext) {
     const anchorKey = slugifyText(href.slice(1));
     if (canonicalRoutes[anchorKey]) {
       const pageMap = navigationContext?.pageMap || {};
-      if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[anchorKey]) {
+      const hasPageMapEntry = pageMap instanceof Map ? pageMap.has(anchorKey) : !!pageMap[anchorKey];
+      const pageMapSize = pageMap instanceof Map ? pageMap.size : Object.keys(pageMap).length;
+      const pageMapHref = pageMap instanceof Map ? pageMap.get(anchorKey)?.href : pageMap[anchorKey];
+      if (navigationContext?.strictPublishedPages && pageMapSize && !hasPageMapEntry) {
         return "#__missing-page";
       }
-      return pageMap[anchorKey] || canonicalRoutes[anchorKey];
+      return pageMapHref || canonicalRoutes[anchorKey];
     }
   }
   if (/^https?:\/\/localhost(?::\d+)?/i.test(href)) {

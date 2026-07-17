@@ -4503,9 +4503,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       );
 
     case "footer": {
-      const footerPageMap = navigationContext?.pageMap && typeof navigationContext.pageMap === "object"
-        ? new Map(Object.entries(navigationContext.pageMap).map(([key, href]) => [key, { slug: key, label: key, href }]))
-        : new Map();
+      const footerPageMap = navigationContext?.pageMap instanceof Map
+        ? navigationContext.pageMap
+        : navigationContext?.pageMap && typeof navigationContext.pageMap === "object"
+          ? new Map(Object.entries(navigationContext.pageMap).map(([key, href]) => [key, { slug: key, label: key, href }]))
+          : new Map();
       const footerProps = normalizeFooterNavigationProps(props, { pageMap: footerPageMap, logInvalid: true });
       const ftBg = props.backgroundColor || "#0f172a";
       const ftText = props.textColor || "#e2e8f0";
@@ -4517,6 +4519,20 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const footerMarkSize = Number(props.logoWidth) || 48;
       const navLinks = Array.isArray(footerProps.navLinks) ? footerProps.navLinks : [];
       const extraLinks = Array.isArray(footerProps.extraLinks) ? footerProps.extraLinks : [];
+      if (process.env.NODE_ENV !== "production" && Array.isArray(props.navLinks) && props.navLinks.length > 3 && navLinks.length < 2) {
+        console.warn("[website-builder footer nav] renderer resolved too few links", {
+          rawCount: props.navLinks.length,
+          validCount: navLinks.length,
+          rejectedCount: props.navLinks.length - navLinks.length,
+          rawLinks: props.navLinks,
+          normalizedLinks: navLinks,
+        });
+      } else if (process.env.NODE_ENV !== "production" && Array.isArray(props.navLinks)) {
+        console.info("[website-builder footer nav] renderer link count", {
+          validCount: navLinks.length,
+          rejectedCount: Math.max(0, props.navLinks.length - navLinks.length),
+        });
+      }
       const footerEmailHref = resolveFooterEmailHref(props.contactEmail);
       const footerPhoneHref = resolveFooterPhoneHref(props.contactPhone);
       const footerVariant = String(props.footerVariant || "service-grid");
@@ -4525,7 +4541,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         { heading: props.navHeading || "Navigate", links: navLinks },
         { heading: props.extraHeading || "Legal", links: extraLinks },
       ].filter((group) => Array.isArray(group.links) && group.links.length);
-      const linkGroups = (Array.isArray(footerProps.linkGroups) && footerProps.linkGroups.length ? footerProps.linkGroups : derivedLinkGroups)
+      const linkGroups = (navLinks.length || extraLinks.length ? derivedLinkGroups : (Array.isArray(footerProps.linkGroups) && footerProps.linkGroups.length ? footerProps.linkGroups : derivedLinkGroups))
         .map((group) => ({ heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
         .filter((group) => group.links.length);
       const spotlightItems = Array.isArray(props.spotlightItems) ? props.spotlightItems.filter(Boolean) : [];
