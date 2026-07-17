@@ -9,14 +9,32 @@ export default function UsageWarning() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUsageStats();
+    const controller = new AbortController();
+    let active = true;
+    fetchUsageStats({ signal: controller.signal, isActive: () => active });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
-  async function fetchUsageStats() {
+  function finishLoading(isActive) {
+    if (isActive()) setLoading(false);
+  }
+
+  function isValidUsageStats(value) {
+    return value
+      && typeof value === "object"
+      && value.email
+      && value.sms
+      && value.subscribers;
+  }
+
+  async function fetchUsageStats({ signal, isActive = () => true } = {}) {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
-        setLoading(false);
+        finishLoading(isActive);
         return;
       }
 
@@ -24,19 +42,22 @@ export default function UsageWarning() {
         headers: {
           Authorization: `Bearer ${session.session.access_token}`,
         },
+        signal,
       });
 
       if (!res.ok) {
-        setLoading(false);
+        finishLoading(isActive);
         return;
       }
 
       const data = await res.json();
-      if (data.stats) setStats(data.stats);
+      if (isActive() && isValidUsageStats(data?.stats)) setStats(data.stats);
     } catch (err) {
-      console.error("Error fetching usage stats:", err);
+      if (err?.name !== "AbortError" && process.env.NODE_ENV !== "production") {
+        console.warn("[UsageWarning] usage stats unavailable", err?.message || err);
+      }
     } finally {
-      setLoading(false);
+      finishLoading(isActive);
     }
   }
 
