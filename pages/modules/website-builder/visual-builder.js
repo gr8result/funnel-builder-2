@@ -134,7 +134,7 @@ function normalizeFooterNavigationForProject(project) {
     ? Object.fromEntries(
         Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
           pageName,
-          normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(Array.isArray(blocks) ? blocks : [], footerContext)),
+          normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(Array.isArray(blocks) ? blocks : []), footerContext)),
         ])
       )
     : project.pageBlocks;
@@ -143,7 +143,7 @@ function normalizeFooterNavigationForProject(project) {
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
           pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
-            ? { ...pageData, blocks: normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(pageData.blocks, footerContext)) }
+            ? { ...pageData, blocks: normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext)) }
             : pageData,
         ])
       )
@@ -1706,7 +1706,8 @@ export default function VisualBuilderPage() {
       flashNotice(message, "error", 15000);
       return { _saveError: true, _saveErrorMessage: message, imageIssues };
     }
-    const safeBlocks = normalizeVideoHeroBlocksForPersistence(stripBlobUrls(Array.isArray(blocks) ? blocks : []));
+    const footerContext = buildFooterNavigationContext({ pages: currentProject.pages, logInvalid: true });
+    const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext));
     return saveChaiPage({
       ...(currentProject?.chaiData?.[pageName] || {}),
       blocks: safeBlocks,
