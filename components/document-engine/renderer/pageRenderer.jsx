@@ -2,7 +2,17 @@ import React from "react";
 import { sortObjectsByLayer } from "../core/layerEngine.js";
 import { ObjectRenderer } from "./objectRenderer.jsx";
 
-export function PageRenderer({ page, workbook = null, selection = null, onSelectObject }) {
+export function PageRenderer({
+  page,
+  workbook = null,
+  selection = null,
+  editing = false,
+  textEditingObjectId = "",
+  onSelectObject,
+  onResizeObject,
+  onTextEditStart,
+  onTextCommit,
+}) {
   if (!page) return null;
   const selectedIds = selection?.selectedObjectIds || [];
   return (
@@ -27,7 +37,12 @@ export function PageRenderer({ page, workbook = null, selection = null, onSelect
           object={object}
           workbook={workbook}
           selected={selectedIds.includes(object.id)}
+          editing={editing}
+          textEditing={textEditingObjectId === object.id}
           onSelect={onSelectObject}
+          onResize={onResizeObject}
+          onTextEditStart={onTextEditStart}
+          onTextCommit={onTextCommit}
         />
       ))}
     </div>
