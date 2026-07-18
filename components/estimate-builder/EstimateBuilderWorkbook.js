@@ -29,8 +29,22 @@ import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapsho
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
 import { createPremierInclusionsDocument } from "../document-engine/templates/standardInclusionsTemplate";
+import { createDocument } from "../document-engine/core/documentState";
+import { createA4Page } from "../document-engine/core/pageEngine";
+import { createObject } from "../document-engine/core/objectEngine";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
+import {
+  APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
+  PROJECT_ESTIMATE_EXPORT_ORDER,
+  PROJECT_ESTIMATE_PAGE_KEYS as REGISTRY_PROJECT_ESTIMATE_PAGE_KEYS,
+  PROJECT_ESTIMATE_TEMPLATE_ID as REGISTRY_PROJECT_ESTIMATE_TEMPLATE_ID,
+  PROJECT_ESTIMATE_TEMPLATE_VERSION as REGISTRY_PROJECT_ESTIMATE_TEMPLATE_VERSION,
+  defaultProjectEstimateBlocks,
+  projectEstimateNavigationPages,
+  projectEstimatePageDefinitionFor,
+} from "./project-estimate/ProjectEstimateRegistry";
+import { appendProjectEstimatePageRevision, projectEstimateRevisionsForPage } from "./project-estimate/storage/projectEstimateVersionHistory";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
 
@@ -2374,8 +2388,9 @@ function ClientPageSheet({ sheet }) {
     [sheet.workbook.clientPage?.proposalBuilder, client]
   );
   const [builder, setBuilder] = useState(sourceBuilder);
-  const activePage = builder.pages.find((page) => page.id === activePageId) || builder.pages[0];
-  const selectedBlock = activePage?.blocks?.find((block) => block.id === selectedBlockId) || activePage?.blocks?.[0] || null;
+  const orderedProposalPages = useMemo(() => orderedProjectEstimatePages(builder), [builder]);
+  const activePage = orderedProposalPages.find((page) => page.id === activePageId) || orderedProposalPages[0] || builder.pages[0];
+  const selectedBlock = activePage?.blocks?.find((block) => block.id === selectedBlockId) || null;
   const logoInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
@@ -2400,12 +2415,12 @@ function ClientPageSheet({ sheet }) {
   }, []);
 
   useEffect(() => {
-    if (!activePageId && builder.pages[0]?.id) setActivePageId(builder.pages[0].id);
-  }, [activePageId, builder.pages]);
+    if (!activePageId && orderedProposalPages[0]?.id) setActivePageId(orderedProposalPages[0].id);
+  }, [activePageId, orderedProposalPages]);
 
   useEffect(() => {
-    if (activePage && !activePage.blocks.some((block) => block.id === selectedBlockId)) {
-      setSelectedBlockId(activePage.blocks[0]?.id || "");
+    if (activePage && selectedBlockId && !activePage.blocks.some((block) => block.id === selectedBlockId)) {
+      setSelectedBlockId("");
     }
   }, [activePage, selectedBlockId]);
 
@@ -2489,7 +2504,19 @@ function ClientPageSheet({ sheet }) {
   const updateBlockContent = (blockId, key, value) => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     const block = activePage.blocks.find((item) => item.id === blockId);
-    updateBlock(blockId, { content: { ...(block?.content || {}), [key]: value } });
+    updateBuilder((current) => ({
+      ...current,
+      pageRevisions: appendProjectEstimatePageRevision(current.pageRevisions || [], {
+        pageId: activePage.page_type || activePage.id,
+        templateVersion: PROJECT_ESTIMATE_TEMPLATE_VERSION,
+        contentOverrides: projectEstimatePageContentOverrides(activePage),
+        source: "editor",
+      }),
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: page.blocks.map((item) => item.id === blockId ? { ...item, content: { ...(block?.content || {}), [key]: value } } : item),
+      } : page),
+    }), "Page field saved.");
     proposalPerfLog("text edit latency", {
       ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
       blockId,
@@ -2820,59 +2847,33 @@ function ClientPageSheet({ sheet }) {
         projectId: proposalProjectId(sheet),
         legacyInclusionsFound: inclusionsCheck.legacyFound,
       });
+      const exportPayload = buildProjectEstimateExportPayload({
+        builder: exportBuilder,
+        sheet,
+        workspaceId,
+        linkedFields,
+      });
+      const requestBody = JSON.stringify(exportPayload);
+      assertProjectEstimateExportPayloadIsSmall(exportPayload);
+      console.info("[Project Estimate PDF export] small export payload", {
+        byteLength: new Blob([requestBody]).size,
+        payloadKeys: Object.keys(exportPayload),
+        pageCount: exportPayload.pageOrder.length,
+        importedDocuments: exportPayload.importedDocumentReferences,
+      });
       const renderedPages = await renderProposalPagesForPdf(exportPagesRef.current);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || "";
-      const exportPayload = {
-        name: exportBuilder.name || "Estimate Pack",
-        fileName: proposalPdfFileName(sheet, exportBuilder),
+      const mergeWarnings = [];
+      const blob = await createProposalPdfBlobFromProjectEstimate({
         renderedPages,
         importedDocuments: exportBuilder.importedDocuments || {},
-        workspaceId: workspaceId || "",
-        projectId: proposalProjectId(sheet),
-        estimateId: proposalEstimateId(sheet),
-      };
-      const requestBody = JSON.stringify(exportPayload);
-      JSON.parse(requestBody);
-      console.info("[Project Estimate PDF export] outgoing request", {
-        url: "/api/builders/proposal-document-export",
-        contentType: "application/json",
-        byteLength: new Blob([requestBody]).size,
-        pageCount: renderedPages.length,
-        uploadedInclusionsSchedule: exportPayload.importedDocuments?.inclusions || null,
-        uploadedPlans: exportPayload.importedDocuments?.pricedPlans || null,
-        payloadKeys: Object.keys(exportPayload),
+        onWarning: (message) => mergeWarnings.push(message),
       });
-      const response = await fetch("/api/builders/proposal-document-export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/pdf, application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: requestBody,
-      });
-      const responseType = response.headers.get("content-type") || "";
-      if (!response.ok) {
-        const message = await formatProposalExportErrorResponse(response, responseType);
-        throw new Error(message);
-      }
-      if (!responseType.includes("application/pdf")) {
-        const message = await formatProposalExportErrorResponse(response, responseType, { responseOk: true });
-        throw new Error(message);
-      }
-      const blob = await response.blob();
       const downloadName = proposalPdfFileName(sheet, exportBuilder);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = downloadName;
-      link.click();
-      URL.revokeObjectURL(url);
-      setStatusMessage("PDF downloaded.");
+      downloadBlob(blob, downloadName);
+      setStatusMessage(mergeWarnings.length ? `${mergeWarnings.join(" ")} The remainder of the Project Estimate has been generated successfully.` : "PDF downloaded.");
     } catch (error) {
       console.error("Merged PDF export failed", error);
-      setStatusMessage(error?.message || "PDF export failed.");
+      setStatusMessage("PDF export could not be completed. Your estimate has not been changed. Please try again.");
     }
   };
 
@@ -2972,7 +2973,7 @@ function ClientPageSheet({ sheet }) {
       <div style={styles.proposalBuilderLayout}>
           <aside className="proposal-builder-sidebar" style={styles.proposalBuilderSidebar}>
             <h3>Pages</h3>
-            {builder.pages.map((page) => (
+            {orderedProposalPages.map((page) => (
               <button
                 key={page.id}
                 style={{ ...styles.proposalPageListButton, ...(activePage.id === page.id ? styles.proposalPageListButtonActive : {}) }}
@@ -2980,6 +2981,7 @@ function ClientPageSheet({ sheet }) {
               >
                 <span>{page.title}</span>
                 <small>{page.page_type}</small>
+                <ProjectEstimatePageAttachmentLabel page={page} importedDocuments={builder.importedDocuments || {}} />
               </button>
             ))}
             <ProposalImportSidebarStatus
@@ -3027,18 +3029,23 @@ function ClientPageSheet({ sheet }) {
                 linkedFields={linkedFields}
                 Brochure={EstimateInclusionsBrochure}
                 ProgressDiagnostic={ProgressPaymentDiagnostic}
+                editing={!readonly}
+                selectedBlockId={selectedBlockId}
+                onSelectBlock={setSelectedBlockId}
                 />
               )
           ))}
-        </main>
+          </main>
           <aside className="proposal-builder-panel" style={styles.proposalBuilderPanel}>
-              <LuxuryProposalThemePanel
-                theme={builder.theme}
-                linkedFields={linkedFields}
+              <ProjectEstimateContextualInspector
+                page={activePage}
+                block={selectedBlock}
+                revisions={builder.pageRevisions || []}
                 readonly={readonly}
-                onThemeChange={updateTheme}
-                onThemeStatChange={updateThemeStat}
-                onUploadImage={openThemeImageUpload}
+                onBlockContent={updateBlockContent}
+                onDuplicateBlock={duplicateBlock}
+                onDeleteBlock={removeBlock}
+                onMoveBlock={moveBlock}
               />
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
             <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : "image")} />
@@ -3049,27 +3056,24 @@ function ClientPageSheet({ sheet }) {
           </aside>
       </div>
       <div ref={exportPagesRef} style={styles.proposalExportSource} aria-hidden="true">
-        {expandProposalPagesForImportedDocuments(builder.pages, builder.importedDocuments || {}, { editing: false }).map((page) => (
+        {orderedProposalPages.map((page) => (
           <div
             key={`export-${page.id}`}
             data-proposal-export-page="true"
             data-orientation={proposalPageOrientation(page)}
             data-page-type={page.page_type || ""}
+            data-page-id={page.page_type || page.id || ""}
             data-source-file={page.importedDocument?.fileName || page.importedDocument?.title || ""}
             data-source-path={page.importedDocument?.storagePath || page.importedDocument?.publicUrl || ""}
             data-source-page-number={page.importedPageNumber || page.importedDocument?.pageNumber || ""}
           >
-            {isProposalImportPage(page) ? (
-              <ProposalImportedDocumentPage page={page} inclusionsDocument={inclusionsDocument} pricedPlans={pricedPlans} editing={false} />
-            ) : (
-              <ProjectEstimatePackPage
-                page={page}
-                theme={builder.theme}
-                linkedFields={linkedFields}
-                Brochure={EstimateInclusionsBrochure}
-                ProgressDiagnostic={ProgressPaymentDiagnostic}
-              />
-            )}
+            <ProjectEstimatePackPage
+              page={page}
+              theme={builder.theme}
+              linkedFields={linkedFields}
+              Brochure={EstimateInclusionsBrochure}
+              ProgressDiagnostic={ProgressPaymentDiagnostic}
+            />
           </div>
         ))}
       </div>
@@ -3124,6 +3128,21 @@ function isProposalImportPage(page = {}) {
   return ["standardInclusions", "pricedPlans", "importedInclusionsPdf", "importedPlanPdf"].includes(page.page_type);
 }
 
+function orderedProjectEstimatePages(builder = {}) {
+  const pages = Array.isArray(builder.pages) ? builder.pages : [];
+  const byType = new Map();
+  pages.forEach((page) => {
+    const pageType = page?.page_type || page?.id || "";
+    if (pageType && !byType.has(pageType)) byType.set(pageType, page);
+  });
+  return PROJECT_ESTIMATE_EXPORT_ORDER
+    .map((item) => {
+      const pageId = item.type === "documentSlot" ? item.placeholderPageId : item.pageId;
+      return byType.get(pageId) || defaultQuoteProposalPage(pageId, {}, {});
+    })
+    .filter((page) => page && projectEstimatePageDefinitionFor(page.page_type || page.id));
+}
+
 function expandProposalPagesForImportedDocuments(pages = [], importedDocuments = {}, { editing = false } = {}) {
   const inclusions = importedDocuments.inclusions || null;
   const planPages = Array.isArray(importedDocuments.pricedPlans?.pages) ? importedDocuments.pricedPlans.pages : [];
@@ -3162,6 +3181,23 @@ function expandProposalPagesForImportedDocuments(pages = [], importedDocuments =
     }
     return [page];
   });
+}
+
+function ProjectEstimatePageAttachmentLabel({ page, importedDocuments = {} }) {
+  const pageType = page?.page_type || page?.id || "";
+  if (pageType === "standardInclusions") {
+    const document = importedDocuments.inclusions || null;
+    if (!referencedPdfUrl(document)) return null;
+    const pageCount = Number(document.pageCount || document.page_count || document.pages?.length || 1) || 1;
+    return <small>{document.fileName || document.title || "Inclusions.pdf"} - {pageCount} page{pageCount === 1 ? "" : "s"}</small>;
+  }
+  if (pageType === "pricedPlans") {
+    const document = importedDocuments.pricedPlans || null;
+    if (!referencedPdfUrl(document)) return null;
+    const pageCount = Number(document.pageCount || document.page_count || document.pages?.length || 1) || 1;
+    return <small>{document.fileName || document.title || "Plans.pdf"} - {pageCount} page{pageCount === 1 ? "" : "s"}</small>;
+  }
+  return null;
 }
 
 function ProposalImportSidebarStatus({
@@ -3395,6 +3431,7 @@ async function renderProposalPagesForPdf(container) {
       });
       renderedPages.push({
         pageIndex: index + 1,
+        pageId: element.dataset.pageId || element.dataset.pageType || "",
         pageType: element.dataset.pageType || "",
         sourceFile: element.dataset.sourceFile || "",
         sourcePath: element.dataset.sourcePath || "",
@@ -3419,6 +3456,229 @@ async function renderProposalPagesForPdf(container) {
   return renderedPages;
 }
 
+function buildProjectEstimateExportPayload({ builder = {}, sheet = {}, workspaceId = "", linkedFields = {} } = {}) {
+  const orderedPages = orderedProjectEstimatePages(builder);
+  return {
+    documentType: "project-estimate",
+    estimateId: proposalEstimateId(sheet),
+    jobId: sheet?.workbook?.id || sheet?.workbook?.jobId || "",
+    workspaceId: workspaceId || "",
+    projectId: proposalProjectId(sheet),
+    templateId: builder.templateId || QUOTE_PROPOSAL_TEMPLATE_KEY,
+    templateVersion: builder.templateVersion || PROJECT_ESTIMATE_TEMPLATE_VERSION,
+    template: builder.template || APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
+    pageOrder: PROJECT_ESTIMATE_EXPORT_ORDER.map((item) => item.type === "documentSlot" ? item.placeholderPageId : item.pageId),
+    pageOverrides: serializeProjectEstimatePageOverrides(orderedPages),
+    linkedFieldOverrides: serializeProjectEstimateLinkedFieldOverrides(linkedFields),
+    importedDocumentReferences: serializeProjectEstimateDocumentReferences(builder.importedDocuments || {}),
+  };
+}
+
+function serializeProjectEstimatePageOverrides(pages = []) {
+  return pages.reduce((overrides, page) => {
+    const pageId = page.page_type || page.id;
+    if (!pageId) return overrides;
+    overrides[pageId] = projectEstimatePageContentOverrides(page);
+    return overrides;
+  }, {});
+}
+
+function serializeProjectEstimateLinkedFieldOverrides(linkedFields = {}) {
+  return Object.entries(linkedFields).reduce((fields, [key, field]) => {
+    if (["pricingGroups", "inclusions", "standardInclusionsPackage", "estimateInclusionsPackage"].includes(key)) return fields;
+    const value = field?.value;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      fields[key] = value;
+    }
+    return fields;
+  }, {});
+}
+
+function serializeProjectEstimateDocumentReferences(importedDocuments = {}) {
+  return Object.entries(importedDocuments || {}).reduce((documents, [key, document]) => {
+    if (!document || typeof document !== "object") return documents;
+    const pages = Array.isArray(document.pages) ? document.pages : [];
+    documents[key] = {
+      id: document.id || "",
+      fileName: document.fileName || document.file_name || document.title || "",
+      mimeType: document.mimeType || document.mime_type || "application/pdf",
+      storagePath: document.storagePath || document.storage_path || "",
+      publicUrl: document.publicUrl || document.public_url || document.url || "",
+      sourceType: document.sourceType || document.source_type || "",
+      pageCount: Number(document.pageCount || document.page_count || pages.length || 0) || 0,
+      pages: pages.map((page, index) => ({
+        pageNumber: Number(page.pageNumber || index + 1),
+        order: Number(page.order || index + 1),
+        storagePath: page.storagePath || document.storagePath || document.storage_path || "",
+        publicUrl: page.publicUrl || document.publicUrl || document.public_url || "",
+      })),
+    };
+    return documents;
+  }, {});
+}
+
+function assertProjectEstimateExportPayloadIsSmall(payload = {}) {
+  const json = JSON.stringify(payload);
+  if (/data:(image|application)\//i.test(json) || /;base64,/i.test(json)) {
+    throw new Error("Project Estimate export metadata contains embedded Base64 data.");
+  }
+  return true;
+}
+
+function parseRenderedPageImage(imageData = "") {
+  const match = String(imageData || "").match(/^data:(image\/png|image\/jpeg|image\/jpg);base64,(.+)$/);
+  if (!match) throw new Error("Rendered PDF page image was invalid.");
+  return {
+    mimeType: match[1] === "image/jpg" ? "image/jpeg" : match[1],
+    bytes: Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0)),
+  };
+}
+
+async function createProposalPdfBlobFromRenderedPages(renderedPages = []) {
+  const { PDFDocument } = await import("pdf-lib");
+  const outputPdf = await PDFDocument.create();
+  const pageSizes = {
+    portrait: [595.28, 841.89],
+    landscape: [841.89, 595.28],
+  };
+  for (const renderedPage of renderedPages) {
+    const size = renderedPage.orientation === "landscape" ? pageSizes.landscape : pageSizes.portrait;
+    const page = outputPdf.addPage(size);
+    const { mimeType, bytes } = parseRenderedPageImage(renderedPage.imageData);
+    const image = mimeType === "image/png" ? await outputPdf.embedPng(bytes) : await outputPdf.embedJpg(bytes);
+    page.drawImage(image, { x: 0, y: 0, width: size[0], height: size[1] });
+  }
+  const pdfBytes = await outputPdf.save();
+  return new Blob([pdfBytes], { type: "application/pdf" });
+}
+
+async function createProposalPdfBlobFromProjectEstimate({ renderedPages = [], importedDocuments = {}, onWarning = () => {} } = {}) {
+  const { PDFDocument } = await import("pdf-lib");
+  const outputPdf = await PDFDocument.create();
+  const pageSizes = {
+    portrait: [595.28, 841.89],
+    landscape: [841.89, 595.28],
+  };
+  const renderedByPageId = new Map();
+  renderedPages.forEach((renderedPage) => {
+    const pageId = renderedPage.pageId || renderedPage.pageType || "";
+    if (pageId && !renderedByPageId.has(pageId)) renderedByPageId.set(pageId, renderedPage);
+  });
+  const diagnostics = [];
+
+  const appendRenderedPage = async (pageId, reasonIncluded) => {
+    const renderedPage = renderedByPageId.get(pageId);
+    if (!renderedPage) throw new Error(`Rendered Project Estimate page "${pageId}" was not available for PDF export.`);
+    const size = renderedPage.orientation === "landscape" ? pageSizes.landscape : pageSizes.portrait;
+    const page = outputPdf.addPage(size);
+    const { mimeType, bytes } = parseRenderedPageImage(renderedPage.imageData);
+    const image = mimeType === "image/png" ? await outputPdf.embedPng(bytes) : await outputPdf.embedJpg(bytes);
+    page.drawImage(image, { x: 0, y: 0, width: size[0], height: size[1] });
+    diagnostics.push({
+      outputPage: outputPdf.getPageCount(),
+      sourceType: "rendered page",
+      pageId,
+      reasonIncluded,
+    });
+  };
+
+  for (const item of PROJECT_ESTIMATE_EXPORT_ORDER) {
+    if (item.type === "page") {
+      await appendRenderedPage(item.pageId, "declared project estimate page");
+      continue;
+    }
+    if (item.type === "documentSlot") {
+      const document = resolveProjectEstimateSlotDocument(importedDocuments, item.slotId);
+      if (referencedPdfUrl(document)) {
+        const result = await appendReferencedPdfDocument({
+          outputPdf,
+          document,
+          warningMessage: item.slotId === "plans" ? "Plans could not be included." : "The selected Inclusions Schedule could not be found.",
+          onWarning,
+        });
+        if (result.appendedPageCount > 0) {
+          diagnostics.push(...result.pages.map((entry) => ({
+            ...entry,
+            reasonIncluded: `${item.slotId} document replaces ${item.placeholderPageId} placeholder`,
+          })));
+          continue;
+        }
+      }
+      await appendRenderedPage(item.placeholderPageId, `${item.slotId} placeholder because no PDF is attached`);
+    }
+  }
+  if (process.env.NODE_ENV !== "production") {
+    console.info("[Project Estimate PDF export] Final PDF assembly", diagnostics.map((entry, index) => ({
+      number: String(index + 1).padStart(2, "0"),
+      ...entry,
+    })));
+    console.info("[Project Estimate PDF export] page counts", {
+      plansSourcePageCount: Number(importedDocuments?.pricedPlans?.pageCount || importedDocuments?.pricedPlans?.page_count || importedDocuments?.pricedPlans?.pages?.length || 0) || 0,
+      inclusionsSourcePageCount: Number(importedDocuments?.inclusions?.pageCount || importedDocuments?.inclusions?.page_count || importedDocuments?.inclusions?.pages?.length || 0) || 0,
+      renderedProjectEstimatePageCount: renderedPages.length,
+      finalMergedPageCount: outputPdf.getPageCount(),
+    });
+  }
+  const pdfBytes = await outputPdf.save();
+  return new Blob([pdfBytes], { type: "application/pdf" });
+}
+
+async function appendReferencedPdfDocument({ outputPdf, document, warningMessage, onWarning }) {
+  const sourceUrl = referencedPdfUrl(document);
+  if (!sourceUrl) return { appendedPageCount: 0, pages: [] };
+  try {
+    const response = await fetch(sourceUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const bytes = await response.arrayBuffer();
+    const { PDFDocument } = await import("pdf-lib");
+    const importedPdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const copiedPages = await outputPdf.copyPages(importedPdf, importedPdf.getPageIndices());
+    const pages = [];
+    copiedPages.forEach((page, index) => {
+      outputPdf.addPage(page);
+      pages.push({
+        outputPage: outputPdf.getPageCount(),
+        sourceType: "imported PDF",
+        fileName: document?.fileName || document?.file_name || document?.title || "",
+        sourcePageNumber: index + 1,
+      });
+    });
+    return { appendedPageCount: pages.length, pages };
+  } catch (error) {
+    console.error("Referenced PDF merge failed", {
+      warningMessage,
+      document: referencedPdfDiagnostics(document),
+      error,
+    });
+    onWarning?.(warningMessage);
+    return { appendedPageCount: 0, pages: [] };
+  }
+}
+
+function resolveProjectEstimateSlotDocument(importedDocuments = {}, slotId = "") {
+  if (slotId === "inclusions") return importedDocuments.inclusions || null;
+  if (slotId === "plans") return importedDocuments.pricedPlans || null;
+  return null;
+}
+
+function referencedPdfUrl(document = {}) {
+  if (!document || typeof document !== "object") return "";
+  if (document.publicUrl || document.public_url || document.url) return document.publicUrl || document.public_url || document.url;
+  const firstPage = Array.isArray(document.pages) ? document.pages.find((page) => page?.publicUrl || page?.public_url || page?.url) : null;
+  return firstPage?.publicUrl || firstPage?.public_url || firstPage?.url || "";
+}
+
+function referencedPdfDiagnostics(document = {}) {
+  return {
+    id: document?.id || "",
+    fileName: document?.fileName || document?.file_name || document?.title || "",
+    storagePath: document?.storagePath || document?.storage_path || "",
+    publicUrl: referencedPdfUrl(document),
+    pageCount: document?.pageCount || document?.page_count || document?.pages?.length || 0,
+    sourceType: document?.sourceType || document?.source_type || "",
+  };
+}
+
 async function formatProposalExportErrorResponse(response, responseType = "", { responseOk = false } = {}) {
   const statusLine = `HTTP ${response.status} ${response.statusText || ""}`.trim();
   const body = await response.text().catch((error) => `Could not read response body: ${error?.message || String(error)}`);
@@ -3430,50 +3690,27 @@ async function formatProposalExportErrorResponse(response, responseType = "", { 
     contentType: responseType,
     body,
   });
+  const safeMessage = "PDF export could not be completed.\nYour estimate has not been changed.\nPlease try again.";
   if (isFrameworkInvalidJson) {
-    return [
-      `Project Estimate PDF export failed (${statusLine}).`,
-      "The server returned the framework JSON-parser failure before the export handler could run.",
-      "Restart the Next dev server so the export API uses its manual JSON parser, then retry the download.",
-    ].join("\n\n");
+    console.error("Project Estimate PDF export invalid JSON response", { statusLine, body });
+    return safeMessage;
   }
   if (responseType.includes("application/json") || /^[\[{]/.test(trimmedBody)) {
     try {
       const payload = JSON.parse(body || "{}");
-      const formatPayloadValue = (value) => typeof value === "string" ? value : JSON.stringify(value, null, 2);
-      return [
-        responseOk ? `Project Estimate PDF export returned JSON instead of a PDF (${statusLine}).` : `Project Estimate PDF export failed (${statusLine}).`,
-        payload.error ? `Server error: ${payload.error}` : "",
-        payload.exception ? `Exception: ${payload.exception}` : "",
-        payload.stack ? `Stack:\n${payload.stack}` : "",
-        payload.pdfLibError ? `pdf-lib error:\n${formatPayloadValue(payload.pdfLibError)}` : "",
-        payload.mergeError ? `Merge error:\n${formatPayloadValue(payload.mergeError)}` : "",
-        payload.outputPath ? `Output path: ${payload.outputPath}` : "",
-        payload.uploadedPdfPaths ? `Uploaded PDF paths:\n${JSON.stringify(payload.uploadedPdfPaths, null, 2)}` : "",
-        payload.pageCount !== undefined ? `Page count: ${payload.pageCount}` : "",
-        payload.details ? `Details:\n${JSON.stringify(payload.details, null, 2)}` : "",
-        `Response body:\n${body}`,
-      ].filter(Boolean).join("\n\n");
+      console.error("Project Estimate PDF export JSON error payload", { statusLine, responseOk, payload });
+      return safeMessage;
     } catch (error) {
-      return [
-        `Project Estimate PDF export failed (${statusLine}).`,
-        `Expected JSON but could not parse the response body: ${error?.message || String(error)}`,
-        `Response body:\n${body || "(empty)"}`,
-      ].join("\n\n");
+      console.error("Project Estimate PDF export response parse failed", { statusLine, error, body });
+      return safeMessage;
     }
   }
   if (/text\/html/i.test(responseType) || /^\s*<!doctype html|^\s*<html/i.test(body)) {
-    return [
-      `Project Estimate PDF export failed (${statusLine}).`,
-      `Server returned HTML instead of JSON/PDF. Content-Type: ${responseType || "missing"}`,
-      `Response body:\n${body}`,
-    ].join("\n\n");
+    console.error("Project Estimate PDF export returned HTML", { statusLine, responseType, body });
+    return safeMessage;
   }
-  return [
-    `Project Estimate PDF export failed (${statusLine}).`,
-    `Server returned a non-JSON/non-PDF response. Content-Type: ${responseType || "missing"}`,
-    `Response body:\n${body || "(empty)"}`,
-  ].join("\n\n");
+  console.error("Project Estimate PDF export returned unexpected response", { statusLine, responseType, body });
+  return safeMessage;
 }
 
 function bytesStartWithPdf(bytes) {
@@ -3991,6 +4228,96 @@ function ClientTextBlock({ title, value, summary, collapsed, onToggle }) {
   );
 }
 
+function ProjectEstimateContextualInspector({ page, block, revisions = [], readonly, onBlockContent, onDuplicateBlock, onDeleteBlock, onMoveBlock }) {
+  const definition = projectEstimatePageDefinitionFor(page?.page_type || page?.id);
+  if (!definition) return null;
+  if (!block) {
+    return (
+      <div style={styles.proposalPropertiesStack}>
+        <h3>{definition.navigationTitle}</h3>
+        <p style={styles.mutedText}>Select an element on the page to edit it.</p>
+        {process.env.NODE_ENV !== "production" ? (
+          <ProjectEstimatePageRecoveryPanel page={page} revisions={revisions} />
+        ) : null}
+      </div>
+    );
+  }
+  const field = definition.editorFields.find((item) => item.blockId === block.id) || {
+    blockId: block.id,
+    label: block.content?.editorLabel || block.type || "Element",
+    type: block.type === "heading" ? "textarea" : "text",
+  };
+  const contentKey = projectEstimateEditorContentKey(block);
+  const value = block.content?.[contentKey] || "";
+  const isLongText = field.type === "textarea" || String(value).length > 80 || String(value).includes("\n");
+  return (
+    <div style={styles.proposalPropertiesStack}>
+      <h3>{definition.navigationTitle}</h3>
+      <p style={styles.mutedText}>{block.content?.editorLabel || field.label || block.type}</p>
+      {isLongText ? (
+        <ProposalPanelTextarea
+          label={field.label || "Content"}
+          value={value}
+          disabled={readonly}
+          onCommit={(nextValue) => onBlockContent(block.id, contentKey, nextValue)}
+        />
+      ) : (
+        <ProposalPanelInput
+          label={field.label || "Content"}
+          value={value}
+          disabled={readonly}
+          onCommit={(nextValue) => onBlockContent(block.id, contentKey, nextValue)}
+        />
+      )}
+      <div style={styles.proposalPanelButtonRow}>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onMoveBlock(block.id, -1)}>Bring forward</button>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onMoveBlock(block.id, 1)}>Send backward</button>
+      </div>
+      <div style={styles.proposalPanelButtonRow}>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onDuplicateBlock(block.id)}>Duplicate</button>
+        <button type="button" style={styles.dangerButton} disabled={readonly} onClick={() => onDeleteBlock(block.id)}>Delete</button>
+      </div>
+      {process.env.NODE_ENV !== "production" ? (
+        <ProjectEstimatePageRecoveryPanel page={page} revisions={revisions} />
+      ) : null}
+    </div>
+  );
+}
+
+function ProjectEstimatePageRecoveryPanel({ page, revisions = [] }) {
+  const pageRevisions = projectEstimateRevisionsForPage(revisions, page?.page_type || page?.id);
+  return (
+    <details>
+      <summary style={styles.proposalPanelSummary}>Page recovery</summary>
+      {!pageRevisions.length ? <p style={styles.mutedText}>No page revisions saved yet.</p> : null}
+      {pageRevisions.map((revision) => (
+        <div key={`${revision.pageId}-${revision.savedAt}`} style={styles.proposalThemeStatRow}>
+          <span>{revision.pageId}</span>
+          <small>{revision.savedAt}</small>
+        </div>
+      ))}
+    </details>
+  );
+}
+
+function projectEstimateEditorContentKey(block = {}) {
+  if (block.type === "signature") return "text";
+  if (block.type === "pricing_summary") return "heading";
+  if (Object.prototype.hasOwnProperty.call(block.content || {}, "text")) return "text";
+  if (Object.prototype.hasOwnProperty.call(block.content || {}, "heading")) return "heading";
+  return "text";
+}
+
+function projectEstimatePageContentOverrides(page = {}) {
+  return (page.blocks || []).reduce((overrides, block) => {
+    const contentKey = projectEstimateEditorContentKey(block);
+    if (block.content && Object.prototype.hasOwnProperty.call(block.content, contentKey)) {
+      overrides[block.id] = block.content[contentKey];
+    }
+    return overrides;
+  }, {});
+}
+
 function ProjectEstimateSheet({ sheet }) {
   const standardSource = workbookStandardInclusionsSource(sheet.workbook);
   const standardOptions = normaliseStandardInclusions(standardSource, sheet.workbook.builderId || "local-builder");
@@ -4264,6 +4591,11 @@ function StandardInclusionsSheet({ sheet }) {
   const elementUploadTargetRef = useRef(null);
   const [status, setStatus] = useState("");
   const [selectedElementId, setSelectedElementId] = useState("");
+  const [managementMode, setManagementMode] = useState("");
+  const [savedScheduleCandidates, setSavedScheduleCandidates] = useState([]);
+  const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [pdfImportMode, setPdfImportMode] = useState("background");
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
   const pages = normalisePremierPdfPages(standard.pdfPages);
   const selectedPageId = standard.selectedPdfPageId || pages[0]?.id || "";
@@ -4271,6 +4603,8 @@ function StandardInclusionsSheet({ sheet }) {
   const selectedPageIndex = pages.findIndex((page) => page.id === selectedPage?.id);
   const usesEditableCanvasEditor = Boolean(selectedPage);
   const selectedElement = selectedPage?.elements?.find((element) => element.id === selectedElementId) || null;
+  const activeDocument = standard.scheduleDeleted ? null : standard.documentBuilder;
+  const activeSummary = standardScheduleSummary(activeDocument, standard);
 
   function saveStandard(next) {
     sheet.updateStandardInclusions?.({
@@ -4280,13 +4614,10 @@ function StandardInclusionsSheet({ sheet }) {
     });
   }
 
-  const documentBuilder = standard.documentBuilder || createPremierInclusionsDocument({
-    name: standard.packages?.find((item) => item.id === standard.selectedPackageId)?.name || "Premier Inclusions Schedule",
-  });
-
   function saveDocumentBuilder(nextDocument) {
     saveStandard({
-      documentBuilder: nextDocument,
+      documentBuilder: markStandardDocumentSaved(nextDocument, standard),
+      scheduleDeleted: false,
       pdfPages: [],
       selectedPdfPageId: "",
       pdfSourceName: "",
@@ -4294,6 +4625,196 @@ function StandardInclusionsSheet({ sheet }) {
       pdfEditorMode: "document-page-builder",
     });
     setStatus("Standard Inclusions document saved.");
+  }
+
+  function saveStandardWithRevision(patch, action, source = "") {
+    const revision = createStandardScheduleRevision(standard, action, source);
+    const previousRevisionId = standard.revisionHistory?.[standard.revisionHistory.length - 1]?.revisionId || "";
+    saveStandard({
+      ...patch,
+      revisionHistory: [...(standard.revisionHistory || []), { ...revision, previousRevisionId }].slice(-50),
+    });
+  }
+
+  async function loadSavedSchedules() {
+    setSavedScheduleLoading(true);
+    setManagementMode("replace");
+    try {
+      const candidates = await collectSavedStandardScheduleCandidates({ workbook: sheet.workbook, standard });
+      setSavedScheduleCandidates(candidates);
+      setStatus(candidates.length ? `Found ${candidates.length} saved schedule candidate${candidates.length === 1 ? "" : "s"}.` : "No saved Standard Inclusions documents were found.");
+    } catch (error) {
+      console.error("Saved Standard Inclusions lookup failed", error);
+      setStatus(error?.message || "Could not load saved schedules.");
+      setSavedScheduleCandidates([]);
+    } finally {
+      setSavedScheduleLoading(false);
+    }
+  }
+
+  function replaceWithCandidate(candidate) {
+    if (!candidate?.document) return;
+    if (!window.confirm("Replace the currently displayed schedule with this saved schedule?")) return;
+    const nextDocument = cloneStandardDocumentForActiveUse(candidate.document, {
+      source: candidate.source || "saved-schedule",
+      name: candidate.name || candidate.document.name || "Standard Inclusions Schedule",
+    });
+    saveStandardWithRevision({
+      documentBuilder: nextDocument,
+      scheduleDeleted: false,
+      activeDocumentId: nextDocument.id,
+      activeDocumentName: nextDocument.name,
+      activeDocumentSource: nextDocument.metadata?.documentSource || candidate.source || "saved-schedule",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    }, "replace", candidate.source || "saved-schedule");
+    setManagementMode("");
+    setStatus("Standard Inclusions schedule replaced from saved document.");
+  }
+
+  function deleteCurrentSchedule() {
+    if (!window.confirm("Delete the current Standard Inclusions Schedule from this workbook?\n\nA complete versioned backup will be retained and the starter template will not be reinserted automatically.")) return;
+    saveStandardWithRevision({
+      documentBuilder: null,
+      scheduleDeleted: true,
+      activeDocumentId: "",
+      activeDocumentName: "",
+      activeDocumentSource: "deleted",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    }, "delete", activeSummary.source || "active-document");
+    setImportPreview(null);
+    setManagementMode("");
+    setStatus("Current Standard Inclusions schedule deleted. A backup was retained in revision history.");
+  }
+
+  function startBlankSchedule() {
+    if (!window.confirm("Start a new blank Standard Inclusions Schedule? A backup of the current schedule will be retained.")) return;
+    const document = createBlankStandardScheduleDocument();
+    saveStandardWithRevision({
+      documentBuilder: document,
+      scheduleDeleted: false,
+      activeDocumentId: document.id,
+      activeDocumentName: document.name,
+      activeDocumentSource: "blank-schedule",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    }, "start-blank", "blank-schedule");
+    setStatus("Started a new blank Standard Inclusions schedule.");
+  }
+
+  function useStarterTemplate() {
+    if (!window.confirm("Load the three-page starter template? This will only happen because you explicitly selected it. A backup of the current schedule will be retained.")) return;
+    const document = createPremierInclusionsDocument({
+      name: standard.packages?.find((item) => item.id === standard.selectedPackageId)?.name || "Premier Inclusions Schedule",
+      metadata: { documentSource: "starter-template", isFallback: true, lastSavedAt: new Date().toISOString() },
+    });
+    saveStandardWithRevision({
+      documentBuilder: document,
+      scheduleDeleted: false,
+      activeDocumentId: document.id,
+      activeDocumentName: document.name,
+      activeDocumentSource: "starter-template",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    }, "use-starter-template", "starter-template");
+    setStatus("Starter template loaded by explicit request.");
+  }
+
+  function restorePreviousVersion() {
+    setManagementMode("restore");
+  }
+
+  function restoreRevision(revision) {
+    if (!revision?.snapshot?.documentBuilder) return;
+    if (!window.confirm("Restore this previous Standard Inclusions Schedule version? A backup of the current schedule will be retained first.")) return;
+    const document = cloneStandardDocumentForActiveUse(revision.snapshot.documentBuilder, {
+      source: `revision:${revision.revisionId}`,
+      name: revision.snapshot.documentBuilder.name || "Restored Standard Inclusions Schedule",
+    });
+    saveStandardWithRevision({
+      documentBuilder: document,
+      scheduleDeleted: false,
+      activeDocumentId: document.id,
+      activeDocumentName: document.name,
+      activeDocumentSource: document.metadata?.documentSource || "restored-revision",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      pptxSourceName: "",
+      pdfEditorMode: "document-page-builder",
+    }, "restore", `revision:${revision.revisionId}`);
+    setManagementMode("");
+    setStatus("Previous Standard Inclusions schedule restored.");
+  }
+
+  async function preparePowerPointImport(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !String(file.name || "").toLowerCase().endsWith(".pptx")) return;
+    setStatus("Preparing PowerPoint import preview...");
+    try {
+      setImportPreview(await importPptxAsStandardDocumentPreview(file));
+      setManagementMode("import-preview");
+      setStatus("PowerPoint import preview ready. Confirm to replace the active schedule.");
+    } catch (error) {
+      console.error("Standard Inclusions PowerPoint preview failed", error);
+      setStatus(error?.message || "PowerPoint import preview failed.");
+    }
+  }
+
+  async function preparePdfImport(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || file.type !== "application/pdf") return;
+    setStatus("Preparing PDF import preview...");
+    try {
+      setImportPreview(await importPdfAsStandardDocumentPreview(file, { mode: pdfImportMode }));
+      setManagementMode("import-preview");
+      setStatus("PDF import preview ready. Confirm to replace the active schedule.");
+    } catch (error) {
+      console.error("Standard Inclusions PDF preview failed", error);
+      setStatus(error?.message || "PDF import preview failed.");
+    }
+  }
+
+  function confirmImportPreview() {
+    if (!importPreview?.document) return;
+    if (!window.confirm("Replace the currently displayed schedule with this imported schedule?")) return;
+    const document = markStandardDocumentSaved(importPreview.document, standard);
+    saveStandardWithRevision({
+      documentBuilder: document,
+      scheduleDeleted: false,
+      activeDocumentId: document.id,
+      activeDocumentName: document.name,
+      activeDocumentSource: importPreview.source || document.metadata?.documentSource || "import",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: importPreview.source === "pdf-import" ? importPreview.fileName : "",
+      pptxSourceName: importPreview.source === "pptx-import" ? importPreview.fileName : "",
+      pdfEditorMode: "document-page-builder",
+    }, importPreview.source === "pptx-import" ? "import-pptx" : "import-pdf", importPreview.fileName);
+    setImportPreview(null);
+    setManagementMode("");
+    setStatus(`Imported ${document.pages.length} Standard Inclusions page${document.pages.length === 1 ? "" : "s"}.`);
   }
 
   return (
@@ -4308,13 +4829,53 @@ function StandardInclusionsSheet({ sheet }) {
         </div>
         {status ? <div style={styles.proposalBuilderStatus}>{status}</div> : null}
       </section>
-      <DocumentPageBuilder
-        document={documentBuilder}
-        workbook={sheet.workbook}
+      <StandardScheduleActiveSummary summary={activeSummary} />
+      <StandardScheduleManagementPanel
         readonly={readonly}
-        onChange={saveDocumentBuilder}
-        onStatus={setStatus}
+        activeDocument={activeDocument}
+        revisionHistory={standard.revisionHistory || []}
+        managementMode={managementMode}
+        savedScheduleCandidates={savedScheduleCandidates}
+        savedScheduleLoading={savedScheduleLoading}
+        importPreview={importPreview}
+        pdfImportMode={pdfImportMode}
+        onPdfImportMode={setPdfImportMode}
+        onReplace={loadSavedSchedules}
+        onUploadPptx={() => pptxUploadRef.current?.click()}
+        onUploadPdf={() => pdfUploadRef.current?.click()}
+        onRestore={restorePreviousVersion}
+        onStartBlank={startBlankSchedule}
+        onDelete={deleteCurrentSchedule}
+        onUseStarterTemplate={useStarterTemplate}
+        onSelectCandidate={replaceWithCandidate}
+        onRestoreRevision={restoreRevision}
+        onCancelManagement={() => {
+          setManagementMode("");
+          setImportPreview(null);
+        }}
+        onConfirmImport={confirmImportPreview}
       />
+      <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
+      <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
+      {activeDocument ? (
+        <DocumentPageBuilder
+          document={activeDocument}
+          workbook={sheet.workbook}
+          readonly={readonly}
+          onChange={saveDocumentBuilder}
+          onStatus={setStatus}
+        />
+      ) : (
+        <StandardScheduleEmptyState
+          readonly={readonly}
+          onUploadPptx={() => pptxUploadRef.current?.click()}
+          onUploadPdf={() => pdfUploadRef.current?.click()}
+          onRestore={restorePreviousVersion}
+          onReplace={loadSavedSchedules}
+          onStartBlank={startBlankSchedule}
+          onUseStarterTemplate={useStarterTemplate}
+        />
+      )}
     </div>
   );
 
@@ -4809,6 +5370,534 @@ function StandardInclusionsSheet({ sheet }) {
       <input ref={elementFileRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={handleElementFile} />
     </div>
   );
+}
+
+function StandardScheduleActiveSummary({ summary }) {
+  return (
+    <div style={styles.standardScheduleSummaryCard}>
+      <strong>Active Schedule</strong>
+      <span>Name: {summary.name || "No schedule attached"}</span>
+      <span>Document ID: {summary.documentId || "-"}</span>
+      <span>Source: {summary.source || "-"}</span>
+      <span>Pages: {summary.pageCount}</span>
+      <span>Last saved: {formatShortDateTime(summary.lastSavedAt)}</span>
+    </div>
+  );
+}
+
+function StandardScheduleManagementPanel({
+  readonly,
+  activeDocument,
+  revisionHistory,
+  managementMode,
+  savedScheduleCandidates,
+  savedScheduleLoading,
+  importPreview,
+  pdfImportMode,
+  onPdfImportMode,
+  onReplace,
+  onUploadPptx,
+  onUploadPdf,
+  onRestore,
+  onStartBlank,
+  onDelete,
+  onUseStarterTemplate,
+  onSelectCandidate,
+  onRestoreRevision,
+  onCancelManagement,
+  onConfirmImport,
+}) {
+  return (
+    <section style={styles.standardScheduleManagement}>
+      <div>
+        <div style={styles.eyebrow}>Schedule Management</div>
+        <h3 style={styles.sectionTitle}>Manage Standard Inclusions Schedule</h3>
+      </div>
+      <div style={styles.proposalMiniActions}>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace Schedule</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPptx}>Upload PowerPoint</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Upload PDF</button>
+        <button type="button" disabled={readonly || !revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Start New Blank Schedule</button>
+        <button type="button" disabled={readonly || !activeDocument} style={styles.dangerButton} onClick={onDelete}>Delete Current Schedule</button>
+      </div>
+      <label style={styles.proposalPanelField}>
+        PDF upload mode
+        <select disabled={readonly} style={styles.proposalPanelInput} value={pdfImportMode} onChange={(event) => onPdfImportMode(event.target.value)}>
+          <option value="background">A. Import each page as a fixed page background</option>
+          <option value="editable-text">B. Import pages and attempt editable text extraction</option>
+        </select>
+      </label>
+      {managementMode === "replace" ? (
+        <div style={styles.standardSchedulePanel}>
+          <div style={styles.proposalMiniActions}>
+            <strong>Saved Standard Inclusions Documents</strong>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
+          </div>
+          {savedScheduleLoading ? <p style={styles.dashboardPanelSubtitle}>Loading saved schedules...</p> : null}
+          {!savedScheduleLoading && !savedScheduleCandidates.length ? <p style={styles.dashboardPanelSubtitle}>No saved Standard Inclusions schedules were found.</p> : null}
+          <div style={styles.standardScheduleCandidateGrid}>
+            {savedScheduleCandidates.map((candidate) => (
+              <article key={candidate.key} style={styles.standardScheduleCandidateCard}>
+                {candidate.thumbnail ? <img src={candidate.thumbnail} alt="" style={styles.standardScheduleThumbnail} /> : <div style={styles.standardScheduleThumbnailPlaceholder}>No preview</div>}
+                <strong>{candidate.name}</strong>
+                <small>ID: {candidate.documentId}</small>
+                <small>Modified: {formatShortDateTime(candidate.modifiedAt)}</small>
+                <small>Pages: {candidate.pageCount}</small>
+                <small>Source: {candidate.source}</small>
+                <button type="button" disabled={readonly} style={styles.primaryButton} onClick={() => onSelectCandidate(candidate)}>Select this schedule</button>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {managementMode === "restore" ? (
+        <div style={styles.standardSchedulePanel}>
+          <div style={styles.proposalMiniActions}>
+            <strong>Previous Versions</strong>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
+          </div>
+          {!revisionHistory.length ? <p style={styles.dashboardPanelSubtitle}>No previous versions are available yet.</p> : null}
+          {revisionHistory.slice().reverse().map((revision) => (
+            <article key={revision.revisionId} style={styles.standardScheduleRevisionRow}>
+              <span>{formatShortDateTime(revision.timestamp)} - {revision.action}</span>
+              <small>ID: {revision.documentId || "-"}</small>
+              <small>Pages: {revision.pageCount || 0}</small>
+              <small>Source: {revision.source || "-"}</small>
+              <button type="button" disabled={readonly || !revision.snapshot?.documentBuilder} style={styles.secondaryButton} onClick={() => onRestoreRevision(revision)}>Restore</button>
+            </article>
+          ))}
+        </div>
+      ) : null}
+      {managementMode === "import-preview" && importPreview ? (
+        <div style={styles.standardSchedulePanel}>
+          <div style={styles.proposalMiniActions}>
+            <strong>Import Preview</strong>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
+            <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConfirmImport}>Confirm Replacement</button>
+          </div>
+          <p style={styles.dashboardPanelSubtitle}>
+            {importPreview.fileName} - {importPreview.pageCount} page{importPreview.pageCount === 1 ? "" : "s"}.
+            Editable text blocks: {importPreview.editableTextCount}. Image/fixed visual elements: {importPreview.fixedVisualCount}.
+          </p>
+          {importPreview.warnings?.length ? (
+            <ul style={styles.standardScheduleWarningList}>{importPreview.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>
+          ) : null}
+          <div style={styles.standardSchedulePreviewGrid}>
+            {importPreview.document.pages.slice(0, 12).map((page, index) => (
+              <article key={page.id} style={styles.standardSchedulePreviewCard}>
+                <div style={styles.standardSchedulePreviewPage}>
+                  {page.background?.imageRef ? <img src={page.background.imageRef} alt="" style={styles.standardSchedulePreviewImage} /> : null}
+                  <strong>{index + 1}</strong>
+                </div>
+                <span>{page.name}</span>
+                <small>{page.objects.length} editable/fixed block{page.objects.length === 1 ? "" : "s"}</small>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function StandardScheduleEmptyState({ readonly, onUploadPptx, onUploadPdf, onRestore, onReplace, onStartBlank, onUseStarterTemplate }) {
+  return (
+    <section style={styles.standardScheduleEmptyState}>
+      <h3>No Standard Inclusions Schedule is currently attached.</h3>
+      <p style={styles.dashboardPanelSubtitle}>The starter template will only load if you explicitly choose it.</p>
+      <div style={styles.proposalMiniActions}>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadPptx}>Upload PowerPoint</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Upload PDF</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Select Saved Schedule</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Create Blank Schedule</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUseStarterTemplate}>Use Starter Template</button>
+      </div>
+    </section>
+  );
+}
+
+function standardScheduleSummary(document, standard = {}) {
+  return {
+    name: document?.name || standard.activeDocumentName || "",
+    documentId: document?.id || standard.activeDocumentId || "",
+    source: document?.metadata?.documentSource || standard.activeDocumentSource || "",
+    pageCount: Array.isArray(document?.pages) ? document.pages.length : 0,
+    lastSavedAt: document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "",
+  };
+}
+
+function cloneJson(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function markStandardDocumentSaved(document, standard = {}) {
+  const timestamp = new Date().toISOString();
+  return createDocument({
+    ...cloneJson(document),
+    id: document?.id,
+    name: document?.name || standard.activeDocumentName || "Standard Inclusions Schedule",
+    metadata: {
+      ...(document?.metadata || {}),
+      documentType: "standardInclusions",
+      lastSavedAt: timestamp,
+      documentSource: document?.metadata?.documentSource || standard.activeDocumentSource || "document-builder",
+    },
+  });
+}
+
+function createStandardScheduleRevision(standard = {}, action = "update", source = "") {
+  const document = standard.scheduleDeleted ? null : standard.documentBuilder || null;
+  const timestamp = new Date().toISOString();
+  return {
+    revisionId: `standard-inclusions-revision-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp,
+    action,
+    documentId: document?.id || standard.activeDocumentId || "",
+    pageCount: Array.isArray(document?.pages) ? document.pages.length : 0,
+    userId: "local-user",
+    source: source || document?.metadata?.documentSource || standard.activeDocumentSource || "",
+    previousRevisionId: "",
+    snapshot: cloneJson({
+      documentBuilder: document,
+      scheduleDeleted: Boolean(standard.scheduleDeleted),
+      activeDocumentId: standard.activeDocumentId || document?.id || "",
+      activeDocumentName: standard.activeDocumentName || document?.name || "",
+      activeDocumentSource: standard.activeDocumentSource || document?.metadata?.documentSource || "",
+      activeDocumentLastSavedAt: standard.activeDocumentLastSavedAt || document?.metadata?.lastSavedAt || "",
+      pdfSourceName: standard.pdfSourceName || "",
+      pptxSourceName: standard.pptxSourceName || "",
+    }),
+  };
+}
+
+function cloneStandardDocumentForActiveUse(document, { source = "saved-schedule", name = "" } = {}) {
+  const timestamp = new Date().toISOString();
+  return createDocument({
+    ...cloneJson(document),
+    id: `standard-inclusions-doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: name || document?.name || "Standard Inclusions Schedule",
+    metadata: {
+      ...(document?.metadata || {}),
+      documentType: "standardInclusions",
+      documentSource: source,
+      sourceDocumentId: document?.id || "",
+      importedAt: timestamp,
+      lastSavedAt: timestamp,
+    },
+  });
+}
+
+function createBlankStandardScheduleDocument() {
+  const timestamp = new Date().toISOString();
+  const page = createA4Page({ name: "Blank Page" });
+  return createDocument({
+    id: `standard-inclusions-blank-${Date.now()}`,
+    name: "Blank Standard Inclusions Schedule",
+    pages: [page],
+    activePageId: page.id,
+    metadata: {
+      documentType: "standardInclusions",
+      documentSource: "blank-schedule",
+      createdAt: timestamp,
+      lastSavedAt: timestamp,
+    },
+  });
+}
+
+async function collectSavedStandardScheduleCandidates({ workbook, standard }) {
+  const candidates = [];
+  const addCandidate = (document, meta = {}) => {
+    if (!document?.pages?.length) return;
+    const documentId = document.id || meta.documentId || "";
+    const key = `${meta.source || "source"}:${documentId}:${meta.modifiedAt || ""}`;
+    if (candidates.some((item) => item.key === key || (documentId && item.documentId === documentId))) return;
+    candidates.push({
+      key,
+      name: document.name || meta.name || "Standard Inclusions Schedule",
+      documentId,
+      modifiedAt: meta.modifiedAt || document.metadata?.lastSavedAt || document.metadata?.importedAt || "",
+      pageCount: document.pages.length,
+      source: meta.source || document.metadata?.documentSource || "saved-document",
+      thumbnail: standardDocumentThumbnail(document),
+      document: cloneJson(document),
+    });
+  };
+  addCandidate(standard.documentBuilder, { source: "current-workbook", modifiedAt: standard.activeDocumentLastSavedAt });
+  (standard.revisionHistory || []).forEach((revision) => addCandidate(revision.snapshot?.documentBuilder, {
+    source: `revision:${revision.action}`,
+    modifiedAt: revision.timestamp,
+  }));
+  (standard.builderCopies || []).forEach((copy) => {
+    if (copy.documentBuilder) addCandidate(copy.documentBuilder, { source: "builder-copy", modifiedAt: copy.createdAt || copy.savedAt });
+  });
+  if (standard.masterTemplate?.documentBuilder) addCandidate(standard.masterTemplate.documentBuilder, { source: "master-template", modifiedAt: standard.masterTemplate.savedAt });
+  const indexedDbCandidates = await collectIndexedDbStandardScheduleCandidates();
+  indexedDbCandidates.forEach((candidate) => addCandidate(candidate.document, candidate));
+  return candidates.sort((left, right) => String(right.modifiedAt || "").localeCompare(String(left.modifiedAt || "")));
+}
+
+function standardDocumentThumbnail(document) {
+  const firstPage = document?.pages?.[0];
+  return firstPage?.background?.imageRef || firstPage?.objects?.find((object) => ["image", "logo"].includes(object.type))?.data?.imageRef || "";
+}
+
+async function collectIndexedDbStandardScheduleCandidates() {
+  if (typeof window === "undefined" || !window.indexedDB) return [];
+  const db = await new Promise((resolve) => {
+    const request = window.indexedDB.open("estimate-builder-template-db");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+  if (!db || !db.objectStoreNames.contains("jobs")) return [];
+  return new Promise((resolve) => {
+    const candidates = [];
+    const transaction = db.transaction("jobs", "readonly");
+    const store = transaction.objectStore("jobs");
+    const request = store.openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      const record = cursor.value || {};
+      const workbook = record.workbook || record;
+      const document = workbook?.standardInclusions?.documentBuilder;
+      if (document?.pages?.length) {
+        candidates.push({
+          source: `IndexedDB:${record.type || "job"}`,
+          modifiedAt: record.modifiedAt || record.savedAt || workbook.savedAt || "",
+          name: `${record.name || workbook.name || workbook.jobName || "Saved job"} - ${document.name || "Standard Inclusions"}`,
+          document,
+        });
+      }
+      cursor.continue();
+    };
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(candidates);
+    };
+    transaction.onerror = () => {
+      db.close();
+      resolve(candidates);
+    };
+  });
+}
+
+async function importPdfAsStandardDocumentPreview(file, { mode = "background" } = {}) {
+  const pdfjsLib = await loadPdfJs();
+  const bytes = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const pages = [];
+  let editableTextCount = 0;
+  const warnings = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 2.25 });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const context = canvas.getContext("2d", { alpha: false });
+    await page.render({ canvasContext: context, viewport }).promise;
+    const objects = [];
+    if (mode === "editable-text") {
+      const textContent = await page.getTextContent().catch(() => null);
+      (textContent?.items || []).forEach((item, index) => {
+        const text = String(item.str || "").trim();
+        if (!text) return;
+        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        const x = tx[4];
+        const y = canvas.height - tx[5];
+        objects.push(createObject("text", {
+          name: `Extracted text ${index + 1}`,
+          x: (x / canvas.width) * 794,
+          y: (y / canvas.height) * 1123,
+          width: Math.min(700, Math.max(80, Number(item.width || 80) * (794 / canvas.width))),
+          height: 24,
+          style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
+          data: { text },
+        }));
+        editableTextCount += 1;
+      });
+      if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will remain a fixed background.`);
+    }
+    pages.push(createA4Page({
+      id: `standard-inclusions-pdf-page-${Date.now()}-${pageNumber}`,
+      name: `PDF Page ${pageNumber}`,
+      background: { color: "#ffffff", imageRef: canvas.toDataURL("image/jpeg", 0.94) },
+      objects,
+    }));
+  }
+  const timestamp = new Date().toISOString();
+  const documentBuilder = createDocument({
+    id: `standard-inclusions-pdf-${Date.now()}`,
+    name: file.name.replace(/\.pdf$/i, "") || "Imported PDF Standard Inclusions",
+    pages,
+    activePageId: pages[0]?.id || null,
+    metadata: {
+      documentType: "standardInclusions",
+      documentSource: "pdf-import",
+      importMode: mode,
+      sourceFileName: file.name,
+      importedAt: timestamp,
+      lastSavedAt: timestamp,
+    },
+  });
+  return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, fixedVisualCount: pages.length, warnings };
+}
+
+async function importPptxAsStandardDocumentPreview(file) {
+  const [{ default: JSZip }] = await Promise.all([import("jszip")]);
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const parser = new DOMParser();
+  const presentationXml = await zip.file("ppt/presentation.xml")?.async("text");
+  if (!presentationXml) throw new Error("PowerPoint file is missing ppt/presentation.xml.");
+  const presentationDoc = parser.parseFromString(presentationXml, "application/xml");
+  const presentationRels = await readPptxRelationships(zip, "ppt/_rels/presentation.xml.rels", parser);
+  const slideSize = pptxSlideSize(presentationDoc);
+  const slidePaths = pptxSlidePaths(zip, presentationDoc, presentationRels);
+  if (!slidePaths.length) throw new Error("No slides found in the PowerPoint file.");
+  const pages = [];
+  const warnings = [];
+  let editableTextCount = 0;
+  let fixedVisualCount = 0;
+  for (let index = 0; index < slidePaths.length; index += 1) {
+    const slidePath = slidePaths[index];
+    const slideXml = await zip.file(slidePath)?.async("text");
+    if (!slideXml) continue;
+    const slideDoc = parser.parseFromString(slideXml, "application/xml");
+    const rels = await readPptxRelationships(zip, pptxSlideRelPath(slidePath), parser);
+    const { objects, warningCount } = await pptxSlideToDocumentObjects({ zip, slideDoc, slidePath, rels, slideSize, pageNumber: index + 1 });
+    editableTextCount += objects.filter((object) => object.type === "text").length;
+    fixedVisualCount += objects.filter((object) => object.type !== "text").length;
+    if (warningCount) warnings.push(`Slide ${index + 1}: ${warningCount} element${warningCount === 1 ? "" : "s"} imported as fixed visual blocks.`);
+    pages.push(createA4Page({
+      id: `standard-inclusions-pptx-page-${Date.now()}-${index + 1}`,
+      name: `Slide ${index + 1}`,
+      background: { color: "#ffffff" },
+      objects,
+    }));
+  }
+  const timestamp = new Date().toISOString();
+  const documentBuilder = createDocument({
+    id: `standard-inclusions-pptx-${Date.now()}`,
+    name: file.name.replace(/\.pptx$/i, "") || "Imported PowerPoint Standard Inclusions",
+    pages,
+    activePageId: pages[0]?.id || null,
+    metadata: {
+      documentType: "standardInclusions",
+      documentSource: "pptx-import",
+      sourceFileName: file.name,
+      importedAt: timestamp,
+      lastSavedAt: timestamp,
+    },
+  });
+  return { source: "pptx-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, fixedVisualCount, warnings };
+}
+
+async function pptxSlideToDocumentObjects({ zip, slideDoc, slidePath, rels, slideSize, pageNumber }) {
+  const spTree = firstByLocalName(slideDoc, "spTree");
+  const elements = Array.from(spTree?.childNodes || []).filter((node) => node.nodeType === 1);
+  const objects = [];
+  let warningCount = 0;
+  for (const element of elements) {
+    const name = localName(element);
+    if (name === "pic") {
+      const object = await pptxPictureToDocumentObject({ zip, element, slidePath, rels, slideSize });
+      if (object) {
+        objects.push(object);
+        warningCount += 1;
+      }
+    } else if (name === "sp") {
+      const shapeObjects = pptxShapeToDocumentObjects(element, slideSize);
+      objects.push(...shapeObjects);
+      warningCount += shapeObjects.filter((object) => object.type === "shape").length;
+    } else if (name === "cxnSp") {
+      objects.push(pptxLineToDocumentObject(element, slideSize, pageNumber));
+      warningCount += 1;
+    }
+  }
+  return { objects, warningCount };
+}
+
+function pptxShapeToDocumentObjects(element, slideSize) {
+  const box = pptxElementBox(element, slideSize);
+  const text = pptxText(element);
+  const fill = pptxSolidFill(element) || "transparent";
+  const stroke = pptxLineColor(element) || "transparent";
+  const name = pptxElementName(element) || (text ? "PowerPoint text" : "PowerPoint shape");
+  const objects = [];
+  if (fill !== "transparent" || stroke !== "transparent") {
+    objects.push(createObject("shape", {
+      name: text ? `${name} panel` : name,
+      x: box.left,
+      y: box.top,
+      width: Math.max(1, box.width),
+      height: Math.max(1, box.height),
+      style: { fill, stroke, strokeWidth: stroke === "transparent" ? 0 : 1.5, borderRadius: 0 },
+    }));
+  }
+  if (text) {
+    objects.push(createObject("text", {
+      name,
+      x: box.left,
+      y: box.top,
+      width: Math.max(20, box.width),
+      height: Math.max(12, box.height),
+      style: {
+        fontFamily: pptxFontFamily(element) || "Arial",
+        fontSize: pptxFontSize(element, box.height),
+        fontWeight: pptxIsBold(element) ? "800" : "600",
+        color: pptxTextColor(element) || "#0b2545",
+        textAlign: pptxTextAlign(element),
+        lineHeight: 1.12,
+      },
+      data: { text },
+    }));
+  }
+  return objects;
+}
+
+async function pptxPictureToDocumentObject({ zip, element, slidePath, rels, slideSize }) {
+  const box = pptxElementBox(element, slideSize);
+  const blip = firstByLocalName(element, "blip");
+  const embedId = attrByLocalName(blip, "embed") || attrByLocalName(blip, "link");
+  const target = rels[embedId]?.target;
+  if (!target) return null;
+  const mediaPath = normaliseZipPath(slidePath.split("/").slice(0, -1).join("/"), target);
+  const media = zip.file(mediaPath);
+  if (!media) return null;
+  const ext = mediaPath.split(".").pop()?.toLowerCase() || "png";
+  const imageRef = `data:${pptxMimeType(ext)};base64,${await media.async("base64")}`;
+  const objectType = /logo/i.test(pptxElementName(element)) ? "logo" : "image";
+  return createObject(objectType, {
+    name: pptxElementName(element) || "PowerPoint image",
+    x: box.left,
+    y: box.top,
+    width: Math.max(1, box.width),
+    height: Math.max(1, box.height),
+    style: { objectFit: objectType === "logo" ? "contain" : "cover" },
+    data: { imageRef, alt: pptxElementName(element) || "PowerPoint image" },
+  });
+}
+
+function pptxLineToDocumentObject(element, slideSize, pageNumber) {
+  const box = pptxElementBox(element, slideSize);
+  return createObject("shape", {
+    name: pptxElementName(element) || `PowerPoint line ${pageNumber}`,
+    x: box.left,
+    y: box.top,
+    width: Math.max(1, Math.abs(box.width)),
+    height: Math.max(1, Math.abs(box.height) || 2),
+    style: { fill: pptxLineColor(element) || "#d29a37", stroke: pptxLineColor(element) || "#d29a37", strokeWidth: 0, borderRadius: 0 },
+  });
+}
+
+function formatShortDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" });
 }
 
 function PremierPdfPageCanvas({ page, selectedElementId = "", onSelectElement = null, exportMode = false }) {
@@ -5868,18 +6957,11 @@ const CLIENT_BLOCK_SUMMARIES = {
   acceptance: "Turns the quote into an actionable approval step with clear intent to proceed.",
 };
 
-const QUOTE_PROPOSAL_TEMPLATE_KEY = "estimate-builder-quote-proposal-template";
+const QUOTE_PROPOSAL_TEMPLATE_KEY = REGISTRY_PROJECT_ESTIMATE_TEMPLATE_ID;
 
-const QUOTE_PROPOSAL_PAGES = [
-  { key: "cover", label: "Cover Page" },
-  { key: "estimateSummary", label: "Estimate Summary" },
-  { key: "about", label: "About GoodBuild / Why Build With Us" },
-  { key: "standardInclusions", label: "Standard Inclusions" },
-  { key: "pricedPlans", label: "Plans Used to Prepare This Estimate" },
-  { key: "pricing", label: "Pricing / Investment Summary" },
-  { key: "termsNotes", label: "Terms / Notes" },
-  { key: "acceptance", label: "Acceptance" },
-];
+const QUOTE_PROPOSAL_PAGES = projectEstimateNavigationPages();
+const PROJECT_ESTIMATE_TEMPLATE_VERSION = REGISTRY_PROJECT_ESTIMATE_TEMPLATE_VERSION;
+const PROJECT_ESTIMATE_PAGE_KEYS = REGISTRY_PROJECT_ESTIMATE_PAGE_KEYS;
 
 const PROPOSAL_BUILDER_BLOCKS = [
   { type: "heading", label: "Heading" },
@@ -6032,6 +7114,9 @@ function normaliseQuoteProposalBuilder(savedBuilder, client, sheet) {
     return {
       ...defaultBuilder,
       ...savedBuilder,
+      template: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
+      templateId: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.id,
+      templateVersion: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.version,
       theme: { ...defaultBuilder.theme, ...(savedBuilder.theme || {}) },
       importedDocuments: normaliseProposalImportedDocuments(savedBuilder.importedDocuments),
       pages: QUOTE_PROPOSAL_PAGES.map((definition) => {
@@ -6044,7 +7129,7 @@ function normaliseQuoteProposalBuilder(savedBuilder, client, sheet) {
           page_type: definition.key,
           title: saved.title || fallback.title,
           design: { ...fallback.design, ...(saved.design || {}) },
-          blocks: Array.isArray(saved.blocks) && saved.blocks.length ? saved.blocks.map((block) => normaliseProposalBuilderBlock(block)) : fallback.blocks,
+          blocks: migrateProjectEstimateSavedBlocks(definition.key, saved.blocks, fallback.blocks),
         };
       }),
     };
@@ -6058,6 +7143,9 @@ function normaliseQuoteProposalBuilder(savedBuilder, client, sheet) {
 function defaultQuoteProposalBuilder(client, sheet) {
   return {
     version: 2,
+    template: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
+    templateId: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.id,
+    templateVersion: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.version,
     name: client.estimateTitle || "Estimate Pack",
     templateName: "Estimate Pack",
     theme: defaultLuxuryProposalTheme(client),
@@ -6066,6 +7154,45 @@ function defaultQuoteProposalBuilder(client, sheet) {
     importedDocuments: normaliseProposalImportedDocuments(),
     pages: QUOTE_PROPOSAL_PAGES.map((page) => defaultQuoteProposalPage(page.key, client, sheet)),
   };
+}
+
+function migrateProjectEstimateSavedBlocks(pageType, savedBlocks = [], fallbackBlocks = []) {
+  const saved = Array.isArray(savedBlocks) ? savedBlocks.map((block) => normaliseProposalBuilderBlock(block)) : [];
+  if (!saved.length) return fallbackBlocks;
+  const usedSavedIds = new Set();
+  return fallbackBlocks.map((fallback) => {
+    const match = findMatchingProjectEstimateBlock(fallback, saved, usedSavedIds);
+    if (!match) return fallback;
+    usedSavedIds.add(match.id);
+    return {
+      ...fallback,
+      ...match,
+      id: fallback.id,
+      type: fallback.type,
+      order: fallback.order,
+      content: { ...(fallback.content || {}), ...(match.content || {}) },
+      design: { ...(fallback.design || {}), ...(match.design || {}) },
+      migratedFromBlockId: match.id !== fallback.id ? match.id : match.migratedFromBlockId,
+      migratedForPageType: pageType,
+    };
+  });
+}
+
+function findMatchingProjectEstimateBlock(fallback, savedBlocks, usedSavedIds) {
+  const fallbackLabel = String(fallback.content?.editorLabel || fallback.content?.label || "").trim().toLowerCase();
+  return savedBlocks.find((block) => block.id === fallback.id && !usedSavedIds.has(block.id))
+    || savedBlocks.find((block) => {
+      if (usedSavedIds.has(block.id)) return false;
+      const label = String(block.content?.editorLabel || block.content?.label || "").trim().toLowerCase();
+      return fallbackLabel && label === fallbackLabel;
+    })
+    || savedBlocks.find((block) => {
+      if (usedSavedIds.has(block.id)) return false;
+      if (block.type !== fallback.type) return false;
+      const fallbackText = String(fallback.content?.text || fallback.content?.heading || "").slice(0, 40).toLowerCase();
+      const blockText = String(block.content?.text || block.content?.heading || "").slice(0, 40).toLowerCase();
+      return fallbackText && blockText && fallbackText === blockText;
+    });
 }
 
 function normaliseProposalImportedDocuments(importedDocuments = {}) {
@@ -6234,6 +7361,14 @@ function defaultQuoteProposalPage(pageType, client, sheet) {
     },
     blocks: [],
   };
+  const standaloneDefinition = projectEstimatePageDefinitionFor(pageType);
+  if (standaloneDefinition) {
+    return {
+      ...base,
+      title: standaloneDefinition.navigationTitle,
+      blocks: defaultProjectEstimateBlocks(pageType).map((block) => normaliseProposalBuilderBlock(block)),
+    };
+  }
   const linked = quoteProposalLinkedFields(sheet, client);
   const accent = "#c89d4a";
   const navy = "#07111f";
@@ -10562,6 +11697,21 @@ const styles = {
   dangerButton: { border: "1px solid #fecaca", borderRadius: 8, background: "#fff1f2", color: "#b91c1c", padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
   standardPdfShell: { display: "grid", gap: 14 },
   standardPdfToolbar: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 14, alignItems: "center", border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 16, padding: 16 },
+  sectionTitle: { margin: "2px 0 0", color: "#0f172a", fontSize: 20, fontWeight: 900 },
+  standardScheduleSummaryCard: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#0f172a", borderRadius: 12, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, fontSize: 13, fontWeight: 800 },
+  standardScheduleManagement: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 14, padding: 14, display: "grid", gap: 12, boxShadow: "0 14px 34px rgba(15,23,42,0.07)" },
+  standardSchedulePanel: { border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 12, padding: 12, display: "grid", gap: 10 },
+  standardScheduleCandidateGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 },
+  standardScheduleCandidateCard: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gap: 6, color: "#0f172a", fontSize: 13 },
+  standardScheduleThumbnail: { width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc" },
+  standardScheduleThumbnailPlaceholder: { width: "100%", aspectRatio: "4 / 3", display: "grid", placeItems: "center", borderRadius: 8, border: "1px dashed #cbd5e1", color: "#64748b", background: "#f8fafc", fontWeight: 900 },
+  standardScheduleRevisionRow: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) repeat(3, auto)", gap: 8, alignItems: "center", color: "#0f172a" },
+  standardScheduleWarningList: { margin: 0, paddingLeft: 18, color: "#92400e", fontWeight: 800 },
+  standardSchedulePreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
+  standardSchedulePreviewCard: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 8, display: "grid", gap: 6, color: "#0f172a", fontSize: 12, fontWeight: 800 },
+  standardSchedulePreviewPage: { position: "relative", width: "100%", aspectRatio: "1 / 1.414", border: "1px solid #cbd5e1", borderRadius: 6, background: "#ffffff", overflow: "hidden", display: "grid", placeItems: "center" },
+  standardSchedulePreviewImage: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" },
+  standardScheduleEmptyState: { border: "1px dashed #94a3b8", background: "#f8fafc", borderRadius: 14, padding: 22, display: "grid", gap: 12, placeItems: "start", color: "#0f172a" },
   standardPdfLayout: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr) 320px", gap: 14, alignItems: "start" },
   standardPdfLayoutEditable: { gridTemplateColumns: "240px minmax(0, 1fr)" },
   standardPdfPageList: { position: "sticky", top: 90, maxHeight: "calc(100vh - 120px)", overflow: "auto", display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10 },
@@ -10595,6 +11745,7 @@ const styles = {
   proposalSignaturePanel: { border: "1px solid #cbd5e1", borderRadius: 14, background: "rgba(248,250,252,0.95)", padding: 18, display: "grid", gap: 18 },
   proposalSignatureLine: { minHeight: 80, borderBottom: "1px solid #64748b", display: "flex", alignItems: "flex-end", color: "#64748b", fontWeight: 800 },
   proposalPropertiesStack: { display: "grid", gap: 10 },
+  proposalPanelButtonRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
   proposalSelectedBlockHeader: { border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", padding: 9, display: "grid", gap: 8 },
   proposalMiniActions: { display: "flex", flexWrap: "wrap", gap: 5 },
   proposalPanelField: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 12, fontWeight: 900, textTransform: "uppercase" },

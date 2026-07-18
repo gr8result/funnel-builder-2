@@ -1,18 +1,20 @@
 import { selectedEstimateInclusionsPackage } from "../../../lib/builders/estimateInclusions";
 import { defaultLuxuryProposalTheme, hasProjectInfoValue } from "./theme";
-import AboutGoodBuildPage from "./pages/AboutGoodBuildPage";
 import AcceptancePage from "./pages/AcceptancePage";
+import AboutBuilderPage from "./pages/AboutBuilderPage";
 import CoverPage from "./pages/CoverPage";
 import EstimateSummaryPage from "./pages/EstimateSummaryPage";
-import PricingPage from "./pages/PricingPage";
+import PricedPlansPage from "./pages/PricedPlansPage";
+import PricingSummaryPage from "./pages/PricingSummaryPage";
 import StandardInclusionsPage from "./pages/StandardInclusionsPage";
-import TermsNotesPage from "./pages/TermsNotesPage";
-import ThankYouPage from "./pages/ThankYouPage";
+import ImportantEstimateNoticePage from "./pages/ImportantEstimateNoticePage";
+import { projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
 
-export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, ProgressDiagnostic }) {
+export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, ProgressDiagnostic, editing = false, selectedBlockId = "", onSelectBlock }) {
   const resolvedTheme = { ...defaultLuxuryProposalTheme({}), ...(theme || {}) };
   const accent = resolvedTheme.accentColor || "#c89d4a";
   const pageType = page.page_type || page.id;
+  const content = projectEstimateContentFromBlocks(page);
   const field = (key) => linkedFields[key]?.value || "Not entered";
   const clientName = resolvedTheme.clientNameOverride || field("clientName");
   const projectAddress = resolvedTheme.siteAddressOverride || field("projectAddress");
@@ -57,34 +59,84 @@ export default function ProjectEstimatePackPage({ page, theme, linkedFields, Bro
   const pricedUsing = inclusionPackage?.package?.name || "Mid Range Standard Inclusions";
   const showProgressDiagnostics = process.env.NODE_ENV !== "production";
   const common = { resolvedTheme, accent, logo, builderName };
+  const wrap = (node) => {
+    if (!editing || !onSelectBlock || !Array.isArray(page?.blocks)) return node;
+    return (
+      <div style={{ position: "relative" }}>
+        {node}
+        <div style={{
+          position: "absolute",
+          top: 14,
+          left: 14,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 6,
+          maxWidth: "calc(100% - 28px)",
+          pointerEvents: "auto",
+          zIndex: 20,
+        }}>
+          {page.blocks.map((block) => (
+            <button
+              key={block.id}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelectBlock(block.id);
+              }}
+              style={{
+                border: selectedBlockId === block.id ? "2px solid #0ea5e9" : "1px solid rgba(15, 23, 42, 0.18)",
+                background: selectedBlockId === block.id ? "#e0f2fe" : "rgba(255,255,255,0.92)",
+                color: "#0f172a",
+                borderRadius: 6,
+                padding: "5px 8px",
+                fontSize: 11,
+                fontWeight: 800,
+                boxShadow: "0 8px 20px rgba(15,23,42,0.12)",
+              }}
+              title={`Select ${block.content?.editorLabel || block.type}`}
+            >
+              {block.content?.editorLabel || block.type}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (pageType === "cover") {
-    return <CoverPage {...common} projectName={projectName} clientName={clientName} projectAddress={projectAddress} quoteNumber={quoteNumber} quoteDate={quoteDate} />;
+    return wrap(<CoverPage {...common} content={content} projectName={projectName} clientName={clientName} projectAddress={projectAddress} quoteNumber={quoteNumber} quoteDate={quoteDate} />);
   }
 
   if (pageType === "estimateSummary" || pageType === "projectInfo") {
-    return <EstimateSummaryPage {...common} pageType={pageType} visibleProjectInfoRows={visibleProjectInfoRows} />;
+    return wrap(<EstimateSummaryPage {...common} content={content} pageType={pageType} visibleProjectInfoRows={visibleProjectInfoRows} />);
   }
 
   if (pageType === "about") {
-    return <AboutGoodBuildPage {...common} whyStats={whyStats} />;
+    return wrap(<AboutBuilderPage {...common} content={content} whyStats={whyStats} />);
   }
 
   if (pageType === "standardInclusions" || pageType === "inclusions") {
-    return <StandardInclusionsPage {...common} pricedUsing={pricedUsing} inclusionPackage={inclusionPackage} Brochure={Brochure} />;
+    return wrap(<StandardInclusionsPage {...common} content={content} pricedUsing={pricedUsing} inclusionPackage={inclusionPackage} Brochure={Brochure} />);
   }
 
   if (pageType === "pricing") {
-    return <PricingPage {...common} quoteTotal={quoteTotal} pricingGroups={pricingGroups} showProgressDiagnostics={showProgressDiagnostics} ProgressDiagnostic={ProgressDiagnostic} />;
+    return wrap(<PricingSummaryPage {...common} content={content} quoteTotal={quoteTotal} pricingGroups={pricingGroups} showProgressDiagnostics={showProgressDiagnostics} ProgressDiagnostic={ProgressDiagnostic} />);
+  }
+
+  if (pageType === "pricedPlans") {
+    return wrap(<PricedPlansPage {...common} content={content} />);
   }
 
   if (pageType === "termsNotes") {
-    return <TermsNotesPage {...common} linkedFields={linkedFields} />;
+    return wrap(<ImportantEstimateNoticePage {...common} content={content} linkedFields={linkedFields} />);
   }
 
   if (pageType === "acceptance") {
-    return <AcceptancePage {...common} />;
+    return wrap(<AcceptancePage {...common} content={content} />);
   }
 
-  return <ThankYouPage {...common} />;
+  if (process.env.NODE_ENV !== "production") {
+    console.warn("[Project Estimate] skipped unknown page type", { pageType, pageId: page?.id || "" });
+  }
+  return null;
 }
