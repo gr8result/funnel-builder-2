@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 export const VIEWER_ZOOM_PRESETS = Object.freeze([
-  { label: "Fit", value: "fit" },
+  { label: "Fit Page", value: "fit-page" },
+  { label: "Fit Width", value: "fit-width" },
   { label: "100%", value: 1 },
   { label: "200%", value: 2 },
   { label: "400%", value: 4 },
@@ -47,6 +48,7 @@ export default function TakeoffControls({
   onSnapToggle,
   onRotate,
   onConfirmOrientation,
+  onResetOrientation,
   onApplyScaleSuggestion,
 }) {
   const warning = getOrientationWarning(page);
@@ -57,6 +59,7 @@ export default function TakeoffControls({
   const suggestedScale = page?.metadata?.suggestedScale || null;
   const showSuggestedScale = suggestedScale?.ratio && !page?.scale && !page?.metadata?.scaleSuggestionConfirmed;
   const [showDeveloperControls, setShowDeveloperControls] = useState(false);
+  const hasPage = Boolean(page?.id);
 
   useEffect(() => {
     setShowDeveloperControls(window.localStorage.getItem("estimate-builder-show-developer-controls") === "true");
@@ -70,7 +73,7 @@ export default function TakeoffControls({
             key={preset.label}
             type="button"
             style={styles.button}
-            onClick={() => (preset.value === "fit" ? onFit?.() : onZoomPreset?.(preset.value))}
+            onClick={() => (typeof preset.value === "string" ? onFit?.(preset.value) : onZoomPreset?.(preset.value))}
           >
             {preset.label}
           </button>
@@ -121,13 +124,45 @@ export default function TakeoffControls({
 
       <div style={styles.group} aria-label="Orientation controls">
         {ORIENTATION_ROTATION_BUTTONS.map((button) => (
-          <button key={button.value} type="button" style={styles.button} onClick={() => onRotate?.(button.value)}>
+          <button
+            key={button.value}
+            type="button"
+            style={hasPage ? styles.button : styles.disabledButton}
+            disabled={!hasPage}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRotate?.(button.value);
+            }}
+          >
             {button.label}
           </button>
         ))}
-        <button type="button" style={styles.confirmButton} onClick={() => onConfirmOrientation?.()}>
+        <button
+          type="button"
+          style={hasPage ? styles.confirmButton : styles.disabledButton}
+          disabled={!hasPage}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onConfirmOrientation?.();
+          }}
+        >
           Set orientation as correct
         </button>
+        {page?.sourceType === "pdf" ? (
+          <button
+            type="button"
+            style={styles.button}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onResetOrientation?.();
+            }}
+          >
+            Reset orientation
+          </button>
+        ) : null}
       </div>
 
       {warning ? <div style={styles.warning}>{warning}</div> : null}
@@ -190,6 +225,16 @@ const styles = {
     fontSize: 12,
     fontWeight: 700,
     cursor: "pointer",
+  },
+  disabledButton: {
+    border: "1px solid #cbd5e1",
+    background: "#f1f5f9",
+    color: "#94a3b8",
+    borderRadius: 6,
+    padding: "6px 9px",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "not-allowed",
   },
   activeButton: {
     border: "1px solid #2563eb",

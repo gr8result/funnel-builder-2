@@ -97,7 +97,7 @@ assert.equal(applied.imageWidth, 200);
 assert.equal(applied.imageHeight, 300);
 assert.match(applied.imageDataUrl, /rotated-90/);
 
-const lowConfidenceSkipped = await applyOrientationAnalysisToRaster({
+const lowConfidenceApplied = await applyOrientationAnalysisToRaster({
   imageDataUrl: "data:image/png;base64,abc",
   imageWidth: 300,
   imageHeight: 200,
@@ -109,9 +109,9 @@ const lowConfidenceSkipped = await applyOrientationAnalysisToRaster({
     rotation,
   }),
 });
-assert.equal(lowConfidenceSkipped.rotation, 0);
-assert.equal(lowConfidenceSkipped.imageWidth, 300);
-assert.doesNotMatch(lowConfidenceSkipped.imageDataUrl, /rotated/);
+assert.equal(lowConfidenceApplied.rotation, 90);
+assert.equal(lowConfidenceApplied.imageWidth, 200);
+assert.match(lowConfidenceApplied.imageDataUrl, /rotated-90/);
 
 const confirmed = await analyzeRasterOrientation({
   imageDataUrl: "data:image/png;base64,abc",

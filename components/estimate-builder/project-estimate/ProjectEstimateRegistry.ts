@@ -79,6 +79,10 @@ export function projectEstimateContentFromBlocks(page: any = {}) {
     if (!block) return;
     const contentKey = field.contentKey || projectEstimateContentKeyForBlock(definition, block);
     if (!contentKey) return;
+    if (block.design?.hidden) {
+      content[contentKey] = "";
+      return;
+    }
     const value = projectEstimateEditableValue(block);
     if (value !== undefined) content[contentKey] = value;
   });

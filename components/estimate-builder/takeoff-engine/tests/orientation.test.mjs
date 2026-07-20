@@ -26,6 +26,8 @@ const rotated = applyManualRotation(orientation, 180);
 assert.equal(rotated.userRotation, 180);
 assert.equal(rotated.finalRotation, 0);
 assert.equal(rotated.confidence, "manual");
+assert.equal(rotated.manualOverride, true);
+assert.equal(rotated.orientationConfirmed, true);
 
 const confirmed = confirmOrientation(rotated);
 assert.equal(confirmed.orientationConfirmed, true);

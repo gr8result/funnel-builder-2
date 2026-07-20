@@ -27,17 +27,6 @@ export function calculateInitialViewerState({ containerWidth, containerHeight, i
   });
 }
 
-function normaliseRotation(value) {
-  return ((Math.round(Number(value || 0) / 90) * 90) % 360 + 360) % 360;
-}
-
-function getPageRotation(page) {
-  if (page?.metadata?.orientationApplied) {
-    return 0;
-  }
-  return normaliseRotation(page?.orientation?.finalRotation || 0);
-}
-
 function loadOpenSeadragon() {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("OpenSeadragon requires a browser"));
@@ -232,6 +221,7 @@ export default function TakeoffCanvas({
   onImageClick,
   onImageDoubleClick,
   fitRequestKey = 0,
+  fitRequestMode = "fit-page",
 }) {
   const containerRef = useRef(null);
   const viewerRef = useRef(null);
@@ -245,7 +235,6 @@ export default function TakeoffCanvas({
 
   const imageWidth = page?.imageWidth || 0;
   const imageHeight = page?.imageHeight || 0;
-  const rotation = getPageRotation(page);
   const currentView = createViewState(viewState);
   const snapPoints = useMemo(() => buildSnapPointsFromSegments(createSegmentsFromPage(page || {}, {
     scaleDraft,
@@ -350,7 +339,6 @@ export default function TakeoffCanvas({
     }
 
     viewer.addHandler("open", () => {
-      viewer.viewport.setRotation(rotation, true);
       if (page?.viewState) {
         applyViewStateToViewer(viewer, currentView, containerRef.current);
       } else {
@@ -434,22 +422,25 @@ export default function TakeoffCanvas({
   }, [OpenSeadragonLib, activeTool, snapEnabled, snapPoints]);
 
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer?.viewport) {
-      return;
-    }
-    viewer.viewport.setRotation(rotation);
-    viewer.viewport.goHome(false);
-    setOverlayTick((value) => value + 1);
-  }, [rotation]);
-
-  useEffect(() => {
     if (!fitRequestKey || !viewerRef.current?.viewport) {
       return;
     }
-    viewerRef.current.viewport.goHome(false);
+    if (fitRequestMode === "fit-width") {
+      const rect = containerRef.current?.getBoundingClientRect?.() || { width: 0 };
+      const nextZoom = Math.max(0.0001, Number(rect.width || 0) / Math.max(1, imageWidth));
+      zoomViewerToImageZoom(viewerRef.current, nextZoom);
+      viewerRef.current.viewport.panTo(
+        viewerRef.current.viewport.imageToViewportCoordinates({
+          x: imageWidth / 2,
+          y: imageHeight / 2,
+        }),
+        false,
+      );
+    } else {
+      viewerRef.current.viewport.goHome(false);
+    }
     setOverlayTick((value) => value + 1);
-  }, [fitRequestKey]);
+  }, [fitRequestKey, fitRequestMode, imageWidth, imageHeight]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

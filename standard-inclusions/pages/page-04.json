@@ -1,0 +1,568 @@
+{
+  "id": "premier-inclusions-page-04",
+  "name": "Page 04",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p4-image-0",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": -14.04,
+      "y": 0,
+      "width": 899.34,
+      "height": 1138.6,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image23.png",
+        "assetPath": "standard-inclusions/assets/image23.png",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p4-logo-1",
+      "name": "Freeform 5",
+      "type": "logo",
+      "x": 482.67,
+      "y": 594.45,
+      "width": 61.3,
+      "height": 56.25,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image24.png",
+        "assetPath": "standard-inclusions/assets/image24.png",
+        "alt": "Freeform 5"
+      },
+      "layer": 1
+    },
+    {
+      "id": "p4-text-2",
+      "name": "TextBox 6",
+      "type": "text",
+      "x": 553.59,
+      "y": 636.2,
+      "width": 188.27,
+      "height": 43.6,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 11,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Carefully selected fixtures, fittings and finishes."
+      },
+      "layer": 2
+    },
+    {
+      "id": "p4-logo-3",
+      "name": "Freeform 8",
+      "type": "logo",
+      "x": 482.67,
+      "y": 690.19,
+      "width": 61.3,
+      "height": 56.25,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image25.png",
+        "assetPath": "standard-inclusions/assets/image25.png",
+        "alt": "Freeform 8"
+      },
+      "layer": 3
+    },
+    {
+      "id": "p4-text-4",
+      "name": "TextBox 9",
+      "type": "text",
+      "x": 553.59,
+      "y": 714.31,
+      "width": 166.82,
+      "height": 43.6,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 11,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Practical, stylish and made for everyday life."
+      },
+      "layer": 4
+    },
+    {
+      "id": "p4-logo-5",
+      "name": "Freeform 11",
+      "type": "logo",
+      "x": 482.67,
+      "y": 757.91,
+      "width": 61.3,
+      "height": 56.66,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image26.png",
+        "assetPath": "standard-inclusions/assets/image26.png",
+        "alt": "Freeform 11"
+      },
+      "layer": 5
+    },
+    {
+      "id": "p4-text-6",
+      "name": "TextBox 12",
+      "type": "text",
+      "x": 553.73,
+      "y": 772.57,
+      "width": 184.19,
+      "height": 24.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 15,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Your Choices"
+      },
+      "layer": 6
+    },
+    {
+      "id": "p4-text-7",
+      "name": "TextBox 13",
+      "type": "text",
+      "x": 551.6,
+      "y": 790.97,
+      "width": 170.79,
+      "height": 65.6,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 11,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Personalise your home with colours, finishes and upgrades."
+      },
+      "layer": 7
+    },
+    {
+      "id": "p4-logo-8",
+      "name": "Freeform 15",
+      "type": "logo",
+      "x": 482.67,
+      "y": 870.82,
+      "width": 61.3,
+      "height": 56.66,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image27.png",
+        "assetPath": "standard-inclusions/assets/image27.png",
+        "alt": "Freeform 15"
+      },
+      "layer": 8
+    },
+    {
+      "id": "p4-image-9",
+      "name": "Freeform 17",
+      "type": "image",
+      "x": 482.67,
+      "y": 884.57,
+      "width": 275.22,
+      "height": 14.58,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image28.png",
+        "assetPath": "standard-inclusions/assets/image28.png",
+        "alt": "Freeform 17"
+      },
+      "layer": 9
+    },
+    {
+      "id": "p4-logo-10",
+      "name": "Freeform 19",
+      "type": "logo",
+      "x": 59.58,
+      "y": 1036.84,
+      "width": 114.83,
+      "height": 61.68,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 19"
+      },
+      "layer": 10
+    },
+    {
+      "id": "p4-logo-11",
+      "name": "Freeform 21",
+      "type": "logo",
+      "x": 396.98,
+      "y": 1066.61,
+      "width": 30.86,
+      "height": 28.33,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image29.png",
+        "assetPath": "standard-inclusions/assets/image29.png",
+        "alt": "Freeform 21"
+      },
+      "layer": 11
+    },
+    {
+      "id": "p4-logo-12",
+      "name": "Freeform 23",
+      "type": "logo",
+      "x": 549.6,
+      "y": 1052.44,
+      "width": 15.85,
+      "height": 42.5,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image30.png",
+        "assetPath": "standard-inclusions/assets/image30.png",
+        "alt": "Freeform 23"
+      },
+      "layer": 12
+    },
+    {
+      "id": "p4-logo-13",
+      "name": "Freeform 25",
+      "type": "logo",
+      "x": 565.03,
+      "y": 1066.61,
+      "width": 30.86,
+      "height": 28.33,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image31.png",
+        "assetPath": "standard-inclusions/assets/image31.png",
+        "alt": "Freeform 25"
+      },
+      "layer": 13
+    },
+    {
+      "id": "p4-text-14",
+      "name": "TextBox 28",
+      "type": "text",
+      "x": 42.22,
+      "y": 549.8,
+      "width": 297.61,
+      "height": 30.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 19,
+        "fontWeight": "800",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Premier Inclusions"
+      },
+      "layer": 14
+    },
+    {
+      "id": "p4-text-15",
+      "name": "TextBox 29",
+      "type": "text",
+      "x": 38.44,
+      "y": 627.57,
+      "width": 397.19,
+      "height": 146.69,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Libre Baskerville",
+        "fontSize": 36,
+        "fontWeight": "600",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Designed for the way you live."
+      },
+      "layer": 15
+    },
+    {
+      "id": "p4-text-16",
+      "name": "TextBox 30",
+      "type": "text",
+      "x": 34.65,
+      "y": 788.5,
+      "width": 417.84,
+      "height": 167.68,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 11,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Our Premier Inclusions provide the perfect balance of quality, style and value, forming the standard specification for every Project Estimate.\nDuring your Selections Process, you'll personalise your home by selecting colours, finishes and approved upgrades, with all final inclusions confirmed in your Formal Quotation before your Building Contract is prepared."
+      },
+      "layer": 16
+    },
+    {
+      "id": "p4-text-17",
+      "name": "TextBox 31",
+      "type": "text",
+      "x": 550.45,
+      "y": 895.29,
+      "width": 187.47,
+      "height": 43.6,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 11,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "All selections documented in your Formal Quotation."
+      },
+      "layer": 17
+    },
+    {
+      "id": "p4-text-18",
+      "name": "TextBox 32",
+      "type": "text",
+      "x": 420.22,
+      "y": 1072.22,
+      "width": 128.69,
+      "height": 20.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 13,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "1300 1231 456"
+      },
+      "layer": 18
+    },
+    {
+      "id": "p4-text-19",
+      "name": "TextBox 33",
+      "type": "text",
+      "x": 594.99,
+      "y": 1072.22,
+      "width": 155.7,
+      "height": 20.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 13,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "goodbuild.com.au"
+      },
+      "layer": 19
+    },
+    {
+      "id": "p4-text-20",
+      "name": "TextBox 34",
+      "type": "text",
+      "x": 555.58,
+      "y": 608.56,
+      "width": 256.12,
+      "height": 24.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 15,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Quality Included"
+      },
+      "layer": 20
+    },
+    {
+      "id": "p4-text-21",
+      "name": "TextBox 35",
+      "type": "text",
+      "x": 553.73,
+      "y": 689.3,
+      "width": 209.21,
+      "height": 24.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 15,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Built for living"
+      },
+      "layer": 21
+    },
+    {
+      "id": "p4-text-22",
+      "name": "TextBox 36",
+      "type": "text",
+      "x": 549.76,
+      "y": 870.57,
+      "width": 208.13,
+      "height": 24.01,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "TT Interphases Bold",
+        "fontSize": 15,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Confidence & Clarity"
+      },
+      "layer": 22
+    }
+  ]
+}

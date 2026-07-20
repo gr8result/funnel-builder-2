@@ -226,15 +226,28 @@ export function takeoffReducer(state = createInitialTakeoffState(), action = {})
       }));
 
     case TAKEOFF_ACTIONS.ROTATE_PAGE: {
-      const updater = (page) => ({
-        ...page,
-        orientation: applyManualRotation(page.orientation, action.payload?.deltaRotation || 0),
-        scale: null,
-        measurements: [],
-        areas: [],
-        viewState: null,
-        orientationResetWarning: "This page was rotated. Scale and measurements were reset because the coordinate system changed.",
-      });
+      const updater = (page) => {
+        const orientation = applyManualRotation(page.orientation, action.payload?.deltaRotation || 0);
+        return {
+          ...page,
+          autoRotation: orientation.autoRotation,
+          manualRotation: orientation.manualRotation,
+          finalRotation: orientation.finalRotation,
+          orientationMode: orientation.orientationMode,
+          orientation,
+          scale: null,
+          measurements: [],
+          areas: [],
+          viewState: null,
+          metadata: {
+            ...(page.metadata || {}),
+            orientationMode: orientation.orientationMode,
+            orientationManualOverride: true,
+            orientationAutoApplied: false,
+          },
+          orientationResetWarning: "This page was rotated manually. Scale and measurements were reset because the coordinate system changed.",
+        };
+      };
       return action.payload?.pageId
         ? updatePageById(state, action.payload.pageId, updater)
         : updateActivePage(state, updater);
@@ -243,7 +256,22 @@ export function takeoffReducer(state = createInitialTakeoffState(), action = {})
     case TAKEOFF_ACTIONS.CONFIRM_ORIENTATION:
       return updateActivePage(state, (page) => ({
         ...page,
-        orientation: confirmOrientation(page.orientation),
+        ...(() => {
+          const orientation = confirmOrientation(page.orientation);
+          return {
+            autoRotation: orientation.autoRotation,
+            manualRotation: orientation.manualRotation,
+            finalRotation: orientation.finalRotation,
+            orientationMode: orientation.orientationMode,
+            orientation,
+            metadata: {
+              ...(page.metadata || {}),
+              orientationMode: orientation.orientationMode,
+              orientationManualOverride: true,
+              orientationAutoApplied: false,
+            },
+          };
+        })(),
       }));
 
     default:

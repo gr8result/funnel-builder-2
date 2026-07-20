@@ -71,7 +71,7 @@ function friendlyQuoteError(status, data) {
 }
 
 function friendlyCandleError(status, data) {
-  if (status === 403) return "Historical candle data is unavailable on the current Finnhub plan.";
+  if (status === 403) return "Historical data temporarily unavailable.";
   if (status === 429) return "Finnhub candle rate limit reached. Try again shortly.";
   if (data?.error) return String(data.error);
   if (status) return `Finnhub candle request failed with status ${status}.`;

@@ -1,0 +1,478 @@
+{
+  "id": "premier-inclusions-page-10",
+  "name": "Page 10",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p10-image-0",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": -25.08,
+      "y": -60.48,
+      "width": 850.19,
+      "height": 427.93,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image55.jpeg",
+        "assetPath": "standard-inclusions/assets/image55.jpeg",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p10-text-1",
+      "name": "TextBox 4",
+      "type": "text",
+      "x": 39.23,
+      "y": 423.63,
+      "width": 357.95,
+      "height": 259.5,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Premium Gainsborough lever door handles throughout.\nPainted timber skirting boards (68mm × 11mm).\nPainted timber architraves (42mm × 11mm).\n90mm cove cornice throughout.\nPlaster-lined garage.\n6mm Villaboard lining to all wet area walls where required.\nCeiling heights as nominated on the approved plans.\nCeiling and roof insulation designed to achieve the required 6-Star Energy Rating (or current NCC equivalent)."
+      },
+      "layer": 1
+    },
+    {
+      "id": "p10-text-2",
+      "name": "TextBox 5",
+      "type": "text",
+      "x": 37.43,
+      "y": 370.38,
+      "width": 311.53,
+      "height": 44.93,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Internal Finishes"
+      },
+      "layer": 2
+    },
+    {
+      "id": "p10-text-3",
+      "name": "TextBox 6",
+      "type": "text",
+      "x": 38.92,
+      "y": 759.52,
+      "width": 356.97,
+      "height": 157.35,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Sewer line allowance (10 metres from house to connection point)\nStormwater line allowance (10 metres from house to connection point)\nMains water line allowance (10 metres from house to connection point)\nPolyethylene water lines for internal plumbing\n150mm gutters"
+      },
+      "layer": 3
+    },
+    {
+      "id": "p10-text-4",
+      "name": "TextBox 7",
+      "type": "text",
+      "x": 39.23,
+      "y": 684.45,
+      "width": 340.53,
+      "height": 67.34,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Plumbing & Drainage"
+      },
+      "layer": 4
+    },
+    {
+      "id": "p10-text-5",
+      "name": "TextBox 8",
+      "type": "text",
+      "x": 418.41,
+      "y": 423.63,
+      "width": 368.39,
+      "height": 145.53,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Genuine COLORBOND® fascia and gutter system.\nGenuine COLORBOND® roofing selected from the builder's standard colour range.\nRoof pitch as detailed on the approved plans.\nRoof insulation designed to achieve the required 6-Star Energy Rating (or current NCC equivalent).\nEave widths as shown on the approved plans."
+      },
+      "layer": 5
+    },
+    {
+      "id": "p10-text-6",
+      "name": "TextBox 9",
+      "type": "text",
+      "x": 418.41,
+      "y": 371.01,
+      "width": 135.23,
+      "height": 44.3,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Roofing"
+      },
+      "layer": 6
+    },
+    {
+      "id": "p10-text-7",
+      "name": "TextBox 10",
+      "type": "text",
+      "x": 414.23,
+      "y": 624.68,
+      "width": 345.61,
+      "height": 103.52,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Three-coat premium paint system to all walls throughout the home.\n2 Coats to ceilings (Flat White rolled finish)\nGloss finish to skirting boards, architraves and internal doors."
+      },
+      "layer": 7
+    },
+    {
+      "id": "p10-text-8",
+      "name": "TextBox 11",
+      "type": "text",
+      "x": 414.23,
+      "y": 576.16,
+      "width": 222.97,
+      "height": 44.3,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Painting"
+      },
+      "layer": 8
+    },
+    {
+      "id": "p10-text-9",
+      "name": "TextBox 12",
+      "type": "text",
+      "x": 414.23,
+      "y": 735.21,
+      "width": 205.08,
+      "height": 44.3,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Flooring"
+      },
+      "layer": 9
+    },
+    {
+      "id": "p10-text-10",
+      "name": "TextBox 13",
+      "type": "text",
+      "x": 414.23,
+      "y": 790.46,
+      "width": 355.99,
+      "height": 145.53,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Choice of 450 x 450 cermaic tiles or choice of flooring from the builder's standard range (with upgrade options available)\nQuality carpet with premium underlay to bedrooms and media room."
+      },
+      "layer": 10
+    },
+    {
+      "id": "p10-text-11",
+      "name": "TextBox 14",
+      "type": "text",
+      "x": 45.87,
+      "y": 987.59,
+      "width": 700.92,
+      "height": 47.26,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Inter Bold",
+        "fontSize": 9,
+        "fontWeight": "800",
+        "color": "#092239",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Our Premier Inclusions Schedule outlines the fixtures, fittings, finishes and construction standards Included as the pricing basis for each Project. Each internal selection and any approved upgrades or downgrades will be confirmed during the Selections Process and documented in the Formal Quotation."
+      },
+      "layer": 11
+    },
+    {
+      "id": "p10-logo-12",
+      "name": "Freeform 16",
+      "type": "logo",
+      "x": 15.01,
+      "y": 1066.61,
+      "width": 30.86,
+      "height": 28.33,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image42.png",
+        "assetPath": "standard-inclusions/assets/image42.png",
+        "alt": "Freeform 16"
+      },
+      "layer": 12
+    },
+    {
+      "id": "p10-text-13",
+      "name": "TextBox 17",
+      "type": "text",
+      "x": 41.31,
+      "y": 1073.34,
+      "width": 126.31,
+      "height": 18.23,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Inter Bold",
+        "fontSize": 12,
+        "fontWeight": "800",
+        "color": "#092239",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "1300 1231 456"
+      },
+      "layer": 13
+    },
+    {
+      "id": "p10-logo-14",
+      "name": "Freeform 19",
+      "type": "logo",
+      "x": 167.63,
+      "y": 1052.44,
+      "width": 15.85,
+      "height": 42.5,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image43.png",
+        "assetPath": "standard-inclusions/assets/image43.png",
+        "alt": "Freeform 19"
+      },
+      "layer": 14
+    },
+    {
+      "id": "p10-logo-15",
+      "name": "Freeform 21",
+      "type": "logo",
+      "x": 183.06,
+      "y": 1066.61,
+      "width": 30.86,
+      "height": 28.33,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image44.png",
+        "assetPath": "standard-inclusions/assets/image44.png",
+        "alt": "Freeform 21"
+      },
+      "layer": 15
+    },
+    {
+      "id": "p10-text-16",
+      "name": "TextBox 22",
+      "type": "text",
+      "x": 211.3,
+      "y": 1075.59,
+      "width": 156.49,
+      "height": 18.23,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Inter Bold",
+        "fontSize": 12,
+        "fontWeight": "800",
+        "color": "#092239",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "goodbuild.com.au"
+      },
+      "layer": 16
+    },
+    {
+      "id": "p10-text-17",
+      "name": "TextBox 23",
+      "type": "text",
+      "x": 389.4,
+      "y": 1047.44,
+      "width": 185.88,
+      "height": 50.41,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Libre Baskerville Italics",
+        "fontSize": 13,
+        "fontWeight": "600",
+        "color": "#092239",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Quality by standard, Personalised by choice."
+      },
+      "layer": 17
+    },
+    {
+      "id": "p10-logo-18",
+      "name": "Freeform 25",
+      "type": "logo",
+      "x": 619.32,
+      "y": 1044.31,
+      "width": 114.83,
+      "height": 61.68,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 25"
+      },
+      "layer": 18
+    }
+  ]
+}

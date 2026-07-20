@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
+import { mergeVideoHeroProps, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
@@ -54,6 +55,74 @@ import {
   formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
   BlockLibraryPanel, PageSectionsPanel,
 } from "./pbPropertiesPanels";
+
+function slugifyBuilderPageLink(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function buildBuilderPageRefs(pages = []) {
+  return (Array.isArray(pages) ? pages : [])
+    .map((page, index) => {
+      const label = String(page?.name || page?.title || page?.pageName || "").trim();
+      const slug = slugifyBuilderPageLink(page?.slug || page?.path || label);
+      if (!label || !slug) return null;
+      return {
+        id: String(page?.id || page?.pageId || slug),
+        label,
+        slug,
+        href: slug === "home" ? "/" : `/${slug}`,
+        order: Number.isFinite(Number(page?.order)) ? Number(page.order) : index,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order);
+}
+
+function resolveBuilderPageRefForCta(cta, pages = []) {
+  const pageRefs = buildBuilderPageRefs(pages);
+  const keys = [
+    cta?.pageId,
+    cta?.href,
+    cta?.slug,
+    cta?.pageSlug,
+  ].map((value) => slugifyBuilderPageLink(String(value || "").replace(/^\/+/, "")));
+  return pageRefs.find((page) => keys.includes(page.id) || keys.includes(page.slug)) || pageRefs[0] || null;
+}
+
+function normalizeBuilderCta(props = {}, pages = []) {
+  const legacyHref = props.ctaLink || props.buttonLink || props.link || props.href || "";
+  const source = props.cta && typeof props.cta === "object" ? props.cta : {};
+  const href = String(source.href || legacyHref || "").trim();
+  const pageRef = resolveBuilderPageRefForCta({ ...source, href }, pages);
+  const explicitType = String(source.linkType || "").trim();
+  const linkType = ["page", "external", "anchor", "none"].includes(explicitType)
+    ? explicitType
+    : pageRef && href && !/^(https?:|mailto:|tel:|#)/i.test(href)
+      ? "page"
+      : href.startsWith("#")
+        ? "anchor"
+        : /^(https?:|mailto:|tel:)/i.test(href)
+          ? "external"
+          : href
+            ? "page"
+            : "none";
+  const selectedPage = linkType === "page" ? pageRef : null;
+  const resolvedHref = linkType === "page"
+    ? selectedPage?.href || ""
+    : linkType === "none"
+      ? ""
+      : href;
+  return {
+    text: String(source.text || props.buttonText || props.ctaText || "").trim(),
+    linkType,
+    pageId: selectedPage?.id || null,
+    href: resolvedHref,
+  };
+}
 
 class BlockPreviewBoundary extends React.Component {
   constructor(props) {
@@ -3361,7 +3430,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   function openAssetBrowser(fieldKey, title) {
-    if (["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(fieldKey || ""))) {
+    if (["backgroundVideoUrl", "__video_hero_src__", "videoUrl", "videoSrc"].includes(String(fieldKey || ""))) {
       setAssetBrowser({ visible: true, fieldKey, title });
       return;
     }
@@ -3378,7 +3447,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   const selectedBrowserImage = assetBrowser.fieldKey ? String(block?.props?.[assetBrowser.fieldKey] || "") : "";
-  const isVideoAssetBrowser = ["backgroundVideoUrl", "__video_hero_src__", "videoSrc", "url"].includes(String(assetBrowser.fieldKey || ""));
+  const isVideoAssetBrowser = ["backgroundVideoUrl", "__video_hero_src__", "videoUrl", "videoSrc"].includes(String(assetBrowser.fieldKey || ""));
   const browserAssets = isVideoAssetBrowser
     ? savedVideos
     : [savedLogo, ...savedImages].filter(Boolean);
@@ -3569,6 +3638,33 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         project={project}
       />
     );
+  }
+
+  const pageRefsForLinks = buildBuilderPageRefs(project?.pages || []);
+  const canonicalCta = normalizeBuilderCta(block?.props || {}, project?.pages || []);
+  function updateCanonicalCta(patch) {
+    const nextCta = { ...canonicalCta, ...patch };
+    if (nextCta.linkType === "page") {
+      const page = pageRefsForLinks.find((entry) => entry.id === nextCta.pageId) || pageRefsForLinks[0] || null;
+      nextCta.pageId = page?.id || null;
+      nextCta.href = page?.href || "";
+    } else if (nextCta.linkType === "anchor") {
+      nextCta.pageId = null;
+      nextCta.href = String(nextCta.href || "#contact").startsWith("#") ? nextCta.href : `#${slugifyBuilderPageLink(nextCta.href || "contact")}`;
+    } else if (nextCta.linkType === "none") {
+      nextCta.pageId = null;
+      nextCta.href = "";
+    } else {
+      nextCta.pageId = null;
+    }
+    onChange(index, {
+      ...block.props,
+      cta: nextCta,
+      ctaText: nextCta.text,
+      buttonText: nextCta.text,
+      ctaLink: nextCta.href,
+      buttonLink: nextCta.href,
+    });
   }
 
   if (block.type === BlockTypes.PLATFORM_PRICING_PLANS) {
@@ -3903,9 +3999,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   if (block.type === BlockTypes.VIDEO_HERO) {
     const vp = block.props || {};
-    const canonicalVideoUrl = String(vp.videoUrl || vp.videoSrc || vp.videoURL || "");
+    const canonicalVideoUrl = String(resolveVideoHeroUrl(vp) || "");
     const canonicalPosterUrl = String(vp.posterUrl || vp.posterSrc || vp.posterURL || "");
-    const updateVH = (patch) => onChange(index, { ...vp, ...patch });
+    const updateVH = (patch, options = {}) => onChange(index, mergeVideoHeroProps(vp, patch, options));
     const applyVHOption = (patch) => (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3933,11 +4029,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         if (asset?.src) {
           updateVH({
             videoUrl: asset.src,
-            videoSrc: asset.src,
             videoStoragePath: asset.storagePath || vp.videoStoragePath || "",
             videoMimeType: asset.type || file.type || "",
             videoFileName: asset.name || file.name || "",
-            uploadedAt: new Date().toISOString(),
+            videoUpdatedAt: new Date().toISOString(),
           });
         } else {
           setVideoUploadError("Upload failed — server returned no URL. Check file format and size.");
@@ -3951,7 +4046,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     const handlePosterUpload = async (file) => {
       if (!file) return;
       const asset = await Promise.resolve(onUploadImage?.(index, "__video_hero_poster__", file));
-      if (asset?.src) updateVH({ posterUrl: asset.src, posterSrc: asset.src });
+      if (asset?.src) updateVH({ posterUrl: asset.src });
     };
 
     return (
@@ -3990,7 +4085,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               </label>
               {canonicalVideoUrl && !videoUploading ? (
                 <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => updateVH({ videoUrl: "", videoSrc: "" })}>Remove</button>
+                  onClick={() => updateVH({ videoUrl: "" }, { removeVideo: true })}>Remove</button>
               ) : null}
             </div>
           </div>
@@ -4008,7 +4103,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               </label>
               {canonicalPosterUrl ? (
                 <button type="button" style={{ ...styles.assetChip, background: "rgba(239,68,68,0.14)", borderColor: "rgba(239,68,68,0.35)", color: "#fecaca" }}
-                  onClick={() => updateVH({ posterUrl: "", posterSrc: "" })}>Remove</button>
+                  onClick={() => updateVH({ posterUrl: "" })}>Remove</button>
               ) : null}
             </div>
           </div>
@@ -4663,6 +4758,66 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             </label>
           </div>
         ) : null}
+        {block.type === BlockTypes.PARALLAX && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>CTA Button Text</label>
+            <input
+              type="text"
+              value={canonicalCta.text}
+              onChange={(e) => updateCanonicalCta({ text: e.target.value })}
+              style={styles.propertyInput}
+              placeholder="Book a Free Demo"
+            />
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>CTA Link Type</label>
+            <select
+              value={canonicalCta.linkType}
+              onChange={(e) => updateCanonicalCta({ linkType: e.target.value })}
+              style={styles.propertyInput}
+            >
+              <option value="page">Website Page</option>
+              <option value="external">External URL</option>
+              <option value="anchor">Anchor / Section</option>
+              <option value="none">No Link</option>
+            </select>
+            {canonicalCta.linkType === "page" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Website Page</label>
+                <select
+                  value={canonicalCta.pageId || ""}
+                  onChange={(e) => updateCanonicalCta({ linkType: "page", pageId: e.target.value })}
+                  style={styles.propertyInput}
+                >
+                  {pageRefsForLinks.map((page) => (
+                    <option key={page.id} value={page.id}>{page.label}</option>
+                  ))}
+                </select>
+                <input type="text" value={canonicalCta.href} readOnly style={{ ...styles.propertyInput, marginTop: 6 }} />
+              </>
+            ) : canonicalCta.linkType === "external" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>External URL</label>
+                <input
+                  type="url"
+                  value={canonicalCta.href}
+                  onChange={(e) => updateCanonicalCta({ href: e.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="https://example.com"
+                />
+              </>
+            ) : canonicalCta.linkType === "anchor" ? (
+              <>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Anchor / Section</label>
+                <input
+                  type="text"
+                  value={canonicalCta.href}
+                  onChange={(e) => updateCanonicalCta({ href: e.target.value })}
+                  style={styles.propertyInput}
+                  placeholder="#contact"
+                />
+              </>
+            ) : null}
+          </div>
+        ) : null}
         {isHero && shouldShowHeroPanelSection("media") ? (
           <div style={styles.sectionCard}>
             <label style={styles.propertyLabel}>{block.type === BlockTypes.PARALLAX ? "Section Background Image" : "Hero Background Image"}</label>
@@ -4923,6 +5078,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
           if (["id", "type", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (block.type === BlockTypes.PARALLAX && ["cta", "ctaText", "ctaLink", "buttonText", "buttonLink", "link", "href"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections
           if (Array.isArray(value) || (typeof value === "object" && value !== null)) return null;

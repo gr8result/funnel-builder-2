@@ -1682,24 +1682,6 @@
               "logo": "",
               "brand": "Your Brand",
               "tagline": "Building something amazing.",
-              "navLinks": [
-                {
-                  "href": "#home",
-                  "label": "Home"
-                },
-                {
-                  "href": "#about",
-                  "label": "About"
-                },
-                {
-                  "href": "#services",
-                  "label": "Services"
-                },
-                {
-                  "href": "#contact",
-                  "label": "Contact"
-                }
-              ],
               "linkColor": "#94a3b8",
               "logoWidth": 48,
               "textColor": "#e2e8f0",
@@ -1735,7 +1717,25 @@
               "newsletterButtonColor": "#2563eb",
               "newsletterSubmitMethod": "post",
               "newsletterFallbackEmail": "",
-              "newsletterButtonTextColor": "#ffffff"
+              "newsletterButtonTextColor": "#ffffff",
+              "navigationLinks": [
+                {
+                  "href": "#home",
+                  "label": "Home"
+                },
+                {
+                  "href": "#about",
+                  "label": "About"
+                },
+                {
+                  "href": "#services",
+                  "label": "Services"
+                },
+                {
+                  "href": "#contact",
+                  "label": "Contact"
+                }
+              ]
             }
           },
           {
@@ -5169,71 +5169,21 @@
           "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
           "brand": "Gr8 Result Digital Solutions",
           "tagline": "Code Hard or Code Home",
-          "navLinks": [
-            {
-              "href": "/home",
-              "label": "Home"
-            },
-            {
-              "href": "/about",
-              "label": "About"
-            },
-            {
-              "href": "/contact",
-              "label": "Contact"
-            },
-            {
-              "href": "/about",
-              "label": "About Us"
-            },
-            {
-              "href": "/modules",
-              "label": "Modules"
-            },
-            {
-              "href": "/contact-us",
-              "label": "Contact Us"
-            },
-            {
-              "href": "/email",
-              "label": "Email"
-            },
-            {
-              "href": "/sms",
-              "label": "SMS"
-            },
-            {
-              "href": "/crm",
-              "label": "CRM"
-            },
-            {
-              "href": "/pricing",
-              "label": "Pricing"
-            },
-            {
-              "label": "[object Object]",
-              "href": "#object-object"
-            },
-            {
-              "label": "Page 9",
-              "href": "#page-9"
-            }
-          ],
           "linkColor": "#f59e0b",
           "logoWidth": 200,
           "textColor": "#ffffff",
           "extraLinks": [
             {
-              "href": "#blog",
-              "label": "Blog"
+              "label": "Blog",
+              "href": "/blog"
             },
             {
-              "href": "#privacy",
-              "label": "Privacy Policy"
+              "label": "Privacy Policy",
+              "href": "/privacy-policy"
             },
             {
-              "href": "#terms",
-              "label": "Terms"
+              "label": "Terms",
+              "href": "/terms"
             }
           ],
           "navHeading": "Navigation",
@@ -5255,7 +5205,57 @@
           "newsletterButtonColor": "#2563eb",
           "newsletterSubmitMethod": "post",
           "newsletterFallbackEmail": "",
-          "newsletterButtonTextColor": "#ffffff"
+          "newsletterButtonTextColor": "#ffffff",
+          "navigationLinks": [
+            {
+              "label": "Home",
+              "href": "/"
+            },
+            {
+              "label": "Modules",
+              "href": "/modules"
+            },
+            {
+              "label": "Email",
+              "href": "/email"
+            },
+            {
+              "label": "SMS",
+              "href": "/sms"
+            },
+            {
+              "label": "CRM",
+              "href": "/crm"
+            },
+            {
+              "label": "Funnels",
+              "href": "/funnels"
+            },
+            {
+              "label": "Website Builder",
+              "href": "/website-builder"
+            },
+            {
+              "label": "Social Media",
+              "href": "/social-media"
+            },
+            {
+              "label": "Project Hub",
+              "href": "/project-hub"
+            },
+            {
+              "label": "About Us",
+              "href": "/about-us"
+            },
+            {
+              "label": "Pricing",
+              "href": "/pricing"
+            },
+            {
+              "label": "Contact Us",
+              "href": "/contact-us"
+            }
+          ]
         }
       }
     }
@@ -6070,6 +6070,122 @@
     },
     "space": {
       "height": "42px"
+    },
+    "side-scroll-accordion": {
+      "items": [
+        {
+          "id": "ai-1",
+          "body": "A business website needs more than a home page. Build service pages, local landing pages, FAQs, metadata and internal links around the terms customers actually search for.",
+          "tags": [
+            "AI website builder",
+            "SEO pages",
+            "local search"
+          ],
+          "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+          "title": "Search-ready website pages",
+          "eyebrow": "SEO foundations",
+          "imageFit": "",
+          "imageUrl": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-no-code.png",
+          "imageScale": "",
+          "imageObjectPosition": "",
+          "useBlockImageSettings": true
+        },
+        {
+          "id": "ai-2",
+          "body": "Change images, buttons, layouts, spacing, forms, colours and page sections without touching code. The builder is made for fast business edits after launch.",
+          "tags": [
+            "no coding",
+            "drag and drop",
+            "mobile friendly"
+          ],
+          "image": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+          "title": "Drag, drop, customise and publish",
+          "eyebrow": "No-code editing",
+          "imageFit": "",
+          "imageUrl": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+          "imageScale": "",
+          "imageObjectPosition": "",
+          "useBlockImageSettings": true
+        },
+        {
+          "id": "ai-3",
+          "body": "Quote forms, booking buttons and contact CTAs should send leads into CRM, start follow-up, notify the team and keep every enquiry visible.",
+          "tags": [
+            "CRM capture",
+            "booking forms",
+            "sales follow-up"
+          ],
+          "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+          "title": "Forms that feed the CRM",
+          "eyebrow": "Lead conversion",
+          "imageFit": "",
+          "imageUrl": "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+          "imageScale": "",
+          "imageObjectPosition": "",
+          "useBlockImageSettings": true
+        },
+        {
+          "id": "ai-4",
+          "body": "Trades need quote urgency, clinics need trust, restaurants need atmosphere, property teams need listings, and ecommerce brands need product pathways.",
+          "tags": [
+            "industry templates",
+            "business websites",
+            "conversion copy"
+          ],
+          "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+          "title": "Built around the business type",
+          "eyebrow": "Industry templates",
+          "imageFit": "",
+          "imageUrl": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+          "imageScale": "",
+          "imageObjectPosition": "",
+          "useBlockImageSettings": true
+        },
+        {
+          "id": "ai-5",
+          "body": "Your website can connect with email marketing, SMS marketing, sales funnels, booking calendars, CRM pipelines and business automation from one Gr8 Result account.",
+          "tags": [
+            "automation",
+            "email marketing",
+            "SMS follow-up"
+          ],
+          "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+          "title": "The site connects to the whole platform",
+          "eyebrow": "Automation-ready",
+          "imageFit": "",
+          "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
+          "imageScale": "",
+          "imageObjectPosition": "",
+          "useBlockImageSettings": true
+        }
+      ],
+      "speed": 48,
+      "title": "Every panel covers a real website requirement",
+      "eyebrow": "Side-stack website system",
+      "imageFit": "contain",
+      "subtitle": "As visitors scroll down, each card slides in from the right and stacks into place, giving them complete, SEO-relevant reasons to choose a professional AI website builder instead of a blank template.",
+      "buttonUrl": "#contact-us",
+      "cardWidth": 430,
+      "peekWidth": 78,
+      "textColor": "#ffffff",
+      "autoScroll": true,
+      "buttonText": "Explore this feature",
+      "cardHeight": 560,
+      "cardRadius": 18,
+      "imageScale": 100,
+      "accentColor": "#00d5ff",
+      "displayMode": "side-stack",
+      "showButtons": true,
+      "imagePadding": 0,
+      "mutedTextColor": "#b8c2d8",
+      "backgroundColor": "#07111f",
+      "buttonFullWidth": true,
+      "imageMaxHeightMode": "auto",
+      "fullWidthBackground": true,
+      "imageObjectPosition": "center center",
+      "imageMaxHeightCustom": 500,
+      "panelImageHeightMode": "match",
+      "panelImageFixedHeight": 500
     }
   }
 }

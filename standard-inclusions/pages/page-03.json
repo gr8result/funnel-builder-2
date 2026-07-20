@@ -1,0 +1,132 @@
+{
+  "id": "premier-inclusions-page-03",
+  "name": "Page 03",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p3-image-0",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": -77.84,
+      "y": 0,
+      "width": 882.59,
+      "height": 1122.85,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image21.png",
+        "assetPath": "standard-inclusions/assets/image21.png",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p3-image-1",
+      "name": "Freeform 5",
+      "type": "image",
+      "x": 345.94,
+      "y": 47.71,
+      "width": 458.81,
+      "height": 419.55,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image22.png",
+        "assetPath": "standard-inclusions/assets/image22.png",
+        "alt": "Freeform 5"
+      },
+      "layer": 1
+    },
+    {
+      "id": "p3-logo-2",
+      "name": "Freeform 6",
+      "type": "logo",
+      "x": 625.5,
+      "y": 989.93,
+      "width": 126.78,
+      "height": 84.47,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 6"
+      },
+      "layer": 2
+    },
+    {
+      "id": "p3-text-3",
+      "name": "TextBox 7",
+      "type": "text",
+      "x": 440.37,
+      "y": 137.08,
+      "width": 293.12,
+      "height": 94.48,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Gotham Heavy",
+        "fontSize": 22,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Creating homes you'll love coming home to."
+      },
+      "layer": 3
+    },
+    {
+      "id": "p3-text-4",
+      "name": "TextBox 8",
+      "type": "text",
+      "x": 435.32,
+      "y": 238.52,
+      "width": 316.96,
+      "height": 152.86,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Open Sans Bold",
+        "fontSize": 12,
+        "fontWeight": "800",
+        "color": "#001F3D",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "The best homes are built around the people who live in them. Our Premier Inclusions provide a carefully selected range of quality fixtures, fittings and finishes, creating the perfect foundation before you personalise your home during the Selections Process."
+      },
+      "layer": 4
+    }
+  ]
+}

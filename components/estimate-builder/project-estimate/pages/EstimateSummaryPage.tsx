@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { estimateSummaryDefaults } from "../defaults/estimateSummary.defaults";
-import { LuxuryInfoCard, LuxuryMasterPageHeader, styles } from "../ProjectEstimateShared";
+import { LuxuryInfoCard, LuxuryMasterPageHeader, nativeProjectEstimateTextProps, styles } from "../ProjectEstimateShared";
 import type { EstimatePageProps, ProjectEstimatePageDefinition } from "../ProjectEstimateTypes";
 
 const block = (id: string, type: string, order: number, content: Record<string, any> = {}, design: Record<string, any> = {}) => ({ id: `estimateSummary-${id}`, type, order, content, design });
@@ -28,21 +28,26 @@ export const estimateSummaryPageDefinition: ProjectEstimatePageDefinition = {
   Component: EstimateSummaryPage,
 };
 
-export function EstimateSummaryPage({ pageType = "estimateSummary", accent, logo, builderName, visibleProjectInfoRows = [], content = estimateSummaryDefaults }: EstimatePageProps) {
+export function EstimateSummaryPage({ pageType = "estimateSummary", accent, logo, builderName, visibleProjectInfoRows = [], content = estimateSummaryDefaults, editorBridge = null }: EstimatePageProps) {
+  const eyebrowProps = nativeProjectEstimateTextProps("estimateSummary-eyebrow", "text", editorBridge);
+  const headingProps = nativeProjectEstimateTextProps("estimateSummary-heading", "text", editorBridge);
+  const introProps = nativeProjectEstimateTextProps("estimateSummary-intro", "text", editorBridge);
+  const noticeHeadingProps = nativeProjectEstimateTextProps("estimateSummary-notice-heading", "text", editorBridge);
+  const noticeBodyProps = nativeProjectEstimateTextProps("estimateSummary-notice-body", "text", editorBridge);
   return (
     <section className="proposal-builder-page" style={{ ...styles.luxuryPage, ...styles.luxuryProjectInfoPage, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryPage : {}) }}>
       <LuxuryMasterPageHeader logo={logo} builderName={builderName} title={pageType === "projectInfo" ? "Project Information" : "Estimate Summary"} accent={accent} />
       <div style={{ ...styles.luxuryProjectIntro, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryIntro : {}) }}>
-        <div style={{ ...styles.luxuryEyebrow, color: accent }}>{content.eyebrow}</div>
-        <h2 style={{ ...styles.luxurySectionTitle, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryTitle : {}) }}>{content.mainHeading}</h2>
-        <p style={{ ...styles.luxuryBodyText, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryBody : {}) }}>{content.introText}</p>
+        <div {...eyebrowProps} style={{ ...styles.luxuryEyebrow, color: accent, ...(eyebrowProps as any).style }}>{content.eyebrow}</div>
+        <h2 {...headingProps} style={{ ...styles.luxurySectionTitle, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryTitle : {}), ...(headingProps as any).style }}>{content.mainHeading}</h2>
+        <p {...introProps} style={{ ...styles.luxuryBodyText, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryBody : {}), ...(introProps as any).style }}>{content.introText}</p>
       </div>
       <div style={{ ...styles.luxuryInfoGrid, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryInfoGrid : {}) }}>
         {visibleProjectInfoRows.map((item: any) => <LuxuryInfoCard key={item.label} item={item} accent={accent} compact={pageType === "estimateSummary"} />)}
       </div>
       <div style={{ ...styles.luxuryFeatureBox, ...styles.luxuryProjectInfoFeatureBox, ...(pageType === "estimateSummary" ? styles.luxuryEstimateSummaryNoticeBox : {}), borderColor: accent }}>
-        <h2 style={styles.luxuryNoticeHeading}>{content.noticeHeading}</h2>
-        <p style={styles.luxuryNoticeBody}>{content.noticeBody}</p>
+        <h2 {...noticeHeadingProps} style={{ ...styles.luxuryNoticeHeading, ...(noticeHeadingProps as any).style }}>{content.noticeHeading}</h2>
+        <p {...noticeBodyProps} style={{ ...styles.luxuryNoticeBody, ...(noticeBodyProps as any).style }}>{content.noticeBody}</p>
       </div>
     </section>
   );

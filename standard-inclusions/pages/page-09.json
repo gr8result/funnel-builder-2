@@ -1,0 +1,309 @@
+{
+  "id": "premier-inclusions-page-09",
+  "name": "Page 09",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p9-logo-0",
+      "name": "Freeform 3",
+      "type": "logo",
+      "x": 619.32,
+      "y": 1026.15,
+      "width": 114.83,
+      "height": 79.83,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p9-image-1",
+      "name": "Freeform 4",
+      "type": "image",
+      "x": 0,
+      "y": -92.3,
+      "width": 794.37,
+      "height": 458.11,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image54.jpeg",
+        "assetPath": "standard-inclusions/assets/image54.jpeg",
+        "alt": "Freeform 4"
+      },
+      "layer": 1
+    },
+    {
+      "id": "p9-text-2",
+      "name": "TextBox 5",
+      "type": "text",
+      "x": 27.31,
+      "y": 417.46,
+      "width": 330.48,
+      "height": 246.22,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Kitchen tap – sink mixer (chrome)\nKitchen sink – 1 ½ Bowl double bowl drop-in stainless steel sink with drainer\nTiled splashback – up to bottom of kitchen bulkheads\nCupboards and doors – laminated with 1mm ABS edge\nDrawers – see detailed kitchen plans for drawer locations\nChoice of handles or finger pull for doors and drawers\nOverhead cupboards – see our detailed kitchen plans"
+      },
+      "layer": 2
+    },
+    {
+      "id": "p9-text-3",
+      "name": "TextBox 6",
+      "type": "text",
+      "x": 27.31,
+      "y": 373.81,
+      "width": 169.52,
+      "height": 44.93,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Kitchen"
+      },
+      "layer": 3
+    },
+    {
+      "id": "p9-text-4",
+      "name": "TextBox 7",
+      "type": "text",
+      "x": 27.31,
+      "y": 753.56,
+      "width": 330.48,
+      "height": 339.53,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Chrome flick mixer tapware\nToilet – close coupled, back-to-wall with soft-close seat\nVanity basins – semi-inset or semi-recessed with built-in plug and overflow (as dictated by plan)\nBuilders range stone benchtops 20mm\nVanity mirror – 850mm high × full length vanity\nShower – recessed and tiled, including 400mm × 400mm shower niche\nShower screens – clear glass Semi-frameless\nTowel rail – 600mm double rail and WC holder in chrome\nBathtub – framed white acrylic\nCeiling-mounted shower rose OR rail and hose shower set\n45L Laundry Tub in custom built cabinet  with 20mm stone top"
+      },
+      "layer": 4
+    },
+    {
+      "id": "p9-text-5",
+      "name": "TextBox 8",
+      "type": "text",
+      "x": 27.31,
+      "y": 678.87,
+      "width": 319.15,
+      "height": 74.69,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Bathroom, Ensuite Laundry & WC"
+      },
+      "layer": 5
+    },
+    {
+      "id": "p9-text-6",
+      "name": "TextBox 9",
+      "type": "text",
+      "x": 394.35,
+      "y": 428.8,
+      "width": 372.71,
+      "height": 207.92,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Underground 16mm² single-phase power (10 metres from house to connection point)\nTelephone NBN Connection and single phone point\nInternal power points as per plan Clipsal Slimline\nLight points and fittings as per plan - White Downlights\nTV points as per plan\nEarth leakage circuit breakers (2 included – power and lighting circuits)\nSmoke detectors as per plan\n3 in 1 exhaust fans to ensuite and bathroom"
+      },
+      "layer": 6
+    },
+    {
+      "id": "p9-text-7",
+      "name": "TextBox 10",
+      "type": "text",
+      "x": 394.35,
+      "y": 373.81,
+      "width": 186.81,
+      "height": 44.93,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Electrical"
+      },
+      "layer": 7
+    },
+    {
+      "id": "p9-text-8",
+      "name": "TextBox 11",
+      "type": "text",
+      "x": 394.35,
+      "y": 698.91,
+      "width": 372.71,
+      "height": 151.16,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "1200 Front door – choice from standard range\nFront entrance lock – Gainsborough Trilock\nAluminium sliding doors and windows\nInternal doors – flush panel doors\nGarage door – panel lift with 2 remote controls and 1 wall switch\nBarrier screens to all sliding doors\nFlyscreens to all windows"
+      },
+      "layer": 8
+    },
+    {
+      "id": "p9-text-9",
+      "name": "TextBox 12",
+      "type": "text",
+      "x": 394.35,
+      "y": 643.97,
+      "width": 339.8,
+      "height": 43.72,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Windows & Doors"
+      },
+      "layer": 9
+    },
+    {
+      "id": "p9-text-10",
+      "name": "TextBox 13",
+      "type": "text",
+      "x": 395.69,
+      "y": 945.77,
+      "width": 370.04,
+      "height": 62.13,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat Semi-Bold",
+        "fontSize": 10,
+        "fontWeight": "800",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Built-in robes – white melamine shelf with hanging rail\nBuilt in Pantry and linen – 4 shelves\nBroom cupboard – top shelf"
+      },
+      "layer": 10
+    },
+    {
+      "id": "p9-text-11",
+      "name": "TextBox 14",
+      "type": "text",
+      "x": 395.69,
+      "y": 866.07,
+      "width": 368.7,
+      "height": 72.7,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 25,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Robes & Linen Cupboards"
+      },
+      "layer": 11
+    }
+  ]
+}

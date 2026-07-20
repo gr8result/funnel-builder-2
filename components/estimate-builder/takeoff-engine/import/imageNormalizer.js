@@ -7,14 +7,25 @@ export const MIN_TARGET_DPI = 300;
 
 export function createOrientationResult(overrides = {}) {
   const confidence = overrides.confidence || "unknown";
-  const trusted = confidence === "high" || confidence === "confirmed";
+  const trusted = confidence === "high" || confidence === "confirmed" || confidence === "manual";
+  const orientationMode = overrides.orientationMode === "manual" ? "manual" : "auto";
+  const autoRotation = normalizeRotation(overrides.autoRotation ?? overrides.appliedRotation ?? overrides.detectedRotation ?? 0);
+  const manualRotation = normalizeRotation(overrides.manualRotation ?? overrides.userRotation ?? overrides.finalRotation ?? autoRotation);
+  const finalRotation = normalizeRotation(overrides.finalRotation ?? (orientationMode === "manual" ? manualRotation : autoRotation));
   const orientation = createOrientation({
+    autoRotation,
+    manualRotation,
+    finalRotation,
     metadataRotation: overrides.metadataRotation || 0,
     detectedRotation: overrides.detectedRotation || 0,
-    userRotation: overrides.userRotation || 0,
+    userRotation: manualRotation,
+    appliedRotation: finalRotation,
     confidence,
     method: overrides.method || "none",
+    orientationMode,
     orientationConfirmed: Boolean(overrides.orientationConfirmed),
+    manualOverride: Boolean(overrides.manualOverride),
+    autoApplied: Boolean(overrides.autoApplied),
     warning: overrides.warning || (trusted ? "" : "Orientation may need checking"),
   });
 
@@ -43,21 +54,48 @@ export function normalizeRasterImagePage(input = {}) {
 
   return createRasterPage({
     id: input.id,
+    documentId: input.documentId || input.takeoffDocumentId || "",
     sourceType: input.sourceType || "pdf",
     sourceFileName: input.sourceFileName || "",
     sourcePdfPageNumber: input.sourcePdfPageNumber || input.pageNumber || 1,
+    originalFileUrl: input.originalFileUrl || input.sourcePdfDataUrl || "",
+    fileHash: input.fileHash || input.sourceFingerprint || "",
+    pageWidthPoints: input.pageWidthPoints || 0,
+    pageHeightPoints: input.pageHeightPoints || 0,
+    textData: input.textData || [],
+    vectorData: input.vectorData || null,
+    rasterPreviewUrl: input.rasterPreviewUrl || input.imageDataUrl || "",
+    detections: input.detections,
+    manualEdits: input.manualEdits,
+    processingStatus: input.processingStatus || "ready",
     imageDataUrl: input.imageDataUrl || "",
     imageWidth: dimensions.width,
     imageHeight: dimensions.height,
     dpi,
     renderScale: Number(input.renderScale || dpi / 72),
     format: input.format || RASTER_FORMAT,
+    autoRotation: orientation.autoRotation,
+    manualRotation: orientation.manualRotation,
+    finalRotation: orientation.finalRotation,
+    orientationMode: orientation.orientationMode,
     orientation,
     metadata: {
       originalImageWidth: Number(input.imageWidth || 0),
       originalImageHeight: Number(input.imageHeight || 0),
       orientationApplied: Boolean(input.orientationApplied),
       orientationAnalysis: input.orientationAnalysis || null,
+      orientationAutoApplied: Boolean(input.orientationAutoApplied || input.orientation?.autoApplied),
+      orientationManualOverride: Boolean(input.orientation?.manualOverride),
+      orientationMode: input.orientationMode || input.orientation?.orientationMode || "auto",
+      sourcePdfDataUrl: input.sourcePdfDataUrl || "",
+      originalFileUrl: input.originalFileUrl || input.sourcePdfDataUrl || "",
+      sourceFingerprint: input.sourceFingerprint || "",
+      fileHash: input.fileHash || input.sourceFingerprint || "",
+      pageWidthPoints: input.pageWidthPoints || 0,
+      pageHeightPoints: input.pageHeightPoints || 0,
+      textData: input.textData || [],
+      vectorData: input.vectorData || null,
+      rasterPreviewUrl: input.rasterPreviewUrl || input.imageDataUrl || "",
       scaleTextCandidates,
       scaleSuggestions: input.scaleSuggestions || scaleDetection.suggestions || [],
       suggestedScale: input.suggestedScale || scaleDetection.bestSuggestion || null,

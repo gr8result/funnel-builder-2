@@ -193,67 +193,21 @@
       "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
       "brand": "Gr8 Result Digital Solutions",
       "tagline": "Code Hard or Code Home",
-      "navLinks": [
-        {
-          "href": "/home",
-          "label": "Home"
-        },
-        {
-          "href": "/about",
-          "label": "About"
-        },
-        {
-          "href": "/contact",
-          "label": "Contact"
-        },
-        {
-          "href": "/about",
-          "label": "About Us"
-        },
-        {
-          "href": "/modules",
-          "label": "Modules"
-        },
-        {
-          "href": "/contact-us",
-          "label": "Contact Us"
-        },
-        {
-          "href": "/email",
-          "label": "Email"
-        },
-        {
-          "href": "/sms",
-          "label": "SMS"
-        },
-        {
-          "href": "/crm",
-          "label": "CRM"
-        },
-        {
-          "href": "/pricing",
-          "label": "Pricing"
-        },
-        {
-          "href": "/crm",
-          "label": "CRM"
-        }
-      ],
       "linkColor": "#f59e0b",
       "logoWidth": 200,
       "textColor": "#ffffff",
       "extraLinks": [
         {
-          "href": "#blog",
-          "label": "Blog"
+          "label": "Blog",
+          "href": "/blog"
         },
         {
-          "href": "#privacy",
-          "label": "Privacy Policy"
+          "label": "Privacy Policy",
+          "href": "/privacy-policy"
         },
         {
-          "href": "#terms",
-          "label": "Terms"
+          "label": "Terms",
+          "href": "/terms"
         }
       ],
       "navHeading": "Navigation",
@@ -275,7 +229,57 @@
       "newsletterButtonColor": "#2563eb",
       "newsletterSubmitMethod": "post",
       "newsletterFallbackEmail": "",
-      "newsletterButtonTextColor": "#ffffff"
+      "newsletterButtonTextColor": "#ffffff",
+      "navigationLinks": [
+        {
+          "label": "Home",
+          "href": "/"
+        },
+        {
+          "label": "Modules",
+          "href": "/modules"
+        },
+        {
+          "label": "Email",
+          "href": "/email"
+        },
+        {
+          "label": "SMS",
+          "href": "/sms"
+        },
+        {
+          "label": "CRM",
+          "href": "/crm"
+        },
+        {
+          "label": "Funnels",
+          "href": "/funnels"
+        },
+        {
+          "label": "Website Builder",
+          "href": "/website-builder"
+        },
+        {
+          "label": "Social Media",
+          "href": "/social-media"
+        },
+        {
+          "label": "Project Hub",
+          "href": "/project-hub"
+        },
+        {
+          "label": "About Us",
+          "href": "/about-us"
+        },
+        {
+          "label": "Pricing",
+          "href": "/pricing"
+        },
+        {
+          "label": "Contact Us",
+          "href": "/contact-us"
+        }
+      ]
     }
   },
   "accountId": "35ab846e-0764-498b-b1f8-7d2cf27d85a5",

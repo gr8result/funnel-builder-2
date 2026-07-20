@@ -542,16 +542,29 @@ function pickDefaultAvatarSrc(assets) {
 
 function resolvePublishedNavHref(link, navigationContext) {
   const href = String(link?.href || "").trim();
-  if (!href) return "#";
   const appBaseUrl = String(navigationContext?.appBaseUrl || "").replace(/\/$/, "");
+  const pageMap = navigationContext?.pageMap || {};
+  const readPageMap = (key) => {
+    const safeKey = slugifyText(String(key || "").replace(/^\/+/, "").split(/[?#]/)[0]) || String(key || "").trim();
+    if (!safeKey) return null;
+    if (pageMap instanceof Map) return pageMap.get(safeKey) || null;
+    return pageMap[safeKey] || null;
+  };
+  const pageMapSize = pageMap instanceof Map ? pageMap.size : Object.keys(pageMap || {}).length;
+  const pageRef = readPageMap(link?.pageId || link?.internalPageId || link?.targetPageId || link?.linkedPageId || link?.page?.id);
+  if (pageRef) {
+    const pageHref = typeof pageRef === "object" ? pageRef.href : pageRef;
+    if (pageHref) return pageHref;
+  }
+  if (!href) return "#";
   const canonicalRoutes = {
     home: "/",
-    "about-us": "/about",
-    about: "/about",
+    "about-us": "/about-us",
+    about: "/about-us",
     modules: "/modules",
     "modules-overview": "/modules",
-    "contact-us": "/contact",
-    contact: "/contact",
+    "contact-us": "/contact-us",
+    contact: "/contact-us",
     "email-marketing": "/email",
     email: "/email",
     pricing: "/pricing",
@@ -566,10 +579,9 @@ function resolvePublishedNavHref(link, navigationContext) {
   if (href.startsWith("#")) {
     const anchorKey = slugifyText(href.slice(1));
     if (canonicalRoutes[anchorKey]) {
-      const pageMap = navigationContext?.pageMap || {};
-      const hasPageMapEntry = pageMap instanceof Map ? pageMap.has(anchorKey) : !!pageMap[anchorKey];
-      const pageMapSize = pageMap instanceof Map ? pageMap.size : Object.keys(pageMap).length;
-      const pageMapHref = pageMap instanceof Map ? pageMap.get(anchorKey)?.href : pageMap[anchorKey];
+      const pageMapEntry = readPageMap(anchorKey);
+      const hasPageMapEntry = !!pageMapEntry;
+      const pageMapHref = pageMapEntry && typeof pageMapEntry === "object" ? pageMapEntry.href : pageMapEntry;
       if (navigationContext?.strictPublishedPages && pageMapSize && !hasPageMapEntry) {
         return "#__missing-page";
       }
@@ -587,25 +599,27 @@ function resolvePublishedNavHref(link, navigationContext) {
       ["gr8result.com", "gr8result.digital", "gr8result.solutions", "app.gr8result.digital"].includes(externalHost)
       && canonicalRoutes[externalPathKey]
     ) {
-      const pageMap = navigationContext?.pageMap || {};
-      if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[externalPathKey]) {
+      const pageMapEntry = readPageMap(externalPathKey);
+      if (navigationContext?.strictPublishedPages && pageMapSize && !pageMapEntry) {
         return "#__missing-page";
       }
-      return pageMap[externalPathKey] || canonicalRoutes[externalPathKey];
+      const pageMapHref = pageMapEntry && typeof pageMapEntry === "object" ? pageMapEntry.href : pageMapEntry;
+      return pageMapHref || canonicalRoutes[externalPathKey];
     }
   } catch {
     // Relative URL or non-URL value.
   }
   if (/^(https?:|mailto:|tel:|#)/i.test(href)) return href;
 
-  const pageMap = navigationContext?.pageMap || {};
   const basePath = String(navigationContext?.basePath || "").replace(/\/$/, "");
   const normalizedHref = href === "/" ? "home" : slugifyText(href.replace(/^\//, ""));
   if (canonicalRoutes[normalizedHref]) {
-    if (navigationContext?.strictPublishedPages && Object.keys(pageMap).length && !pageMap[normalizedHref]) {
+    if (navigationContext?.strictPublishedPages && pageMapSize && !readPageMap(normalizedHref)) {
       return "#__missing-page";
     }
-    return pageMap[normalizedHref] || canonicalRoutes[normalizedHref];
+    const pageMapEntry = readPageMap(normalizedHref);
+    const pageMapHref = pageMapEntry && typeof pageMapEntry === "object" ? pageMapEntry.href : pageMapEntry;
+    return pageMapHref || canonicalRoutes[normalizedHref];
   }
   const platformRoutes = new Set([
     "app",
@@ -622,7 +636,8 @@ function resolvePublishedNavHref(link, navigationContext) {
     const path = normalizedHref === "app" ? "" : `/${href.replace(/^\//, "")}`;
     return `${appBaseUrl}${path}`;
   }
-  const publishedHref = pageMap[normalizedHref];
+  const pageMapEntry = readPageMap(normalizedHref);
+  const publishedHref = pageMapEntry && typeof pageMapEntry === "object" ? pageMapEntry.href : pageMapEntry;
 
   if (publishedHref) {
     if (/^(https?:|mailto:|tel:|#|\/|\?)/i.test(publishedHref)) return publishedHref;

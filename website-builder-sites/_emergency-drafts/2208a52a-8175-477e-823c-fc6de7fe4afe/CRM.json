@@ -10,22 +10,40 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
+            "href": "/",
             "label": "Home",
             "children": [],
-            "highlighted": true
+            "highlighted": true,
+            "id": "nav-item-0-0-home",
+            "linkType": "page",
+            "pageId": "home",
+            "slug": "home"
           },
           {
-            "href": "#about",
-            "label": "About"
+            "href": "/about-us",
+            "label": "About Us",
+            "id": "nav-item-1-0-about",
+            "linkType": "page",
+            "slug": "about-us",
+            "children": [],
+            "pageId": "about-us"
           },
           {
             "href": "#services",
-            "label": "Services"
+            "label": "Services",
+            "id": "nav-item-2-0-services",
+            "linkType": "anchor",
+            "slug": "services",
+            "children": []
           },
           {
-            "href": "#contact",
-            "label": "Contact"
+            "href": "/contact-us",
+            "label": "Contact Us",
+            "id": "nav-item-3-0-contact",
+            "linkType": "page",
+            "slug": "contact-us",
+            "children": [],
+            "pageId": "contact-us"
           }
         ],
         "ctaLink": "#contact",
@@ -398,22 +416,40 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
+              "href": "/",
               "label": "Home",
               "children": [],
-              "highlighted": true
+              "highlighted": true,
+              "id": "nav-item-0-0-home",
+              "linkType": "page",
+              "pageId": "home",
+              "slug": "home"
             },
             {
-              "href": "#about",
-              "label": "About"
+              "href": "/about-us",
+              "label": "About Us",
+              "id": "nav-item-1-0-about",
+              "linkType": "page",
+              "slug": "about-us",
+              "children": [],
+              "pageId": "about-us"
             },
             {
               "href": "#services",
-              "label": "Services"
+              "label": "Services",
+              "id": "nav-item-2-0-services",
+              "linkType": "anchor",
+              "slug": "services",
+              "children": []
             },
             {
-              "href": "#contact",
-              "label": "Contact"
+              "href": "/contact-us",
+              "label": "Contact Us",
+              "id": "nav-item-3-0-contact",
+              "linkType": "page",
+              "slug": "contact-us",
+              "children": [],
+              "pageId": "contact-us"
             }
           ],
           "ctaLink": "#contact",
@@ -780,6 +816,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-06-23T23:48:11.789Z",
-  "source": "autosave"
+  "savedAt": "2026-07-18T22:29:15.006Z",
+  "source": "manual-save"
 }

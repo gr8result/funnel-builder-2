@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import BackToTopButton from "./website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
+import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 
 function slugify(value) {
   return String(value || "")
@@ -57,7 +58,8 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
   const pageBlocks = active?.name ? (project?.pageBlocks || {})[active.name] || [] : [];
   const pageContent = active?.name ? (project?.pagesContent || {})[active.name] || "" : "";
   const globalNavBlock = project?.globalNavBlock?.type === "nav-bar" ? project.globalNavBlock : null;
-  const globalFooterBlock = project?.globalFooterBlock?.type === "footer" ? project.globalFooterBlock : null;
+  const rawGlobalFooterBlock = project?.globalFooterBlock || globalFooterToFooterBlock(project?.globalFooter, null);
+  const globalFooterBlock = rawGlobalFooterBlock?.type === "footer" ? rawGlobalFooterBlock : null;
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
   const injectFooter = !!globalFooterBlock;

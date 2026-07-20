@@ -62,8 +62,15 @@ const area = buildPolygonArea({
 });
 const page = createRasterPage({
   id: "page-1",
+  documentId: "doc-1",
   sourceType: "image",
   sourceFileName: "plan.png",
+  originalFileUrl: "data:image/png;base64,abc",
+  fileHash: "image-hash",
+  pageWidthPoints: 300,
+  pageHeightPoints: 200,
+  textData: [{ id: "text-1", text: "BED 1", planPoint: { x: 20, y: 20 } }],
+  vectorData: { lineSegments: [{ id: "line-1", start: { x: 0, y: 0 }, end: { x: 100, y: 0 } }] },
   imageDataUrl: "data:image/png;base64,abc",
   imageWidth: 4200,
   imageHeight: 2970,
@@ -92,6 +99,14 @@ const loaded = loadTakeoffStateFromStorage(storage);
 assert.equal(loaded.pages.length, 1);
 assert.equal(loaded.activePageId, "page-1");
 assert.equal(loaded.pages[0].imageWidth, 4200);
+assert.equal(loaded.pages[0].documentId, "doc-1");
+assert.equal(loaded.pages[0].originalFileUrl, "data:image/png;base64,abc");
+assert.equal(loaded.pages[0].fileHash, "image-hash");
+assert.equal(loaded.pages[0].pageWidthPoints, 300);
+assert.equal(loaded.pages[0].pageHeightPoints, 200);
+assert.equal(loaded.pages[0].textData[0].text, "BED 1");
+assert.equal(loaded.pages[0].vectorData.lineSegments[0].id, "line-1");
+assert.equal(loaded.pages[0].rasterPreviewUrl, "data:image/png;base64,abc");
 
 assert.equal(loaded.pages[0].measurements.length, 1);
 assert.equal(loaded.pages[0].measurements[0].label, "Reference");

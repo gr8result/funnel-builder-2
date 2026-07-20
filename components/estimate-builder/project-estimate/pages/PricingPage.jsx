@@ -1,7 +1,7 @@
 import { LuxuryMasterPageHeader, styles } from "../ProjectEstimateShared";
 import { money } from "../theme";
 
-export default function PricingPage({ accent, logo, builderName, quoteTotal, pricingGroups, showProgressDiagnostics, ProgressDiagnostic }) {
+export default function PricingPage({ accent, logo, builderName, quoteTotal, pricingGroups }) {
   return (
     <section className="proposal-builder-page" style={{ ...styles.luxuryPage, background: "#07111f", color: "#fff" }}>
       <LuxuryMasterPageHeader logo={logo} builderName={builderName} title="Pricing / Investment Summary" accent={accent} light />
@@ -28,7 +28,6 @@ export default function PricingPage({ accent, logo, builderName, quoteTotal, pri
           </div>
         ))}
       </div>
-      {showProgressDiagnostics && ProgressDiagnostic ? <ProgressDiagnostic rows={pricingGroups} compact dark /> : null}
     </section>
   );
 }

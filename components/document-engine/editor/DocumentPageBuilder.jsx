@@ -322,7 +322,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             </>
           ) : null}
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={saveDocument}>Save</button>
-          <button type="button" style={styles.secondaryButton} onClick={() => setPdfPreviewOpen(true)}>PDF Preview</button>
+          <button type="button" style={styles.secondaryButton} onClick={() => setPdfPreviewOpen(true)}>Preview</button>
           <button type="button" style={styles.primaryButton} onClick={exportPdf}>Export PDF</button>
         </div>
         <div

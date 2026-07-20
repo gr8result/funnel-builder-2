@@ -6,7 +6,9 @@ import {
   buildWebsitePath,
   buildWebsiteUrl,
   collectVideoHeroMedia,
+  compareWebsitePublishIntegrity,
   createPublicationPayload,
+  getPublishedAssetValidationFailures,
   getCustomDomainTargetHost,
   getPublishHost,
   getSiteRootDomain,
@@ -38,6 +40,24 @@ function toErrorMessage(error, fallback) {
 function isMissingPublishedWebsitesTable(error) {
   const message = String(error?.message || "").toLowerCase();
   return message.includes("published_websites") && (message.includes("schema cache") || message.includes("does not exist") || message.includes("could not find the table"));
+}
+
+function videoHeroMediaMismatches(expected = [], actual = []) {
+  const actualById = new Map((Array.isArray(actual) ? actual : []).map((entry) => [String(entry?.id || ""), entry]));
+  return (Array.isArray(expected) ? expected : [])
+    .filter((entry) => String(entry?.videoSrc || "").trim())
+    .map((entry, index) => {
+      const matched = actualById.get(String(entry?.id || "")) || (Array.isArray(actual) ? actual[index] : null);
+      const expectedUrl = String(entry?.videoSrc || "").trim();
+      const actualUrl = String(matched?.videoSrc || "").trim();
+      return expectedUrl === actualUrl ? null : {
+        pageName: entry?.pageName || "",
+        blockId: entry?.id || "",
+        expectedUrl,
+        actualUrl,
+      };
+    })
+    .filter(Boolean);
 }
 
 function publishedSiteComparable(project) {
@@ -110,6 +130,39 @@ async function handler(req, res) {
     : buildWebsiteProjectVersion(project, project?.savedAt || project?.updatedAt || new Date().toISOString());
 
   const publication = createPublicationPayload(project);
+  const assetValidationReport = publication.site_data?.publication?.assetValidationReport || {};
+  const assetValidationFailures = getPublishedAssetValidationFailures(assetValidationReport);
+  if (assetValidationFailures.length) {
+    console.error("[website-publish] publish blocked by asset validation", {
+      projectId: project?.id || "",
+      slug: publication.slug,
+      failures: assetValidationFailures.slice(0, 25),
+      summary: assetValidationReport.summary || {},
+    });
+    return res.status(409).json({
+      ok: false,
+      error: `Publish blocked: ${assetValidationFailures[0]?.path || "an asset"} is not a public publishable URL.`,
+      code: "WEBSITE_PUBLISH_ASSET_VALIDATION_FAILED",
+      assetValidationReport,
+      failures: assetValidationFailures,
+    });
+  }
+  const publishIntegrity = compareWebsitePublishIntegrity(project, publication.site_data);
+  if (!publishIntegrity.ok) {
+    console.error("[website-publish] publish blocked by integrity check", {
+      projectId: project?.id || "",
+      slug: publication.slug,
+      issues: publishIntegrity.issues,
+      saved: publishIntegrity.saved,
+      published: publishIntegrity.published,
+    });
+    return res.status(409).json({
+      ok: false,
+      error: `Publish blocked: ${publishIntegrity.issues[0]?.message || "saved builder content would be removed from the publish payload."}`,
+      code: "WEBSITE_PUBLISH_INTEGRITY_FAILED",
+      issues: publishIntegrity.issues,
+    });
+  }
   const videoHeroMediaBeforePublish = collectVideoHeroMedia(project?.pageBlocks || {});
   const videoHeroMediaForPublish = collectVideoHeroMedia(publication.site_data?.pageBlocks || {});
   console.log("[website-publish] Video Hero media", {
@@ -280,6 +333,41 @@ async function handler(req, res) {
 
   if (verifyResult.error || !verifyResult.data) {
     return res.status(500).json({ ok: false, error: toErrorMessage(verifyResult.error, "Could not verify published website row after update") });
+  }
+
+  const verifiedVideoHeroMedia = collectVideoHeroMedia(verifyResult.data.site_data?.pageBlocks || {});
+  const verifiedIntegrity = compareWebsitePublishIntegrity(project, verifyResult.data.site_data || {});
+  if (!verifiedIntegrity.ok) {
+    console.error("[website-publish] published row failed integrity read-back", {
+      projectId,
+      slug,
+      issues: verifiedIntegrity.issues,
+      saved: verifiedIntegrity.saved,
+      published: verifiedIntegrity.published,
+    });
+    return res.status(500).json({
+      ok: false,
+      error: `Published website verification failed. ${verifiedIntegrity.issues[0]?.message || "The live row does not match the saved project."}`,
+      code: "WEBSITE_PUBLISH_READBACK_INTEGRITY_FAILED",
+      issues: verifiedIntegrity.issues,
+      publicationRowId: verifyResult.data.id,
+    });
+  }
+  const videoMismatches = videoHeroMediaMismatches(videoHeroMediaForPublish, verifiedVideoHeroMedia);
+  if (videoMismatches.length) {
+    console.error("[website-publish] Video Hero publish verification failed", {
+      projectId,
+      slug,
+      expected: videoHeroMediaForPublish,
+      verified: verifiedVideoHeroMedia,
+      videoMismatches,
+    });
+    return res.status(500).json({
+      ok: false,
+      error: "Published website verification failed. The published Video Hero URL does not match the saved project.",
+      videoMismatches,
+      publicationRowId: verifyResult.data.id,
+    });
   }
 
   const savedHash = websiteContentHash(publishedSiteComparable(publication.site_data));

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { acceptanceDefaults } from "../defaults/acceptance.defaults";
-import { LuxuryMasterPageHeader, styles } from "../ProjectEstimateShared";
+import { LuxuryMasterPageHeader, nativeProjectEstimateTextProps, styles } from "../ProjectEstimateShared";
 import type { EstimatePageProps, ProjectEstimatePageDefinition } from "../ProjectEstimateTypes";
 
 const block = (id: string, type: string, order: number, content: Record<string, any> = {}, design: Record<string, any> = {}) => ({ id: `acceptance-${id}`, type, order, content, design });
@@ -26,20 +26,24 @@ export const acceptancePageDefinition: ProjectEstimatePageDefinition = {
   Component: AcceptancePage,
 };
 
-export function AcceptancePage({ resolvedTheme, accent, logo, builderName, content = acceptanceDefaults }: EstimatePageProps) {
+export function AcceptancePage({ resolvedTheme, accent, logo, builderName, content = acceptanceDefaults, editorBridge = null }: EstimatePageProps) {
+  const eyebrowProps = nativeProjectEstimateTextProps("acceptance-eyebrow", "text", editorBridge);
+  const headingProps = nativeProjectEstimateTextProps("acceptance-heading", "text", editorBridge);
+  const introProps = nativeProjectEstimateTextProps("acceptance-intro", "text", editorBridge);
+  const acknowledgementProps = nativeProjectEstimateTextProps("acceptance-acknowledgement", "text", editorBridge);
   return (
     <section className="proposal-builder-page" style={styles.luxuryPage}>
       <LuxuryMasterPageHeader logo={logo} builderName={builderName} title="Acceptance" accent={accent} />
-      <div style={{ ...styles.luxuryEyebrow, color: accent }}>{content.eyebrow}</div>
-      <h2 style={styles.luxurySectionTitle}>{content.mainHeading}</h2>
-      <p style={styles.luxuryBodyText}>{content.introText}</p>
+      <div {...eyebrowProps} style={{ ...styles.luxuryEyebrow, color: accent, ...(eyebrowProps as any).style }}>{content.eyebrow}</div>
+      <h2 {...headingProps} style={{ ...styles.luxurySectionTitle, ...(headingProps as any).style }}>{content.mainHeading}</h2>
+      <p {...introProps} style={{ ...styles.luxuryBodyText, ...(introProps as any).style }}>{content.introText}</p>
       <div style={styles.luxurySignatureGrid}>
         <div style={styles.luxurySignatureLine}>{content.signatureLabel}</div>
         <div style={styles.luxurySignatureLine}>{content.dateLabel}</div>
       </div>
       <div style={{ ...styles.luxuryFeatureBox, borderColor: accent }}>
         <h2>{content.acknowledgementHeading}</h2>
-        <p>{content.acknowledgementText || resolvedTheme?.acceptanceNote}</p>
+        <p {...acknowledgementProps} style={(acknowledgementProps as any).style}>{content.acknowledgementText || resolvedTheme?.acceptanceNote}</p>
       </div>
     </section>
   );

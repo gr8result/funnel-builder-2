@@ -27,9 +27,12 @@ export function applyViewerViewState(state, viewState) {
 export default function TakeoffViewer({
   initialState,
   onStateChange,
+  onRotatePageOverride,
+  onResetPageOrientation,
   importProgress = null,
 }) {
   const [fitRequestKey, setFitRequestKey] = useState(0);
+  const [fitRequestMode, setFitRequestMode] = useState("fit-page");
   const [scaleDraft, setScaleDraft] = useState({ pointA: null, pointB: null });
   const [measureDraft, setMeasureDraft] = useState({ pointA: null, pointB: null });
   const [areaDraft, setAreaDraft] = useState({
@@ -57,7 +60,8 @@ export default function TakeoffViewer({
     });
   }
 
-  function handleFit() {
+  function handleFit(mode = "fit-page") {
+    setFitRequestMode(mode === "fit-width" ? "fit-width" : "fit-page");
     setFitRequestKey((value) => value + 1);
   }
 
@@ -229,6 +233,13 @@ export default function TakeoffViewer({
       return;
     }
 
+    if (typeof onRotatePageOverride === "function") {
+      const handled = await onRotatePageOverride(page.id, deltaRotation);
+      if (handled) {
+        return;
+      }
+    }
+
     try {
       const rotatedPage = await rotateRasterPage(page, deltaRotation);
       dispatch({
@@ -238,10 +249,17 @@ export default function TakeoffViewer({
           orientation: {
             ...(rotatedPage.orientation || page.orientation || {}),
             userRotation: ((Number(page?.orientation?.userRotation || 0) + Number(deltaRotation || 0)) % 360 + 360) % 360,
+            appliedRotation: ((Number(page?.orientation?.appliedRotation || 0) + Number(deltaRotation || 0)) % 360 + 360) % 360,
             confidence: "manual",
             method: "manual-raster-rotation",
-            orientationConfirmed: false,
-            warning: "Orientation changed manually. Scale and measurements were reset.",
+            manualOverride: true,
+            orientationConfirmed: true,
+            warning: "",
+          },
+          metadata: {
+            ...(rotatedPage.metadata || page.metadata || {}),
+            orientationManualOverride: true,
+            orientationAutoApplied: false,
           },
         },
       });
@@ -256,6 +274,12 @@ export default function TakeoffViewer({
 
   function handleConfirmOrientation() {
     dispatch({ type: TAKEOFF_ACTIONS.CONFIRM_ORIENTATION });
+  }
+
+  function handleResetOrientation() {
+    if (page?.id && typeof onResetPageOrientation === "function") {
+      onResetPageOrientation(page.id);
+    }
   }
 
   return (
@@ -273,6 +297,7 @@ export default function TakeoffViewer({
         onSnapToggle={handleSnapToggle}
         onRotate={handleRotate}
         onConfirmOrientation={handleConfirmOrientation}
+        onResetOrientation={handleResetOrientation}
         onApplyScaleSuggestion={handleApplyScaleSuggestion}
       />
       <div style={styles.body}>
@@ -285,6 +310,7 @@ export default function TakeoffViewer({
           areaDraft={areaDraft}
           snapEnabled={state.settings?.snapEnabled !== false}
           fitRequestKey={fitRequestKey}
+          fitRequestMode={fitRequestMode}
           onViewStateChange={setViewState}
           onImageClick={handleImageClick}
           onImageDoubleClick={handleAreaDoubleClick}

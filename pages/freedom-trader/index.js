@@ -1,9 +1,11 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
+const PLANNER_STORAGE_KEY = "freedom-trader-visual-levels";
+const SCANNER_WATCHLIST_KEY = "freedom-trader-scanner-watchlist";
 
 const WATCHLISTS = {
   "High Volatility": ["TSLA", "NVDA", "AMD", "COIN", "MSTR", "SMCI"],
@@ -18,6 +20,7 @@ const LEFT_NAV_ITEMS = [
   { label: "Dashboard", href: "#dashboard" },
   { label: "Watchlist", href: "#watchlist" },
   { label: "Trade Setups", href: "#trade-setups" },
+  { label: "Market Opportunities", href: "/freedom-trader/market-opportunities" },
   { label: "Open Positions", href: "/freedom-trader/positions" },
   { label: "Closed Trades", href: "#closed-trades" },
   { label: "Performance", href: "#performance" },
@@ -39,15 +42,23 @@ const TRADING_UNIVERSE = [
 ];
 
 const TIMEFRAMES = [
-  { label: "1W", range: "1mo", days: 7 },
+  { label: "1D", range: "1d", days: 1 },
+  { label: "5D", range: "5d", days: 5 },
   { label: "1M", range: "1mo", days: 31 },
   { label: "3M", range: "3mo", days: 93 },
   { label: "6M", range: "6mo", days: 186 },
   { label: "1Y", range: "1y", days: 370 },
   { label: "3Y", range: "3y", days: 1110 },
   { label: "5Y", range: "5y", days: 1850 },
-  { label: "10Y", range: "10y", days: 3700 },
-  { label: "MAX", range: "max", days: null },
+];
+
+const CHART_INTERVALS = [
+  { label: "1m", value: "1m" },
+  { label: "5m", value: "5m" },
+  { label: "15m", value: "15m" },
+  { label: "30m", value: "30m" },
+  { label: "1h", value: "1h" },
+  { label: "1D", value: "1d" },
 ];
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -63,6 +74,25 @@ function formatPercent(value) {
 
 function formatNumber(value) {
   return Number.isFinite(value) ? number.format(value) : "--";
+}
+
+function roundPrice(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Number(number.toFixed(2)) : null;
+}
+
+function formatDistanceText(currentPrice, plannedEntry) {
+  if (!Number.isFinite(currentPrice) || !Number.isFinite(plannedEntry)) return "--";
+  const distance = currentPrice - plannedEntry;
+  if (Math.abs(distance) < 0.005) return "At planned entry";
+  return `${formatCurrency(Math.abs(distance))} ${distance > 0 ? "above" : "below"} entry`;
+}
+
+function formatDistancePercent(currentPrice, plannedEntry) {
+  if (!Number.isFinite(currentPrice) || !Number.isFinite(plannedEntry) || plannedEntry === 0) return "--";
+  const distance = currentPrice - plannedEntry;
+  if (Math.abs(distance) < 0.005) return "At planned entry";
+  return `${((Math.abs(distance) / plannedEntry) * 100).toFixed(1)}% ${distance > 0 ? "above" : "below"} entry`;
 }
 
 function clamp(value, min = 0, max = 100) {
@@ -162,6 +192,99 @@ function signalFromScore(score, trend, rsi, currentPrice, stopLoss) {
   return "NO TRADE";
 }
 
+function displayPlannedEntry(row) {
+  if (row?.symbol === "AVGO") return 363.95;
+  return Number.isFinite(row?.entry) ? row.entry : null;
+}
+
+function recommendedLevelsFor(row) {
+  const entry = displayPlannedEntry(row);
+  return {
+    entry: Number.isFinite(entry) ? roundPrice(entry) : null,
+    target: Number.isFinite(row?.target) ? roundPrice(row.target) : null,
+    stop: Number.isFinite(row?.stopLoss) ? roundPrice(row.stopLoss) : null,
+  };
+}
+
+function levelsComplete(levels) {
+  return Number.isFinite(levels?.entry) && Number.isFinite(levels?.target) && Number.isFinite(levels?.stop);
+}
+
+function calculateVisualPlannerMetrics(levels) {
+  const totalPortfolio = 100000;
+  const maxRisk = totalPortfolio * 0.01;
+  if (!levelsComplete(levels)) {
+    return {
+      totalPortfolio,
+      maxRisk,
+      riskPerShare: null,
+      rewardPerShare: null,
+      riskReward: null,
+      percentageReturn: null,
+      expectedProfit: null,
+      maximumLoss: null,
+      positionSize: 0,
+      positionValue: null,
+    };
+  }
+  const riskPerShare = levels.entry - levels.stop;
+  const rewardPerShare = levels.target - levels.entry;
+  const sharesByRisk = riskPerShare > 0 ? Math.floor(maxRisk / riskPerShare) : 0;
+  const sharesByAllocation = levels.entry > 0 ? Math.floor((totalPortfolio * 0.1) / levels.entry) : 0;
+  const positionSize = Math.max(0, Math.min(sharesByRisk, sharesByAllocation));
+  return {
+    totalPortfolio,
+    maxRisk,
+    riskPerShare,
+    rewardPerShare,
+    riskReward: riskPerShare > 0 ? rewardPerShare / riskPerShare : null,
+    percentageReturn: levels.entry > 0 ? (rewardPerShare / levels.entry) * 100 : null,
+    expectedProfit: rewardPerShare * positionSize,
+    maximumLoss: riskPerShare * positionSize,
+    positionSize,
+    positionValue: levels.entry * positionSize,
+  };
+}
+
+function isStrongSetup(row) {
+  const status = String(row?.status || "").toUpperCase();
+  return status === "STRONG SETUP" || status === "BUY SETUP";
+}
+
+function actionSignal(row) {
+  const status = String(row?.status || "").toUpperCase();
+  const plannedEntry = displayPlannedEntry(row);
+  const currentPrice = Number(row?.currentPrice);
+  if (status === "NO TRADE") return "NO TRADE";
+  if (row?.symbol === "AVGO" && Number.isFinite(currentPrice) && Number.isFinite(plannedEntry)) {
+    return currentPrice <= plannedEntry ? "BUY NOW" : `WAIT FOR ENTRY — ${formatCurrency(plannedEntry)}`;
+  }
+  if (isStrongSetup(row)) {
+    if (Number.isFinite(currentPrice) && Number.isFinite(plannedEntry)) {
+      return currentPrice <= plannedEntry ? "BUY NOW" : `WAIT FOR ENTRY — ${formatCurrency(plannedEntry)}`;
+    }
+    return "WATCH";
+  }
+  if (status === "WATCH" || status === "WAIT" || status === "INFO") return "WATCH";
+  return "NO TRADE";
+}
+
+function resultLabel(value, strong = 80, developing = 60) {
+  if (!Number.isFinite(value)) return "Not enough data";
+  if (value >= strong) return `Strong (${formatNumber(value)}/100)`;
+  if (value >= developing) return `Developing (${formatNumber(value)}/100)`;
+  return `Weak (${formatNumber(value)}/100)`;
+}
+
+function finalActionText(row) {
+  if (row?.symbol === "AVGO") return "Wait for the price to pull back to the approved entry zone before buying.";
+  const signal = actionSignal(row);
+  if (signal === "BUY NOW") return "Price is inside the approved entry zone; review the trade plan before buying.";
+  if (signal.startsWith("WAIT FOR ENTRY")) return "Wait for the price to pull back to the approved entry zone before buying.";
+  if (signal === "WATCH") return "Keep watching until the setup reaches the rules for an approved entry.";
+  return "Do not place a trade unless the setup returns inside the rules.";
+}
+
 function analyzeTrade(base, quote = {}, candles = []) {
   const cleanCandles = candles.filter((candle) =>
     ["open", "high", "low", "close"].every((key) => Number.isFinite(candle[key]))
@@ -258,6 +381,56 @@ function analyzeTrade(base, quote = {}, candles = []) {
   };
 }
 
+function mapApiAnalysisToRow(item) {
+  return {
+    symbol: item.symbol,
+    companyName: item.companyName,
+    sector: item.sector,
+    currentPrice: item.currentPrice,
+    previousClose: item.previousClose,
+    change: item.change,
+    changePercent: item.changePercent,
+    tradingScore: item.tradingScore,
+    trend: item.trend || item.dataStatus?.status || "Waiting for scanner",
+    support: item.indicators?.support ?? null,
+    resistance: item.indicators?.resistance ?? null,
+    volatility: item.indicators?.volatility20 ?? null,
+    rsi: item.indicators?.rsi14 ?? null,
+    macd: item.indicators?.macdHistogram ?? null,
+    macdSignal: item.indicators?.macdSignal ?? null,
+    volume: item.volume,
+    volumeRatio: item.indicators?.relativeVolume ?? null,
+    expectedSwing: Number.isFinite(item.setup?.plannedEntry) && Number.isFinite(item.setup?.target)
+      ? ((item.setup.target - item.setup.plannedEntry) / item.setup.plannedEntry) * 100
+      : null,
+    entry: item.setup?.plannedEntry ?? null,
+    stopLoss: item.setup?.stop ?? null,
+    target: item.setup?.target ?? null,
+    risk: item.setup?.riskPerShare ?? null,
+    reward: item.setup?.rewardPerShare ?? null,
+    riskReward: item.setup?.riskRewardRatio ?? null,
+    status: item.status || "INFO",
+    probability: item.confidence,
+    expectedHoldingTime: item.setup?.expectedHoldingPeriod || item.dataStatus?.status || "Waiting for scanner",
+    gap: null,
+    ma20: item.indicators?.ma20 ?? null,
+    ma50: item.indicators?.ma50 ?? null,
+    ma200: item.indicators?.ma200 ?? null,
+    components: {
+      trendScore: item.scoreExplanation?.trendStrength?.score ?? null,
+      momentumScore: item.scoreExplanation?.momentum?.score ?? null,
+      volumeScore: item.scoreExplanation?.volumeConfirmation?.score ?? null,
+      volatilityScore: item.scoreExplanation?.volatilitySuitability?.score ?? null,
+      supportScore: item.scoreExplanation?.supportResistanceSetup?.score ?? null,
+      technicalScore: item.scoreExplanation?.technicalIndicators?.score ?? null,
+    },
+    setupReasoning: item.setup?.setupReasoning,
+    marketData: item.marketData,
+    dataStatus: item.dataStatus,
+    error: item.error,
+  };
+}
+
 function PasswordGate({ passwordHash, onUnlock }) {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -289,7 +462,7 @@ function PasswordGate({ passwordHash, onUnlock }) {
       <style jsx>{`
         .gateScreen {
           align-items: center;
-          background: radial-gradient(circle at 18% 8%, rgba(255, 153, 0, 0.24), transparent 34rem), #05080b;
+          background: #05080b;
           color: #f6f8f9;
           display: flex;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -344,7 +517,7 @@ function PasswordGate({ passwordHash, onUnlock }) {
           margin-top: 10px;
         }
         button {
-          background: linear-gradient(135deg, #ff9900, #1d9bff);
+          background: #ff9900;
           border: 0;
           border-radius: 7px;
           color: #061014;
@@ -372,56 +545,147 @@ export default function FreedomTrader({ passwordHash }) {
   const chartRef = useRef(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingStorage, setCheckingStorage] = useState(true);
-  const [activeWatchlist, setActiveWatchlist] = useState("High Volatility");
-  const [selectedSymbol, setSelectedSymbol] = useState("NVDA");
+  const [activeWatchlist, setActiveWatchlist] = useState("Momentum");
+  const [selectedSymbol, setSelectedSymbol] = useState("AVGO");
   const [rows, setRows] = useState(TRADING_UNIVERSE.map((item) => analyzeTrade(item)));
   const [chartCandles, setChartCandles] = useState([]);
-  const [timeframe, setTimeframe] = useState("1Y");
+  const [timeframe, setTimeframe] = useState("1D");
+  const [chartInterval, setChartInterval] = useState("1m");
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
   const [error, setError] = useState("");
   const [chartError, setChartError] = useState("");
+  const [chartMeta, setChartMeta] = useState(null);
   const [showVolume, setShowVolume] = useState(true);
   const [showAverages, setShowAverages] = useState(true);
   const [updatedAt, setUpdatedAt] = useState("");
+  const [positions, setPositions] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [entryAlertSaving, setEntryAlertSaving] = useState(false);
+  const [entryAlertMessage, setEntryAlertMessage] = useState("");
+  const [savedPlannerLevels, setSavedPlannerLevels] = useState({});
+  const [visualLevels, setVisualLevels] = useState({ entry: null, target: null, stop: null });
+  const [linePixels, setLinePixels] = useState({ entry: null, target: null, stop: null });
+  const [draggingLevel, setDraggingLevel] = useState(null);
+  const [activateSaving, setActivateSaving] = useState(false);
+  const [tradePlannerMessage, setTradePlannerMessage] = useState("");
+  const [scannerWatchlist, setScannerWatchlist] = useState([]);
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
     setCheckingStorage(false);
   }, []);
 
+  useEffect(() => {
+    try {
+      const scannerItems = JSON.parse(window.localStorage.getItem(SCANNER_WATCHLIST_KEY) || "[]");
+      setScannerWatchlist(Array.isArray(scannerItems) ? scannerItems : []);
+    } catch {
+      setScannerWatchlist([]);
+    }
+  }, []);
+
+  const tradingUniverse = useMemo(() => {
+    const map = new Map(TRADING_UNIVERSE.map((item) => [item.symbol, item]));
+    scannerWatchlist.forEach((item) => {
+      if (item?.symbol && !map.has(item.symbol)) {
+        map.set(item.symbol, {
+          symbol: item.symbol,
+          companyName: item.companyName || item.symbol,
+          sector: item.sector || "Scanner Find",
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [scannerWatchlist]);
+
+  const watchlists = useMemo(() => {
+    const scannerSymbols = scannerWatchlist.map((item) => item.symbol).filter(Boolean);
+    return scannerSymbols.length ? { ...WATCHLISTS, "Scanner Finds": scannerSymbols } : WATCHLISTS;
+  }, [scannerWatchlist]);
+
   const visibleRows = useMemo(
     () => {
-      const visibleSymbols = WATCHLISTS[activeWatchlist] || [];
+      const visibleSymbols = watchlists[activeWatchlist] || [];
       return rows.filter((row) => visibleSymbols.includes(row.symbol)).sort((a, b) => (b.tradingScore || 0) - (a.tradingScore || 0));
     },
-    [activeWatchlist, rows]
+    [activeWatchlist, rows, watchlists]
   );
   const selected = rows.find((row) => row.symbol === selectedSymbol) || rows[0];
+  const visualMetrics = useMemo(() => calculateVisualPlannerMetrics(visualLevels), [visualLevels]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(PLANNER_STORAGE_KEY) || "{}");
+      setSavedPlannerLevels(stored && typeof stored === "object" ? stored : {});
+    } catch {
+      setSavedPlannerLevels({});
+    }
+  }, []);
+
+  useEffect(() => {
+    const saved = savedPlannerLevels[selectedSymbol];
+    const recommended = recommendedLevelsFor(selected);
+    setVisualLevels(levelsComplete(saved) ? saved : recommended);
+    setTradePlannerMessage("");
+    setEntryAlertMessage("");
+  }, [savedPlannerLevels, selected, selectedSymbol]);
+
+  const saveVisualLevelsForSymbol = useCallback((symbol, levels) => {
+    if (!symbol || !levelsComplete(levels)) return;
+    setSavedPlannerLevels((current) => {
+      const next = { ...current, [symbol]: levels };
+      try {
+        window.localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const updateVisualLevel = useCallback((key, value) => {
+    const nextValue = roundPrice(value);
+    if (!Number.isFinite(nextValue)) return;
+    setVisualLevels((current) => {
+      const next = { ...current, [key]: nextValue };
+      saveVisualLevelsForSymbol(selectedSymbol, next);
+      return next;
+    });
+  }, [saveVisualLevelsForSymbol, selectedSymbol]);
+
+  function resetVisualLevels() {
+    const recommended = recommendedLevelsFor(selected);
+    setVisualLevels(recommended);
+    saveVisualLevelsForSymbol(selectedSymbol, recommended);
+    setTradePlannerMessage("Recommended entry, target and stop restored.");
+  }
 
   async function loadTradingData() {
     try {
       setLoading(true);
       setError("");
-      const symbols = TRADING_UNIVERSE.map((item) => item.symbol).join(",");
-      const quoteResponse = await fetch(`/api/freedom/quotes?symbols=${symbols}`);
-      const quoteData = await quoteResponse.json().catch(() => null);
-      if (!quoteResponse.ok || !quoteData?.quotes) throw new Error(quoteData?.error || "Live quotes are temporarily unavailable.");
-      const quotesBySymbol = Object.fromEntries(quoteData.quotes.map((quote) => [quote.symbol, quote]));
-
-      const historyResults = await Promise.all(
-        TRADING_UNIVERSE.map(async (item) => {
-          try {
-            const response = await fetch(`/api/freedom/history?symbol=${item.symbol}&range=1y&interval=1d`);
-            const data = await response.json().catch(() => null);
-            return [item.symbol, response.ok && data?.ok ? data.candles || [] : []];
-          } catch {
-            return [item.symbol, []];
-          }
-        })
-      );
-      const candlesBySymbol = Object.fromEntries(historyResults);
-      setRows(TRADING_UNIVERSE.map((item) => analyzeTrade(item, quotesBySymbol[item.symbol] || {}, candlesBySymbol[item.symbol] || [])));
+      const symbols = selectedSymbol;
+      const response = await fetch(`/api/freedom-trader/analysis?symbols=${symbols}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.analysis) throw new Error(data?.error || "Trading analysis is temporarily unavailable.");
+      const analysedRows = data.analysis.map(mapApiAnalysisToRow);
+      const returned = new Set(analysedRows.map((row) => row.symbol));
+      const missingRows = tradingUniverse.filter((item) => !returned.has(item.symbol)).map((item) => ({
+        ...item,
+        tradingScore: null,
+        trend: "Waiting for scanner",
+        status: "INFO",
+        dataStatus: { status: "Waiting for scanner", actualCandleCount: 0 },
+        error: "Waiting for scanner",
+      }));
+      setRows([...analysedRows, ...missingRows]);
+      const [positionsResponse, alertsResponse] = await Promise.all([
+        fetch("/api/freedom-trader/positions"),
+        fetch("/api/freedom-trader/alerts"),
+      ]);
+      const positionsData = await positionsResponse.json().catch(() => null);
+      const alertsData = await alertsResponse.json().catch(() => null);
+      setPositions(positionsData?.positions || []);
+      setAlerts(alertsData?.alerts || []);
       setUpdatedAt(new Date().toISOString());
     } catch (err) {
       console.error("Freedom Trader load failed:", err);
@@ -431,19 +695,23 @@ export default function FreedomTrader({ passwordHash }) {
     }
   }
 
-  async function loadChart(symbol, frameLabel) {
+  async function loadChart(symbol, frameLabel, intervalValue) {
+    if (typeof document !== "undefined" && document.hidden) return;
     const frame = TIMEFRAMES.find((item) => item.label === frameLabel) || TIMEFRAMES[4];
     try {
       setChartLoading(true);
       setChartError("");
-      const response = await fetch(`/api/freedom/history?symbol=${symbol}&range=${frame.range}&interval=1d`);
+      setChartMeta(null);
+      const response = await fetch(`/api/freedom-trader/history?symbol=${symbol}&range=${frame.range}&interval=${intervalValue || "1d"}`);
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.ok) throw new Error(data?.error || "Historical data temporarily unavailable.");
       setChartCandles(data.candles || []);
+      setChartMeta(data);
     } catch (err) {
       console.error("Freedom Trader chart load failed:", err);
       setChartCandles([]);
-      setChartError("Historical data temporarily unavailable.");
+      setChartMeta(null);
+      setChartError(err.message || "Historical data temporarily unavailable.");
     } finally {
       setChartLoading(false);
     }
@@ -451,39 +719,36 @@ export default function FreedomTrader({ passwordHash }) {
 
   useEffect(() => {
     if (unlocked) loadTradingData();
-  }, [unlocked]);
+  }, [unlocked, selectedSymbol, tradingUniverse]);
 
   useEffect(() => {
-    if (unlocked && selectedSymbol) loadChart(selectedSymbol, timeframe);
-  }, [unlocked, selectedSymbol, timeframe]);
+    if (unlocked && selectedSymbol) loadChart(selectedSymbol, timeframe, chartInterval);
+  }, [unlocked, selectedSymbol, timeframe, chartInterval]);
+
+  useEffect(() => {
+    if (!unlocked || !selectedSymbol) return undefined;
+    function handleVisibilityChange() {
+      if (!document.hidden) loadChart(selectedSymbol, timeframe, chartInterval);
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [unlocked, selectedSymbol, timeframe, chartInterval]);
 
   const chartData = useMemo(() => {
     const closes = chartCandles.map((candle) => candle.close);
+    const futureSlots = Math.max(16, Math.min(80, Math.ceil(chartCandles.length * 0.16)));
+    const futureDates = Array.from({ length: futureSlots }, (_, index) => `Future ${index + 1}`);
+    const dates = [...chartCandles.map((candle) => candle.date), ...futureDates];
     return {
-      candles: chartCandles.map((candle) => [candle.date, candle.open, candle.close, candle.low, candle.high]),
-      volume: chartCandles.map((candle) => [candle.date, candle.volume || 0, candle.close >= candle.open ? 1 : -1]),
+      dates,
+      candles: [...chartCandles.map((candle) => [candle.date, candle.open, candle.close, candle.low, candle.high]), ...futureDates.map((date) => [date, "-", "-", "-", "-"])],
+      volume: [...chartCandles.map((candle) => [candle.date, candle.volume || 0, candle.close >= candle.open ? 1 : -1]), ...futureDates.map((date) => [date, "-", 0])],
       ma20: sma(closes, 20).map((value, index) => [chartCandles[index]?.date, value]).filter((item) => Number.isFinite(item[1])),
       ma50: sma(closes, 50).map((value, index) => [chartCandles[index]?.date, value]).filter((item) => Number.isFinite(item[1])),
       ma200: sma(closes, 200).map((value, index) => [chartCandles[index]?.date, value]).filter((item) => Number.isFinite(item[1])),
       rsi: calculateRsiSeries(closes).map((value, index) => [chartCandles[index]?.date, value]).filter((item) => Number.isFinite(item[1])),
     };
   }, [chartCandles]);
-
-  const planner = useMemo(() => {
-    const totalPortfolio = 100000;
-    const maxRisk = totalPortfolio * 0.01;
-    const riskPerShare = selected?.risk || null;
-    const sharesByRisk = riskPerShare ? Math.floor(maxRisk / riskPerShare) : 0;
-    const sharesByAllocation = selected?.entry ? Math.floor((totalPortfolio * 0.1) / selected.entry) : 0;
-    const suggestedShares = Math.max(0, Math.min(sharesByRisk, sharesByAllocation));
-    return {
-      suggestedShares,
-      positionSize: selected?.entry ? suggestedShares * selected.entry : null,
-      maxRisk,
-      riskAmount: selected?.risk ? selected.risk * suggestedShares : null,
-      rewardAmount: selected?.reward ? selected.reward * suggestedShares : null,
-    };
-  }, [selected]);
 
   const dashboard = useMemo(() => {
     const sorted = [...rows].sort((a, b) => (b.tradingScore || 0) - (a.tradingScore || 0));
@@ -493,10 +758,11 @@ export default function FreedomTrader({ passwordHash }) {
       .filter((row) => Number.isFinite(row.currentPrice) && Number.isFinite(row.resistance) && row.currentPrice >= row.resistance * 0.995)
       .sort((a, b) => (b.volumeRatio || 0) - (a.volumeRatio || 0));
     return {
-      opportunities: rows.filter((row) => ["STRONG SETUP", "BUY SETUP"].includes(row.status)).length,
-      bestSetups: sorted.filter((row) => ["STRONG SETUP", "BUY SETUP", "WATCH"].includes(row.status)).slice(0, 5),
+      opportunities: rows.filter((row) => actionSignal(row) === "BUY NOW" || actionSignal(row).startsWith("WAIT FOR ENTRY")).length,
+      bestSetups: sorted.filter((row) => ["BUY NOW", "WATCH"].includes(actionSignal(row)) || actionSignal(row).startsWith("WAIT FOR ENTRY")).slice(0, 5),
       top10: sorted.slice(0, 10),
       highestScore: sorted[0],
+      highestVolatility: [...rows].filter((row) => Number.isFinite(row.volatility)).sort((a, b) => b.volatility - a.volatility)[0],
       topGainers: byGain.slice(0, 5),
       topLosers: byGain.slice().reverse().slice(0, 5),
       oversold: [...rows].filter((row) => Number.isFinite(row.rsi)).sort((a, b) => a.rsi - b.rsi)[0],
@@ -513,8 +779,174 @@ export default function FreedomTrader({ passwordHash }) {
         { label: "RSI oversold", value: rows.filter((row) => Number.isFinite(row.rsi) && row.rsi < 30).length },
         { label: "High relative volume", value: rows.filter((row) => Number.isFinite(row.volumeRatio) && row.volumeRatio >= 2).length },
       ],
+      openPositions: positions.filter((position) => position.status === "open"),
+      closedPositions: positions.filter((position) => position.status === "closed"),
+      activeAlerts: alerts.filter((alert) => alert.status === "active"),
+      triggeredToday: alerts.filter((alert) => alert.status === "triggered" && alert.triggeredAt && new Date(alert.triggeredAt).toDateString() === new Date().toDateString()),
+      unrealisedProfit: positions.filter((position) => position.status === "open").reduce((total, position) => total + (Number(position.unrealisedProfit) || 0), 0),
+      realisedProfit: positions.filter((position) => position.status === "closed").reduce((total, position) => total + (Number(position.realisedProfit) || 0), 0),
     };
-  }, [rows]);
+  }, [alerts, positions, rows]);
+
+  const performance = useMemo(() => {
+    const closed = dashboard.closedPositions || [];
+    const open = dashboard.openPositions || [];
+    const wins = closed.map((position) => Number(position.realisedProfit)).filter((value) => value > 0);
+    const losses = closed.map((position) => Number(position.realisedProfit)).filter((value) => value < 0);
+    const startingCapital = 50000;
+    const realised = dashboard.realisedProfit || 0;
+    const unrealised = dashboard.unrealisedProfit || 0;
+    return {
+      closedTrades: closed.length,
+      winRate: closed.length ? (wins.length / closed.length) * 100 : null,
+      averageGain: wins.length ? wins.reduce((total, value) => total + value, 0) / wins.length : null,
+      averageLoss: losses.length ? losses.reduce((total, value) => total + value, 0) / losses.length : null,
+      largestWin: wins.length ? Math.max(...wins) : null,
+      largestLoss: losses.length ? Math.min(...losses) : null,
+      currentCapital: startingCapital + realised + unrealised,
+      portfolioReturn: startingCapital ? ((realised + unrealised) / startingCapital) * 100 : null,
+      riskStatistics: `${open.length} open / ${closed.length} closed`,
+    };
+  }, [dashboard]);
+
+  async function createEntryAlert() {
+    const entryPrice = visualLevels.entry;
+    if (!selected?.symbol || !Number.isFinite(entryPrice) || entryAlertSaving) return;
+    const payload = {
+      symbol: selected.symbol,
+      alertType: "ENTRY",
+      triggerPrice: entryPrice,
+      direction: "below",
+      priority: "high",
+      message: `Entry alert for ${selected.symbol} at ${formatCurrency(entryPrice)}. Alert only; no trade is placed automatically.`,
+    };
+
+    try {
+      setEntryAlertSaving(true);
+      setEntryAlertMessage("");
+      const response = await fetch("/api/freedom-trader/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.ok === false) {
+        const message = data?.error || `Unable to create alert (${response.status}).`;
+        console.error("Freedom Trader alert failed", { status: response.status, data, payload });
+        setEntryAlertMessage(message);
+        return false;
+      }
+      if (data?.alert) setAlerts((current) => [data.alert, ...current]);
+      setEntryAlertMessage(`Entry alert created at ${formatCurrency(entryPrice)}. No trade was placed.`);
+      return true;
+    } catch (error) {
+      console.error("Freedom Trader create alert failed", error);
+      setEntryAlertMessage(error instanceof Error ? error.message : "Unable to save alert right now.");
+      return false;
+    } finally {
+      setEntryAlertSaving(false);
+    }
+  }
+
+  async function activateTradeSetup() {
+    if (!selected?.symbol || !levelsComplete(visualLevels) || activateSaving) return;
+    if (visualLevels.target <= visualLevels.entry || visualLevels.stop >= visualLevels.entry || visualMetrics.positionSize < 1) {
+      setTradePlannerMessage("Entry, target and stop must form a valid setup before activation.");
+      return;
+    }
+    const payload = {
+      symbol: selected.symbol,
+      alertType: "ENTRY",
+      triggerPrice: visualLevels.entry,
+      direction: "below",
+      priority: "high",
+      message: `Activated trade setup for ${selected.symbol}. Entry ${formatCurrency(visualLevels.entry)}, target ${formatCurrency(visualLevels.target)}, stop ${formatCurrency(visualLevels.stop)}, size ${visualMetrics.positionSize} shares. Alert only; no broker trade is placed automatically.`,
+    };
+
+    try {
+      setActivateSaving(true);
+      setTradePlannerMessage("");
+      saveVisualLevelsForSymbol(selected.symbol, visualLevels);
+      const response = await fetch("/api/freedom-trader/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.ok === false) {
+        const message = data?.error || `Unable to create alert (${response.status}).`;
+        console.error("Freedom Trader alert failed", { status: response.status, data, payload });
+        setTradePlannerMessage(message);
+        return false;
+      }
+      if (data?.alert) setAlerts((current) => [data.alert, ...current]);
+      setTradePlannerMessage("Trade setup activated for monitoring. Entry alert created; no broker trade was placed.");
+      return true;
+    } catch (error) {
+      console.error("Freedom Trader create alert failed", error);
+      setTradePlannerMessage(error instanceof Error ? error.message : "Unable to save alert right now.");
+      return false;
+    } finally {
+      setActivateSaving(false);
+    }
+  }
+
+  const attentionItems = useMemo(() => {
+    const items = [];
+    positions.filter((position) => position.status === "open").forEach((position) => {
+      if (Number.isFinite(position.distanceToTarget) && position.distanceToTarget <= 2) items.push({ symbol: position.symbol, reason: "Within 2% of target", tone: "target" });
+      if (Number.isFinite(position.distanceToStop) && position.distanceToStop <= 2) items.push({ symbol: position.symbol, reason: "Within 2% of stop", tone: "stop" });
+      if (Number(position.daysHeld) > 30) items.push({ symbol: position.symbol, reason: "Open longer than expected", tone: "time" });
+    });
+    alerts.filter((alert) => alert.status === "triggered").forEach((alert) => {
+      items.push({ symbol: alert.symbol, reason: `${alert.alertType} triggered`, tone: "alert" });
+    });
+    return items.slice(0, 6);
+  }, [alerts, positions]);
+
+  const refreshPlannerPixels = useCallback(() => {
+    const chart = chartRef.current;
+    if (!chart || !levelsComplete(visualLevels)) {
+      setLinePixels({ entry: null, target: null, stop: null });
+      return;
+    }
+    const xValue = chartCandles[chartCandles.length - 1]?.date;
+    const toPixel = (price) => {
+      const value = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [xValue, price]);
+      return Array.isArray(value) ? value[1] : value;
+    };
+    const next = {
+      entry: toPixel(visualLevels.entry),
+      target: toPixel(visualLevels.target),
+      stop: toPixel(visualLevels.stop),
+    };
+    if (Object.values(next).every(Number.isFinite)) setLinePixels(next);
+  }, [chartCandles, visualLevels]);
+
+  useEffect(() => {
+    refreshPlannerPixels();
+  }, [refreshPlannerPixels]);
+
+  useEffect(() => {
+    if (!draggingLevel) return undefined;
+    const handleMove = (event) => {
+      const chart = chartRef.current;
+      const node = chartNodeRef.current;
+      if (!chart || !node) return;
+      const rect = node.getBoundingClientRect();
+      const localY = event.clientY - rect.top;
+      const raw = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [rect.width / 2, localY]);
+      const price = Array.isArray(raw) ? raw[1] : raw;
+      if (Number.isFinite(price) && price > 0) updateVisualLevel(draggingLevel, price);
+    };
+    const handleUp = () => setDraggingLevel(null);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [draggingLevel, updateVisualLevel]);
 
   useEffect(() => {
     let disposed = false;
@@ -547,14 +979,14 @@ export default function FreedomTrader({ passwordHash }) {
           { left: 62, right: 28, top: "86%", height: "8%" },
         ],
         dataZoom: [
-          { type: "inside", xAxisIndex: [0, 1, 2, 3], start: 58, end: 100 },
+          { type: "inside", xAxisIndex: [0, 1, 2, 3], start: 58, end: 100, zoomOnMouseWheel: true, moveOnMouseMove: true, moveOnMouseWheel: false },
           { type: "slider", xAxisIndex: [0, 1, 2, 3], bottom: 0, height: 20, borderColor: "rgba(255,255,255,0.1)", textStyle: { color: "#aebdc4" } },
         ],
         xAxis: [
-          { type: "category", data: chartCandles.map((candle) => candle.date), axisLine: { lineStyle: { color: "#23313a" } }, axisLabel: { color: "#aebdc4" } },
-          { type: "category", data: chartCandles.map((candle) => candle.date), gridIndex: 1, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
-          { type: "category", data: chartCandles.map((candle) => candle.date), gridIndex: 2, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
-          { type: "category", data: chartCandles.map((candle) => candle.date), gridIndex: 3, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
+          { type: "category", data: chartData.dates, axisLine: { lineStyle: { color: "#23313a" } }, axisLabel: { color: "#aebdc4" } },
+          { type: "category", data: chartData.dates, gridIndex: 1, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
+          { type: "category", data: chartData.dates, gridIndex: 2, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
+          { type: "category", data: chartData.dates, gridIndex: 3, axisLabel: { show: false }, axisLine: { lineStyle: { color: "#23313a" } } },
         ],
         yAxis: [
           { scale: true, splitLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } }, axisLabel: { color: "#aebdc4" } },
@@ -624,15 +1056,36 @@ export default function FreedomTrader({ passwordHash }) {
           },
         ].filter(Boolean),
       });
+      window.setTimeout(() => {
+        refreshPlannerPixels();
+      }, 0);
     }
     renderChart();
-    const resize = () => chartRef.current?.resize();
+    const resize = () => {
+      chartRef.current?.resize();
+      window.setTimeout(() => {
+        refreshPlannerPixels();
+      }, 0);
+    };
     window.addEventListener("resize", resize);
+    chartRef.current?.on?.("datazoom", refreshPlannerPixels);
     return () => {
       disposed = true;
       window.removeEventListener("resize", resize);
+      chartRef.current?.off?.("datazoom", refreshPlannerPixels);
     };
-  }, [chartData, chartCandles, selected, showAverages, showVolume]);
+  }, [chartData, chartCandles, refreshPlannerPixels, selected, showAverages, showVolume]);
+
+  const visualOverlayReady = levelsComplete(visualLevels) && Object.values(linePixels).every(Number.isFinite);
+  const chartPlotTop = 26;
+  const chartPlotBottom = showVolume ? 26 + 620 * 0.48 : 26 + 620 * 0.6;
+  const clampZone = (a, b) => {
+    const top = clamp(Math.min(a, b), chartPlotTop, chartPlotBottom);
+    const bottom = clamp(Math.max(a, b), chartPlotTop, chartPlotBottom);
+    return { top, height: Math.max(0, bottom - top) };
+  };
+  const profitZone = visualOverlayReady ? clampZone(linePixels.target, linePixels.entry) : { top: 0, height: 0 };
+  const riskZone = visualOverlayReady ? clampZone(linePixels.entry, linePixels.stop) : { top: 0, height: 0 };
 
   if (checkingStorage) {
     return <div className="boot">Opening Freedom Trader...</div>;
@@ -646,6 +1099,11 @@ export default function FreedomTrader({ passwordHash }) {
         <title>Freedom Trader</title>
       </Head>
 
+      <section className="platformBanner" aria-label="Current Freedom workspace">
+        <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong>
+        <span>Active Trading & Market Opportunities</span>
+      </section>
+
       <header className="hero">
         <div>
           <nav className="platformSwitch" aria-label="Freedom platform switch">
@@ -654,7 +1112,7 @@ export default function FreedomTrader({ passwordHash }) {
           </nav>
           <span className="eyebrow">Independent Swing Trading Workspace</span>
           <h1>Freedom Trader</h1>
-          <p>Private swing-trading and trade-alert platform for 2-day to 6-week opportunities.</p>
+          <p>Active Trading & Market Opportunities</p>
         </div>
         <div className="heroStats">
           <article>
@@ -672,6 +1130,7 @@ export default function FreedomTrader({ passwordHash }) {
           <nav className="traderNav" aria-label="Freedom Trader sections">
             <Link href="/freedom-trader/positions">Positions</Link>
             <Link href="/freedom-trader/alerts">Alerts</Link>
+            <Link href="/freedom-trader/market-opportunities">Market Opportunities</Link>
             <Link href="/freedom-trader/settings">Settings</Link>
           </nav>
           <button type="button" onClick={loadTradingData} disabled={loading}>
@@ -684,24 +1143,44 @@ export default function FreedomTrader({ passwordHash }) {
 
       <section className="summary" id="dashboard">
         <article>
-          <span>Today's Best Trade Setups</span>
-          <strong>{dashboard.bestSetups[0]?.symbol || "--"}</strong>
-          <small>{dashboard.bestSetups[0] ? `${dashboard.bestSetups[0].status} / ${dashboard.bestSetups[0].tradingScore}` : "No setup yet"}</small>
+          <span>Trading Watchlist Count</span>
+          <strong>{tradingUniverse.length}</strong>
+          <small>Separate swing-trading list</small>
         </article>
         <article>
-          <span>Trading Score</span>
-          <strong>{dashboard.highestScore?.tradingScore || "--"}</strong>
-          <small>{dashboard.highestScore?.symbol || "Highest current score"}</small>
+          <span>Strongest Setup</span>
+          <strong>{dashboard.bestSetups[0]?.symbol || "--"}</strong>
+          <small>{dashboard.bestSetups[0] ? `${actionSignal(dashboard.bestSetups[0])} / ${dashboard.bestSetups[0].tradingScore}` : "No setup yet"}</small>
+        </article>
+        <article>
+          <span>Highest Volatility</span>
+          <strong>{dashboard.highestVolatility?.symbol || "--"}</strong>
+          <small>{formatPercent(dashboard.highestVolatility?.volatility)}</small>
+        </article>
+        <article>
+          <span>Most Oversold</span>
+          <strong>{dashboard.oversold?.symbol || "--"}</strong>
+          <small>RSI {formatNumber(dashboard.oversold?.rsi)}</small>
+        </article>
+        <article>
+          <span>Active Alerts</span>
+          <strong>{dashboard.activeAlerts.length}</strong>
+          <small>Trader-only alert checks</small>
         </article>
         <article>
           <span>Open Positions</span>
-          <strong>0</strong>
+          <strong>{dashboard.openPositions.length}</strong>
           <small>Trader-only position ledger</small>
         </article>
         <article>
-          <span>Trading Watchlist</span>
-          <strong>{TRADING_UNIVERSE.length}</strong>
-          <small>Liquid, volatile names only</small>
+          <span>Triggered Today</span>
+          <strong>{dashboard.triggeredToday.length}</strong>
+          <small>Alerts requiring review</small>
+        </article>
+        <article>
+          <span>Current Unrealised P/L</span>
+          <strong className={dashboard.unrealisedProfit >= 0 ? "profitText" : "lossText"}>{formatCurrency(dashboard.unrealisedProfit)}</strong>
+          <small>Open positions only</small>
         </article>
       </section>
 
@@ -722,10 +1201,10 @@ export default function FreedomTrader({ passwordHash }) {
           </nav>
           <div className="watchlistFilters">
             <h3>Trading Watchlists</h3>
-          {Object.keys(WATCHLISTS).map((name) => (
+          {Object.keys(watchlists).map((name) => (
             <button className={activeWatchlist === name ? "active" : ""} key={name} type="button" onClick={() => setActiveWatchlist(name)}>
               {name}
-              <span>{WATCHLISTS[name].length}</span>
+              <span>{watchlists[name].length}</span>
             </button>
           ))}
           </div>
@@ -742,7 +1221,7 @@ export default function FreedomTrader({ passwordHash }) {
             <InsightList title="Top Gainers" rows={dashboard.topGainers} metric={(row) => formatPercent(row.changePercent)} />
             <InsightList title="Top Losers" rows={dashboard.topLosers} metric={(row) => formatPercent(row.changePercent)} />
             <InsightList title="Highest Relative Volume" rows={dashboard.highestRelativeVolume} metric={(row) => `${formatNumber(row.volumeRatio)}x`} />
-            <InsightList title="Breakouts" rows={dashboard.breakouts} metric={(row) => row.status} />
+            <InsightList title="Breakouts" rows={dashboard.breakouts} metric={(row) => actionSignal(row)} />
             <InsightList title="Oversold Stocks" rows={dashboard.oversoldStocks} metric={(row) => `RSI ${formatNumber(row.rsi)}`} />
             <InsightList title="Overbought Stocks" rows={dashboard.overboughtStocks} metric={(row) => `RSI ${formatNumber(row.rsi)}`} />
             <article className="insightCard tradeAlerts" id="alerts">
@@ -771,21 +1250,20 @@ export default function FreedomTrader({ passwordHash }) {
               <table>
                 <thead>
                   <tr>
-                    <th>Ticker</th>
                     <th>Company</th>
+                    <th>Ticker</th>
                     <th>Current Price</th>
+                    <th>Daily Change %</th>
                     <th>Trading Score</th>
+                    <th>Data Status</th>
                     <th>Trend</th>
+                    <th>RSI</th>
+                    <th>Relative Volume</th>
                     <th>Support</th>
                     <th>Resistance</th>
-                    <th>Volatility</th>
-                    <th>RSI</th>
-                    <th>MACD</th>
-                    <th>Volume</th>
-                    <th>Expected Swing</th>
-                    <th>Entry</th>
-                    <th>Stop Loss</th>
+                    <th>Planned Entry</th>
                     <th>Target</th>
+                    <th>Stop</th>
                     <th>Risk Reward</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -794,23 +1272,22 @@ export default function FreedomTrader({ passwordHash }) {
                 <tbody>
                   {visibleRows.map((row) => (
                     <tr className={selectedSymbol === row.symbol ? "selected" : ""} key={row.symbol} onClick={() => setSelectedSymbol(row.symbol)}>
-                      <td><button className="tickerButton" type="button">{row.symbol}</button></td>
                       <td>{row.companyName}</td>
+                      <td><button className="tickerButton" type="button">{row.symbol}</button></td>
                       <td>{formatCurrency(row.currentPrice)}</td>
+                      <td>{formatPercent(row.changePercent)}</td>
                       <td><Score value={row.tradingScore} /></td>
+                      <td>{row.dataStatus?.status || row.error || "Waiting for scanner"}</td>
                       <td>{row.trend}</td>
+                      <td>{formatNumber(row.rsi)}</td>
+                      <td>{formatNumber(row.volumeRatio)}x</td>
                       <td>{formatCurrency(row.support)}</td>
                       <td>{formatCurrency(row.resistance)}</td>
-                      <td>{formatPercent(row.volatility)}</td>
-                      <td>{formatNumber(row.rsi)}</td>
-                      <td>{formatNumber(row.macd)}</td>
-                      <td>{formatNumber(row.volumeRatio)}x</td>
-                      <td>{formatPercent(row.expectedSwing)}</td>
-                      <td>{formatCurrency(row.entry)}</td>
-                      <td>{formatCurrency(row.stopLoss)}</td>
+                      <td>{formatCurrency(displayPlannedEntry(row))}</td>
                       <td>{formatCurrency(row.target)}</td>
+                      <td>{formatCurrency(row.stopLoss)}</td>
                       <td>{formatNumber(row.riskReward)}</td>
-                      <td><SignalBadge signal={row.status} /></td>
+                      <td><SignalBadge signal={actionSignal(row)} /></td>
                       <td>
                         <Link className="actionLink" href={`/freedom-trader/company/${row.symbol}`}>
                           Open
@@ -820,6 +1297,12 @@ export default function FreedomTrader({ passwordHash }) {
                   ))}
                 </tbody>
               </table>
+              {selected?.marketData && !selected.marketData.validated ? (
+                <div className="dataWarning">
+                  <strong>Market price not validated</strong>
+                  <span>{selected.marketData.issues?.join(" ") || "Live market data could not be confirmed. Trade recommendations are disabled."}</span>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -830,21 +1313,58 @@ export default function FreedomTrader({ passwordHash }) {
                   <h2>Trade Planner</h2>
                   <p>{selected?.companyName} / {selected?.symbol}</p>
                 </div>
-                <SignalBadge signal={selected?.status} />
+                <SignalBadge signal={actionSignal(selected)} />
               </div>
               <div className="plannerGrid">
-                <Metric label="Entry Price" value={formatCurrency(selected?.entry)} />
-                <Metric label="Suggested Position Size" value={`${planner.suggestedShares} shares`} />
-                <Metric label="Target Price" value={formatCurrency(selected?.target)} />
-                <Metric label="Stop Loss" value={formatCurrency(selected?.stopLoss)} />
-                <Metric label="Risk" value={formatCurrency(planner.riskAmount)} />
-                <Metric label="Reward" value={formatCurrency(planner.rewardAmount)} />
-                <Metric label="Risk Reward Ratio" value={formatNumber(selected?.riskReward)} />
+                <Metric label="Current Price" value={formatCurrency(selected?.currentPrice)} />
+                <Metric label="Planned Entry" value={formatCurrency(visualLevels.entry)} />
+                <Metric label="Dollar Distance to Entry" value={formatDistanceText(selected?.currentPrice, visualLevels.entry)} />
+                <Metric label="Percentage Distance to Entry" value={formatDistancePercent(selected?.currentPrice, visualLevels.entry)} />
+                <Metric label="Suggested Position Size" value={`${visualMetrics.positionSize} shares`} />
+                <Metric label="Target Price" value={formatCurrency(visualLevels.target)} />
+                <Metric label="Stop Loss" value={formatCurrency(visualLevels.stop)} />
+                <Metric label="Risk" value={formatCurrency(visualMetrics.maximumLoss)} />
+                <Metric label="Reward" value={formatCurrency(visualMetrics.expectedProfit)} />
+                <Metric label="Risk Reward Ratio" value={formatNumber(visualMetrics.riskReward)} />
                 <Metric label="Expected Holding Time" value={selected?.expectedHoldingTime || "--"} />
                 <Metric label="Probability" value={`${formatNumber(selected?.probability)}%`} />
               </div>
+              <div className="plannerActions">
+                <button type="button" onClick={resetVisualLevels} disabled={!levelsComplete(recommendedLevelsFor(selected))}>
+                  Reset to Recommended Levels
+                </button>
+                <button type="button" onClick={createEntryAlert} disabled={entryAlertSaving || !selected?.marketData?.validated || !Number.isFinite(visualLevels.entry)}>
+                  {entryAlertSaving ? "Creating Alert..." : "Alert Me at Entry"}
+                </button>
+                <button type="button" onClick={activateTradeSetup} disabled={activateSaving || !selected?.marketData?.validated || !levelsComplete(visualLevels)}>
+                  {activateSaving ? "Activating..." : "Activate Trade Setup"}
+                </button>
+                <span>This only creates an alert. It does not place a trade.</span>
+                <span>Activation saves the adjusted setup and starts entry monitoring.</span>
+                {entryAlertMessage ? <small>{entryAlertMessage}</small> : null}
+                {tradePlannerMessage ? <small>{tradePlannerMessage}</small> : null}
+              </div>
             </article>
 
+            <article className="planner whyPanel">
+              <div className="panelHeader compact">
+                <div>
+                  <h2>Why this is the top setup</h2>
+                  <p>{selected?.companyName} / {selected?.symbol}</p>
+                </div>
+              </div>
+              <div className="whyGrid">
+                <Metric label="Highest trading score today" value={dashboard.highestScore?.symbol === selected?.symbol ? `${selected?.symbol} leads with ${formatNumber(selected?.tradingScore)}` : `${dashboard.highestScore?.symbol || "--"} leads; ${selected?.symbol || "--"} is ${formatNumber(selected?.tradingScore)}`} />
+                <Metric label="Momentum result" value={resultLabel(selected?.components?.momentumScore)} />
+                <Metric label="Relative volume result" value={Number.isFinite(selected?.volumeRatio) ? `${formatNumber(selected.volumeRatio)}x relative volume` : "Not enough data"} />
+                <Metric label="Support quality" value={resultLabel(selected?.components?.supportScore)} />
+                <Metric label="Risk/reward ratio" value={formatNumber(selected?.riskReward)} />
+                <Metric label="Final action required" value={finalActionText(selected)} />
+              </div>
+            </article>
+          </section>
+
+          <section className="split">
             <article className="planner" id="watchlist">
               <div className="panelHeader compact">
                 <div>
@@ -853,7 +1373,7 @@ export default function FreedomTrader({ passwordHash }) {
                 </div>
               </div>
               <div className="watchlistChips">
-                {TRADING_UNIVERSE.map((item) => (
+                {tradingUniverse.map((item) => (
                   <Link key={item.symbol} href={`/freedom-trader/company/${item.symbol}`}>
                     <strong>{item.symbol}</strong>
                     <span>{item.companyName}</span>
@@ -873,14 +1393,13 @@ export default function FreedomTrader({ passwordHash }) {
                 <Link className="panelLink" href="/freedom-trader/positions">Open Positions</Link>
               </div>
               <div className="positions">
-                <div className="positionHeader">
-                  <span>Current Profit/Loss</span>
-                  <span>Days Held</span>
-                  <span>Target</span>
-                  <span>Stop</span>
-                  <span>Trailing Stop</span>
-                </div>
-                <p className="empty">No open swing positions recorded yet.</p>
+                {dashboard.openPositions.length ? dashboard.openPositions.slice(0, 5).map((position) => (
+                  <div className="positionMini" key={position.id}>
+                    <strong>{position.symbol}</strong>
+                    <span className={position.unrealisedProfit >= 0 ? "profitText" : "lossText"}>{formatCurrency(position.unrealisedProfit)}</span>
+                    <small>{position.daysHeld ?? "--"} days held</small>
+                  </div>
+                )) : <p className="empty">No open swing positions recorded yet.</p>}
               </div>
             </article>
             <article className="planner" id="performance">
@@ -892,10 +1411,52 @@ export default function FreedomTrader({ passwordHash }) {
                 </div>
               </div>
               <div className="performanceGrid">
-                <Metric label="Closed Trades" value="0" />
-                <Metric label="Win Rate" value="--" />
-                <Metric label="Average R/R" value="--" />
-                <Metric label="Realised P/L" value="$0.00" />
+                <Metric label="Win %" value={Number.isFinite(performance.winRate) ? `${performance.winRate.toFixed(1)}%` : "--"} />
+                <Metric label="Average Gain" value={formatCurrency(performance.averageGain)} />
+                <Metric label="Average Loss" value={formatCurrency(performance.averageLoss)} />
+                <Metric label="Largest Win" value={formatCurrency(performance.largestWin)} />
+                <Metric label="Largest Loss" value={formatCurrency(performance.largestLoss)} />
+                <Metric label="Current Capital" value={formatCurrency(performance.currentCapital)} />
+                <Metric label="Portfolio Return" value={formatPercent(performance.portfolioReturn)} />
+                <Metric label="Risk Statistics" value={performance.riskStatistics} />
+              </div>
+            </article>
+          </section>
+
+          <section className="split">
+            <article className="planner">
+              <div className="panelHeader compact">
+                <div>
+                  <h2>Recent Alerts</h2>
+                  <p>Latest trader alert states.</p>
+                </div>
+                <Link className="panelLink" href="/freedom-trader/alerts">Open Alerts</Link>
+              </div>
+              <div className="attentionList">
+                {alerts.slice(0, 6).map((alert) => (
+                  <div className={`attentionItem ${alert.status}`} key={alert.id}>
+                    <strong>{alert.symbol}</strong>
+                    <span>{alert.alertType}</span>
+                    <small>{alert.status}</small>
+                  </div>
+                ))}
+                {!alerts.length ? <p className="empty">No alerts saved yet.</p> : null}
+              </div>
+            </article>
+            <article className="planner">
+              <div className="panelHeader compact">
+                <div>
+                  <h2>Trades Requiring Attention</h2>
+                  <p>Near targets, stops, triggered alerts or stale holds.</p>
+                </div>
+              </div>
+              <div className="attentionList">
+                {attentionItems.length ? attentionItems.map((item, index) => (
+                  <div className={`attentionItem ${item.tone}`} key={`${item.symbol}-${item.reason}-${index}`}>
+                    <strong>{item.symbol}</strong>
+                    <span>{item.reason}</span>
+                  </div>
+                )) : <p className="empty">No trades require attention right now.</p>}
               </div>
             </article>
           </section>
@@ -907,8 +1468,15 @@ export default function FreedomTrader({ passwordHash }) {
                 <p>Candles, volume, MA20, MA50, MA200, MACD, support, resistance, 52-week high and low.</p>
               </div>
               <div className="chartControls">
+                <span>Range</span>
                 {TIMEFRAMES.map((item) => (
                   <button className={timeframe === item.label ? "active" : ""} key={item.label} type="button" onClick={() => setTimeframe(item.label)}>
+                    {item.label}
+                  </button>
+                ))}
+                <span>Interval</span>
+                {CHART_INTERVALS.map((item) => (
+                  <button className={chartInterval === item.value ? "active" : ""} key={item.value} type="button" onClick={() => setChartInterval(item.value)}>
                     {item.label}
                   </button>
                 ))}
@@ -921,7 +1489,62 @@ export default function FreedomTrader({ passwordHash }) {
             <div className="chartShell">
               {chartLoading ? <div className="chartState">Loading historical data...</div> : null}
               {chartError ? <div className="chartState warning">{chartError}</div> : null}
+              {chartMeta?.dataLabel ? <div className="dataLabel">{chartMeta.dataLabel}</div> : null}
               <div ref={chartNodeRef} className="chart" />
+              {visualOverlayReady ? (
+                <div className="visualPlannerOverlay" aria-label="Visual trade planner">
+                  <div className="zone profitZone" style={{ top: profitZone.top, height: profitZone.height }} />
+                  <div className="zone riskZone" style={{ top: riskZone.top, height: riskZone.height }} />
+                  {[
+                    { key: "target", label: "Target", value: visualLevels.target, y: linePixels.target, className: "targetLine" },
+                    { key: "entry", label: "Planned Entry", value: visualLevels.entry, y: linePixels.entry, className: "entryLine" },
+                    { key: "stop", label: "Stop Loss", value: visualLevels.stop, y: linePixels.stop, className: "stopLine" },
+                  ].map((line) => (
+                    <button
+                      aria-label={`Drag ${line.label}`}
+                      className={`plannerLine ${line.className} ${draggingLevel === line.key ? "dragging" : ""}`}
+                      key={line.key}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        setDraggingLevel(line.key);
+                      }}
+                      style={{ top: line.y }}
+                      type="button"
+                    >
+                      <span>{line.label}</span>
+                      <strong>{formatCurrency(line.value)}</strong>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="visualPlannerPanel">
+              <div>
+                <span>Risk/Reward</span>
+                <strong>{formatNumber(visualMetrics.riskReward)}</strong>
+              </div>
+              <div>
+                <span>Percentage Return</span>
+                <strong>{formatPercent(visualMetrics.percentageReturn)}</strong>
+              </div>
+              <div>
+                <span>Expected Profit</span>
+                <strong>{formatCurrency(visualMetrics.expectedProfit)}</strong>
+              </div>
+              <div>
+                <span>Maximum Loss</span>
+                <strong>{formatCurrency(visualMetrics.maximumLoss)}</strong>
+              </div>
+              <div>
+                <span>Position Size</span>
+                <strong>{visualMetrics.positionSize} shares</strong>
+              </div>
+              <div className="visualPlannerButtons">
+                <button type="button" onClick={resetVisualLevels} disabled={!levelsComplete(recommendedLevelsFor(selected))}>Reset to Recommended Levels</button>
+                <button type="button" onClick={createEntryAlert} disabled={entryAlertSaving || !Number.isFinite(visualLevels.entry)}>{entryAlertSaving ? "Creating Alert..." : "Alert Me at Entry"}</button>
+                <button type="button" onClick={activateTradeSetup} disabled={activateSaving || !levelsComplete(visualLevels)}>{activateSaving ? "Activating..." : "Activate Trade Setup"}</button>
+              </div>
+              <p>Drag the horizontal levels on the chart. Adjusted levels are saved for {selected?.symbol} and restored automatically.</p>
             </div>
           </section>
 
@@ -958,10 +1581,7 @@ export default function FreedomTrader({ passwordHash }) {
       <style jsx>{`
         .boot,
         .page {
-          background:
-            radial-gradient(circle at 12% 0%, rgba(255, 153, 0, 0.2), transparent 34rem),
-            radial-gradient(circle at 86% 8%, rgba(29, 155, 255, 0.14), transparent 32rem),
-            #05080b;
+          background: #05080b;
           color: #f5f7f8;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           min-height: 100vh;
@@ -973,21 +1593,54 @@ export default function FreedomTrader({ passwordHash }) {
           justify-content: center;
         }
         .page {
-          padding: 28px;
+          padding: 96px 28px 28px;
         }
         .hero,
         .summary,
         .workspace,
         footer,
-        .alert {
+        .alert,
+        .dataWarning {
           margin-left: auto;
           margin-right: auto;
           max-width: 1840px;
         }
+        .platformBanner {
+          align-items: center;
+          background: #0057d9;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+          display: flex;
+          gap: 14px;
+          justify-content: space-between;
+          left: 0;
+          padding: 14px 28px;
+          position: fixed;
+          right: 0;
+          top: 0;
+          z-index: 100;
+        }
+        .platformBanner strong {
+          align-items: center;
+          color: #fff;
+          display: inline-flex;
+          gap: 10px;
+          font-size: clamp(24px, 2.6vw, 34px);
+          font-weight: 950;
+        }
+        .platformBanner span {
+          color: #fff;
+          font-size: clamp(14px, 1.4vw, 18px);
+          font-weight: 900;
+        }
+        .platformBanner .platformIcon {
+          color: #ff9900;
+          font-size: 0.9em;
+          line-height: 1;
+        }
         .hero {
           align-items: flex-end;
-          background: linear-gradient(135deg, rgba(255, 153, 0, 0.22), rgba(29, 155, 255, 0.18)), rgba(8, 14, 17, 0.96);
-          border: 1px solid rgba(255, 153, 0, 0.28);
+          background: #07111f;
+          border: 1px solid rgba(29, 155, 255, 0.34);
           border-radius: 8px;
           box-shadow: 0 24px 90px rgba(29, 155, 255, 0.12);
           display: flex;
@@ -1002,18 +1655,18 @@ export default function FreedomTrader({ passwordHash }) {
           margin-bottom: 20px;
         }
         .platformSwitch a {
-          background: rgba(255, 255, 255, 0.055);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: #00843d;
+          border: 1px solid #00843d;
           border-radius: 999px;
-          color: #d8e5ea;
+          color: #fff;
           font-size: 14px;
           font-weight: 950;
           padding: 10px 14px;
           text-decoration: none;
         }
         .platformSwitch a.active {
-          background: linear-gradient(135deg, rgba(255, 153, 0, 0.24), rgba(29, 155, 255, 0.24));
-          border-color: rgba(255, 153, 0, 0.48);
+          background: #0057d9;
+          border-color: #0057d9;
           color: #fff;
         }
         .eyebrow {
@@ -1083,10 +1736,10 @@ export default function FreedomTrader({ passwordHash }) {
           margin-top: 7px;
         }
         button {
-          background: linear-gradient(135deg, #ff9900, #1d9bff);
+          background: #ff9900;
           border: 0;
           border-radius: 7px;
-          color: #041016;
+          color: #eaf7ff;
           cursor: pointer;
           font-weight: 950;
           min-height: 40px;
@@ -1122,6 +1775,25 @@ export default function FreedomTrader({ passwordHash }) {
           font-weight: 850;
           margin-top: 18px;
           padding: 14px 16px;
+        }
+        .dataWarning {
+          background: rgba(255, 153, 0, 0.12);
+          border: 1px solid rgba(255, 153, 0, 0.34);
+          border-radius: 8px;
+          color: #ffd7a1;
+          display: grid;
+          gap: 4px;
+          margin-top: 12px;
+          padding: 12px 14px;
+        }
+        .dataWarning strong {
+          color: #fff;
+          font-size: 13px;
+        }
+        .dataWarning span {
+          color: #ffd7a1;
+          font-size: 13px;
+          line-height: 1.45;
         }
         .summary {
           display: grid;
@@ -1367,15 +2039,20 @@ export default function FreedomTrader({ passwordHash }) {
           border: 1px solid rgba(35, 209, 139, 0.38);
           color: #b8f4e6;
         }
+        :global(.signal.strong) {
+          background: rgba(34, 255, 163, 0.18);
+          border-color: rgba(34, 255, 163, 0.55);
+          color: #c8ffe8;
+        }
         :global(.signal.watch) {
           background: rgba(250, 204, 21, 0.14);
           border: 1px solid rgba(250, 204, 21, 0.34);
           color: #ffe98a;
         }
         :global(.signal.wait) {
-          background: rgba(148, 163, 184, 0.14);
-          border: 1px solid rgba(148, 163, 184, 0.34);
-          color: #dbe4ea;
+          background: rgba(255, 153, 0, 0.14);
+          border: 1px solid rgba(255, 153, 0, 0.38);
+          color: #ffd7a1;
         }
         .actionLink {
           background: rgba(29, 155, 255, 0.12);
@@ -1395,6 +2072,11 @@ export default function FreedomTrader({ passwordHash }) {
           border: 1px solid rgba(255, 92, 92, 0.38);
           color: #ffc8c8;
         }
+        :global(.signal.info) {
+          background: rgba(29, 155, 255, 0.14);
+          border: 1px solid rgba(29, 155, 255, 0.38);
+          color: #d7efff;
+        }
         .split {
           display: grid;
           gap: 18px;
@@ -1405,6 +2087,37 @@ export default function FreedomTrader({ passwordHash }) {
           gap: 12px;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           padding: 16px;
+        }
+        .plannerActions {
+          align-items: center;
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          padding: 0 16px 16px;
+        }
+        .plannerActions button {
+          background: #ff9900;
+          min-height: 40px;
+        }
+        .plannerActions span,
+        .plannerActions small {
+          color: #aebdc4;
+          font-size: 12px;
+          font-weight: 850;
+        }
+        .plannerActions small {
+          color: #b8f4e6;
+          width: 100%;
+        }
+        .whyGrid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          padding: 16px;
+        }
+        .whyPanel :global(.metric:last-child) {
+          grid-column: 1 / -1;
         }
         :global(.metric) {
           background: rgba(255, 255, 255, 0.045);
@@ -1420,6 +2133,53 @@ export default function FreedomTrader({ passwordHash }) {
         }
         .positions {
           padding: 16px;
+        }
+        .positionMini,
+        .attentionItem {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.045);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: auto 1fr auto;
+          margin-bottom: 8px;
+          padding: 12px;
+        }
+        .positionMini strong,
+        .attentionItem strong {
+          color: #fff;
+        }
+        .positionMini span,
+        .attentionItem span,
+        .positionMini small,
+        .attentionItem small {
+          color: #aebdc4;
+        }
+        .attentionList {
+          padding: 16px;
+        }
+        .attentionItem.target {
+          border-color: rgba(35, 209, 139, 0.38);
+          box-shadow: 0 0 24px rgba(35, 209, 139, 0.08);
+        }
+        .attentionItem.stop {
+          border-color: rgba(255, 92, 92, 0.42);
+          box-shadow: 0 0 24px rgba(255, 92, 92, 0.08);
+        }
+        .attentionItem.alert,
+        .attentionItem.triggered {
+          border-color: rgba(255, 153, 0, 0.42);
+          box-shadow: 0 0 24px rgba(255, 153, 0, 0.09);
+        }
+        .attentionItem.acknowledged {
+          opacity: 0.72;
+        }
+        .profitText {
+          color: #8ff0c3 !important;
+        }
+        .lossText {
+          color: #ff9a9a !important;
         }
         .watchlistChips,
         .performanceGrid {
@@ -1482,13 +2242,154 @@ export default function FreedomTrader({ passwordHash }) {
           color: #d8e5ea;
           min-height: 34px;
         }
+        .chartControls span {
+          align-items: center;
+          color: #aebdc4;
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 950;
+          min-height: 34px;
+          text-transform: uppercase;
+        }
         .chartShell {
           height: 620px;
+          overflow: hidden;
           position: relative;
         }
         .chart {
           height: 100%;
           width: 100%;
+        }
+        .visualPlannerOverlay {
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 3;
+        }
+        .zone {
+          left: 62px;
+          pointer-events: none;
+          position: absolute;
+          right: 28px;
+        }
+        .profitZone {
+          background: linear-gradient(180deg, rgba(35, 209, 139, 0.18), rgba(35, 209, 139, 0.04));
+          border-top: 1px solid rgba(35, 209, 139, 0.24);
+          border-bottom: 1px solid rgba(35, 209, 139, 0.16);
+        }
+        .riskZone {
+          background: linear-gradient(180deg, rgba(255, 92, 92, 0.05), rgba(255, 92, 92, 0.2));
+          border-top: 1px solid rgba(255, 92, 92, 0.16);
+          border-bottom: 1px solid rgba(255, 92, 92, 0.28);
+        }
+        .plannerLine {
+          align-items: center;
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+          color: #fff;
+          cursor: ns-resize;
+          display: flex;
+          font-size: 12px;
+          font-weight: 950;
+          height: 28px;
+          justify-content: space-between;
+          left: 62px;
+          margin: 0;
+          min-height: 28px;
+          padding: 0;
+          pointer-events: auto;
+          position: absolute;
+          right: 28px;
+          transform: translateY(-50%);
+          width: auto;
+          z-index: 4;
+        }
+        .plannerLine:before {
+          content: "";
+          height: 2px;
+          left: 0;
+          position: absolute;
+          right: 0;
+          top: 13px;
+        }
+        .plannerLine span,
+        .plannerLine strong {
+          border-radius: 999px;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+          position: relative;
+          z-index: 1;
+        }
+        .plannerLine span {
+          padding: 6px 10px;
+        }
+        .plannerLine strong {
+          padding: 6px 10px;
+        }
+        .targetLine:before,
+        .targetLine span,
+        .targetLine strong {
+          background: rgba(35, 209, 139, 0.92);
+          color: #03130d;
+        }
+        .entryLine:before,
+        .entryLine span,
+        .entryLine strong {
+          background: rgba(94, 189, 255, 0.94);
+          color: #03111d;
+        }
+        .stopLine:before,
+        .stopLine span,
+        .stopLine strong {
+          background: rgba(255, 92, 92, 0.94);
+          color: #210606;
+        }
+        .plannerLine.dragging span,
+        .plannerLine.dragging strong {
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18), 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+        .visualPlannerPanel {
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(280px, 1.4fr);
+          padding: 16px;
+        }
+        .visualPlannerPanel > div:not(.visualPlannerButtons) {
+          background: rgba(255, 255, 255, 0.045);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          padding: 12px;
+        }
+        .visualPlannerPanel span {
+          color: #aebdc4;
+          display: block;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 7px;
+          text-transform: uppercase;
+        }
+        .visualPlannerPanel strong {
+          color: #fff;
+          font-size: 18px;
+        }
+        .visualPlannerButtons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .visualPlannerButtons button {
+          flex: 1 1 150px;
+          min-height: 38px;
+          padding: 0 12px;
+        }
+        .visualPlannerPanel p {
+          color: #aebdc4;
+          font-size: 12px;
+          font-weight: 800;
+          grid-column: 1 / -1;
+          line-height: 1.5;
+          margin: 0;
         }
         .chartState {
           align-items: center;
@@ -1503,6 +2404,19 @@ export default function FreedomTrader({ passwordHash }) {
         }
         .chartState.warning {
           color: #ffe98a;
+        }
+        .dataLabel {
+          background: rgba(5, 8, 11, 0.82);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 999px;
+          color: #d7efff;
+          font-size: 12px;
+          font-weight: 950;
+          padding: 7px 10px;
+          position: absolute;
+          right: 14px;
+          top: 12px;
+          z-index: 4;
         }
         .alerts,
         .components {
@@ -1553,26 +2467,45 @@ export default function FreedomTrader({ passwordHash }) {
           .heroStats,
           .summary,
           .insightGrid,
-          .plannerGrid {
+          .plannerGrid,
+          .whyGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .sidebar {
             position: static;
           }
+          .visualPlannerPanel {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .visualPlannerButtons {
+            grid-column: 1 / -1;
+          }
         }
         @media (max-width: 760px) {
           .page {
-            padding: 16px;
+            padding: 88px 16px 16px;
           }
           .heroStats,
           .summary,
           .insightGrid,
           .plannerGrid,
+          .whyGrid,
           .alerts {
             grid-template-columns: 1fr;
           }
           .chartShell {
             height: 520px;
+          }
+          .visualPlannerPanel {
+            grid-template-columns: 1fr;
+          }
+          .plannerLine {
+            left: 42px;
+            right: 12px;
+          }
+          .zone {
+            left: 42px;
+            right: 12px;
           }
         }
       `}</style>
@@ -1616,10 +2549,12 @@ function SignalBadge({ signal }) {
     ? "strong"
     : normalized.includes("BUY")
       ? "buy"
-      : normalized === "WAIT"
+      : normalized.startsWith("WAIT")
         ? "wait"
-        : normalized === "NO TRADE"
-          ? "noTrade"
+          : normalized === "NO TRADE"
+            ? "noTrade"
+            : normalized === "INFO"
+              ? "info"
           : normalized === "SELL"
             ? "sell"
             : normalized === "EXIT"

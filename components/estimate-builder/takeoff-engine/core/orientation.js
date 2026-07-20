@@ -13,6 +13,10 @@ export function calculateFinalRotation({ metadataRotation = 0, detectedRotation 
   return combineRotations(metadataRotation, detectedRotation, userRotation);
 }
 
+export function calculatePlanFinalRotation({ orientationMode = "auto", autoRotation = 0, manualRotation = 0 } = {}) {
+  return orientationMode === "manual" ? normalizeRotation(manualRotation) : normalizeRotation(autoRotation);
+}
+
 export function rotateDimensions(width, height, rotation = 0) {
   const finalRotation = normalizeRotation(rotation);
   if (finalRotation === 90 || finalRotation === 270) {
@@ -23,12 +27,20 @@ export function rotateDimensions(width, height, rotation = 0) {
 
 export function createOrientation(overrides = {}) {
   const orientation = createOrientationState(overrides);
+  const orientationMode = orientation.orientationMode === "manual" ? "manual" : "auto";
+  const autoRotation = normalizeRotation(orientation.autoRotation);
+  const manualRotation = normalizeRotation(orientation.manualRotation);
+  const finalRotation = calculatePlanFinalRotation({ orientationMode, autoRotation, manualRotation });
   return {
     ...orientation,
+    autoRotation,
+    manualRotation,
+    finalRotation,
+    orientationMode,
     metadataRotation: normalizeRotation(orientation.metadataRotation),
     detectedRotation: normalizeRotation(orientation.detectedRotation),
     userRotation: normalizeRotation(orientation.userRotation),
-    finalRotation: calculateFinalRotation(orientation),
+    appliedRotation: normalizeRotation(orientation.appliedRotation),
   };
 }
 
@@ -151,27 +163,36 @@ export async function detectRasterOrientation({ imageDataUrl = "", imageWidth = 
 
 export function applyManualRotation(orientation, deltaRotation) {
   const current = createOrientation(orientation);
+  const manualRotation = combineRotations(current.finalRotation, deltaRotation);
   const userRotation = combineRotations(current.userRotation, deltaRotation);
   return createOrientation({
     ...current,
+    manualRotation,
     userRotation,
+    appliedRotation: manualRotation,
+    orientationMode: "manual",
     confidence: "manual",
     method: "manual",
-    orientationConfirmed: false,
-    warning: "Orientation changed manually. Scale and measurements should be reset.",
+    manualOverride: true,
+    orientationConfirmed: true,
+    warning: "",
   });
 }
 
 export function confirmOrientation(orientation) {
   const current = createOrientation(orientation);
-  return {
+  return createOrientation({
     ...current,
+    orientationMode: "manual",
+    manualRotation: current.finalRotation,
+    userRotation: current.finalRotation,
+    appliedRotation: current.finalRotation,
     orientationConfirmed: true,
     confidence: "confirmed",
     warning: "",
-  };
+  });
 }
 
 export function shouldAutoOrient(orientation) {
-  return !orientation?.orientationConfirmed;
+  return !orientation?.orientationConfirmed && !orientation?.manualOverride;
 }

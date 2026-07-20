@@ -1,0 +1,205 @@
+{
+  "id": "premier-inclusions-page-08",
+  "name": "Page 08",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p8-image-0",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": 43.58,
+      "y": 46.31,
+      "width": 1231.81,
+      "height": 1283.42,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image53.jpeg",
+        "assetPath": "standard-inclusions/assets/image53.jpeg",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p8-shape-1",
+      "name": "Freeform 4 shape",
+      "type": "shape",
+      "x": 28.69,
+      "y": 31.48,
+      "width": 1261.58,
+      "height": 1298.25,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fill": "#C69A39",
+        "stroke": "transparent",
+        "strokeWidth": 0,
+        "borderRadius": 0
+      },
+      "data": {},
+      "layer": 1
+    },
+    {
+      "id": "p8-logo-2",
+      "name": "Freeform 6",
+      "type": "logo",
+      "x": 619.32,
+      "y": 1026.15,
+      "width": 114.83,
+      "height": 79.83,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 6"
+      },
+      "layer": 2
+    },
+    {
+      "id": "p8-text-3",
+      "name": "TextBox 7",
+      "type": "text",
+      "x": 115.91,
+      "y": 351.82,
+      "width": 257.36,
+      "height": 128.35,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Arapey",
+        "fontSize": 17,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "center"
+      },
+      "data": {
+        "text": "Standard Colourboard doors. Choice of colours from either Laminex or Polytec"
+      },
+      "layer": 3
+    },
+    {
+      "id": "p8-text-4",
+      "name": "TextBox 8",
+      "type": "text",
+      "x": 476.8,
+      "y": 415.81,
+      "width": 257.36,
+      "height": 64.36,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Arapey",
+        "fontSize": 17,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "center"
+      },
+      "data": {
+        "text": "Softclose Doors and Drawers standard"
+      },
+      "layer": 4
+    },
+    {
+      "id": "p8-text-5",
+      "name": "TextBox 9",
+      "type": "text",
+      "x": 92.74,
+      "y": 573.78,
+      "width": 257.36,
+      "height": 32.37,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Arapey",
+        "fontSize": 17,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "center"
+      },
+      "data": {
+        "text": "Tiled Splashback"
+      },
+      "layer": 5
+    },
+    {
+      "id": "p8-text-6",
+      "name": "TextBox 10",
+      "type": "text",
+      "x": 476.8,
+      "y": 541.82,
+      "width": 257.36,
+      "height": 32.37,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Arapey",
+        "fontSize": 17,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "center"
+      },
+      "data": {
+        "text": "Choice of Luxury Tapwear"
+      },
+      "layer": 6
+    },
+    {
+      "id": "p8-text-7",
+      "name": "TextBox 11",
+      "type": "text",
+      "x": 548.06,
+      "y": 615.65,
+      "width": 257.36,
+      "height": 96.36,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Arapey",
+        "fontSize": 17,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "center"
+      },
+      "data": {
+        "text": "20mm Quality Stone Benchtops from Builder’s Range"
+      },
+      "layer": 7
+    }
+  ]
+}

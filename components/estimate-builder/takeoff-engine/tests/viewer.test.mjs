@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRasterPage, createTakeoffDocument } from "../core/types.js";
 import { calculateFitView, screenToImagePoint, zoomToScreenPoint } from "../core/viewTransform.js";
+import {
+  applyPageRotation,
+  pdfToPlanCoordinates,
+  planToPdfCoordinates,
+  planToScreenCoordinates,
+  screenToPlanCoordinates,
+} from "../core/planCoordinates.js";
 import { TAKEOFF_ACTIONS, takeoffReducer } from "../state/takeoffReducer.js";
 
 function getActivePage(state) {
@@ -29,7 +36,8 @@ const controlsSource = readFileSync(new URL("../viewer/TakeoffControls.jsx", imp
 const canvasSource = readFileSync(new URL("../viewer/TakeoffCanvas.jsx", import.meta.url), "utf8");
 const viewerSource = readFileSync(new URL("../viewer/TakeoffViewer.jsx", import.meta.url), "utf8");
 
-assert.match(controlsSource, /Fit/);
+assert.match(controlsSource, /Fit Page/);
+assert.match(controlsSource, /Fit Width/);
 assert.match(controlsSource, /100%/);
 assert.match(controlsSource, /200%/);
 assert.match(controlsSource, /400%/);
@@ -69,6 +77,18 @@ const afterImagePoint = screenToImagePoint(pointer, zoomed);
 assert.equal(Number(beforeImagePoint.x.toFixed(6)), Number(afterImagePoint.x.toFixed(6)));
 assert.equal(Number(beforeImagePoint.y.toFixed(6)), Number(afterImagePoint.y.toFixed(6)));
 
+const planPoint = { x: 120, y: 80 };
+const screenPoint = planToScreenCoordinates(planPoint, zoomed);
+const roundTripPlanPoint = screenToPlanCoordinates(screenPoint, zoomed);
+assert.equal(Number(roundTripPlanPoint.x.toFixed(6)), planPoint.x);
+assert.equal(Number(roundTripPlanPoint.y.toFixed(6)), planPoint.y);
+assert.deepEqual(applyPageRotation({ x: 10, y: 20 }, { width: 300, height: 200 }, 90), { x: 180, y: 10 });
+
+const pdfPage = { pageWidthPoints: 300, pageHeightPoints: 200, finalRotation: 0 };
+const convertedPlanPoint = pdfToPlanCoordinates({ x: 25, y: 150 }, pdfPage);
+assert.deepEqual(convertedPlanPoint, { x: 25, y: 50 });
+assert.deepEqual(planToPdfCoordinates(convertedPlanPoint, pdfPage), { x: 25, y: 150 });
+
 const withView = takeoffReducer(state, {
   type: TAKEOFF_ACTIONS.SET_VIEW_STATE,
   payload: { viewState: zoomed },
@@ -81,7 +101,9 @@ const rotated = takeoffReducer(state, {
   payload: { deltaRotation: 180 },
 });
 assert.equal(getActivePage(rotated).orientation.userRotation, 180);
-assert.equal(getActivePage(rotated).orientation.orientationConfirmed, false);
+assert.equal(getActivePage(rotated).orientation.orientationConfirmed, true);
+assert.equal(getActivePage(rotated).orientation.manualOverride, true);
+assert.equal(getActivePage(rotated).metadata.orientationManualOverride, true);
 
 const confirmed = takeoffReducer(rotated, { type: TAKEOFF_ACTIONS.CONFIRM_ORIENTATION });
 assert.equal(getActivePage(confirmed).orientation.orientationConfirmed, true);

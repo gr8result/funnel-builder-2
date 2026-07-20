@@ -63,10 +63,8 @@
       "id": 1781468862706,
       "type": "video-hero",
       "props": {
-        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
-        "posterSrc": "",
-        "heightMode": "full",
-        "minHeight": 620,
+        "heightMode": "fixed",
+        "minHeight": 1800,
         "objectFit": "cover",
         "objectPosition": "top center",
         "overlayColor": "#000000",
@@ -81,7 +79,14 @@
         "accentColor": "#6366f1",
         "baseLayoutWidth": 1500,
         "unmuteOnScroll": true,
-        "marginTop": 140
+        "muted": false,
+        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
+        "loop": false,
+        "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
+        "videoMimeType": "video/mp4",
+        "videoFileName": "modules.mp4",
+        "videoUpdatedAt": "2026-07-20T03:42:21.351Z",
+        "paddingBottom": 200
       }
     },
     {
@@ -263,7 +268,7 @@
         "baseLayoutWidth": 1500,
         "buttonTextColor": "#0f172a",
         "dotsActiveColor": "#0f172a",
-        "autoPlayInterval": 1500,
+        "autoPlayInterval": 6000,
         "headlineFontSize": 52,
         "sectionTitleSize": 48,
         "headlineAlignment": "center",
@@ -362,10 +367,8 @@
         "id": 1781468862706,
         "type": "video-hero",
         "props": {
-          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
-          "posterSrc": "",
-          "heightMode": "full",
-          "minHeight": 620,
+          "heightMode": "fixed",
+          "minHeight": 1800,
           "objectFit": "cover",
           "objectPosition": "top center",
           "overlayColor": "#000000",
@@ -380,7 +383,14 @@
           "accentColor": "#6366f1",
           "baseLayoutWidth": 1500,
           "unmuteOnScroll": true,
-          "marginTop": 140
+          "muted": false,
+          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
+          "loop": false,
+          "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
+          "videoMimeType": "video/mp4",
+          "videoFileName": "modules.mp4",
+          "videoUpdatedAt": "2026-07-20T03:42:21.351Z",
+          "paddingBottom": 200
         }
       },
       {
@@ -562,7 +572,7 @@
           "baseLayoutWidth": 1500,
           "buttonTextColor": "#0f172a",
           "dotsActiveColor": "#0f172a",
-          "autoPlayInterval": 1500,
+          "autoPlayInterval": 6000,
           "headlineFontSize": 52,
           "sectionTitleSize": 48,
           "headlineAlignment": "center",
@@ -602,6 +612,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-06-22T21:33:23.741Z",
+  "savedAt": "2026-07-20T03:48:52.816Z",
   "source": "autosave"
 }

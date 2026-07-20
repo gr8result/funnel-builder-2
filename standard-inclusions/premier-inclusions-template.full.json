@@ -1,0 +1,4007 @@
+{
+  "id": "premier-inclusions-master-template",
+  "schemaVersion": 1,
+  "name": "Premier Inclusions Schedule",
+  "activePageId": "premier-inclusions-page-01",
+  "metadata": {
+    "documentType": "standardInclusions",
+    "documentSource": "native-master-template",
+    "sourceFileName": "Premier Inclusions Schedule.pptx",
+    "sourcePath": "C:\\Users\\grant\\Downloads\\Premier Inclusions Schedule.pptx",
+    "slideWidth": 7556500,
+    "slideHeight": 10693400,
+    "pageCount": 10,
+    "generatedAt": "2026-07-18T02:16:40.379Z",
+    "immutableMaster": true
+  },
+  "pages": [
+    {
+      "id": "premier-inclusions-page-01",
+      "name": "Page 01",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p1-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": 29.71,
+          "y": 48.94,
+          "width": 794.37,
+          "height": 1122.85,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image1.png",
+            "assetPath": "standard-inclusions/assets/image1.png",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p1-image-1",
+          "name": "Freeform 5",
+          "type": "image",
+          "x": -7.66,
+          "y": -46.68,
+          "width": 845.38,
+          "height": 814.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image2.png",
+            "assetPath": "standard-inclusions/assets/image2.png",
+            "alt": "Freeform 5"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p1-image-2",
+          "name": "Freeform 7",
+          "type": "image",
+          "x": 0,
+          "y": 745.45,
+          "width": 845.38,
+          "height": 140.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image3.png",
+            "assetPath": "standard-inclusions/assets/image3.png",
+            "alt": "Freeform 7"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p1-text-3",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 54.02,
+          "y": 232.42,
+          "width": 306.63,
+          "height": 158.9,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 42,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier Inclusions\nRange"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p1-image-4",
+          "name": "Freeform 10",
+          "type": "image",
+          "x": 42.9,
+          "y": 390.23,
+          "width": 190.55,
+          "height": 30.15,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image4.png",
+            "assetPath": "standard-inclusions/assets/image4.png",
+            "alt": "Freeform 10"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p1-logo-5",
+          "name": "Freeform 12",
+          "type": "logo",
+          "x": 33.38,
+          "y": 753.4,
+          "width": 61.72,
+          "height": 70.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image5.png",
+            "assetPath": "standard-inclusions/assets/image5.png",
+            "alt": "Freeform 12"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p1-logo-6",
+          "name": "Freeform 14",
+          "type": "logo",
+          "x": 48.8,
+          "y": 767.14,
+          "width": 30.86,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image6.png",
+            "assetPath": "standard-inclusions/assets/image6.png",
+            "alt": "Freeform 14"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p1-image-7",
+          "name": "Freeform 16",
+          "type": "image",
+          "x": 277.73,
+          "y": 725.06,
+          "width": 15.85,
+          "height": 140.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image7.png",
+            "assetPath": "standard-inclusions/assets/image7.png",
+            "alt": "Freeform 16"
+          },
+          "layer": 7
+        },
+        {
+          "id": "p1-logo-8",
+          "name": "Freeform 18",
+          "type": "logo",
+          "x": 293.16,
+          "y": 753.4,
+          "width": 61.3,
+          "height": 70.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image8.png",
+            "assetPath": "standard-inclusions/assets/image8.png",
+            "alt": "Freeform 18"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p1-logo-9",
+          "name": "Freeform 20",
+          "type": "logo",
+          "x": 308.59,
+          "y": 767.14,
+          "width": 30.86,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image9.png",
+            "assetPath": "standard-inclusions/assets/image9.png",
+            "alt": "Freeform 20"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p1-image-10",
+          "name": "Freeform 22",
+          "type": "image",
+          "x": 537.52,
+          "y": 725.06,
+          "width": 15.85,
+          "height": 140.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image10.png",
+            "assetPath": "standard-inclusions/assets/image10.png",
+            "alt": "Freeform 22"
+          },
+          "layer": 10
+        },
+        {
+          "id": "p1-logo-11",
+          "name": "Freeform 24",
+          "type": "logo",
+          "x": 552.95,
+          "y": 753.4,
+          "width": 61.3,
+          "height": 70.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image11.png",
+            "assetPath": "standard-inclusions/assets/image11.png",
+            "alt": "Freeform 24"
+          },
+          "layer": 11
+        },
+        {
+          "id": "p1-logo-12",
+          "name": "Freeform 26",
+          "type": "logo",
+          "x": 567.96,
+          "y": 767.14,
+          "width": 31.27,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image12.png",
+            "assetPath": "standard-inclusions/assets/image12.png",
+            "alt": "Freeform 26"
+          },
+          "layer": 12
+        },
+        {
+          "id": "p1-text-13",
+          "name": "TextBox 27",
+          "type": "text",
+          "x": 42.9,
+          "y": 992.76,
+          "width": 258.97,
+          "height": 56.02,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Libre Baskerville Italics",
+            "fontSize": 18,
+            "fontWeight": "600",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier range.\nPersonalised by choice."
+          },
+          "layer": 13
+        },
+        {
+          "id": "p1-logo-14",
+          "name": "Freeform 29",
+          "type": "logo",
+          "x": 30.44,
+          "y": 1052.44,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image13.png",
+            "assetPath": "standard-inclusions/assets/image13.png",
+            "alt": "Freeform 29"
+          },
+          "layer": 14
+        },
+        {
+          "id": "p1-logo-15",
+          "name": "Freeform 31",
+          "type": "logo",
+          "x": 198.49,
+          "y": 1038.27,
+          "width": 15.43,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image14.png",
+            "assetPath": "standard-inclusions/assets/image14.png",
+            "alt": "Freeform 31"
+          },
+          "layer": 15
+        },
+        {
+          "id": "p1-logo-16",
+          "name": "Freeform 33",
+          "type": "logo",
+          "x": 213.5,
+          "y": 1052.44,
+          "width": 31.27,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image15.png",
+            "assetPath": "standard-inclusions/assets/image15.png",
+            "alt": "Freeform 33"
+          },
+          "layer": 16
+        },
+        {
+          "id": "p1-logo-17",
+          "name": "Freeform 35",
+          "type": "logo",
+          "x": 610.9,
+          "y": 1010.36,
+          "width": 153.04,
+          "height": 84.58,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image16.png",
+            "assetPath": "standard-inclusions/assets/image16.png",
+            "alt": "Freeform 35"
+          },
+          "layer": 17
+        },
+        {
+          "id": "p1-logo-18",
+          "name": "Freeform 37",
+          "type": "logo",
+          "x": 641.34,
+          "y": 1010.36,
+          "width": 76.73,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image17.png",
+            "assetPath": "standard-inclusions/assets/image17.png",
+            "alt": "Freeform 37"
+          },
+          "layer": 18
+        },
+        {
+          "id": "p1-text-19",
+          "name": "TextBox 38",
+          "type": "text",
+          "x": 625.97,
+          "y": 1063.74,
+          "width": 55.61,
+          "height": 18.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "right"
+          },
+          "data": {
+            "text": "Good"
+          },
+          "layer": 19
+        },
+        {
+          "id": "p1-text-20",
+          "name": "TextBox 39",
+          "type": "text",
+          "x": 679.98,
+          "y": 1063.74,
+          "width": 55.61,
+          "height": 18.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#C69A39",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Build"
+          },
+          "layer": 20
+        },
+        {
+          "id": "p1-text-21",
+          "name": "TextBox 40",
+          "type": "text",
+          "x": 634.7,
+          "y": 1081.72,
+          "width": 91.35,
+          "height": 12,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 6,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "right"
+          },
+          "data": {
+            "text": "Your property is measured with feet"
+          },
+          "layer": 21
+        },
+        {
+          "id": "p1-logo-22",
+          "name": "Freeform 41",
+          "type": "logo",
+          "x": 625.5,
+          "y": 1010.36,
+          "width": 126.78,
+          "height": 84.47,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 41"
+          },
+          "layer": 22
+        },
+        {
+          "id": "p1-text-24",
+          "name": "TextBox 43",
+          "type": "text",
+          "x": 100.18,
+          "y": 794.48,
+          "width": 142.19,
+          "height": 49,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 10,
+            "fontWeight": "600",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Carefully selected for performance, durability and style."
+          },
+          "layer": 23
+        },
+        {
+          "id": "p1-text-25",
+          "name": "TextBox 44",
+          "type": "text",
+          "x": 365.5,
+          "y": 789.19,
+          "width": 145.37,
+          "height": 65,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 10,
+            "fontWeight": "600",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "A complete Premier range of inclusions to make building easy."
+          },
+          "layer": 24
+        },
+        {
+          "id": "p1-text-26",
+          "name": "TextBox 45",
+          "type": "text",
+          "x": 630.03,
+          "y": 789.19,
+          "width": 134.25,
+          "height": 65,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Inclusions that deliver exceptional value for your investment"
+          },
+          "layer": 25
+        },
+        {
+          "id": "p1-text-27",
+          "name": "TextBox 46",
+          "type": "text",
+          "x": 38.53,
+          "y": 896.06,
+          "width": 709.38,
+          "height": 56.24,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Our Premier Inclusions Range Schedule outlines the fixtures, finishes and construction standards included as the baseline for your Project Estimate. It gives you a clear view of the quality included before your final selections are confirmed in the Formal Quotation."
+          },
+          "layer": 26
+        },
+        {
+          "id": "p1-text-28",
+          "name": "TextBox 47",
+          "type": "text",
+          "x": 64.34,
+          "y": 1055.67,
+          "width": 127.89,
+          "height": 21.58,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 13,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1300 1231 456"
+          },
+          "layer": 27
+        },
+        {
+          "id": "p1-text-29",
+          "name": "TextBox 48",
+          "type": "text",
+          "x": 239.11,
+          "y": 1055.39,
+          "width": 154.11,
+          "height": 21.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#00182E",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "goodbuild.com.au"
+          },
+          "layer": 28
+        },
+        {
+          "id": "p1-text-30",
+          "name": "TextBox 49",
+          "type": "text",
+          "x": 100.18,
+          "y": 771.19,
+          "width": 166.54,
+          "height": 18.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality Inclusions"
+          },
+          "layer": 29
+        },
+        {
+          "id": "p1-text-31",
+          "name": "TextBox 50",
+          "type": "text",
+          "x": 365.5,
+          "y": 771.19,
+          "width": 157,
+          "height": 18.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier Range"
+          },
+          "layer": 30
+        },
+        {
+          "id": "p1-text-32",
+          "name": "TextBox 51",
+          "type": "text",
+          "x": 630.03,
+          "y": 771.19,
+          "width": 152.99,
+          "height": 18.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Ultra-Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Great Value"
+          },
+          "layer": 31
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-02",
+      "name": "Page 02",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p2-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": -117.58,
+          "y": -41.49,
+          "width": 1397.64,
+          "height": 1164.35,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image19.jpeg",
+            "assetPath": "standard-inclusions/assets/image19.jpeg",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p2-image-1",
+          "name": "Freeform 5",
+          "type": "image",
+          "x": -172.02,
+          "y": -252.58,
+          "width": 872.21,
+          "height": 765.78,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image20.png",
+            "assetPath": "standard-inclusions/assets/image20.png",
+            "alt": "Freeform 5"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p2-text-2",
+          "name": "TextBox 6",
+          "type": "text",
+          "x": 68.32,
+          "y": 32.08,
+          "width": 365.41,
+          "height": 43.51,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Fraunces Italics",
+            "fontSize": 32,
+            "fontWeight": "600",
+            "color": "#003C64",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier Inclusions"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p2-text-3",
+          "name": "TextBox 7",
+          "type": "text",
+          "x": 68.32,
+          "y": 71.6,
+          "width": 364.62,
+          "height": 182.15,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Open Sauce",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#003C64",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Our Premier Inclusions provide the perfect balance of quality, style and value, forming the standard specification for every Project Estimate. During your Selections Process, you'll personalise your home by selecting colours, finishes and approved upgrades, with all final inclusions confirmed in your Formal Quotation before your Building Contract is prepared."
+          },
+          "layer": 3
+        },
+        {
+          "id": "p2-text-4",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 749.89,
+          "y": 1045.8,
+          "width": 12,
+          "height": 14.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Open Sauce",
+            "fontSize": 7,
+            "fontWeight": "600",
+            "color": "#003C64",
+            "lineHeight": 1.12,
+            "textAlign": "right"
+          },
+          "data": {
+            "text": "2"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p2-logo-5",
+          "name": "Freeform 9",
+          "type": "logo",
+          "x": 625.5,
+          "y": 989.93,
+          "width": 126.78,
+          "height": 84.47,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 9"
+          },
+          "layer": 5
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-03",
+      "name": "Page 03",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p3-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": -77.84,
+          "y": 0,
+          "width": 882.59,
+          "height": 1122.85,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image21.png",
+            "assetPath": "standard-inclusions/assets/image21.png",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p3-image-1",
+          "name": "Freeform 5",
+          "type": "image",
+          "x": 345.94,
+          "y": 47.71,
+          "width": 458.81,
+          "height": 419.55,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image22.png",
+            "assetPath": "standard-inclusions/assets/image22.png",
+            "alt": "Freeform 5"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p3-logo-2",
+          "name": "Freeform 6",
+          "type": "logo",
+          "x": 625.5,
+          "y": 989.93,
+          "width": 126.78,
+          "height": 84.47,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 6"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p3-text-3",
+          "name": "TextBox 7",
+          "type": "text",
+          "x": 440.37,
+          "y": 137.08,
+          "width": 293.12,
+          "height": 94.48,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Gotham Heavy",
+            "fontSize": 22,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Creating homes you'll love coming home to."
+          },
+          "layer": 3
+        },
+        {
+          "id": "p3-text-4",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 435.32,
+          "y": 238.52,
+          "width": 316.96,
+          "height": 152.86,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Open Sans Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "The best homes are built around the people who live in them. Our Premier Inclusions provide a carefully selected range of quality fixtures, fittings and finishes, creating the perfect foundation before you personalise your home during the Selections Process."
+          },
+          "layer": 4
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-04",
+      "name": "Page 04",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p4-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": -14.04,
+          "y": 0,
+          "width": 899.34,
+          "height": 1138.6,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image23.png",
+            "assetPath": "standard-inclusions/assets/image23.png",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p4-logo-1",
+          "name": "Freeform 5",
+          "type": "logo",
+          "x": 482.67,
+          "y": 594.45,
+          "width": 61.3,
+          "height": 56.25,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image24.png",
+            "assetPath": "standard-inclusions/assets/image24.png",
+            "alt": "Freeform 5"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p4-text-2",
+          "name": "TextBox 6",
+          "type": "text",
+          "x": 553.59,
+          "y": 636.2,
+          "width": 188.27,
+          "height": 43.6,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 11,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Carefully selected fixtures, fittings and finishes."
+          },
+          "layer": 2
+        },
+        {
+          "id": "p4-logo-3",
+          "name": "Freeform 8",
+          "type": "logo",
+          "x": 482.67,
+          "y": 690.19,
+          "width": 61.3,
+          "height": 56.25,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image25.png",
+            "assetPath": "standard-inclusions/assets/image25.png",
+            "alt": "Freeform 8"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p4-text-4",
+          "name": "TextBox 9",
+          "type": "text",
+          "x": 553.59,
+          "y": 714.31,
+          "width": 166.82,
+          "height": 43.6,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 11,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Practical, stylish and made for everyday life."
+          },
+          "layer": 4
+        },
+        {
+          "id": "p4-logo-5",
+          "name": "Freeform 11",
+          "type": "logo",
+          "x": 482.67,
+          "y": 757.91,
+          "width": 61.3,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image26.png",
+            "assetPath": "standard-inclusions/assets/image26.png",
+            "alt": "Freeform 11"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p4-text-6",
+          "name": "TextBox 12",
+          "type": "text",
+          "x": 553.73,
+          "y": 772.57,
+          "width": 184.19,
+          "height": 24.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 15,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Your Choices"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p4-text-7",
+          "name": "TextBox 13",
+          "type": "text",
+          "x": 551.6,
+          "y": 790.97,
+          "width": 170.79,
+          "height": 65.6,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 11,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Personalise your home with colours, finishes and upgrades."
+          },
+          "layer": 7
+        },
+        {
+          "id": "p4-logo-8",
+          "name": "Freeform 15",
+          "type": "logo",
+          "x": 482.67,
+          "y": 870.82,
+          "width": 61.3,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image27.png",
+            "assetPath": "standard-inclusions/assets/image27.png",
+            "alt": "Freeform 15"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p4-image-9",
+          "name": "Freeform 17",
+          "type": "image",
+          "x": 482.67,
+          "y": 884.57,
+          "width": 275.22,
+          "height": 14.58,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image28.png",
+            "assetPath": "standard-inclusions/assets/image28.png",
+            "alt": "Freeform 17"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p4-logo-10",
+          "name": "Freeform 19",
+          "type": "logo",
+          "x": 59.58,
+          "y": 1036.84,
+          "width": 114.83,
+          "height": 61.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 19"
+          },
+          "layer": 10
+        },
+        {
+          "id": "p4-logo-11",
+          "name": "Freeform 21",
+          "type": "logo",
+          "x": 396.98,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image29.png",
+            "assetPath": "standard-inclusions/assets/image29.png",
+            "alt": "Freeform 21"
+          },
+          "layer": 11
+        },
+        {
+          "id": "p4-logo-12",
+          "name": "Freeform 23",
+          "type": "logo",
+          "x": 549.6,
+          "y": 1052.44,
+          "width": 15.85,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image30.png",
+            "assetPath": "standard-inclusions/assets/image30.png",
+            "alt": "Freeform 23"
+          },
+          "layer": 12
+        },
+        {
+          "id": "p4-logo-13",
+          "name": "Freeform 25",
+          "type": "logo",
+          "x": 565.03,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image31.png",
+            "assetPath": "standard-inclusions/assets/image31.png",
+            "alt": "Freeform 25"
+          },
+          "layer": 13
+        },
+        {
+          "id": "p4-text-14",
+          "name": "TextBox 28",
+          "type": "text",
+          "x": 42.22,
+          "y": 549.8,
+          "width": 297.61,
+          "height": 30.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 19,
+            "fontWeight": "800",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier Inclusions"
+          },
+          "layer": 14
+        },
+        {
+          "id": "p4-text-15",
+          "name": "TextBox 29",
+          "type": "text",
+          "x": 38.44,
+          "y": 627.57,
+          "width": 397.19,
+          "height": 146.69,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Libre Baskerville",
+            "fontSize": 36,
+            "fontWeight": "600",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Designed for the way you live."
+          },
+          "layer": 15
+        },
+        {
+          "id": "p4-text-16",
+          "name": "TextBox 30",
+          "type": "text",
+          "x": 34.65,
+          "y": 788.5,
+          "width": 417.84,
+          "height": 167.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 11,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Our Premier Inclusions provide the perfect balance of quality, style and value, forming the standard specification for every Project Estimate.\nDuring your Selections Process, you'll personalise your home by selecting colours, finishes and approved upgrades, with all final inclusions confirmed in your Formal Quotation before your Building Contract is prepared."
+          },
+          "layer": 16
+        },
+        {
+          "id": "p4-text-17",
+          "name": "TextBox 31",
+          "type": "text",
+          "x": 550.45,
+          "y": 895.29,
+          "width": 187.47,
+          "height": 43.6,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 11,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "All selections documented in your Formal Quotation."
+          },
+          "layer": 17
+        },
+        {
+          "id": "p4-text-18",
+          "name": "TextBox 32",
+          "type": "text",
+          "x": 420.22,
+          "y": 1072.22,
+          "width": 128.69,
+          "height": 20.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 13,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1300 1231 456"
+          },
+          "layer": 18
+        },
+        {
+          "id": "p4-text-19",
+          "name": "TextBox 33",
+          "type": "text",
+          "x": 594.99,
+          "y": 1072.22,
+          "width": 155.7,
+          "height": 20.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 13,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "goodbuild.com.au"
+          },
+          "layer": 19
+        },
+        {
+          "id": "p4-text-20",
+          "name": "TextBox 34",
+          "type": "text",
+          "x": 555.58,
+          "y": 608.56,
+          "width": 256.12,
+          "height": 24.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 15,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality Included"
+          },
+          "layer": 20
+        },
+        {
+          "id": "p4-text-21",
+          "name": "TextBox 35",
+          "type": "text",
+          "x": 553.73,
+          "y": 689.3,
+          "width": 209.21,
+          "height": 24.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 15,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Built for living"
+          },
+          "layer": 21
+        },
+        {
+          "id": "p4-text-22",
+          "name": "TextBox 36",
+          "type": "text",
+          "x": 549.76,
+          "y": 870.57,
+          "width": 208.13,
+          "height": 24.01,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "TT Interphases Bold",
+            "fontSize": 15,
+            "fontWeight": "800",
+            "color": "#001F3D",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Confidence & Clarity"
+          },
+          "layer": 22
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-05",
+      "name": "Page 05",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p5-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": 16.09,
+          "y": 21.18,
+          "width": 249.83,
+          "height": 171.12,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image33.png",
+            "assetPath": "standard-inclusions/assets/image33.png",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p5-image-1",
+          "name": "Freeform 5",
+          "type": "image",
+          "x": 273.56,
+          "y": 21.18,
+          "width": 245.6,
+          "height": 171.12,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image34.png",
+            "assetPath": "standard-inclusions/assets/image34.png",
+            "alt": "Freeform 5"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p5-image-2",
+          "name": "Freeform 7",
+          "type": "image",
+          "x": 527.08,
+          "y": 23.01,
+          "width": 247.05,
+          "height": 169.46,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image35.png",
+            "assetPath": "standard-inclusions/assets/image35.png",
+            "alt": "Freeform 7"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p5-text-3",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 23.83,
+          "y": 208.3,
+          "width": 468.68,
+          "height": 32.07,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 23,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premier Inclusions Schedule"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p5-image-4",
+          "name": "Freeform 10",
+          "type": "image",
+          "x": 0,
+          "y": 255.12,
+          "width": 794.37,
+          "height": 177.49,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image36.png",
+            "assetPath": "standard-inclusions/assets/image36.png",
+            "alt": "Freeform 10"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p5-logo-5",
+          "name": "Freeform 12",
+          "type": "logo",
+          "x": 0,
+          "y": 294.57,
+          "width": 61.3,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image37.png",
+            "assetPath": "standard-inclusions/assets/image37.png",
+            "alt": "Freeform 12"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p5-text-6",
+          "name": "TextBox 13",
+          "type": "text",
+          "x": 62.76,
+          "y": 297.57,
+          "width": 190.61,
+          "height": 18.67,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality Inclusions"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p5-text-7",
+          "name": "TextBox 14",
+          "type": "text",
+          "x": 63.76,
+          "y": 328.92,
+          "width": 186.61,
+          "height": 67.99,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Carefully selected products and finishes designed for quality, durability and value."
+          },
+          "layer": 7
+        },
+        {
+          "id": "p5-image-8",
+          "name": "Freeform 16",
+          "type": "image",
+          "x": 259.37,
+          "y": 252.49,
+          "width": 15.85,
+          "height": 140.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image38.png",
+            "assetPath": "standard-inclusions/assets/image38.png",
+            "alt": "Freeform 16"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p5-logo-9",
+          "name": "Freeform 18",
+          "type": "logo",
+          "x": 274.8,
+          "y": 294.57,
+          "width": 46.29,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image39.png",
+            "assetPath": "standard-inclusions/assets/image39.png",
+            "alt": "Freeform 18"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p5-text-10",
+          "name": "TextBox 19",
+          "type": "text",
+          "x": 329.78,
+          "y": 300.02,
+          "width": 197.3,
+          "height": 36.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Complete Specification"
+          },
+          "layer": 10
+        },
+        {
+          "id": "p5-text-11",
+          "name": "TextBox 20",
+          "type": "text",
+          "x": 328.47,
+          "y": 345.6,
+          "width": 173.97,
+          "height": 50.99,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Everything required to build a quality Premier home has been included."
+          },
+          "layer": 11
+        },
+        {
+          "id": "p5-image-12",
+          "name": "Freeform 22",
+          "type": "image",
+          "x": 519.16,
+          "y": 252.49,
+          "width": 15.85,
+          "height": 140.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image40.png",
+            "assetPath": "standard-inclusions/assets/image40.png",
+            "alt": "Freeform 22"
+          },
+          "layer": 12
+        },
+        {
+          "id": "p5-logo-13",
+          "name": "Freeform 24",
+          "type": "logo",
+          "x": 534.59,
+          "y": 294.57,
+          "width": 46.29,
+          "height": 56.66,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image41.png",
+            "assetPath": "standard-inclusions/assets/image41.png",
+            "alt": "Freeform 24"
+          },
+          "layer": 13
+        },
+        {
+          "id": "p5-text-14",
+          "name": "TextBox 25",
+          "type": "text",
+          "x": 589.88,
+          "y": 300.02,
+          "width": 174.99,
+          "height": 18.67,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Exceptional Value"
+          },
+          "layer": 14
+        },
+        {
+          "id": "p5-text-15",
+          "name": "TextBox 26",
+          "type": "text",
+          "x": 589.88,
+          "y": 328.6,
+          "width": 173.97,
+          "height": 67.99,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#FFFFFF",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "A balanced specification designed to deliver excellent value without compromising quality."
+          },
+          "layer": 15
+        },
+        {
+          "id": "p5-text-16",
+          "name": "TextBox 27",
+          "type": "text",
+          "x": 37.34,
+          "y": 497.13,
+          "width": 347.94,
+          "height": 190.59,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Site cut allowance for up to 1 metre cross fall Engineer-designed concrete waffle pod slab system with brick rebate  to suit M Class site conditions\nNo stepdown to garage\nTermite treatment to perimeter and slab penetrations in accordance with Australian Standards"
+          },
+          "layer": 16
+        },
+        {
+          "id": "p5-text-17",
+          "name": "TextBox 28",
+          "type": "text",
+          "x": 36.7,
+          "y": 701.6,
+          "width": 320.99,
+          "height": 20.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Structural & External"
+          },
+          "layer": 17
+        },
+        {
+          "id": "p5-text-18",
+          "name": "TextBox 29",
+          "type": "text",
+          "x": 36.7,
+          "y": 726.18,
+          "width": 352.7,
+          "height": 133.56,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "70mm T2 treated timber wall framing\nT2 treated timber roof trusses designed to engineer's requirements with metal ceiling battens\nColorbond steel roofing\n65mm Anticon insulation blanket beneath roof sheeting"
+          },
+          "layer": 18
+        },
+        {
+          "id": "p5-text-19",
+          "name": "TextBox 30",
+          "type": "text",
+          "x": 34.77,
+          "y": 865.63,
+          "width": 176.54,
+          "height": 20.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Driveway"
+          },
+          "layer": 19
+        },
+        {
+          "id": "p5-text-20",
+          "name": "TextBox 31",
+          "type": "text",
+          "x": 37.34,
+          "y": 888.46,
+          "width": 333.64,
+          "height": 76.53,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Exposed aggregate driveway and paths\nAllowance up to 60m2\nColour selected from the builder's standard range"
+          },
+          "layer": 20
+        },
+        {
+          "id": "p5-text-21",
+          "name": "TextBox 32",
+          "type": "text",
+          "x": 34.77,
+          "y": 987.59,
+          "width": 737.97,
+          "height": 47.26,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 9,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Our Premier Inclusions Schedule outlines the fixtures, fittings, finishes and construction standards Included as the pricing basis for each Project. Each internal selection and any approved upgrades or downgrades will be confirmed during the Selections Process and documented in the Formal Quotation."
+          },
+          "layer": 21
+        },
+        {
+          "id": "p5-logo-22",
+          "name": "Freeform 34",
+          "type": "logo",
+          "x": 15.01,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image42.png",
+            "assetPath": "standard-inclusions/assets/image42.png",
+            "alt": "Freeform 34"
+          },
+          "layer": 22
+        },
+        {
+          "id": "p5-text-23",
+          "name": "TextBox 35",
+          "type": "text",
+          "x": 41.31,
+          "y": 1073.34,
+          "width": 126.31,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1300 1231 456"
+          },
+          "layer": 23
+        },
+        {
+          "id": "p5-logo-24",
+          "name": "Freeform 37",
+          "type": "logo",
+          "x": 167.63,
+          "y": 1052.44,
+          "width": 15.85,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image43.png",
+            "assetPath": "standard-inclusions/assets/image43.png",
+            "alt": "Freeform 37"
+          },
+          "layer": 24
+        },
+        {
+          "id": "p5-logo-25",
+          "name": "Freeform 39",
+          "type": "logo",
+          "x": 183.06,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image44.png",
+            "assetPath": "standard-inclusions/assets/image44.png",
+            "alt": "Freeform 39"
+          },
+          "layer": 25
+        },
+        {
+          "id": "p5-text-26",
+          "name": "TextBox 40",
+          "type": "text",
+          "x": 211.3,
+          "y": 1075.59,
+          "width": 156.49,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "goodbuild.com.au"
+          },
+          "layer": 26
+        },
+        {
+          "id": "p5-text-27",
+          "name": "TextBox 41",
+          "type": "text",
+          "x": 38.51,
+          "y": 449.61,
+          "width": 228.78,
+          "height": 39.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Site Preparation & Foundations & Slab"
+          },
+          "layer": 27
+        },
+        {
+          "id": "p5-text-28",
+          "name": "TextBox 42",
+          "type": "text",
+          "x": 419.43,
+          "y": 449.7,
+          "width": 272.47,
+          "height": 20.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Highlight Inclusions"
+          },
+          "layer": 28
+        },
+        {
+          "id": "p5-text-29",
+          "name": "TextBox 43",
+          "type": "text",
+          "x": 410.69,
+          "y": 814.36,
+          "width": 246.26,
+          "height": 20.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "General Inclusions"
+          },
+          "layer": 29
+        },
+        {
+          "id": "p5-text-30",
+          "name": "TextBox 44",
+          "type": "text",
+          "x": 410.69,
+          "y": 841.18,
+          "width": 347.94,
+          "height": 120.16,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Building approvals and standard certification\nEnergy efficiency assessment\nBuilder's internal and external clean\nIndependent quality inspections during construction\n12-month maintenance period following handover"
+          },
+          "layer": 30
+        },
+        {
+          "id": "p5-text-31",
+          "name": "TextBox 45",
+          "type": "text",
+          "x": 389.4,
+          "y": 1047.44,
+          "width": 185.88,
+          "height": 50.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Libre Baskerville Italics",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality by standard, Personalised by choice."
+          },
+          "layer": 31
+        },
+        {
+          "id": "p5-text-32",
+          "name": "TextBox 46",
+          "type": "text",
+          "x": 36.7,
+          "y": 603.88,
+          "width": 323.59,
+          "height": 20.82,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 14,
+            "fontWeight": "800",
+            "color": "#C48935",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Termite Treatment"
+          },
+          "layer": 32
+        },
+        {
+          "id": "p5-logo-33",
+          "name": "Freeform 48",
+          "type": "logo",
+          "x": 619.32,
+          "y": 1044.31,
+          "width": 114.83,
+          "height": 61.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 48"
+          },
+          "layer": 33
+        },
+        {
+          "id": "p5-text-34",
+          "name": "TextBox 50",
+          "type": "text",
+          "x": 419.43,
+          "y": 476.52,
+          "width": 352.7,
+          "height": 320.84,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter",
+            "fontSize": 11,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "900mm Underbench or freestanding cooker\nChoice of underbench of canopy rangehood\nStainless Steel Dishwasher\nSoft close doors and drawers to kitchen\nFrameless mirrors standard\nSemi-frameless Showerscreens standard\nFlyscreens to all windows\nBarrier screens to sliding doors\nWall mounted clothesline\nTV Anenna\nDownlights to all living rooms, bedrooms and exterior alfresco and porch\n3 in 1 light/heat/fan to al bathrooms\nChoice of entry door and door furniture\n2 x garden taps\n250l Electric Hot Water System"
+          },
+          "layer": 34
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-06",
+      "name": "Page 06",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p6-image-0",
+          "name": "Freeform 2",
+          "type": "image",
+          "x": 410.04,
+          "y": 0,
+          "width": 664.98,
+          "height": 1111.51,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image45.jpeg",
+            "assetPath": "standard-inclusions/assets/image45.jpeg",
+            "alt": "Freeform 2"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p6-image-1",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": 34.86,
+          "y": 913.6,
+          "width": 351.67,
+          "height": 197.91,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image46.jpeg",
+            "assetPath": "standard-inclusions/assets/image46.jpeg",
+            "alt": "Freeform 3"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p6-text-2",
+          "name": "TextBox 4",
+          "type": "text",
+          "x": 34.86,
+          "y": 93.13,
+          "width": 329.77,
+          "height": 797.98,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 12,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Create a luxurious look for your dream\nkitchen, with a superb selection of\nclassic cabinetry, quality Blanco appliances, designer tapware and premium finishes.\nCUPBOARDS\nSquare edge door and drawer fronts with PVC edging and selected door handles from Builders Range all with soft close options as standard.\nOverhead cupboards and microwave provision.\nLaminated Pantry unit (plan specific) (2100mm high) with four 5 Melamine shelves\nPainted MDF bulkheads to ceiling).\n600mm wide cupboards with White melamine internal linings including one (1) intermediate shelf and a bank of four (4) drawers.\nPlan specific: Laminated pantry unit (2100mm high) with White melamine shelves OR Walk-In\nPantry with 5 White melamine shelves.\nLaminate colours in Polytec or Laminex Smooth, Sheen, Matt, and Woodmatt finishes.\nSPLASH BACK\nUp to 710mm above all benchtops from standard Builders Range.\nCeramic tiles from Builders Range.\nFixed Glass Window Splash back plan specific.\nFRIDGE\nWater connection to fridge space standard.\nTwo door laminated ‘push to open’ overhead cupboards above fridge."
+          },
+          "layer": 2
+        },
+        {
+          "id": "p6-text-3",
+          "name": "TextBox 5",
+          "type": "text",
+          "x": 27.08,
+          "y": 0.34,
+          "width": 337.56,
+          "height": 95.79,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 53,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Kitchen"
+          },
+          "layer": 3
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-07",
+      "name": "Page 07",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p7-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": 29.05,
+          "y": 29.35,
+          "width": 741.22,
+          "height": 430.18,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image47.jpeg",
+            "assetPath": "standard-inclusions/assets/image47.jpeg",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p7-shape-1",
+          "name": "Freeform 4 shape",
+          "type": "shape",
+          "x": 24.84,
+          "y": 25.06,
+          "width": 750.22,
+          "height": 439.25,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fill": "#C69A39",
+            "stroke": "transparent",
+            "strokeWidth": 0,
+            "borderRadius": 0
+          },
+          "data": {},
+          "layer": 1
+        },
+        {
+          "id": "p7-image-2",
+          "name": "Freeform 6",
+          "type": "image",
+          "x": 74.34,
+          "y": 570.23,
+          "width": 318.14,
+          "height": 189.68,
+          "rotation": -6.75,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image48.jpeg",
+            "assetPath": "standard-inclusions/assets/image48.jpeg",
+            "alt": "Freeform 6"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p7-image-3",
+          "name": "Freeform 7",
+          "type": "image",
+          "x": 123.42,
+          "y": 746.57,
+          "width": 159.41,
+          "height": 225.96,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image49.jpeg",
+            "assetPath": "standard-inclusions/assets/image49.jpeg",
+            "alt": "Freeform 7"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p7-image-4",
+          "name": "Freeform 8",
+          "type": "image",
+          "x": 304.94,
+          "y": 754.77,
+          "width": 313.33,
+          "height": 209.56,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image50.png",
+            "assetPath": "standard-inclusions/assets/image50.png",
+            "alt": "Freeform 8"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p7-image-5",
+          "name": "Freeform 9",
+          "type": "image",
+          "x": 415.27,
+          "y": 692.95,
+          "width": 287.52,
+          "height": 123.64,
+          "rotation": 23.62,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image51.png",
+            "assetPath": "standard-inclusions/assets/image51.png",
+            "alt": "Freeform 9"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p7-logo-6",
+          "name": "Freeform 11",
+          "type": "logo",
+          "x": 15.01,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image42.png",
+            "assetPath": "standard-inclusions/assets/image42.png",
+            "alt": "Freeform 11"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p7-logo-7",
+          "name": "Freeform 13",
+          "type": "logo",
+          "x": 167.63,
+          "y": 1052.44,
+          "width": 15.85,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image43.png",
+            "assetPath": "standard-inclusions/assets/image43.png",
+            "alt": "Freeform 13"
+          },
+          "layer": 7
+        },
+        {
+          "id": "p7-logo-8",
+          "name": "Freeform 15",
+          "type": "logo",
+          "x": 183.06,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image44.png",
+            "assetPath": "standard-inclusions/assets/image44.png",
+            "alt": "Freeform 15"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p7-logo-9",
+          "name": "Freeform 17",
+          "type": "logo",
+          "x": 619.32,
+          "y": 1044.31,
+          "width": 114.83,
+          "height": 61.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 17"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p7-text-10",
+          "name": "TextBox 19",
+          "type": "text",
+          "x": 11.35,
+          "y": 473.85,
+          "width": 783.02,
+          "height": 75.34,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "The Seasons Bold",
+            "fontSize": 41,
+            "fontWeight": "800",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Quality Blanco Applicances"
+          },
+          "layer": 10
+        },
+        {
+          "id": "p7-text-11",
+          "name": "TextBox 20",
+          "type": "text",
+          "x": 41.31,
+          "y": 1073.34,
+          "width": 126.31,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1300 1231 456"
+          },
+          "layer": 11
+        },
+        {
+          "id": "p7-text-12",
+          "name": "TextBox 21",
+          "type": "text",
+          "x": 211.3,
+          "y": 1075.59,
+          "width": 156.49,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "goodbuild.com.au"
+          },
+          "layer": 12
+        },
+        {
+          "id": "p7-text-13",
+          "name": "TextBox 22",
+          "type": "text",
+          "x": 389.4,
+          "y": 1047.44,
+          "width": 185.88,
+          "height": 50.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Libre Baskerville Italics",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality by standard, Personalised by choice."
+          },
+          "layer": 13
+        },
+        {
+          "id": "p7-text-14",
+          "name": "TextBox 23",
+          "type": "text",
+          "x": -4.08,
+          "y": 1014.01,
+          "width": 783.02,
+          "height": 16.46,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Bold",
+            "fontSize": 9,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Note: Makes and models are subject to change without notice"
+          },
+          "layer": 14
+        },
+        {
+          "id": "p7-text-15",
+          "name": "TextBox 24",
+          "type": "text",
+          "x": 472.47,
+          "y": 563.78,
+          "width": 321.89,
+          "height": 118.45,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Bold",
+            "fontSize": 9,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Applicances:\n900mm Electric Cooktop\n900mm Underbench Oven or Freestanding Range\n700mm Underbench or 900mm Canopy Rangehood\nStainless Steel Freestanding Dishwasher"
+          },
+          "layer": 15
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-08",
+      "name": "Page 08",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p8-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": 43.58,
+          "y": 46.31,
+          "width": 1231.81,
+          "height": 1283.42,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image53.jpeg",
+            "assetPath": "standard-inclusions/assets/image53.jpeg",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p8-shape-1",
+          "name": "Freeform 4 shape",
+          "type": "shape",
+          "x": 28.69,
+          "y": 31.48,
+          "width": 1261.58,
+          "height": 1298.25,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fill": "#C69A39",
+            "stroke": "transparent",
+            "strokeWidth": 0,
+            "borderRadius": 0
+          },
+          "data": {},
+          "layer": 1
+        },
+        {
+          "id": "p8-logo-2",
+          "name": "Freeform 6",
+          "type": "logo",
+          "x": 619.32,
+          "y": 1026.15,
+          "width": 114.83,
+          "height": 79.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 6"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p8-text-3",
+          "name": "TextBox 7",
+          "type": "text",
+          "x": 115.91,
+          "y": 351.82,
+          "width": 257.36,
+          "height": 128.35,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Arapey",
+            "fontSize": 17,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Standard Colourboard doors. Choice of colours from either Laminex or Polytec"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p8-text-4",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 476.8,
+          "y": 415.81,
+          "width": 257.36,
+          "height": 64.36,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Arapey",
+            "fontSize": 17,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Softclose Doors and Drawers standard"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p8-text-5",
+          "name": "TextBox 9",
+          "type": "text",
+          "x": 92.74,
+          "y": 573.78,
+          "width": 257.36,
+          "height": 32.37,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Arapey",
+            "fontSize": 17,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Tiled Splashback"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p8-text-6",
+          "name": "TextBox 10",
+          "type": "text",
+          "x": 476.8,
+          "y": 541.82,
+          "width": 257.36,
+          "height": 32.37,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Arapey",
+            "fontSize": 17,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "Choice of Luxury Tapwear"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p8-text-7",
+          "name": "TextBox 11",
+          "type": "text",
+          "x": 548.06,
+          "y": 615.65,
+          "width": 257.36,
+          "height": 96.36,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Arapey",
+            "fontSize": 17,
+            "fontWeight": "600",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "center"
+          },
+          "data": {
+            "text": "20mm Quality Stone Benchtops from Builder’s Range"
+          },
+          "layer": 7
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-09",
+      "name": "Page 09",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p9-logo-0",
+          "name": "Freeform 3",
+          "type": "logo",
+          "x": 619.32,
+          "y": 1026.15,
+          "width": 114.83,
+          "height": 79.83,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p9-image-1",
+          "name": "Freeform 4",
+          "type": "image",
+          "x": 0,
+          "y": -92.3,
+          "width": 794.37,
+          "height": 458.11,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image54.jpeg",
+            "assetPath": "standard-inclusions/assets/image54.jpeg",
+            "alt": "Freeform 4"
+          },
+          "layer": 1
+        },
+        {
+          "id": "p9-text-2",
+          "name": "TextBox 5",
+          "type": "text",
+          "x": 27.31,
+          "y": 417.46,
+          "width": 330.48,
+          "height": 246.22,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Kitchen tap – sink mixer (chrome)\nKitchen sink – 1 ½ Bowl double bowl drop-in stainless steel sink with drainer\nTiled splashback – up to bottom of kitchen bulkheads\nCupboards and doors – laminated with 1mm ABS edge\nDrawers – see detailed kitchen plans for drawer locations\nChoice of handles or finger pull for doors and drawers\nOverhead cupboards – see our detailed kitchen plans"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p9-text-3",
+          "name": "TextBox 6",
+          "type": "text",
+          "x": 27.31,
+          "y": 373.81,
+          "width": 169.52,
+          "height": 44.93,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Kitchen"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p9-text-4",
+          "name": "TextBox 7",
+          "type": "text",
+          "x": 27.31,
+          "y": 753.56,
+          "width": 330.48,
+          "height": 339.53,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Chrome flick mixer tapware\nToilet – close coupled, back-to-wall with soft-close seat\nVanity basins – semi-inset or semi-recessed with built-in plug and overflow (as dictated by plan)\nBuilders range stone benchtops 20mm\nVanity mirror – 850mm high × full length vanity\nShower – recessed and tiled, including 400mm × 400mm shower niche\nShower screens – clear glass Semi-frameless\nTowel rail – 600mm double rail and WC holder in chrome\nBathtub – framed white acrylic\nCeiling-mounted shower rose OR rail and hose shower set\n45L Laundry Tub in custom built cabinet  with 20mm stone top"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p9-text-5",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 27.31,
+          "y": 678.87,
+          "width": 319.15,
+          "height": 74.69,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Bathroom, Ensuite Laundry & WC"
+          },
+          "layer": 5
+        },
+        {
+          "id": "p9-text-6",
+          "name": "TextBox 9",
+          "type": "text",
+          "x": 394.35,
+          "y": 428.8,
+          "width": 372.71,
+          "height": 207.92,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Underground 16mm² single-phase power (10 metres from house to connection point)\nTelephone NBN Connection and single phone point\nInternal power points as per plan Clipsal Slimline\nLight points and fittings as per plan - White Downlights\nTV points as per plan\nEarth leakage circuit breakers (2 included – power and lighting circuits)\nSmoke detectors as per plan\n3 in 1 exhaust fans to ensuite and bathroom"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p9-text-7",
+          "name": "TextBox 10",
+          "type": "text",
+          "x": 394.35,
+          "y": 373.81,
+          "width": 186.81,
+          "height": 44.93,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Electrical"
+          },
+          "layer": 7
+        },
+        {
+          "id": "p9-text-8",
+          "name": "TextBox 11",
+          "type": "text",
+          "x": 394.35,
+          "y": 698.91,
+          "width": 372.71,
+          "height": 151.16,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1200 Front door – choice from standard range\nFront entrance lock – Gainsborough Trilock\nAluminium sliding doors and windows\nInternal doors – flush panel doors\nGarage door – panel lift with 2 remote controls and 1 wall switch\nBarrier screens to all sliding doors\nFlyscreens to all windows"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p9-text-9",
+          "name": "TextBox 12",
+          "type": "text",
+          "x": 394.35,
+          "y": 643.97,
+          "width": 339.8,
+          "height": 43.72,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Windows & Doors"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p9-text-10",
+          "name": "TextBox 13",
+          "type": "text",
+          "x": 395.69,
+          "y": 945.77,
+          "width": 370.04,
+          "height": 62.13,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Built-in robes – white melamine shelf with hanging rail\nBuilt in Pantry and linen – 4 shelves\nBroom cupboard – top shelf"
+          },
+          "layer": 10
+        },
+        {
+          "id": "p9-text-11",
+          "name": "TextBox 14",
+          "type": "text",
+          "x": 395.69,
+          "y": 866.07,
+          "width": 368.7,
+          "height": 72.7,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Robes & Linen Cupboards"
+          },
+          "layer": 11
+        }
+      ]
+    },
+    {
+      "id": "premier-inclusions-page-10",
+      "name": "Page 10",
+      "width": 794,
+      "height": 1123,
+      "unit": "px",
+      "background": {
+        "color": "#ffffff",
+        "imageRef": null
+      },
+      "objects": [
+        {
+          "id": "p10-image-0",
+          "name": "Freeform 3",
+          "type": "image",
+          "x": -25.08,
+          "y": -60.48,
+          "width": 850.19,
+          "height": 427.93,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image55.jpeg",
+            "assetPath": "standard-inclusions/assets/image55.jpeg",
+            "alt": "Freeform 3"
+          },
+          "layer": 0
+        },
+        {
+          "id": "p10-text-1",
+          "name": "TextBox 4",
+          "type": "text",
+          "x": 39.23,
+          "y": 423.63,
+          "width": 357.95,
+          "height": 259.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Premium Gainsborough lever door handles throughout.\nPainted timber skirting boards (68mm × 11mm).\nPainted timber architraves (42mm × 11mm).\n90mm cove cornice throughout.\nPlaster-lined garage.\n6mm Villaboard lining to all wet area walls where required.\nCeiling heights as nominated on the approved plans.\nCeiling and roof insulation designed to achieve the required 6-Star Energy Rating (or current NCC equivalent)."
+          },
+          "layer": 1
+        },
+        {
+          "id": "p10-text-2",
+          "name": "TextBox 5",
+          "type": "text",
+          "x": 37.43,
+          "y": 370.38,
+          "width": 311.53,
+          "height": 44.93,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Internal Finishes"
+          },
+          "layer": 2
+        },
+        {
+          "id": "p10-text-3",
+          "name": "TextBox 6",
+          "type": "text",
+          "x": 38.92,
+          "y": 759.52,
+          "width": 356.97,
+          "height": 157.35,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Sewer line allowance (10 metres from house to connection point)\nStormwater line allowance (10 metres from house to connection point)\nMains water line allowance (10 metres from house to connection point)\nPolyethylene water lines for internal plumbing\n150mm gutters"
+          },
+          "layer": 3
+        },
+        {
+          "id": "p10-text-4",
+          "name": "TextBox 7",
+          "type": "text",
+          "x": 39.23,
+          "y": 684.45,
+          "width": 340.53,
+          "height": 67.34,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Plumbing & Drainage"
+          },
+          "layer": 4
+        },
+        {
+          "id": "p10-text-5",
+          "name": "TextBox 8",
+          "type": "text",
+          "x": 418.41,
+          "y": 423.63,
+          "width": 368.39,
+          "height": 145.53,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Genuine COLORBOND® fascia and gutter system.\nGenuine COLORBOND® roofing selected from the builder's standard colour range.\nRoof pitch as detailed on the approved plans.\nRoof insulation designed to achieve the required 6-Star Energy Rating (or current NCC equivalent).\nEave widths as shown on the approved plans."
+          },
+          "layer": 5
+        },
+        {
+          "id": "p10-text-6",
+          "name": "TextBox 9",
+          "type": "text",
+          "x": 418.41,
+          "y": 371.01,
+          "width": 135.23,
+          "height": 44.3,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Roofing"
+          },
+          "layer": 6
+        },
+        {
+          "id": "p10-text-7",
+          "name": "TextBox 10",
+          "type": "text",
+          "x": 414.23,
+          "y": 624.68,
+          "width": 345.61,
+          "height": 103.52,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Semi-Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Three-coat premium paint system to all walls throughout the home.\n2 Coats to ceilings (Flat White rolled finish)\nGloss finish to skirting boards, architraves and internal doors."
+          },
+          "layer": 7
+        },
+        {
+          "id": "p10-text-8",
+          "name": "TextBox 11",
+          "type": "text",
+          "x": 414.23,
+          "y": 576.16,
+          "width": 222.97,
+          "height": 44.3,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Painting"
+          },
+          "layer": 8
+        },
+        {
+          "id": "p10-text-9",
+          "name": "TextBox 12",
+          "type": "text",
+          "x": 414.23,
+          "y": 735.21,
+          "width": 205.08,
+          "height": 44.3,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat",
+            "fontSize": 25,
+            "fontWeight": "600",
+            "color": "#D49415",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Flooring"
+          },
+          "layer": 9
+        },
+        {
+          "id": "p10-text-10",
+          "name": "TextBox 13",
+          "type": "text",
+          "x": 414.23,
+          "y": 790.46,
+          "width": 355.99,
+          "height": 145.53,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Montserrat Bold",
+            "fontSize": 10,
+            "fontWeight": "800",
+            "color": "#000000",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Choice of 450 x 450 cermaic tiles or choice of flooring from the builder's standard range (with upgrade options available)\nQuality carpet with premium underlay to bedrooms and media room."
+          },
+          "layer": 10
+        },
+        {
+          "id": "p10-text-11",
+          "name": "TextBox 14",
+          "type": "text",
+          "x": 45.87,
+          "y": 987.59,
+          "width": 700.92,
+          "height": 47.26,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 9,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Our Premier Inclusions Schedule outlines the fixtures, fittings, finishes and construction standards Included as the pricing basis for each Project. Each internal selection and any approved upgrades or downgrades will be confirmed during the Selections Process and documented in the Formal Quotation."
+          },
+          "layer": 11
+        },
+        {
+          "id": "p10-logo-12",
+          "name": "Freeform 16",
+          "type": "logo",
+          "x": 15.01,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image42.png",
+            "assetPath": "standard-inclusions/assets/image42.png",
+            "alt": "Freeform 16"
+          },
+          "layer": 12
+        },
+        {
+          "id": "p10-text-13",
+          "name": "TextBox 17",
+          "type": "text",
+          "x": 41.31,
+          "y": 1073.34,
+          "width": 126.31,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "1300 1231 456"
+          },
+          "layer": 13
+        },
+        {
+          "id": "p10-logo-14",
+          "name": "Freeform 19",
+          "type": "logo",
+          "x": 167.63,
+          "y": 1052.44,
+          "width": 15.85,
+          "height": 42.5,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image43.png",
+            "assetPath": "standard-inclusions/assets/image43.png",
+            "alt": "Freeform 19"
+          },
+          "layer": 14
+        },
+        {
+          "id": "p10-logo-15",
+          "name": "Freeform 21",
+          "type": "logo",
+          "x": 183.06,
+          "y": 1066.61,
+          "width": 30.86,
+          "height": 28.33,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image44.png",
+            "assetPath": "standard-inclusions/assets/image44.png",
+            "alt": "Freeform 21"
+          },
+          "layer": 15
+        },
+        {
+          "id": "p10-text-16",
+          "name": "TextBox 22",
+          "type": "text",
+          "x": 211.3,
+          "y": 1075.59,
+          "width": 156.49,
+          "height": 18.23,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Inter Bold",
+            "fontSize": 12,
+            "fontWeight": "800",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "goodbuild.com.au"
+          },
+          "layer": 16
+        },
+        {
+          "id": "p10-text-17",
+          "name": "TextBox 23",
+          "type": "text",
+          "x": 389.4,
+          "y": 1047.44,
+          "width": 185.88,
+          "height": 50.41,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "fontFamily": "Libre Baskerville Italics",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "color": "#092239",
+            "lineHeight": 1.12,
+            "textAlign": "left"
+          },
+          "data": {
+            "text": "Quality by standard, Personalised by choice."
+          },
+          "layer": 17
+        },
+        {
+          "id": "p10-logo-18",
+          "name": "Freeform 25",
+          "type": "logo",
+          "x": 619.32,
+          "y": 1044.31,
+          "width": 114.83,
+          "height": 61.68,
+          "rotation": 0,
+          "locked": false,
+          "visible": true,
+          "opacity": 1,
+          "style": {
+            "objectFit": "cover",
+            "borderRadius": 0
+          },
+          "data": {
+            "imageRef": "/standard-inclusions/assets/image18.png",
+            "assetPath": "standard-inclusions/assets/image18.png",
+            "alt": "Freeform 25"
+          },
+          "layer": 18
+        }
+      ]
+    }
+  ]
+}

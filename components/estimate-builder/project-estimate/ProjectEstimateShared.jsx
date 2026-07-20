@@ -45,4 +45,126 @@ export function LuxuryImageFrame({ src, label, wide = false, tall = false, deep 
   );
 }
 
+export function nativeProjectEstimateTextProps(blockId, contentKey, editorBridge = {}) {
+  if (!editorBridge?.editMode) return {};
+  const block = editorBridge.blockById?.[blockId] || {};
+  const selected = editorBridge.selectedBlockId === blockId;
+  const editing = editorBridge.editingBlockId === blockId;
+  const design = block.design || {};
+  const designStyle = projectEstimateNativeDesignStyle(design);
+  return {
+    "data-project-estimate-native-element": blockId,
+    contentEditable: editing,
+    suppressContentEditableWarning: true,
+    tabIndex: 0,
+    onMouseDown: (event) => {
+      event.stopPropagation();
+      editorBridge.onSelectBlock?.(blockId);
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[Project Estimate editor] Clicked object", {
+          pageId: editorBridge.pageId || "",
+          objectId: blockId,
+          type: block.type || "text",
+          visible: block.design?.hidden !== true,
+          locked: block.design?.locked === true,
+          zIndex: block.design?.zIndex || block.order || 0,
+        });
+      }
+    },
+    onDoubleClick: (event) => {
+      event.stopPropagation();
+      const target = event.currentTarget;
+      editorBridge.onSelectBlock?.(blockId);
+      editorBridge.onEditBlock?.(blockId);
+      requestAnimationFrame(() => placeCaretAtEnd(target));
+    },
+    onBlur: (event) => {
+      if (!editing) return;
+      editorBridge.onTextCommit?.(blockId, contentKey, String(event.currentTarget.innerText || "").trim());
+      editorBridge.onEditBlock?.("");
+    },
+    onKeyDown: (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.currentTarget.blur();
+        editorBridge.onEditBlock?.("");
+      }
+    },
+    style: {
+      ...designStyle,
+      outline: selected ? "1px solid #38bdf8" : "none",
+      cursor: editing ? "text" : "pointer",
+      borderRadius: 3,
+    },
+  };
+}
+
+export function nativeProjectEstimateImageProps(blockId, editorBridge = {}) {
+  if (!editorBridge?.editMode) return {};
+  const block = editorBridge.blockById?.[blockId] || {};
+  const selected = editorBridge.selectedBlockId === blockId;
+  return {
+    "data-project-estimate-native-element": blockId,
+    onMouseDown: (event) => {
+      event.stopPropagation();
+      editorBridge.onSelectBlock?.(blockId);
+      if (process.env.NODE_ENV !== "production") {
+        console.info("[Project Estimate editor] Clicked object", {
+          pageId: editorBridge.pageId || "",
+          objectId: blockId,
+          type: block.type || "image",
+          visible: block.design?.hidden !== true,
+          locked: block.design?.locked === true,
+          zIndex: block.design?.zIndex || block.order || 0,
+        });
+      }
+    },
+    onDoubleClick: (event) => {
+      event.stopPropagation();
+      editorBridge.onSelectBlock?.(blockId);
+      editorBridge.onReplaceImage?.(block);
+    },
+    style: {
+      outline: selected ? "1px solid #38bdf8" : "none",
+      cursor: selected ? "move" : "pointer",
+    },
+  };
+}
+
+function projectEstimateNativeDesignStyle(design = {}) {
+  const frame = design.frameEdited && design.frame ? {
+    position: "absolute",
+    left: Number(design.frame.x || 0),
+    top: Number(design.frame.y || 0),
+    width: Number(design.frame.width || 0) || undefined,
+    minHeight: Number(design.frame.height || 0) || undefined,
+    zIndex: Number(design.zIndex || 5),
+    boxSizing: "border-box",
+  } : {};
+  return {
+    ...frame,
+    ...(design.color ? { color: design.color } : {}),
+    ...(design.fontFamily ? { fontFamily: design.fontFamily } : {}),
+    ...(design.fontSize ? { fontSize: Number(design.fontSize) } : {}),
+    ...(design.fontWeight ? { fontWeight: Number(design.fontWeight) } : {}),
+    ...(design.fontStyle ? { fontStyle: design.fontStyle } : {}),
+    ...(design.textDecoration ? { textDecoration: design.textDecoration } : {}),
+    ...(design.textAlign ? { textAlign: design.textAlign } : {}),
+    ...(design.lineHeight ? { lineHeight: design.lineHeight } : {}),
+    ...(design.letterSpacing !== undefined ? { letterSpacing: Number(design.letterSpacing) } : {}),
+    ...(design.opacity !== undefined ? { opacity: Number(design.opacity) } : {}),
+    ...(design.backgroundColor ? { backgroundColor: design.backgroundColor } : {}),
+  };
+}
+
+function placeCaretAtEnd(target) {
+  const selection = window.getSelection?.();
+  const range = document.createRange?.();
+  if (!selection || !range || !target) return;
+  range.selectNodeContents(target);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export { styles };

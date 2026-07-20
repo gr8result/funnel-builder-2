@@ -26,8 +26,8 @@ import {
 } from "../../../lib/website-builder/projectStore";
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
-import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
-import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
+import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
@@ -95,6 +95,37 @@ function summarizeBuilderBlocksForSave(blocks = []) {
   const safeBlocks = Array.isArray(blocks) ? blocks : [];
   return {
     count: safeBlocks.length,
+    blockIds: safeBlocks.map((block, index) => ({
+      index,
+      id: block?.id || "",
+      type: block?.type || "",
+    })),
+    listBlocks: safeBlocks
+      .map((block, index) => String(block?.type || "") === BlockTypes.FEATURE_LIST ? {
+        index,
+        id: block?.id || "",
+        headline: stripHtmlForSaveDebug(block?.props?.headline || block?.props?.title || "").slice(0, 120),
+      } : null)
+      .filter(Boolean),
+    accordionImages: safeBlocks
+      .map((block, index) => {
+        const type = String(block?.type || "");
+        if (!["feature-accordion", "side-scroll-accordion", "scroll-stack"].includes(type)) return null;
+        const panels = Array.isArray(block?.props?.panels)
+          ? block.props.panels
+          : (Array.isArray(block?.props?.items) ? block.props.items : []);
+        return {
+          index,
+          id: block?.id || "",
+          type,
+          images: panels.map((panel, panelIndex) => ({
+            panelIndex,
+            panelId: panel?.id || "",
+            imageUrl: panel?.imageUrl || (typeof panel?.image === "string" ? panel.image : "") || panel?.image?.url || panel?.image?.src || panel?.media?.url || "",
+          })),
+        };
+      })
+      .filter(Boolean),
     missingIds: safeBlocks
       .map((block, index) => (!block?.id ? { index, type: block?.type || "" } : null))
       .filter(Boolean),
@@ -127,9 +158,109 @@ function summarizeBuilderBlocksForSave(blocks = []) {
   };
 }
 
+const PERSISTENCE_DIAGNOSTIC_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+const PERSISTENCE_DIAGNOSTIC_PAGE_NAME = "Website Builder";
+const MANUAL_SAVE_SOURCES = new Set(["manual-save"]);
+
+function isPersistenceDiagnosticPage(projectId, pageName) {
+  return String(projectId || "").replace(/^draft:/, "") === PERSISTENCE_DIAGNOSTIC_PROJECT_ID
+    && pageNameFromValue(pageName) === PERSISTENCE_DIAGNOSTIC_PAGE_NAME;
+}
+
+function isManualSaveSource(source) {
+  return MANUAL_SAVE_SOURCES.has(String(source || "").toLowerCase());
+}
+
+function createWebsiteSaveRequestId(source = "save") {
+  const randomPart = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+  return `wb-${String(source || "save").replace(/[^a-z0-9-]+/gi, "-")}-${Date.now()}-${randomPart}`;
+}
+
+function normalizeDeletedBlockTombstones(projectLike) {
+  const seen = new Set();
+  return (Array.isArray(projectLike?.deletedBlockIds) ? projectLike.deletedBlockIds : [])
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return { blockId: entry, pageId: "", deletedAt: "" };
+      }
+      if (!entry || typeof entry !== "object") return null;
+      return {
+        blockId: String(entry.blockId || entry.id || "").trim(),
+        pageId: String(entry.pageId || entry.pageName || "").trim(),
+        deletedAt: String(entry.deletedAt || "").trim(),
+        blockType: String(entry.blockType || entry.type || "").trim(),
+      };
+    })
+    .filter((entry) => {
+      if (!entry?.blockId) return false;
+      const key = `${entry.pageId}::${entry.blockId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function getSavedPageBlocks(projectLike, pageName) {
+  if (Array.isArray(projectLike?.pageBlocks?.[pageName])) return projectLike.pageBlocks[pageName];
+  if (Array.isArray(projectLike?.chaiData?.[pageName]?.blocks)) return projectLike.chaiData[pageName].blocks;
+  return null;
+}
+
+function buildDeletedBlockTombstones(projectLike, pageName, nextBlocks) {
+  const previousBlocks = getSavedPageBlocks(projectLike, pageName) || [];
+  const nextIds = new Set((Array.isArray(nextBlocks) ? nextBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
+  const now = new Date().toISOString();
+  const existing = normalizeDeletedBlockTombstones(projectLike);
+  const existingKeys = new Set(existing.map((entry) => `${entry.pageId}::${entry.blockId}`));
+  const additions = (Array.isArray(previousBlocks) ? previousBlocks : [])
+    .map((block) => {
+      const blockId = String(block?.id || "").trim();
+      if (!blockId || nextIds.has(blockId)) return null;
+      return {
+        blockId,
+        pageId: pageName,
+        deletedAt: now,
+        blockType: String(block?.type || ""),
+      };
+    })
+    .filter((entry) => entry && !existingKeys.has(`${entry.pageId}::${entry.blockId}`));
+  return additions.length ? [...existing, ...additions] : existing;
+}
+
+function filterDeletedBlocks(blocks, deletedBlockIds, pageName) {
+  if (!Array.isArray(blocks) || !Array.isArray(deletedBlockIds) || deletedBlockIds.length === 0) return blocks;
+  const tombstones = new Set(
+    deletedBlockIds
+      .filter((entry) => !entry?.pageId || entry.pageId === pageName)
+      .map((entry) => String(entry?.blockId || ""))
+      .filter(Boolean)
+  );
+  if (!tombstones.size) return blocks;
+  return blocks.filter((block) => !tombstones.has(String(block?.id || "")));
+}
+
 function normalizeFooterNavigationForProject(project) {
   if (!project || typeof project !== "object") return project;
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
+  const globalFooterBlock = project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
+  let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
+  if (String(project.id || "").replace(/^draft:/, "") === PERSISTENCE_DIAGNOSTIC_PROJECT_ID && normalizedGlobalFooterBlock?.type === "footer") {
+    const props = normalizedGlobalFooterBlock.props || {};
+    const currentNav = Array.isArray(props.navigationLinks) ? props.navigationLinks : [];
+    const currentCompany = Array.isArray(props.companyLinks || props.extraLinks) ? (props.companyLinks || props.extraLinks) : [];
+    normalizedGlobalFooterBlock = {
+      ...normalizedGlobalFooterBlock,
+      props: {
+        ...props,
+        navigationLinks: currentNav.length >= GR8_RESULT_FOOTER_NAVIGATION_LINKS.length ? currentNav : GR8_RESULT_FOOTER_NAVIGATION_LINKS,
+        companyLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
+        extraLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
+        footerNavManual: true,
+      },
+    };
+  }
   const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
     ? Object.fromEntries(
         Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
@@ -152,7 +283,8 @@ function normalizeFooterNavigationForProject(project) {
     ...project,
     pageBlocks,
     chaiData,
-    globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
+    globalFooterBlock: normalizedGlobalFooterBlock,
+    globalFooter: footerBlockToGlobalFooter(normalizedGlobalFooterBlock, footerContext) || project.globalFooter || null,
     globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
   };
 }
@@ -345,6 +477,16 @@ async function readApiJson(response) {
 
 function shouldUseEmergencyDraft(project, pageName, draft) {
   if (!draft || !Array.isArray(draft.blocks)) return false;
+  if (isPersistenceDiagnosticPage(project?.id, pageName)) {
+    logWebsiteBuilderSaveDebug("emergency draft recovery skipped for persistence diagnosis", {
+      projectId: project?.id || "",
+      pageName,
+      draftSavedAt: draft.savedAt || "",
+      source: draft.source || "",
+      blockCount: draft.blocks.length,
+    });
+    return false;
+  }
   const currentBlocks = Array.isArray(project?.pageBlocks?.[pageName]) ? project.pageBlocks[pageName] : [];
   const draftSavedAt = Date.parse(draft.savedAt || 0) || 0;
   const projectUpdatedAt = Date.parse(project?.updatedAt || project?.createdAt || 0) || 0;
@@ -693,13 +835,12 @@ export default function VisualBuilderPage() {
             const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
             const localBlocksForPage = Array.isArray(localProject?.pageBlocks?.[localPageName]) ? localProject.pageBlocks[localPageName] : [];
             const remoteBlocksForPage = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : [];
-            const localTypes = new Set(localBlocksForPage.map((block) => String(block?.type || "")));
-            const remoteHasMissingStructure = remoteBlocksForPage.some((block) => !localTypes.has(String(block?.type || "")));
+            const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
+            const filteredRemoteBlocksForPage = filterDeletedBlocks(remoteBlocksForPage, deletedBlockIds, remotePageName);
             const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
             const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
               localBlocksForPage.length === 0
               || remoteCleansInlineImages
-              || (remoteBlocksForPage.length > localBlocksForPage.length && remoteHasMissingStructure)
             );
 
             const shouldUseRemoteNow = shouldForceReload || !localProject || shouldRecoverRequestedPage;
@@ -715,6 +856,8 @@ export default function VisualBuilderPage() {
               shouldUseRemoteNow,
               local: summarizeBuilderBlocksForSave(localBlocksForPage),
               remote: summarizeBuilderBlocksForSave(remoteBlocksForPage),
+              filteredRemote: summarizeBuilderBlocksForSave(filteredRemoteBlocksForPage),
+              deletedBlockIds,
             });
             if (localProject?.id && !shouldForceReload) {
               const mergedProject = mergeRemotePageIntoProject(localProject, remoteProject, requestedPage);
@@ -746,13 +889,12 @@ export default function VisualBuilderPage() {
           const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
           const localBlocksForPage = Array.isArray(localPageBlocks[localPageName]) ? localPageBlocks[localPageName] : [];
           const remoteBlocksForPage = Array.isArray(remotePageBlocks[remotePageName]) ? remotePageBlocks[remotePageName] : [];
-          const localTypes = new Set(localBlocksForPage.map((block) => String(block?.type || "")));
-          const remoteHasMissingStructure = remoteBlocksForPage.some((block) => !localTypes.has(String(block?.type || "")));
+          const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
+          const filteredRemoteBlocksForPage = filterDeletedBlocks(remoteBlocksForPage, deletedBlockIds, remotePageName);
           const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
           const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
             localBlocksForPage.length === 0
             || remoteCleansInlineImages
-            || (remoteBlocksForPage.length > localBlocksForPage.length && remoteHasMissingStructure)
           );
 
           if (newPages.length === 0 && !shouldRecoverRequestedPage) {
@@ -768,7 +910,7 @@ export default function VisualBuilderPage() {
             if (remotePageBlocks[np.name]) mergedBlocks[np.name] = remotePageBlocks[np.name];
           }
           if (shouldRecoverRequestedPage) {
-            mergedBlocks[localPageName] = remoteBlocksForPage;
+            mergedBlocks[localPageName] = filteredRemoteBlocksForPage;
           }
           updateWebsiteProject(projectId, {
             pages: [...localPages, ...newPages],
@@ -831,7 +973,7 @@ export default function VisualBuilderPage() {
         flashNotice(`Recovered unsynced ${resolvedDraftPage} edits from disk`, "success", 6000);
       }
 
-      if (!cancelled && nextProject?.id) {
+      if (!cancelled && nextProject?.id && !isPersistenceDiagnosticPage(nextProject.id, resolvedDraftPage)) {
         const repairedProject = await fetchLocalProjectRepair(nextProject.id || projectId);
         if (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject)) {
           const repairedPageCount = Array.isArray(repairedProject?.pages) ? repairedProject.pages.length : 0;
@@ -973,21 +1115,19 @@ export default function VisualBuilderPage() {
       || requestedPage;
     const remotePageName = remotePages.find((p) => slugify(p.name) === slugify(requestedPage))?.name || localPageName;
     const localBlocks = Array.isArray(localProject?.pageBlocks?.[localPageName]) ? localProject.pageBlocks[localPageName] : [];
-    const remoteBlocks = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : null;
+    const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
+    const rawRemoteBlocks = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : null;
+    const remoteBlocks = Array.isArray(rawRemoteBlocks) ? filterDeletedBlocks(rawRemoteBlocks, deletedBlockIds, remotePageName) : null;
     const remoteHtml = remoteProject?.pagesContent?.[remotePageName];
     const remoteChai = remoteProject?.chaiData?.[remotePageName];
     const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
     const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
-    const localTypes = new Set(localBlocks.map((block) => String(block?.type || "")));
-    const remoteHasMissingStructure = Array.isArray(remoteBlocks)
-      && remoteBlocks.some((block) => !localTypes.has(String(block?.type || "")));
     const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
     const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && (
       remoteUpdatedAt > localUpdatedAt
       || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
       || localBlocks.length === 0
       || remoteCleansInlineImages
-      || (remoteBlocks.length > localBlocks.length && remoteHasMissingStructure)
     );
 
     const localNames = new Set(localPages.map((p) => p.name));
@@ -1015,6 +1155,7 @@ export default function VisualBuilderPage() {
       globalNavBlock: "globalNavBlock" in remoteProject ? remoteProject.globalNavBlock : localProject.globalNavBlock,
       globalFooterBlock: "globalFooterBlock" in remoteProject ? remoteProject.globalFooterBlock : localProject.globalFooterBlock,
       updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
+      deletedBlockIds,
     };
   }
 
@@ -1068,12 +1209,6 @@ export default function VisualBuilderPage() {
   function blocksMatchForSave(left, right) {
     if (!Array.isArray(left) || !Array.isArray(right)) return false;
     return stableJson(jsonRoundTrip(normalizeForSaveCompare(left))) === stableJson(jsonRoundTrip(normalizeForSaveCompare(right)));
-  }
-
-  function getSavedPageBlocks(projectLike, pageName) {
-    if (Array.isArray(projectLike?.pageBlocks?.[pageName])) return projectLike.pageBlocks[pageName];
-    if (Array.isArray(projectLike?.chaiData?.[pageName]?.blocks)) return projectLike.chaiData[pageName].blocks;
-    return null;
   }
 
   function buildClientContentHash(value) {
@@ -1141,6 +1276,17 @@ export default function VisualBuilderPage() {
   async function syncProjectToServer(nextProject, options = {}) {
     if (!session?.access_token || !nextProject?.id) return nextProject;
     const syncPageName = resolveProjectPageName(options?.pageName || activePage, nextProject);
+    const saveSource = options?.saveSource || (options?.force ? "manual-save" : "autosave");
+
+    if (isPersistenceDiagnosticPage(nextProject.id, syncPageName) && !isManualSaveSource(saveSource)) {
+      console.warn("[website-builder persistence diagnosis] blocked automatic server write", {
+        projectId: nextProject.id,
+        pageName: syncPageName,
+        saveSource,
+        force: !!options?.force,
+      });
+      return nextProject;
+    }
 
     // Throttle: if a sync is already in-flight, or fired too recently,
     // queue this project and bail. The queued sync fires automatically.
@@ -1191,7 +1337,7 @@ export default function VisualBuilderPage() {
         syncedProject = await saveWebsiteProjectToServer(session, nextProject, {
           pageName: options?.siteOnly ? "" : syncPageName,
           siteOnly: options?.siteOnly === true,
-          saveSource: options?.saveSource || (options?.force ? "manual-save" : "autosave"),
+          saveSource,
         });
       } catch (firstError) {
         // If the token is stale (401), refresh and retry once
@@ -1202,7 +1348,7 @@ export default function VisualBuilderPage() {
               syncedProject = await saveWebsiteProjectToServer(refreshed.session, nextProject, {
                 pageName: options?.siteOnly ? "" : syncPageName,
                 siteOnly: options?.siteOnly === true,
-                saveSource: options?.saveSource || (options?.force ? "manual-save" : "autosave"),
+                saveSource,
               });
             } else {
               throw firstError;
@@ -1268,7 +1414,7 @@ export default function VisualBuilderPage() {
     } catch (error) {
       console.warn("Could not sync website draft to the server", error);
       if (options?.force) {
-        flashNotice(error?.message || "Cloud sync failed. Work is local only and no server backup was created yet.", "error", 15000);
+        flashNotice("Saved locally. Cloud backup failed, so publish/live sync is not updated yet.", "error", 15000);
         return { ...(nextProject || {}), _saveError: true, _saveErrorMessage: error?.message || "Cloud sync failed" };
       }
       if (!options?.silent) {
@@ -1491,7 +1637,9 @@ export default function VisualBuilderPage() {
       setProject(latest);
       if (successMessage) flashNotice(successMessage);
       else clearNotice();
-      void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions });
+      void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).catch((error) => {
+        console.warn("[saveProjectPatch] background cloud sync failed after local save", error);
+      });
       return latest;
     }
 
@@ -1501,7 +1649,9 @@ export default function VisualBuilderPage() {
       setProject(savedProject);
       if (successMessage) flashNotice(successMessage);
       else clearNotice();
-      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions });
+      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).catch((error) => {
+        console.warn("[saveProjectPatch] background cloud sync failed after local save", error);
+      });
       return savedProject;
     }
 
@@ -1628,16 +1778,31 @@ export default function VisualBuilderPage() {
   async function saveChaiPage(data, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    const saveSource = options?.saveSource || "autosave";
     const safeData = data || buildStarterChaiData(currentProject, pageName);
     const safeBlocks = Array.isArray(safeData?.blocks) ? safeData.blocks : [];
+    const deletedBlockIds = buildDeletedBlockTombstones(currentProject, pageName, safeBlocks);
     const html = "";
 
-    await saveEmergencyPageDraft(currentProject?.id, pageName, {
-      blocks: safeBlocks,
-      html,
-      chaiData: safeData,
-      source: options?.saveSource || "autosave",
-    });
+    if (isPersistenceDiagnosticPage(currentProject?.id, pageName) && !isManualSaveSource(saveSource)) {
+      console.warn("[website-builder persistence diagnosis] blocked automatic page write", {
+        projectId: currentProject?.id || "",
+        pageName,
+        saveSource,
+        blockCount: safeBlocks.length,
+        recurringBlockPresent: safeBlocks.some((block) => String(block?.id || "") === "wb-core-features"),
+      });
+      return currentProject;
+    }
+
+    if (!isPersistenceDiagnosticPage(currentProject?.id, pageName) || isManualSaveSource(saveSource)) {
+      await saveEmergencyPageDraft(currentProject?.id, pageName, {
+        blocks: safeBlocks,
+        html,
+        chaiData: safeData,
+        source: saveSource,
+      });
+    }
 
     return saveProjectPatch(
       {
@@ -1653,9 +1818,10 @@ export default function VisualBuilderPage() {
           ...(currentProject?.pagesContent || {}),
           [pageName]: "",
         },
+        deletedBlockIds,
       },
       successMessage,
-      { pageName, saveSource: options?.saveSource || "autosave" }
+      { pageName, saveSource }
     );
   }
 
@@ -1672,6 +1838,74 @@ export default function VisualBuilderPage() {
         }
       }
       return { ...block, props: cleanProps };
+    });
+  }
+
+  const durableMediaFieldNames = new Set([
+    ...VIDEO_HERO_CANONICAL_MEDIA_FIELDS,
+    "videoUrl",
+    "videoStoragePath",
+    "videoFileName",
+    "videoMimeType",
+    "posterUrl",
+    "autoplay",
+    "muted",
+    "loop",
+    "controls",
+    "showControls",
+    "startWithAudioWhenAllowed",
+    "imageUrl",
+    "image",
+    "imageSrc",
+    "src",
+    "mediaUrl",
+    "desktopImage",
+    "backgroundImage",
+    "iconUrl",
+    "iconImage",
+    "logoUrl",
+    "storagePath",
+  ]);
+
+  function isTemporaryMediaValue(value) {
+    const text = String(value || "").trim();
+    return !text
+      || /^blob:/i.test(text)
+      || /^file:/i.test(text)
+      || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(text);
+  }
+
+  function preserveDurableMediaValues(nextValue, previousValue) {
+    if (Array.isArray(nextValue)) {
+      const previousItems = Array.isArray(previousValue) ? previousValue : [];
+      return nextValue.map((item, index) => preserveDurableMediaValues(item, previousItems[index]));
+    }
+    if (!nextValue || typeof nextValue !== "object") return nextValue;
+    const previousObject = previousValue && typeof previousValue === "object" ? previousValue : {};
+    const nextObject = { ...nextValue };
+    new Set([...Object.keys(previousObject), ...Object.keys(nextObject)]).forEach((key) => {
+      if (durableMediaFieldNames.has(key) && typeof previousObject[key] === "string" && !isTemporaryMediaValue(previousObject[key]) && isTemporaryMediaValue(nextObject[key])) {
+        nextObject[key] = previousObject[key];
+        return;
+      }
+      if (durableMediaFieldNames.has(key) && typeof previousObject[key] === "boolean" && nextObject[key] === undefined) {
+        nextObject[key] = previousObject[key];
+        return;
+      }
+      if (nextObject[key] && typeof nextObject[key] === "object") {
+        nextObject[key] = preserveDurableMediaValues(nextObject[key], previousObject[key]);
+      }
+    });
+    return nextObject;
+  }
+
+  function preserveSavedBlockMedia(nextBlocks, pageName, currentProject) {
+    const previousBlocks = getSavedPageBlocks(currentProject, pageName) || [];
+    const previousById = new Map((Array.isArray(previousBlocks) ? previousBlocks : []).map((block) => [String(block?.id || ""), block]));
+    return (Array.isArray(nextBlocks) ? nextBlocks : []).map((block, index) => {
+      const previousBlock = previousById.get(String(block?.id || "")) || previousBlocks[index] || null;
+      if (!previousBlock) return block;
+      return preserveDurableMediaValues(block, previousBlock);
     });
   }
 
@@ -1697,6 +1931,24 @@ export default function VisualBuilderPage() {
     return issues;
   }
 
+  function getVideoHeroSaveMismatches(expectedBlocks, storedBlocks) {
+    const storedById = new Map((Array.isArray(storedBlocks) ? storedBlocks : []).map((block) => [String(block?.id || ""), block]));
+    return (Array.isArray(expectedBlocks) ? expectedBlocks : [])
+      .filter((block) => String(block?.type || "") === "video-hero")
+      .map((block, index) => {
+        const expectedUrl = resolveVideoHeroUrl(block?.props || "");
+        if (!expectedUrl || isUnsafeVideoHeroUrl(expectedUrl)) return null;
+        const storedBlock = storedById.get(String(block?.id || "")) || (Array.isArray(storedBlocks) ? storedBlocks[index] : null);
+        const storedUrl = resolveVideoHeroUrl(storedBlock?.props || "");
+        return expectedUrl === storedUrl ? null : {
+          blockId: block?.id || "",
+          expectedUrl,
+          storedUrl,
+        };
+      })
+      .filter(Boolean);
+  }
+
   function saveBlockPage(blocks, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
@@ -1707,7 +1959,8 @@ export default function VisualBuilderPage() {
       return { _saveError: true, _saveErrorMessage: message, imageIssues };
     }
     const footerContext = buildFooterNavigationContext({ pages: currentProject.pages, logInvalid: true });
-    const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext));
+    const mediaPreservedBlocks = preserveSavedBlockMedia(Array.isArray(blocks) ? blocks : [], pageName, currentProject);
+    const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(mediaPreservedBlocks)), footerContext));
     return saveChaiPage({
       ...(currentProject?.chaiData?.[pageName] || {}),
       blocks: safeBlocks,
@@ -1722,6 +1975,7 @@ export default function VisualBuilderPage() {
     try {
       const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
       const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+      const saveSource = options?.saveSource || "manual-save";
       const isPreviewSave = options?.saveSource === "preview-autosave";
       if (!currentProject?.id) {
         console.error("[forceSaveBlockPage] project has no id — project state:", project);
@@ -1737,7 +1991,9 @@ export default function VisualBuilderPage() {
       }
 
       const footerContext = buildFooterNavigationContext({ pages: currentProject.pages, logInvalid: true });
-      const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(Array.isArray(blocks) ? blocks : [])), footerContext));
+      const mediaPreservedBlocks = preserveSavedBlockMedia(Array.isArray(blocks) ? blocks : [], pageName, currentProject);
+      const safeBlocks = normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(stripBlobUrls(mediaPreservedBlocks)), footerContext));
+      const deletedBlockIds = buildDeletedBlockTombstones(currentProject, pageName, safeBlocks);
 
       // Build the chai data payload
       const chaiData = {
@@ -1753,17 +2009,24 @@ export default function VisualBuilderPage() {
         chaiData: { ...(currentProject?.chaiData || {}), [pageName]: chaiData },
         pageBlocks: { ...(currentProject?.pageBlocks || {}), [pageName]: safeBlocks },
         pagesContent: { ...(currentProject?.pagesContent || {}), [pageName]: html },
+        deletedBlockIds,
         status: "saved",
       };
 
-      const projectWithPatch = normalizeFooterNavigationForProject({ ...currentProject, ...patch, updatedAt: new Date().toISOString() });
+      const projectWithPatch = normalizeFooterNavigationForProject({
+        ...currentProject,
+        ...patch,
+        __saveBaseUpdatedAt: currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
+        __saveRequestId: createWebsiteSaveRequestId(saveSource),
+        updatedAt: new Date().toISOString(),
+      });
 
-      if (!isPreviewSave) {
+      if (!isPreviewSave && (!isPersistenceDiagnosticPage(currentProject.id, pageName) || isManualSaveSource(saveSource))) {
         await saveEmergencyPageDraft(currentProject.id, pageName, {
           blocks: safeBlocks,
           html,
           chaiData,
-          source: options?.saveSource || "manual-save",
+          source: saveSource,
         });
       }
 
@@ -1785,11 +2048,12 @@ export default function VisualBuilderPage() {
       logWebsiteBuilderSaveDebug("force save payload prepared", {
         projectId: currentProject.id,
         pageName,
-        saveSource: options?.saveSource || "manual-save",
+        saveSource,
         isPreviewSave,
         activePage,
         resolvedPageName: pageName,
         payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+        deletedBlockIds,
       });
       console.info("[website-builder save] editor payload", summarizeProjectForVersion(projectToSync, pageName));
 
@@ -1797,12 +2061,11 @@ export default function VisualBuilderPage() {
       // cannot treat an older cache entry as the source of truth and roll blocks back.
       let serverSynced = null;
       try {
-        serverSynced = await syncProjectToServer(projectToSync, { silent: true, force: true, pageName, saveSource: options?.saveSource || "manual-save" });
+        serverSynced = await syncProjectToServer(projectToSync, { silent: true, force: true, pageName, saveSource });
       } catch (serverErr) {
         console.warn("[forceSaveBlockPage] server sync failed:", serverErr);
-        flashNotice("Could not save to cloud. Work is local only and no server backup was created yet.", "error", 15000);
         if (isPreviewSave) {
-          return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: serverErr?.message || "Cloud sync failed" };
+          return { ...projectWithPatch, _cloudSaveWarning: serverErr?.message || "Cloud sync failed" };
         }
         // Still write to localStorage so the preview tab can load the latest local copy.
         if (!getWebsiteProject(currentProject.id)) {
@@ -1810,14 +2073,21 @@ export default function VisualBuilderPage() {
         }
         updateWebsiteProject(currentProject.id, projectWithPatch);
         setProject(projectWithPatch);
-        return { ...projectWithPatch, _saveError: true, _saveErrorMessage: serverErr?.message || "Cloud sync failed" };
+        flashNotice(`Saved locally ✓ ${pageName}. Cloud backup failed; retry Save when the server is reachable.`, "success", 10000);
+        return { ...projectWithPatch, _cloudSaveWarning: serverErr?.message || "Cloud sync failed" };
       }
 
       if (serverSynced?._saveError) {
-        if (isPreviewSave) return serverSynced;
+        if (isPreviewSave) {
+          const localPreviewProject = { ...projectWithPatch, _cloudSaveWarning: serverSynced._saveErrorMessage || "Cloud sync failed" };
+          updateWebsiteProject(currentProject.id, localPreviewProject);
+          setProject(localPreviewProject);
+          return localPreviewProject;
+        }
         updateWebsiteProject(currentProject.id, projectWithPatch);
         setProject(projectWithPatch);
-        return serverSynced;
+        flashNotice(`Saved locally ✓ ${pageName}. Cloud backup failed; retry Save when the server is reachable.`, "success", 10000);
+        return { ...projectWithPatch, _cloudSaveWarning: serverSynced._saveErrorMessage || "Cloud sync failed" };
       }
 
       logWebsiteBuilderSaveDebug("server sync response received", {
@@ -1825,6 +2095,7 @@ export default function VisualBuilderPage() {
         pageName,
         updatedAt: serverSynced?.updatedAt || "",
         stored: summarizeBuilderBlocksForSave(getSavedPageBlocks(serverSynced, pageName) || []),
+        deletedBlockIds: normalizeDeletedBlockTombstones(serverSynced),
       });
 
       let verifiedProject = null;
@@ -1840,6 +2111,10 @@ export default function VisualBuilderPage() {
           updatedAt: verifiedProject?.updatedAt || "",
           stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
           matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+          extraStoredBlockIds: (Array.isArray(verifiedBlocks) ? verifiedBlocks : [])
+            .map((block) => String(block?.id || ""))
+            .filter((id) => id && !(new Set(normalizedBlocks.map((block) => String(block?.id || "")).filter(Boolean))).has(id)),
+          deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
         });
         if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks) && session?.access_token) {
           await waitForSaveVerification();
@@ -1851,6 +2126,7 @@ export default function VisualBuilderPage() {
             updatedAt: verifiedProject?.updatedAt || "",
             stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
             matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+            deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
           });
         }
         if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks)) {
@@ -1860,13 +2136,16 @@ export default function VisualBuilderPage() {
             verifiedBlocks = syncedBlocks;
             verifiedSaveMatches = true;
           } else {
-            console.error("[forceSaveBlockPage] save verification mismatch; keeping staged save as local source.", {
-            pageName,
-            editorBlockCount: normalizedBlocks.length,
-            verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
-            syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
-          });
-            const message = `Save verification failed for ${pageName}. The cloud copy did not contain the text blocks that were just saved.`;
+            const message = "Save failed verification. Your current page has not been replaced.";
+            console.error("[forceSaveBlockPage] save verification mismatch after cloud sync; blocking saved status.", {
+              pageName,
+              editorBlockCount: normalizedBlocks.length,
+              verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
+              syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
+              payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
+              synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+            });
             flashNotice(message, "error", 15000);
             return {
               ...projectWithPatch,
@@ -1889,7 +2168,7 @@ export default function VisualBuilderPage() {
           verifiedProject = serverSynced;
           verifiedSaveMatches = true;
         } else {
-          const message = `Save verification failed for ${pageName}. Could not confirm the saved text in cloud storage.`;
+          const message = "Save failed verification. Your current page has not been replaced.";
           flashNotice(message, "error", 15000);
           return {
             ...projectWithPatch,
@@ -1898,9 +2177,32 @@ export default function VisualBuilderPage() {
             _saveDebug: {
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+              error: verifyErr?.message || "Save verification failed",
             },
           };
         }
+      }
+
+      const verifiedVideoBlocks = getSavedPageBlocks(verifiedProject || serverSynced, pageName);
+      const videoMismatches = getVideoHeroSaveMismatches(normalizedBlocks, verifiedVideoBlocks);
+      if (videoMismatches.length) {
+        const message = `Video was not saved for ${pageName}. The cloud copy is missing the Video Hero URL.`;
+        console.error("[forceSaveBlockPage] video hero save verification mismatch", {
+          projectId: currentProject.id,
+          pageName,
+          mismatches: videoMismatches,
+        });
+        flashNotice(message, "error", 15000);
+        return {
+          ...projectWithPatch,
+          _saveError: true,
+          _saveErrorMessage: message,
+          _saveDebug: {
+            payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+            verified: summarizeBuilderBlocksForSave(verifiedVideoBlocks || []),
+            videoMismatches,
+          },
+        };
       }
 
       const verifiedPagePatch = verifiedProject && typeof verifiedProject === "object" ? {
@@ -1923,6 +2225,9 @@ export default function VisualBuilderPage() {
           },
         } : {}),
         updatedAt: verifiedProject.updatedAt || projectWithPatch.updatedAt,
+        deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject).length
+          ? normalizeDeletedBlockTombstones(verifiedProject)
+          : deletedBlockIds,
         status: "saved",
       } : {};
 
@@ -2093,14 +2398,20 @@ export default function VisualBuilderPage() {
       return;
     }
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
-    saveProjectPatch({ [field]: block }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true, saveSource: "manual-save" });
+    const footerPatch = role === "footer"
+      ? { globalFooter: footerBlockToGlobalFooter(block, buildFooterNavigationContext({ pages: project.pages || [] })) }
+      : {};
+    saveProjectPatch({ [field]: block, ...footerPatch }, `Saved as global ${role === "nav" ? "navigation" : "footer"} — shows on every page`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function updateGlobalBlock(role, block) {
     if (!project?.id) return;
     const field = role === "nav" ? "globalNavBlock" : "globalFooterBlock";
     // block === null means "delete this global block"
-    saveProjectPatch({ [field]: block ?? null }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true, saveSource: "manual-save" });
+    const footerPatch = role === "footer"
+      ? { globalFooter: block ? footerBlockToGlobalFooter(block, buildFooterNavigationContext({ pages: project.pages || [] })) : null }
+      : {};
+    saveProjectPatch({ [field]: block ?? null, ...footerPatch }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true, saveSource: "manual-save" });
   }
 
   function applyDesignPreset(presetName) {
@@ -2131,9 +2442,21 @@ export default function VisualBuilderPage() {
 
     if (!currentBlocks[blockIndex]) return;
 
-    const existingProps = currentBlocks[blockIndex]?.props || {};
+    const existingBlock = currentBlocks[blockIndex] || {};
+    const existingProps = existingBlock?.props || {};
     const nextProps = applyAssetToProps(existingProps, fieldKey, normalizedAsset);
-    nextProps[fieldKey] = String(normalizedAsset.src || "").startsWith("data:") ? "" : normalizedAsset.src;
+    const selectedSrc = String(normalizedAsset.src || "").startsWith("data:") ? "" : normalizedAsset.src;
+    if (String(existingBlock?.type || "") === "video-hero" && ["__video_hero_src__", "videoUrl", "videoSrc", "mediaUrl", "src", "url"].includes(String(fieldKey || ""))) {
+      Object.assign(nextProps, mergeVideoHeroProps(existingProps, {
+        videoUrl: selectedSrc,
+        videoStoragePath: normalizedAsset.storagePath || existingProps.videoStoragePath || "",
+        videoFileName: normalizedAsset.name || existingProps.videoFileName || "",
+        videoMimeType: normalizedAsset.type || existingProps.videoMimeType || "",
+        videoUpdatedAt: new Date().toISOString(),
+      }));
+    } else {
+      nextProps[fieldKey] = selectedSrc;
+    }
 
     currentBlocks[blockIndex] = {
       ...currentBlocks[blockIndex],
@@ -2332,6 +2655,8 @@ export default function VisualBuilderPage() {
     activePageBlocks.length,
     activePageBlocks.map((block) => block?.id || block?.type || "").join(":"),
   ].join("|");
+  const builderDebugVersion = versionStatus?.savedVersion || studioProject?.projectVersion || publication?.projectVersion || "Unknown";
+  const builderDebugSavedAt = versionStatus?.savedAt || studioProject?.savedAt || publication?.savedAt || studioProject?.updatedAt || "Unknown";
 
   return (
     <>
@@ -2574,16 +2899,18 @@ export default function VisualBuilderPage() {
                 ) : null}
               </div>
 
-              {(versionStatus || publication?.projectVersion || publication?.publishedVersion) ? (
-                <div style={styles.publishVersionPanel}>
-                  <span>Saved version: <strong>{versionStatus?.savedVersion || publication?.projectVersion || "Unknown"}</strong></span>
+              <div style={styles.publishVersionPanel}>
+                  <span>Page version: <strong>{builderDebugVersion}</strong></span>
+                  <span>Saved version: <strong>{versionStatus?.savedVersion || publication?.projectVersion || studioProject?.projectVersion || "Unknown"}</strong></span>
                   <span>Published version: <strong>{versionStatus?.publishedVersion || publication?.publishedVersion || "Not published"}</strong></span>
                   <span>Published at: <strong>{versionStatus?.publishedAt || publication?.publishedAt || "Not published"}</strong></span>
+                  <span>Loaded from: <strong>{session?.access_token ? "database" : "local cache"}</strong></span>
+                  <span>Last saved: <strong>{builderDebugSavedAt}</strong></span>
+                  <span>Block count: <strong>{activePageBlocks.length}</strong></span>
                   {(versionStatus?.matches === false || (publication?.projectVersion && publication?.publishedVersion && publication.projectVersion !== publication.publishedVersion)) ? (
                     <strong style={styles.publishVersionWarning}>Live website is not using the latest saved version.</strong>
                   ) : null}
                 </div>
-              ) : null}
 
               {publication?.customDomainInstructions ? (
                 <div style={styles.publishDnsCard}>

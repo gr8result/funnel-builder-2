@@ -1,0 +1,157 @@
+{
+  "id": "premier-inclusions-page-02",
+  "name": "Page 02",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p2-image-0",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": -117.58,
+      "y": -41.49,
+      "width": 1397.64,
+      "height": 1164.35,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image19.jpeg",
+        "assetPath": "standard-inclusions/assets/image19.jpeg",
+        "alt": "Freeform 3"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p2-image-1",
+      "name": "Freeform 5",
+      "type": "image",
+      "x": -172.02,
+      "y": -252.58,
+      "width": 872.21,
+      "height": 765.78,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image20.png",
+        "assetPath": "standard-inclusions/assets/image20.png",
+        "alt": "Freeform 5"
+      },
+      "layer": 1
+    },
+    {
+      "id": "p2-text-2",
+      "name": "TextBox 6",
+      "type": "text",
+      "x": 68.32,
+      "y": 32.08,
+      "width": 365.41,
+      "height": 43.51,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Fraunces Italics",
+        "fontSize": 32,
+        "fontWeight": "600",
+        "color": "#003C64",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Premier Inclusions"
+      },
+      "layer": 2
+    },
+    {
+      "id": "p2-text-3",
+      "name": "TextBox 7",
+      "type": "text",
+      "x": 68.32,
+      "y": 71.6,
+      "width": 364.62,
+      "height": 182.15,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Open Sauce",
+        "fontSize": 11,
+        "fontWeight": "600",
+        "color": "#003C64",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Our Premier Inclusions provide the perfect balance of quality, style and value, forming the standard specification for every Project Estimate. During your Selections Process, you'll personalise your home by selecting colours, finishes and approved upgrades, with all final inclusions confirmed in your Formal Quotation before your Building Contract is prepared."
+      },
+      "layer": 3
+    },
+    {
+      "id": "p2-text-4",
+      "name": "TextBox 8",
+      "type": "text",
+      "x": 749.89,
+      "y": 1045.8,
+      "width": 12,
+      "height": 14.23,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Open Sauce",
+        "fontSize": 7,
+        "fontWeight": "600",
+        "color": "#003C64",
+        "lineHeight": 1.12,
+        "textAlign": "right"
+      },
+      "data": {
+        "text": "2"
+      },
+      "layer": 4
+    },
+    {
+      "id": "p2-logo-5",
+      "name": "Freeform 9",
+      "type": "logo",
+      "x": 625.5,
+      "y": 989.93,
+      "width": 126.78,
+      "height": 84.47,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image18.png",
+        "assetPath": "standard-inclusions/assets/image18.png",
+        "alt": "Freeform 9"
+      },
+      "layer": 5
+    }
+  ]
+}

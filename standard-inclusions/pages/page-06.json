@@ -1,0 +1,109 @@
+{
+  "id": "premier-inclusions-page-06",
+  "name": "Page 06",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": null
+  },
+  "objects": [
+    {
+      "id": "p6-image-0",
+      "name": "Freeform 2",
+      "type": "image",
+      "x": 410.04,
+      "y": 0,
+      "width": 664.98,
+      "height": 1111.51,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image45.jpeg",
+        "assetPath": "standard-inclusions/assets/image45.jpeg",
+        "alt": "Freeform 2"
+      },
+      "layer": 0
+    },
+    {
+      "id": "p6-image-1",
+      "name": "Freeform 3",
+      "type": "image",
+      "x": 34.86,
+      "y": 913.6,
+      "width": 351.67,
+      "height": 197.91,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "objectFit": "cover",
+        "borderRadius": 0
+      },
+      "data": {
+        "imageRef": "/standard-inclusions/assets/image46.jpeg",
+        "assetPath": "standard-inclusions/assets/image46.jpeg",
+        "alt": "Freeform 3"
+      },
+      "layer": 1
+    },
+    {
+      "id": "p6-text-2",
+      "name": "TextBox 4",
+      "type": "text",
+      "x": 34.86,
+      "y": 93.13,
+      "width": 329.77,
+      "height": 797.98,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 12,
+        "fontWeight": "600",
+        "color": "#000000",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Create a luxurious look for your dream\nkitchen, with a superb selection of\nclassic cabinetry, quality Blanco appliances, designer tapware and premium finishes.\nCUPBOARDS\nSquare edge door and drawer fronts with PVC edging and selected door handles from Builders Range all with soft close options as standard.\nOverhead cupboards and microwave provision.\nLaminated Pantry unit (plan specific) (2100mm high) with four 5 Melamine shelves\nPainted MDF bulkheads to ceiling).\n600mm wide cupboards with White melamine internal linings including one (1) intermediate shelf and a bank of four (4) drawers.\nPlan specific: Laminated pantry unit (2100mm high) with White melamine shelves OR Walk-In\nPantry with 5 White melamine shelves.\nLaminate colours in Polytec or Laminex Smooth, Sheen, Matt, and Woodmatt finishes.\nSPLASH BACK\nUp to 710mm above all benchtops from standard Builders Range.\nCeramic tiles from Builders Range.\nFixed Glass Window Splash back plan specific.\nFRIDGE\nWater connection to fridge space standard.\nTwo door laminated ‘push to open’ overhead cupboards above fridge."
+      },
+      "layer": 2
+    },
+    {
+      "id": "p6-text-3",
+      "name": "TextBox 5",
+      "type": "text",
+      "x": 27.08,
+      "y": 0.34,
+      "width": 337.56,
+      "height": 95.79,
+      "rotation": 0,
+      "locked": false,
+      "visible": true,
+      "opacity": 1,
+      "style": {
+        "fontFamily": "Montserrat",
+        "fontSize": 53,
+        "fontWeight": "600",
+        "color": "#D49415",
+        "lineHeight": 1.12,
+        "textAlign": "left"
+      },
+      "data": {
+        "text": "Kitchen"
+      },
+      "layer": 3
+    }
+  ]
+}

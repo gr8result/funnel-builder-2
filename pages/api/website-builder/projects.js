@@ -11,10 +11,11 @@ import {
 } from "../../../lib/website-builder/supabaseSiteStorage";
 import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
-import { buildFooterNavigationContext, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
 
 const TABLE_NAME = "published_websites";
+const GR8_RESULT_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
 
 export const config = {
   api: {
@@ -188,14 +189,71 @@ function syncPlatformPricingPage(project) {
   };
 }
 
+function normalizeDeletedBlockTombstones(project) {
+  const seen = new Set();
+  return (Array.isArray(project?.deletedBlockIds) ? project.deletedBlockIds : [])
+    .map((entry) => {
+      if (typeof entry === "string") return { blockId: entry, pageId: "", deletedAt: "" };
+      if (!entry || typeof entry !== "object") return null;
+      return {
+        blockId: String(entry.blockId || entry.id || "").trim(),
+        pageId: String(entry.pageId || entry.pageName || "").trim(),
+        deletedAt: String(entry.deletedAt || "").trim(),
+        blockType: String(entry.blockType || entry.type || "").trim(),
+      };
+    })
+    .filter((entry) => {
+      if (!entry?.blockId) return false;
+      const key = `${entry.pageId}::${entry.blockId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function applyDeletedBlockTombstones(blocks, deletedBlockIds, pageName) {
+  if (!Array.isArray(blocks)) return blocks;
+  if (!Array.isArray(deletedBlockIds) || deletedBlockIds.length === 0) return blocks;
+  const ids = new Set(
+    deletedBlockIds
+      .filter((entry) => !entry?.pageId || entry.pageId === pageName)
+      .map((entry) => String(entry?.blockId || ""))
+      .filter(Boolean)
+  );
+  if (!ids.size) return blocks;
+  return blocks.filter((block) => !ids.has(String(block?.id || "")));
+}
+
 function normalizeProjectBlocksForSave(project) {
   if (!project || typeof project !== "object") return project;
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
+  const globalFooterBlock = project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
+  let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
+  if (String(project.id || "").replace(/^draft:/, "") === GR8_RESULT_PROJECT_ID && normalizedGlobalFooterBlock?.type === "footer") {
+    const props = normalizedGlobalFooterBlock.props || {};
+    const currentNav = Array.isArray(props.navigationLinks) ? props.navigationLinks : [];
+    const currentCompany = Array.isArray(props.companyLinks || props.extraLinks) ? (props.companyLinks || props.extraLinks) : [];
+    normalizedGlobalFooterBlock = {
+      ...normalizedGlobalFooterBlock,
+      props: {
+        ...props,
+        navigationLinks: currentNav.length >= GR8_RESULT_FOOTER_NAVIGATION_LINKS.length ? currentNav : GR8_RESULT_FOOTER_NAVIGATION_LINKS,
+        companyLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
+        extraLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
+        footerNavManual: true,
+      },
+    };
+  }
+  const deletedBlockIds = normalizeDeletedBlockTombstones(project);
   const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
     ? Object.fromEntries(
         Object.entries(project.pageBlocks).map(([pageName, blocks]) => [
           pageName,
-          normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(blocks), footerContext)),
+          applyDeletedBlockTombstones(
+            normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(blocks), footerContext)),
+            deletedBlockIds,
+            pageName
+          ),
         ])
       )
     : project.pageBlocks;
@@ -204,7 +262,14 @@ function normalizeProjectBlocksForSave(project) {
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
           pageData && typeof pageData === "object" && Array.isArray(pageData.blocks)
-            ? { ...pageData, blocks: normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext)) }
+            ? {
+                ...pageData,
+                blocks: applyDeletedBlockTombstones(
+                  normalizeVideoHeroBlocksForPersistence(normalizeFooterNavigationBlocks(normalizeAccordionBlocks(pageData.blocks), footerContext)),
+                  deletedBlockIds,
+                  pageName
+                ),
+              }
             : pageData,
         ])
       )
@@ -213,7 +278,9 @@ function normalizeProjectBlocksForSave(project) {
     ...project,
     pageBlocks,
     chaiData,
-    globalFooterBlock: normalizeFooterNavigationBlock(project.globalFooterBlock, footerContext),
+    deletedBlockIds,
+    globalFooterBlock: normalizedGlobalFooterBlock,
+    globalFooter: footerBlockToGlobalFooter(normalizedGlobalFooterBlock, footerContext) || project.globalFooter || null,
     globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
   };
 }
@@ -221,7 +288,7 @@ function normalizeProjectBlocksForSave(project) {
 function countFooterNavLinks(project) {
   const block = project?.globalFooterBlock;
   if (!block || block.type !== "footer") return 0;
-  const links = block.props?.navLinks;
+  const links = block.props?.navigationLinks;
   return Array.isArray(links) ? links.length : 0;
 }
 
@@ -243,11 +310,64 @@ function mapProjectRow(row) {
 
 function compactProjectForDb(project) {
   if (!project || typeof project !== "object") return {};
-  const { pageBlocks: _pageBlocks, pagesContent: _pagesContent, chaiData: _chaiData, brandAssets: _brandAssets, ...site } = project;
+  const {
+    pageBlocks: _pageBlocks,
+    pagesContent: _pagesContent,
+    chaiData: _chaiData,
+    brandAssets: _brandAssets,
+    __saveBaseUpdatedAt: _saveBaseUpdatedAt,
+    __saveRequestId: _saveRequestId,
+    ...site
+  } = project;
   return {
     ...site,
     __splitStorage: true,
     storageVersion: 2,
+  };
+}
+
+function getProjectPageBlocks(project, pageName) {
+  if (!project || !pageName) return [];
+  if (Array.isArray(project?.pageBlocks?.[pageName])) return project.pageBlocks[pageName];
+  if (Array.isArray(project?.chaiData?.[pageName]?.blocks)) return project.chaiData[pageName].blocks;
+  return [];
+}
+
+function summarizeBlockList(blocks) {
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
+  return {
+    count: safeBlocks.length,
+    blockIds: safeBlocks.map((block, index) => ({
+      index,
+      id: block?.id || "",
+      type: block?.type || "",
+    })),
+    listBlocks: safeBlocks
+      .map((block, index) => String(block?.type || "") === "feature-list" ? {
+        index,
+        id: block?.id || "",
+        headline: String(block?.props?.headline || block?.props?.title || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120),
+      } : null)
+      .filter(Boolean),
+    accordionImages: safeBlocks
+      .map((block, index) => {
+        const type = String(block?.type || "");
+        if (!["feature-accordion", "side-scroll-accordion", "scroll-stack"].includes(type)) return null;
+        const panels = Array.isArray(block?.props?.panels)
+          ? block.props.panels
+          : (Array.isArray(block?.props?.items) ? block.props.items : []);
+        return {
+          index,
+          id: block?.id || "",
+          type,
+          images: panels.map((panel, panelIndex) => ({
+            panelIndex,
+            panelId: panel?.id || "",
+            imageUrl: panel?.imageUrl || panel?.image?.url || panel?.image?.src || panel?.media?.url || "",
+          })),
+        };
+      })
+      .filter(Boolean),
   };
 }
 
@@ -311,7 +431,8 @@ async function handler(req, res) {
         throw error;
       }
 
-      // Try draft-prefixed row first, then fall back to the raw project_id (published sites)
+      // Draft data is the only editable source. Published rows are never used
+      // to hydrate builder state.
       const draftResult = await baseSelect
         .eq("project_id", draftProjectId)
         .limit(1)
@@ -330,22 +451,11 @@ async function handler(req, res) {
         return res.status(200).json({ ok: true, project: migrated || mapped });
       }
 
-      // Fall back: look up by the raw (non-draft-prefixed) project_id for published sites
-      const publishedResult = await supabaseAdmin
-        .from(TABLE_NAME)
-        .select("id, project_id, name, site_data, created_at, updated_at")
-        .eq("user_id", userId)
-        .eq("project_id", projectId)
-        .limit(1)
-        .maybeSingle();
-
-      if (publishedResult.error) {
-        return res.status(500).json({ ok: false, error: toErrorMessage(publishedResult.error, "Could not load website project") });
-      }
-
-      const mapped = mapProjectRow(publishedResult.data);
-      const migrated = mapped ? await migrateWebsiteProjectToSplitStorage(userId, mapped, { pageName: requestedPage }) : null;
-      return res.status(200).json({ ok: true, project: migrated || mapped });
+      return res.status(404).json({
+        ok: false,
+        error: "Website draft project was not found. Published website data is not used to hydrate the editable builder.",
+        code: "WEBSITE_DRAFT_PROJECT_NOT_FOUND",
+      });
     }
 
     // List all projects — include both drafts and published sites
@@ -382,6 +492,7 @@ async function handler(req, res) {
       seen.set(key, preferProjectEntry(seen.get(key), { mapped: splitProject, isDraft: true, source: "split" }));
     }
     for (const row of Array.isArray(result.data) ? result.data : []) {
+      if (!String(row.project_id || "").startsWith("draft:")) continue;
       const mapped = mapProjectRow(row);
       if (!mapped?.id) continue;
       const isDraft = String(row.project_id || "").startsWith("draft:");
@@ -420,6 +531,9 @@ async function handler(req, res) {
     const requestedPage = pageNameFromValue(req.body?.pageName || req.query?.page || "");
     const siteOnly = req.body?.siteOnly === true;
     const saveSource = String(req.body?.saveSource || req.query?.saveSource || (siteOnly ? "site-save" : "autosave")).trim();
+    const requestId = String(req.body?.requestId || project?.__saveRequestId || "").trim();
+    const pageVersion = String(req.body?.pageVersion || project?.projectVersion || "").trim();
+    const baseUpdatedAt = String(req.body?.baseUpdatedAt || project?.__saveBaseUpdatedAt || "").trim();
 
     const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
@@ -433,12 +547,47 @@ async function handler(req, res) {
       projectVersion: versionMeta.projectVersion,
       contentHash: versionMeta.contentHash,
     };
+    const incomingBlocks = requestedPage ? getProjectPageBlocks(nextProject, requestedPage) : [];
+    console.info("[website-builder save] incoming payload", {
+      projectId,
+      draftProjectId,
+      pageName: requestedPage || "",
+      saveSource,
+      siteOnly,
+      pageVersion: pageVersion || nextProject.projectVersion,
+      baseUpdatedAt,
+      requestId,
+      savedAt: nextProject.savedAt,
+      deletedBlockIds: normalizeDeletedBlockTombstones(nextProject),
+      page: summarizeBlockList(incomingBlocks),
+    });
 
     let currentSplitProject = null;
     try {
       currentSplitProject = await loadFullSplitWebsiteProject(userId, projectId);
     } catch {
       currentSplitProject = null;
+    }
+    const currentSplitUpdatedAt = currentSplitProject?.updatedAt || currentSplitProject?.savedAt || "";
+    const incomingBaseMs = Date.parse(baseUpdatedAt || 0) || 0;
+    const currentSplitMs = Date.parse(currentSplitUpdatedAt || 0) || 0;
+    if (baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs && saveSource !== "manual-save") {
+      console.warn("[website-builder save] rejected stale split-storage write before page upsert", {
+        projectId,
+        pageName: requestedPage || "",
+        saveSource,
+        requestId,
+        baseUpdatedAt,
+        currentUpdatedAt: currentSplitUpdatedAt,
+      });
+      return res.status(409).json({
+        ok: false,
+        error: "Rejected stale website page save because split storage has a newer version.",
+        code: "STALE_WEBSITE_PAGE_SAVE",
+        requestId,
+        baseUpdatedAt,
+        currentUpdatedAt: currentSplitUpdatedAt,
+      });
     }
     const previousFooterLinkCount = countFooterNavLinks(currentSplitProject);
     const nextFooterLinkCount = countFooterNavLinks(nextProject);
@@ -458,7 +607,7 @@ async function handler(req, res) {
 
     const existing = await supabaseAdmin
       .from(TABLE_NAME)
-      .select("id, published, published_at, custom_domain, domain_status, slug, primary_domain, site_data")
+      .select("id, published, published_at, custom_domain, domain_status, slug, primary_domain, site_data, updated_at")
       .eq("user_id", userId)
       .eq("project_id", draftProjectId)
       .limit(1)
@@ -471,19 +620,43 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(existing.error, "Could not load website draft") });
     }
 
-    // Preserve any blocks marked _pinned:true that exist in the DB but are missing from the incoming payload.
-    // This prevents auto-saves from the visual builder from removing manually-pinned blocks.
+    const currentUpdatedAt = existing.data?.updated_at || existing.data?.site_data?.updatedAt || "";
+    const currentMs = Date.parse(currentUpdatedAt || 0) || 0;
+    if (baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs && saveSource !== "manual-save") {
+      console.warn("[website-builder save] rejected stale write", {
+        projectId,
+        pageName: requestedPage || "",
+        saveSource,
+        requestId,
+        baseUpdatedAt,
+        currentUpdatedAt,
+      });
+      return res.status(409).json({
+        ok: false,
+        error: "Rejected stale website page save because the database has a newer version.",
+        code: "STALE_WEBSITE_PAGE_SAVE",
+        requestId,
+        baseUpdatedAt,
+        currentUpdatedAt,
+      });
+    }
+
     if (!requestedPage && existing.data?.site_data?.pageBlocks && nextProject.pageBlocks) {
       const dbPageBlocks = existing.data.site_data.pageBlocks;
       for (const [pageName, dbBlocks] of Object.entries(dbPageBlocks)) {
         if (!Array.isArray(dbBlocks)) continue;
         const pinnedBlocks = dbBlocks.filter((b) => b && b._pinned);
         if (pinnedBlocks.length === 0) continue;
-        const incomingBlocks = Array.isArray(nextProject.pageBlocks[pageName]) ? nextProject.pageBlocks[pageName] : [];
-        const incomingIds = new Set(incomingBlocks.map((b) => b?.id).filter(Boolean));
+        const pageIncomingBlocks = Array.isArray(nextProject.pageBlocks[pageName]) ? nextProject.pageBlocks[pageName] : [];
+        const incomingIds = new Set(pageIncomingBlocks.map((b) => b?.id).filter(Boolean));
         const missing = pinnedBlocks.filter((b) => !incomingIds.has(b.id));
         if (missing.length > 0) {
-          nextProject.pageBlocks[pageName] = [...incomingBlocks, ...missing];
+          console.warn("[website-builder save] pinned block restore disabled; not re-adding missing DB blocks", {
+            projectId,
+            pageName,
+            saveSource,
+            missingPinnedBlocks: missing.map((block) => ({ id: block?.id || "", type: block?.type || "" })),
+          });
         }
       }
     }
@@ -557,11 +730,37 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(result.error, "Could not save website draft") });
     }
 
-    const savedProject = splitProject || mapProjectRow(result.data);
+    const readBack = result.data?.id
+      ? await supabaseAdmin
+        .from(TABLE_NAME)
+        .select("id, project_id, name, site_data, created_at, updated_at")
+        .eq("id", result.data.id)
+        .limit(1)
+        .maybeSingle()
+      : { data: result.data, error: null };
+
+    if (readBack.error) {
+      console.error("[website-builder save] database read-back failed", {
+        projectId,
+        draftProjectId,
+        rowId: result.data?.id || "",
+        error: readBack.error?.message || readBack.error,
+      });
+      return res.status(500).json({ ok: false, error: toErrorMessage(readBack.error, "Could not verify saved website draft") });
+    }
+
+    const savedProject = splitProject || mapProjectRow(readBack.data || result.data);
+    const readBackProject = mapProjectRow(readBack.data || result.data);
     const pageSummary = summarizeWebsitePage(savedProject, requestedPage);
+    const readBackBlocks = requestedPage ? getProjectPageBlocks(savedProject, requestedPage) : [];
+    const payloadBlockIds = new Set((Array.isArray(incomingBlocks) ? incomingBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
+    const readBackBlockIds = new Set((Array.isArray(readBackBlocks) ? readBackBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
+    const extraReadBackIds = [...readBackBlockIds].filter((id) => !payloadBlockIds.has(id));
+    const missingReadBackIds = [...payloadBlockIds].filter((id) => !readBackBlockIds.has(id));
     console.info("[website-builder save] saved project", {
       projectId,
       draftProjectId,
+      rowId: readBack.data?.id || result.data?.id || "",
       pageId: pageSummary.pageId,
       pageName: pageSummary.pageName || requestedPage || "",
       blockCount: pageSummary.blockCount,
@@ -572,7 +771,33 @@ async function handler(req, res) {
       pageHash: pageSummary.pageHash,
       saveSource,
       siteOnly,
+      splitStorageReadBack: summarizeBlockList(readBackBlocks),
+      draftRowReadBack: summarizeBlockList(requestedPage ? getProjectPageBlocks(readBackProject, requestedPage) : []),
+      extraReadBackIds,
+      missingReadBackIds,
+      deletedBlockIds: normalizeDeletedBlockTombstones(readBackProject),
     });
+
+    if (requestedPage && (extraReadBackIds.length || missingReadBackIds.length)) {
+      console.error("[website-builder save] verification mismatch after save; rejecting saved status", {
+        projectId,
+        draftProjectId,
+        pageName: requestedPage,
+        extraReadBackIds,
+        missingReadBackIds,
+        payload: summarizeBlockList(incomingBlocks),
+        readBack: summarizeBlockList(readBackBlocks),
+      });
+      return res.status(409).json({
+        ok: false,
+        error: "Save failed verification. Your current page has not been replaced.",
+        code: "WEBSITE_SAVE_VERIFICATION_FAILED",
+        projectId,
+        pageName: requestedPage,
+        extraReadBackIds,
+        missingReadBackIds,
+      });
+    }
 
     return res.status(200).json({ ok: true, project: savedProject });
   }
