@@ -33,7 +33,9 @@ import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
+import TakeoffModuleLoader from "./ai-takeoff/TakeoffModuleLoader";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
+import ProjectEstimateVisualEditor from "./project-estimate/editor/ProjectEstimateVisualEditor";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
@@ -49,11 +51,6 @@ import { appendProjectEstimatePageRevision, projectEstimateRevisionsForPage } fr
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
 
-// AI Plan Takeoff — loaded client-side only (uses canvas, PDF.js, localStorage)
-const AIPlanTakeoffPage = dynamic(() => import("./ai-takeoff/AIPlanTakeoffPage"), {
-  ssr: false,
-  loading: () => <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading AI Plan Takeoff…</div>,
-});
 
 // AI Gantt Builder — loaded client-side only
 const GanttBuilderPage = dynamic(() => import("./gantt/GanttBuilderPage"), {
@@ -794,7 +791,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
           {sheet.workbook.page === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
           {sheet.workbook.page === "aiPlanTakeoff" && (
-            <AIPlanTakeoffPage sheet={sheet} useNewTakeoffEngine={USE_NEW_TAKEOFF_ENGINE} />
+            <TakeoffModuleLoader sheet={sheet} useNewTakeoffEngine={USE_NEW_TAKEOFF_ENGINE} />
           )}
           {sheet.workbook.page === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
@@ -3359,115 +3356,64 @@ export function ClientPageSheet({ sheet }) {
             </div>
           </aside>
         <main className="proposal-builder-print" style={styles.proposalBuilderCanvas}>
-          {expandProposalPagesForImportedDocuments([activePage], builder.importedDocuments || {}, { editing: true }).map((page) => (
-            isProposalImportPage(page) ? (
-                <ProposalImportedDocumentPage
-                  key={page.id}
-                  page={page}
-                  inclusionsDocument={inclusionsDocument}
-                  pricedPlans={pricedPlans}
-                  editing={pageEditMode && !readonly}
-                  onInsertStandard={() => inclusionsInputRef.current?.click()}
-                  onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
-                  onInsertPlans={() => plansInputRef.current?.click()}
-                  onReplaceInclusions={() => inclusionsInputRef.current?.click()}
-                  onRemoveInclusions={removeInclusionsDocument}
-                  onReplacePlans={() => plansInputRef.current?.click()}
-                  onRemovePlans={removePlansDocument}
-                  onOpenLibrary={openDocumentLibrary}
-                />
-              ) : (
-                <ProjectEstimateEditablePage
-                  key={page.id}
-                  page={page}
-                  theme={builder.theme}
-                  linkedFields={linkedFields}
-                  Brochure={EstimateInclusionsBrochure}
-                  editMode={pageEditMode && !readonly}
-                  selectedBlockId={selectedBlockId}
-                  editingBlockId={editingBlockId}
-                  onSelectBlock={setSelectedBlockId}
-                  onEditBlock={setEditingBlockId}
-                  onBlockContent={updateBlockContent}
-                  onBlockDesign={updateBlockDesign}
-                  onReplaceImage={(block) => {
-                    setProjectEstimateInspectorTab("properties");
-                    if (block?.type === "logo") openBlockImageUpload("logo");
-                    else if (block?.type === "image") openBlockImageUpload("image");
-                  }}
-                  onStartDrag={(block, event) => {
-                    if (editingBlockId) return;
-                    pushProjectEstimateUndo(block.id);
-                    dragStateRef.current = {
-                      kind: "move",
-                      blockId: block.id,
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      startFrame: proposalBlockFrame(block, page),
-                    };
-                  }}
-                  onStartResize={(block, handle, event) => {
-                    pushProjectEstimateUndo(block.id);
-                    dragStateRef.current = {
-                      kind: "resize",
-                      blockId: block.id,
-                      handle,
-                      startX: event.clientX,
-                      startY: event.clientY,
-                      startFrame: proposalBlockFrame(block, page),
-                    };
-                  }}
-                />
-              )
-          ))}
+          {isProposalImportPage(activePage) ? (
+            <ProposalImportedDocumentPage
+              key={activePage.id}
+              page={activePage}
+              inclusionsDocument={inclusionsDocument}
+              pricedPlans={pricedPlans}
+              editing={pageEditMode && !readonly}
+              onInsertStandard={() => inclusionsInputRef.current?.click()}
+              onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
+              onInsertPlans={() => plansInputRef.current?.click()}
+              onReplaceInclusions={() => inclusionsInputRef.current?.click()}
+              onRemoveInclusions={removeInclusionsDocument}
+              onReplacePlans={() => plansInputRef.current?.click()}
+              onRemovePlans={removePlansDocument}
+              onOpenLibrary={openDocumentLibrary}
+            />
+          ) : (
+            <ProjectEstimateVisualEditor
+              page={activePage}
+              theme={builder.theme}
+              linkedFields={linkedFields}
+              Brochure={EstimateInclusionsBrochure}
+              editMode={pageEditMode && !readonly}
+              selectedBlockId={selectedBlockId}
+              editingBlockId={editingBlockId}
+              readonly={readonly}
+              onToggleEditMode={() => {
+                setPageEditMode((current) => !current);
+                setEditingBlockId("");
+                setAddElementOpen(false);
+              }}
+              onSelectBlock={setSelectedBlockId}
+              onEditBlock={setEditingBlockId}
+              onBlockContent={updateBlockContent}
+              onBlockDesign={updateBlockDesign}
+              onSelectedBlockDesign={updateSelectedBlockDesign}
+              onDuplicateBlock={duplicateBlock}
+              onDeleteBlock={removeBlock}
+              onMoveBlock={moveBlockLayer}
+              onAddBlock={addBlock}
+              onUploadLogo={() => openBlockImageUpload("logo")}
+              onUploadImage={() => openBlockImageUpload("image")}
+              onOpenMediaLibrary={openProjectEstimateMediaLibrary}
+              onReplaceImage={(block) => {
+                if (block?.type === "logo") openBlockImageUpload("logo");
+                else if (block?.type === "image") openBlockImageUpload("image");
+              }}
+              onUndo={undoProjectEstimateEdit}
+              onRedo={redoProjectEstimateEdit}
+            />
+          )}
+          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
+          <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
+          <input ref={backgroundInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "background")} />
+          <input ref={inclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "standard_inclusions")} />
+          <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "modified_inclusions")} />
+          <input ref={plansInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPlanPdfs} />
           </main>
-          <aside className="proposal-builder-panel" style={styles.proposalBuilderPanel}>
-              <ProjectEstimateContextualInspector
-                page={activePage}
-                block={selectedBlock}
-                inclusionsDocument={inclusionsDocument}
-                pricedPlans={pricedPlans}
-                revisions={builder.pageRevisions || []}
-                readonly={readonly}
-                editMode={pageEditMode}
-                onToggleEditMode={() => setPageEditMode((current) => !current)}
-                onBlockContent={updateBlockContent}
-                onBlockDesign={updateBlockDesign}
-                onSelectedBlockDesign={updateSelectedBlockDesign}
-                onDuplicateBlock={duplicateBlock}
-                onDeleteBlock={removeBlock}
-                onMoveBlock={moveBlockLayer}
-                onSelectBlock={setSelectedBlockId}
-                onRenameBlock={(blockId, name) => updateBlockContent(blockId, "editorLabel", name)}
-                activeTab={projectEstimateInspectorTab}
-                onActiveTab={setProjectEstimateInspectorTab}
-                addElementOpen={addElementOpen}
-                onToggleAddElement={() => setAddElementOpen((current) => !current)}
-                onAddBlock={addBlock}
-                onUploadLogo={() => openBlockImageUpload("logo")}
-                onUploadImage={() => openBlockImageUpload("image")}
-                onOpenMediaLibrary={openProjectEstimateMediaLibrary}
-                onOpenAiRewrite={openAiRewriteForSelectedBlock}
-                onUndo={undoProjectEstimateEdit}
-                onRedo={redoProjectEstimateEdit}
-                onViewDocument={(document) => {
-                  const url = referencedPdfUrl(document);
-                  if (url && typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
-                }}
-                onUploadStandardInclusions={() => inclusionsInputRef.current?.click()}
-                onUploadModifiedInclusions={() => modifiedInclusionsInputRef.current?.click()}
-                onUploadPlans={() => plansInputRef.current?.click()}
-                onRemoveInclusions={removeInclusionsDocument}
-                onRemovePlans={removePlansDocument}
-                onOpenDocumentLibrary={openDocumentLibrary}
-              />
-            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
-            <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
-            <input ref={backgroundInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "background")} />
-            <input ref={inclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "standard_inclusions")} />
-            <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "modified_inclusions")} />
-            <input ref={plansInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPlanPdfs} />
-          </aside>
       </div>
       <div ref={exportPagesRef} style={styles.proposalExportSource} aria-hidden="true">
         {orderedProposalPages.filter((page) => !page.hiddenFromPdf).map((page) => (

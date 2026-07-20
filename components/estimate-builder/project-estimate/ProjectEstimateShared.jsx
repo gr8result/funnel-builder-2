@@ -80,19 +80,21 @@ export function nativeProjectEstimateTextProps(blockId, contentKey, editorBridge
     },
     onBlur: (event) => {
       if (!editing) return;
+      if (event.relatedTarget?.closest?.('[data-project-estimate-text-toolbar="true"]')) return;
       editorBridge.onTextCommit?.(blockId, contentKey, String(event.currentTarget.innerText || "").trim());
       editorBridge.onEditBlock?.("");
     },
     onKeyDown: (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        editorBridge.onTextCommit?.(blockId, contentKey, String(event.currentTarget.innerText || "").trim());
         event.currentTarget.blur();
         editorBridge.onEditBlock?.("");
       }
     },
     style: {
       ...designStyle,
-      outline: selected ? "1px solid #38bdf8" : "none",
+      outline: "none",
       cursor: editing ? "text" : "pointer",
       borderRadius: 3,
     },
@@ -125,7 +127,7 @@ export function nativeProjectEstimateImageProps(blockId, editorBridge = {}) {
       editorBridge.onReplaceImage?.(block);
     },
     style: {
-      outline: selected ? "1px solid #38bdf8" : "none",
+      outline: "none",
       cursor: selected ? "move" : "pointer",
     },
   };

@@ -77,7 +77,7 @@ function editableProps(blockId: string, contentKey: string, editorBridge: any = 
     },
     style: {
       ...designStyle,
-      outline: selected ? "1px solid #38bdf8" : "none",
+      outline: "none",
       cursor: editing ? "text" : "pointer",
       borderRadius: 3,
     },

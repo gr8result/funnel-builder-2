@@ -11,6 +11,7 @@ export const coverPageDefinition: ProjectEstimatePageDefinition = {
   version: 1,
   defaultContent: coverPageDefaults,
   defaultBlocks: [
+    block("hero-image", "image", -1, { imageUrl: "", defaultImageUrl: "", editorLabel: "Cover hero image", alt: "Project estimate cover image" }),
     block("document-label", "text", 0, { text: coverPageDefaults.documentLabel, editorLabel: "Document label" }),
     block("title", "heading", 1, { text: coverPageDefaults.title, editorLabel: "Estimate title" }),
     block("client-site", "text", 2, { text: coverPageDefaults.clientAndSite, editorLabel: "Client and site" }),
