@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import JSZip from "jszip";
 
 const PPTX_PATH = "C:\\Users\\grant\\Downloads\\Premier Inclusions Schedule.pptx";
@@ -10,6 +12,9 @@ const ASSETS_DIR = path.join(TEMPLATE_DIR, "assets");
 const PUBLIC_ASSETS_DIR = path.join(ROOT, "public", "standard-inclusions", "assets");
 const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
+const EXACT_LAYOUT_LABEL = "Exact layout — page artwork is fixed, overlays remain editable.";
+const IMPORT_MODE = process.env.PPTX_IMPORT_MODE || "exact-layout";
+const execFileAsync = promisify(execFile);
 
 const NS = {
   presentation: "http://schemas.openxmlformats.org/presentationml/2006/main",
@@ -92,6 +97,32 @@ for (let index = 0; index < slidePaths.length; index += 1) {
   const slidePath = slidePaths[index];
   const slideXml = await zip.file(slidePath)?.async("text");
   if (!slideXml) continue;
+  const pageFile = `page-${String(index + 1).padStart(2, "0")}.json`;
+  if (IMPORT_MODE === "exact-layout") {
+    const imageRef = await exportExactSlideArtwork(index + 1);
+    const page = {
+      id: `premier-inclusions-page-${String(index + 1).padStart(2, "0")}`,
+      name: `Page ${String(index + 1).padStart(2, "0")}`,
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      unit: "px",
+      background: { color: "#ffffff", imageRef },
+      objects: [],
+      importResult: {
+        mode: "exact-layout",
+        label: EXACT_LAYOUT_LABEL,
+        sourceSlide: index + 1,
+        sourceFileName: path.basename(PPTX_PATH),
+        sourceRenderer: "Microsoft PowerPoint COM Slide.Export",
+        artwork: imageRef,
+        editableObjectConversion: "blocked-native-conversion-requires-visual-diff-pass",
+      },
+    };
+    await fs.writeFile(path.join(PAGES_DIR, pageFile), `${JSON.stringify(page, null, 2)}\n`);
+    pages.push({ ...page, file: `pages/${pageFile}` });
+    console.log(`Page ${index + 1}: exact layout artwork`);
+    continue;
+  }
   const slide = parser.parseFromString(slideXml, "application/xml");
   const rels = await readRelationships(slideRelPath(slidePath));
   const spTree = first(slide, "spTree");
@@ -116,10 +147,9 @@ for (let index = 0; index < slidePaths.length; index += 1) {
       .filter((object) => object.width > 0 && object.height > 0)
       .map((object, layer) => ({ ...object, layer })),
   };
-  const pageFile = `page-${String(index + 1).padStart(2, "0")}.json`;
   await fs.writeFile(path.join(PAGES_DIR, pageFile), `${JSON.stringify(page, null, 2)}\n`);
   pages.push({ ...page, file: `pages/${pageFile}` });
-  console.log(`Page ${index + 1}: ${page.objects.length} native blocks`);
+  console.log(`Page ${index + 1}: ${page.objects.length} native blocks pending visual acceptance`);
 }
 
 const document = {
@@ -137,6 +167,9 @@ const document = {
     pageCount: pages.length,
     generatedAt: new Date().toISOString(),
     immutableMaster: true,
+    importMode: IMPORT_MODE,
+    importQualityRule: "editable conversion requires visual comparison against PowerPoint-rendered source",
+    exactLayoutLabel: EXACT_LAYOUT_LABEL,
   },
   pages: pages.map(({ file, ...page }) => page),
 };
@@ -148,12 +181,43 @@ const manifest = {
     name: page.name,
     file: page.file,
     objectCount: page.objects.length,
+    importMode: page.importResult?.mode || "editable-object-conversion",
+    label: page.importResult?.label,
   })),
 };
 
 await fs.writeFile(path.join(TEMPLATE_DIR, "premier-inclusions-template.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 await fs.writeFile(path.join(TEMPLATE_DIR, "premier-inclusions-template.full.json"), `${JSON.stringify(document, null, 2)}\n`);
-console.log(`Wrote ${pages.length} native Premier Inclusions pages.`);
+console.log(`Wrote ${pages.length} Premier Inclusions pages in ${IMPORT_MODE} mode.`);
+
+async function exportExactSlideArtwork(slideNumber) {
+  const fileName = `slide-${String(slideNumber).padStart(2, "0")}-exact.png`;
+  const publicAssetPath = path.join(PUBLIC_ASSETS_DIR, fileName);
+  const assetPath = path.join(ASSETS_DIR, fileName);
+  const script = `
+$ErrorActionPreference = "Stop"
+$pptxPath = $args[0]
+$slideNumber = [int]$args[1]
+$outPath = $args[2]
+$app = New-Object -ComObject PowerPoint.Application
+$presentation = $app.Presentations.Open($pptxPath, $true, $true, $false)
+try {
+  $presentation.Slides.Item($slideNumber).Export($outPath, "PNG", 1588, 2246)
+} finally {
+  $presentation.Close()
+  $app.Quit()
+  [void][Runtime.InteropServices.Marshal]::ReleaseComObject($presentation)
+  [void][Runtime.InteropServices.Marshal]::ReleaseComObject($app)
+}
+`;
+  await execFileAsync(
+    "powershell",
+    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script, PPTX_PATH, String(slideNumber), publicAssetPath],
+    { windowsHide: true, maxBuffer: 1024 * 1024 }
+  );
+  await fs.copyFile(publicAssetPath, assetPath);
+  return `/standard-inclusions/assets/${fileName}`;
+}
 
 async function collectObjects({ node, slidePath, rels, objects, transform, copiedAssets, pageNumber }) {
   for (const child of children(node)) {

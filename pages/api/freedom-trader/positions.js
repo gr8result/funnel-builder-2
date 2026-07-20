@@ -19,63 +19,9 @@ function round(value, decimals = 2) {
   return Number.isFinite(number) ? Number(number.toFixed(decimals)) : null;
 }
 
-async function ensureWatchlistSymbol(supabase, symbol, companyName = null) {
-  const { error } = await supabase
-    .from("freedom_trader_watchlist")
-    .upsert({
-      symbol,
-      company_name: companyName || symbol,
-      exchange: "NASDAQ",
-      active: true,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "symbol" });
-  if (error) throw error;
-}
-
-function normalizePosition(row) {
-  const quantity = cleanNumber(row.quantity) || 0;
-  const entryPrice = cleanNumber(row.entry_price) || 0;
-  const currentPrice = cleanNumber(row.current_price);
-  const investedAmount = quantity * entryPrice;
-  const unrealisedProfit = row.status === "open" && Number.isFinite(currentPrice)
-    ? (currentPrice - entryPrice) * quantity
-    : cleanNumber(row.unrealised_profit);
-  const profitPercent = investedAmount ? (unrealisedProfit / investedAmount) * 100 : null;
-  const distanceToTarget = Number.isFinite(currentPrice) && Number.isFinite(cleanNumber(row.target_price))
-    ? ((cleanNumber(row.target_price) - currentPrice) / currentPrice) * 100
-    : null;
-  const distanceToStop = Number.isFinite(currentPrice) && Number.isFinite(cleanNumber(row.stop_price))
-    ? ((currentPrice - cleanNumber(row.stop_price)) / currentPrice) * 100
-    : null;
-  const heldUntil = row.status === "closed" && row.exit_date ? new Date(row.exit_date).getTime() : Date.now();
-  const daysHeld = row.entry_date ? Math.max(0, Math.floor((heldUntil - new Date(row.entry_date).getTime()) / 86400000)) : null;
-
-  return {
-    id: row.id,
-    symbol: row.symbol,
-    companyName: row.company_name || row.symbol,
-    quantity,
-    entryPrice,
-    entryDate: row.entry_date,
-    targetPrice: cleanNumber(row.target_price),
-    stopPrice: cleanNumber(row.stop_price),
-    currentPrice,
-    status: row.status,
-    exitPrice: cleanNumber(row.exit_price),
-    exitDate: row.exit_date,
-    brokerageBuy: cleanNumber(row.brokerage_buy) || 0,
-    brokerageSell: cleanNumber(row.brokerage_sell) || 0,
-    realisedProfit: cleanNumber(row.realised_profit),
-    unrealisedProfit: round(unrealisedProfit),
-    investedAmount: round(investedAmount),
-    profitPercent: round(profitPercent),
-    distanceToTarget: round(distanceToTarget),
-    distanceToStop: round(distanceToStop),
-    daysHeld,
-    notes: row.notes || "",
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+function daysBetween(start, end) {
+  if (!start || !end) return null;
+  return Math.max(0, Math.floor((new Date(end).getTime() - new Date(start).getTime()) / 86400000));
 }
 
 async function fetchQuote(symbol) {
@@ -92,21 +38,107 @@ async function fetchQuote(symbol) {
   }
 }
 
-async function refreshOpenPrices(supabase, rows) {
-  const openRows = rows.filter((row) => row.status === "open");
-  const updates = await Promise.all(openRows.map(async (row) => {
-    const currentPrice = await fetchQuote(row.symbol);
-    if (!Number.isFinite(currentPrice)) return null;
-    const unrealisedProfit = (currentPrice - Number(row.entry_price)) * Number(row.quantity);
-    const { error } = await supabase
-      .from("freedom_trader_positions")
-      .update({ current_price: currentPrice, unrealised_profit: unrealisedProfit, updated_at: new Date().toISOString() })
-      .eq("id", row.id);
-    if (error) console.error("Freedom Trader price update failed:", error);
-    return { ...row, current_price: currentPrice, unrealised_profit: unrealisedProfit };
-  }));
-  const updatedById = new Map(updates.filter(Boolean).map((row) => [row.id, row]));
-  return rows.map((row) => updatedById.get(row.id) || row);
+function pendingFromOpen(row) {
+  return row.pending_trade || row.pending_trades || {};
+}
+
+function pendingFromClosed(row) {
+  return row.open_position?.pending_trade || row.open_position?.pending_trades || {};
+}
+
+function normalizeOpenPosition(row, currentPrice = null) {
+  const pending = pendingFromOpen(row);
+  const quantity = cleanNumber(row.shares) || 0;
+  const entryPrice = cleanNumber(row.purchase_price) || 0;
+  const targetPrice = cleanNumber(pending.target_price);
+  const stopPrice = cleanNumber(pending.stop_loss);
+  const investedAmount = quantity * entryPrice;
+  const brokerageBuy = cleanNumber(row.brokerage) || 0;
+  const unrealisedProfit = Number.isFinite(currentPrice) ? (currentPrice - entryPrice) * quantity : null;
+  const profitPercent = investedAmount && Number.isFinite(unrealisedProfit) ? (unrealisedProfit / investedAmount) * 100 : null;
+  const distanceToTarget = Number.isFinite(currentPrice) && Number.isFinite(targetPrice) && currentPrice !== 0
+    ? ((targetPrice - currentPrice) / currentPrice) * 100
+    : null;
+  const distanceToStop = Number.isFinite(currentPrice) && Number.isFinite(stopPrice) && currentPrice !== 0
+    ? ((currentPrice - stopPrice) / currentPrice) * 100
+    : null;
+
+  return {
+    id: row.id,
+    pendingTradeId: row.pending_trade_id,
+    symbol: pending.ticker || row.ticker,
+    companyName: pending.ticker || row.ticker,
+    quantity,
+    entryPrice,
+    entryDate: row.purchase_date,
+    targetPrice,
+    stopPrice,
+    currentPrice,
+    status: row.status || "open",
+    exitPrice: null,
+    exitDate: null,
+    brokerageBuy,
+    brokerageSell: 0,
+    grossProfit: null,
+    totalBrokerage: brokerageBuy,
+    realisedProfit: null,
+    netProfit: null,
+    percentageReturn: null,
+    winLoss: null,
+    unrealisedProfit: round(unrealisedProfit),
+    investedAmount: round(investedAmount),
+    profitPercent: round(profitPercent),
+    distanceToTarget: round(distanceToTarget),
+    distanceToStop: round(distanceToStop),
+    daysHeld: daysBetween(row.purchase_date, new Date().toISOString()),
+    notes: "",
+    createdAt: row.purchase_date,
+    updatedAt: row.purchase_date,
+  };
+}
+
+function normalizeClosedPosition(row) {
+  const open = row.open_position || {};
+  const pending = pendingFromClosed(row);
+  const quantity = cleanNumber(open.shares) || 0;
+  const entryPrice = cleanNumber(open.purchase_price) || 0;
+  const salePrice = cleanNumber(row.sale_price);
+  const investedAmount = quantity * entryPrice;
+  const netProfit = cleanNumber(row.net_profit);
+
+  return {
+    id: row.id,
+    openPositionId: row.open_position_id,
+    pendingTradeId: open.pending_trade_id,
+    symbol: pending.ticker || open.ticker,
+    companyName: pending.ticker || open.ticker,
+    quantity,
+    entryPrice,
+    entryDate: open.purchase_date,
+    targetPrice: cleanNumber(pending.target_price),
+    stopPrice: cleanNumber(pending.stop_loss),
+    currentPrice: salePrice,
+    status: "closed",
+    exitPrice: salePrice,
+    exitDate: row.sale_date,
+    brokerageBuy: cleanNumber(open.brokerage) || 0,
+    brokerageSell: cleanNumber(row.brokerage) || 0,
+    grossProfit: round(row.gross_profit),
+    totalBrokerage: round((cleanNumber(open.brokerage) || 0) + (cleanNumber(row.brokerage) || 0)),
+    realisedProfit: netProfit,
+    netProfit,
+    percentageReturn: round(row.return_percent),
+    winLoss: Number.isFinite(netProfit) ? netProfit >= 0 ? "Win" : "Loss" : null,
+    unrealisedProfit: null,
+    investedAmount: round(investedAmount),
+    profitPercent: null,
+    distanceToTarget: null,
+    distanceToStop: null,
+    daysHeld: row.holding_days,
+    notes: "",
+    createdAt: row.sale_date,
+    updatedAt: row.sale_date,
+  };
 }
 
 async function listPositions(req, res) {
@@ -114,92 +146,99 @@ async function listPositions(req, res) {
   if (!supabase) return res.status(200).json({ ok: true, positions: [], databaseUnavailable: true, error: null });
 
   try {
-    const { data, error } = await supabase
-      .from("freedom_trader_positions")
-      .select("*")
-      .order("entry_date", { ascending: false });
-    if (error) throw error;
-    const withPrices = await refreshOpenPrices(supabase, data || []);
-    return res.status(200).json({ ok: true, positions: withPrices.map(normalizePosition), databaseUnavailable: false, error: null });
+    const { data: openRows, error: openError } = await supabase
+      .from("open_positions")
+      .select("*, pending_trade:pending_trades(*)")
+      .eq("status", "open")
+      .order("purchase_date", { ascending: false });
+    if (openError) throw openError;
+
+    const { data: closedRows, error: closedError } = await supabase
+      .from("closed_trades")
+      .select("*, open_position:open_positions(*, pending_trade:pending_trades(*))")
+      .order("sale_date", { ascending: false });
+    if (closedError) throw closedError;
+
+    const openPositions = await Promise.all((openRows || []).map(async (row) => {
+      const symbol = pendingFromOpen(row).ticker;
+      const currentPrice = symbol ? await fetchQuote(symbol) : null;
+      return normalizeOpenPosition(row, currentPrice);
+    }));
+
+    return res.status(200).json({
+      ok: true,
+      positions: [...openPositions, ...(closedRows || []).map(normalizeClosedPosition)],
+      databaseUnavailable: false,
+      error: null,
+    });
   } catch (error) {
     console.error("Freedom Trader positions list failed:", error);
     return res.status(200).json({ ok: true, positions: [], databaseUnavailable: true, error: "Positions database temporarily unavailable." });
   }
 }
 
+async function findOrCreatePendingTrade(supabase, body, symbol, quantity, entryPrice, stopPrice, targetPrice) {
+  if (body?.pendingTradeId) {
+    const { data, error } = await supabase.from("pending_trades").select("*").eq("id", body.pendingTradeId).single();
+    if (error) throw error;
+    return data;
+  }
+
+  const risk = entryPrice - stopPrice;
+  const reward = targetPrice - entryPrice;
+  const payload = {
+    user_id: body?.userId || null,
+    ticker: symbol,
+    entry_price: entryPrice,
+    stop_loss: stopPrice,
+    target_price: targetPrice,
+    shares: quantity,
+    risk_reward: risk > 0 ? reward / risk : null,
+    expected_profit: reward * quantity,
+    status: "OPEN",
+    fib_data: body?.fibData || null,
+    created_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from("pending_trades").insert(payload).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
 async function createPosition(req, res) {
   const supabase = getSupabase();
   if (!supabase) return res.status(503).json({ ok: false, error: "Positions database temporarily unavailable." });
 
-  const quantity = Math.floor(cleanNumber(req.body?.quantity) || 0);
-  const entryPrice = cleanNumber(req.body?.entryPrice);
+  const quantity = Math.floor(cleanNumber(req.body?.quantity ?? req.body?.shares) || 0);
+  const entryPrice = cleanNumber(req.body?.entryPrice ?? req.body?.purchasePrice);
   const targetPrice = cleanNumber(req.body?.targetPrice);
-  const stopPrice = cleanNumber(req.body?.stopPrice);
-  const symbol = String(req.body?.symbol || "").trim().toUpperCase();
+  const stopPrice = cleanNumber(req.body?.stopPrice ?? req.body?.stopLoss);
+  const brokerage = cleanNumber(req.body?.brokerage) || 0;
+  const symbol = String(req.body?.symbol || req.body?.ticker || "").trim().toUpperCase();
 
   if (!symbol || quantity < 1 || !entryPrice || entryPrice <= 0 || !targetPrice || targetPrice <= entryPrice || !stopPrice || stopPrice >= entryPrice) {
-    return res.status(400).json({ ok: false, error: "Enter a valid symbol, quantity, entry, target and stop." });
+    return res.status(400).json({ ok: false, error: "Enter a valid ticker, shares, entry, target and stop." });
   }
 
   try {
-    await ensureWatchlistSymbol(supabase, symbol, req.body?.companyName);
-    const currentPrice = await fetchQuote(symbol);
+    const pendingTrade = await findOrCreatePendingTrade(supabase, req.body, symbol, quantity, entryPrice, stopPrice, targetPrice);
     const positionPayload = {
-      symbol,
-      company_name: req.body?.companyName || symbol,
-      quantity,
-      entry_price: entryPrice,
-      entry_date: req.body?.entryDate || new Date().toISOString(),
-      target_price: targetPrice,
-      stop_price: stopPrice,
-      current_price: currentPrice,
+      pending_trade_id: pendingTrade.id,
+      purchase_price: entryPrice,
+      purchase_date: req.body?.entryDate || req.body?.purchaseDate || new Date().toISOString(),
+      shares: quantity,
+      brokerage,
       status: "open",
-      brokerage_buy: cleanNumber(req.body?.brokerage) || 0,
-      notes: req.body?.notes || null,
     };
     const { data: position, error } = await supabase
-      .from("freedom_trader_positions")
+      .from("open_positions")
       .insert(positionPayload)
-      .select("*")
+      .select("*, pending_trade:pending_trades(*)")
       .single();
     if (error) throw error;
 
-    const alertRows = [
-      {
-        symbol,
-        position_id: position.id,
-        alert_type: "TARGET REACHED",
-        trigger_price: targetPrice,
-        direction: "above",
-        message: `${symbol} target reached. Review the open position; no trade is executed automatically.`,
-        priority: "high",
-        status: "active",
-      },
-      {
-        symbol,
-        position_id: position.id,
-        alert_type: "STOP REACHED",
-        trigger_price: stopPrice,
-        direction: "below",
-        message: `${symbol} stop reached. Review risk immediately; no trade is executed automatically.`,
-        priority: "high",
-        status: "active",
-      },
-    ];
-    const { error: alertsError } = await supabase.from("freedom_trader_alerts").insert(alertRows);
-    if (alertsError) console.error("Freedom Trader auto-alert creation failed:", alertsError);
-
-    const { error: journalError } = await supabase.from("freedom_trader_journal").insert({
-      position_id: position.id,
-      symbol,
-      event_type: "BUY RECORDED",
-      price: entryPrice,
-      quantity,
-      notes: req.body?.notes || "Buy recorded from Freedom Trader.",
-    });
-    if (journalError) console.error("Freedom Trader journal creation failed:", journalError);
-
-    return res.status(200).json({ ok: true, position: normalizePosition(position), error: null });
+    await supabase.from("pending_trades").update({ status: "OPEN" }).eq("id", pendingTrade.id);
+    const currentPrice = await fetchQuote(symbol);
+    return res.status(200).json({ ok: true, position: normalizeOpenPosition(position, currentPrice), error: null });
   } catch (error) {
     console.error("Freedom Trader position create failed:", error);
     return res.status(500).json({ ok: false, error: "Unable to save position right now." });
@@ -214,55 +253,68 @@ async function updatePosition(req, res) {
   if (!id) return res.status(400).json({ ok: false, error: "Missing position id." });
 
   try {
-    const { data: existing, error: getError } = await supabase.from("freedom_trader_positions").select("*").eq("id", id).single();
+    const { data: existing, error: getError } = await supabase
+      .from("open_positions")
+      .select("*, pending_trade:pending_trades(*)")
+      .eq("id", id)
+      .single();
     if (getError) throw getError;
 
+    const pending = pendingFromOpen(existing);
     if (action === "close") {
       const exitPrice = cleanNumber(req.body?.exitPrice);
       const brokerageSell = cleanNumber(req.body?.brokerageSell) || 0;
+      const sharesSold = Math.floor(cleanNumber(req.body?.sharesSold) || 0);
+      const openShares = Math.floor(cleanNumber(existing.shares) || 0);
       if (!exitPrice || exitPrice <= 0) return res.status(400).json({ ok: false, error: "Exit price must be positive." });
-      const grossProfit = (exitPrice - Number(existing.entry_price)) * Number(existing.quantity);
-      const netProfit = grossProfit - (Number(existing.brokerage_buy) || 0) - brokerageSell;
-      const exitDate = req.body?.exitDate || new Date().toISOString();
+      if (sharesSold !== openShares) return res.status(400).json({ ok: false, error: "Shares sold must match the open position quantity to close the trade." });
+
+      const entryPrice = cleanNumber(existing.purchase_price) || 0;
+      const grossProfit = (exitPrice - entryPrice) * sharesSold;
+      const brokerageBuy = cleanNumber(existing.brokerage) || 0;
+      const netProfit = grossProfit - brokerageBuy - brokerageSell;
+      const exitDate = req.body?.exitDate || req.body?.saleDate || new Date().toISOString();
+      const returnPercent = entryPrice * sharesSold ? (netProfit / (entryPrice * sharesSold)) * 100 : null;
       const payload = {
-        status: "closed",
-        exit_price: exitPrice,
-        exit_date: exitDate,
-        brokerage_sell: brokerageSell,
-        realised_profit: netProfit,
-        unrealised_profit: null,
-        notes: req.body?.notes ?? existing.notes,
-        updated_at: new Date().toISOString(),
+        open_position_id: existing.id,
+        sale_price: exitPrice,
+        sale_date: exitDate,
+        brokerage: brokerageSell,
+        gross_profit: grossProfit,
+        net_profit: netProfit,
+        return_percent: returnPercent,
+        holding_days: daysBetween(existing.purchase_date, exitDate),
       };
-      const { data, error } = await supabase.from("freedom_trader_positions").update(payload).eq("id", id).select("*").single();
+      const { data, error } = await supabase
+        .from("closed_trades")
+        .insert(payload)
+        .select("*, open_position:open_positions(*, pending_trade:pending_trades(*))")
+        .single();
       if (error) throw error;
-      await supabase.from("freedom_trader_alerts").update({ status: "disabled", updated_at: new Date().toISOString() }).eq("position_id", id).eq("status", "active");
-      await supabase.from("freedom_trader_journal").insert({
-        position_id: id,
-        symbol: existing.symbol,
-        event_type: "POSITION CLOSED",
-        price: exitPrice,
-        quantity: existing.quantity,
-        notes: req.body?.notes || `Closed position. Net profit: ${round(netProfit)}`,
-      });
-      return res.status(200).json({ ok: true, position: normalizePosition(data), error: null });
+
+      await supabase.from("open_positions").update({ status: "closed" }).eq("id", existing.id);
+      if (pending.id) {
+        await supabase.from("pending_trades").update({ status: "CLOSED" }).eq("id", pending.id);
+        await supabase.from("trade_alerts").update({ triggered: true }).eq("trade_id", pending.id).eq("triggered", false);
+      }
+      return res.status(200).json({ ok: true, position: normalizeClosedPosition(data), error: null });
     }
 
-    const payload = { updated_at: new Date().toISOString() };
-    if (Object.prototype.hasOwnProperty.call(req.body, "targetPrice")) payload.target_price = cleanNumber(req.body.targetPrice);
-    if (Object.prototype.hasOwnProperty.call(req.body, "stopPrice")) payload.stop_price = cleanNumber(req.body.stopPrice);
-    if (Object.prototype.hasOwnProperty.call(req.body, "notes")) payload.notes = req.body.notes || null;
-    const { data, error } = await supabase.from("freedom_trader_positions").update(payload).eq("id", id).select("*").single();
+    const pendingPayload = {};
+    if (Object.prototype.hasOwnProperty.call(req.body, "targetPrice")) pendingPayload.target_price = cleanNumber(req.body.targetPrice);
+    if (Object.prototype.hasOwnProperty.call(req.body, "stopPrice")) pendingPayload.stop_loss = cleanNumber(req.body.stopPrice);
+    if (Object.keys(pendingPayload).length && pending.id) {
+      const { error } = await supabase.from("pending_trades").update(pendingPayload).eq("id", pending.id);
+      if (error) throw error;
+    }
+    const { data, error } = await supabase
+      .from("open_positions")
+      .select("*, pending_trade:pending_trades(*)")
+      .eq("id", id)
+      .single();
     if (error) throw error;
-    await supabase.from("freedom_trader_journal").insert({
-      position_id: id,
-      symbol: existing.symbol,
-      event_type: action === "raise-stop" ? "STOP UPDATED" : action === "edit-target" ? "TARGET UPDATED" : "NOTE ADDED",
-      price: payload.stop_price || payload.target_price || null,
-      quantity: existing.quantity,
-      notes: req.body?.notes || action || "Position updated.",
-    });
-    return res.status(200).json({ ok: true, position: normalizePosition(data), error: null });
+    const currentPrice = pending.ticker ? await fetchQuote(pending.ticker) : null;
+    return res.status(200).json({ ok: true, position: normalizeOpenPosition(data, currentPrice), error: null });
   } catch (error) {
     console.error("Freedom Trader position update failed:", error);
     return res.status(500).json({ ok: false, error: "Unable to update position right now." });

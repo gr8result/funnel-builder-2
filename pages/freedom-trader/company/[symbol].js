@@ -424,6 +424,7 @@ export default function TraderCompany({ passwordHash }) {
   const [buyForm, setBuyForm] = useState({});
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [tradeDraft, setTradeDraft] = useState(null);
+  const [manualBuyForm, setManualBuyForm] = useState(null);
   const [tradeActionSaving, setTradeActionSaving] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [visualLevels, setVisualLevels] = useState({ entry: null, target: null, stop: null });
@@ -687,14 +688,23 @@ export default function TraderCompany({ passwordHash }) {
   function tradeBlockers(levels = visualLevels, metrics = visualMetrics) {
     const blockers = [];
     const currentPrice = Number(setup.currentPrice);
+    const atr = Number(setup.atr);
+    const minimumRiskReward = 2;
     if (!setup.marketData?.validated || !Number.isFinite(currentPrice)) blockers.push("Market price is stale or unverified.");
     if (chartMeta?.dataLabel === "Unavailable") blockers.push("Market price is stale or unverified.");
     if (!chartMeta?.ok || !candles.length || chartError) blockers.push(chartError || "Chart data is unavailable.");
     if (!levelsComplete(levels)) blockers.push("Entry, stop loss and target must all be placed on the chart.");
     if (levelsComplete(levels) && levels.stop >= levels.entry) blockers.push("Stop loss must be below entry for a long trade.");
     if (levelsComplete(levels) && levels.target <= levels.entry) blockers.push("Target must be above entry.");
+    if (levelsComplete(levels) && Number.isFinite(metrics.riskReward) && metrics.riskReward < minimumRiskReward) blockers.push(`Risk/reward must be at least ${minimumRiskReward}:1.`);
     if (!Number.isFinite(metrics.positionSize) || metrics.positionSize < 1) blockers.push("Position size exceeds configured capital or risk limits.");
     if (Number.isFinite(metrics.maximumLoss) && Number.isFinite(metrics.riskLimit) && metrics.maximumLoss > metrics.riskLimit) blockers.push("Maximum dollar loss exceeds configured portfolio risk.");
+    if (levelsComplete(levels) && Number.isFinite(atr) && atr > 0) {
+      const entryDistance = Math.abs(currentPrice - levels.entry);
+      const stopDistance = Math.abs(levels.entry - levels.stop);
+      if (entryDistance > atr * 2.5) blockers.push("Entry is too far from the current price compared with ATR.");
+      if (stopDistance > atr * 3) blockers.push("Stop distance is too wide compared with ATR.");
+    }
     return blockers;
   }
 
@@ -705,6 +715,9 @@ export default function TraderCompany({ passwordHash }) {
       target: roundPrice(visualLevels.target),
     };
     const metrics = visualMetrics;
+    const currentPrice = Number(setup.currentPrice);
+    const entryDistance = Number.isFinite(currentPrice) && Number.isFinite(levels.entry) ? currentPrice - levels.entry : null;
+    const status = currentTradeStatus(levels);
     return {
       symbol,
       companyName: company.companyName,
@@ -718,7 +731,9 @@ export default function TraderCompany({ passwordHash }) {
       expectedProfit: roundPrice(metrics.expectedProfit),
       percentageReturn: metrics.percentageReturn,
       riskRewardRatio: metrics.riskReward,
-      status: currentTradeStatus(levels),
+      distanceToEntry: roundPrice(entryDistance),
+      distanceToEntryPercent: Number.isFinite(entryDistance) && Number.isFinite(levels.entry) && levels.entry > 0 ? (entryDistance / levels.entry) * 100 : null,
+      status,
       orderType: "BUY LIMIT",
       holdingTime: setup.expectedHoldingPeriod || "1 to 6 weeks",
       riskRating: Number.isFinite(metrics.riskReward) && metrics.riskReward >= 2 && Number.isFinite(metrics.maximumLoss) && metrics.maximumLoss <= (metrics.riskLimit || 0) ? "Controlled" : "Review",
@@ -729,8 +744,19 @@ export default function TraderCompany({ passwordHash }) {
   function openTradeConfirmation() {
     const draft = buildTradeDraft();
     setSaveMessage("");
+    setManualBuyForm(null);
     setTradeDraft(draft);
     setTradeModalOpen(true);
+  }
+
+  function startManualBuy() {
+    if (!tradeDraft) return;
+    setManualBuyForm({
+      actualPurchasePrice: tradeDraft.entryPrice || "",
+      sharesPurchased: tradeDraft.quantity || 1,
+      brokerageCost: 0,
+      purchaseDateTime: new Date().toISOString().slice(0, 16),
+    });
   }
 
   async function createAllAlerts(draft = tradeDraft) {
@@ -817,6 +843,14 @@ export default function TraderCompany({ passwordHash }) {
       setSaveMessage(draft.blockers[0]);
       return;
     }
+    const actualPurchasePrice = Number(manualBuyForm?.actualPurchasePrice);
+    const sharesPurchased = Math.floor(Number(manualBuyForm?.sharesPurchased));
+    const brokerageCost = Number(manualBuyForm?.brokerageCost || 0);
+    const purchaseDateTime = manualBuyForm?.purchaseDateTime;
+    if (!Number.isFinite(actualPurchasePrice) || actualPurchasePrice <= 0 || sharesPurchased < 1 || !purchaseDateTime || !Number.isFinite(brokerageCost) || brokerageCost < 0) {
+      setSaveMessage("Enter the actual purchase price, shares purchased, brokerage cost and purchase date/time.");
+      return;
+    }
     const confirmed = window.confirm("Confirm you manually placed this buy order with your broker. Freedom Trader will only record the purchase; it will not execute a broker trade.");
     if (!confirmed) return;
     setTradeActionSaving("buy");
@@ -827,11 +861,12 @@ export default function TraderCompany({ passwordHash }) {
         body: JSON.stringify({
           symbol,
           companyName: company.companyName,
-          quantity: draft.quantity,
-          entryPrice: draft.entryPrice,
+          quantity: sharesPurchased,
+          entryPrice: actualPurchasePrice,
           targetPrice: draft.targetPrice,
           stopPrice: draft.stopPrice,
-          brokerage: 0,
+          brokerage: brokerageCost,
+          entryDate: new Date(purchaseDateTime).toISOString(),
           notes: "Manual broker buy recorded from Freedom Trader chart.",
         }),
       });
@@ -1324,7 +1359,7 @@ export default function TraderCompany({ passwordHash }) {
           <SignalBadge signal={tradeStatus} />
         </div>
         <div className="heroActions">
-          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Create Trade From Chart</button>
+          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
         </div>
       </header>
 
@@ -1528,7 +1563,7 @@ export default function TraderCompany({ passwordHash }) {
             setVisualLevels(recommended);
             saveVisualLevels(recommended);
           }}>Reset to Recommended Levels</button>
-          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Create Trade From Chart</button>
+          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
           {saveMessage ? <p className="inlineNotice">{saveMessage}</p> : null}
         </div>
       </section>
@@ -1538,7 +1573,7 @@ export default function TraderCompany({ passwordHash }) {
       {tradeModalOpen && tradeDraft ? (
         <div className="modalBackdrop">
           <section className="modal">
-            <h2>Create Trade From Chart</h2>
+            <h2>Validate & Create Trade</h2>
             {tradeDraft.blockers?.length ? (
               <div className="modalWarning">
                 <strong>Setup blocked</strong>
@@ -1549,21 +1584,40 @@ export default function TraderCompany({ passwordHash }) {
               <Metric label="Company" value={tradeDraft.companyName} />
               <Metric label="Order Type" value={tradeDraft.orderType} />
               <Metric label="Current Verified Price" value={formatCurrency(tradeDraft.currentPrice)} />
-              <Metric label="Entry" value={formatCurrency(tradeDraft.entryPrice)} />
-              <Metric label="Stop" value={formatCurrency(tradeDraft.stopPrice)} />
+              <Metric label="Entry Price" value={formatCurrency(tradeDraft.entryPrice)} />
+              <Metric label="Stop Loss" value={formatCurrency(tradeDraft.stopPrice)} />
               <Metric label="Target" value={formatCurrency(tradeDraft.targetPrice)} />
+              <Metric label="Distance to Entry" value={`${formatCurrency(Math.abs(tradeDraft.distanceToEntry))} / ${formatPercent(Math.abs(tradeDraft.distanceToEntryPercent))}`} />
               <Metric label="Shares" value={`${tradeDraft.quantity || 0}`} />
               <Metric label="Capital" value={formatCurrency(tradeDraft.capitalRequired)} />
               <Metric label="Maximum Loss" value={formatCurrency(tradeDraft.maximumLoss)} />
               <Metric label="Expected Profit" value={formatCurrency(tradeDraft.expectedProfit)} />
+              <Metric label="Percentage Return" value={formatPercent(tradeDraft.percentageReturn)} />
+              <Metric label="Risk/Reward Ratio" value={formatNumber(tradeDraft.riskRewardRatio)} />
               <Metric label="Holding Time" value={tradeDraft.holdingTime} />
-              <Metric label="Risk Rating" value={tradeDraft.riskRating} />
+              <Metric label="Status" value={tradeDraft.status} />
+            </div>
+            <div className="confirmationMessage">
+              <strong>{tradeDraft.status}</strong>
+              <span>
+                Current price is {formatCurrency(tradeDraft.currentPrice)}. Your planned entry is {formatCurrency(tradeDraft.entryPrice)}.
+                {" "}The price is {formatCurrency(Math.abs(tradeDraft.distanceToEntry))} {tradeDraft.distanceToEntry > 0 ? "above" : "below"} entry.
+                {" "}{tradeDraft.status === "BUY NOW" ? "The chart setup is at or below the planned entry." : "Wait for the pullback before buying."}
+              </span>
             </div>
             <p className="brokerNotice">Freedom Trader does not execute broker orders. Record Buy is only available after you manually confirm the broker order was placed.</p>
+            {manualBuyForm ? (
+              <div className="manualTradeForm">
+                <label>Actual purchase price<input value={manualBuyForm.actualPurchasePrice} onChange={(event) => setManualBuyForm((current) => ({ ...current, actualPurchasePrice: event.target.value }))} type="number" /></label>
+                <label>Shares purchased<input value={manualBuyForm.sharesPurchased} onChange={(event) => setManualBuyForm((current) => ({ ...current, sharesPurchased: event.target.value }))} type="number" /></label>
+                <label>Brokerage cost<input value={manualBuyForm.brokerageCost} onChange={(event) => setManualBuyForm((current) => ({ ...current, brokerageCost: event.target.value }))} type="number" /></label>
+                <label>Purchase date and time<input value={manualBuyForm.purchaseDateTime} onChange={(event) => setManualBuyForm((current) => ({ ...current, purchaseDateTime: event.target.value }))} type="datetime-local" /></label>
+              </div>
+            ) : null}
             <div className="modalActions">
-              <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create Alerts"}</button>
-              <button type="button" onClick={() => saveTradeSetup()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "setup" ? "Saving..." : "Save Trade"}</button>
-              <button className="primaryAction" type="button" onClick={recordTradeDraftBuy} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "buy" ? "Recording..." : "Record Manual Buy"}</button>
+              <button type="button" onClick={() => saveTradeSetup()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "setup" ? "Saving..." : "Save Trade Setup"}</button>
+              <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create All Alerts"}</button>
+              <button className="primaryAction" type="button" onClick={manualBuyForm ? recordTradeDraftBuy : startManualBuy} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "buy" ? "Recording..." : "Record Manual Buy"}</button>
               <button type="button" onClick={() => setTradeModalOpen(false)}>Cancel</button>
             </div>
           </section>
@@ -1671,6 +1725,9 @@ export default function TraderCompany({ passwordHash }) {
         .modalBackdrop { align-items: center; background: rgba(0,0,0,.72); display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 50; }
         .modal { background: #081013; border: 1px solid rgba(255,153,0,.24); border-radius: 8px; box-shadow: 0 30px 120px rgba(0,0,0,.62); display: grid; gap: 14px; max-height: calc(100vh - 48px); max-width: 720px; overflow: auto; padding: 22px; width: 100%; }
         .modalGrid, .confirmationGrid { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .manualTradeForm { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .confirmationMessage { background: rgba(255,153,0,.1); border: 1px solid rgba(255,153,0,.24); border-radius: 8px; color: #ffd7a1; display: grid; gap: 6px; line-height: 1.45; padding: 12px; }
+        .confirmationMessage strong { color: #fff; }
         .modalWarning { background: rgba(255,92,92,.14); border: 1px solid rgba(255,92,92,.3); border-radius: 8px; color: #ffd8d3; display: grid; gap: 5px; padding: 12px; }
         .modalWarning strong { color: #fff; }
         .brokerNotice { background: rgba(255,153,0,.1); border: 1px solid rgba(255,153,0,.24); border-radius: 8px; color: #ffd7a1; font-weight: 850; line-height: 1.45; padding: 12px; }

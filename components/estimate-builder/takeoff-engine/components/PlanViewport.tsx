@@ -56,6 +56,8 @@ export default function PlanViewport({
   const latestRenderIdRef = useRef(0);
   const [renderScale, setRenderScale] = useState(1);
   const [rendering, setRendering] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [renderRetryKey, setRenderRetryKey] = useState(0);
   const [spacePressed, setSpacePressed] = useState(false);
   const [snapMarker, setSnapMarker] = useState<{ x: number; y: number } | null>(null);
 
@@ -94,6 +96,7 @@ export default function PlanViewport({
     renderTaskRef.current = null;
 
     setRendering(true);
+    setRenderError(null);
 
     getPdfDocument(document)
       .then(async (pdf) => {
@@ -133,6 +136,7 @@ export default function PlanViewport({
       .catch((error) => {
         if (error?.name !== "RenderingCancelledException") {
           console.error("[takeoff-engine] PDF render failed", error);
+          setRenderError(error instanceof Error ? error.message : String(error));
         }
       })
       .finally(() => {
@@ -144,7 +148,7 @@ export default function PlanViewport({
       renderTaskRef.current?.cancel?.();
       renderTaskRef.current = null;
     };
-  }, [document.id, page?.id, page?.finalRotation, renderScale]);
+  }, [document.id, page?.id, page?.finalRotation, renderScale, renderRetryKey]);
 
   useEffect(() => {
     const element = hostRef.current;
@@ -336,6 +340,13 @@ export default function PlanViewport({
         />
       </div>
       {rendering ? <div style={styles.rendering}>Rendering sharp PDF</div> : null}
+      {renderError ? (
+        <div style={styles.renderError} role="alert">
+          <strong>PDF render failed</strong>
+          <span>{renderError}</span>
+          <button type="button" style={styles.retryButton} onClick={() => setRenderRetryKey((current) => current + 1)}>Retry</button>
+        </div>
+      ) : null}
       <div style={styles.readout}>Page {page.pageNumber} | Rotation {page.finalRotation} | {Math.round(viewport.scale * 100)}%</div>
     </div>
   );
@@ -488,6 +499,34 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "5px 8px",
     fontSize: 12,
     fontWeight: 900,
+  },
+  renderError: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    top: 10,
+    display: "grid",
+    gap: 6,
+    maxWidth: 520,
+    border: "1px solid #fecaca",
+    borderRadius: 6,
+    background: "#fff7f7",
+    color: "#7f1d1d",
+    padding: 10,
+    fontSize: 12,
+    fontWeight: 800,
+    zIndex: 30,
+  },
+  retryButton: {
+    justifySelf: "start",
+    border: "1px solid #0f766e",
+    borderRadius: 6,
+    background: "#0f766e",
+    color: "#ffffff",
+    padding: "6px 8px",
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: "pointer",
   },
   readout: {
     position: "absolute",

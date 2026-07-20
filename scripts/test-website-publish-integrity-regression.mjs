@@ -87,6 +87,15 @@ const unsafePublication = createPublicationPayload({
         type: "hero",
         props: {
           backgroundImage: "data:image/png;base64,abc123",
+          imageSrc: "blob:http://localhost:3000/asset-1",
+          iconUrl: "http://localhost:3000/icon.svg",
+          desktopVideo: "https://example.supabase.co/storage/v1/object/sign/assets/private-video.mp4?token=abc",
+          posterUrl: "https://example.supabase.co/storage/v1/object/authenticated/assets/private-poster.jpg",
+          items: [
+            {
+              mobileImage: "uploads/mobile.jpg",
+            },
+          ],
         },
       },
     ],
@@ -94,5 +103,17 @@ const unsafePublication = createPublicationPayload({
 });
 const failures = getPublishedAssetValidationFailures(unsafePublication.site_data.publication.assetValidationReport);
 assert.equal(failures[0]?.type, "inline-data-asset-url");
+assert.deepEqual(
+  failures.map((failure) => failure.type).sort(),
+  [
+    "blob-asset-url",
+    "inline-data-asset-url",
+    "localhost-asset-url",
+    "private-storage-asset-url",
+    "relative-asset-url",
+    "signed-storage-asset-url",
+  ].sort()
+);
+assert.equal(failures.length, 6);
 
 console.log("Website publish integrity regression checks passed.");

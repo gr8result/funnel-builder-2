@@ -14,10 +14,13 @@ import {
   getSiteRootDomain,
   normalizeDomain,
   slugifyWebsiteValue,
+  withProjectPublicationIdentity,
 } from "../../../lib/website-builder/publishConfig";
 import { loadFullSplitWebsiteProject } from "../../../lib/website-builder/supabaseSiteStorage";
+import { getPublishedWebsiteByDomain } from "../../../lib/website-builder/publicationStore";
 import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
 import { buildWebsiteProjectVersion, summarizeWebsitePage, websiteContentHash } from "../../../lib/website-builder/documentVersion";
+import { mergeWebsiteBuilderAssetSources } from "../../../lib/website-builder/mediaAssets";
 
 export const config = {
   api: {
@@ -71,6 +74,21 @@ function publishedSiteComparable(project) {
   };
 }
 
+function extractPublicationDebugMeta(html = "") {
+  const match = String(html || "").match(/<meta\s+name=["']website-publication-debug["']\s+content=["']([^"']*)["']/i);
+  return match?.[1] || "";
+}
+
+function debugMetaValue(meta = "", key = "") {
+  const prefix = `${key}=`;
+  return String(meta || "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length)
+    || "";
+}
+
 async function clearPrimaryWebsiteFlags(userId, keepId = "") {
   const { data } = await supabaseAdmin
     .from("published_websites")
@@ -121,7 +139,31 @@ async function handler(req, res) {
   const incomingProject = req.body?.project;
   const splitProjectId = String(incomingProject?.id || "").trim();
   const splitProject = splitProjectId ? await loadFullSplitWebsiteProject(userId, splitProjectId) : null;
-  const project = splitProject ? { ...incomingProject, ...splitProject, brandAssets: splitProject?.brandAssets || incomingProject?.brandAssets } : incomingProject;
+  const requestedDomainForProject = normalizeDomain(req.body?.customDomain);
+  const mergedBrandAssets = mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, splitProject?.brandAssets);
+  const project = withProjectPublicationIdentity(
+    splitProject
+      ? {
+          ...incomingProject,
+          ...splitProject,
+          slug: incomingProject?.slug || splitProject?.slug,
+          customDomain: requestedDomainForProject || incomingProject?.customDomain || incomingProject?.custom_domain || splitProject?.customDomain || splitProject?.custom_domain || "",
+          custom_domain: requestedDomainForProject || incomingProject?.custom_domain || incomingProject?.customDomain || splitProject?.custom_domain || splitProject?.customDomain || "",
+          publication: {
+            ...(splitProject?.publication || {}),
+            ...(incomingProject?.publication || {}),
+            customDomain: requestedDomainForProject || incomingProject?.publication?.customDomain || incomingProject?.publication?.custom_domain || splitProject?.publication?.customDomain || splitProject?.publication?.custom_domain || "",
+            custom_domain: requestedDomainForProject || incomingProject?.publication?.custom_domain || incomingProject?.publication?.customDomain || splitProject?.publication?.custom_domain || splitProject?.publication?.customDomain || "",
+          },
+          brandAssets: mergedBrandAssets,
+        }
+      : {
+          ...(incomingProject || {}),
+          customDomain: requestedDomainForProject || incomingProject?.customDomain || incomingProject?.custom_domain || "",
+          custom_domain: requestedDomainForProject || incomingProject?.custom_domain || incomingProject?.customDomain || "",
+          brandAssets: mergedBrandAssets,
+        }
+  );
   if (!project || typeof project !== "object") {
     return res.status(400).json({ ok: false, error: "Missing website project payload" });
   }
@@ -136,14 +178,15 @@ async function handler(req, res) {
     console.error("[website-publish] publish blocked by asset validation", {
       projectId: project?.id || "",
       slug: publication.slug,
-      failures: assetValidationFailures.slice(0, 25),
+      failures: assetValidationFailures,
       summary: assetValidationReport.summary || {},
     });
     return res.status(409).json({
       ok: false,
-      error: `Publish blocked: ${assetValidationFailures[0]?.path || "an asset"} is not a public publishable URL.`,
+      error: `Publish blocked: ${assetValidationFailures.length} asset${assetValidationFailures.length === 1 ? "" : "s"} are not public publishable URLs.`,
       code: "WEBSITE_PUBLISH_ASSET_VALIDATION_FAILED",
       assetValidationReport,
+      invalidAssets: assetValidationFailures,
       failures: assetValidationFailures,
     });
   }
@@ -186,7 +229,7 @@ async function handler(req, res) {
     existingPublication = data || null;
   }
 
-  const requestedCustomDomain = normalizeDomain(req.body?.customDomain) || normalizeDomain(existingPublication?.custom_domain);
+  const requestedCustomDomain = requestedDomainForProject || normalizeDomain(project?.customDomain || project?.custom_domain) || normalizeDomain(existingPublication?.custom_domain);
   const useCustomDomain = !!requestedCustomDomain;
   const nextDomainStatus = useCustomDomain
     ? (normalizeDomain(existingPublication?.custom_domain) === requestedCustomDomain
@@ -293,6 +336,9 @@ async function handler(req, res) {
       .select("id")
       .eq("user_id", userId)
       .eq("project_id", projectId)
+      .eq("published", true)
+      .order("published_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     existing = data || null;
@@ -372,6 +418,7 @@ async function handler(req, res) {
 
   const savedHash = websiteContentHash(publishedSiteComparable(publication.site_data));
   const publishedHash = websiteContentHash(publishedSiteComparable(verifyResult.data.site_data || {}));
+  const publishedFullHash = websiteContentHash(verifyResult.data.site_data || {});
   const firstPageName = Array.isArray(project?.pages) ? project.pages[0]?.name || "" : "";
   const pageSummary = summarizeWebsitePage(project, firstPageName);
   console.info("[website-publish] verified published row", {
@@ -387,6 +434,7 @@ async function handler(req, res) {
     savedHash,
     publishedHash,
     hashesMatch: savedHash === publishedHash,
+    publishedFullHash,
     pageId: pageSummary.pageId,
     pageName: pageSummary.pageName,
     blockCount: pageSummary.blockCount,
@@ -400,6 +448,58 @@ async function handler(req, res) {
       publishedHash,
       publicationRowId: verifyResult.data.id,
     });
+  }
+
+  const domainReadback = primaryDomain ? await getPublishedWebsiteByDomain(primaryDomain) : null;
+  const domainReadbackHash = domainReadback?.site_data ? websiteContentHash(publishedSiteComparable(domainReadback.site_data)) : "";
+  if (primaryDomain && (!domainReadback || domainReadback.id !== verifyResult.data.id || domainReadbackHash !== publishedHash)) {
+    return res.status(500).json({
+      ok: false,
+      error: "Published website verification failed. The custom domain resolves to a different row or content hash than the row just written.",
+      code: "WEBSITE_PUBLISH_DOMAIN_ROW_MISMATCH",
+      writtenRowId: verifyResult.data.id,
+      writtenHash: publishedHash,
+      domainRowId: domainReadback?.id || null,
+      domainHash: domainReadbackHash || null,
+      domain: primaryDomain,
+    });
+  }
+
+  let liveHttpVerification = null;
+  if (primaryWebsiteUrl && /^https?:\/\//i.test(primaryWebsiteUrl)) {
+    try {
+      const liveResponse = await fetch(primaryWebsiteUrl, {
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      });
+      const liveHtml = await liveResponse.text();
+      const liveMeta = extractPublicationDebugMeta(liveHtml);
+      const liveRowId = liveResponse.headers.get("x-gr8-published-row-id") || debugMetaValue(liveMeta, "row");
+      const liveHash = liveResponse.headers.get("x-gr8-site-data-hash") || debugMetaValue(liveMeta, "hash");
+      liveHttpVerification = {
+        ok: liveResponse.ok && liveRowId === verifyResult.data.id && liveHash === publishedFullHash,
+        status: liveResponse.status,
+        url: liveResponse.url,
+        rowId: liveRowId || "",
+        hash: liveHash || "",
+      };
+    } catch (error) {
+      liveHttpVerification = { ok: false, error: error?.message || "Could not request live URL" };
+    }
+
+    if (!liveHttpVerification?.ok) {
+      return res.status(500).json({
+        ok: false,
+        error: "Published website verification failed. The live domain did not return the row/hash that was just written.",
+        code: "WEBSITE_PUBLISH_LIVE_HTTP_MISMATCH",
+        writtenRowId: verifyResult.data.id,
+        writtenHash: publishedHash,
+        writtenFullHash: publishedFullHash,
+        live: liveHttpVerification,
+      });
+    }
   }
 
   return res.status(200).json({
@@ -418,12 +518,16 @@ async function handler(req, res) {
       publishedAt: verifyResult.data.site_data?.publishedAt || verifyResult.data.published_at,
       contentHash: savedHash,
       publishedHash,
+      publishedFullHash,
     },
     verified: {
       ok: true,
       savedHash,
       publishedHash,
       publicationRowId: verifyResult.data.id,
+      domainRowId: domainReadback?.id || null,
+      domainHash: domainReadbackHash || null,
+      live: liveHttpVerification,
     },
     primaryWebsite: requestedRootPrimaryWebsite,
     primaryWebsiteUrl,

@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import BackToTopButton from "../../components/website-builder/website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
+import { websiteContentHash } from "../../lib/website-builder/documentVersion";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
@@ -325,10 +326,17 @@ export async function getServerSideProps(ctx) {
     : await getPublishedWebsiteBySlug(slugArr[0] || "");
 
   if (publication) {
+    const siteData = publication.site_data && typeof publication.site_data === "object" ? publication.site_data : {};
+    const siteDataHash = websiteContentHash(siteData);
+    ctx.res?.setHeader("X-GR8-Published-Row-Id", publication.id || "");
+    ctx.res?.setHeader("X-GR8-Published-Project-Id", publication.project_id || siteData.id || "");
+    ctx.res?.setHeader("X-GR8-Site-Data-Updated-At", siteData.updatedAt || "");
+    ctx.res?.setHeader("X-GR8-Site-Data-Hash", siteDataHash);
     return {
       props: {
         mode: "published-website",
         publication,
+        siteDataHash,
         requestedPath: slugArr.slice(1),
         isDomainRequest: isHostLookup,
       },
@@ -357,7 +365,7 @@ export async function getServerSideProps(ctx) {
   };
 }
 
-export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
+export function PublishedWebsiteRenderer({ publication, siteDataHash = "", requestedPath, isDomainRequest }) {
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
 
@@ -417,6 +425,7 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
     projectId: publication?.project_id || project?.id || "",
     publishedVersion: project?.publishedVersion || project?.publication?.publishedVersion || "",
     publishedAt: publication?.published_at || project?.publishedAt || project?.publication?.publishedAt || "",
+    siteDataHash,
     pageName: activePage?.name || "",
     blockCount: Array.isArray(pageBlocks) ? pageBlocks.length : 0,
   };
@@ -477,7 +486,7 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
       <Head>
         <title>{publication?.name || project?.name || "Website"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="website-publication-debug" content={`row=${liveDebugInfo.publicationRowId}; version=${liveDebugInfo.publishedVersion}; published_at=${liveDebugInfo.publishedAt}; page=${liveDebugInfo.pageName}; blocks=${liveDebugInfo.blockCount}`} />
+        <meta name="website-publication-debug" content={`row=${liveDebugInfo.publicationRowId}; hash=${liveDebugInfo.siteDataHash}; version=${liveDebugInfo.publishedVersion}; published_at=${liveDebugInfo.publishedAt}; page=${liveDebugInfo.pageName}; blocks=${liveDebugInfo.blockCount}`} />
         <style>{`
           html,
           body,
@@ -614,9 +623,9 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
   );
 }
 
-export default function SitePage({ mode, title, sections, publication, requestedPath, isDomainRequest }) {
+export default function SitePage({ mode, title, sections, publication, siteDataHash, requestedPath, isDomainRequest }) {
   if (mode === "published-website") {
-    return <PublishedWebsiteRenderer publication={publication} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
+    return <PublishedWebsiteRenderer publication={publication} siteDataHash={siteDataHash || ""} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
   }
 
   return (

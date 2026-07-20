@@ -12,7 +12,9 @@
     "slideHeight": 10693400,
     "pageCount": 10,
     "generatedAt": "2026-07-18T02:16:40.379Z",
-    "immutableMaster": true
+    "immutableMaster": true,
+    "importQualityRule": "editable conversion requires visual comparison against PowerPoint-rendered source",
+    "exactLayoutLabel": "Exact layout — page artwork is fixed, overlays remain editable."
   },
   "pages": [
     {
@@ -55,7 +57,9 @@
       "id": "premier-inclusions-page-07",
       "name": "Page 07",
       "file": "pages/page-07.json",
-      "objectCount": 16
+      "objectCount": 0,
+      "importMode": "exact-layout",
+      "label": "Exact layout — page artwork is fixed, overlays remain editable."
     },
     {
       "id": "premier-inclusions-page-08",

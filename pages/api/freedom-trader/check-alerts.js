@@ -32,7 +32,7 @@ function shouldTrigger(alert, currentPrice) {
   const triggerPrice = cleanNumber(alert.trigger_price);
   if (!Number.isFinite(currentPrice) || !Number.isFinite(triggerPrice)) return false;
   const type = String(alert.alert_type || "").toUpperCase();
-  const direction = String(alert.direction || "").toLowerCase();
+  const direction = type.includes("STOP") ? "below" : "above";
   if (type === "TARGET REACHED") return currentPrice >= triggerPrice;
   if (type === "STOP REACHED") return currentPrice <= triggerPrice;
   if (type === "ENTRY REACHED") return direction === "below" ? currentPrice <= triggerPrice : currentPrice >= triggerPrice;
@@ -43,7 +43,8 @@ function shouldTrigger(alert, currentPrice) {
 }
 
 function alertMessage(alert, currentPrice) {
-  return `${alert.alert_type} for ${alert.symbol}: current price ${currentPrice} reached planned level ${alert.trigger_price}. Review the setup manually; no trade was executed.`;
+  const symbol = alert.pending_trade?.ticker || alert.symbol || "trade setup";
+  return `${alert.alert_type} for ${symbol}: current price ${currentPrice} reached planned level ${alert.trigger_price}. Review the setup manually; no trade was executed.`;
 }
 
 export default async function handler(req, res) {
@@ -56,45 +57,38 @@ export default async function handler(req, res) {
   if (!supabase) return res.status(503).json({ ok: false, error: "Alerts database temporarily unavailable.", checked: 0, triggered: [] });
 
   try {
-    const { data: alerts, error } = await supabase.from("freedom_trader_alerts").select("*").eq("status", "active");
+    const { data: alerts, error } = await supabase
+      .from("trade_alerts")
+      .select("*, pending_trade:pending_trades(*)")
+      .eq("triggered", false);
     if (error) throw error;
 
     const triggered = [];
     const failed = [];
     for (const alert of alerts || []) {
       try {
-        const currentPrice = await fetchQuote(alert.symbol);
-        if (!Number.isFinite(currentPrice)) {
-          failed.push({ id: alert.id, symbol: alert.symbol, error: "Live quote unavailable." });
+        const symbol = alert.pending_trade?.ticker;
+        if (!symbol) {
+          failed.push({ id: alert.id, symbol: null, error: "Alert is missing its pending trade ticker." });
           continue;
         }
-        const baseUpdate = { last_checked_price: currentPrice, updated_at: new Date().toISOString() };
+        const currentPrice = await fetchQuote(symbol);
+        if (!Number.isFinite(currentPrice)) {
+          failed.push({ id: alert.id, symbol, error: "Live quote unavailable." });
+          continue;
+        }
         if (shouldTrigger(alert, currentPrice)) {
-          const triggeredAt = new Date().toISOString();
           const message = alertMessage(alert, currentPrice);
           const { error: updateError } = await supabase
-            .from("freedom_trader_alerts")
-            .update({ ...baseUpdate, status: "triggered", triggered_at: triggeredAt, message })
+            .from("trade_alerts")
+            .update({ triggered: true })
             .eq("id", alert.id);
           if (updateError) throw updateError;
-          if (alert.position_id) {
-            const { error: journalError } = await supabase.from("freedom_trader_journal").insert({
-              position_id: alert.position_id,
-              symbol: alert.symbol,
-              event_type: alert.alert_type,
-              price: currentPrice,
-              notes: message,
-            });
-            if (journalError) console.error("Freedom Trader alert journal failed:", journalError);
-          }
-          triggered.push({ id: alert.id, symbol: alert.symbol, alertType: alert.alert_type, currentPrice, triggerPrice: cleanNumber(alert.trigger_price), message });
-        } else {
-          const { error: updateError } = await supabase.from("freedom_trader_alerts").update(baseUpdate).eq("id", alert.id);
-          if (updateError) throw updateError;
+          triggered.push({ id: alert.id, symbol, alertType: alert.alert_type, currentPrice, triggerPrice: cleanNumber(alert.trigger_price), message });
         }
       } catch (alertError) {
         console.error("Freedom Trader single alert check failed:", alertError);
-        failed.push({ id: alert.id, symbol: alert.symbol, error: "Alert check failed." });
+        failed.push({ id: alert.id, symbol: alert.pending_trade?.ticker || null, error: "Alert check failed." });
       }
     }
 

@@ -132,6 +132,7 @@
         "ctaUrl": "#",
         "ctaText": "",
         "eyebrow": "",
+        "autoplay": true,
         "showText": true,
         "subtitle": "",
         "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
@@ -147,13 +148,12 @@
         "videoMimeType": "video/mp4",
         "objectPosition": "top center",
         "overlayOpacity": 0,
+        "startWithAudio": true,
         "unmuteOnScroll": true,
         "videoUpdatedAt": "2026-07-19T23:53:10.518Z",
         "baseLayoutWidth": 1500,
         "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
-        "startWithAudio": true,
-        "playAudioOnInteraction": true,
-        "autoplay": true
+        "playAudioOnInteraction": true
       }
     },
     {
@@ -1956,6 +1956,7 @@
           "ctaUrl": "#",
           "ctaText": "",
           "eyebrow": "",
+          "autoplay": true,
           "showText": true,
           "subtitle": "",
           "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
@@ -1971,13 +1972,12 @@
           "videoMimeType": "video/mp4",
           "objectPosition": "top center",
           "overlayOpacity": 0,
+          "startWithAudio": true,
           "unmuteOnScroll": true,
           "videoUpdatedAt": "2026-07-19T23:53:10.518Z",
           "baseLayoutWidth": 1500,
           "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
-          "startWithAudio": true,
-          "playAudioOnInteraction": true,
-          "autoplay": true
+          "playAudioOnInteraction": true
         }
       },
       {
@@ -3652,6 +3652,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-20T03:12:23.253Z",
+  "savedAt": "2026-07-20T07:22:37.436Z",
   "source": "autosave"
 }

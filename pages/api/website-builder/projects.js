@@ -9,10 +9,11 @@ import {
   migrateWebsiteProjectToSplitStorage,
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
-import { buildWebsiteProjectVersion, summarizeWebsitePage } from "../../../lib/website-builder/documentVersion";
+import { buildWebsiteProjectVersion, summarizeWebsitePage, websiteContentHash } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
+import { collectVideoHeroMedia, normalizeDomain, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
 
 const TABLE_NAME = "published_websites";
 const GR8_RESULT_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
@@ -292,6 +293,45 @@ function countFooterNavLinks(project) {
   return Array.isArray(links) ? links.length : 0;
 }
 
+function collectMediaFieldCount(value, fieldNames) {
+  if (Array.isArray(value)) {
+    return value.reduce((sum, entry) => sum + collectMediaFieldCount(entry, fieldNames), 0);
+  }
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce((sum, [key, child]) => {
+    const current = typeof child === "string" && fieldNames.has(key) && child.trim() ? 1 : 0;
+    return sum + current + collectMediaFieldCount(child, fieldNames);
+  }, 0);
+}
+
+function summarizeProjectSaveVerification(project = {}) {
+  const imageFields = new Set(["imageUrl", "image", "imageSrc", "mediaUrl", "backgroundImage", "desktopImage", "iconImage", "iconUrl", "logoUrl"]);
+  const videos = collectVideoHeroMedia(project?.pageBlocks || {});
+  return {
+    pageCount: Array.isArray(project?.pages) ? project.pages.length : 0,
+    blockCount: Object.values(project?.pageBlocks || {}).reduce((sum, blocks) => sum + (Array.isArray(blocks) ? blocks.length : 0), 0),
+    contentHash: websiteContentHash({
+      pages: project?.pages || [],
+      pageBlocks: project?.pageBlocks || {},
+      pagesContent: project?.pagesContent || {},
+      chaiData: project?.chaiData || {},
+      globalNavBlock: project?.globalNavBlock || null,
+      globalFooterBlock: project?.globalFooterBlock || null,
+    }),
+    footerNavigationCount: countFooterNavLinks(project),
+    customDomain: normalizeDomain(project?.customDomain || project?.custom_domain || project?.publication?.customDomain || project?.publication?.custom_domain || ""),
+    primaryDomain: normalizeDomain(project?.primaryDomain || project?.primary_domain || project?.publication?.primaryDomain || project?.publication?.primary_domain || ""),
+    slug: resolveProjectSlug(project, project?.name || project?.id || "site"),
+    videos: videos.map((entry) => ({
+      pageName: entry.pageName || "",
+      blockId: entry.id || "",
+      videoUrl: entry.videoSrc || "",
+    })),
+    imageCount: collectMediaFieldCount(project?.pageBlocks || {}, imageFields),
+    marqueeIconCount: collectMediaFieldCount(project?.pageBlocks || {}, new Set(["iconName", "iconUrl"])),
+  };
+}
+
 function mapProjectRow(row) {
   if (!row) return null;
 
@@ -324,6 +364,27 @@ function compactProjectForDb(project) {
     __splitStorage: true,
     storageVersion: 2,
   };
+}
+
+function hasProjectDomainField(project = {}) {
+  const publication = project?.publication && typeof project.publication === "object" ? project.publication : {};
+  return Object.prototype.hasOwnProperty.call(project || {}, "customDomain")
+    || Object.prototype.hasOwnProperty.call(project || {}, "custom_domain")
+    || Object.prototype.hasOwnProperty.call(publication, "customDomain")
+    || Object.prototype.hasOwnProperty.call(publication, "custom_domain");
+}
+
+function resolveSavedDraftDomain(nextProject = {}, existingRow = null) {
+  const incoming = normalizeDomain(nextProject?.customDomain || nextProject?.custom_domain || nextProject?.publication?.customDomain || nextProject?.publication?.custom_domain || "");
+  if (hasProjectDomainField(nextProject)) return incoming;
+  return normalizeDomain(
+    existingRow?.custom_domain
+    || existingRow?.site_data?.customDomain
+    || existingRow?.site_data?.custom_domain
+    || existingRow?.site_data?.publication?.customDomain
+    || existingRow?.site_data?.publication?.custom_domain
+    || ""
+  );
 }
 
 function getProjectPageBlocks(project, pageName) {
@@ -571,7 +632,7 @@ async function handler(req, res) {
     const currentSplitUpdatedAt = currentSplitProject?.updatedAt || currentSplitProject?.savedAt || "";
     const incomingBaseMs = Date.parse(baseUpdatedAt || 0) || 0;
     const currentSplitMs = Date.parse(currentSplitUpdatedAt || 0) || 0;
-    if (baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs && saveSource !== "manual-save") {
+    if (baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs) {
       console.warn("[website-builder save] rejected stale split-storage write before page upsert", {
         projectId,
         pageName: requestedPage || "",
@@ -605,6 +666,85 @@ async function handler(req, res) {
       return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
     }
 
+    if (splitProject?.id) {
+      const savedProject = splitProject;
+      const expectedVerification = summarizeProjectSaveVerification(nextProject);
+      const splitVerification = summarizeProjectSaveVerification(savedProject);
+      const savedBlocks = requestedPage ? getProjectPageBlocks(savedProject, requestedPage) : [];
+      const payloadBlockIds = new Set((Array.isArray(incomingBlocks) ? incomingBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
+      const savedBlockIds = new Set((Array.isArray(savedBlocks) ? savedBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
+      const extraReadBackIds = [...savedBlockIds].filter((id) => !payloadBlockIds.has(id));
+      const missingReadBackIds = [...payloadBlockIds].filter((id) => !savedBlockIds.has(id));
+      const missingVideos = expectedVerification.videos
+        .filter((entry) => entry.videoUrl)
+        .filter((entry) => !splitVerification.videos.some((stored) => (
+          stored.pageName === entry.pageName
+          && stored.blockId === entry.blockId
+          && stored.videoUrl === entry.videoUrl
+        )));
+      const verificationIssues = [];
+      if (expectedVerification.pageCount && splitVerification.pageCount !== expectedVerification.pageCount) {
+        verificationIssues.push({ type: "page-count-mismatch", expected: expectedVerification.pageCount, actual: splitVerification.pageCount });
+      }
+      if (expectedVerification.footerNavigationCount > 0 && splitVerification.footerNavigationCount !== expectedVerification.footerNavigationCount) {
+        verificationIssues.push({ type: "footer-navigation-count-mismatch", expected: expectedVerification.footerNavigationCount, actual: splitVerification.footerNavigationCount });
+      }
+      if (expectedVerification.customDomain && splitVerification.customDomain !== expectedVerification.customDomain) {
+        verificationIssues.push({ type: "custom-domain-mismatch", expected: expectedVerification.customDomain, actual: splitVerification.customDomain });
+      }
+      if (expectedVerification.primaryDomain && splitVerification.primaryDomain !== expectedVerification.primaryDomain) {
+        verificationIssues.push({ type: "primary-domain-mismatch", expected: expectedVerification.primaryDomain, actual: splitVerification.primaryDomain });
+      }
+      if (expectedVerification.imageCount > 0 && splitVerification.imageCount < expectedVerification.imageCount) {
+        verificationIssues.push({ type: "image-count-decreased", expected: expectedVerification.imageCount, actual: splitVerification.imageCount });
+      }
+      if (expectedVerification.marqueeIconCount > 0 && splitVerification.marqueeIconCount < expectedVerification.marqueeIconCount) {
+        verificationIssues.push({ type: "marquee-icon-count-decreased", expected: expectedVerification.marqueeIconCount, actual: splitVerification.marqueeIconCount });
+      }
+      if (missingVideos.length) {
+        verificationIssues.push({ type: "video-url-missing", missingVideos });
+      }
+
+      console.info("[website-builder save] verified split-storage source of truth", {
+        projectId,
+        pageName: requestedPage || "",
+        saveSource,
+        siteOnly,
+        expected: expectedVerification,
+        splitStorage: splitVerification,
+        extraReadBackIds,
+        missingReadBackIds,
+        issues: verificationIssues,
+      });
+
+      if (verificationIssues.length || (requestedPage && (extraReadBackIds.length || missingReadBackIds.length))) {
+        return res.status(409).json({
+          ok: false,
+          error: "Save failed verification. The database read-back does not match the submitted website project.",
+          code: "WEBSITE_SAVE_READBACK_MISMATCH",
+          projectId,
+          pageName: requestedPage || "",
+          extraReadBackIds,
+          missingReadBackIds,
+          verification: {
+            expected: expectedVerification,
+            splitStorage: splitVerification,
+            issues: verificationIssues,
+          },
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        project: savedProject,
+        verification: {
+          ok: true,
+          expected: expectedVerification,
+          splitStorage: splitVerification,
+        },
+      });
+    }
+
     const existing = await supabaseAdmin
       .from(TABLE_NAME)
       .select("id, published, published_at, custom_domain, domain_status, slug, primary_domain, site_data, updated_at")
@@ -622,7 +762,7 @@ async function handler(req, res) {
 
     const currentUpdatedAt = existing.data?.updated_at || existing.data?.site_data?.updatedAt || "";
     const currentMs = Date.parse(currentUpdatedAt || 0) || 0;
-    if (baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs && saveSource !== "manual-save") {
+    if (baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs) {
       console.warn("[website-builder save] rejected stale write", {
         projectId,
         pageName: requestedPage || "",
@@ -661,18 +801,27 @@ async function handler(req, res) {
       }
     }
 
+    const draftCustomDomain = resolveSavedDraftDomain(nextProject, existing.data);
+    const draftPrimaryDomain = draftCustomDomain || existing.data?.primary_domain || buildDraftPrimaryDomain(projectId);
+    const draftSlug = resolveProjectSlug(nextProject, existing.data?.site_data?.slug || existing.data?.slug || nextProject?.name || projectId);
+    const draftSiteData = withProjectPublicationIdentity(compactProjectForDb(splitProject || nextProject), {
+      slug: draftSlug,
+      customDomain: draftCustomDomain,
+      primaryDomain: draftPrimaryDomain,
+    });
+
     const record = {
       user_id: userId,
       project_id: draftProjectId,
       name: nextProject?.name || "Untitled Website",
       slug: existing.data?.slug || buildDraftSlug(projectId),
       primary_domain: existing.data?.primary_domain || buildDraftPrimaryDomain(projectId),
-      custom_domain: existing.data?.custom_domain || null,
-      domain_status: existing.data?.domain_status || "generated",
+      custom_domain: null,
+      domain_status: draftCustomDomain ? "saved_for_publish" : "generated",
       published: false,
       published_at: null,
       site_data: {
-        ...compactProjectForDb(splitProject || nextProject),
+        ...draftSiteData,
         __draftSync: true,
       },
     };
@@ -751,6 +900,64 @@ async function handler(req, res) {
 
     const savedProject = splitProject || mapProjectRow(readBack.data || result.data);
     const readBackProject = mapProjectRow(readBack.data || result.data);
+    const expectedVerification = summarizeProjectSaveVerification(nextProject);
+    const splitVerification = summarizeProjectSaveVerification(savedProject);
+    const missingVideos = expectedVerification.videos
+      .filter((entry) => entry.videoUrl)
+      .filter((entry) => !splitVerification.videos.some((stored) => (
+        stored.pageName === entry.pageName
+        && stored.blockId === entry.blockId
+        && stored.videoUrl === entry.videoUrl
+      )));
+    const verificationIssues = [];
+    if (expectedVerification.pageCount && splitVerification.pageCount !== expectedVerification.pageCount) {
+      verificationIssues.push({
+        type: "page-count-mismatch",
+        expected: expectedVerification.pageCount,
+        actual: splitVerification.pageCount,
+      });
+    }
+    if (expectedVerification.footerNavigationCount > 0 && splitVerification.footerNavigationCount !== expectedVerification.footerNavigationCount) {
+      verificationIssues.push({
+        type: "footer-navigation-count-mismatch",
+        expected: expectedVerification.footerNavigationCount,
+        actual: splitVerification.footerNavigationCount,
+      });
+    }
+    if (expectedVerification.customDomain && splitVerification.customDomain !== expectedVerification.customDomain) {
+      verificationIssues.push({
+        type: "custom-domain-mismatch",
+        expected: expectedVerification.customDomain,
+        actual: splitVerification.customDomain,
+      });
+    }
+    if (expectedVerification.primaryDomain && splitVerification.primaryDomain !== expectedVerification.primaryDomain) {
+      verificationIssues.push({
+        type: "primary-domain-mismatch",
+        expected: expectedVerification.primaryDomain,
+        actual: splitVerification.primaryDomain,
+      });
+    }
+    if (expectedVerification.imageCount > 0 && splitVerification.imageCount < expectedVerification.imageCount) {
+      verificationIssues.push({
+        type: "image-count-decreased",
+        expected: expectedVerification.imageCount,
+        actual: splitVerification.imageCount,
+      });
+    }
+    if (expectedVerification.marqueeIconCount > 0 && splitVerification.marqueeIconCount < expectedVerification.marqueeIconCount) {
+      verificationIssues.push({
+        type: "marquee-icon-count-decreased",
+        expected: expectedVerification.marqueeIconCount,
+        actual: splitVerification.marqueeIconCount,
+      });
+    }
+    if (missingVideos.length) {
+      verificationIssues.push({
+        type: "video-url-missing",
+        missingVideos,
+      });
+    }
     const pageSummary = summarizeWebsitePage(savedProject, requestedPage);
     const readBackBlocks = requestedPage ? getProjectPageBlocks(savedProject, requestedPage) : [];
     const payloadBlockIds = new Set((Array.isArray(incomingBlocks) ? incomingBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
@@ -773,10 +980,39 @@ async function handler(req, res) {
       siteOnly,
       splitStorageReadBack: summarizeBlockList(readBackBlocks),
       draftRowReadBack: summarizeBlockList(requestedPage ? getProjectPageBlocks(readBackProject, requestedPage) : []),
+      verification: {
+        expected: expectedVerification,
+        splitStorage: splitVerification,
+        issues: verificationIssues,
+      },
       extraReadBackIds,
       missingReadBackIds,
       deletedBlockIds: normalizeDeletedBlockTombstones(readBackProject),
     });
+
+    if (verificationIssues.length) {
+      console.error("[website-builder save] split-storage verification mismatch after save; rejecting saved status", {
+        projectId,
+        draftProjectId,
+        pageName: requestedPage || "",
+        saveSource,
+        expected: expectedVerification,
+        splitStorage: splitVerification,
+        issues: verificationIssues,
+      });
+      return res.status(409).json({
+        ok: false,
+        error: "Save failed verification. The database read-back does not match the submitted website project.",
+        code: "WEBSITE_SAVE_READBACK_MISMATCH",
+        projectId,
+        pageName: requestedPage || "",
+        verification: {
+          expected: expectedVerification,
+          splitStorage: splitVerification,
+          issues: verificationIssues,
+        },
+      });
+    }
 
     if (requestedPage && (extraReadBackIds.length || missingReadBackIds.length)) {
       console.error("[website-builder save] verification mismatch after save; rejecting saved status", {
@@ -799,7 +1035,15 @@ async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ ok: true, project: savedProject });
+    return res.status(200).json({
+      ok: true,
+      project: savedProject,
+      verification: {
+        ok: true,
+        expected: expectedVerification,
+        splitStorage: splitVerification,
+      },
+    });
   }
 
   if (req.method === "PATCH") {

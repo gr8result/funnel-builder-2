@@ -8,7 +8,7 @@ import {
   MonitorSmartphone,
 } from "lucide-react";
 import { aboutBuilderDefaults } from "../defaults/aboutBuilder.defaults";
-import { LuxuryMasterPageHeader, nativeProjectEstimateImageProps, nativeProjectEstimateTextProps, styles } from "../ProjectEstimateShared";
+import { LuxuryMasterPageHeader, styles } from "../ProjectEstimateShared";
 import type { EstimatePageProps, ProjectEstimatePageDefinition } from "../ProjectEstimateTypes";
 
 const block = (id: string, type: string, order: number, content: Record<string, any> = {}, design: Record<string, any> = {}) => ({ id: `about-${id}`, type, order, content, design });
@@ -44,8 +44,6 @@ export const aboutBuilderPageDefinition: ProjectEstimatePageDefinition = {
     block("heading", "heading", 1, { text: aboutBuilderDefaults.mainHeading, editorLabel: "Main heading" }),
     block("about-copy", "text", 2, { text: aboutBuilderDefaults.aboutText, editorLabel: "About text" }),
     block("proof-points", "text", 3, { text: aboutBuilderDefaults.proofPoints, editorLabel: "Proof points" }),
-    block("hero-image", "image", 4, { imageUrl: "", defaultImageUrl: "", editorLabel: "Main about image", alt: "Premium residential home" }),
-    block("detail-image", "image", 5, { imageUrl: "", defaultImageUrl: "", editorLabel: "Detail about image", alt: "Architectural detail" }),
   ],
   editorFields: [
     { blockId: "about-eyebrow", label: "Page label", type: "text" },
@@ -57,7 +55,7 @@ export const aboutBuilderPageDefinition: ProjectEstimatePageDefinition = {
   Component: AboutBuilderPage,
 };
 
-export function AboutBuilderPage({ resolvedTheme, accent, logo, builderName, whyStats = [], content = aboutBuilderDefaults, editorBridge = null }: EstimatePageProps) {
+export function AboutBuilderPage({ resolvedTheme, accent, logo, builderName, whyStats = [], content = aboutBuilderDefaults }: EstimatePageProps) {
   const aboutWhyCards = [
     ["Quality Craftsmanship", "Careful workmanship, disciplined supervision and a finish that feels considered in every room.", BadgeCheck],
     ["Clear Communication", "Straightforward updates, practical guidance and clear next steps from estimate through to handover.", MessageCircle],
@@ -66,34 +64,26 @@ export function AboutBuilderPage({ resolvedTheme, accent, logo, builderName, why
     ["Transparent Fixed Pricing", "Your investment is presented clearly, with scope, inclusions and progress stages explained in plain language.", FileCheck2],
     ["Long-Term Support", "Our care continues after handover with practical support and a relationship built to last.", Handshake],
   ];
-  const defaultHeroImage = resolvedTheme?.aboutImageUrl || resolvedTheme?.heroImageUrl || "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1400&q=80";
-  const defaultDetailImage = resolvedTheme?.aboutDetailImageUrl || resolvedTheme?.designImageUrl || "https://images.unsplash.com/photo-1600210492493-0946911123ea?auto=format&fit=crop&w=1400&q=80";
-  const aboutHeroImage = editorBridge?.blockById?.["about-hero-image"]?.content?.imageUrl || defaultHeroImage;
-  const aboutDetailImage = editorBridge?.blockById?.["about-detail-image"]?.content?.imageUrl || defaultDetailImage;
-  const headingProps = nativeProjectEstimateTextProps("about-heading", "text", editorBridge);
-  const bodyProps = nativeProjectEstimateTextProps("about-about-copy", "text", editorBridge);
-  const eyebrowProps = nativeProjectEstimateTextProps("about-eyebrow", "text", editorBridge);
-  const proofProps = nativeProjectEstimateTextProps("about-proof-points", "text", editorBridge);
-  const heroProps = nativeProjectEstimateImageProps("about-hero-image", editorBridge);
-  const detailProps = nativeProjectEstimateImageProps("about-detail-image", editorBridge);
+  const aboutHeroImage = resolvedTheme?.aboutImageUrl || resolvedTheme?.heroImageUrl || "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1400&q=80";
+  const aboutDetailImage = resolvedTheme?.aboutDetailImageUrl || resolvedTheme?.designImageUrl || "https://images.unsplash.com/photo-1600210492493-0946911123ea?auto=format&fit=crop&w=1400&q=80";
 
   return (
     <section className="proposal-builder-page" style={aboutPageStyles.page}>
       <LuxuryMasterPageHeader logo={logo} builderName={builderName} title="About GoodBuild" accent={accent} />
       <div style={aboutPageStyles.top}>
         <div style={aboutPageStyles.copy}>
-          <h2 {...headingProps} style={{ ...aboutPageStyles.title, ...(headingProps as any).style }}>{content.mainHeading}</h2>
-          <p {...bodyProps} style={{ ...aboutPageStyles.body, ...(bodyProps as any).style }}>{content.aboutText}</p>
+          <h2 style={aboutPageStyles.title}>{content.mainHeading}</h2>
+          <p style={aboutPageStyles.body}>{content.aboutText}</p>
         </div>
         <div style={aboutPageStyles.imageStack}>
-          <img {...heroProps} src={aboutHeroImage} alt="Premium residential home" style={{ ...aboutPageStyles.heroImage, ...(heroProps as any).style }} />
-          <img {...detailProps} src={aboutDetailImage} alt="Architectural detail" style={{ ...aboutPageStyles.detailImage, ...(detailProps as any).style }} />
+          <img src={aboutHeroImage} alt="Premium residential home" style={aboutPageStyles.heroImage} />
+          <img src={aboutDetailImage} alt="Architectural detail" style={aboutPageStyles.detailImage} />
         </div>
       </div>
       <div style={aboutPageStyles.lower}>
         <div>
-          <div {...eyebrowProps} style={{ ...styles.luxuryEyebrow, color: accent, ...(eyebrowProps as any).style }}>{content.eyebrow}</div>
-          <h3 {...proofProps} style={{ ...aboutPageStyles.subhead, ...(proofProps as any).style }}>{content.proofPoints || "A premium building experience with clear systems and human care."}</h3>
+          <div style={{ ...styles.luxuryEyebrow, color: accent }}>{content.eyebrow}</div>
+          <h3 style={aboutPageStyles.subhead}>A premium building experience with clear systems and human care.</h3>
         </div>
         <div style={aboutPageStyles.cardGrid}>
           {aboutWhyCards.map(([title, body, Icon]: any) => (

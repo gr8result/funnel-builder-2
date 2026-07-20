@@ -103,6 +103,11 @@ const DocumentPageBuilder = dynamic(() => import("../document-engine/editor/Docu
   loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading document page builder...</div>,
 });
 
+const WebsiteBuilderPageCanvas = dynamic(() => import("../website-builder/PageBuilderCanvas"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading Website Builder editor...</div>,
+});
+
 const CommercialQuoteApprovalsPage = dynamic(() => import("../../pages/modules/builders/quote-approvals"), {
   ssr: false,
   loading: () => <CommercialModuleLoading label="Quote Approvals" />,
@@ -2663,13 +2668,6 @@ export function ClientPageSheet({ sheet }) {
     }), "Block saved.");
   };
 
-  const applyProjectEstimateDocumentToPage = (pageId, document) => {
-    updateBuilder((current) => ({
-      ...current,
-      pages: (current.pages || []).map((page) => page.id === pageId ? projectEstimatePageFromDocument(page, document, linkedFields) : page),
-    }), "Project Estimate page saved.");
-  };
-
   const updateSelectedBlockDesign = (changes = {}) => {
     if (!selectedBlock) return;
     updateBlock(selectedBlock.id, { design: { ...(selectedBlock.design || {}), ...changes } });
@@ -2906,6 +2904,19 @@ export function ClientPageSheet({ sheet }) {
       setStatusMessage("Image could not be imported.");
       themeUploadTargetRef.current = "";
     }
+  };
+
+  const prepareWebsiteBuilderEstimateImage = async (_index, _key, file) => {
+    const imageLike = file?.type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(String(file?.name || ""));
+    if (!file || !imageLike) return null;
+    const url = await prepareProposalImageDataUrl(file, { maxDimension: 1800, quality: 0.84 });
+    return {
+      id: proposalBuilderId("asset"),
+      src: url,
+      url,
+      name: file.name || "Uploaded image",
+      type: file.type || "image",
+    };
   };
 
   const saveTemplate = async () => {
@@ -3220,6 +3231,12 @@ export function ClientPageSheet({ sheet }) {
     setAiRewriteOpen(false);
   };
 
+  const openReferencedPdfDocument = (document) => {
+    const url = referencedPdfUrl(document);
+    if (!url || typeof window === "undefined") return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const openDocumentLibrary = async (sourceType) => {
     setDocumentLibraryOpen(sourceType);
     setDocumentLibraryLoading(true);
@@ -3355,6 +3372,7 @@ export function ClientPageSheet({ sheet }) {
               onRemoveInclusions={removeInclusionsDocument}
               onReplacePlans={() => plansInputRef.current?.click()}
               onRemovePlans={removePlansDocument}
+              onViewDocument={openReferencedPdfDocument}
               onOpenLibrary={openDocumentLibrary}
             />
             <div style={styles.proposalThemeHint}>
@@ -3381,14 +3399,31 @@ export function ClientPageSheet({ sheet }) {
             />
           ) : (
             pageEditMode && !readonly ? (
-              <DocumentPageBuilder
-                key={`document-editor-${activePage.id}`}
-                document={projectEstimatePageToDocument(activePage, builder.theme, linkedFields)}
-                workbook={sheet.workbook}
-                readonly={readonly}
-                initialMode="edit"
-                onStatus={setStatusMessage}
-                onChange={(document) => applyProjectEstimateDocumentToPage(activePage.id, document)}
+              <ProjectEstimateWebsiteBuilderEditor
+                key={`website-builder-editor-${activePage.id}`}
+                page={activePage}
+                builder={builder}
+                client={client}
+                sheet={sheet}
+                linkedFields={linkedFields}
+                brandAssets={{
+                  logo: client.logoUrl ? { id: "estimate-logo", src: client.logoUrl, name: "Builder logo" } : null,
+                  images: [
+                    builder.theme?.heroImageUrl ? { id: "estimate-hero", src: builder.theme.heroImageUrl, name: "Hero image" } : null,
+                    builder.theme?.aboutImageUrl ? { id: "estimate-about", src: builder.theme.aboutImageUrl, name: "About image" } : null,
+                    builder.theme?.aboutDetailImageUrl ? { id: "estimate-about-detail", src: builder.theme.aboutDetailImageUrl, name: "About detail image" } : null,
+                  ].filter(Boolean),
+                }}
+                onUploadImage={prepareWebsiteBuilderEstimateImage}
+                onSave={(blocks) => {
+                  updateBuilder((current) => ({
+                    ...current,
+                    pages: (current.pages || []).map((page) => page.id === activePage.id
+                      ? projectEstimatePageFromWebsiteBuilderBlocks(page, blocks, linkedFields)
+                      : page),
+                  }), "Project Estimate page saved.");
+                  setStatusMessage("Project Estimate page saved.");
+                }}
               />
             ) : (
               <ProjectEstimateEditablePage
@@ -3606,6 +3641,7 @@ function ProposalImportSidebarStatus({
   onRemoveInclusions,
   onReplacePlans,
   onRemovePlans,
+  onViewDocument,
   onOpenLibrary,
 }) {
   if (!editing || !["standardInclusions", "pricedPlans"].includes(page?.page_type)) return null;
@@ -3616,19 +3652,24 @@ function ProposalImportSidebarStatus({
         <strong>Plans Used to Prepare This Estimate</strong>
         {planPages.length ? (
           <>
-            <span>{pricedPlans.fileName || pricedPlans.title || planPages[0]?.fileName || "Concept Plans PDF"}</span>
-            <span>{planPages.length} page{planPages.length === 1 ? "" : "s"} imported</span>
+            <span>Current file: {pricedPlans.fileName || pricedPlans.title || planPages[0]?.fileName || "Concept Plans PDF"}</span>
+            <span>Page count: {planPages.length}</span>
             <div style={styles.importButtonRow}>
-              <button type="button" style={styles.secondaryButton} onClick={onReplacePlans}>Replace</button>
-              <button type="button" style={styles.dangerButton} onClick={onRemovePlans}>Remove</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => onViewDocument?.(pricedPlans)}>View PDF</button>
+              <button type="button" style={styles.secondaryButton} onClick={onReplacePlans}>Replace PDF</button>
+              <button type="button" style={styles.dangerButton} onClick={onRemovePlans}>Remove PDF</button>
             </div>
           </>
         ) : (
           <>
-            <span>No plans PDF uploaded.</span>
+            <span>Current file: No PDF attached</span>
+            <span>Page count: -</span>
             <div style={styles.importButtonRow}>
-              <button type="button" style={styles.primaryButton} onClick={onInsertPlans}>Insert Plans PDF</button>
-              <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("priced_plans")}>Select from Library</button>
+              <button type="button" style={styles.secondaryButton} disabled>View PDF</button>
+              <button type="button" style={styles.secondaryButton} onClick={onInsertPlans}>Replace PDF</button>
+              <button type="button" style={styles.primaryButton} onClick={onInsertPlans}>Upload Plans</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("priced_plans")}>Choose from Document Library</button>
+              <button type="button" style={styles.dangerButton} disabled>Remove PDF</button>
             </div>
           </>
         )}
@@ -3638,27 +3679,34 @@ function ProposalImportSidebarStatus({
   return (
     <div style={styles.proposalThemeHint}>
       <strong>Standard Inclusions Schedule</strong>
-      {inclusionsDocument?.publicUrl ? (
+      {referencedPdfUrl(inclusionsDocument) ? (
         <>
-          <span>Active inclusions schedule:</span>
-          <span>{inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</span>
-          <span>{Number(inclusionsDocument.pageCount || 1)} page{Number(inclusionsDocument.pageCount || 1) === 1 ? "" : "s"} imported</span>
+          <span>Current file: {inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</span>
+          <span>Page count: {Number(inclusionsDocument.pageCount || inclusionsDocument.page_count || inclusionsDocument.pages?.length || 1)}</span>
           <span>Uploaded {formatProposalDate(inclusionsDocument.uploadedAt || inclusionsDocument.importedAt)}</span>
           {inclusionsDocument.version || inclusionsDocument.fileHash ? (
             <span>Version {inclusionsDocument.version || String(inclusionsDocument.fileHash).slice(0, 12)}</span>
           ) : null}
           <div style={styles.importButtonRow}>
-            <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace</button>
-            <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove Existing Schedule Completely</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onViewDocument?.(inclusionsDocument)}>View PDF</button>
+            <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace PDF</button>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
+            <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove PDF</button>
           </div>
         </>
       ) : (
         <>
-          <span>No inclusions PDF uploaded.</span>
+          <span>Current file: No PDF attached</span>
+          <span>Page count: -</span>
           <div style={styles.importButtonRow}>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Insert Standard</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Insert Modified</button>
-            <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Select from Library</button>
+            <button type="button" style={styles.secondaryButton} disabled>View PDF</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertStandard}>Replace PDF</button>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
+            <button type="button" style={styles.dangerButton} disabled>Remove PDF</button>
           </div>
         </>
       )}
@@ -4567,6 +4615,38 @@ function ProjectEstimateOverlayShape({ block }) {
     return <div style={{ width: "100%", height: block.design?.thickness || 2, background: block.design?.color || "#cbd5e1", marginTop: "10%" }} />;
   }
   return <div style={{ width: "100%", height: "100%", background: block.design?.backgroundColor || block.design?.fill || "rgba(14,165,233,0.10)", border: `${block.design?.borderWidth || 1}px solid ${block.design?.borderColor || "rgba(14,165,233,0.35)"}`, borderRadius: Number(block.design?.borderRadius || 8) }} />;
+}
+
+function ProjectEstimateWebsiteBuilderEditor({ page, builder, client, sheet, linkedFields, brandAssets, onUploadImage, onSave }) {
+  const pageName = page?.title || pretty(page?.page_type || page?.id || "Project Estimate Page");
+  const pageBlocks = useMemo(() => projectEstimatePageToWebsiteBuilderBlocks(page, builder?.theme || {}, linkedFields), [page, builder?.theme, linkedFields]);
+  const editorProject = useMemo(() => ({
+    id: `project-estimate-${sheet?.workbook?.id || sheet?.workbook?.builderId || "local"}`,
+    name: client?.companyName || "Project Estimate",
+    userId: sheet?.workbook?.userId || sheet?.workbook?.ownerId || "",
+    pages: [{ id: page?.id || page?.page_type || "page", name: pageName, slug: page?.page_type || page?.id || "page" }],
+    pageBlocks: { [pageName]: pageBlocks },
+  }), [client?.companyName, page?.id, page?.page_type, pageName, pageBlocks, sheet?.workbook?.builderId, sheet?.workbook?.id, sheet?.workbook?.ownerId, sheet?.workbook?.userId]);
+
+  return (
+    <div data-project-estimate-website-builder-adapter="true" style={styles.projectEstimateWebsiteBuilderFrame}>
+      <WebsiteBuilderPageCanvas
+        project={editorProject}
+        brandAssets={brandAssets}
+        pageBlocks={pageBlocks}
+        activePage={pageName}
+        currentObjective="Edit this Project Estimate page"
+        onSave={onSave}
+        onForceSave={onSave}
+        onUploadImage={onUploadImage}
+        onSelectAsset={(_index, _key, _asset, updatedBlocks) => {
+          if (Array.isArray(updatedBlocks)) onSave?.(updatedBlocks);
+        }}
+        showHeader
+        canSaveTemplates={false}
+      />
+    </div>
+  );
 }
 
 function ProjectEstimateTextToolbar({ block, readonly, onBlockDesign, onUndo, onRedo }) {
@@ -5507,154 +5587,166 @@ function projectEstimateBlockTextStyle(block = {}) {
   };
 }
 
-function projectEstimatePageToDocument(page = {}, theme = {}, linkedFields = {}) {
-  const pageId = page.page_type || page.id || "project-estimate-page";
-  const objects = (page.blocks || [])
+function projectEstimatePageToWebsiteBuilderBlocks(page = {}, theme = {}, linkedFields = {}) {
+  return (page.blocks || [])
     .filter((block) => block?.design?.hidden !== true)
-    .map((block, index) => projectEstimateBlockToDocumentObject(block, page, theme, linkedFields, index))
+    .map((block, index) => projectEstimateBlockToWebsiteBuilderBlock(block, page, theme, linkedFields, index))
     .filter(Boolean);
-  return createDocument({
-    id: `project-estimate-document-${page.id || pageId}`,
-    name: page.title || pretty(pageId),
-    activePageId: page.id || pageId,
-    pages: [
-      createA4Page({
-        id: page.id || pageId,
-        name: page.title || pretty(pageId),
-        width: PROJECT_ESTIMATE_PAGE_WIDTH,
-        height: PROJECT_ESTIMATE_PAGE_HEIGHT,
-        background: { color: page.design?.backgroundColor || "#ffffff", imageRef: page.design?.backgroundImageUrl || null },
-        objects,
-      }),
-    ],
-    metadata: { source: "project-estimate", pageId },
-  });
 }
 
-function projectEstimateBlockToDocumentObject(block = {}, page = {}, theme = {}, linkedFields = {}, index = 0) {
+function projectEstimateBlockToWebsiteBuilderBlock(block = {}, page = {}, theme = {}, linkedFields = {}, index = 0) {
+  const design = block.design || {};
   const frame = proposalBlockFrame(block, page);
   const common = {
-    id: block.id,
-    name: block.content?.editorLabel || proposalBlockLabel(block.type),
-    x: frame.x,
-    y: frame.y,
-    width: frame.width,
-    height: frame.height,
-    layer: Number(block.design?.zIndex ?? block.order ?? index),
-    locked: block.design?.locked === true,
-    visible: block.design?.hidden !== true,
-    opacity: Number(block.design?.opacity ?? 1),
-    style: projectEstimateDocumentObjectStyle(block),
-    data: { blockId: block.id, blockType: block.type, contentKey: projectEstimateEditorContentKey(block), fieldKey: block.content?.fieldKey || "" },
+    id: `pe-${block.id}`,
+    props: {
+      __projectEstimateBlockId: block.id,
+      __projectEstimateBlockType: block.type,
+      __projectEstimateContentKey: projectEstimateEditorContentKey(block),
+      __projectEstimatePageType: page.page_type || page.id || "",
+      baseLayoutWidth: PROJECT_ESTIMATE_PAGE_WIDTH,
+      backgroundColor: design.backgroundColor || "transparent",
+      marginTop: 0,
+      paddingTop: Math.max(0, Number(design.padding || 0)),
+      paddingBottom: Math.max(0, Number(design.padding || 0)),
+      minHeight: `${Math.max(24, Number(frame.height || 80))}px`,
+      opacity: Number(design.opacity ?? 1),
+    },
   };
   if (block.type === "image" || block.type === "logo" || block.id === "cover-hero-image") {
-    const imageRef = block.content?.imageUrl || block.content?.logoUrl || block.content?.defaultImageUrl || block.content?.defaultLogoUrl || theme.heroImageUrl || "/assets/builders/standard-inclusions-hero.jpg";
-    return createObject(block.type === "logo" ? "logo" : "image", { ...common, data: { ...common.data, imageRef, alt: block.content?.alt || common.name } });
+    const src = block.content?.imageUrl || block.content?.logoUrl || block.content?.defaultImageUrl || block.content?.defaultLogoUrl || theme.heroImageUrl || "";
+    return {
+      ...common,
+      type: "image",
+      props: {
+        ...common.props,
+        src,
+        alt: block.content?.alt || block.content?.editorLabel || proposalBlockLabel(block.type),
+        width: `${Math.max(120, Number(frame.width || PROJECT_ESTIMATE_PAGE_WIDTH))}px`,
+        height: `${Math.max(80, Number(frame.height || 360))}px`,
+        objectFit: design.objectFit || design.fit || "cover",
+        objectPosition: `${Number(design.objectPositionX ?? 50)}% ${Number(design.objectPositionY ?? 50)}%`,
+        borderRadius: Number(design.borderRadius || 0),
+        fullWidthBackground: block.id === "cover-hero-image",
+      },
+    };
   }
-  if (block.type === "divider") return createObject("divider", common);
-  if (["shape", "container", "spacer"].includes(block.type)) return createObject("shape", common);
-  return createObject(block.type === "quote_field" ? "dynamicField" : "text", {
-    ...common,
-    data: { ...common.data, text: projectEstimateBlockTextValue(block, linkedFields) },
-  });
-}
-
-function projectEstimateDocumentObjectStyle(block = {}) {
-  const design = block.design || {};
+  if (block.type === "divider") {
+    return {
+      ...common,
+      type: "divider",
+      props: {
+        ...common.props,
+        color: design.color || design.backgroundColor || "#cbd5e1",
+        thickness: Number(design.thickness || frame.height || 2),
+        backgroundColor: "transparent",
+      },
+    };
+  }
+  if (block.type === "spacer") {
+    return { ...common, type: "space", props: { ...common.props, height: Number(frame.height || design.height || 32), backgroundColor: "transparent" } };
+  }
+  const text = projectEstimateBlockTextValue(block, linkedFields);
   return {
-    fontFamily: design.fontFamily || "Arial",
-    fontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
-    fontWeight: Number(design.fontWeight || (block.type === "heading" ? 800 : 500)),
-    fontStyle: design.fontStyle || "normal",
-    textDecoration: design.textDecoration || "none",
-    color: design.color || "#0f172a",
-    textAlign: design.textAlign || "left",
-    lineHeight: design.lineHeight || 1.3,
-    letterSpacing: design.letterSpacing || 0,
-    backgroundColor: design.backgroundColor || "transparent",
-    padding: Number(design.padding || 0),
-    objectFit: design.objectFit || "cover",
-    borderRadius: Number(design.borderRadius || 0),
-    fill: design.backgroundColor || "transparent",
-    stroke: design.borderColor || "#d1d5db",
-    strokeWidth: Number(design.borderWidth || 0),
+    ...common,
+    type: "text",
+    props: {
+      ...common.props,
+      text: looksLikeRichText(text) ? text : String(text || "").replace(/\n/g, "<br />"),
+      alignment: design.textAlign || "left",
+      textAlign: design.textAlign || "left",
+      textColor: design.color || (block.type === "heading" ? "#0f172a" : "#334155"),
+      fontFamily: design.fontFamily || "Arial",
+      bodyFontFamily: design.fontFamily || "Arial",
+      textFontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
+      bodyFontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
+      fontWeight: String(design.fontWeight || (block.type === "heading" ? 800 : 500)),
+      bodyLineHeight: Number(design.lineHeight || 1.35),
+      textLineHeight: Number(design.lineHeight || 1.35),
+      letterSpacing: Number(design.letterSpacing || 0),
+      hideBorder: true,
+      fullWidthBackground: false,
+    },
   };
 }
 
-function projectEstimatePageFromDocument(page = {}, document = {}) {
-  const documentPage = (document.pages || [])[0] || {};
+function projectEstimatePageFromWebsiteBuilderBlocks(page = {}, websiteBlocks = [], linkedFields = {}) {
   const existingBlocks = Array.isArray(page.blocks) ? page.blocks : [];
   const byId = new Map(existingBlocks.map((block) => [block.id, block]));
-  const nextBlocks = (documentPage.objects || []).map((object, index) => {
-    const blockId = object.data?.blockId || object.id;
-    const existing = byId.get(blockId);
-    return existing ? projectEstimateBlockFromDocumentObject(existing, object, index) : projectEstimateNewBlockFromDocumentObject(object, page, index);
-  });
-  const knownIds = new Set(nextBlocks.map((block) => block.id));
-  const hiddenOrMissing = existingBlocks
-    .filter((block) => !knownIds.has(block.id))
+  const nextBlocks = (Array.isArray(websiteBlocks) ? websiteBlocks : []).map((websiteBlock, index) => {
+    const existingId = String(websiteBlock?.props?.__projectEstimateBlockId || "").trim();
+    const existing = existingId ? byId.get(existingId) : null;
+    return existing
+      ? projectEstimateBlockFromWebsiteBuilderBlock(existing, websiteBlock, index)
+      : projectEstimateNewBlockFromWebsiteBuilderBlock(websiteBlock, page, linkedFields, index);
+  }).filter(Boolean);
+  const nextIds = new Set(nextBlocks.map((block) => block.id));
+  const hiddenExisting = existingBlocks
+    .filter((block) => !nextIds.has(block.id))
     .map((block) => ({ ...block, design: { ...(block.design || {}), hidden: true, hiddenBySubscriber: true } }));
-  return { ...page, blocks: [...nextBlocks, ...hiddenOrMissing].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)) };
+  return { ...page, blocks: [...nextBlocks, ...hiddenExisting].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)) };
 }
 
-function projectEstimateBlockFromDocumentObject(block = {}, object = {}, index = 0) {
-  const contentKey = object.data?.contentKey || projectEstimateEditorContentKey(block);
+function projectEstimateBlockFromWebsiteBuilderBlock(block = {}, websiteBlock = {}, index = 0) {
+  const props = websiteBlock.props || {};
+  const contentKey = props.__projectEstimateContentKey || projectEstimateEditorContentKey(block);
   const content = { ...(block.content || {}) };
-  if (object.type === "image") content.imageUrl = object.data?.imageRef || content.imageUrl || "";
-  else if (object.type === "logo") content.logoUrl = object.data?.imageRef || content.logoUrl || "";
-  else if (contentKey) content[contentKey] = object.data?.text ?? content[contentKey] ?? "";
+  if (websiteBlock.type === "image") {
+    if (block.type === "logo") content.logoUrl = props.src || content.logoUrl || "";
+    else content.imageUrl = props.src || content.imageUrl || "";
+  } else if (contentKey && block.type !== "quote_field") {
+    content[contentKey] = props.text ?? content[contentKey] ?? "";
+  }
   return {
     ...block,
-    order: Number(object.layer ?? block.order ?? index),
+    order: index,
     content,
-    design: { ...(block.design || {}), ...projectEstimateDesignFromDocumentObject(object) },
+    design: { ...(block.design || {}), ...projectEstimateDesignFromWebsiteBuilderProps(block, websiteBlock, index) },
   };
 }
 
-function projectEstimateNewBlockFromDocumentObject(object = {}, page = {}, index = 0) {
-  const type = object.type === "dynamicField" ? "quote_field" : object.type === "logo" ? "logo" : object.type === "image" ? "image" : object.type === "divider" ? "divider" : object.type === "shape" ? "shape" : "text";
-  const content = { editorLabel: object.name || proposalBlockLabel(type), source: "builder-created" };
-  if (type === "image") content.imageUrl = object.data?.imageRef || "";
-  else if (type === "logo") content.logoUrl = object.data?.imageRef || "";
-  else content.text = object.data?.text || "";
-  return normaliseProposalBuilderBlock({
-    id: object.id || proposalBuilderId("block"),
-    type,
+function projectEstimateNewBlockFromWebsiteBuilderBlock(websiteBlock = {}, page = {}, linkedFields = {}, index = 0) {
+  const type = websiteBlock.type === "image" ? "image" : websiteBlock.type === "divider" ? "divider" : websiteBlock.type === "space" ? "spacer" : "text";
+  const props = websiteBlock.props || {};
+  const block = createProposalBuilderBlock(type, linkedFields, index, {
+    id: String(websiteBlock.id || "").startsWith("pe-") ? proposalBuilderId("block") : (websiteBlock.id || proposalBuilderId("block")),
     source: "builder-created",
     pageType: page.page_type || page.id || "",
-    order: Number(object.layer ?? index),
-    content,
-    design: projectEstimateDesignFromDocumentObject(object),
+    content: type === "image"
+      ? { imageUrl: props.src || "", alt: props.alt || "", editorLabel: "Image" }
+      : { text: props.text || "", editorLabel: type === "divider" ? "Divider" : "Text" },
+    design: projectEstimateDesignFromWebsiteBuilderProps({ type }, websiteBlock, index),
   });
+  return normaliseProposalBuilderBlock({ ...block, source: "builder-created" });
 }
 
-function projectEstimateDesignFromDocumentObject(object = {}) {
+function projectEstimateDesignFromWebsiteBuilderProps(block = {}, websiteBlock = {}, index = 0) {
+  const props = websiteBlock.props || {};
+  const width = parseProposalPixelValue(props.width, block.type === "image" ? 570 : 560);
+  const height = parseProposalPixelValue(props.height || props.minHeight, block.type === "image" ? 320 : 86);
   return {
-    frame: { x: Number(object.x || 0), y: Number(object.y || 0), width: Number(object.width || 1), height: Number(object.height || 1) },
+    frame: { x: 74, y: 150 + Number(index || 0) * 118, width, height },
     frameEdited: true,
-    zIndex: Number(object.layer || 0),
-    opacity: Number(object.opacity ?? 1),
-    rotation: Number(object.rotation || 0),
-    locked: object.locked === true,
-    hidden: object.visible === false,
-    hiddenBySubscriber: object.visible === false,
     styleEdited: true,
-    fontFamily: object.style?.fontFamily,
-    fontSize: object.style?.fontSize,
-    fontWeight: object.style?.fontWeight,
-    fontStyle: object.style?.fontStyle,
-    textDecoration: object.style?.textDecoration,
-    color: object.style?.color,
-    textAlign: object.style?.textAlign,
-    lineHeight: object.style?.lineHeight,
-    letterSpacing: object.style?.letterSpacing,
-    backgroundColor: object.style?.backgroundColor || object.style?.fill,
-    padding: object.style?.padding,
-    objectFit: object.style?.objectFit,
-    borderRadius: object.style?.borderRadius,
-    borderColor: object.style?.stroke,
-    borderWidth: object.style?.strokeWidth,
+    color: props.textColor || props.color,
+    fontFamily: props.fontFamily || props.bodyFontFamily,
+    fontSize: Number(props.textFontSize || props.bodyFontSize || props.fontSize || 17),
+    fontWeight: props.fontWeight,
+    textAlign: props.alignment || props.textAlign,
+    lineHeight: Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35),
+    letterSpacing: Number(props.letterSpacing || 0),
+    backgroundColor: props.backgroundColor,
+    padding: Number(props.paddingTop || props.padding || 0),
+    objectFit: props.objectFit,
+    borderRadius: Number(props.borderRadius || 0),
+    hidden: false,
+    hiddenBySubscriber: false,
   };
+}
+
+function parseProposalPixelValue(value, fallback = 0) {
+  const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function createProposalVisualElement(type, linkedFields, order = 0) {
@@ -13686,6 +13778,7 @@ const styles = {
   proposalAddElementWrap: { position: "relative", display: "inline-flex" },
   projectEstimateAddElementMenu: { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 80, width: 230, display: "grid", gap: 4, background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, boxShadow: "0 18px 45px rgba(15,23,42,0.22)" },
   projectEstimateVisualEditorFrame: { position: "relative", width: 794, minHeight: 1123, flex: "0 0 auto" },
+  projectEstimateWebsiteBuilderFrame: { width: "100%", minHeight: 720, background: "#f8fafc", borderRadius: 12, overflow: "hidden", boxShadow: "0 18px 46px rgba(15,23,42,0.10)" },
   projectEstimateEditOverlay: { position: "absolute", inset: 0, zIndex: 40, pointerEvents: "none" },
   projectEstimateExportOverlay: { pointerEvents: "none" },
   projectEstimateEditableRegion: { position: "absolute", border: "1px solid transparent", background: "transparent", boxSizing: "border-box", pointerEvents: "auto", cursor: "pointer" },

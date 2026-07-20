@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { listWebsiteProjects, updateWebsiteProject } from "../../../lib/website-builder/projectStore";
 import { normalizeDomain } from "../../../lib/website-builder/publishConfig";
+import { saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
 function affiliateOrFallback(envKey, fallback) {
   return process.env[envKey] || fallback;
@@ -102,7 +103,7 @@ export default function WebsiteDomainsPage() {
         id: project.id,
         name: project.name || "Untitled Website",
         projectId: project.id,
-        customDomain: normalizeDomain(project?.publication?.customDomain || project?.publication?.custom_domain || ""),
+        customDomain: normalizeDomain(project?.customDomain || project?.custom_domain || project?.publication?.customDomain || project?.publication?.custom_domain || ""),
         isPublished: !!project?.publication?.publishedAt,
       }));
 
@@ -191,13 +192,18 @@ export default function WebsiteDomainsPage() {
     }
   }
 
-  function saveDraftProjectDomain(project) {
+  async function saveDraftProjectDomain(project) {
     const nextCustomDomain = normalizeDomain(draftProjectDomains[project.id] || pendingDomain || "");
     const updated = updateWebsiteProject(project.id, {
+      customDomain: nextCustomDomain,
+      custom_domain: nextCustomDomain,
       publication: {
         ...(project.publication || {}),
+        slug: project.slug || project.publication?.slug || "",
         customDomain: nextCustomDomain,
         custom_domain: nextCustomDomain,
+        primaryDomain: nextCustomDomain || project.publication?.primaryDomain || project.publication?.primary_domain || "",
+        primary_domain: nextCustomDomain || project.publication?.primary_domain || project.publication?.primaryDomain || "",
       },
       status: "saved",
     });
@@ -207,9 +213,23 @@ export default function WebsiteDomainsPage() {
       return;
     }
 
-    setDraftProjectDomains((current) => ({ ...current, [project.id]: nextCustomDomain }));
-    setVerifyNotes((current) => ({ ...current, [`draft:${project.id}`]: nextCustomDomain ? "Your domain has been saved and will be applied when you publish this site." : "Your saved domain has been cleared." }));
-    refreshDraftProjects();
+    setSavingId(`draft:${project.id}`);
+    setError("");
+    try {
+      if (session?.access_token) {
+        await saveWebsiteProjectToServer(session, updated, {
+          siteOnly: true,
+          saveSource: "domain-settings",
+        });
+      }
+      setDraftProjectDomains((current) => ({ ...current, [project.id]: nextCustomDomain }));
+      setVerifyNotes((current) => ({ ...current, [`draft:${project.id}`]: nextCustomDomain ? "Your domain has been saved and will be applied when you publish this site." : "Your saved domain has been cleared." }));
+      refreshDraftProjects();
+    } catch (saveError) {
+      setError(saveError?.message || "Could not save domain");
+    } finally {
+      setSavingId("");
+    }
   }
 
   async function handleSearchDomain() {

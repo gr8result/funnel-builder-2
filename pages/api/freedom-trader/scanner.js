@@ -179,23 +179,39 @@ function passesFilters(row, settings) {
 async function createApprovedAlert(result) {
   try {
     const supabase = createSupabaseAdmin();
+    const { data: pending, error: pendingError } = await supabase
+      .from("pending_trades")
+      .insert({
+        ticker: result.symbol,
+        entry_price: result.recommendedEntry,
+        stop_loss: result.stopLoss,
+        target_price: result.target,
+        shares: null,
+        risk_reward: result.riskReward,
+        expected_profit: null,
+        status: result.status || "WAIT FOR ENTRY",
+        fib_data: result.fibonacci || null,
+        created_at: new Date().toISOString(),
+      })
+      .select("*")
+      .single();
+    if (pendingError) throw pendingError;
+
     const { data: existing } = await supabase
-      .from("freedom_trader_alerts")
+      .from("trade_alerts")
       .select("id")
-      .eq("symbol", result.symbol)
+      .eq("trade_id", pending.id)
       .eq("alert_type", "SCANNER ENTRY")
       .eq("trigger_price", result.recommendedEntry)
-      .eq("status", "active")
+      .eq("triggered", false)
       .maybeSingle();
     if (existing?.id) return;
-    await supabase.from("freedom_trader_alerts").insert({
-      symbol: result.symbol,
+    await supabase.from("trade_alerts").insert({
+      trade_id: pending.id,
       alert_type: "SCANNER ENTRY",
       trigger_price: result.recommendedEntry,
-      direction: "below",
-      priority: "high",
-      status: "active",
-      message: `Market scanner found ${result.symbol}: ${result.reason} Alert only; no trade is placed automatically.`,
+      triggered: false,
+      created_at: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Scanner alert creation skipped:", error);

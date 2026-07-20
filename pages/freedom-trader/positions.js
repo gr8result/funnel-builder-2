@@ -33,6 +33,7 @@ export default function TraderPositions({ passwordHash }) {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [positions, setPositions] = useState([]);
+  const [pendingSetups, setPendingSetups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [databaseUnavailable, setDatabaseUnavailable] = useState(false);
@@ -90,7 +91,8 @@ export default function TraderPositions({ passwordHash }) {
       stopPrice: position?.stopPrice || "",
       notes: position?.notes || "",
       exitPrice: position?.currentPrice || "",
-      exitDate: new Date().toISOString().slice(0, 10),
+      sharesSold: position?.quantity || "",
+      exitDate: new Date().toISOString().slice(0, 16),
       brokerageSell: 0,
     });
   }
@@ -107,6 +109,7 @@ export default function TraderPositions({ passwordHash }) {
     if (activeModal.type === "raise-stop") payload.stopPrice = Number(form.stopPrice);
     if (activeModal.type === "close") {
       payload.exitPrice = Number(form.exitPrice);
+      payload.sharesSold = Number(form.sharesSold);
       payload.exitDate = form.exitDate;
       payload.brokerageSell = Number(form.brokerageSell || 0);
     }
@@ -130,13 +133,13 @@ export default function TraderPositions({ passwordHash }) {
   const totals = useMemo(() => {
     const open = positions.filter((position) => position.status === "open");
     const closed = positions.filter((position) => position.status === "closed");
-    const winning = closed.filter((position) => Number(position.realisedProfit) > 0).length;
-    const losing = closed.filter((position) => Number(position.realisedProfit) < 0).length;
-    const realised = closed.reduce((total, position) => total + (Number(position.realisedProfit) || 0), 0);
+    const winning = closed.filter((position) => Number(position.netProfit ?? position.realisedProfit) > 0).length;
+    const losing = closed.filter((position) => Number(position.netProfit ?? position.realisedProfit) < 0).length;
+    const realised = closed.reduce((total, position) => total + (Number(position.netProfit ?? position.realisedProfit) || 0), 0);
     const unrealised = open.reduce((total, position) => total + (Number(position.unrealisedProfit) || 0), 0);
     const invested = open.reduce((total, position) => total + (Number(position.investedAmount) || 0), 0);
-    const gains = closed.map((position) => Number(position.realisedProfit)).filter((value) => value > 0);
-    const losses = closed.map((position) => Number(position.realisedProfit)).filter((value) => value < 0);
+    const gains = closed.map((position) => Number(position.netProfit ?? position.realisedProfit)).filter((value) => value > 0);
+    const losses = closed.map((position) => Number(position.netProfit ?? position.realisedProfit)).filter((value) => value < 0);
     const startingCapital = 50000;
     const decided = winning + losing;
     return {
@@ -156,6 +159,22 @@ export default function TraderPositions({ passwordHash }) {
       portfolioReturn: startingCapital ? ((realised + unrealised) / startingCapital) * 100 : null,
     };
   }, [positions]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    loadPendingSetups();
+  }, [unlocked]);
+
+  async function loadPendingSetups() {
+    try {
+      const response = await fetch("/api/freedom-trader/setups");
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.ok) setPendingSetups(data.setups || []);
+    } catch (error) {
+      console.error("Freedom Trader pending setups load failed:", error);
+      setPendingSetups([]);
+    }
+  }
 
   function positionTone(position) {
     if (Number(position.unrealisedProfit) < 0 || (Number.isFinite(position.distanceToStop) && position.distanceToStop <= 2)) return "red";
@@ -178,6 +197,35 @@ export default function TraderPositions({ passwordHash }) {
 
       {databaseUnavailable ? <section className="notice">Positions database temporarily unavailable. The page remains available.</section> : null}
       {message ? <section className="notice">{message}</section> : null}
+
+      <section className="panel">
+        <div className="panelHeader">
+          <h2>Pending Trades</h2>
+          <span>Saved chart setups waiting for entry or manual buy</span>
+        </div>
+        <div className="tableWrap">
+          <table className="pendingTable">
+            <thead>
+              <tr>
+                <th>Ticker</th><th>Entry</th><th>Stop Loss</th><th>Target</th><th>Risk/Reward</th><th>Status</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingSetups.length ? pendingSetups.map((setup) => (
+                <tr key={setup.id || `${setup.symbol}-${setup.createdAt}`}>
+                  <td><Link href={`/freedom-trader/company/${setup.symbol}`}>{setup.symbol}</Link></td>
+                  <td>{formatCurrency(setup.entryPrice)}</td>
+                  <td>{formatCurrency(setup.stopPrice)}</td>
+                  <td>{formatCurrency(setup.targetPrice)}</td>
+                  <td>{Number.isFinite(setup.riskRewardRatio) ? setup.riskRewardRatio.toFixed(2) : "--"}</td>
+                  <td>{setup.status || "Pending"}</td>
+                  <td><Link href={`/freedom-trader/company/${setup.symbol}`}>Open Chart</Link></td>
+                </tr>
+              )) : <tr><td colSpan="7">No pending trades saved yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="summary">
         <Card label="Open Positions" value={totals.open} />
@@ -258,23 +306,25 @@ export default function TraderPositions({ passwordHash }) {
           <table className="closedTable">
             <thead>
               <tr>
-                <th>Company</th><th>Ticker</th><th>Shares</th><th>Entry</th><th>Sell</th><th>Profit / Loss</th><th>Return %</th><th>Holding Days</th><th>Status</th>
+                <th>Company</th><th>Ticker</th><th>Shares</th><th>Entry</th><th>Sell</th><th>Gross P/L</th><th>Total Brokerage</th><th>Net P/L</th><th>Return %</th><th>Holding Days</th><th>Win/Loss</th>
               </tr>
             </thead>
             <tbody>
               {positions.filter((position) => position.status === "closed").length ? positions.filter((position) => position.status === "closed").map((position) => (
-                <tr className={Number(position.realisedProfit) >= 0 ? "green" : "red"} key={position.id}>
+                <tr className={Number(position.netProfit ?? position.realisedProfit) >= 0 ? "green" : "red"} key={position.id}>
                   <td>{position.companyName}</td>
                   <td><Link href={`/freedom-trader/company/${position.symbol}`}>{position.symbol}</Link></td>
                   <td>{position.quantity}</td>
                   <td>{formatCurrency(position.entryPrice)}</td>
                   <td>{formatCurrency(position.exitPrice)}</td>
-                  <td className={Number(position.realisedProfit) >= 0 ? "profit" : "loss"}>{formatCurrency(position.realisedProfit)}</td>
-                  <td>{formatPercent(position.investedAmount ? (Number(position.realisedProfit) / position.investedAmount) * 100 : null)}</td>
+                  <td>{formatCurrency(position.grossProfit)}</td>
+                  <td>{formatCurrency(position.totalBrokerage)}</td>
+                  <td className={Number(position.netProfit ?? position.realisedProfit) >= 0 ? "profit" : "loss"}>{formatCurrency(position.netProfit ?? position.realisedProfit)}</td>
+                  <td>{formatPercent(position.percentageReturn)}</td>
                   <td>{position.daysHeld ?? "--"}</td>
-                  <td>Closed</td>
+                  <td>{position.winLoss || "Closed"}</td>
                 </tr>
-              )) : <tr><td colSpan="9">No closed trades yet.</td></tr>}
+              )) : <tr><td colSpan="11">No closed trades yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -288,9 +338,10 @@ export default function TraderPositions({ passwordHash }) {
             {activeModal.type === "raise-stop" ? <label>Stop price<input value={form.stopPrice} onChange={(event) => setForm((current) => ({ ...current, stopPrice: event.target.value }))} type="number" /></label> : null}
             {activeModal.type === "close" ? (
               <>
-                <label>Exit price<input value={form.exitPrice} onChange={(event) => setForm((current) => ({ ...current, exitPrice: event.target.value }))} type="number" /></label>
-                <label>Exit date<input value={form.exitDate} onChange={(event) => setForm((current) => ({ ...current, exitDate: event.target.value }))} type="date" /></label>
-                <label>Sell brokerage<input value={form.brokerageSell} onChange={(event) => setForm((current) => ({ ...current, brokerageSell: event.target.value }))} type="number" /></label>
+                <label>Actual sale price<input value={form.exitPrice} onChange={(event) => setForm((current) => ({ ...current, exitPrice: event.target.value }))} type="number" /></label>
+                <label>Shares sold<input value={form.sharesSold} onChange={(event) => setForm((current) => ({ ...current, sharesSold: event.target.value }))} type="number" /></label>
+                <label>Brokerage cost<input value={form.brokerageSell} onChange={(event) => setForm((current) => ({ ...current, brokerageSell: event.target.value }))} type="number" /></label>
+                <label>Sale date and time<input value={form.exitDate} onChange={(event) => setForm((current) => ({ ...current, exitDate: event.target.value }))} type="datetime-local" /></label>
               </>
             ) : null}
             <label>Notes<textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
@@ -324,7 +375,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function PageStyles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.summary,.panel,footer,.notice{margin:0 auto;max-width:1840px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.summary article,.performanceGrid article,.gate,.modal{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{padding:28px}.hero a{color:#d7efff;font-weight:900;text-decoration:none}h1,h2,p{margin:0}h1{font-size:48px;margin-top:18px}p,footer{color:#aebdc4}.notice{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.24);border-radius:8px;color:#d7efff;font-weight:850;margin-top:18px;padding:14px 16px}.summary,.performanceGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px}.performanceGrid{padding:16px}.summary article,.performanceGrid article{padding:18px}.summary span,.performanceGrid span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.summary strong,.performanceGrid strong{display:block;font-size:26px;margin-top:10px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;gap:12px;justify-content:space-between;padding:18px 20px}.panelHeader span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:36px;padding:0 12px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1900px;width:100%}.closedTable{min-width:1120px}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px;text-align:left;vertical-align:middle}th{color:#aebdc4;font-size:12px;text-transform:uppercase}td{color:#e7eef2}td a{color:#d7efff;font-weight:900;text-decoration:none}.actions{display:flex;flex-wrap:wrap;gap:7px}.actions button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);color:#d7efff}.positionRow.green td,.closedTable tr.green td{box-shadow:inset 4px 0 0 rgba(35,209,139,.9)}.positionRow.amber td{box-shadow:inset 4px 0 0 rgba(255,153,0,.95)}.positionRow.red td,.closedTable tr.red td{box-shadow:inset 4px 0 0 rgba(255,92,92,.95)}.nearTarget td{background:rgba(255,153,0,.08)}.nearStop td{background:rgba(255,92,92,.07)}footer{font-size:13px;margin-top:20px;padding-bottom:12px}.modalBackdrop{align-items:center;background:rgba(0,0,0,.72);display:flex;inset:0;justify-content:center;padding:24px;position:fixed;z-index:50}.modal{display:grid;gap:14px;max-width:520px;padding:22px;width:100%}label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:8px;text-transform:uppercase}input,textarea{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;padding:10px}textarea{min-height:100px}.modalActions{display:flex;gap:10px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff;font-size:12px;font-weight:950;text-transform:uppercase}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.summary,.performanceGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.page{padding:88px 16px 16px}.summary,.performanceGrid{grid-template-columns:1fr}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.summary,.panel,footer,.notice{margin:0 auto;max-width:1840px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.summary article,.performanceGrid article,.gate,.modal{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{padding:28px}.hero a{color:#d7efff;font-weight:900;text-decoration:none}h1,h2,p{margin:0}h1{font-size:48px;margin-top:18px}p,footer{color:#aebdc4}.notice{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.24);border-radius:8px;color:#d7efff;font-weight:850;margin-top:18px;padding:14px 16px}.summary,.performanceGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px}.performanceGrid{padding:16px}.summary article,.performanceGrid article{padding:18px}.summary span,.performanceGrid span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.summary strong,.performanceGrid strong{display:block;font-size:26px;margin-top:10px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;gap:12px;justify-content:space-between;padding:18px 20px}.panelHeader span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:36px;padding:0 12px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1900px;width:100%}.pendingTable{min-width:980px}.closedTable{min-width:1280px}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px;text-align:left;vertical-align:middle}th{color:#aebdc4;font-size:12px;text-transform:uppercase}td{color:#e7eef2}td a{color:#d7efff;font-weight:900;text-decoration:none}.actions{display:flex;flex-wrap:wrap;gap:7px}.actions button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);color:#d7efff}.positionRow.green td,.closedTable tr.green td{box-shadow:inset 4px 0 0 rgba(35,209,139,.9)}.positionRow.amber td{box-shadow:inset 4px 0 0 rgba(255,153,0,.95)}.positionRow.red td,.closedTable tr.red td{box-shadow:inset 4px 0 0 rgba(255,92,92,.95)}.nearTarget td{background:rgba(255,153,0,.08)}.nearStop td{background:rgba(255,92,92,.07)}footer{font-size:13px;margin-top:20px;padding-bottom:12px}.modalBackdrop{align-items:center;background:rgba(0,0,0,.72);display:flex;inset:0;justify-content:center;padding:24px;position:fixed;z-index:50}.modal{display:grid;gap:14px;max-width:520px;padding:22px;width:100%}label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:8px;text-transform:uppercase}input,textarea{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;padding:10px}textarea{min-height:100px}.modalActions{display:flex;gap:10px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff;font-size:12px;font-weight:950;text-transform:uppercase}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.summary,.performanceGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.page{padding:88px 16px 16px}.summary,.performanceGrid{grid-template-columns:1fr}}
   `}</style>;
 }
 

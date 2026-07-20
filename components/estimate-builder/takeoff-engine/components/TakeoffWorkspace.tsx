@@ -26,7 +26,9 @@ import type { TakeoffDocument, TakeoffObject, ViewportState } from "../state/tak
 export default function TakeoffWorkspace({ sheet, activeRoute = "" }: { sheet: any; activeRoute?: string }) {
   const workbook = sheet?.workbook || {};
   const jobId = workbook.openedFileName || workbook.id || "";
-  const [documentState, setDocumentState] = useState<TakeoffDocument>(() => hydrateTakeoffDocument(workbook.takeoffEngine, workbook.openedFileName || workbook.projectName || "Workbook takeoff"));
+  const [initialHydration] = useState(() => safeHydrateTakeoffDocument(workbook.takeoffEngine, workbook.openedFileName || workbook.projectName || "Workbook takeoff"));
+  const [startupError, setStartupError] = useState<Error | null>(initialHydration.error);
+  const [documentState, setDocumentState] = useState<TakeoffDocument>(initialHydration.document);
   const [activeTool, setActiveTool] = useState("select");
   const [status, setStatus] = useState<{ status: string; detail?: string; percent?: number }>({ status: "ready" });
   const [fitRequest, setFitRequest] = useState<{ mode: "page" | "width" | "preset"; key: number; scale?: number }>({ mode: "page", key: 0 });
@@ -42,7 +44,17 @@ export default function TakeoffWorkspace({ sheet, activeRoute = "" }: { sheet: a
   const viewport = createViewportState(activePage?.viewport || {});
 
   useEffect(() => {
-    setDocumentState(hydrateTakeoffDocument(workbook.takeoffEngine, workbook.openedFileName || workbook.projectName || "Workbook takeoff"));
+    try {
+      console.info("[Takeoff] loading saved state");
+      setStartupError(null);
+      const hydrated = safeHydrateTakeoffDocument(workbook.takeoffEngine, workbook.openedFileName || workbook.projectName || "Workbook takeoff");
+      if (hydrated.error) throw hydrated.error;
+      setDocumentState(hydrated.document);
+      console.info("[Takeoff] loading PDF metadata");
+    } catch (error) {
+      console.error("[Takeoff] initialisation failed", error);
+      setStartupError(error instanceof Error ? error : new Error(String(error)));
+    }
   }, [workbook.takeoffEngine, workbook.openedFileName, workbook.projectName]);
 
   useEffect(() => {
@@ -120,6 +132,7 @@ export default function TakeoffWorkspace({ sheet, activeRoute = "" }: { sheet: a
       window.localStorage.setItem("gr8:takeoff:v1", JSON.stringify(filtered));
     } catch {}
     setStatus({ status: "ready", detail: "Legacy takeoff data cleared", percent: 100 });
+    setStartupError(null);
   }
 
   async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -435,6 +448,13 @@ export default function TakeoffWorkspace({ sheet, activeRoute = "" }: { sheet: a
 
   return (
     <section style={styles.shell} data-takeoff-engine-viewer>
+      {startupError ? (
+        <div style={styles.startupError} role="alert">
+          <strong>Takeoff Engine Error</strong>
+          <span>{startupError.message}</span>
+          <button type="button" style={styles.primarySmallButton} onClick={clearLegacyTakeoffData}>Clear Takeoff Cache</button>
+        </div>
+      ) : null}
       <div style={styles.header}>
         <div>
           <div style={styles.activeMarker}>NEW TAKEOFF ENGINE BUILD ACTIVE</div>
@@ -579,8 +599,21 @@ function constrainScalePoint(start: { x: number; y: number }, point: { x: number
   };
 }
 
+function safeHydrateTakeoffDocument(raw: unknown, fallbackName: string) {
+  try {
+    return { document: hydrateTakeoffDocument(raw, fallbackName), error: null };
+  } catch (error) {
+    console.error("[Takeoff] initialisation failed", error);
+    return {
+      document: hydrateTakeoffDocument(null, fallbackName),
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
 const styles: Record<string, React.CSSProperties> = {
   shell: {
+    position: "relative",
     display: "flex",
     flexDirection: "column",
     minHeight: 620,
@@ -588,6 +621,23 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #cbd5e1",
     background: "#ffffff",
     overflow: "hidden",
+  },
+  startupError: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    top: 12,
+    zIndex: 50,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    border: "1px solid #fecaca",
+    borderRadius: 6,
+    background: "#fff7f7",
+    color: "#7f1d1d",
+    padding: 10,
+    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.18)",
   },
   header: {
     display: "flex",

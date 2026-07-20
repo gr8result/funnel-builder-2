@@ -78,7 +78,7 @@
         "backgroundStyle": "image",
         "fullWidthBackground": true,
         "backgroundImageAssetId": "9daebc77-c70b-4c97-acb4-43eb309d941e",
-        "marginTop": 130,
+        "marginTop": 0,
         "headline": "Click to type headline",
         "subheadline": "Add supporting text here",
         "baseLayoutWidth": 1500,
@@ -484,7 +484,7 @@
           "backgroundStyle": "image",
           "fullWidthBackground": true,
           "backgroundImageAssetId": "9daebc77-c70b-4c97-acb4-43eb309d941e",
-          "marginTop": 130,
+          "marginTop": 0,
           "headline": "Click to type headline",
           "subheadline": "Add supporting text here",
           "baseLayoutWidth": 1500,
@@ -816,6 +816,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-18T22:29:15.006Z",
-  "source": "manual-save"
+  "savedAt": "2026-07-20T07:11:04.037Z",
+  "source": "autosave"
 }

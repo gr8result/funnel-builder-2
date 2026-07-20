@@ -784,15 +784,15 @@ export default function FreedomTrader({ passwordHash }) {
       activeAlerts: alerts.filter((alert) => alert.status === "active"),
       triggeredToday: alerts.filter((alert) => alert.status === "triggered" && alert.triggeredAt && new Date(alert.triggeredAt).toDateString() === new Date().toDateString()),
       unrealisedProfit: positions.filter((position) => position.status === "open").reduce((total, position) => total + (Number(position.unrealisedProfit) || 0), 0),
-      realisedProfit: positions.filter((position) => position.status === "closed").reduce((total, position) => total + (Number(position.realisedProfit) || 0), 0),
+      realisedProfit: positions.filter((position) => position.status === "closed").reduce((total, position) => total + (Number(position.netProfit ?? position.realisedProfit) || 0), 0),
     };
   }, [alerts, positions, rows]);
 
   const performance = useMemo(() => {
     const closed = dashboard.closedPositions || [];
     const open = dashboard.openPositions || [];
-    const wins = closed.map((position) => Number(position.realisedProfit)).filter((value) => value > 0);
-    const losses = closed.map((position) => Number(position.realisedProfit)).filter((value) => value < 0);
+    const wins = closed.map((position) => Number(position.netProfit ?? position.realisedProfit)).filter((value) => value > 0);
+    const losses = closed.map((position) => Number(position.netProfit ?? position.realisedProfit)).filter((value) => value < 0);
     const startingCapital = 50000;
     const realised = dashboard.realisedProfit || 0;
     const unrealised = dashboard.unrealisedProfit || 0;
@@ -1412,6 +1412,8 @@ export default function FreedomTrader({ passwordHash }) {
               </div>
               <div className="performanceGrid">
                 <Metric label="Win %" value={Number.isFinite(performance.winRate) ? `${performance.winRate.toFixed(1)}%` : "--"} />
+                <Metric label="Closed Trades" value={performance.closedTrades} />
+                <Metric label="Total Net P/L" value={formatCurrency(dashboard.realisedProfit)} />
                 <Metric label="Average Gain" value={formatCurrency(performance.averageGain)} />
                 <Metric label="Average Loss" value={formatCurrency(performance.averageLoss)} />
                 <Metric label="Largest Win" value={formatCurrency(performance.largestWin)} />

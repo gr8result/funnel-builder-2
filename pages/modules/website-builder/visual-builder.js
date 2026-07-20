@@ -1083,7 +1083,13 @@ export default function VisualBuilderPage() {
     if (fallbackSlug && fallbackSlug !== siteSlug) {
       setSiteSlug(fallbackSlug);
     }
-    const savedCustomDomain = normalizeDomain(project?.publication?.customDomain || project?.publication?.custom_domain || "");
+    const savedCustomDomain = normalizeDomain(
+      project?.customDomain
+      || project?.custom_domain
+      || project?.publication?.customDomain
+      || project?.publication?.custom_domain
+      || ""
+    );
     if (savedCustomDomain !== customDomain) {
       setCustomDomain(savedCustomDomain);
     }
@@ -1091,7 +1097,7 @@ export default function VisualBuilderPage() {
     if (savedPrimaryWebsite !== primaryWebsite) {
       setPrimaryWebsite(savedPrimaryWebsite);
     }
-  }, [project?.id, project?.publication?.customDomain, project?.publication?.custom_domain, project?.publication?.isPrimaryWebsite, project?.publication?.primaryWebsite]);
+  }, [project?.id, project?.customDomain, project?.custom_domain, project?.publication?.customDomain, project?.publication?.custom_domain, project?.publication?.isPrimaryWebsite, project?.publication?.primaryWebsite]);
 
   const currentObjective = useMemo(() => {
     const pageEntry = project?.pages?.find((entry) => entry.name === activePage || slugify(entry.name) === slugify(activePage));
@@ -1586,7 +1592,14 @@ export default function VisualBuilderPage() {
       };
       setVersionStatus(nextVersionStatus);
 
-      const updated = saveProjectPatch({ publication: nextPublication }, "Website published", { siteOnly: true, saveSource: "publish" });
+      const updated = saveProjectPatch({
+        slug: nextPublication.slug,
+        customDomain: nextPublication.customDomain,
+        custom_domain: nextPublication.customDomain,
+        primaryDomain: nextPublication.primaryDomain,
+        primary_domain: nextPublication.primaryDomain,
+        publication: nextPublication,
+      }, "Website published", { siteOnly: true, saveSource: "publish" });
       if (!updated) {
         setProject((current) => current ? { ...current, publication: nextPublication } : current);
         flashNotice("Website published", "success");

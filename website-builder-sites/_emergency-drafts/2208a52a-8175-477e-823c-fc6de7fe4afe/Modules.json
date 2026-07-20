@@ -10,30 +10,49 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
+            "id": "nav-item-0-0-home",
+            "href": "/",
+            "slug": "home",
             "label": "Home",
+            "pageId": "home",
             "children": [],
+            "linkType": "page",
             "highlighted": true
           },
           {
-            "href": "#about",
-            "label": "About"
+            "id": "nav-item-1-0-about",
+            "href": "/about-us",
+            "slug": "about-us",
+            "label": "About Us",
+            "pageId": "about-us",
+            "children": [],
+            "linkType": "page"
           },
           {
+            "id": "nav-item-2-0-services",
             "href": "#services",
-            "label": "Services"
+            "slug": "services",
+            "label": "Services",
+            "children": [],
+            "linkType": "anchor"
           },
           {
-            "href": "#contact",
-            "label": "Contact"
+            "id": "nav-item-3-0-contact",
+            "href": "/contact-us",
+            "slug": "contact-us",
+            "label": "Contact Us",
+            "pageId": "contact-us",
+            "children": [],
+            "linkType": "page"
           },
           {
-            "href": "#modules",
-            "label": "Modules"
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us"
+            "id": "nav-item-4-0-modules",
+            "href": "/modules",
+            "slug": "modules",
+            "label": "Modules",
+            "pageId": "modules",
+            "children": [],
+            "linkType": "page"
           }
         ],
         "ctaLink": "#contact",
@@ -63,30 +82,30 @@
       "id": 1781468862706,
       "type": "video-hero",
       "props": {
-        "heightMode": "fixed",
-        "minHeight": 1800,
-        "objectFit": "cover",
-        "objectPosition": "top center",
-        "overlayColor": "#000000",
-        "overlayOpacity": 0,
-        "showText": true,
-        "eyebrow": "",
-        "title": "",
-        "subtitle": "",
-        "ctaText": "",
-        "ctaUrl": "#",
-        "textColor": "#ffffff",
-        "accentColor": "#6366f1",
-        "baseLayoutWidth": 1500,
-        "unmuteOnScroll": true,
-        "muted": false,
-        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
         "loop": false,
-        "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
-        "videoMimeType": "video/mp4",
+        "muted": false,
+        "title": "",
+        "ctaUrl": "#",
+        "ctaText": "",
+        "eyebrow": "",
+        "showText": true,
+        "subtitle": "",
+        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784519825823-modules.mp4",
+        "minHeight": 1900,
+        "objectFit": "cover",
+        "textColor": "#ffffff",
+        "heightMode": "fixed",
+        "accentColor": "#6366f1",
+        "overlayColor": "#000000",
+        "paddingBottom": 0,
         "videoFileName": "modules.mp4",
-        "videoUpdatedAt": "2026-07-20T03:42:21.351Z",
-        "paddingBottom": 200
+        "videoMimeType": "video/mp4",
+        "objectPosition": "top center",
+        "overlayOpacity": 0,
+        "unmuteOnScroll": true,
+        "videoUpdatedAt": "2026-07-20T03:57:38.386Z",
+        "baseLayoutWidth": 1500,
+        "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784519825823-modules.mp4"
       }
     },
     {
@@ -209,11 +228,11 @@
           },
           {
             "id": "hc-1781468191793",
-            "title": "Builders Platform",
-            "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity.",
+            "link": "#",
             "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780972725600-Projects-Hub.png",
+            "title": "Builders Platform",
             "cardColor": "#dde3ea",
-            "link": "#"
+            "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity."
           }
         ],
         "arrowBg": "#ffffff",
@@ -284,22 +303,22 @@
       "id": 1781468957799,
       "type": "cta-button",
       "props": {
-        "eyebrow": "<br>",
-        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
-        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
-        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
         "link": "https://gr8result.digital/login.",
         "note": "<br>",
-        "style": "stacked-card",
         "size": "large",
+        "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+        "style": "stacked-card",
+        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+        "eyebrow": "<br>",
         "alignment": "center",
-        "backgroundColor": "#121c26",
         "textColor": "#ffffff",
-        "buttonColor": "#00b0f0",
-        "buttonTextColor": "#1f2937",
         "borderColor": "rgba(255,255,255,0.18)",
-        "fullWidthBackground": true,
-        "baseLayoutWidth": 1500
+        "buttonColor": "#00b0f0",
+        "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+        "backgroundColor": "#121c26",
+        "baseLayoutWidth": 1500,
+        "buttonTextColor": "#1f2937",
+        "fullWidthBackground": true
       }
     }
   ],
@@ -314,30 +333,49 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
+              "id": "nav-item-0-0-home",
+              "href": "/",
+              "slug": "home",
               "label": "Home",
+              "pageId": "home",
               "children": [],
+              "linkType": "page",
               "highlighted": true
             },
             {
-              "href": "#about",
-              "label": "About"
+              "id": "nav-item-1-0-about",
+              "href": "/about-us",
+              "slug": "about-us",
+              "label": "About Us",
+              "pageId": "about-us",
+              "children": [],
+              "linkType": "page"
             },
             {
+              "id": "nav-item-2-0-services",
               "href": "#services",
-              "label": "Services"
+              "slug": "services",
+              "label": "Services",
+              "children": [],
+              "linkType": "anchor"
             },
             {
-              "href": "#contact",
-              "label": "Contact"
+              "id": "nav-item-3-0-contact",
+              "href": "/contact-us",
+              "slug": "contact-us",
+              "label": "Contact Us",
+              "pageId": "contact-us",
+              "children": [],
+              "linkType": "page"
             },
             {
-              "href": "#modules",
-              "label": "Modules"
-            },
-            {
-              "href": "#about-us",
-              "label": "About Us"
+              "id": "nav-item-4-0-modules",
+              "href": "/modules",
+              "slug": "modules",
+              "label": "Modules",
+              "pageId": "modules",
+              "children": [],
+              "linkType": "page"
             }
           ],
           "ctaLink": "#contact",
@@ -367,30 +405,30 @@
         "id": 1781468862706,
         "type": "video-hero",
         "props": {
-          "heightMode": "fixed",
-          "minHeight": 1800,
-          "objectFit": "cover",
-          "objectPosition": "top center",
-          "overlayColor": "#000000",
-          "overlayOpacity": 0,
-          "showText": true,
-          "eyebrow": "",
-          "title": "",
-          "subtitle": "",
-          "ctaText": "",
-          "ctaUrl": "#",
-          "textColor": "#ffffff",
-          "accentColor": "#6366f1",
-          "baseLayoutWidth": 1500,
-          "unmuteOnScroll": true,
-          "muted": false,
-          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
           "loop": false,
-          "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784518910424-modules.mp4",
-          "videoMimeType": "video/mp4",
+          "muted": false,
+          "title": "",
+          "ctaUrl": "#",
+          "ctaText": "",
+          "eyebrow": "",
+          "showText": true,
+          "subtitle": "",
+          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784519825823-modules.mp4",
+          "minHeight": 1900,
+          "objectFit": "cover",
+          "textColor": "#ffffff",
+          "heightMode": "fixed",
+          "accentColor": "#6366f1",
+          "overlayColor": "#000000",
+          "paddingBottom": 0,
           "videoFileName": "modules.mp4",
-          "videoUpdatedAt": "2026-07-20T03:42:21.351Z",
-          "paddingBottom": 200
+          "videoMimeType": "video/mp4",
+          "objectPosition": "top center",
+          "overlayOpacity": 0,
+          "unmuteOnScroll": true,
+          "videoUpdatedAt": "2026-07-20T03:57:38.386Z",
+          "baseLayoutWidth": 1500,
+          "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784519825823-modules.mp4"
         }
       },
       {
@@ -513,11 +551,11 @@
             },
             {
               "id": "hc-1781468191793",
-              "title": "Builders Platform",
-              "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity.",
+              "link": "#",
               "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1780972725600-Projects-Hub.png",
+              "title": "Builders Platform",
               "cardColor": "#dde3ea",
-              "link": "#"
+              "description": "Designed by Professional Builders for Professional Builders. \n\nTake control of every project with automated Gantt charts that help you plan schedules, manage resources, and keep jobs running on time.\n\nCreate professional estimates quickly and accurately with powerful estimating tools designed specifically for builders and construction companies.\n\nStay organised with visual job flow boards that give you a real-time overview of every project, helping your team track progress, manage workloads, and improve productivity."
             }
           ],
           "arrowBg": "#ffffff",
@@ -588,22 +626,22 @@
         "id": 1781468957799,
         "type": "cta-button",
         "props": {
-          "eyebrow": "<br>",
-          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
-          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
-          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
           "link": "https://gr8result.digital/login.",
           "note": "<br>",
-          "style": "stacked-card",
           "size": "large",
+          "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+          "style": "stacked-card",
+          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+          "eyebrow": "<br>",
           "alignment": "center",
-          "backgroundColor": "#121c26",
           "textColor": "#ffffff",
-          "buttonColor": "#00b0f0",
-          "buttonTextColor": "#1f2937",
           "borderColor": "rgba(255,255,255,0.18)",
-          "fullWidthBackground": true,
-          "baseLayoutWidth": 1500
+          "buttonColor": "#00b0f0",
+          "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+          "backgroundColor": "#121c26",
+          "baseLayoutWidth": 1500,
+          "buttonTextColor": "#1f2937",
+          "fullWidthBackground": true
         }
       }
     ],
@@ -612,6 +650,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-20T03:48:52.816Z",
-  "source": "autosave"
+  "savedAt": "2026-07-20T06:10:58.072Z",
+  "source": "publish-preflight"
 }

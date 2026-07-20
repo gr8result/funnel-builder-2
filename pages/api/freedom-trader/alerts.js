@@ -18,53 +18,73 @@ function failure(res, status, error) {
   return res.status(status).json({ ok: false, error });
 }
 
-function errorMessage(error, fallback) {
-  if (error?.message) return error.message;
-  if (typeof error === "string") return error;
-  return fallback;
-}
-
-async function ensureWatchlistSymbol(supabase, symbol, companyName = null) {
-  const { error } = await supabase
-    .from("freedom_trader_watchlist")
-    .upsert({
-      symbol,
-      company_name: companyName || symbol,
-      exchange: "NASDAQ",
-      active: true,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "symbol" });
-  if (error) throw error;
-}
-
 function normalizeAlert(row) {
-  const currentPrice = cleanNumber(row.last_checked_price);
+  const pending = row.pending_trade || row.pending_trades || {};
   const triggerPrice = cleanNumber(row.trigger_price);
+  const alertType = row.alert_type || "";
+  const upperType = alertType.toUpperCase();
+  const direction = upperType.includes("STOP") ? "below" : "above";
   return {
     id: row.id,
-    symbol: row.symbol,
-    alertType: row.alert_type,
+    tradeId: row.trade_id,
+    symbol: pending.ticker || row.ticker || "",
+    alertType,
     triggerPrice,
-    direction: row.direction,
-    message: row.message || "",
-    priority: row.priority || "normal",
-    status: row.status || "active",
-    currentPrice,
-    distance: Number.isFinite(currentPrice) && Number.isFinite(triggerPrice) && currentPrice !== 0
-      ? Number((((triggerPrice - currentPrice) / currentPrice) * 100).toFixed(2))
-      : null,
-    triggeredAt: row.triggered_at,
-    acknowledgedAt: row.acknowledged_at,
+    direction,
+    message: `${alertType} alert for ${pending.ticker || "trade setup"}. Review manually; no trade is executed automatically.`,
+    priority: "normal",
+    status: row.triggered ? "triggered" : "active",
+    currentPrice: null,
+    distance: null,
+    triggeredAt: row.triggered ? row.created_at : null,
+    acknowledgedAt: null,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.created_at,
   };
+}
+
+async function findOrCreatePendingTrade(supabase, alert) {
+  if (alert.tradeId) {
+    const { data, error } = await supabase.from("pending_trades").select("*").eq("id", alert.tradeId).single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data: existing, error: findError } = await supabase
+    .from("pending_trades")
+    .select("*")
+    .eq("ticker", alert.symbol)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (findError) throw findError;
+  if (existing?.id) return existing;
+
+  const payload = {
+    ticker: alert.symbol,
+    entry_price: alert.alertType.includes("ENTRY") ? alert.triggerPrice : null,
+    stop_loss: alert.alertType.includes("STOP") ? alert.triggerPrice : null,
+    target_price: alert.alertType.includes("TARGET") ? alert.triggerPrice : null,
+    shares: null,
+    risk_reward: null,
+    expected_profit: null,
+    status: "WAIT FOR ENTRY",
+    fib_data: null,
+    created_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from("pending_trades").insert(payload).select("*").single();
+  if (error) throw error;
+  return data;
 }
 
 async function listAlerts(req, res) {
   const supabase = getSupabase();
   if (!supabase) return res.status(200).json({ ok: true, alerts: [], databaseUnavailable: true, error: null });
   try {
-    const { data, error } = await supabase.from("freedom_trader_alerts").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("trade_alerts")
+      .select("*, pending_trade:pending_trades(*)")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return res.status(200).json({ ok: true, alerts: (data || []).map(normalizeAlert), databaseUnavailable: false, error: null });
   } catch (error) {
@@ -77,82 +97,71 @@ async function createAlert(req, res) {
   const supabase = getSupabase();
   if (!supabase) return failure(res, 503, "Alerts database temporarily unavailable.");
   if (Array.isArray(req.body?.alerts)) return createAlertBatch(req, res, supabase);
-  const symbol = String(req.body?.symbol || "").trim().toUpperCase();
-  const alertType = String(req.body?.alertType || "").trim().toUpperCase();
-  const triggerPrice = cleanNumber(req.body?.triggerPrice);
-  const direction = req.body?.direction ? String(req.body.direction).trim().toLowerCase() : null;
-  const priority = req.body?.priority ? String(req.body.priority).trim().toLowerCase() : "normal";
 
-  if (!symbol || !alertType) return failure(res, 400, "Symbol and alert type are required.");
-  if (!Number.isFinite(triggerPrice)) return failure(res, 400, "A valid trigger price is required.");
-
-  const payload = {
-    symbol,
-    alert_type: alertType,
-    trigger_price: triggerPrice,
-    direction,
-    message: req.body?.message || `${alertType} alert for ${symbol}. Review manually; no trade is executed automatically.`,
-    priority,
-    status: "active",
+  const alert = {
+    tradeId: req.body?.tradeId || req.body?.pendingTradeId || null,
+    symbol: String(req.body?.symbol || req.body?.ticker || "").trim().toUpperCase(),
+    alertType: String(req.body?.alertType || "").trim().toUpperCase(),
+    triggerPrice: cleanNumber(req.body?.triggerPrice),
   };
-  if (req.body?.positionId) payload.position_id = req.body.positionId;
+  if (!alert.symbol && !alert.tradeId) return failure(res, 400, "Ticker or trade id is required.");
+  if (!alert.alertType) return failure(res, 400, "Alert type is required.");
+  if (!Number.isFinite(alert.triggerPrice)) return failure(res, 400, "A valid trigger price is required.");
 
   try {
-    await ensureWatchlistSymbol(supabase, symbol, req.body?.companyName);
-    const { data, error } = await supabase.from("freedom_trader_alerts").insert(payload).select("*").single();
-    if (error) {
-      const message = errorMessage(error, "Unable to save alert right now.");
-      console.error("Freedom Trader alert insert failed", { error, payload });
-      return failure(res, 500, message);
-    }
+    const pendingTrade = await findOrCreatePendingTrade(supabase, alert);
+    const payload = {
+      trade_id: pendingTrade.id,
+      alert_type: alert.alertType,
+      trigger_price: alert.triggerPrice,
+      triggered: false,
+      created_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase.from("trade_alerts").insert(payload).select("*, pending_trade:pending_trades(*)").single();
+    if (error) throw error;
     return res.status(200).json({ ok: true, alert: normalizeAlert(data), error: null });
   } catch (error) {
-    const message = errorMessage(error, "Unable to save alert right now.");
-    console.error("Freedom Trader alert create failed:", { error, payload });
-    return failure(res, 500, message);
+    console.error("Freedom Trader alert create failed:", { error, alert });
+    return failure(res, 500, "Unable to save alert right now.");
   }
 }
 
 async function createAlertBatch(req, res, supabase) {
   const alerts = req.body.alerts
-    .map((alert) => ({
-      symbol: String(alert?.symbol || req.body?.symbol || "").trim().toUpperCase(),
-      companyName: alert?.companyName || req.body?.companyName || null,
-      alertType: String(alert?.alertType || "").trim().toUpperCase(),
-      triggerPrice: cleanNumber(alert?.triggerPrice),
-      direction: alert?.direction ? String(alert.direction).trim().toLowerCase() : null,
-      priority: alert?.priority ? String(alert.priority).trim().toLowerCase() : "normal",
-      message: alert?.message || null,
+    .map((item) => ({
+      tradeId: item?.tradeId || item?.pendingTradeId || req.body?.tradeId || req.body?.pendingTradeId || null,
+      symbol: String(item?.symbol || req.body?.symbol || req.body?.ticker || "").trim().toUpperCase(),
+      alertType: String(item?.alertType || "").trim().toUpperCase(),
+      triggerPrice: cleanNumber(item?.triggerPrice),
     }))
-    .filter((alert) => alert.symbol && alert.alertType && Number.isFinite(alert.triggerPrice));
+    .filter((alert) => (alert.symbol || alert.tradeId) && alert.alertType && Number.isFinite(alert.triggerPrice));
 
   if (!alerts.length) return failure(res, 400, "Provide at least one valid alert.");
 
   try {
-    await Promise.all([...new Set(alerts.map((alert) => alert.symbol))].map((symbol) => {
-      const alert = alerts.find((item) => item.symbol === symbol);
-      return ensureWatchlistSymbol(supabase, symbol, alert?.companyName);
-    }));
-    const rows = alerts.map((alert) => ({
-      symbol: alert.symbol,
-      alert_type: alert.alertType,
-      trigger_price: alert.triggerPrice,
-      direction: alert.direction,
-      message: alert.message || `${alert.alertType} alert for ${alert.symbol}. Review manually; no trade is executed automatically.`,
-      priority: alert.priority,
-      status: "active",
-    }));
-    const { data, error } = await supabase.from("freedom_trader_alerts").insert(rows).select("*");
-    if (error) {
-      const message = errorMessage(error, "Unable to save alerts right now.");
-      console.error("Freedom Trader batch alert insert failed", { error, rows });
-      return failure(res, 500, message);
+    const pendingByKey = new Map();
+    const rows = [];
+    for (const alert of alerts) {
+      const key = alert.tradeId || alert.symbol;
+      let pendingTrade = pendingByKey.get(key);
+      if (!pendingTrade) {
+        pendingTrade = await findOrCreatePendingTrade(supabase, alert);
+        pendingByKey.set(key, pendingTrade);
+      }
+      rows.push({
+        trade_id: pendingTrade.id,
+        alert_type: alert.alertType,
+        trigger_price: alert.triggerPrice,
+        triggered: false,
+        created_at: new Date().toISOString(),
+      });
     }
+    const { data, error } = await supabase.from("trade_alerts").insert(rows).select("*, pending_trade:pending_trades(*)");
+    if (error) throw error;
     return res.status(200).json({ ok: true, alerts: (data || []).map(normalizeAlert), error: null });
   } catch (error) {
-    const message = errorMessage(error, "Unable to save alerts right now.");
-    console.error("Freedom Trader batch alert create failed:", error);
-    return failure(res, 500, message);
+    console.error("Freedom Trader batch alert create failed:", { error, alerts });
+    return failure(res, 500, "Unable to save alerts right now.");
   }
 }
 
@@ -163,16 +172,13 @@ async function updateAlert(req, res) {
   const action = req.body?.action;
   if (!id) return res.status(400).json({ ok: false, error: "Missing alert id." });
   try {
-    const payload = { updated_at: new Date().toISOString() };
-    if (action === "acknowledge") {
-      payload.status = "acknowledged";
-      payload.acknowledged_at = new Date().toISOString();
-    } else if (action === "disable") {
-      payload.status = "disabled";
-    } else if (req.body?.status) {
-      payload.status = req.body.status;
-    }
-    const { data, error } = await supabase.from("freedom_trader_alerts").update(payload).eq("id", id).select("*").single();
+    const triggered = action === "acknowledge" || req.body?.status === "triggered";
+    const { data, error } = await supabase
+      .from("trade_alerts")
+      .update({ triggered })
+      .eq("id", id)
+      .select("*, pending_trade:pending_trades(*)")
+      .single();
     if (error) throw error;
     return res.status(200).json({ ok: true, alert: normalizeAlert(data), error: null });
   } catch (error) {
@@ -187,7 +193,7 @@ async function deleteAlert(req, res) {
   const id = req.query.id || req.body?.id;
   if (!id) return res.status(400).json({ ok: false, error: "Missing alert id." });
   try {
-    const { error } = await supabase.from("freedom_trader_alerts").delete().eq("id", id);
+    const { error } = await supabase.from("trade_alerts").delete().eq("id", id);
     if (error) throw error;
     return res.status(200).json({ ok: true, error: null });
   } catch (error) {
