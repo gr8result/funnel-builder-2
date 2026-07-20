@@ -32,7 +32,6 @@ import { createPremierInclusionsWorkingCopy } from "../document-engine/templates
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
-import StandardInclusionsV2 from "../standard-inclusions-v2/StandardInclusionsV2";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import {
@@ -46,7 +45,6 @@ import {
   projectEstimatePageDefinitionFor,
 } from "./project-estimate/ProjectEstimateRegistry";
 
-const STANDARD_INCLUSIONS_LEGACY = false;
 import { appendProjectEstimatePageRevision, projectEstimateRevisionsForPage } from "./project-estimate/storage/projectEstimateVersionHistory";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
@@ -2496,7 +2494,7 @@ export function ClientPageSheet({ sheet }) {
       window.removeEventListener("mousemove", handlePointerMove);
       window.removeEventListener("mouseup", handlePointerUp);
     };
-  }, [readonly]);
+  }, [readonly, activePage?.id, activePage?.blocks]);
 
   const persistBuilder = async (nextBuilder, { message = "Proposal autosaved.", fullWorkbookSaveTriggered = true } = {}) => {
     if (readonly) return;
@@ -2651,8 +2649,10 @@ export function ClientPageSheet({ sheet }) {
     if (block?.design?.locked && key !== "locked" && key !== "hidden") return;
     if (key !== "frame" || dragStateRef.current?.blockId !== blockId) pushProjectEstimateUndo(blockId);
     const visualKeys = new Set(["fontFamily", "fontSize", "fontWeight", "fontStyle", "textDecoration", "color", "backgroundColor", "textAlign", "lineHeight", "letterSpacing", "padding", "borderRadius", "opacity", "objectFit", "zoom", "objectPositionX", "objectPositionY"]);
+    const shouldFreezeFrame = visualKeys.has(key) && !block?.design?.frameEdited;
     const nextDesign = {
       ...(block?.design || {}),
+      ...(shouldFreezeFrame ? { frame: normaliseProposalFrame(block?.design?.frame, block), frameEdited: true } : {}),
       [key]: value,
       ...(key === "frame" ? { frameEdited: true } : {}),
       ...(visualKeys.has(key) ? { styleEdited: true } : {}),
@@ -4394,7 +4394,7 @@ function ProjectEstimateEditablePage({
     : null;
   const selectedNativeFrame = selectedNativeBlock ? proposalBlockFrame(selectedNativeBlock, page) : null;
   return (
-    <div style={styles.projectEstimateVisualEditorFrame} onMouseDown={() => editMode && onSelectBlock("")}>
+    <div data-project-estimate-editor-frame={page?.page_type || page?.id || ""} style={styles.projectEstimateVisualEditorFrame} onMouseDown={() => editMode && onSelectBlock("")}>
       <ProjectEstimatePackPage
         page={page}
         theme={theme}
@@ -5844,11 +5844,6 @@ function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly })
 }
 
 export function StandardInclusionsSheet({ sheet }) {
-  if (!STANDARD_INCLUSIONS_LEGACY) return <StandardInclusionsV2 sheet={sheet} />;
-  return <StandardInclusionsLegacySheet sheet={sheet} />;
-}
-
-function StandardInclusionsLegacySheet({ sheet }) {
   const readonly = sheet.previewMode;
   const workbookId = sheet.workbook?.id || sheet.workbook?.jobId || sheet.workbook?.openedFileName || "local";
   const pdfUploadRef = useRef(null);

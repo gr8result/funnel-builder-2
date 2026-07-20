@@ -1,12 +1,12 @@
 import { selectedEstimateInclusionsPackage } from "../../../lib/builders/estimateInclusions";
 import { defaultLuxuryProposalTheme, hasProjectInfoValue } from "./theme";
-import AcceptancePage from "./pages/AcceptancePage";
+import AcceptancePage from "./pages/AcceptancePage.tsx";
 import AboutBuilderPage from "./pages/AboutBuilderPage";
-import CoverPage from "./pages/CoverPage";
-import EstimateSummaryPage from "./pages/EstimateSummaryPage";
+import CoverPage from "./pages/CoverPage.tsx";
+import EstimateSummaryPage from "./pages/EstimateSummaryPage.tsx";
 import PricedPlansPage from "./pages/PricedPlansPage";
 import PricingSummaryPage from "./pages/PricingSummaryPage";
-import StandardInclusionsPage from "./pages/StandardInclusionsPage";
+import StandardInclusionsPage from "./pages/StandardInclusionsPage.tsx";
 import ImportantEstimateNoticePage from "./pages/ImportantEstimateNoticePage";
 import { projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
 import { styles } from "./ProjectEstimateShared";
