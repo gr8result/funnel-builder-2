@@ -32,10 +32,10 @@ import { createPremierInclusionsWorkingCopy } from "../document-engine/templates
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
+import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import TakeoffModuleLoader from "./ai-takeoff/TakeoffModuleLoader";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
-import ProjectEstimateVisualEditor from "./project-estimate/editor/ProjectEstimateVisualEditor";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
@@ -2663,6 +2663,13 @@ export function ClientPageSheet({ sheet }) {
     }), "Block saved.");
   };
 
+  const applyProjectEstimateDocumentToPage = (pageId, document) => {
+    updateBuilder((current) => ({
+      ...current,
+      pages: (current.pages || []).map((page) => page.id === pageId ? projectEstimatePageFromDocument(page, document, linkedFields) : page),
+    }), "Project Estimate page saved.");
+  };
+
   const updateSelectedBlockDesign = (changes = {}) => {
     if (!selectedBlock) return;
     updateBlock(selectedBlock.id, { design: { ...(selectedBlock.design || {}), ...changes } });
@@ -3373,39 +3380,35 @@ export function ClientPageSheet({ sheet }) {
               onOpenLibrary={openDocumentLibrary}
             />
           ) : (
-            <ProjectEstimateVisualEditor
-              page={activePage}
-              theme={builder.theme}
-              linkedFields={linkedFields}
-              Brochure={EstimateInclusionsBrochure}
-              editMode={pageEditMode && !readonly}
-              selectedBlockId={selectedBlockId}
-              editingBlockId={editingBlockId}
-              readonly={readonly}
-              onToggleEditMode={() => {
-                setPageEditMode((current) => !current);
-                setEditingBlockId("");
-                setAddElementOpen(false);
-              }}
-              onSelectBlock={setSelectedBlockId}
-              onEditBlock={setEditingBlockId}
-              onBlockContent={updateBlockContent}
-              onBlockDesign={updateBlockDesign}
-              onSelectedBlockDesign={updateSelectedBlockDesign}
-              onDuplicateBlock={duplicateBlock}
-              onDeleteBlock={removeBlock}
-              onMoveBlock={moveBlockLayer}
-              onAddBlock={addBlock}
-              onUploadLogo={() => openBlockImageUpload("logo")}
-              onUploadImage={() => openBlockImageUpload("image")}
-              onOpenMediaLibrary={openProjectEstimateMediaLibrary}
-              onReplaceImage={(block) => {
-                if (block?.type === "logo") openBlockImageUpload("logo");
-                else if (block?.type === "image") openBlockImageUpload("image");
-              }}
-              onUndo={undoProjectEstimateEdit}
-              onRedo={redoProjectEstimateEdit}
-            />
+            pageEditMode && !readonly ? (
+              <DocumentPageBuilder
+                key={`document-editor-${activePage.id}`}
+                document={projectEstimatePageToDocument(activePage, builder.theme, linkedFields)}
+                workbook={sheet.workbook}
+                readonly={readonly}
+                initialMode="edit"
+                onStatus={setStatusMessage}
+                onChange={(document) => applyProjectEstimateDocumentToPage(activePage.id, document)}
+              />
+            ) : (
+              <ProjectEstimateEditablePage
+                key={activePage.id}
+                page={activePage}
+                theme={builder.theme}
+                linkedFields={linkedFields}
+                Brochure={EstimateInclusionsBrochure}
+                editMode={false}
+                selectedBlockId=""
+                editingBlockId=""
+                onSelectBlock={() => {}}
+                onEditBlock={() => {}}
+                onBlockContent={() => {}}
+                onBlockDesign={() => {}}
+                onReplaceImage={() => {}}
+                onStartDrag={() => {}}
+                onStartResize={() => {}}
+              />
+            )
           )}
           <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
@@ -5504,6 +5507,156 @@ function projectEstimateBlockTextStyle(block = {}) {
   };
 }
 
+function projectEstimatePageToDocument(page = {}, theme = {}, linkedFields = {}) {
+  const pageId = page.page_type || page.id || "project-estimate-page";
+  const objects = (page.blocks || [])
+    .filter((block) => block?.design?.hidden !== true)
+    .map((block, index) => projectEstimateBlockToDocumentObject(block, page, theme, linkedFields, index))
+    .filter(Boolean);
+  return createDocument({
+    id: `project-estimate-document-${page.id || pageId}`,
+    name: page.title || pretty(pageId),
+    activePageId: page.id || pageId,
+    pages: [
+      createA4Page({
+        id: page.id || pageId,
+        name: page.title || pretty(pageId),
+        width: PROJECT_ESTIMATE_PAGE_WIDTH,
+        height: PROJECT_ESTIMATE_PAGE_HEIGHT,
+        background: { color: page.design?.backgroundColor || "#ffffff", imageRef: page.design?.backgroundImageUrl || null },
+        objects,
+      }),
+    ],
+    metadata: { source: "project-estimate", pageId },
+  });
+}
+
+function projectEstimateBlockToDocumentObject(block = {}, page = {}, theme = {}, linkedFields = {}, index = 0) {
+  const frame = proposalBlockFrame(block, page);
+  const common = {
+    id: block.id,
+    name: block.content?.editorLabel || proposalBlockLabel(block.type),
+    x: frame.x,
+    y: frame.y,
+    width: frame.width,
+    height: frame.height,
+    layer: Number(block.design?.zIndex ?? block.order ?? index),
+    locked: block.design?.locked === true,
+    visible: block.design?.hidden !== true,
+    opacity: Number(block.design?.opacity ?? 1),
+    style: projectEstimateDocumentObjectStyle(block),
+    data: { blockId: block.id, blockType: block.type, contentKey: projectEstimateEditorContentKey(block), fieldKey: block.content?.fieldKey || "" },
+  };
+  if (block.type === "image" || block.type === "logo" || block.id === "cover-hero-image") {
+    const imageRef = block.content?.imageUrl || block.content?.logoUrl || block.content?.defaultImageUrl || block.content?.defaultLogoUrl || theme.heroImageUrl || "/assets/builders/standard-inclusions-hero.jpg";
+    return createObject(block.type === "logo" ? "logo" : "image", { ...common, data: { ...common.data, imageRef, alt: block.content?.alt || common.name } });
+  }
+  if (block.type === "divider") return createObject("divider", common);
+  if (["shape", "container", "spacer"].includes(block.type)) return createObject("shape", common);
+  return createObject(block.type === "quote_field" ? "dynamicField" : "text", {
+    ...common,
+    data: { ...common.data, text: projectEstimateBlockTextValue(block, linkedFields) },
+  });
+}
+
+function projectEstimateDocumentObjectStyle(block = {}) {
+  const design = block.design || {};
+  return {
+    fontFamily: design.fontFamily || "Arial",
+    fontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
+    fontWeight: Number(design.fontWeight || (block.type === "heading" ? 800 : 500)),
+    fontStyle: design.fontStyle || "normal",
+    textDecoration: design.textDecoration || "none",
+    color: design.color || "#0f172a",
+    textAlign: design.textAlign || "left",
+    lineHeight: design.lineHeight || 1.3,
+    letterSpacing: design.letterSpacing || 0,
+    backgroundColor: design.backgroundColor || "transparent",
+    padding: Number(design.padding || 0),
+    objectFit: design.objectFit || "cover",
+    borderRadius: Number(design.borderRadius || 0),
+    fill: design.backgroundColor || "transparent",
+    stroke: design.borderColor || "#d1d5db",
+    strokeWidth: Number(design.borderWidth || 0),
+  };
+}
+
+function projectEstimatePageFromDocument(page = {}, document = {}) {
+  const documentPage = (document.pages || [])[0] || {};
+  const existingBlocks = Array.isArray(page.blocks) ? page.blocks : [];
+  const byId = new Map(existingBlocks.map((block) => [block.id, block]));
+  const nextBlocks = (documentPage.objects || []).map((object, index) => {
+    const blockId = object.data?.blockId || object.id;
+    const existing = byId.get(blockId);
+    return existing ? projectEstimateBlockFromDocumentObject(existing, object, index) : projectEstimateNewBlockFromDocumentObject(object, page, index);
+  });
+  const knownIds = new Set(nextBlocks.map((block) => block.id));
+  const hiddenOrMissing = existingBlocks
+    .filter((block) => !knownIds.has(block.id))
+    .map((block) => ({ ...block, design: { ...(block.design || {}), hidden: true, hiddenBySubscriber: true } }));
+  return { ...page, blocks: [...nextBlocks, ...hiddenOrMissing].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)) };
+}
+
+function projectEstimateBlockFromDocumentObject(block = {}, object = {}, index = 0) {
+  const contentKey = object.data?.contentKey || projectEstimateEditorContentKey(block);
+  const content = { ...(block.content || {}) };
+  if (object.type === "image") content.imageUrl = object.data?.imageRef || content.imageUrl || "";
+  else if (object.type === "logo") content.logoUrl = object.data?.imageRef || content.logoUrl || "";
+  else if (contentKey) content[contentKey] = object.data?.text ?? content[contentKey] ?? "";
+  return {
+    ...block,
+    order: Number(object.layer ?? block.order ?? index),
+    content,
+    design: { ...(block.design || {}), ...projectEstimateDesignFromDocumentObject(object) },
+  };
+}
+
+function projectEstimateNewBlockFromDocumentObject(object = {}, page = {}, index = 0) {
+  const type = object.type === "dynamicField" ? "quote_field" : object.type === "logo" ? "logo" : object.type === "image" ? "image" : object.type === "divider" ? "divider" : object.type === "shape" ? "shape" : "text";
+  const content = { editorLabel: object.name || proposalBlockLabel(type), source: "builder-created" };
+  if (type === "image") content.imageUrl = object.data?.imageRef || "";
+  else if (type === "logo") content.logoUrl = object.data?.imageRef || "";
+  else content.text = object.data?.text || "";
+  return normaliseProposalBuilderBlock({
+    id: object.id || proposalBuilderId("block"),
+    type,
+    source: "builder-created",
+    pageType: page.page_type || page.id || "",
+    order: Number(object.layer ?? index),
+    content,
+    design: projectEstimateDesignFromDocumentObject(object),
+  });
+}
+
+function projectEstimateDesignFromDocumentObject(object = {}) {
+  return {
+    frame: { x: Number(object.x || 0), y: Number(object.y || 0), width: Number(object.width || 1), height: Number(object.height || 1) },
+    frameEdited: true,
+    zIndex: Number(object.layer || 0),
+    opacity: Number(object.opacity ?? 1),
+    rotation: Number(object.rotation || 0),
+    locked: object.locked === true,
+    hidden: object.visible === false,
+    hiddenBySubscriber: object.visible === false,
+    styleEdited: true,
+    fontFamily: object.style?.fontFamily,
+    fontSize: object.style?.fontSize,
+    fontWeight: object.style?.fontWeight,
+    fontStyle: object.style?.fontStyle,
+    textDecoration: object.style?.textDecoration,
+    color: object.style?.color,
+    textAlign: object.style?.textAlign,
+    lineHeight: object.style?.lineHeight,
+    letterSpacing: object.style?.letterSpacing,
+    backgroundColor: object.style?.backgroundColor || object.style?.fill,
+    padding: object.style?.padding,
+    objectFit: object.style?.objectFit,
+    borderRadius: object.style?.borderRadius,
+    borderColor: object.style?.stroke,
+    borderWidth: object.style?.strokeWidth,
+  };
+}
+
 function createProposalVisualElement(type, linkedFields, order = 0) {
   const mappedType = type === "paragraph" ? "text" : type;
   const baseType = mappedType === "text_box" ? "text" : mappedType;
@@ -5805,6 +5958,7 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
+  const [onlyOfficeAuthToken, setOnlyOfficeAuthToken] = useState("");
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
   const pages = normalisePremierPdfPages(standard.pdfPages);
   const selectedPageId = standard.selectedPdfPageId || pages[0]?.id || "";
@@ -5815,7 +5969,23 @@ export function StandardInclusionsSheet({ sheet }) {
   const activeDocument = !standard.scheduleDeleted && Array.isArray(standard.documentBuilder?.pages) && standard.documentBuilder.pages.length
     ? standard.documentBuilder
     : null;
+  const activeOnlyOfficeDocumentId = !standard.scheduleDeleted ? standard.onlyOfficeDocumentId || "" : "";
   const activeSummary = standardScheduleSummary(activeDocument, standard);
+
+  useEffect(() => {
+    if (!activeOnlyOfficeDocumentId || onlyOfficeAuthToken) return;
+    let cancelled = false;
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!cancelled) setOnlyOfficeAuthToken(data?.session?.access_token || "");
+      })
+      .catch(() => {
+        if (!cancelled) setOnlyOfficeAuthToken("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOnlyOfficeDocumentId, onlyOfficeAuthToken]);
 
   async function saveStandard(next, options = {}) {
     const nextStandard = normaliseStandardInclusions({
@@ -6014,14 +6184,49 @@ export function StandardInclusionsSheet({ sheet }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !String(file.name || "").toLowerCase().endsWith(".pptx")) return;
-    setStandardStatus("Preparing PowerPoint import preview...");
+    setStandardStatus("Uploading PowerPoint for ONLYOFFICE editing...");
     try {
-      setImportPreview(await importPptxAsStandardDocumentPreview(file));
-      setManagementMode("import-preview");
-      setStandardStatus("PowerPoint import preview ready. Confirm to replace the active schedule.");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      if (!token) throw new Error("Sign in before uploading a Standard Inclusions PowerPoint.");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tenantId", sheet.workbook?.builderId || sheet.workbook?.id || "local-builder");
+      const response = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "PowerPoint upload failed.");
+      const document = payload.document;
+      await saveStandardWithRevision({
+        documentBuilder: null,
+        source: "onlyoffice-pptx",
+        scheduleDeleted: false,
+        isDeleted: false,
+        deletedAt: null,
+        activeDocumentId: document.id,
+        activeDocumentName: document.source_file_name || file.name,
+        activeDocumentSource: "onlyoffice-pptx",
+        activeDocumentLastSavedAt: document.updated_at || new Date().toISOString(),
+        pdfPages: [],
+        selectedPdfPageId: "",
+        pdfSourceName: "",
+        pptxSourceName: file.name,
+        pdfEditorMode: "onlyoffice",
+        onlyOfficeDocumentId: document.id,
+        onlyOfficeVersion: document.version || 1,
+        onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
+        onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
+      }, "upload-pptx-onlyoffice", file.name, { persist: true });
+      setOnlyOfficeAuthToken(token);
+      setImportPreview(null);
+      setManagementMode("");
+      setStandardStatus("PowerPoint uploaded. Opening in ONLYOFFICE Presentation Editor.");
     } catch (error) {
-      console.error("Standard Inclusions PowerPoint preview failed", error);
-      setStandardStatus(error?.message || "PowerPoint import preview failed.");
+      console.error("Standard Inclusions ONLYOFFICE PowerPoint upload failed", error);
+      setStandardStatus(error?.message || "PowerPoint upload failed.");
     }
   }
 
@@ -6112,7 +6317,14 @@ export function StandardInclusionsSheet({ sheet }) {
       </section>
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
-      {activeDocument ? (
+      {activeOnlyOfficeDocumentId ? (
+        <OnlyOfficePresentationEditor
+          documentId={activeOnlyOfficeDocumentId}
+          authToken={onlyOfficeAuthToken}
+          onStatus={setStandardStatus}
+          onClose={() => setStandardStatus("ONLYOFFICE editor closed.")}
+        />
+      ) : activeDocument ? (
         <StandardScheduleLoadedEditor
           readonly={readonly}
           activeSummary={activeSummary}

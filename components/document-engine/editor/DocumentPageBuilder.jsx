@@ -9,9 +9,9 @@ import { PageRenderer } from "../renderer/pageRenderer.jsx";
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
 
-export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onChange, onStatus }) {
+export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onChange, onStatus, initialMode = "preview" }) {
   const [draft, setDraft] = useState(() => hydrateDocument(document));
-  const [mode, setMode] = useState("preview");
+  const [mode, setMode] = useState(initialMode);
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
   const dragRef = useRef(null);
@@ -22,7 +22,8 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
 
   useEffect(() => {
     setDraft(hydrateDocument(document));
-  }, [document?.id]);
+    setMode(initialMode);
+  }, [document?.id, initialMode]);
 
   useEffect(() => {
     function move(event) {
