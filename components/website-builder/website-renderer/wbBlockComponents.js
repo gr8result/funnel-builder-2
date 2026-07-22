@@ -1,6 +1,7 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { isUnsafeAccordionPanelImageUrl, resolveAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
+import { normalizeAccordionHeading } from "../../../lib/website-builder/accordionHeadingText";
 import { resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
@@ -6171,6 +6172,16 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     const ctaBg = isLight ? tc : ac;
     const showCta = panel.showCta !== false;
     const buttonFullWidth = panel.buttonFullWidth === true || props.buttonFullWidth === true;
+    const eyebrowHeading = normalizeAccordionHeading(panel.eyebrow || (editor ? "Category label" : ""), {
+      color: ac,
+      fontSize: "16px",
+      fontWeight: 600,
+    });
+    const panelHeading = normalizeAccordionHeading(panel.heading || "Your headline", {
+      color: tc,
+      fontSize: `${compact ? 28 : (panel.headingSize || 46)}px`,
+      fontWeight: panel.headingWeight || 800,
+    });
 
     return (
       <div style={{ display: "flex", flexDirection: "column", justifyContent: contentJustify, gap: 20, padding: compact ? "40px 24px 48px" : `${contentPadTop}px 64px 0 72px`, height: "100%", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", overflow: "hidden" }}>
@@ -6181,38 +6192,50 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
             {panel.eyebrowDot ? (
               <span style={{ width: 12, height: 12, borderRadius: 3, background: ac, display: "inline-block", flexShrink: 0 }} />
             ) : null}
-            <div
-              data-website-inline-editor={editor ? "true" : undefined}
-              contentEditable={editor || undefined}
-              suppressContentEditableWarning
-              onMouseDown={(e) => editor && e.stopPropagation()}
-              onPointerDown={(e) => editor && e.stopPropagation()}
-              onBlur={(e) => {
-                if (!editor) return;
-                if (shouldSkipToolbarBlur(e)) return;
-                patchPanel(idx, { eyebrow: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
-              }}
-              style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.06em", color: ac, outline: edgeOut, borderRadius: 4, padding: edgePad }}
-              dangerouslySetInnerHTML={{ __html: asRichHtml(panel.eyebrow || (editor ? "Category label" : "")) }}
-            />
+            {editor ? (
+              <div
+                data-website-inline-editor="true"
+                contentEditable
+                suppressContentEditableWarning
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onBlur={(e) => {
+                  if (shouldSkipToolbarBlur(e)) return;
+                  patchPanel(idx, { eyebrow: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
+                }}
+                style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.06em", color: ac, outline: edgeOut, borderRadius: 4, padding: edgePad }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(panel.eyebrow || "Category label") }}
+              />
+            ) : (
+              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.06em", color: ac, outline: edgeOut, borderRadius: 4, padding: edgePad, ...eyebrowHeading.style }}>
+                {eyebrowHeading.text}
+              </div>
+            )}
           </div>
         ) : null}
 
         {/* Heading */}
-        <div
-          data-website-inline-editor={editor ? "true" : undefined}
-          contentEditable={editor || undefined}
-          suppressContentEditableWarning
-          onMouseDown={(e) => editor && e.stopPropagation()}
-          onPointerDown={(e) => editor && e.stopPropagation()}
-          onBlur={(e) => {
-            if (!editor) return;
-            if (shouldSkipToolbarBlur(e)) return;
-            patchPanel(idx, { heading: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
-          }}
-          style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
-          dangerouslySetInnerHTML={{ __html: asRichHtml(panel.heading || "Your headline") }}
-        />
+        {editor ? (
+          <div
+            data-website-inline-editor="true"
+            contentEditable
+            suppressContentEditableWarning
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              if (shouldSkipToolbarBlur(e)) return;
+              patchPanel(idx, { heading: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
+            }}
+            style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
+            dangerouslySetInnerHTML={{ __html: asRichHtml(panel.heading || "Your headline") }}
+          />
+        ) : (
+          <div
+            style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box", ...panelHeading.style }}
+          >
+            {panelHeading.text}
+          </div>
+        )}
 
         {/* Body */}
         {(panel.body || editor) ? (
@@ -6419,6 +6442,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
             const tc = panel.textColor || "#ffffff";
             const ac = panel.accentColor || "#0ea5e9";
             const contentGridColumns = contentColumns;
+            const stripHeading = normalizeAccordionHeading(panel.eyebrow || panel.heading || `Panel ${idx + 1}`, {
+              color: tc,
+              fontSize: "15px",
+              fontWeight: 800,
+            });
 
             return (
               <div
@@ -6463,8 +6491,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                 >
                   <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", display: "flex", alignItems: "center", gap: 12, maxHeight: "86%" }}>
                     <span style={{ width: 9, height: 9, borderRadius: "50%", background: ac, flexShrink: 0 }} />
-                    <span style={{ fontSize: 15, fontWeight: 800, color: tc, letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {panel.eyebrow || panel.heading || `Panel ${idx + 1}`}
+                    <span style={{ fontSize: 15, fontWeight: 800, color: tc, letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...stripHeading.style }}>
+                      {stripHeading.text}
                     </span>
                   </div>
                 </div>
@@ -6512,6 +6540,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
           const imageRight = panel.imagePosition !== "left";
           const tc = panel.textColor || "#ffffff";
           const ac = panel.accentColor || "#0ea5e9";
+          const stripHeading = normalizeAccordionHeading(panel.eyebrow || panel.heading || `Panel ${idx + 1}`, {
+            color: tc,
+            fontSize: "16px",
+            fontWeight: 600,
+          });
 
           return (
             <div
@@ -6548,8 +6581,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               >
                 {/* Accent dot = card colour identity */}
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: ac, flexShrink: 0 }} />
-                <span style={{ fontSize: 16, fontWeight: 600, color: tc, letterSpacing: "0.04em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {panel.eyebrow || panel.heading || `Panel ${idx + 1}`}
+                <span style={{ fontSize: 16, fontWeight: 600, color: tc, letterSpacing: "0.04em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...stripHeading.style }}>
+                  {stripHeading.text}
                 </span>
                 {isPast ? (
                   <span style={{ fontSize: 16, color: `${tc}50`, fontWeight: 500, whiteSpace: "nowrap" }}>↑ scroll back</span>
