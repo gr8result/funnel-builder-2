@@ -77,6 +77,64 @@ assert.equal(publishedBlocks[2].props.videoUrl, "https://cdn.example.com/hero.mp
 assert.deepEqual(getPublishedAssetValidationFailures(publication.site_data.publication.assetValidationReport), []);
 assert.equal(compareWebsitePublishIntegrity(project, publication.site_data).ok, true);
 
+const safeSvgPublication = createPublicationPayload({
+  ...project,
+  pageBlocks: {
+    Home: [
+      {
+        id: "safe-svg-image",
+        type: "hero",
+        props: {
+          backgroundImage: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E",
+          floatingImage: "/assets/website-builder/example/public-image.png",
+        },
+      },
+    ],
+  },
+});
+assert.deepEqual(
+  getPublishedAssetValidationFailures(safeSvgPublication.site_data.publication.assetValidationReport),
+  [],
+  "safe inline SVG images and app-owned public asset paths should not block publish"
+);
+
+const pageFooterPublication = createPublicationPayload({
+  ...project,
+  id: "generic-footer-selection",
+  pageBlocks: {
+    Home: [
+      ...(project.pageBlocks.Home || []),
+      {
+        id: "page-footer",
+        type: "footer",
+        props: {
+          navigationLinks: [
+            { label: "Home", href: "/" },
+            { label: "Pricing", href: "/pricing" },
+            { label: "About Us", href: "/about-us" },
+          ],
+        },
+      },
+    ],
+  },
+  globalFooterBlock: {
+    id: "stale-global-footer",
+    type: "footer",
+    props: {
+      navigationLinks: [{ label: "Home", href: "/" }],
+    },
+  },
+});
+assert.deepEqual(
+  pageFooterPublication.site_data.globalFooterBlock.props.navigationLinks.map(({ label, href }) => ({ label, href })),
+  [
+    { label: "Home", href: "/" },
+    { label: "Pricing", href: "/pricing" },
+    { label: "About Us", href: "/about-us" },
+  ],
+  "publish should use the richest saved footer navigation, even when the global footer copy is stale"
+);
+
 const unsafePublication = createPublicationPayload({
   ...project,
   brandAssets: {},

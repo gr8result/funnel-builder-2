@@ -1734,32 +1734,32 @@
         "textColor": "#e2e8f0",
         "extraLinks": [
           {
-            "label": "Blog",
-            "href": "#blog"
+            "href": "#blog",
+            "label": "Blog"
           },
           {
-            "label": "Privacy Policy",
-            "href": "#privacy"
+            "href": "#privacy",
+            "label": "Privacy Policy"
           },
           {
-            "label": "Terms",
-            "href": "#terms"
+            "href": "#terms",
+            "label": "Terms"
           }
         ],
         "navHeading": "Navigation",
         "borderColor": "rgba(148,163,184,0.2)",
         "companyLinks": [
           {
-            "label": "Blog",
-            "href": "#blog"
+            "href": "#blog",
+            "label": "Blog"
           },
           {
-            "label": "Privacy Policy",
-            "href": "#privacy"
+            "href": "#privacy",
+            "label": "Privacy Policy"
           },
           {
-            "label": "Terms",
-            "href": "#terms"
+            "href": "#terms",
+            "label": "Terms"
           }
         ],
         "contactEmail": "hello@yourbrand.com",
@@ -1774,20 +1774,20 @@
         "baseLayoutWidth": 1500,
         "navigationLinks": [
           {
-            "label": "Home",
-            "href": "#home"
+            "href": "#home",
+            "label": "Home"
           },
           {
-            "label": "About",
-            "href": "#about"
+            "href": "#about",
+            "label": "About"
           },
           {
-            "label": "Services",
-            "href": "#services"
+            "href": "#services",
+            "label": "Services"
           },
           {
-            "label": "Contact",
-            "href": "#contact"
+            "href": "#contact",
+            "label": "Contact"
           }
         ],
         "newsletterHeading": "Stay Updated",
@@ -3558,32 +3558,32 @@
           "textColor": "#e2e8f0",
           "extraLinks": [
             {
-              "label": "Blog",
-              "href": "#blog"
+              "href": "#blog",
+              "label": "Blog"
             },
             {
-              "label": "Privacy Policy",
-              "href": "#privacy"
+              "href": "#privacy",
+              "label": "Privacy Policy"
             },
             {
-              "label": "Terms",
-              "href": "#terms"
+              "href": "#terms",
+              "label": "Terms"
             }
           ],
           "navHeading": "Navigation",
           "borderColor": "rgba(148,163,184,0.2)",
           "companyLinks": [
             {
-              "label": "Blog",
-              "href": "#blog"
+              "href": "#blog",
+              "label": "Blog"
             },
             {
-              "label": "Privacy Policy",
-              "href": "#privacy"
+              "href": "#privacy",
+              "label": "Privacy Policy"
             },
             {
-              "label": "Terms",
-              "href": "#terms"
+              "href": "#terms",
+              "label": "Terms"
             }
           ],
           "contactEmail": "hello@yourbrand.com",
@@ -3598,20 +3598,20 @@
           "baseLayoutWidth": 1500,
           "navigationLinks": [
             {
-              "label": "Home",
-              "href": "#home"
+              "href": "#home",
+              "label": "Home"
             },
             {
-              "label": "About",
-              "href": "#about"
+              "href": "#about",
+              "label": "About"
             },
             {
-              "label": "Services",
-              "href": "#services"
+              "href": "#services",
+              "label": "Services"
             },
             {
-              "label": "Contact",
-              "href": "#contact"
+              "href": "#contact",
+              "label": "Contact"
             }
           ],
           "newsletterHeading": "Stay Updated",
@@ -3652,6 +3652,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-20T07:22:37.436Z",
-  "source": "autosave"
+  "savedAt": "2026-07-22T05:28:14.447Z",
+  "source": "manual-save"
 }

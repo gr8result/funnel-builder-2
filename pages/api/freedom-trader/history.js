@@ -27,6 +27,7 @@ function normalizeRange(value) {
     "1y": "1y",
     "3y": "3y",
     "5y": "5y",
+    "max": "max",
   };
   return aliases[String(value || "1y").trim().toLowerCase()] || "1y";
 }
@@ -35,12 +36,13 @@ function rangeInterval(range) {
   return {
     "1d": "1min",
     "5d": "5min",
-    "1mo": "30min",
-    "3mo": "1h",
-    "6mo": "1h",
+    "1mo": "1h",
+    "3mo": "1day",
+    "6mo": "1day",
     "1y": "1day",
-    "3y": "1day",
-    "5y": "1day",
+    "3y": "1week",
+    "5y": "1week",
+    "max": "1week",
   }[range] || "1day";
 }
 

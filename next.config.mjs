@@ -1,7 +1,10 @@
 // next.config.mjs
 import { createRequire } from "module";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
   reactStrictMode: true,
@@ -12,6 +15,10 @@ const nextConfig = {
   },
 
   devIndicators: false,
+
+  experimental: {
+    middlewareClientMaxBodySize: "80mb",
+  },
 
   async headers() {
     return [
@@ -36,7 +43,7 @@ const nextConfig = {
     return [];
   },
 
-  webpack: (config) => {
+  webpack: (config, { dev, nextRuntime }) => {
     config.watchOptions = {
       ...(config.watchOptions || {}),
       ignored: [
@@ -50,9 +57,19 @@ const nextConfig = {
     };
 
     config.resolve = config.resolve || {};
-    config.resolve.alias = {
+    const aliases = {
       ...(config.resolve.alias || {}),
       immer: require.resolve("immer"),
+    };
+
+    if (dev && nextRuntime !== "edge") {
+      aliases["private-next-pages/_app"] = path.join(__dirname, "pages", "_app.js");
+      aliases["private-next-pages/_error"] = path.join(__dirname, "pages", "_error.js");
+      aliases["private-next-pages/_document"] = path.join(__dirname, "pages", "_document.js");
+    }
+
+    config.resolve.alias = {
+      ...aliases,
     };
     return config;
   },

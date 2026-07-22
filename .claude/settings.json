@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(git -C /d/dev/funnel-builder-clean status --short)",
+      "Bash(cat \"C:\\\\Users\\\\grant\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--dev-funnel-builder-clean\\\\36ca4a9d-7a79-4b88-bff1-37340ebbe8dd\\\\tasks\\\\bmvfprl4n.output\" 2>&1 | tail -20 *)",
+      "Read(//d/dev/**)",
+      "Bash(node modules/takeoff-v2/tests/rotation.test.mjs)",
+      "Bash(node modules/takeoff-v2/tests/coordinateTransform.test.mjs)",
+      "Bash(node modules/takeoff-v2/tests/planStore.test.mjs)"
+    ]
+  }
+}

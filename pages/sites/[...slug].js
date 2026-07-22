@@ -328,10 +328,25 @@ export async function getServerSideProps(ctx) {
   if (publication) {
     const siteData = publication.site_data && typeof publication.site_data === "object" ? publication.site_data : {};
     const siteDataHash = websiteContentHash(siteData);
+    const footerRoles = Array.isArray(siteData.globalFooterBlock?.props?.footerCardOrder)
+      ? siteData.globalFooterBlock.props.footerCardOrder.filter(Boolean)
+      : [];
+    const mediaBlockCount = Object.values(siteData.pageBlocks || {}).reduce((count, blocks) => (
+      count + (Array.isArray(blocks)
+        ? blocks.filter((block) => block?.type === "video-hero" || block?.type === "image-hero" || block?.props?.imageUrl || block?.props?.videoSrc).length
+        : 0)
+    ), 0);
     ctx.res?.setHeader("X-GR8-Published-Row-Id", publication.id || "");
     ctx.res?.setHeader("X-GR8-Published-Project-Id", publication.project_id || siteData.id || "");
     ctx.res?.setHeader("X-GR8-Site-Data-Updated-At", siteData.updatedAt || "");
     ctx.res?.setHeader("X-GR8-Site-Data-Hash", siteDataHash);
+    ctx.res?.setHeader("X-GR8-Published-Revision", siteData.publishedVersion || siteData.publication?.publishedVersion || "");
+    ctx.res?.setHeader("X-GR8-Published-Timestamp", publication.published_at || siteData.publishedAt || siteData.publication?.publishedAt || "");
+    ctx.res?.setHeader("X-GR8-Snapshot-Hash", siteDataHash);
+    ctx.res?.setHeader("X-GR8-Requested-Page-Slug", slugArr.slice(1).join("/") || "home");
+    ctx.res?.setHeader("X-GR8-Footer-Roles", footerRoles.join(","));
+    ctx.res?.setHeader("X-GR8-Nav-Sticky-Mode", siteData.globalNavBlock?.props?.stickyMode || "");
+    ctx.res?.setHeader("X-GR8-Media-Block-Count", String(mediaBlockCount));
     return {
       props: {
         mode: "published-website",
@@ -373,12 +388,19 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const footerContext = { pages, logInvalid: true };
-  const normalizedPageBlocks = normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}, publishedAssets), footerContext, publishedAssets);
-  const normalizedGlobalNavBlock = project?.globalNavBlock?.type === "video-hero"
-    ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
-    : normalizePublishedWebsiteBlocks([project?.globalNavBlock], footerContext, publishedAssets)[0];
   const rawGlobalFooterBlock = project?.globalFooterBlock || globalFooterToFooterBlock(project?.globalFooter, null);
-  const normalizedGlobalFooterBlock = normalizePublishedGlobalFooterBlock(rawGlobalFooterBlock, project, footerContext, publishedAssets);
+  const usesVerifiedSnapshot = project?.publication?.verified === true;
+  const normalizedPageBlocks = usesVerifiedSnapshot
+    ? (project?.pageBlocks || {})
+    : normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}, publishedAssets), footerContext, publishedAssets);
+  const normalizedGlobalNavBlock = usesVerifiedSnapshot
+    ? project?.globalNavBlock
+    : (project?.globalNavBlock?.type === "video-hero"
+      ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
+      : normalizePublishedWebsiteBlocks([project?.globalNavBlock], footerContext, publishedAssets)[0]);
+  const normalizedGlobalFooterBlock = usesVerifiedSnapshot && rawGlobalFooterBlock?.type === "footer"
+    ? rawGlobalFooterBlock
+    : normalizePublishedGlobalFooterBlock(rawGlobalFooterBlock, project, footerContext, publishedAssets);
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
   const requestedAliases = publishedPageAliases(requested || "home");
   const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
@@ -428,6 +450,11 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
     siteDataHash,
     pageName: activePage?.name || "",
     blockCount: Array.isArray(pageBlocks) ? pageBlocks.length : 0,
+    footerCardCount: Array.isArray(globalFooterBlock?.props?.footerCardOrder) ? globalFooterBlock.props.footerCardOrder.length : 0,
+    footerRoles: Array.isArray(globalFooterBlock?.props?.footerCardOrder) ? globalFooterBlock.props.footerCardOrder : [],
+    navStickyMode: globalNavBlock?.props?.stickyMode || "",
+    mediaBlockCount: Object.values(project?.pageBlocks || {}).reduce((count, blocks) => count + (Array.isArray(blocks) ? blocks.filter((block) => block?.type === "video-hero" || block?.type === "image-hero" || block?.props?.imageUrl || block?.props?.videoSrc).length : 0), 0),
+    usesVerifiedSnapshot,
   };
 
   useEffect(() => {

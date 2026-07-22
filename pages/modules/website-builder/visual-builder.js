@@ -13,7 +13,7 @@ import {
 } from "../../../lib/website-builder/mediaAssets";
 import { applyChaiThemePreset, buildStarterChaiData, renderChaiHtml } from "../../../lib/website-builder/chaiStudio";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, collectVideoHeroMedia, getSiteRootDomain, normalizeDomain } from "../../../lib/website-builder/publishConfig";
+import { buildDefaultSiteDomain, buildHostedWebsiteUrl, buildWebsitePath, buildWebsiteUrl, collectVideoHeroMedia, getSiteRootDomain, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveWebsitePublicationStatus, resolveWebsiteUrls } from "../../../lib/website-builder/publishConfig";
 import {
   cacheWebsiteProject,
   createWebsiteProject,
@@ -26,7 +26,7 @@ import {
 } from "../../../lib/website-builder/projectStore";
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
-import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 
@@ -244,13 +244,13 @@ function filterDeletedBlocks(blocks, deletedBlockIds, pageName) {
 function normalizeFooterNavigationForProject(project) {
   if (!project || typeof project !== "object") return project;
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
-  const globalFooterBlock = project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
+  const globalFooterBlock = resolveCanonicalGlobalFooterBlock(project, footerContext) || project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
   let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
   if (String(project.id || "").replace(/^draft:/, "") === PERSISTENCE_DIAGNOSTIC_PROJECT_ID && normalizedGlobalFooterBlock?.type === "footer") {
     const props = normalizedGlobalFooterBlock.props || {};
     const currentNav = Array.isArray(props.navigationLinks) ? props.navigationLinks : [];
     const currentCompany = Array.isArray(props.companyLinks || props.extraLinks) ? (props.companyLinks || props.extraLinks) : [];
-    normalizedGlobalFooterBlock = {
+    normalizedGlobalFooterBlock = applyGr8AustralianFooterPanel({
       ...normalizedGlobalFooterBlock,
       props: {
         ...props,
@@ -259,7 +259,7 @@ function normalizeFooterNavigationForProject(project) {
         extraLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
         footerNavManual: true,
       },
-    };
+    }, footerContext);
   }
   const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
     ? Object.fromEntries(
@@ -1410,6 +1410,18 @@ export default function VisualBuilderPage() {
         pagesContent: baseHas("pagesContent") ? mergeBase.pagesContent : syncedProject.pagesContent,
         globalNavBlock: baseHas("globalNavBlock") ? mergeBase.globalNavBlock : syncedProject.globalNavBlock,
         globalFooterBlock: baseHas("globalFooterBlock") ? mergeBase.globalFooterBlock : syncedProject.globalFooterBlock,
+        customDomain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
+        custom_domain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
+        primaryDomain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+        primary_domain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+        publication: {
+          ...(syncedProject?.publication || {}),
+          ...(mergeBase?.publication || {}),
+          customDomain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || mergeBase?.publication?.customDomain || mergeBase?.publication?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
+          custom_domain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || mergeBase?.publication?.customDomain || mergeBase?.publication?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
+          primaryDomain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || mergeBase?.publication?.primaryDomain || mergeBase?.publication?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+          primary_domain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || mergeBase?.publication?.primaryDomain || mergeBase?.publication?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+        },
       };
 
       const cachedProject = cacheWebsiteProject(mergedProject, { onlyIfNewer: false });
@@ -1480,6 +1492,34 @@ export default function VisualBuilderPage() {
     }
   }
 
+  async function handleInspectSavedDraft() {
+    if (!project?.id || !session?.access_token) {
+      flashNotice("Log in and load a project before inspecting the saved draft.", "error");
+      return;
+    }
+
+    try {
+      const currentProject = normalizeFooterNavigationForProject(getWebsiteProject(project.id) || project);
+      const savedProject = normalizeFooterNavigationForProject(await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName }));
+      const currentBlocks = Array.isArray(currentProject?.pageBlocks?.[activeProjectPageName]) ? currentProject.pageBlocks[activeProjectPageName] : [];
+      const savedBlocks = Array.isArray(savedProject?.pageBlocks?.[activeProjectPageName]) ? savedProject.pageBlocks[activeProjectPageName] : [];
+      const report = {
+        projectId: project.id,
+        pageName: activeProjectPageName,
+        matchesSavedDraft: blocksMatchForSave(currentBlocks, savedBlocks),
+        current: summarizeProjectForVersion(currentProject, activeProjectPageName),
+        saved: summarizeProjectForVersion(savedProject, activeProjectPageName),
+        currentBlockIds: currentBlocks.map((block) => block?.id || ""),
+        savedBlockIds: savedBlocks.map((block) => block?.id || ""),
+      };
+      console.info("[website-builder inspect saved draft]", report);
+      flashNotice(report.matchesSavedDraft ? "Saved draft matches current builder state. Details logged to console." : "Saved draft differs from current builder state. Details logged to console.", report.matchesSavedDraft ? "success" : "error", 6500);
+    } catch (error) {
+      console.warn("[website-builder inspect saved draft] failed", error);
+      flashNotice(error?.message || "Could not inspect saved draft.", "error", 6500);
+    }
+  }
+
   async function handlePublishWebsite() {
     if (!project?.id) {
       flashNotice("Save the project before publishing.", "error");
@@ -1507,7 +1547,7 @@ export default function VisualBuilderPage() {
         throw new Error(savedBeforePublish._saveErrorMessage || "Could not save the latest page before publishing.");
       }
       await waitForActiveSaveToFinish();
-      const latestSavedProject = normalizeFooterNavigationForProject(await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName }));
+      const latestSavedProject = normalizeFooterNavigationForProject(await fetchWebsiteProjectFromServer(session, project.id));
       if (!latestSavedProject?.id) {
         throw new Error("Could not reload the latest saved project before publishing.");
       }
@@ -1533,7 +1573,7 @@ export default function VisualBuilderPage() {
         },
         body: JSON.stringify({
           slug: normalizedSlug,
-          customDomain: normalizeDomain(customDomain),
+          customDomain: normalizeDomain(customDomain || projectForPublish?.customDomain || projectForPublish?.custom_domain || projectForPublish?.publication?.customDomain || projectForPublish?.publication?.custom_domain || ""),
           primaryWebsite,
           project: {
             ...projectForPublish,
@@ -1944,20 +1984,54 @@ export default function VisualBuilderPage() {
     return issues;
   }
 
-  function getVideoHeroSaveMismatches(expectedBlocks, storedBlocks) {
+  const VIDEO_ASSET_RETAINED_SAVE_ERROR = "Save failed: the video asset was not retained in the page record.";
+
+  function safeVideoText(value) {
+    return typeof value === "string" ? value.trim() : "";
+  }
+
+  function getVideoHeroRetentionIssues(expectedBlocks, storedBlocks) {
     const storedById = new Map((Array.isArray(storedBlocks) ? storedBlocks : []).map((block) => [String(block?.id || ""), block]));
     return (Array.isArray(expectedBlocks) ? expectedBlocks : [])
       .filter((block) => String(block?.type || "") === "video-hero")
       .map((block, index) => {
-        const expectedUrl = resolveVideoHeroUrl(block?.props || "");
+        const expectedProps = block?.props || {};
+        const expectedUrl = resolveVideoHeroUrl(expectedProps);
         if (!expectedUrl || isUnsafeVideoHeroUrl(expectedUrl)) return null;
         const storedBlock = storedById.get(String(block?.id || "")) || (Array.isArray(storedBlocks) ? storedBlocks[index] : null);
-        const storedUrl = resolveVideoHeroUrl(storedBlock?.props || "");
-        return expectedUrl === storedUrl ? null : {
+        if (!storedBlock) {
+          return {
+            blockId: block?.id || "",
+            field: "block",
+            reason: "missing video hero block",
+          };
+        }
+        const storedProps = storedBlock?.props || {};
+        const storedUrl = resolveVideoHeroUrl(storedProps);
+        if (!storedUrl || isUnsafeVideoHeroUrl(storedUrl) || expectedUrl !== storedUrl) {
+          return {
+            blockId: block?.id || "",
+            field: "videoUrl",
+            expected: expectedUrl,
+            actual: storedUrl,
+          };
+        }
+
+        const metadataFields = ["videoStoragePath", "videoFileName", "videoMimeType"];
+        const missingMetadata = metadataFields
+          .map((field) => {
+            const expectedValue = safeVideoText(expectedProps[field]);
+            if (!expectedValue) return null;
+            const actualValue = safeVideoText(storedProps[field]);
+            return expectedValue === actualValue ? null : { field, expected: expectedValue, actual: actualValue };
+          })
+          .filter(Boolean);
+
+        return missingMetadata.length ? {
           blockId: block?.id || "",
-          expectedUrl,
-          storedUrl,
-        };
+          field: "videoAssetMetadata",
+          issues: missingMetadata,
+        } : null;
       })
       .filter(Boolean);
   }
@@ -2197,13 +2271,13 @@ export default function VisualBuilderPage() {
       }
 
       const verifiedVideoBlocks = getSavedPageBlocks(verifiedProject || serverSynced, pageName);
-      const videoMismatches = getVideoHeroSaveMismatches(normalizedBlocks, verifiedVideoBlocks);
-      if (videoMismatches.length) {
-        const message = `Video was not saved for ${pageName}. The cloud copy is missing the Video Hero URL.`;
+      const videoRetentionIssues = getVideoHeroRetentionIssues(normalizedBlocks, verifiedVideoBlocks);
+      if (videoRetentionIssues.length) {
+        const message = VIDEO_ASSET_RETAINED_SAVE_ERROR;
         console.error("[forceSaveBlockPage] video hero save verification mismatch", {
           projectId: currentProject.id,
           pageName,
-          mismatches: videoMismatches,
+          videoRetentionIssues,
         });
         flashNotice(message, "error", 15000);
         return {
@@ -2213,7 +2287,7 @@ export default function VisualBuilderPage() {
           _saveDebug: {
             payload: summarizeBuilderBlocksForSave(normalizedBlocks),
             verified: summarizeBuilderBlocksForSave(verifiedVideoBlocks || []),
-            videoMismatches,
+            videoRetentionIssues,
           },
         };
       }
@@ -2605,15 +2679,18 @@ export default function VisualBuilderPage() {
   const hasDedicatedRootDomain = !!getSiteRootDomain();
   const predictedSitePath = buildWebsitePath(siteSlug || displayName || "site");
   const publication = project?.publication || null;
-  const predictedPrimaryWebsiteUrl = customDomain
-    ? buildWebsiteUrl({ slug: siteSlug || displayName || "site", domain: customDomain })
-    : predictedHostedUrl;
-  const resolvedPublicationLiveUrl = publication
-    ? (publication.primaryWebsiteUrl || publication.liveUrl || (publication.customDomain
-      ? buildWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site", domain: publication.customDomain })
-      : buildHostedWebsiteUrl({ slug: publication.slug || siteSlug || displayName || "site" })))
-    : "";
-  const internalPreviewUrl = publication?.internalPreviewUrl || publication?.defaultUrl || predictedHostedUrl;
+  const rootWebsiteUrls = resolveWebsiteUrls({
+    ...(project || {}),
+    slug: siteSlug || project?.slug || publication?.slug || displayName || "site",
+    customDomain: customDomain || project?.customDomain || project?.custom_domain || publication?.customDomain || publication?.custom_domain || "",
+    custom_domain: customDomain || project?.customDomain || project?.custom_domain || publication?.customDomain || publication?.custom_domain || "",
+    domainStatus: project?.domainStatus || project?.domain_status || publication?.domainStatus || publication?.domain_status || "",
+    domain_status: project?.domainStatus || project?.domain_status || publication?.domainStatus || publication?.domain_status || "",
+    publication,
+  });
+  const predictedPrimaryWebsiteUrl = rootWebsiteUrls.primaryPublicUrl || predictedHostedUrl;
+  const resolvedPublicationLiveUrl = publication ? rootWebsiteUrls.primaryPublicUrl : "";
+  const internalPreviewUrl = rootWebsiteUrls.internalPreviewUrl || publication?.internalPreviewUrl || publication?.defaultUrl || predictedHostedUrl;
 
   if (!router.isReady) {
     return (
@@ -2668,8 +2745,36 @@ export default function VisualBuilderPage() {
     activePageBlocks.length,
     activePageBlocks.map((block) => block?.id || block?.type || "").join(":"),
   ].join("|");
+  const activePageEntry = Array.isArray(studioProject?.pages)
+    ? studioProject.pages.find((entry) => entry?.name === activeProjectPageName || slugify(entry?.name) === slugify(activeProjectPageName))
+    : null;
+  const canonicalWebsiteIdentity = {
+    ...studioProject,
+    slug: siteSlug || studioProject?.slug || publication?.slug || displayName || "site",
+    customDomain: customDomain || studioProject?.customDomain || studioProject?.custom_domain || publication?.customDomain || publication?.custom_domain || "",
+    custom_domain: customDomain || studioProject?.customDomain || studioProject?.custom_domain || publication?.customDomain || publication?.custom_domain || "",
+    domainStatus: studioProject?.domainStatus || studioProject?.domain_status || publication?.domainStatus || publication?.domain_status || "",
+    domain_status: studioProject?.domainStatus || studioProject?.domain_status || publication?.domainStatus || publication?.domain_status || "",
+    publication,
+  };
+  const activePageWebsiteUrls = resolveWebsiteUrls(canonicalWebsiteIdentity, { page: activeProjectPageName });
+  const rootSettingsWebsiteUrls = resolveWebsiteUrls(canonicalWebsiteIdentity);
+  const publicationStatus = resolveWebsitePublicationStatus({
+    ...studioProject,
+    publication,
+    projectVersion: versionStatus?.savedVersion || studioProject?.projectVersion || publication?.projectVersion || "",
+    savedVersion: versionStatus?.savedVersion || studioProject?.projectVersion || publication?.projectVersion || "",
+    publishedVersion: versionStatus?.publishedVersion || publication?.publishedVersion || "",
+    publishedAt: versionStatus?.publishedAt || publication?.publishedAt || publication?.published_at || "",
+  }, {
+    expectedWebsiteId: studioProject?.id || project?.id || "",
+    isPublishing: publishBusy,
+    publishError: versionStatus?.publishError || "",
+  });
   const builderDebugVersion = versionStatus?.savedVersion || studioProject?.projectVersion || publication?.projectVersion || "Unknown";
   const builderDebugSavedAt = versionStatus?.savedAt || studioProject?.savedAt || publication?.savedAt || studioProject?.updatedAt || "Unknown";
+  const builderPublishedVersion = publicationStatus.validPublished ? (publicationStatus.publishedRevision || "Published") : publicationStatus.label;
+  const builderPublishedAt = publicationStatus.validPublished ? (publicationStatus.publishedAt || "Unknown") : publicationStatus.label;
 
   return (
     <>
@@ -2836,7 +2941,7 @@ export default function VisualBuilderPage() {
             <div style={styles.publishPanel}>
               <div style={styles.publishHead}>
                 <strong style={styles.sectionTitle}>Publish Website</strong>
-                <span style={styles.publishStatus}>{publication?.publishedAt ? "Published" : "Draft only"}</span>
+                <span style={styles.publishStatus}>{publicationStatus.label}</span>
               </div>
 
               <label style={styles.fieldLabel}>
@@ -2881,10 +2986,12 @@ export default function VisualBuilderPage() {
               </label>
 
               <div style={styles.publishHintWrap}>
-                <span style={styles.publishHint}>Primary Website: <span style={styles.inlineHighlightMint}>{publication?.primaryWebsiteUrl || resolvedPublicationLiveUrl || predictedPrimaryWebsiteUrl}</span></span>
-                <span style={styles.publishHint}>Internal Preview URL: <span style={styles.inlineHighlightBlue}>{internalPreviewUrl}</span></span>
+                <span style={styles.publishHint}>Primary live website: <span style={styles.inlineHighlightMint}>{rootSettingsWebsiteUrls.primaryPublicUrl || predictedPrimaryWebsiteUrl}</span></span>
+                {rootSettingsWebsiteUrls.customDomainUrl ? <span style={styles.publishHint}>Custom domain: <span style={styles.inlineHighlightMint}>{normalizeDomain(customDomain || publication?.customDomain || publication?.custom_domain)}</span></span> : null}
+                <span style={styles.publishHint}>Internal preview URL: <span style={styles.inlineHighlightBlue}>{rootSettingsWebsiteUrls.internalPreviewUrl || internalPreviewUrl}</span></span>
                 {hasDedicatedRootDomain ? <span style={styles.publishHint}>Branded subdomain: <span style={styles.inlineHighlightBlue}>{predictedDefaultDomain || "Add a site slug to generate one"}</span></span> : null}
                 <span style={styles.publishHint}>Published route path: <span style={styles.inlineHighlightGold}>{predictedSitePath}</span></span>
+                <span style={styles.publishHint}>Published page URL: <span style={styles.inlineHighlightMint}>{activePageWebsiteUrls.primaryPublicUrl}</span></span>
               </div>
 
               <div style={styles.publishActionRow}>
@@ -2892,34 +2999,41 @@ export default function VisualBuilderPage() {
                   {publishBusy ? "Publishing..." : saveBusy ? "Saving..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
                 </button>
 
-                {resolvedPublicationLiveUrl ? (
+                {activePageWebsiteUrls.primaryPublicUrl ? (
                   <div style={styles.publishUrlCard}>
-                    <span style={styles.publishUrlLabel}>Primary Website</span>
+                    <span style={styles.publishUrlLabel}>Published page URL</span>
                     <div style={styles.publishUrlRow}>
-                      <input value={resolvedPublicationLiveUrl} readOnly style={styles.publishUrlInput} aria-label="Primary website URL" />
-                      <button type="button" onClick={() => handleCopyPublishedUrl(resolvedPublicationLiveUrl)} style={styles.publishUrlButton}>
+                      <input value={activePageWebsiteUrls.primaryPublicUrl} readOnly style={styles.publishUrlInput} aria-label="Published page URL" />
+                      <button type="button" onClick={() => handleCopyPublishedUrl(activePageWebsiteUrls.primaryPublicUrl)} style={styles.publishUrlButton}>
                         Copy URL
                       </button>
-                      <a href={resolvedPublicationLiveUrl} style={styles.publishUrlOpenLink} target="_blank" rel="noopener noreferrer">
+                      <a href={activePageWebsiteUrls.primaryPublicUrl} style={styles.publishUrlOpenLink} target="_blank" rel="noopener noreferrer">
                         Open
                       </a>
                     </div>
-                    <a href={resolvedPublicationLiveUrl} style={styles.publishLiveLink} target="_blank" rel="noopener noreferrer">
-                        {publication.customDomain ? `Live on ${publication.customDomain}` : `Open live website`}
+                    <a href={rootSettingsWebsiteUrls.primaryPublicUrl} style={styles.publishLiveLink} target="_blank" rel="noopener noreferrer">
+                        {rootSettingsWebsiteUrls.customDomainUrl ? `Live on ${normalizeDomain(customDomain || publication?.customDomain || publication?.custom_domain)}` : `Open live website`}
                     </a>
-                    <span style={styles.publishHint}>Internal Preview URL: <span style={styles.inlineHighlightBlue}>{internalPreviewUrl}</span></span>
+                    <span style={styles.publishHint}>Internal preview URL: <span style={styles.inlineHighlightBlue}>{activePageWebsiteUrls.internalPreviewUrl}</span></span>
                   </div>
                 ) : null}
               </div>
 
               <div style={styles.publishVersionPanel}>
-                  <span>Page version: <strong>{builderDebugVersion}</strong></span>
-                  <span>Saved version: <strong>{versionStatus?.savedVersion || publication?.projectVersion || studioProject?.projectVersion || "Unknown"}</strong></span>
-                  <span>Published version: <strong>{versionStatus?.publishedVersion || publication?.publishedVersion || "Not published"}</strong></span>
-                  <span>Published at: <strong>{versionStatus?.publishedAt || publication?.publishedAt || "Not published"}</strong></span>
+                  <span>Selected page: <strong>{activeProjectPageName} ({activePageEntry?.slug || slugify(activeProjectPageName) || "home"})</strong></span>
+                  <span>Saved draft version: <strong>{builderDebugVersion}</strong></span>
+                  <span>Publication status: <strong>{publicationStatus.label}</strong></span>
+                  <span>Published snapshot: <strong>{builderPublishedVersion}</strong></span>
+                  <span>Published at: <strong>{builderPublishedAt}</strong></span>
                   <span>Loaded from: <strong>{session?.access_token ? "database" : "local cache"}</strong></span>
                   <span>Last saved: <strong>{builderDebugSavedAt}</strong></span>
-                  <span>Block count: <strong>{activePageBlocks.length}</strong></span>
+                  <span>Draft blocks: <strong>{activePageBlocks.length}</strong></span>
+                  <span>Site pages: <strong>{Array.isArray(studioProject?.pages) ? studioProject.pages.length : 0}</strong></span>
+                  {WEBSITE_BUILDER_SAVE_DEBUG ? (
+                    <button type="button" onClick={handleInspectSavedDraft} style={styles.publishUrlButton}>
+                      Inspect Saved Draft
+                    </button>
+                  ) : null}
                   {(versionStatus?.matches === false || (publication?.projectVersion && publication?.publishedVersion && publication.projectVersion !== publication.publishedVersion)) ? (
                     <strong style={styles.publishVersionWarning}>Live website is not using the latest saved version.</strong>
                   ) : null}

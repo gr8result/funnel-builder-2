@@ -1,13 +1,35 @@
 import { useEffect, useRef, useState } from "react";
+import { supabase } from "../../utils/supabase-client";
 
-export default function OnlyOfficePresentationEditor({ documentId, authToken, onStatus, onClose }) {
+export default function OnlyOfficePresentationEditor({ documentId, authToken, onStatus, onClose, onDocumentUpdated }) {
   const containerId = useRef(`onlyoffice-standard-inclusions-${Math.random().toString(36).slice(2, 9)}`);
   const editorRef = useRef(null);
   const [loading, setLoading] = useState(Boolean(documentId));
   const [error, setError] = useState("");
+  const [resolvedAuthToken, setResolvedAuthToken] = useState(authToken || "");
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
-    if (!documentId || !authToken) return undefined;
+    if (authToken) {
+      setResolvedAuthToken(authToken);
+      return undefined;
+    }
+    if (!documentId || resolvedAuthToken) return undefined;
+    let cancelled = false;
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!cancelled) setResolvedAuthToken(data?.session?.access_token || "");
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedAuthToken("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken, documentId, resolvedAuthToken]);
+
+  useEffect(() => {
+    if (!documentId || !resolvedAuthToken) return undefined;
     let cancelled = false;
     setLoading(true);
     setError("");
@@ -15,7 +37,7 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
     async function loadEditor() {
       try {
         const response = await fetch(`/api/standard-inclusions/onlyoffice/config?documentId=${encodeURIComponent(documentId)}`, {
-          headers: { Authorization: `Bearer ${authToken}` },
+          headers: { Authorization: `Bearer ${resolvedAuthToken}` },
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load ONLYOFFICE editor.");
@@ -42,26 +64,92 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
       editorRef.current?.destroyEditor?.();
       editorRef.current = null;
     };
-  }, [documentId, authToken]);
+  }, [documentId, resolvedAuthToken]);
 
   async function exportPdf() {
-    if (!documentId || !authToken) return;
+    if (!documentId || !resolvedAuthToken) return;
     onStatus?.("Exporting Standard Inclusions PDF...");
     try {
       const response = await fetch("/api/standard-inclusions/onlyoffice/export-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${resolvedAuthToken}`,
         },
         body: JSON.stringify({ documentId }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "PDF export failed.");
-      onStatus?.("Standard Inclusions PDF exported.");
+
+      const pdfResponse = await fetch(`/api/standard-inclusions/onlyoffice/download-pdf?documentId=${encodeURIComponent(documentId)}`, {
+        headers: { Authorization: `Bearer ${resolvedAuthToken}` },
+      });
+      if (!pdfResponse.ok) throw new Error("PDF exported but could not be downloaded.");
+      const blob = await pdfResponse.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Standard Inclusions.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      onStatus?.("Standard Inclusions PDF exported and downloaded — attach it via \"Import Inclusions PDF\" in the Project Estimate to update the approved document.");
     } catch (nextError) {
       onStatus?.(nextError?.message || "PDF export failed.");
     }
+  }
+
+  async function restoreVersion(mode) {
+    if (!documentId || !resolvedAuthToken || restoring) return;
+    const confirmMessage = mode === "master"
+      ? "Restore Master will overwrite this tenant's current PowerPoint with the approved master template. Continue?"
+      : "Duplicate Version will save a new checkpoint of the current PowerPoint before you keep editing. Continue?";
+    if (!window.confirm(confirmMessage)) return;
+    setRestoring(true);
+    onStatus?.(mode === "master" ? "Restoring master template..." : "Duplicating current version...");
+    try {
+      const response = await fetch("/api/standard-inclusions/onlyoffice/restore-version", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resolvedAuthToken}`,
+        },
+        body: JSON.stringify({ documentId, mode }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Restore failed.");
+      onDocumentUpdated?.(payload.document);
+      onStatus?.(mode === "master" ? "Master template restored." : "Version duplicated.");
+    } catch (nextError) {
+      onStatus?.(nextError?.message || "Restore failed.");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  function downloadPptx() {
+    if (!documentId || !resolvedAuthToken) return;
+    fetch(`/api/standard-inclusions/onlyoffice/download-pptx?documentId=${encodeURIComponent(documentId)}`, {
+      headers: { Authorization: `Bearer ${resolvedAuthToken}` },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error || "Download failed.");
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "Standard Inclusions.pptx";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch((nextError) => onStatus?.(nextError?.message || "Download failed."));
   }
 
   return (
@@ -69,6 +157,9 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
       <div style={styles.toolbar}>
         <strong>ONLYOFFICE Presentation Editor</strong>
         <span style={styles.documentId}>{documentId}</span>
+        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => restoreVersion("master")}>Restore Master</button>
+        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => restoreVersion("duplicate")}>Duplicate Version</button>
+        <button type="button" style={styles.secondaryButton} onClick={downloadPptx}>Download PPTX</button>
         <button type="button" style={styles.secondaryButton} onClick={exportPdf}>Export PDF</button>
         <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
       </div>

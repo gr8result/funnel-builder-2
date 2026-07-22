@@ -1,6 +1,8 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -159,13 +161,10 @@ export default function MarketOpportunities({ passwordHash }) {
     <div className="page">
       <Head><title>Market Opportunities | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
+      <PaperAccountBar />
+      <FreedomModuleNav module="trader" paper />
       <header className="hero">
         <div>
-          <nav className="platformSwitch">
-            <Link href="/freedom-trader">Freedom Trader</Link>
-            <Link className="active" href="/freedom-trader/market-opportunities">Market Opportunities</Link>
-            <Link href="/freedom-trader/settings">Settings</Link>
-          </nav>
           <h1>Market Opportunities</h1>
           <p>The watchlist follows names you know. This scanner searches supported liquid markets for new setups you have not seen yet.</p>
         </div>

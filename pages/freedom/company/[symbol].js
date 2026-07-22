@@ -1,7 +1,10 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
+import { buildHeikinAshiCandles, chartTypeLabel, FreedomChartTypeSelector, FREEDOM_CHART_MODE_LABELS, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
 import { calculateAdaptiveScores } from "../../../lib/freedom-terminal/adaptiveBuyScore";
+import { calculateInvestmentSignal } from "../../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
@@ -10,8 +13,43 @@ const CHART_RANGE_STORAGE_KEY = "freedom-terminal-chart-range";
 const CHART_MA_STORAGE_KEY = "freedom-terminal-chart-ma";
 const COMPANY_TAB_STORAGE_KEY = "freedom-terminal-company-tabs";
 const COMPANY_CHART_STATE_KEY = "freedom-terminal-company-chart-state";
-const CHART_MODES = ["Candles", "Line", "Area"];
-const CHART_RANGES = ["1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
+const CHART_INTERVAL_STORAGE_KEY = "freedom-terminal-chart-interval";
+const CHART_PANEL_LAYOUT_STORAGE_KEY = "freedom-terminal-chart-panel-layout";
+const CHART_MODES = FREEDOM_CHART_MODE_LABELS;
+const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
+const CHART_INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+const DEFAULT_INTERVAL_BY_RANGE = {
+  "1D": "5m",
+  "5D": "15m",
+  "1M": "1h",
+  "3M": "1D",
+  "6M": "1D",
+  "1Y": "1D",
+  "3Y": "1W",
+  "5Y": "1W",
+  "MAX": "1W",
+};
+const API_RANGE_BY_LABEL = {
+  "1D": "1d",
+  "5D": "5d",
+  "1M": "1mo",
+  "3M": "3mo",
+  "6M": "6mo",
+  "1Y": "1y",
+  "3Y": "3y",
+  "5Y": "5y",
+  "MAX": "max",
+};
+const API_INTERVAL_BY_LABEL = {
+  "1m": "1m",
+  "5m": "5m",
+  "15m": "15m",
+  "30m": "30m",
+  "1h": "1h",
+  "4h": "4h",
+  "1D": "1d",
+  "1W": "1w",
+};
 const COMPANY_TABS = ["Overview", "Business Quality", "Valuation", "Analyst Review", "Price Trend", "Trade Setup", "Charts"];
 
 const COMPANY_STYLES = {
@@ -170,6 +208,90 @@ function formatPercent(value, signed = false) {
 
 function formatVolume(value) {
   return Number.isFinite(value) ? compactNumber.format(value) : "--";
+}
+
+function formatChartCurrency(value, currency = "USD") {
+  return Number.isFinite(value)
+    ? new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", {
+        style: "currency",
+        currency: currency || "USD",
+        maximumFractionDigits: value >= 100 ? 2 : 4,
+      }).format(value)
+    : "--";
+}
+
+function formatChartTimestamp(value, timeZone = "America/New_York") {
+  const timestamp = typeof value === "number" ? value * 1000 : Date.parse(String(value || "").replace(" ", "T"));
+  if (!Number.isFinite(timestamp)) return "--";
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+    timeZoneName: "short",
+  }).format(new Date(timestamp));
+}
+
+function intervalIsIntraday(interval) {
+  return ["1m", "5m", "15m", "30m", "1h", "4h"].includes(interval);
+}
+
+function supportedIntervalsForRange(range) {
+  if (range === "1D") return ["1m", "5m", "15m", "30m", "1h"];
+  if (range === "5D") return ["5m", "15m", "30m", "1h"];
+  if (range === "1M") return ["30m", "1h", "1D"];
+  if (["3M", "6M", "1Y"].includes(range)) return ["1D"];
+  return ["1D", "1W"];
+}
+
+function normalizeStoredInterval(value, range) {
+  const interval = CHART_INTERVALS.includes(value) ? value : DEFAULT_INTERVAL_BY_RANGE[range] || "1D";
+  const supported = supportedIntervalsForRange(range);
+  return supported.includes(interval) ? interval : DEFAULT_INTERVAL_BY_RANGE[range] || supported[0] || "1D";
+}
+
+function labelForAxisDate(value, range, interval, timeZone = "America/New_York") {
+  const timestamp = Date.parse(String(value || "").replace(" ", "T"));
+  if (!Number.isFinite(timestamp)) return value;
+  if (intervalIsIntraday(interval) || range === "1D" || range === "5D") {
+    return new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone }).format(new Date(timestamp));
+  }
+  if (["1M", "3M", "6M", "1Y"].includes(range)) {
+    return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short", timeZone }).format(new Date(timestamp));
+  }
+  return new Intl.DateTimeFormat("en-AU", { month: "short", year: "2-digit", timeZone }).format(new Date(timestamp));
+}
+
+function buildDataQuality({ symbol, candles, range, interval, metadata }) {
+  const first = metadata?.firstTimestamp || candles[0]?.date || candles[0]?.timestamp;
+  const latest = metadata?.latestTimestamp || candles[candles.length - 1]?.date || candles[candles.length - 1]?.timestamp;
+  return {
+    symbol,
+    exchange: metadata?.exchange || "--",
+    currency: metadata?.currency || "USD",
+    provider: metadata?.provider || metadata?.source || "Twelve Data",
+    range,
+    interval,
+    first,
+    latest,
+    candleCount: metadata?.candleCount ?? candles.length,
+    dataLabel: metadata?.dataLabel || (intervalIsIntraday(interval) ? "Delayed 15 minutes" : "End-of-day"),
+    timezone: metadata?.exchangeTimezone || "America/New_York",
+    error: metadata?.error || "",
+  };
+}
+
+function priceScaleFromCandles(candles) {
+  const highs = candles.map((candle) => candle.high).filter(Number.isFinite);
+  const lows = candles.map((candle) => candle.low).filter(Number.isFinite);
+  if (!highs.length || !lows.length) return null;
+  const high = Math.max(...highs);
+  const low = Math.min(...lows);
+  const span = Math.max(0.01, high - low);
+  const padding = span * 0.1;
+  return { min: round(low - padding, 4), max: round(high + padding, 4), low, high };
 }
 
 function formatVsAverage(price, averageValue) {
@@ -781,13 +903,45 @@ function buildTrendLineData(candles) {
 }
 
 function loadStoredChartMode() {
-  if (typeof window === "undefined") return "Candles";
+  if (typeof window === "undefined") return "Standard candlesticks";
   const stored = window.localStorage.getItem(CHART_MODE_STORAGE_KEY);
-  return CHART_MODES.includes(stored) ? stored : "Candles";
+  if (stored === "Candles") return "Standard candlesticks";
+  if (stored === "Area") return "Area/fill";
+  return CHART_MODES.includes(stored) ? stored : "Standard candlesticks";
 }
 
 function loadStoredChartRange() {
-  return "1Y";
+  if (typeof window === "undefined") return "1Y";
+  const stored = window.localStorage.getItem(CHART_RANGE_STORAGE_KEY);
+  return CHART_RANGES.includes(stored) ? stored : "1Y";
+}
+
+function loadStoredChartInterval(range = "1Y") {
+  if (typeof window === "undefined") return DEFAULT_INTERVAL_BY_RANGE[range] || "1D";
+  return normalizeStoredInterval(window.localStorage.getItem(CHART_INTERVAL_STORAGE_KEY), range);
+}
+
+function loadStoredPanelLayout() {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(CHART_PANEL_LAYOUT_STORAGE_KEY) || "null");
+    if (!parsed) return null;
+    return {
+      price: Number.isFinite(parsed.price) ? parsed.price : 68,
+      volume: Number.isFinite(parsed.volume) ? parsed.volume : 12,
+      rsi: Number.isFinite(parsed.rsi) ? parsed.rsi : 10,
+      macd: Number.isFinite(parsed.macd) ? parsed.macd : 10,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistPanelLayout(layout) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CHART_PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  } catch {}
 }
 
 function readCompanyChartState(symbol) {
@@ -862,7 +1016,7 @@ function chartTooltipFormatter(params, candles, ma20, ma50, ma200) {
   ].join("");
 }
 
-function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibility, setMaVisibility, symbol, quote, valuation, research, tradeMode = false, onBackToResearch = null }) {
+function MarketChart({ candles, range, setRange, interval, setInterval, metadata, mode, setMode, notice, maVisibility, setMaVisibility, symbol, quote, valuation, research, tradeMode = false, onBackToResearch = null }) {
   const chartNodeRef = useRef(null);
   const chartRef = useRef(null);
   const initializedSymbolRef = useRef("");
@@ -890,6 +1044,9 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   const [drawingFib, setDrawingFib] = useState(false);
   const [priceScale, setPriceScale] = useState(null);
   const [draggingPriceScale, setDraggingPriceScale] = useState(null);
+  const [includeOverlaysInScale, setIncludeOverlaysInScale] = useState(false);
+  const [panelLayout, setPanelLayout] = useState(() => loadStoredPanelLayout() || { price: 68, volume: 12, rsi: 10, macd: 10 });
+  const [draggingPanel, setDraggingPanel] = useState(null);
   const [tradeMessage, setTradeMessage] = useState("");
   const [tradeActionSaving, setTradeActionSaving] = useState(false);
   const dailyVisible = useMemo(() => visibleCandlesForRange(candles, range), [candles, range]);
@@ -908,7 +1065,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   const macdValues = useMemo(() => macdHistogramSeries(closeValues), [closeValues]);
   const recommendedLevels = useMemo(() => recommendedTradeLevels({ quote, valuation, research, overlayLevels }), [overlayLevels, quote, research, valuation]);
   const plannerMetrics = useMemo(() => tradeMetrics(tradeLevels), [tradeLevels]);
-  const effectiveMode = tradeMode ? "Candles" : mode;
+  const effectiveMode = tradeMode ? "Standard candlesticks" : mode;
   const effectiveShowVolume = tradeMode || showVolume;
   const effectiveShowRsi = !tradeMode && showRsi;
   const effectiveShowMacd = !tradeMode && showMacd;
@@ -919,6 +1076,18 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   const startPrice = dailyVisible[0]?.close;
   const endPrice = dailyVisible[dailyVisible.length - 1]?.close;
   const tradeOverlayReady = tradeMode && [linePixels.entry, linePixels.target, linePixels.stop].every(Number.isFinite);
+  const dataQuality = useMemo(() => buildDataQuality({ symbol, candles: visible, range, interval, metadata }), [interval, metadata, range, symbol, visible]);
+  const activePanelLayout = useMemo(() => {
+    const visiblePanels = ["price"];
+    if (effectiveShowVolume) visiblePanels.push("volume");
+    if (effectiveShowRsi) visiblePanels.push("rsi");
+    if (effectiveShowMacd) visiblePanels.push("macd");
+    const base = { price: panelLayout.price, volume: panelLayout.volume, rsi: panelLayout.rsi, macd: panelLayout.macd };
+    const hiddenSpace = ["volume", "rsi", "macd"].filter((key) => !visiblePanels.includes(key)).reduce((total, key) => total + base[key], 0);
+    base.price += hiddenSpace;
+    const total = visiblePanels.reduce((sum, key) => sum + base[key], 0) || 100;
+    return visiblePanels.reduce((next, key) => ({ ...next, [key]: (base[key] / total) * 100 }), {});
+  }, [effectiveShowMacd, effectiveShowRsi, effectiveShowVolume, panelLayout]);
 
   useEffect(() => {
     recommendedLevelsRef.current = recommendedLevels;
@@ -982,6 +1151,30 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
 
   function resetPlanner() {
     saveTradeLevels(recommendedLevels);
+  }
+
+  function selectRange(nextRange) {
+    const nextInterval = normalizeStoredInterval(DEFAULT_INTERVAL_BY_RANGE[nextRange], nextRange);
+    setRange(nextRange);
+    setInterval(nextInterval);
+    setPriceScale(null);
+    resetZoomState();
+    writeCompanyChartState(symbol, { range: nextRange, interval: nextInterval, zoom: { start: 0, end: 100 } });
+  }
+
+  function selectInterval(nextInterval) {
+    const normalized = normalizeStoredInterval(nextInterval, range);
+    setInterval(normalized);
+    setPriceScale(null);
+    resetZoomState();
+    writeCompanyChartState(symbol, { interval: normalized, zoom: { start: 0, end: 100 } });
+  }
+
+  function resetZoomState() {
+    const nextZoom = { start: 0, end: 100 };
+    zoomRef.current = nextZoom;
+    setZoomState(nextZoom);
+    chartRef.current?.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
   }
 
   async function createTradeAlert(alertType, triggerPrice, direction) {
@@ -1051,15 +1244,19 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
 
   const currentPriceScale = useCallback(() => {
     if (Number.isFinite(priceScale?.min) && Number.isFinite(priceScale?.max)) return priceScale;
-    const plannerPrices = [tradeLevels.entry, tradeLevels.target, tradeLevels.stop, quote?.currentPrice].filter(Number.isFinite);
-    const lows = visible.map((candle) => candle.low).concat(plannerPrices).filter(Number.isFinite);
-    const highs = visible.map((candle) => candle.high).concat(plannerPrices).filter(Number.isFinite);
-    if (!lows.length || !highs.length) return null;
-    const min = Math.min(...lows);
-    const max = Math.max(...highs);
-    const padding = (max - min) * 0.08 || max * 0.04 || 1;
-    return { min: round(min - padding), max: round(max + padding) };
-  }, [priceScale, quote?.currentPrice, tradeLevels.entry, tradeLevels.stop, tradeLevels.target, visible]);
+    const scaleCandles = normalizeChartType(effectiveMode) === "heikin" ? buildHeikinAshiCandles(visible) : visible;
+    const base = priceScaleFromCandles(scaleCandles);
+    if (!base) return null;
+    if (!includeOverlaysInScale) return base;
+    const overlayPrices = [quote?.currentPrice, tradeLevels.entry, tradeLevels.target, tradeLevels.stop]
+      .concat(fibVisible && fibAnchors ? [fibAnchors.low?.price, fibAnchors.high?.price] : [])
+      .filter(Number.isFinite);
+    if (!overlayPrices.length) return base;
+    const min = Math.min(base.low, ...overlayPrices);
+    const max = Math.max(base.high, ...overlayPrices);
+    const padding = Math.max(0.01, max - min) * 0.1;
+    return { min: round(min - padding, 4), max: round(max + padding, 4), low: min, high: max };
+  }, [effectiveMode, fibAnchors, fibVisible, includeOverlaysInScale, priceScale, quote?.currentPrice, tradeLevels.entry, tradeLevels.stop, tradeLevels.target, visible]);
 
   const chartPointFromPointer = useCallback((event) => {
     const node = chartNodeRef.current;
@@ -1273,11 +1470,37 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   }, [draggingPriceScale]);
 
   useEffect(() => {
+    if (!draggingPanel) return undefined;
+    const handleMove = (event) => {
+      const delta = ((event.clientY - draggingPanel.startY) / Math.max(1, draggingPanel.height)) * 100;
+      setPanelLayout(() => {
+        const next = { ...draggingPanel.layout };
+        const topKey = draggingPanel.topKey;
+        const bottomKey = draggingPanel.bottomKey;
+        const top = clamp(draggingPanel.layout[topKey] + delta, topKey === "price" ? 45 : 6, 82);
+        const bottom = clamp(draggingPanel.layout[bottomKey] - delta, 6, 35);
+        next[topKey] = top;
+        next[bottomKey] = bottom;
+        persistPanelLayout(next);
+        return next;
+      });
+    };
+    const handleUp = () => setDraggingPanel(null);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [draggingPanel]);
+
+  useEffect(() => {
     if (!chartRef.current || !chartNodeRef.current || !echartsReady || !visible.length) return;
 
-    const dates = visible.map((candle) => candle.date);
-    const candleValues = visible.map((candle) => [candle.open, candle.close, candle.low, candle.high]);
-    const closeValues = visible.map((candle) => candle.close);
+    const chartVisible = normalizeChartType(effectiveMode) === "heikin" ? buildHeikinAshiCandles(visible) : visible;
+    const dates = chartVisible.map((candle) => candle.date);
+    const candleValues = chartVisible.map((candle) => [candle.open, candle.close, candle.low, candle.high]);
+    const closeValues = chartVisible.map((candle) => candle.close);
     const chartStyles = getComputedStyle(chartNodeRef.current);
     const accentColor = chartStyles.getPropertyValue("--company-accent").trim() || "#E4B85D";
     const volumeValues = visible.map((candle) => ({
@@ -1287,20 +1510,33 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
     const upColor = "#2BD89F";
     const downColor = "#FF5F57";
     const activePriceScale = currentPriceScale();
+    const panelKeys = ["price"]
+      .concat(effectiveShowVolume ? ["volume"] : [])
+      .concat(effectiveShowRsi ? ["rsi"] : [])
+      .concat(effectiveShowMacd ? ["macd"] : []);
+    const panelGap = panelKeys.length > 1 ? 2 : 0;
+    const usableHeight = 80 - panelGap * (panelKeys.length - 1);
+    let panelCursor = 8;
+    const panelGrids = {};
+    panelKeys.forEach((key) => {
+      const height = Math.max(key === "price" ? 45 : 6, (activePanelLayout[key] || 0) * usableHeight / 100);
+      panelGrids[key] = { top: `${panelCursor}%`, height: `${height}%` };
+      panelCursor += height + panelGap;
+    });
     const priceSeries =
-      effectiveMode === "Candles"
+      ["candles", "hollow", "ohlc", "heikin"].includes(normalizeChartType(effectiveMode))
         ? {
             type: "candlestick",
             name: "OHLC",
             data: candleValues,
-            barMaxWidth: range === "1M" || range === "3M" ? 18 : 14,
-            barMinWidth: 4,
+            barMaxWidth: normalizeChartType(effectiveMode) === "ohlc" ? 8 : range === "1M" || range === "3M" ? 18 : 14,
+            barMinWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 4,
             itemStyle: {
-              color: upColor,
+              color: normalizeChartType(effectiveMode) === "hollow" ? "transparent" : upColor,
               color0: downColor,
               borderColor: upColor,
               borderColor0: downColor,
-              borderWidth: 1.6,
+              borderWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 1.6,
             },
           }
         : {
@@ -1312,7 +1548,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
             sampling: "lttb",
             lineStyle: { color: accentColor, width: 2.6 },
             areaStyle:
-              effectiveMode === "Area"
+              normalizeChartType(effectiveMode) === "area"
                 ? {
                     color: {
                       type: "linear",
@@ -1359,26 +1595,26 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
         {
           left: 64,
           right: 72,
-          top: 42,
-          height: effectiveShowVolume ? (tradeMode ? "70%" : "48%") : "78%",
+          top: panelGrids.price?.top || "8%",
+          height: panelGrids.price?.height || "72%",
         },
         {
           left: 64,
           right: 72,
-          top: effectiveShowVolume ? (tradeMode ? "76%" : "56%") : "84%",
-          height: effectiveShowVolume ? (tradeMode ? 120 : 90) : 0,
+          top: panelGrids.volume?.top || "86%",
+          height: effectiveShowVolume ? panelGrids.volume?.height || "10%" : 0,
         },
         {
           left: 64,
           right: 72,
-          top: "73%",
-          height: effectiveShowRsi ? 70 : 0,
+          top: panelGrids.rsi?.top || "86%",
+          height: effectiveShowRsi ? panelGrids.rsi?.height || "12%" : 0,
         },
         {
           left: 64,
           right: 72,
-          top: "86%",
-          height: effectiveShowMacd ? 72 : 0,
+          top: panelGrids.macd?.top || "86%",
+          height: effectiveShowMacd ? panelGrids.macd?.height || "15%" : 0,
         },
       ],
       xAxis: [
@@ -1387,7 +1623,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           data: dates,
           boundaryGap: true,
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.14)" } },
-          axisLabel: { color: "#AEBCC4", hideOverlap: true },
+          axisLabel: { color: "#AEBCC4", hideOverlap: true, formatter: (value) => labelForAxisDate(value, range, interval, dataQuality.timezone) },
           axisTick: { show: false },
           splitLine: { show: false },
         },
@@ -1427,7 +1663,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           scale: true,
           position: "right",
           axisLine: { show: false },
-          axisLabel: { color: "#AEBCC4", formatter: (value) => `$${Number(value).toFixed(0)}` },
+          axisLabel: { color: "#AEBCC4", formatter: (value) => formatChartCurrency(Number(value), dataQuality.currency) },
           min: Number.isFinite(activePriceScale?.min) ? activePriceScale.min : undefined,
           max: Number.isFinite(activePriceScale?.max) ? activePriceScale.max : undefined,
           splitLine: { lineStyle: { color: "rgba(255,255,255,0.045)" } },
@@ -1437,7 +1673,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           gridIndex: 1,
           position: "right",
           axisLine: { show: false },
-          axisLabel: { color: "#71818A", formatter: (value) => compactNumber.format(value) },
+          axisLabel: { color: "#71818A", formatter: (value) => formatVolume(Number(value)) },
           splitLine: { show: false },
         },
         {
@@ -1448,6 +1684,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           axisLine: { show: false },
           axisLabel: { color: "#71818A" },
           splitLine: { show: false },
+          markLine: undefined,
         },
         {
           scale: true,
@@ -1597,15 +1834,33 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
     };
     chartRef.current.off?.("datazoom");
     chartRef.current.on?.("datazoom", handleZoom);
-  }, [currentPriceScale, drawingMode, echartsReady, visible, ma20, ma50, ma200, effectiveMaVisibility, effectiveMode, range, effectiveShowVolume, effectiveShowRsi, effectiveShowMacd, rsiValues, macdValues, trendLineData, hasMa200, priceScale, refreshOverlayPixels, symbol, tradeMode]);
+  }, [activePanelLayout, currentPriceScale, dataQuality.currency, dataQuality.timezone, drawingMode, echartsReady, interval, visible, ma20, ma50, ma200, effectiveMaVisibility, effectiveMode, range, effectiveShowVolume, effectiveShowRsi, effectiveShowMacd, rsiValues, macdValues, trendLineData, hasMa200, priceScale, refreshOverlayPixels, symbol, tradeMode]);
 
   function resetZoom() {
-    const nextZoom = { start: 0, end: 100 };
-    zoomRef.current = nextZoom;
-    setZoomState(nextZoom);
     setPriceScale(null);
-    writeCompanyChartState(symbol, { zoom: nextZoom });
-    chartRef.current?.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
+    resetZoomState();
+    writeCompanyChartState(symbol, { zoom: { start: 0, end: 100 } });
+  }
+
+  function fitData() {
+    setPriceScale(null);
+    resetZoomState();
+    chartRef.current?.resize();
+    window.requestAnimationFrame(refreshOverlayPixels);
+  }
+
+  function resetPanelLayout() {
+    const next = { price: 68, volume: 12, rsi: 10, macd: 10 };
+    setPanelLayout(next);
+    persistPanelLayout(next);
+    setTimeout(() => chartRef.current?.resize(), 40);
+  }
+
+  function startPanelDrag(event, topKey, bottomKey) {
+    const rect = event.currentTarget.closest(".chartShell")?.getBoundingClientRect();
+    if (!rect) return;
+    event.preventDefault();
+    setDraggingPanel({ startY: event.clientY, height: rect.height, topKey, bottomKey, layout: panelLayout });
   }
 
   async function toggleFullscreen() {
@@ -1623,25 +1878,34 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
     <section className={`chartCard ${tradeMode ? "tradeModeChart" : ""}`}>
       <div className="chartHeader">
         <div>
-          <span>{tradeMode ? "Trade Mode" : "Historical data: Yahoo Finance"}</span>
-          <strong>{symbol} {tradeMode ? `Current Price ${formatCurrency(quote?.currentPrice)}` : "Live quote: Finnhub"}</strong>
-          <small>Selected range: {range}</small>
+          <span>{tradeMode ? "Trade Mode" : "Historical chart"}</span>
+          <strong>{symbol} {dataQuality.exchange !== "--" ? `· ${dataQuality.exchange}` : ""} · {dataQuality.currency}</strong>
+          <small>Range: {range} · Interval: {interval} · {dataQuality.provider}</small>
         </div>
         <div className="chartControls">
-          <div className="segmented wide">
-            {["1M", "3M", "6M", "1Y", "3Y", "5Y"].map((item) => (
-              <button className={range === item ? "active" : ""} key={item} onClick={() => setRange(item)} type="button">
+          <div className="segmented wide" aria-label="Visible range">
+            {CHART_RANGES.map((item) => (
+              <button className={range === item ? "active" : ""} key={item} onClick={() => selectRange(item)} type="button">
                 {item}
               </button>
             ))}
           </div>
-          {!tradeMode ? <div className="segmented">
-            {CHART_MODES.map((item) => (
-              <button className={mode === item ? "active" : ""} key={item} onClick={() => setMode(item)} type="button">
-                {item}
-              </button>
-            ))}
-          </div> : null}
+          <label className="chartTypeSelect">
+            Candle Interval
+            <select value={interval} onChange={(event) => selectInterval(event.target.value)}>
+              {CHART_INTERVALS.map((item) => (
+                <option disabled={!supportedIntervalsForRange(range).includes(item)} key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!tradeMode ? (
+            <FreedomChartTypeSelector
+              value={normalizeChartType(mode)}
+              onChange={(value) => setMode(chartTypeLabel(value))}
+            />
+          ) : null}
           {!tradeMode ? <div className="maToggles">
             <label>
               <input checked={showVolume} onChange={(event) => setShowVolume(event.target.checked)} type="checkbox" />
@@ -1654,6 +1918,10 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
             <label>
               <input checked={showMacd} onChange={(event) => setShowMacd(event.target.checked)} type="checkbox" />
               MACD
+            </label>
+            <label>
+              <input checked={includeOverlaysInScale} onChange={(event) => setIncludeOverlaysInScale(event.target.checked)} type="checkbox" />
+              Include overlays in price scale
             </label>
             {[
               ["ma20", "MA20", false],
@@ -1672,7 +1940,9 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
             ))}
           </div> : null}
           <div className="segmented">
+            <button onClick={fitData} type="button">Fit Data</button>
             <button onClick={resetZoom} type="button">Reset Zoom</button>
+            <button onClick={resetPanelLayout} type="button">Reset Panel Layout</button>
             <button className={isFullscreen ? "active" : ""} onClick={toggleFullscreen} type="button">Fullscreen</button>
           </div>
           {tradeMode ? <div className="segmented drawingToolbar">
@@ -1706,6 +1976,12 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
       </div>
 
       {notice ? <div className="chartNotice">{notice}</div> : null}
+      {range === "1D" && intervalIsIntraday(interval) && !metadata?.ok ? (
+        <div className="chartNotice warning">INTRADAY DATA UNAVAILABLE FROM CURRENT PROVIDER. {metadata?.error || "The provider did not return intraday candles."}</div>
+      ) : null}
+      {visible.length && ((range === "1D" && visible.length < 20) || (range === "1M" && visible.length < 20)) ? (
+        <div className="chartNotice warning">Only {visible.length} candles were returned for the selected {range} range and {interval} interval.</div>
+      ) : null}
 
       {visible.length ? (
         <>
@@ -1755,6 +2031,40 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
               aria-label="Interactive professional OHLC chart"
               style={{ width: "100%", height: "100%", minHeight: 720, position: "relative", display: "block" }}
             />
+            <div className="dataQualityBadge">
+              <strong>{dataQuality.symbol} · {dataQuality.exchange} · {dataQuality.currency}</strong>
+              <span>Range: {dataQuality.range} · Interval: {dataQuality.interval}</span>
+              <span>{dataQuality.candleCount} candles · {dataQuality.dataLabel}</span>
+              <span>Provider: {dataQuality.provider}</span>
+              <span>{formatChartTimestamp(dataQuality.first, dataQuality.timezone)} - {formatChartTimestamp(dataQuality.latest, dataQuality.timezone)}</span>
+            </div>
+            {effectiveShowVolume ? (
+              <button
+                aria-label="Resize price and volume panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "price", "volume")}
+                style={{ top: `${8 + (activePanelLayout.price || 68) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
+            {effectiveShowVolume && effectiveShowRsi ? (
+              <button
+                aria-label="Resize volume and RSI panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "volume", "rsi")}
+                style={{ top: `${8 + ((activePanelLayout.price || 68) + (activePanelLayout.volume || 12)) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
+            {effectiveShowRsi && effectiveShowMacd ? (
+              <button
+                aria-label="Resize RSI and MACD panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "rsi", "macd")}
+                style={{ top: `${8 + ((activePanelLayout.price || 68) + (activePanelLayout.volume || 0) + (activePanelLayout.rsi || 10)) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
             {tradeOverlayReady ? <div className="rewardZone" style={{ top: Math.min(linePixels.target, linePixels.entry), height: Math.abs(linePixels.entry - linePixels.target) }} /> : null}
             {tradeOverlayReady ? <div className="riskZone" style={{ top: Math.min(linePixels.entry, linePixels.stop), height: Math.abs(linePixels.stop - linePixels.entry) }} /> : null}
             {Number.isFinite(currentPricePixel) ? (
@@ -1980,6 +2290,24 @@ const chartStyles = `
     max-width: 100%;
     overflow-x: auto;
   }
+  .chartTypeSelect {
+    align-items: center;
+    color: #c9d5db;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 900;
+    gap: 8px;
+    text-transform: none;
+  }
+  .chartTypeSelect select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 7px;
+    color: #fff;
+    font-weight: 900;
+    height: 38px;
+    padding: 0 10px;
+  }
   .maToggles {
     gap: 8px;
     padding: 5px 8px;
@@ -2011,6 +2339,12 @@ const chartStyles = `
     margin-bottom: 12px;
     padding: 10px 12px;
   }
+  .chartNotice.warning {
+    background: rgba(255, 153, 0, 0.12);
+    border-color: rgba(255, 153, 0, 0.34);
+    color: #ffd7a1;
+    font-weight: 850;
+  }
   .chartShell {
     background: #05090d;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2021,6 +2355,54 @@ const chartStyles = `
     overflow: hidden;
     position: relative;
     width: 100%;
+  }
+  .dataQualityBadge {
+    background: rgba(5, 8, 11, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    display: grid;
+    gap: 3px;
+    left: 74px;
+    max-width: min(420px, calc(100% - 160px));
+    padding: 9px 11px;
+    pointer-events: none;
+    position: absolute;
+    top: 14px;
+    z-index: 7;
+  }
+  .dataQualityBadge strong,
+  .dataQualityBadge span {
+    display: block;
+  }
+  .dataQualityBadge strong {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 950;
+  }
+  .dataQualityBadge span {
+    color: #c9d5db;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .panelDivider {
+    background: rgba(255, 255, 255, 0.08);
+    border: 0;
+    border-radius: 0;
+    cursor: ns-resize;
+    height: 6px;
+    left: 64px;
+    margin: 0;
+    min-height: 6px;
+    padding: 0;
+    position: absolute;
+    right: 72px;
+    transform: translateY(-50%);
+    z-index: 6;
+  }
+  .panelDivider:hover,
+  .panelDivider:focus-visible {
+    background: var(--company-accent);
+    outline: none;
   }
   .tradeModeChart .chartShell {
     height: min(80vh, 900px);
@@ -2459,10 +2841,12 @@ function FreedomCompany({ passwordHash, symbol }) {
   const [checkingStorage, setCheckingStorage] = useState(true);
   const [quote, setQuote] = useState({ ...fallback, rating: getRating(fallback.qualityScore, null) });
   const [candles, setCandles] = useState([]);
+  const [historyMetadata, setHistoryMetadata] = useState(null);
   const [experienceMode, setExperienceMode] = useState("research");
   const [activeTab, setActiveTab] = useState("Overview");
   const [chartRange, setChartRange] = useState("1Y");
-  const [chartMode, setChartMode] = useState("Candles");
+  const [chartInterval, setChartInterval] = useState("1D");
+  const [chartMode, setChartMode] = useState("Standard candlesticks");
   const [maVisibility, setMaVisibility] = useState({ ma20: true, ma50: true, ma200: true });
   const [historyNotice, setHistoryNotice] = useState("");
   const [research, setResearch] = useState(() => normalizeLoadedNote(symbol, null));
@@ -2485,7 +2869,9 @@ function FreedomCompany({ passwordHash, symbol }) {
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
     setActiveTab(readCompanyTab(symbol));
-    setChartRange(loadStoredChartRange());
+    const storedRange = loadStoredChartRange();
+    setChartRange(storedRange);
+    setChartInterval(loadStoredChartInterval(storedRange));
     setChartMode(loadStoredChartMode());
     setMaVisibility(loadStoredMaVisibility());
     setExperienceMode("research");
@@ -2501,6 +2887,16 @@ function FreedomCompany({ passwordHash, symbol }) {
     if (checkingStorage) return;
     window.localStorage.setItem(CHART_RANGE_STORAGE_KEY, chartRange);
   }, [chartRange, checkingStorage]);
+
+  useEffect(() => {
+    if (checkingStorage) return;
+    const normalized = normalizeStoredInterval(chartInterval, chartRange);
+    if (normalized !== chartInterval) {
+      setChartInterval(normalized);
+      return;
+    }
+    window.localStorage.setItem(CHART_INTERVAL_STORAGE_KEY, normalized);
+  }, [chartInterval, chartRange, checkingStorage]);
 
   useEffect(() => {
     if (checkingStorage) return;
@@ -2601,7 +2997,7 @@ function FreedomCompany({ passwordHash, symbol }) {
 
       const [quoteResponse, historyResponse, researchResponse] = await Promise.allSettled([
         fetch(`/api/freedom/quotes?symbol=${symbol}`),
-        fetch(`/api/freedom/history?symbol=${symbol}&range=5y&interval=1d`),
+        fetch(`/api/freedom/history?symbol=${symbol}&range=${API_RANGE_BY_LABEL[chartRange] || "1y"}&interval=${API_INTERVAL_BY_LABEL[chartInterval] || "1d"}`),
         fetch(`/api/freedom/research?symbol=${symbol}`),
       ]);
 
@@ -2613,9 +3009,24 @@ function FreedomCompany({ passwordHash, symbol }) {
         researchResponse.status === "fulfilled" ? await researchResponse.value.json().catch(() => null) : null;
 
       const historyCandles = historyData?.ok ? historyData.candles || [] : [];
-      setCandles(historyCandles);
-
       const nextQuote = quoteData?.quotes?.[0] || fallback;
+      setCandles(historyCandles);
+      setHistoryMetadata({
+        ok: Boolean(historyData?.ok),
+        provider: historyData?.provider || historyData?.source || "Twelve Data",
+        source: historyData?.source || historyData?.provider || "Twelve Data",
+        dataLabel: historyData?.dataLabel || null,
+        exchange: historyData?.exchange || null,
+        currency: historyData?.currency || nextQuote?.currency || "USD",
+        exchangeTimezone: historyData?.exchangeTimezone || null,
+        candleCount: historyData?.candleCount ?? historyCandles.length,
+        firstTimestamp: historyData?.firstTimestamp || historyCandles[0]?.date || null,
+        latestTimestamp: historyData?.latestTimestamp || historyCandles[historyCandles.length - 1]?.date || null,
+        interval: historyData?.interval || chartInterval,
+        range: historyData?.range || chartRange,
+        error: historyData?.error || null,
+      });
+
       const historyHigh = Number.isFinite(historyData?.yearHigh) ? historyData.yearHigh : null;
       const historyLow = Number.isFinite(historyData?.yearLow) ? historyData.yearLow : null;
       const percentOffHigh =
@@ -2655,7 +3066,7 @@ function FreedomCompany({ passwordHash, symbol }) {
         });
       }
       if (!quoteData?.ok) setError(quoteData?.error || "Live market data unavailable. Showing fallback data where available.");
-      if (!historyData?.ok) setHistoryNotice("Historical candlestick data unavailable.");
+      if (!historyData?.ok) setHistoryNotice(historyData?.error || "Historical candlestick data unavailable.");
 
       await Promise.all([loadValuation(DEFAULT_ASSUMPTIONS), loadCommittee()]);
     } catch (err) {
@@ -2664,7 +3075,7 @@ function FreedomCompany({ passwordHash, symbol }) {
     } finally {
       setLoading(false);
     }
-  }, [fallback, loadCommittee, loadValuation, symbol]);
+  }, [chartInterval, chartRange, fallback, loadCommittee, loadValuation, symbol]);
 
   useEffect(() => {
     if (unlocked) loadCompany();
@@ -2714,6 +3125,20 @@ function FreedomCompany({ passwordHash, symbol }) {
     () => calculateAdaptiveScores({ symbol, quote, valuation, committee, history: candles }),
     [candles, committee, quote, symbol, valuation]
   );
+  const investmentSignal = useMemo(
+    () => calculateInvestmentSignal({
+      ticker: symbol,
+      exchange: quote.exchange || "NASDAQ",
+      currency: quote.currency || "USD",
+      timeframe: "1D",
+      decision: adaptiveScore.decision,
+      confidence: adaptiveScore.confidence,
+      buyScore: adaptiveScore.buyScore,
+      quote,
+      valuation,
+    }),
+    [adaptiveScore, quote, symbol, valuation]
+  );
   const companyName = quote.companyName || companyStyle.companyName || symbol;
   const cards = [
     ["Current Price", formatCurrency(quote.currentPrice)],
@@ -2722,7 +3147,7 @@ function FreedomCompany({ passwordHash, symbol }) {
     ["52W Low", formatCurrency(quote.yearLow)],
     ["% Off High", formatPercent(quote.percentOffHigh)],
     ["Buy Score", adaptiveScore.buyScore ?? "--"],
-    ["Decision", ratingLabel(adaptiveScore.decision)],
+    ["Decision", `${investmentSignal.overallSignal} (${investmentSignal.timeframe})`],
   ];
   const valuationCards = [
     ["Fair Value", formatCurrency(valuation?.fairValue)],
@@ -2789,16 +3214,10 @@ function FreedomCompany({ passwordHash, symbol }) {
 
       <section className="platformBanner" aria-label="Current Freedom workspace">
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
-        <nav className="platformSwitch" aria-label="Freedom platform switch">
-          <Link className="active" href="/freedom">Freedom Investment</Link>
-          <Link href="/freedom-trader">Freedom Trader</Link>
-        </nav>
       </section>
+      <FreedomModuleNav module="investment" />
 
       <header className="companyBanner">
-        <Link className="back" href="/freedom">
-          Back to Freedom Investment
-        </Link>
         <div className="bannerMain">
           <div className="logoBadge">{companyStyle.logoText}</div>
           <div className="bannerCopy">
@@ -2812,7 +3231,9 @@ function FreedomCompany({ passwordHash, symbol }) {
             </p>
           </div>
           <div className="bannerActions">
-            <span className={`rating statusPill large ${ratingClass(adaptiveScore.decision)}`}>{ratingLabel(adaptiveScore.decision)}</span>
+            <span className={`rating statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
+              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            </span>
             <button className="headerTradeButton" type="button" onClick={() => setExperienceMode("trade")}>
               Create Trade Setup
             </button>
@@ -2836,13 +3257,16 @@ function FreedomCompany({ passwordHash, symbol }) {
           <MarketChart
             candles={candles}
             maVisibility={maVisibility}
+            metadata={historyMetadata}
             mode={chartMode}
             notice={historyNotice}
             onBackToResearch={() => setExperienceMode("research")}
             quote={quote}
             range={chartRange}
+            interval={chartInterval}
             research={research}
             setMaVisibility={setMaVisibility}
+            setInterval={setChartInterval}
             setMode={setChartMode}
             setRange={setChartRange}
             symbol={symbol}
@@ -2864,7 +3288,9 @@ function FreedomCompany({ passwordHash, symbol }) {
         <section className="overviewTab">
           <article className="overviewHero">
             <span>Main Recommendation</span>
-            <strong className={`statusPill large ${ratingClass(adaptiveScore.decision)}`}>{ratingLabel(adaptiveScore.decision)}</strong>
+            <strong className={`statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
+              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            </strong>
             <p>{adaptiveScore.reason}</p>
             <button type="button" onClick={() => setExperienceMode("trade")}>Create Trade Setup</button>
           </article>
@@ -3252,12 +3678,15 @@ function FreedomCompany({ passwordHash, symbol }) {
       <MarketChart
         candles={candles}
         maVisibility={maVisibility}
+        metadata={historyMetadata}
         mode={chartMode}
         notice={historyNotice}
         quote={quote}
         range={chartRange}
+        interval={chartInterval}
         research={research}
         setMaVisibility={setMaVisibility}
+        setInterval={setChartInterval}
         setMode={setChartMode}
         setRange={setChartRange}
         symbol={symbol}

@@ -1,7 +1,9 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { calculateAdaptiveScores } from "../../lib/freedom-terminal/adaptiveBuyScore";
+import { calculateInvestmentSignal } from "../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
@@ -135,6 +137,16 @@ async function browserHashPassword(password) {
 
 function withAdaptiveScore(row) {
   const adaptive = calculateAdaptiveScores({ symbol: row.symbol, quote: row });
+  const signalResult = calculateInvestmentSignal({
+    ticker: row.symbol,
+    exchange: row.exchange || "NASDAQ",
+    currency: row.currency || "USD",
+    timeframe: "1D",
+    decision: adaptive.decision,
+    confidence: adaptive.confidence,
+    buyScore: adaptive.buyScore,
+    quote: row,
+  });
   return {
     ...row,
     adaptiveScore: adaptive,
@@ -145,6 +157,7 @@ function withAdaptiveScore(row) {
     estimatedUpside: adaptive.estimatedUpside,
     discountToFairValue: adaptive.discountToFairValue,
     rating: adaptive.decision,
+    signalResult,
   };
 }
 
@@ -462,15 +475,12 @@ function FreedomTerminal({ passwordHash }) {
 
       <section className="platformBanner" aria-label="Current Freedom workspace">
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
-        <span>Long-Term Wealth & Portfolio Management</span>
+        <span>Long-Term Investing & Wealth Building</span>
       </section>
+      <FreedomModuleNav module="investment" />
 
       <header className="hero">
         <div>
-          <nav className="platformSwitch" aria-label="Freedom platform switch">
-            <Link className="active" href="/freedom">Freedom Investment</Link>
-            <Link href="/freedom-trader">Freedom Trader</Link>
-          </nav>
           <span className="eyebrow">Private Terminal</span>
           <h1>Freedom Investment</h1>
           <p>Long-Term Wealth & Portfolio Management</p>
@@ -511,7 +521,7 @@ function FreedomTerminal({ passwordHash }) {
         </section>
       ) : null}
 
-      <section className="summary">
+      <section className="summary" id="portfolio">
         <article className="summaryCard blue">
           <span>Watchlist Count</span>
           <strong>{summary.watchlistCount}</strong>
@@ -534,10 +544,10 @@ function FreedomTerminal({ passwordHash }) {
         </article>
       </section>
 
-      <main className="panel">
+      <main className="panel" id="watchlist">
         <div className="panelHeader">
           <div>
-            <h2>Watchlist</h2>
+            <h2>Long-Term Watchlist</h2>
             <p>Live quotes, adaptive buy scoring, conviction, fair-value gap, and research readiness.</p>
           </div>
           <span className="pill">{loading ? "Loading quotes..." : `${rows.length} Symbols`}</span>
@@ -612,7 +622,9 @@ function FreedomTerminal({ passwordHash }) {
                       </div>
                     </td>
                     <td>
-                      <span className={`rating statusPill ${ratingClass(decision)}`}>{ratingLabel(decision)}</span>
+                      <span className={`rating statusPill ${ratingClass(decision)}`}>
+                        {row.signalResult?.overallSignal || ratingLabel(decision)} ({row.signalResult?.timeframe || "1D"})
+                      </span>
                     </td>
                     <td>
                       <span className={Number.isFinite(row.estimatedUpside) && row.estimatedUpside >= 0 ? "up" : "down"}>

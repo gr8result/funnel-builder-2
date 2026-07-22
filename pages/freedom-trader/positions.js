@@ -1,6 +1,8 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -189,8 +191,9 @@ export default function TraderPositions({ passwordHash }) {
     <div className="page">
       <Head><title>Positions | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
+      <PaperAccountBar />
+      <FreedomModuleNav module="trader" paper />
       <header className="hero">
-        <Link href="/freedom-trader">Back to Freedom Trader</Link>
         <h1>Open Positions</h1>
         <p>Trader-only swing positions. Separate from Freedom Investment.</p>
       </header>

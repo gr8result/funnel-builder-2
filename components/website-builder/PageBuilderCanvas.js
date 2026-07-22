@@ -79,6 +79,23 @@ const INLINE_EDITOR_PLACEHOLDERS = new Set([
   "Column content",
 ]);
 
+function stableCanvasJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableCanvasJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableCanvasJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function canvasBlocksHash(blocks) {
+  const text = stableCanvasJson(Array.isArray(blocks) ? blocks : []);
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+  }
+  return `blocks_${Math.abs(hash).toString(16)}`;
+}
+
 const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
 
 function parseToolbarFontSize(value, fallback = 18) {
@@ -356,6 +373,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const saveNoticeTimerRef = useRef(null);
   const autosaveTimerRef = useRef(null);
   const skipNextAutosaveRef = useRef(true);
+  const lastHydratedBlocksHashRef = useRef(canvasBlocksHash(Array.isArray(pageBlocks) ? pageBlocks : []));
+  const lastSavedBlocksHashRef = useRef(canvasBlocksHash(Array.isArray(pageBlocks) ? pageBlocks : []));
   const handleSaveRef = useRef(null);
   const pendingLocalBlocksRef = useRef(false);
   const onSaveRef = useRef(onSave);
@@ -464,12 +483,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       // truth. Background refreshes/server responses can be older than the
       // user's current tab, and accepting them here rolls the canvas backward.
       if (pendingLocalBlocksRef.current) {
-        Promise.resolve(onSaveRef.current(localBlocks)).catch(() => {});
+        const localHash = canvasBlocksHash(localBlocks);
+        Promise.resolve(onSaveRef.current(localBlocks)).then((saved) => {
+          if (saved && !saved?._saveError) {
+            lastSavedBlocksHashRef.current = localHash;
+            pendingLocalBlocksRef.current = false;
+            setLastSavedAt(Date.now());
+          }
+        }).catch(() => {});
       }
       return;
     }
 
     if (pageChanged) pendingLocalBlocksRef.current = false;
+    if (blocksMatch) {
+      lastHydratedBlocksHashRef.current = canvasBlocksHash(nextBlocks);
+      if (!pendingLocalBlocksRef.current) lastSavedBlocksHashRef.current = lastHydratedBlocksHashRef.current;
+    }
 
     const previousSelectedIndex = selectedIndexRef.current;
     const previousSelectedGlobalRole = selectedGlobalRoleRef.current;
@@ -478,6 +508,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       : null;
 
     latestBlocksRef.current = nextBlocks;
+    const nextHash = canvasBlocksHash(nextBlocks);
+    lastHydratedBlocksHashRef.current = nextHash;
+    if (!pendingLocalBlocksRef.current) lastSavedBlocksHashRef.current = nextHash;
     setBlocks(nextBlocks);
     skipNextAutosaveRef.current = true;
 
@@ -505,6 +538,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return undefined;
     }
     if (typeof onSaveRef.current !== "function") return undefined;
+    const currentHash = canvasBlocksHash(latestBlocksRef.current);
+    if (!pendingLocalBlocksRef.current && (currentHash === lastSavedBlocksHashRef.current || currentHash === lastHydratedBlocksHashRef.current)) {
+      return undefined;
+    }
 
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -513,9 +550,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
       const currentBlocks = latestBlocksRef.current;
+      const currentHashAtSave = canvasBlocksHash(currentBlocks);
+      if (!pendingLocalBlocksRef.current && currentHashAtSave === lastSavedBlocksHashRef.current) return;
       // Use onSaveRef so the timer always calls the latest save function at fire-time
       Promise.resolve(onSaveRef.current(currentBlocks)).then((saved) => {
-        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
+        if (saved && !saved?._saveError) {
+          lastSavedBlocksHashRef.current = currentHashAtSave;
+          pendingLocalBlocksRef.current = false;
+          setLastSavedAt(Date.now());
+        }
       }).catch(() => {});
     }, 1500);
 
@@ -537,7 +580,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         autosaveTimerRef.current = null;
       }
       if (typeof onSaveRef.current === "function") {
-        onSaveRef.current(latestBlocksRef.current);
+        const currentHash = canvasBlocksHash(latestBlocksRef.current);
+        if (pendingLocalBlocksRef.current || currentHash !== lastSavedBlocksHashRef.current) {
+          onSaveRef.current(latestBlocksRef.current);
+        }
       }
       // Best-effort server sync: use force-save if available so the 5s throttle is bypassed.
       // The browser may not complete async work on pagehide, but desktop browsers typically do.
@@ -602,8 +648,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
+      const currentHash = canvasBlocksHash(latestBlocksRef.current);
+      if (!pendingLocalBlocksRef.current && currentHash === lastSavedBlocksHashRef.current) return;
       Promise.resolve(onSaveRef.current(latestBlocksRef.current)).then((saved) => {
-        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
+        if (saved && !saved?._saveError) {
+          lastSavedBlocksHashRef.current = currentHash;
+          pendingLocalBlocksRef.current = false;
+          setLastSavedAt(Date.now());
+        }
       }).catch(() => {});
     }, 1500);
   };
@@ -3146,6 +3198,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         showSavePopup(saved?._saveErrorMessage || "Could not save page", "error");
         return;
       }
+      lastSavedBlocksHashRef.current = canvasBlocksHash(committedBlocks);
+      pendingLocalBlocksRef.current = false;
       setLastSavedAt(Date.now());
       showSavePopup("Saved ✓");
     } catch (err) {

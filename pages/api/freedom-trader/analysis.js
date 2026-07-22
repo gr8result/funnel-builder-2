@@ -1,5 +1,6 @@
 import { fetchTraderHistory } from "./history.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
+import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 
 function round(value, decimals = 2) {
   const number = Number(value);
@@ -307,12 +308,56 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     }
   }
 
-  let status = scoreStatus(tradingScore);
+  const legacySetupStatus = scoreStatus(tradingScore);
+  let status = legacySetupStatus;
   if ((status === "STRONG SETUP" || status === "BUY SETUP") && (!Number.isFinite(riskRewardRatio) || riskRewardRatio < 2)) {
     status = tradingScore >= 70 ? "WATCH" : tradingScore >= 60 ? "WAIT" : "NO TRADE";
   }
 
   const confidence = Number.isFinite(tradingScore) ? round(clamp(tradingScore * 0.8 + (Number.isFinite(relativeVolume) ? Math.min(relativeVolume, 3) * 5 : 0))) : null;
+  const setup = {
+    valid: status === "STRONG SETUP" || status === "BUY SETUP" || (Number.isFinite(riskRewardRatio) && riskRewardRatio >= 2),
+    plannedEntry,
+    target,
+    stop,
+    riskPerShare,
+    rewardPerShare,
+    riskRewardRatio,
+    expectedHoldingPeriod,
+    setupExpiryDate,
+    setupReasoning,
+  };
+  const signalResult = calculateTraderSignal({
+    ticker: symbol,
+    exchange: meta.exchange,
+    currency: "USD",
+    timeframe: "1D",
+    currentPrice,
+    plannedEntry,
+    tradingScore,
+    confidence,
+    indicators: {
+      ma20,
+      ma50,
+      ma200,
+      rsi14: rsi,
+      macd: macd.macd,
+      macdSignal: macd.signal,
+      macdHistogram: macd.histogram,
+      atr14: atr,
+      averageVolume20: avgVolume20,
+      relativeVolume,
+      support,
+      resistance,
+      volatility20: volatility,
+      distanceFromSupport,
+      distanceFromResistance,
+    },
+    setup,
+    marketData,
+    dataStatus,
+  });
+  status = signalResult.overallSignal;
 
   return {
     symbol,
@@ -350,20 +395,11 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     tradingScore,
     trend,
     status,
+    legacySetupStatus,
+    signalResult,
     confidence,
     scoreExplanation: components,
-    setup: {
-      valid: status === "STRONG SETUP" || status === "BUY SETUP" || (Number.isFinite(riskRewardRatio) && riskRewardRatio >= 2),
-      plannedEntry,
-      target,
-      stop,
-      riskPerShare,
-      rewardPerShare,
-      riskRewardRatio,
-      expectedHoldingPeriod,
-      setupExpiryDate,
-      setupReasoning,
-    },
+    setup,
     marketData,
     dataStatus,
     candleCount: clean.length,

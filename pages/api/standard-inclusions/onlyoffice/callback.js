@@ -55,6 +55,7 @@ export default async function handler(req, res) {
       .update({
         version: nextVersion,
         current_pptx_asset_id: storagePath,
+        current_exported_pdf_asset_id: null,
         updated_at: now,
         revision_history: revisionHistory,
       })

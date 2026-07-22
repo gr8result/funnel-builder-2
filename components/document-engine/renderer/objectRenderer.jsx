@@ -66,6 +66,7 @@ export function ObjectRenderer({
 function renderObjectContent(object, workbook, editor = {}) {
   if (object.type === "text" || object.type === "dynamicField") {
     const text = resolveDynamicText(object.data?.text || "", workbook);
+    const activationHidden = object.data?.overlayMode === "pptx-text-activation" && !object.data?.edited && !editor.textEditing;
     return (
       <div
         contentEditable={editor.editing && editor.textEditing && !object.locked}
@@ -78,6 +79,8 @@ function renderObjectContent(object, workbook, editor = {}) {
           height: "100%",
           outline: "none",
           cursor: editor.editing ? "text" : "inherit",
+          color: activationHidden ? "transparent" : "inherit",
+          userSelect: activationHidden ? "none" : undefined,
         }}
         onMouseDown={(event) => {
           if (editor.textEditing) event.stopPropagation();
@@ -96,8 +99,9 @@ function renderObjectContent(object, workbook, editor = {}) {
     );
   }
   if (object.type === "image" || object.type === "logo") {
+    const activationHidden = object.data?.overlayMode === "pptx-image-activation" && !object.data?.edited;
     return object.data?.imageRef ? (
-      <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0 }} />
+      <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0, opacity: activationHidden ? 0 : 1 }} />
     ) : (
       <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f3f4f6", color: "#6b7280" }}>Image</div>
     );

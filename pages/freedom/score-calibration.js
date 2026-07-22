@@ -1,6 +1,6 @@
 import Head from "next/head";
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { DEFAULT_CALIBRATION } from "../../lib/freedom-terminal/adaptiveBuyScore";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
@@ -199,10 +199,10 @@ export default function ScoreCalibration({ passwordHash }) {
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
         <span>Long-Term Wealth & Portfolio Management</span>
       </section>
+      <FreedomModuleNav module="investment" />
 
       <header className="hero">
         <div>
-          <Link href="/freedom">Back to Freedom Investment</Link>
           <span>Private Admin</span>
           <h1>Score Calibration</h1>
           <p>Review which evidence categories are predicting winners and tune the model over time.</p>

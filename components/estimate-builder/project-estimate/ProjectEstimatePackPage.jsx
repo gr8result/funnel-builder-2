@@ -8,10 +8,10 @@ import PricedPlansPage from "./pages/PricedPlansPage";
 import PricingSummaryPage from "./pages/PricingSummaryPage";
 import StandardInclusionsPage from "./pages/StandardInclusionsPage.tsx";
 import ImportantEstimateNoticePage from "./pages/ImportantEstimateNoticePage";
-import { projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
+import { defaultProjectEstimateBlocks, projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
 import { styles } from "./ProjectEstimateShared";
 
-export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, editing = false, selectedBlockId = "", editingBlockId = "", onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, hiddenBlockIds = [] }) {
+export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, editing = false, selectedBlockId = "", editingBlockId = "", onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, onPreserveSelection, hiddenBlockIds = [] }) {
   const resolvedTheme = { ...defaultLuxuryProposalTheme({}), ...(theme || {}) };
   const accent = resolvedTheme.accentColor || "#c89d4a";
   const pageType = page.page_type || page.id;
@@ -58,8 +58,11 @@ export default function ProjectEstimatePackPage({ page, theme, linkedFields, Bro
   const pricingGroups = (linkedFields.pricingGroups?.value || []).slice(0, 7);
   const inclusionPackage = linkedFields.standardInclusionsPackage?.value || linkedFields.estimateInclusionsPackage?.value || selectedEstimateInclusionsPackage();
   const pricedUsing = inclusionPackage?.package?.name || "Mid Range Standard Inclusions";
-  const blockById = Object.fromEntries((Array.isArray(page?.blocks) ? page.blocks : []).map((block) => [block.id, block]));
-  const editorBridge = { editMode: editing, selectedBlockId, editingBlockId, onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, blockById };
+  const blockById = Object.fromEntries([
+    ...defaultProjectEstimateBlocks(pageType),
+    ...(Array.isArray(page?.blocks) ? page.blocks : []),
+  ].map((block) => [block.id, block]));
+  const editorBridge = { editMode: editing, pageId: page?.id || pageType, selectedBlockId, editingBlockId, onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, onPreserveSelection, blockById };
   const common = { resolvedTheme, accent, logo, builderName };
   const wrap = (node) => node;
 

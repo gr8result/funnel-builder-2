@@ -16,6 +16,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
   const dragRef = useRef(null);
   const imageUploadRef = useRef(null);
+  const exportPagesRef = useRef(null);
   const activePage = getActivePage(draft);
   const selectedObjectId = draft.selection?.lastSelectedObjectId || "";
   const selectedObject = activePage?.objects?.find((object) => object.id === selectedObjectId) || null;
@@ -190,7 +191,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     if (!objectId) return;
     updateActivePage((page) => updateObjectOnPage(page, objectId, (object) => ({
       ...object,
-      data: { ...object.data, text },
+      data: { ...object.data, text, edited: true },
     })), "Text updated.");
     setTextEditingObjectId("");
   }
@@ -200,6 +201,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     updateActivePage((page) => updateObjectOnPage(page, selectedObject.id, (object) => ({
       ...object,
       style: { ...object.style, ...stylePatch },
+      data: { ...object.data, edited: object.data?.overlayMode === "pptx-text-activation" ? true : object.data?.edited },
     })), message);
   }
 
@@ -242,11 +244,19 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
 
   async function exportPdf() {
     try {
-      const { PDFDocument, rgb } = await import("pdf-lib");
+      const [{ PDFDocument }, html2canvasModule] = await Promise.all([
+        import("pdf-lib"),
+        import("html2canvas"),
+      ]);
+      const html2canvas = html2canvasModule.default || html2canvasModule;
       const pdf = await PDFDocument.create();
-      for (const page of draft.pages) {
+      const pageNodes = Array.from(exportPagesRef.current?.querySelectorAll?.("[data-document-page-id]") || []);
+      if (!pageNodes.length) throw new Error("No document pages were available for PDF export.");
+      for (const node of pageNodes) {
+        const canvas = await html2canvas(node, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
+        const image = await pdf.embedPng(canvas.toDataURL("image/png"));
         const pdfPage = pdf.addPage([595.28, 841.89]);
-        pdfPage.drawRectangle({ x: 0, y: 0, width: 595.28, height: 841.89, color: rgb(1, 1, 1) });
+        pdfPage.drawImage(image, { x: 0, y: 0, width: 595.28, height: 841.89 });
       }
       const bytes = await pdf.save();
       const blob = new Blob([bytes], { type: "application/pdf" });
@@ -269,7 +279,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     if (!file || !selectedObject || !["image", "logo"].includes(selectedObject.type)) return;
     const reader = new FileReader();
     reader.onload = () => {
-      updateSelectedObject({ data: { imageRef: reader.result, alt: file.name } });
+      updateSelectedObject({ data: { imageRef: reader.result, alt: file.name, edited: true } });
       onStatus?.("Image replaced.");
     };
     reader.readAsDataURL(file);
@@ -382,6 +392,9 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
           </div>
         </div>
       ) : null}
+      <div ref={exportPagesRef} style={styles.exportPages} aria-hidden="true">
+        {draft.pages.map((page) => <PageRenderer key={`export-${page.id}`} page={page} workbook={workbook} exportMode />)}
+      </div>
     </div>
   );
 }
@@ -420,7 +433,7 @@ function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, 
       <strong>{object.name || typeLabel(object.type)}</strong>
       {(object.type === "text" || object.type === "dynamicField") ? (
         <>
-          <label style={styles.field}>Text<textarea disabled={readonly} style={styles.textarea} value={object.data?.text || ""} onChange={(event) => onPatch({ data: { text: event.target.value } })} /></label>
+          <label style={styles.field}>Text<textarea disabled={readonly} style={styles.textarea} value={object.data?.text || ""} onChange={(event) => onPatch({ data: { text: event.target.value, edited: true } })} /></label>
           <label style={styles.field}>Font size<input disabled={readonly} type="number" style={styles.input} value={object.style?.fontSize || 16} onChange={(event) => onPatch({ style: { fontSize: Number(event.target.value) || 16 } })} /></label>
           <label style={styles.field}>Colour<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.color, "#0b2545")} onChange={(event) => onPatch({ style: { color: event.target.value } })} /></label>
           <label style={styles.field}>Alignment<select disabled={readonly} style={styles.input} value={object.style?.textAlign || "left"} onChange={(event) => onPatch({ style: { textAlign: event.target.value } })}>
@@ -618,4 +631,5 @@ const styles = {
   previewDialog: { width: "min(980px, 96vw)", maxHeight: "92vh", overflow: "auto", background: "#f8fafc", borderRadius: 12, border: "1px solid #cbd5e1", padding: 14, display: "grid", gap: 12 },
   previewHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
   previewPages: { display: "grid", gap: 18, justifyItems: "center" },
+  exportPages: { position: "fixed", left: -10000, top: 0, width: 794, display: "grid", gap: 0, pointerEvents: "none", opacity: 1 },
 };

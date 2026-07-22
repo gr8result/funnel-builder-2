@@ -4,19 +4,27 @@ import { getWebsiteLimitForResolvedPlan, getUserPlan } from "../../../lib/planRe
 import { COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
 import {
   deleteSplitWebsiteProject,
+  assembleWebsiteForRendering,
   listSplitWebsiteProjects,
   loadFullSplitWebsiteProject,
   migrateWebsiteProjectToSplitStorage,
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
-import { buildWebsiteProjectVersion, summarizeWebsitePage, websiteContentHash } from "../../../lib/website-builder/documentVersion";
+import {
+  buildWebsiteProjectVersion,
+  diffWebsitePersistence,
+  summarizeWebsitePage,
+  summarizeWebsitePersistence,
+  websitePersistenceHash,
+} from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
-import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
-import { collectVideoHeroMedia, normalizeDomain, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
+import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
 
 const TABLE_NAME = "published_websites";
 const GR8_RESULT_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+const VIDEO_ASSET_RETAINED_SAVE_ERROR = "Save failed: the video asset was not retained in the page record.";
 
 export const config = {
   api: {
@@ -228,13 +236,13 @@ function applyDeletedBlockTombstones(blocks, deletedBlockIds, pageName) {
 function normalizeProjectBlocksForSave(project) {
   if (!project || typeof project !== "object") return project;
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
-  const globalFooterBlock = project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
+  const globalFooterBlock = resolveCanonicalGlobalFooterBlock(project, footerContext) || project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
   let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
   if (String(project.id || "").replace(/^draft:/, "") === GR8_RESULT_PROJECT_ID && normalizedGlobalFooterBlock?.type === "footer") {
     const props = normalizedGlobalFooterBlock.props || {};
     const currentNav = Array.isArray(props.navigationLinks) ? props.navigationLinks : [];
     const currentCompany = Array.isArray(props.companyLinks || props.extraLinks) ? (props.companyLinks || props.extraLinks) : [];
-    normalizedGlobalFooterBlock = {
+    normalizedGlobalFooterBlock = applyGr8AustralianFooterPanel({
       ...normalizedGlobalFooterBlock,
       props: {
         ...props,
@@ -243,7 +251,7 @@ function normalizeProjectBlocksForSave(project) {
         extraLinks: currentCompany.length >= DEFAULT_FOOTER_COMPANY_LINKS.length ? currentCompany : DEFAULT_FOOTER_COMPANY_LINKS,
         footerNavManual: true,
       },
-    };
+    }, footerContext);
   }
   const deletedBlockIds = normalizeDeletedBlockTombstones(project);
   const pageBlocks = project.pageBlocks && typeof project.pageBlocks === "object"
@@ -310,14 +318,7 @@ function summarizeProjectSaveVerification(project = {}) {
   return {
     pageCount: Array.isArray(project?.pages) ? project.pages.length : 0,
     blockCount: Object.values(project?.pageBlocks || {}).reduce((sum, blocks) => sum + (Array.isArray(blocks) ? blocks.length : 0), 0),
-    contentHash: websiteContentHash({
-      pages: project?.pages || [],
-      pageBlocks: project?.pageBlocks || {},
-      pagesContent: project?.pagesContent || {},
-      chaiData: project?.chaiData || {},
-      globalNavBlock: project?.globalNavBlock || null,
-      globalFooterBlock: project?.globalFooterBlock || null,
-    }),
+    contentHash: websitePersistenceHash(project),
     footerNavigationCount: countFooterNavLinks(project),
     customDomain: normalizeDomain(project?.customDomain || project?.custom_domain || project?.publication?.customDomain || project?.publication?.custom_domain || ""),
     primaryDomain: normalizeDomain(project?.primaryDomain || project?.primary_domain || project?.publication?.primaryDomain || project?.publication?.primary_domain || ""),
@@ -326,9 +327,43 @@ function summarizeProjectSaveVerification(project = {}) {
       pageName: entry.pageName || "",
       blockId: entry.id || "",
       videoUrl: entry.videoSrc || "",
+      videoStoragePath: entry.videoStoragePath || "",
+      videoFileName: entry.videoFileName || "",
+      videoMimeType: entry.videoMimeType || "",
     })),
     imageCount: collectMediaFieldCount(project?.pageBlocks || {}, imageFields),
     marqueeIconCount: collectMediaFieldCount(project?.pageBlocks || {}, new Set(["iconName", "iconUrl"])),
+  };
+}
+
+function videoEntryWasRetained(expected, stored) {
+  if (!stored) return false;
+  if (stored.pageName !== expected.pageName) return false;
+  if (stored.blockId !== expected.blockId) return false;
+  if (stored.videoUrl !== expected.videoUrl) return false;
+  return ["videoStoragePath", "videoFileName", "videoMimeType"].every((field) => {
+    const expectedValue = String(expected?.[field] || "").trim();
+    return !expectedValue || String(stored?.[field] || "").trim() === expectedValue;
+  });
+}
+
+function getVideoRetentionError(verificationIssues = [], fallbackError = "Save failed verification. The database read-back does not match the submitted website project.") {
+  return verificationIssues.some((issue) => issue?.type === "video-asset-not-retained")
+    ? VIDEO_ASSET_RETAINED_SAVE_ERROR
+    : fallbackError;
+}
+
+function compareProjectPersistenceForSave(expectedProject, storedProject, pageName = "") {
+  const expectedHash = websitePersistenceHash(expectedProject);
+  const storedHash = websitePersistenceHash(storedProject);
+  const diffs = expectedHash === storedHash ? [] : diffWebsitePersistence(expectedProject, storedProject);
+  return {
+    ok: expectedHash === storedHash,
+    expectedHash,
+    storedHash,
+    diffs,
+    expected: summarizeWebsitePersistence(expectedProject, pageName),
+    stored: summarizeWebsitePersistence(storedProject, pageName),
   };
 }
 
@@ -481,7 +516,7 @@ async function handler(req, res) {
 
     if (projectId) {
       try {
-        const splitProject = await loadFullSplitWebsiteProject(userId, projectId);
+        const splitProject = await assembleWebsiteForRendering(userId, projectId);
         if (splitProject) {
           return res.status(200).json({ ok: true, project: splitProject });
         }
@@ -677,11 +712,7 @@ async function handler(req, res) {
       const missingReadBackIds = [...payloadBlockIds].filter((id) => !savedBlockIds.has(id));
       const missingVideos = expectedVerification.videos
         .filter((entry) => entry.videoUrl)
-        .filter((entry) => !splitVerification.videos.some((stored) => (
-          stored.pageName === entry.pageName
-          && stored.blockId === entry.blockId
-          && stored.videoUrl === entry.videoUrl
-        )));
+        .filter((entry) => !splitVerification.videos.some((stored) => videoEntryWasRetained(entry, stored)));
       const verificationIssues = [];
       if (expectedVerification.pageCount && splitVerification.pageCount !== expectedVerification.pageCount) {
         verificationIssues.push({ type: "page-count-mismatch", expected: expectedVerification.pageCount, actual: splitVerification.pageCount });
@@ -702,7 +733,16 @@ async function handler(req, res) {
         verificationIssues.push({ type: "marquee-icon-count-decreased", expected: expectedVerification.marqueeIconCount, actual: splitVerification.marqueeIconCount });
       }
       if (missingVideos.length) {
-        verificationIssues.push({ type: "video-url-missing", missingVideos });
+        verificationIssues.push({ type: "video-asset-not-retained", missingVideos });
+      }
+      const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+      if (!persistenceVerification.ok) {
+        verificationIssues.push({
+          type: "structural-hash-mismatch",
+          expectedHash: persistenceVerification.expectedHash,
+          actualHash: persistenceVerification.storedHash,
+          diffs: persistenceVerification.diffs.slice(0, 20),
+        });
       }
 
       console.info("[website-builder save] verified split-storage source of truth", {
@@ -712,6 +752,7 @@ async function handler(req, res) {
         siteOnly,
         expected: expectedVerification,
         splitStorage: splitVerification,
+        persistenceAudit: persistenceVerification,
         extraReadBackIds,
         missingReadBackIds,
         issues: verificationIssues,
@@ -720,7 +761,12 @@ async function handler(req, res) {
       if (verificationIssues.length || (requestedPage && (extraReadBackIds.length || missingReadBackIds.length))) {
         return res.status(409).json({
           ok: false,
-          error: "Save failed verification. The database read-back does not match the submitted website project.",
+          error: getVideoRetentionError(
+            verificationIssues,
+            persistenceVerification.ok
+              ? "Save failed verification. The database read-back does not match the submitted website project."
+              : "Save verification failed. The database did not retain the complete page structure.",
+          ),
           code: "WEBSITE_SAVE_READBACK_MISMATCH",
           projectId,
           pageName: requestedPage || "",
@@ -730,6 +776,7 @@ async function handler(req, res) {
             expected: expectedVerification,
             splitStorage: splitVerification,
             issues: verificationIssues,
+            persistence: persistenceVerification,
           },
         });
       }
@@ -741,6 +788,7 @@ async function handler(req, res) {
           ok: true,
           expected: expectedVerification,
           splitStorage: splitVerification,
+          persistence: persistenceVerification,
         },
       });
     }
@@ -904,11 +952,7 @@ async function handler(req, res) {
     const splitVerification = summarizeProjectSaveVerification(savedProject);
     const missingVideos = expectedVerification.videos
       .filter((entry) => entry.videoUrl)
-      .filter((entry) => !splitVerification.videos.some((stored) => (
-        stored.pageName === entry.pageName
-        && stored.blockId === entry.blockId
-        && stored.videoUrl === entry.videoUrl
-      )));
+      .filter((entry) => !splitVerification.videos.some((stored) => videoEntryWasRetained(entry, stored)));
     const verificationIssues = [];
     if (expectedVerification.pageCount && splitVerification.pageCount !== expectedVerification.pageCount) {
       verificationIssues.push({
@@ -954,8 +998,17 @@ async function handler(req, res) {
     }
     if (missingVideos.length) {
       verificationIssues.push({
-        type: "video-url-missing",
+        type: "video-asset-not-retained",
         missingVideos,
+      });
+    }
+    const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+    if (!persistenceVerification.ok) {
+      verificationIssues.push({
+        type: "structural-hash-mismatch",
+        expectedHash: persistenceVerification.expectedHash,
+        actualHash: persistenceVerification.storedHash,
+        diffs: persistenceVerification.diffs.slice(0, 20),
       });
     }
     const pageSummary = summarizeWebsitePage(savedProject, requestedPage);
@@ -984,6 +1037,7 @@ async function handler(req, res) {
         expected: expectedVerification,
         splitStorage: splitVerification,
         issues: verificationIssues,
+        persistence: persistenceVerification,
       },
       extraReadBackIds,
       missingReadBackIds,
@@ -1002,7 +1056,12 @@ async function handler(req, res) {
       });
       return res.status(409).json({
         ok: false,
-        error: "Save failed verification. The database read-back does not match the submitted website project.",
+        error: getVideoRetentionError(
+          verificationIssues,
+          persistenceVerification.ok
+            ? "Save failed verification. The database read-back does not match the submitted website project."
+            : "Save verification failed. The database did not retain the complete page structure.",
+        ),
         code: "WEBSITE_SAVE_READBACK_MISMATCH",
         projectId,
         pageName: requestedPage || "",
@@ -1010,6 +1069,7 @@ async function handler(req, res) {
           expected: expectedVerification,
           splitStorage: splitVerification,
           issues: verificationIssues,
+          persistence: persistenceVerification,
         },
       });
     }
@@ -1042,6 +1102,7 @@ async function handler(req, res) {
         ok: true,
         expected: expectedVerification,
         splitStorage: splitVerification,
+        persistence: persistenceVerification,
       },
     });
   }

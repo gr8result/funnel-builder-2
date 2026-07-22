@@ -260,9 +260,11 @@ export default async function handler(req, res) {
           ok: true,
           ...signed,
           src: signed.publicUrl,
-          id: `asset-${Date.now()}`,
+          id: `asset:${signed.storagePath}`,
           name: rawName,
           type: mimeType,
+          storage_path: signed.storagePath,
+          size,
         });
       }
 
@@ -327,7 +329,8 @@ export default async function handler(req, res) {
       src: publicUrl,
       publicUrl,
       storagePath,
-      id: `asset-${Date.now()}`,
+      storage_path: storagePath,
+      id: `asset:${storagePath}`,
       name: rawName,
       type: mimeType,
     });

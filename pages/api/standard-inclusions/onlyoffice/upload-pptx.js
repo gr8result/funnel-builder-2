@@ -1,7 +1,7 @@
 import formidable from "formidable";
 import os from "node:os";
 import { readFile, unlink } from "node:fs/promises";
-import { withAuth } from "../../../../lib/withWorkspace";
+import { withWorkspace } from "../../../../lib/withWorkspace";
 import {
   createOnlyOfficeId,
   createStandardInclusionsOnlyOfficeDocument,
@@ -48,10 +48,6 @@ function parseForm(req) {
   });
 }
 
-function firstField(value, fallback = "") {
-  return Array.isArray(value) ? String(value[0] || fallback) : String(value || fallback);
-}
-
 function firstFile(files) {
   const file = files?.file || files?.pptx || files?.presentation;
   return Array.isArray(file) ? file[0] : file;
@@ -82,14 +78,14 @@ async function handler(req, res) {
       return res.status(400).json({ ok: false, error: "PowerPoint upload must be sent as multipart/form-data." });
     }
 
-    const { fields, files } = await parseForm(req);
+    const { files } = await parseForm(req);
     const file = firstFile(files);
     const originalName = file?.originalFilename || file?.newFilename || "";
     if (!file || !/\.pptx$/i.test(originalName)) {
       return res.status(400).json({ ok: false, error: "Upload a .pptx presentation file." });
     }
 
-    const tenantId = firstField(fields.tenantId, req.user.id);
+    const tenantId = req.workspaceId;
     const documentId = createOnlyOfficeId("std-inclusions");
     const storagePath = `${req.user.id}/standard-inclusions/${tenantId}/${documentId}/active/v1.pptx`;
     tempFilePath = file.filepath || "";
@@ -127,4 +123,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAuth(handler);
+export default withWorkspace(handler);

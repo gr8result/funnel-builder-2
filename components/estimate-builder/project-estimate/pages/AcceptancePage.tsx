@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { acceptanceDefaults } from "../defaults/acceptance.defaults";
-import { LuxuryMasterPageHeader, nativeProjectEstimateTextProps, styles } from "../ProjectEstimateShared";
+import { LuxuryMasterPageHeader, nativeProjectEstimateGroupProps, projectEstimateRichTextProps, styles } from "../ProjectEstimateShared";
 import type { EstimatePageProps, ProjectEstimatePageDefinition } from "../ProjectEstimateTypes";
 
 const block = (id: string, type: string, order: number, content: Record<string, any> = {}, design: Record<string, any> = {}) => ({ id: `acceptance-${id}`, type, order, content, design });
@@ -11,10 +11,12 @@ export const acceptancePageDefinition: ProjectEstimatePageDefinition = {
   version: 1,
   defaultContent: acceptanceDefaults,
   defaultBlocks: [
-    block("eyebrow", "text", 0, { text: acceptanceDefaults.eyebrow, editorLabel: "Page label" }),
-    block("heading", "heading", 1, { text: acceptanceDefaults.mainHeading, editorLabel: "Main heading" }),
-    block("intro", "text", 2, { text: acceptanceDefaults.introText, editorLabel: "Intro paragraph" }),
-    block("acknowledgement", "signature", 3, { heading: acceptanceDefaults.acknowledgementHeading, text: acceptanceDefaults.acknowledgementText, signatureLabel: acceptanceDefaults.signatureLabel, dateLabel: acceptanceDefaults.dateLabel, editorLabel: "Acknowledgement section" }),
+    block("signature-section", "group", -1, { editorLabel: "Signature section" }, { autoFit: true }),
+    block("acknowledgement-section", "group", 0, { editorLabel: "Acceptance section" }, { children: ["acceptance-acknowledgement"], autoFit: true }),
+    block("eyebrow", "text", 1, { text: acceptanceDefaults.eyebrow, editorLabel: "Page label" }),
+    block("heading", "heading", 2, { text: acceptanceDefaults.mainHeading, editorLabel: "Main heading" }),
+    block("intro", "text", 3, { text: acceptanceDefaults.introText, editorLabel: "Intro paragraph" }),
+    block("acknowledgement", "signature", 4, { heading: acceptanceDefaults.acknowledgementHeading, text: acceptanceDefaults.acknowledgementText, signatureLabel: acceptanceDefaults.signatureLabel, dateLabel: acceptanceDefaults.dateLabel, editorLabel: "Acknowledgement section" }, { parentGroupId: "acceptance-acknowledgement-section" }),
   ],
   editorFields: [
     { blockId: "acceptance-eyebrow", label: "Page label", type: "text" },
@@ -27,23 +29,25 @@ export const acceptancePageDefinition: ProjectEstimatePageDefinition = {
 };
 
 export function AcceptancePage({ resolvedTheme, accent, logo, builderName, content = acceptanceDefaults, editorBridge = null }: EstimatePageProps) {
-  const eyebrowProps = nativeProjectEstimateTextProps("acceptance-eyebrow", "text", editorBridge);
-  const headingProps = nativeProjectEstimateTextProps("acceptance-heading", "text", editorBridge);
-  const introProps = nativeProjectEstimateTextProps("acceptance-intro", "text", editorBridge);
-  const acknowledgementProps = nativeProjectEstimateTextProps("acceptance-acknowledgement", "text", editorBridge);
+  const eyebrowProps = projectEstimateRichTextProps("acceptance-eyebrow", "text", content.eyebrow, editorBridge);
+  const headingProps = projectEstimateRichTextProps("acceptance-heading", "text", content.mainHeading, editorBridge);
+  const introProps = projectEstimateRichTextProps("acceptance-intro", "text", content.introText, editorBridge);
+  const acknowledgementProps = projectEstimateRichTextProps("acceptance-acknowledgement", "text", content.acknowledgementText || resolvedTheme?.acceptanceNote, editorBridge);
+  const signatureGroupProps = nativeProjectEstimateGroupProps("acceptance-signature-section", editorBridge);
+  const acknowledgementGroupProps = nativeProjectEstimateGroupProps("acceptance-acknowledgement-section", editorBridge);
   return (
     <section className="proposal-builder-page" style={styles.luxuryPage}>
       <LuxuryMasterPageHeader logo={logo} builderName={builderName} title="Acceptance" accent={accent} />
-      <div {...eyebrowProps} style={{ ...styles.luxuryEyebrow, color: accent, ...(eyebrowProps as any).style }}>{content.eyebrow}</div>
-      <h2 {...headingProps} style={{ ...styles.luxurySectionTitle, ...(headingProps as any).style }}>{content.mainHeading}</h2>
-      <p {...introProps} style={{ ...styles.luxuryBodyText, ...(introProps as any).style }}>{content.introText}</p>
-      <div style={styles.luxurySignatureGrid}>
+      <div {...eyebrowProps} style={{ ...styles.luxuryEyebrow, color: accent, ...(eyebrowProps as any).style }} />
+      <h2 {...headingProps} style={{ ...styles.luxurySectionTitle, ...(headingProps as any).style }} />
+      <div {...introProps} style={{ ...styles.luxuryBodyText, ...(introProps as any).style }} />
+      <div {...signatureGroupProps} style={{ ...styles.luxurySignatureGrid, ...(signatureGroupProps as any).style }}>
         <div style={styles.luxurySignatureLine}>{content.signatureLabel}</div>
         <div style={styles.luxurySignatureLine}>{content.dateLabel}</div>
       </div>
-      <div style={{ ...styles.luxuryFeatureBox, borderColor: accent }}>
+      <div {...acknowledgementGroupProps} style={{ ...styles.luxuryFeatureBox, borderColor: accent, ...(acknowledgementGroupProps as any).style }}>
         <h2>{content.acknowledgementHeading}</h2>
-        <p {...acknowledgementProps} style={(acknowledgementProps as any).style}>{content.acknowledgementText || resolvedTheme?.acceptanceNote}</p>
+        <div {...acknowledgementProps} style={(acknowledgementProps as any).style} />
       </div>
     </section>
   );

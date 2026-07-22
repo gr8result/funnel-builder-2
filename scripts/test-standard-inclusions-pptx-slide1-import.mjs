@@ -4,19 +4,23 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import JSZip from "jszip";
 import { JSDOM } from "jsdom";
+import { importPptxAsStandardDocumentPreview } from "../lib/standard-inclusions/powerpointImport.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const sourcePath = path.join(repoRoot, "components", "estimate-builder", "EstimateBuilderWorkbook.js");
-const workbookSource = fs.readFileSync(sourcePath, "utf8");
+const sourcePath = path.join(repoRoot, "lib", "standard-inclusions", "powerpointImport.js");
+const importerSource = fs.readFileSync(sourcePath, "utf8");
 const pptxPath = "C:\\Users\\grant\\Downloads\\Premier Inclusions Schedule.pptx";
 
 function assertSourceIncludes(text, message) {
-  assert.ok(workbookSource.includes(text), message);
+  assert.ok(importerSource.includes(text), message);
 }
 
 assertSourceIncludes("createPptxSlideImportContext", "Importer must create slide/layout/master context");
 assertSourceIncludes("pptxDrawableElementContexts", "Importer must recursively collect grouped elements");
+assertSourceIncludes("pptxSlideToEditableOverlayObjects", "Importer must support hybrid rendered-base editable overlays");
+assertSourceIncludes("pptx-text-activation", "Importer must suppress duplicate text on rendered slide bases");
+assertSourceIncludes("missingFonts", "Importer must report missing fonts");
 assertSourceIncludes("pptxComposeGroupTransform", "Importer must compose group transforms");
 assertSourceIncludes("pptxApplyGroupBox", "Importer must map child coordinates through group transforms");
 assertSourceIncludes("pptxImageFillToDocumentObject", "Importer must turn blipFill shapes into image/logo blocks");
@@ -28,8 +32,11 @@ if (!fs.existsSync(pptxPath)) {
   process.exit(0);
 }
 
+const dom = new JSDOM("");
+globalThis.DOMParser = dom.window.DOMParser;
+
 const zip = await JSZip.loadAsync(fs.readFileSync(pptxPath));
-const parser = new (new JSDOM("").window.DOMParser)();
+const parser = new DOMParser();
 
 function localName(node) {
   return node?.localName || String(node?.nodeName || "").split(":").pop();
@@ -150,10 +157,22 @@ const unresolved = mediaRels.filter(({ relId }) => {
 
 assert.equal(first(await xml("ppt/presentation.xml"), "sldSz")?.getAttribute("cx"), "7556500");
 assert.equal(first(await xml("ppt/presentation.xml"), "sldSz")?.getAttribute("cy"), "10693400");
-assert.ok(rows.filter((row) => row.source === "slide").length >= 50, "Slide 1 source elements must be inspected");
-assert.ok(rows.filter((row) => row.type === "grpSp").length >= 17, "Slide 1 must include heavy grouping");
-assert.ok(rows.filter((row) => row.hasBlipFill).length >= 35, "Slide 1 must include image-filled shapes");
+assert.ok(rows.filter((row) => row.source === "slide").length >= 48, "Slide 1 source elements must be inspected");
+assert.ok(rows.filter((row) => row.type === "grpSp").length >= 15, "Slide 1 must include heavy grouping");
+assert.ok(rows.filter((row) => row.hasBlipFill).length >= 32, "Slide 1 must include image-filled shapes");
 assert.equal(unresolved.length, 0, "Slide 1 media relationships should resolve");
+
+const renderedSlideImages = Array.from({ length: 10 }, (_, index) => `data:image/png;base64,slide-${index + 1}`);
+const imported = await importPptxAsStandardDocumentPreview({
+  name: path.basename(pptxPath),
+  arrayBuffer: async () => fs.readFileSync(pptxPath),
+}, { expectedSlideCount: 10, renderedSlideImages });
+
+assert.equal(imported.pageCount, 10, "Premier PowerPoint must import all 10 slides");
+assert.ok(imported.editableTextCount > 0, "Premier PowerPoint import must produce editable text blocks");
+assert.ok(imported.document.pages.every((page) => page.background?.imageRef), "PowerPoint hybrid import must use rendered slide images as locked visual bases");
+assert.ok(imported.document.pages.some((page) => page.objects.some((object) => object.data?.overlayMode === "pptx-text-activation")), "PowerPoint hybrid import must expose editable text activation overlays");
+assert.ok(imported.document.pages.every((page) => page.objects.length > 0), "Each imported slide must contain native blocks");
 
 console.log(JSON.stringify({
   slide1: {
@@ -163,6 +182,9 @@ console.log(JSON.stringify({
     imageFilledShapes: rows.filter((row) => row.hasBlipFill).length,
     textShapes: rows.filter((row) => row.text).length,
     unresolvedMedia: unresolved.length,
+    importedPages: imported.pageCount,
+    editableTextBlocks: imported.editableTextCount,
+    firstPageObjects: imported.document.pages[0]?.objects?.length || 0,
     layoutPath,
     masterPath,
   },

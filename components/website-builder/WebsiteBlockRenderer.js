@@ -4560,13 +4560,25 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const footerPhoneHref = resolveFooterPhoneHref(props.contactPhone);
       const footerVariant = String(props.footerVariant || "service-grid");
       const contactItems = [props.contactEmail, props.contactPhone, props.contactAddress].filter(Boolean);
+      const explicitLinkGroups = Array.isArray(footerProps.linkGroups)
+        ? footerProps.linkGroups
+          .map((group) => ({
+            ...group,
+            type: group?.type || "",
+            id: group?.id || "",
+            heading: group?.heading || group?.title || group?.label || "Links",
+            links: Array.isArray(group?.links) ? group.links : [],
+          }))
+          .filter((group) => group.type === "australian-company-panel" || group.links.length)
+        : [];
       const derivedLinkGroups = [
         { heading: props.navHeading || "Navigate", links: navLinks },
         { heading: props.extraHeading || "Legal", links: extraLinks },
       ].filter((group) => Array.isArray(group.links) && group.links.length);
-      const linkGroups = derivedLinkGroups
-        .map((group) => ({ heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
-        .filter((group) => group.links.length);
+      const linkGroupsSource = explicitLinkGroups.length ? explicitLinkGroups : derivedLinkGroups;
+      const linkGroups = linkGroupsSource
+        .map((group) => ({ ...group, heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
+        .filter((group) => group.type === "australian-company-panel" || group.links.length);
       const spotlightItems = Array.isArray(props.spotlightItems) ? props.spotlightItems.filter(Boolean) : [];
       const footerPanelBackground = footerVariant === "editorial"
         ? "rgba(255,255,255,0.04)"
@@ -4576,9 +4588,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const footerPanelBorder = `1px solid ${ftBorder}`;
       const topGridColumns = compact
         ? "1fr"
-        : props.showNewsletter !== false
-          ? "1.15fr 0.95fr 1fr 1.05fr"
-          : "1.2fr 1fr 1fr";
+        : `1.15fr ${linkGroups.map(() => "minmax(0, 1fr)").join(" ")}${props.showNewsletter !== false ? " 1.05fr" : ""}`;
       const panelStyle = {
         borderRadius: compact ? 18 : 24,
         padding: compact ? "18px" : "22px",
@@ -4599,6 +4609,22 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         borderRadius: 6,
         padding: editor ? "2px 4px" : 0,
       });
+
+      const patchFooterGroup = (groupIndex, patch) => {
+        if (!editor || typeof onChangeBlock !== "function") return;
+        const currentGroups = Array.isArray(footerProps.linkGroups) ? footerProps.linkGroups : [];
+        const nextGroups = currentGroups.map((group, index) => index === groupIndex ? { ...group, ...patch } : group);
+        onChangeBlock({ ...props, linkGroups: nextGroups });
+      };
+      const openFooterFlagPicker = (groupIndex) => {
+        if (!editor) return;
+        openSharedMediaPicker({
+          onPick: (asset) => {
+            if (!asset?.src) return;
+            patchFooterGroup(groupIndex, { flagImageUrl: asset.src });
+          },
+        });
+      };
 
       return (
         <ScrollReveal as="footer" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor) }}>
@@ -4624,7 +4650,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               ) : null}
 
               <div style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
-                <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
+                <div data-footer-card-role="contact" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
                   <BrandMark brand={props.brand} logoSrc={footerLogoSrc} size={footerMarkSize} background={ftBtnBg} color={ftBtnText} borderColor={ftBorder} borderRadius={10} />
                   {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}
                   {contactItems.length > 0 ? (
@@ -4636,19 +4662,65 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   ) : null}
                 </div>
 
-                {linkGroups.map((group, groupIndex) => (
-                  <div key={`footer-group-${groupIndex}`} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
-                    <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      {group.links.map((link, i) => (
-                        <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
-                      ))}
+                {linkGroups.map((group, groupIndex) => {
+                  if (group.type === "australian-company-panel") {
+                    return (
+                      <div key={`footer-group-${group.id || groupIndex}`} data-footer-card-role="australian-company" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 12, background: `linear-gradient(180deg, ${colorWithAlpha("#f8d15c", 0.08)} 0%, ${footerPanelBackground} 100%)` }}>
+                        {group.flagImageUrl ? (
+                          <img
+                            src={group.flagImageUrl}
+                            alt="Australian flag"
+                            onClick={() => openFooterFlagPicker(groupIndex)}
+                            title={editor ? "Replace Australian flag image" : undefined}
+                            style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 8, border: `1px solid ${colorWithAlpha("#f8d15c", 0.38)}`, boxShadow: "0 10px 22px rgba(0,0,0,0.22)" }}
+                          />
+                        ) : null}
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => patchFooterGroup(groupIndex, { heading: e.currentTarget.textContent })}
+                          style={inlineStyle({ fontSize: 16, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colorWithAlpha("#f8d15c", 0.96) })}
+                        >
+                          {group.heading || "Proudly Australian"}
+                        </span>
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => patchFooterGroup(groupIndex, { body: e.currentTarget.textContent })}
+                          style={inlineStyle({ fontSize: 16, color: ftText, lineHeight: 1.58 })}
+                        >
+                          {group.body || ""}
+                        </span>
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            const text = e.currentTarget.textContent || "";
+                            const [location, timezone] = text.split(/\s+—\s+|\s+-\s+/);
+                            patchFooterGroup(groupIndex, { location: location || "", timezone: timezone || group.timezone || "" });
+                          }}
+                          style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.45, fontWeight: 600 })}
+                        >
+                          {`${group.location || "Sunshine Coast, Queensland"} — ${group.timezone || "UTC+10"}`}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={`footer-group-${groupIndex}`} data-footer-card-role={group.role || "links"} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {group.links.map((link, i) => (
+                          <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {props.showNewsletter !== false ? (
-                  <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
+                  <div data-footer-card-role="newsletter" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
                     <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 600, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
                     {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
                     <FooterNewsletterSignupForm editor={editor} props={props} patchFt={patchFt} footerPanelBorder={footerPanelBorder} ftLink={ftLink} ftBtnBg={ftBtnBg} ftBtnText={ftBtnText} siteId={siteId} />

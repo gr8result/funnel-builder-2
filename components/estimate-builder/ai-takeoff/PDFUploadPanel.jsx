@@ -12,11 +12,6 @@ import {
   DEFAULT_PDF_TARGET_DPI,
   rotateRasterImageDataUrl,
 } from "./pdfPlanRendering";
-import { renderPdfPageToRaster } from "../takeoff-engine/import/pdfToRaster.js";
-import { analyzeRasterOrientation, applyOrientationAnalysisToRaster } from "../takeoff-engine/analysis/imageOrientationAnalysis.js";
-import {
-  rotateRasterImageDataUrl as rotateEngineRasterImageDataUrl,
-} from "../takeoff-engine/import/imageNormalizer.js";
 
 const ROTATION_RESET_WARNING = "This page was rotated. Scale and measurements were reset because the coordinate system changed.";
 
@@ -63,38 +58,26 @@ function renderImageToDataUrl(file) {
 
 async function renderImageFileWithEngineAnalysis(file) {
   const rendered = await renderImageToDataUrl(file);
-  const orientationAnalysis = await analyzeRasterOrientation({
-    imageDataUrl: rendered.dataUrl,
-    imageWidth: rendered.width,
-    imageHeight: rendered.height,
-  });
-  const rotated = await applyOrientationAnalysisToRaster({
-    imageDataUrl: rendered.dataUrl,
-    imageWidth: rendered.width,
-    imageHeight: rendered.height,
-    orientationAnalysis,
-    rotateRaster: rotateEngineRasterImageDataUrl,
-  });
-  const selectedRotation = normalizePlanRotation(rotated.rotation ?? rotated.appliedRotation ?? orientationAnalysis.selectedRotation);
 
   return {
-    imageDataUrl: rotated.imageDataUrl || rotated.dataUrl || rendered.dataUrl,
-    imageWidth: rotated.imageWidth || rotated.width || rendered.width,
-    imageHeight: rotated.imageHeight || rotated.height || rendered.height,
+    imageDataUrl: rendered.dataUrl,
+    imageWidth: rendered.width,
+    imageHeight: rendered.height,
     originalWidth: rendered.width,
     originalHeight: rendered.height,
     metadataRotation: 0,
-    detectedRotation: selectedRotation,
+    detectedRotation: 0,
     userRotation: 0,
-    finalRotation: selectedRotation,
+    finalRotation: 0,
+    rotation: 0,
     renderScale: 1,
     dpi: 300,
     format: "PNG",
     sourcePdfPageNumber: 1,
-    orientationMethod: "raster-orientation-analysis",
-    orientationConfidence: orientationAnalysis.confidence,
-    orientationScores: orientationAnalysis.scores,
-    orientationAnalysis,
+    orientationMethod: "manual-unrotated",
+    orientationConfidence: "manual",
+    orientationScores: [],
+    orientationAnalysis: null,
     detectedScaleText: "",
   };
 }
@@ -109,7 +92,7 @@ function engineRasterToLegacyPage(rendered, file, pageNum, originalFileUrl) {
   const metadataRotation = normalizePlanRotation(orientation.metadataRotation || rendered.metadataRotation || 0);
   const detectedRotation = normalizePlanRotation(orientation.detectedRotation || rendered.detectedRotation || 0);
   const userRotation = normalizePlanRotation(orientation.userRotation || rendered.userRotation || 0);
-  const finalRotation = normalizePlanRotation(orientation.finalRotation ?? rendered.finalRotation ?? getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation }));
+  const finalRotation = normalizePlanRotation(orientation.rotation ?? rendered.rotation ?? orientation.finalRotation ?? rendered.finalRotation ?? getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation }));
 
   pg.sourceType = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
   pg.sourceFileName = file.name;
@@ -124,6 +107,7 @@ function engineRasterToLegacyPage(rendered, file, pageNum, originalFileUrl) {
   pg.detectedRotation = detectedRotation;
   pg.userRotation = userRotation;
   pg.finalRotation = finalRotation;
+  pg.rotation = finalRotation;
   pg.planRotation = finalRotation;
   pg.renderScale = rendered.renderScale || (DEFAULT_PDF_TARGET_DPI / 72);
   pg.dpi = rendered.dpi || DEFAULT_PDF_TARGET_DPI;
@@ -164,24 +148,31 @@ function isPdfPage(page) {
 }
 
 async function renderPageWithPlanRotation(page, rotationDegrees) {
-  const userRotation = normalizePlanRotation(rotationDegrees);
+  const rotation = normalizePlanRotation(rotationDegrees);
   const rotationState = {
     metadataRotation: page.metadataRotation || 0,
     detectedRotation: page.detectedRotation || 0,
-    userRotation,
+    userRotation: rotation,
+    rotation,
     orientationMethod: page.orientationMethod,
     orientationConfidence: page.orientationConfidence,
     orientationScores: page.orientationScores,
+    orientationConfirmed: false,
   };
-  const finalRotation = getFinalPlanRotation(rotationState);
+  const finalRotation = rotation;
   if (!isPdfPage(page)) {
     return {
       ...page,
-      userRotation,
+      userRotation: rotation,
       finalRotation,
+      rotation,
       planRotation: finalRotation,
+      orientationMethod: "manual",
+      orientationConfidence: "manual",
+      orientationConfirmed: false,
       scale: null,
       overlays: [],
+      viewState: null,
       rotationResetWarning: ROTATION_RESET_WARNING,
     };
   }
@@ -196,26 +187,34 @@ async function renderPageWithPlanRotation(page, rotationDegrees) {
     originalHeight: rendered.originalHeight,
     metadataRotation: rendered.metadataRotation,
     detectedRotation: rendered.detectedRotation,
-    userRotation: rendered.userRotation,
-    finalRotation: rendered.finalRotation,
+    userRotation: rendered.rotation,
+    finalRotation: rendered.rotation,
+    rotation: rendered.rotation,
     renderScale: rendered.renderScale,
     dpi: rendered.dpi,
-    orientationMethod: rendered.orientationMethod,
-    orientationConfidence: rendered.orientationConfidence,
+    orientationMethod: "manual",
+    orientationConfidence: "manual",
     orientationConfirmed: false,
     orientationScores: rendered.orientationScores,
     normalizedWidth: rendered.normalizedWidth,
     normalizedHeight: rendered.normalizedHeight,
     imageWidth: rendered.imageWidth,
     imageHeight: rendered.imageHeight,
+    viewportWidth: rendered.viewportWidth,
+    viewportHeight: rendered.viewportHeight,
+    canvasPixelWidth: rendered.canvasPixelWidth,
+    canvasPixelHeight: rendered.canvasPixelHeight,
+    canvasCssWidth: rendered.canvasCssWidth,
+    canvasCssHeight: rendered.canvasCssHeight,
     format: rendered.format,
     sourcePdfPageNumber: rendered.sourcePdfPageNumber,
     detectedScaleText: rendered.detectedScaleText,
     normalisedImageData: rendered.dataUrl,
     normalisedImageUrl: rendered.dataUrl,
-    planRotation: rendered.finalRotation,
+    planRotation: rendered.rotation,
     scale: null,
     overlays: [],
+    viewState: null,
     rotationResetWarning: ROTATION_RESET_WARNING,
   };
 }
@@ -243,8 +242,9 @@ function createPlanRecord(file, firstPage, index, jobId = "") {
     metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
     detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
     userRotation: normalizePlanRotation(firstPage?.userRotation || 0),
-    finalRotation: normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
-    planRotation: normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
+    finalRotation: normalizePlanRotation(firstPage?.rotation ?? firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
+    rotation: normalizePlanRotation(firstPage?.rotation ?? firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
+    planRotation: normalizePlanRotation(firstPage?.rotation ?? firstPage?.finalRotation ?? firstPage?.planRotation ?? 0),
     imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || 0,
     imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || 0,
     renderScale: firstPage?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
@@ -293,6 +293,7 @@ export default function PDFUploadPanel({
   onTakeoffDataChange,
   onSelectPage,
   selectedPageId,
+  onRotateSelectedPage,
 }) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
@@ -328,21 +329,23 @@ export default function PDFUploadPanel({
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum += 1) {
-            setProgress(`Detecting orientation for ${file.name} page ${pageNum} of ${pdfDoc.numPages}...`);
-            const pdfPage = await pdfDoc.getPage(pageNum);
-            const rendered = await renderPdfPageToRaster(pdfPage, {
-              pageNumber: pageNum,
-              sourceFileName: file.name,
-              dpi: DEFAULT_PDF_TARGET_DPI,
-              onProgress: (update) => {
-                if (update?.message) setProgress(update.message);
-              },
-            });
+            setProgress(`Rendering ${file.name} page ${pageNum} of ${pdfDoc.numPages}...`);
+            const rendered = await renderPdfDataUrlPage(originalFileUrl, pageNum, {
+              metadataRotation: 0,
+              detectedRotation: 0,
+              userRotation: 0,
+              rotation: 0,
+              orientationMethod: "manual-unrotated",
+              orientationConfidence: "manual",
+              orientationConfirmed: false,
+              orientationScores: [],
+              detectedScaleText: "",
+            }, DEFAULT_PDF_TARGET_DPI);
             const pg = engineRasterToLegacyPage(rendered, file, pageNum, originalFileUrl);
             createdPages.push(pg);
           }
         } else {
-          setProgress(`Analysing orientation for ${file.name}...`);
+          setProgress(`Rendering ${file.name}...`);
           const rendered = await renderImageFileWithEngineAnalysis(file);
           const pg = engineRasterToLegacyPage(rendered, file, 1, originalFileUrl);
           createdPages.push(pg);
@@ -369,8 +372,9 @@ export default function PDFUploadPanel({
         plan.normalisedImageUrl = createdPages[0]?.normalisedImageUrl || createdPages[0]?.imageDataUrl || "";
         plan.metadataRotation = normalizePlanRotation(createdPages[0]?.metadataRotation || 0);
         plan.detectedRotation = normalizePlanRotation(createdPages[0]?.detectedRotation || 0);
-        plan.userRotation = normalizePlanRotation(createdPages[0]?.userRotation || 0);
-        plan.finalRotation = normalizePlanRotation(createdPages[0]?.finalRotation ?? createdPages[0]?.planRotation ?? 0);
+        plan.userRotation = normalizePlanRotation(createdPages[0]?.rotation ?? createdPages[0]?.userRotation ?? 0);
+        plan.finalRotation = normalizePlanRotation(createdPages[0]?.rotation ?? createdPages[0]?.finalRotation ?? createdPages[0]?.planRotation ?? 0);
+        plan.rotation = plan.finalRotation;
         plan.planRotation = plan.finalRotation;
         plan.renderScale = createdPages[0]?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72);
         plan.dpi = createdPages[0]?.dpi || DEFAULT_PDF_TARGET_DPI;
@@ -446,11 +450,26 @@ export default function PDFUploadPanel({
   const rotatePlan = useCallback(async (planId, rotationDegrees) => {
     const degrees = normalizePlanRotation(rotationDegrees);
     if (!degrees) return;
+    const clickPage = pages.find((page) => page.planId === planId && (!selectedPageId || page.id === selectedPageId))
+      || pages.find((page) => page.planId === planId);
+    const beforeRotation = normalizePlanRotation(clickPage?.rotation ?? clickPage?.finalRotation ?? clickPage?.planRotation ?? 0);
+    const afterRotation = normalizePlanRotation(beforeRotation + degrees);
+    console.log("MANUAL ROTATE CLICKED", {
+      documentId: planId,
+      pageId: clickPage?.id || "",
+      before: beforeRotation,
+      requested: `+${degrees}`,
+      after: afterRotation,
+      orientationConfirmed: Boolean(clickPage?.orientationConfirmed),
+    });
     setProgress("Rotating plan...");
     try {
       const rotatedPages = await Promise.all(pages.map(async (page) => {
         if (page.planId !== planId) return page;
-        const nextRotation = normalizePlanRotation((page.userRotation || 0) + degrees);
+        const authoritativeRotation = normalizePlanRotation((page.rotation ?? page.finalRotation ?? page.planRotation ?? 0) + degrees);
+        if (isPdfPage(page)) {
+          return renderPageWithPlanRotation(page, authoritativeRotation);
+        }
         if (page.imageDataUrl) {
           const rotated = await rotateRasterImageDataUrl(page.imageDataUrl, degrees);
           return {
@@ -462,27 +481,30 @@ export default function PDFUploadPanel({
             normalizedHeight: rotated.height,
             imageWidth: rotated.width,
             imageHeight: rotated.height,
-            userRotation: nextRotation,
-            finalRotation: getFinalPlanRotation({ metadataRotation: page.metadataRotation || 0, detectedRotation: page.detectedRotation || 0, userRotation: nextRotation }),
-            planRotation: getFinalPlanRotation({ metadataRotation: page.metadataRotation || 0, detectedRotation: page.detectedRotation || 0, userRotation: nextRotation }),
+            userRotation: authoritativeRotation,
+            finalRotation: authoritativeRotation,
+            rotation: authoritativeRotation,
+            planRotation: authoritativeRotation,
             orientationMethod: "manual",
             orientationConfidence: "manual",
             orientationConfirmed: false,
             scale: null,
             overlays: [],
+            viewState: null,
             rotationResetWarning: ROTATION_RESET_WARNING,
           };
         }
-        return renderPageWithPlanRotation(page, nextRotation);
+        return renderPageWithPlanRotation(page, authoritativeRotation);
       }));
       const firstPage = rotatedPages.find((page) => page.planId === planId);
-      const planRotation = normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
+      const planRotation = normalizePlanRotation(firstPage?.rotation ?? firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
       const nextPlans = plans.map((plan) => plan.id === planId ? {
         ...plan,
         metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
         detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
-        userRotation: normalizePlanRotation(firstPage?.userRotation || 0),
+        userRotation: planRotation,
         finalRotation: planRotation,
+        rotation: planRotation,
         planRotation,
         imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || plan.imageWidth,
         imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || plan.imageHeight,
@@ -492,7 +514,7 @@ export default function PDFUploadPanel({
         sourcePdfPageNumber: firstPage?.sourcePdfPageNumber || plan.sourcePdfPageNumber,
         orientationMethod: firstPage?.orientationMethod || plan.orientationMethod,
         orientationConfidence: firstPage?.orientationConfidence || plan.orientationConfidence,
-        orientationConfirmed: Boolean(firstPage?.orientationConfirmed),
+        orientationConfirmed: false,
         fileUrl: firstPage?.imageDataUrl || plan.fileUrl,
         normalisedImageData: firstPage?.normalisedImageData || firstPage?.imageDataUrl || plan.normalisedImageData,
         normalisedImageUrl: firstPage?.normalisedImageUrl || firstPage?.imageDataUrl || plan.normalisedImageUrl,
@@ -515,7 +537,7 @@ export default function PDFUploadPanel({
     } finally {
       setProgress("");
     }
-  }, [onPagesChange, onPlansChange, pages, plans]);
+  }, [onPagesChange, onPlansChange, pages, plans, selectedPageId]);
 
   const resetPlanRotation = useCallback(async (planId) => {
     setProgress("Resetting plan rotation...");
@@ -524,13 +546,14 @@ export default function PDFUploadPanel({
         page.planId === planId ? renderPageWithPlanRotation(page, 0) : page
       )));
       const firstPage = resetPages.find((page) => page.planId === planId);
-      const finalRotation = normalizePlanRotation(firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
+      const finalRotation = normalizePlanRotation(firstPage?.rotation ?? firstPage?.finalRotation ?? firstPage?.planRotation ?? 0);
       const nextPlans = plans.map((plan) => plan.id === planId ? {
         ...plan,
         metadataRotation: normalizePlanRotation(firstPage?.metadataRotation || 0),
         detectedRotation: normalizePlanRotation(firstPage?.detectedRotation || 0),
         userRotation: 0,
         finalRotation,
+        rotation: finalRotation,
         planRotation: finalRotation,
         imageWidth: firstPage?.imageWidth || firstPage?.normalizedWidth || plan.imageWidth,
         imageHeight: firstPage?.imageHeight || firstPage?.normalizedHeight || plan.imageHeight,
@@ -540,6 +563,7 @@ export default function PDFUploadPanel({
         sourcePdfPageNumber: firstPage?.sourcePdfPageNumber || plan.sourcePdfPageNumber,
         orientationMethod: firstPage?.orientationMethod || plan.orientationMethod,
         orientationConfidence: firstPage?.orientationConfidence || plan.orientationConfidence,
+        orientationConfirmed: false,
         fileUrl: firstPage?.imageDataUrl || plan.fileUrl,
         normalisedImageData: firstPage?.normalisedImageData || firstPage?.imageDataUrl || plan.normalisedImageData,
         normalisedImageUrl: firstPage?.normalisedImageUrl || firstPage?.imageDataUrl || plan.normalisedImageUrl,
@@ -626,9 +650,9 @@ export default function PDFUploadPanel({
               onUpdate={(patch) => updatePlan(plan.id, patch)}
               onPreview={() => selectFirstPlanPage(plan.id)}
               onDelete={() => deletePlan(plan.id)}
-              onRotateLeft={() => rotatePlan(plan.id, 270)}
-              onRotateRight={() => rotatePlan(plan.id, 90)}
-              onRotate180={() => rotatePlan(plan.id, 180)}
+              onRotateLeft={() => onRotateSelectedPage ? onRotateSelectedPage(270, plan.id) : rotatePlan(plan.id, 270)}
+              onRotateRight={() => onRotateSelectedPage ? onRotateSelectedPage(90, plan.id) : rotatePlan(plan.id, 90)}
+              onRotate180={() => onRotateSelectedPage ? onRotateSelectedPage(180, plan.id) : rotatePlan(plan.id, 180)}
               onResetRotation={() => resetPlanRotation(plan.id)}
               onConfirmOrientation={() => confirmPlanOrientation(plan.id)}
               onPageSelect={onSelectPage}
@@ -690,7 +714,7 @@ function PlanCard({ plan, index, pages, selectedPageId, onUpdate, onPreview, onD
       </label>
       <div style={S.planActions}>
         <button type="button" style={S.previewButton} onClick={onPreview}>Preview</button>
-        <button type="button" style={S.quickRotateButton} onClick={onRotateRight}>Rotate 90°</button>
+        <button type="button" style={S.quickRotateButton} onClick={onRotateRight}>ROTATE TEST 001</button>
         <button type="button" style={S.quickRotateButton} onClick={onRotate180}>Rotate 180°</button>
         <button type="button" style={S.quickRotateButton} onClick={onRotateLeft}>Rotate 270°</button>
         <button type="button" style={S.confirmOrientationButton} onClick={onConfirmOrientation}>Set as correct orientation</button>

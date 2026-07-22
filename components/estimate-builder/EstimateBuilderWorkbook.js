@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import {
   BarChart3,
@@ -22,6 +23,7 @@ import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEsti
 import { useWorkspace } from "../../hooks/useWorkspace";
 import { useJobFile } from "../../hooks/useJobFile";
 import { supabase } from "../../utils/supabase-client";
+import { isDeveloperEmail } from "../../lib/adminUsers";
 import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
@@ -34,8 +36,9 @@ import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
-import TakeoffModuleLoader from "./ai-takeoff/TakeoffModuleLoader";
+import AIPlanTakeoffPage from "./ai-takeoff/AIPlanTakeoffPage";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
+import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
@@ -48,6 +51,11 @@ import {
 } from "./project-estimate/ProjectEstimateRegistry";
 
 import { appendProjectEstimatePageRevision, projectEstimateRevisionsForPage } from "./project-estimate/storage/projectEstimateVersionHistory";
+import { useProjectEstimateInstanceSync } from "./project-estimate/persistence/useProjectEstimateInstanceSync";
+import * as ProjectEstimateApi from "./project-estimate/persistence/ProjectEstimateApiClient";
+import ProjectEstimateTemplateManager from "./project-estimate/components/TemplateManager";
+import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/VersionHistoryPanel";
+import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/pbPropertiesPanels";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
 
@@ -101,11 +109,6 @@ const PremierInclusionsCanvasEditor = dynamic(() => import("./standard-inclusion
 const DocumentPageBuilder = dynamic(() => import("../document-engine/editor/DocumentPageBuilder"), {
   ssr: false,
   loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading document page builder...</div>,
-});
-
-const WebsiteBuilderPageCanvas = dynamic(() => import("../website-builder/PageBuilderCanvas"), {
-  ssr: false,
-  loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading Website Builder editor...</div>,
 });
 
 const CommercialQuoteApprovalsPage = dynamic(() => import("../../pages/modules/builders/quote-approvals"), {
@@ -796,7 +799,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
           {sheet.workbook.page === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
           {sheet.workbook.page === "aiPlanTakeoff" && (
-            <TakeoffModuleLoader sheet={sheet} useNewTakeoffEngine={USE_NEW_TAKEOFF_ENGINE} />
+            <AIPlanTakeoffPage sheet={sheet} />
           )}
           {sheet.workbook.page === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
@@ -2382,7 +2385,6 @@ export function ClientPageSheet({ sheet }) {
   const [documentLibraryOpen, setDocumentLibraryOpen] = useState(null);
   const [documentLibraryRows, setDocumentLibraryRows] = useState([]);
   const [documentLibraryLoading, setDocumentLibraryLoading] = useState(false);
-  const dragStateRef = useRef(null);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   const saveTimerRef = useRef(null);
@@ -2413,6 +2415,45 @@ export function ClientPageSheet({ sheet }) {
   const estimateDocuments = builder.importedDocuments || {};
   const inclusionsDocument = estimateDocuments.inclusions || null;
   const pricedPlans = estimateDocuments.pricedPlans || { files: [], pages: [] };
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [baseTemplateConfirmOpen, setBaseTemplateConfirmOpen] = useState(false);
+  const [isPlatformAdminUser, setIsPlatformAdminUser] = useState(false);
+  const estimateProjectId = proposalProjectId(sheet)
+    || sheet.workbook?.id
+    || sheet.workbook?.jobId
+    || sheet.workbook?.openedFileName
+    || "";
+  const instanceSync = useProjectEstimateInstanceSync({
+    workspaceId,
+    projectId: estimateProjectId,
+    builder,
+    setBuilder,
+    dirtyRef,
+    readonly,
+    hydratePage: (pageShell) => hydrateProjectEstimatePageFromApi(pageShell, client, sheet),
+  });
+
+  useEffect(() => {
+    if (instanceSync.status === "saving") setStatusMessage("Saving...");
+    else if (instanceSync.status === "saved") setStatusMessage("Saved");
+    else if (instanceSync.status === "save_failed") setStatusMessage(instanceSync.errorMessage || "Save failed");
+    else if (instanceSync.status === "conflict") setStatusMessage(instanceSync.errorMessage || "Save conflict — reload to see the latest version.");
+  }, [instanceSync.status, instanceSync.errorMessage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser()
+      .then(({ data }) => {
+        if (!cancelled) setIsPlatformAdminUser(isDeveloperEmail(data?.user?.email || ""));
+      })
+      .catch(() => {
+        if (!cancelled) setIsPlatformAdminUser(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     draftRef.current = builder;
@@ -2439,6 +2480,11 @@ export function ClientPageSheet({ sheet }) {
       setSelectedBlockId("");
     }
   }, [activePage, selectedBlockId]);
+
+  useEffect(() => {
+    setEditingBlockId("");
+    setAddElementOpen(false);
+  }, [activePage?.id, pageEditMode]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -2471,33 +2517,6 @@ export function ClientPageSheet({ sheet }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [pageEditMode, readonly, selectedBlock?.id, selectedBlock?.design?.frame, editingBlockId, activePage?.id]);
 
-  useEffect(() => {
-    function handlePointerMove(event) {
-      const drag = dragStateRef.current;
-      if (!drag || readonly) return;
-      event.preventDefault();
-      const dx = event.clientX - drag.startX;
-      const dy = event.clientY - drag.startY;
-      const nextFrame = drag.kind === "resize"
-        ? resizeProposalFrame(drag.startFrame, drag.handle, dx, dy)
-        : moveProposalFrame(drag.startFrame, dx, dy);
-      updateBlockDesign(drag.blockId, "frame", nextFrame);
-    }
-    function handlePointerUp() {
-      dragStateRef.current = null;
-    }
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("mousemove", handlePointerMove);
-    window.addEventListener("mouseup", handlePointerUp);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("mousemove", handlePointerMove);
-      window.removeEventListener("mouseup", handlePointerUp);
-    };
-  }, [readonly, activePage?.id, activePage?.blocks]);
-
   const persistBuilder = async (nextBuilder, { message = "Proposal autosaved.", fullWorkbookSaveTriggered = true } = {}) => {
     if (readonly) return;
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -2513,6 +2532,7 @@ export function ClientPageSheet({ sheet }) {
       await Promise.resolve(sheet.saveDraft?.(nextWorkbook));
     }
     dirtyRef.current = false;
+    instanceSync.scheduleSave(nextBuilder);
     setStatusMessage(message);
     proposalPerfLog("save time", {
       ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
@@ -2536,7 +2556,7 @@ export function ClientPageSheet({ sheet }) {
   const saveBuilder = (nextBuilder, message = "Proposal updated.") => {
     setBuilder(nextBuilder);
     draftRef.current = nextBuilder;
-    setStatusMessage("Editing...");
+    setStatusMessage("Unsaved changes");
     scheduleBuilderSave(nextBuilder, message);
   };
 
@@ -2618,7 +2638,10 @@ export function ClientPageSheet({ sheet }) {
 
   const updateBlockContent = (blockId, key, value) => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
-    const block = activePage.blocks.find((item) => item.id === blockId);
+    const latestPage = (draftRef.current || builder).pages?.find((page) => page.id === activePage?.id) || activePage;
+    const pageType = latestPage?.page_type || latestPage?.id || "";
+    const fallbackBlock = defaultProjectEstimateBlocks(pageType).find((item) => item.id === blockId) || null;
+    const block = (latestPage?.blocks || []).find((item) => item.id === blockId) || fallbackBlock;
     if (block?.design?.locked) return;
     pushProjectEstimateUndo(blockId);
     const objectUpdatedAt = new Date().toISOString();
@@ -2635,9 +2658,11 @@ export function ClientPageSheet({ sheet }) {
       }),
       pages: current.pages.map((page) => page.id === activePage.id ? {
         ...page,
-        blocks: page.blocks.map((item) => item.id === blockId ? { ...item, objectUpdatedAt, objectRevision: Number(item.objectRevision || 0) + 1, content: { ...(item.content || {}), [key]: value } } : item),
+        blocks: [
+          ...((page.blocks || []).some((item) => item.id === blockId) ? (page.blocks || []) : [...(page.blocks || []), fallbackBlock].filter(Boolean)),
+        ].map((item) => item.id === blockId ? { ...item, objectUpdatedAt, objectRevision: Number(item.objectRevision || 0) + 1, content: { ...(item.content || {}), [key]: value } } : item),
       } : page),
-    }), "Page field saved.");
+    }), "Saved");
     proposalPerfLog("text edit latency", {
       ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
       blockId,
@@ -2647,23 +2672,32 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const updateBlockDesign = (blockId, key, value) => {
-    const block = activePage.blocks.find((item) => item.id === blockId);
+    const latestPage = (draftRef.current || builder).pages?.find((page) => page.id === activePage?.id) || activePage;
+    const pageType = latestPage?.page_type || latestPage?.id || "";
+    const fallbackBlock = defaultProjectEstimateBlocks(pageType).find((item) => item.id === blockId) || null;
+    const block = (latestPage?.blocks || []).find((item) => item.id === blockId) || fallbackBlock;
     if (block?.design?.locked && key !== "locked" && key !== "hidden") return;
-    if (key !== "frame" || dragStateRef.current?.blockId !== blockId) pushProjectEstimateUndo(blockId);
+    pushProjectEstimateUndo(blockId);
     const visualKeys = new Set(["fontFamily", "fontSize", "fontWeight", "fontStyle", "textDecoration", "color", "backgroundColor", "textAlign", "lineHeight", "letterSpacing", "padding", "borderRadius", "opacity", "objectFit", "zoom", "objectPositionX", "objectPositionY"]);
-    const shouldFreezeFrame = visualKeys.has(key) && !block?.design?.frameEdited;
+    const designUpdates = key && typeof key === "object" ? key : { [key]: value };
+    const shouldFreezeFrame = Object.keys(designUpdates).some((item) => visualKeys.has(item)) && !block?.design?.frameEdited;
     const nextDesign = {
       ...(block?.design || {}),
       ...(shouldFreezeFrame ? { frame: normaliseProposalFrame(block?.design?.frame, block), frameEdited: true } : {}),
-      [key]: value,
-      ...(key === "frame" ? { frameEdited: true } : {}),
-      ...(visualKeys.has(key) ? { styleEdited: true } : {}),
+      ...designUpdates,
+      ...(Object.prototype.hasOwnProperty.call(designUpdates, "frame") ? { frameEdited: true } : {}),
+      ...(Object.keys(designUpdates).some((item) => visualKeys.has(item)) ? { styleEdited: true } : {}),
     };
+    Object.entries(designUpdates).forEach(([designKey, designValue]) => {
+      if (designValue === undefined) delete nextDesign[designKey];
+    });
     updateBuilder((current) => ({
       ...current,
       pages: current.pages.map((page) => page.id === activePage.id ? {
         ...page,
-        blocks: page.blocks.map((item) => item.id === blockId ? { ...item, objectUpdatedAt: new Date().toISOString(), objectRevision: Number(item.objectRevision || 0) + 1, design: nextDesign } : item),
+        blocks: [
+          ...((page.blocks || []).some((item) => item.id === blockId) ? (page.blocks || []) : [...(page.blocks || []), fallbackBlock].filter(Boolean)),
+        ].map((item) => item.id === blockId ? { ...item, objectUpdatedAt: new Date().toISOString(), objectRevision: Number(item.objectRevision || 0) + 1, design: nextDesign } : item),
       } : page),
     }), "Block saved.");
   };
@@ -2693,10 +2727,6 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const addBlock = (type) => {
-    if (type === "blank_page") {
-      addProjectEstimatePage();
-      return;
-    }
     const nextBlock = {
       ...createProposalVisualElement(type, linkedFields, activePage?.blocks?.length || 0),
       pageType: activePage?.page_type || activePage?.id || "",
@@ -2890,8 +2920,8 @@ export function ClientPageSheet({ sheet }) {
         updateTheme({ [target]: url });
       } else if (purpose === "background") {
         updatePage(activePage.id, { design: { ...activePage.design, backgroundImageUrl: url } });
-      } else if (selectedBlock) {
-        updateBlockContent(selectedBlock.id, purpose === "logo" ? "logoUrl" : "imageUrl", url);
+      } else if (selectedBlock || selectedBlockId) {
+        updateBlockContent(selectedBlock?.id || selectedBlockId, purpose === "logo" ? "logoUrl" : "imageUrl", url);
       }
       proposalPerfLog("image import", {
         ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
@@ -2906,25 +2936,12 @@ export function ClientPageSheet({ sheet }) {
     }
   };
 
-  const prepareWebsiteBuilderEstimateImage = async (_index, _key, file) => {
-    const imageLike = file?.type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(String(file?.name || ""));
-    if (!file || !imageLike) return null;
-    const url = await prepareProposalImageDataUrl(file, { maxDimension: 1800, quality: 0.84 });
-    return {
-      id: proposalBuilderId("asset"),
-      src: url,
-      url,
-      name: file.name || "Uploaded image",
-      type: file.type || "image",
-    };
-  };
-
-  const saveTemplate = async () => {
+  const saveCurrentEstimateChanges = async (message = "Estimate changes saved.") => {
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    setStatusMessage("Saving template...");
+    setStatusMessage("Saving estimate changes...");
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     const nextBuilder = { ...(draftRef.current || builder), updatedAt: new Date().toISOString() };
     const nextWorkbook = {
@@ -2937,12 +2954,160 @@ export function ClientPageSheet({ sheet }) {
     sheet.updateClientPage("proposalBuilder", nextBuilder);
     dirtyRef.current = false;
     await Promise.resolve(sheet.saveDraft?.(nextWorkbook));
-    setStatusMessage("Template saved.");
+    await instanceSync.persistNow(nextBuilder);
+    setStatusMessage(message);
     proposalPerfLog("save time", {
       ms: Math.round(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt) * 10) / 10,
       explicit: true,
       fullWorkbookSaveTriggered: true,
     });
+  };
+
+  // Applies a freshly-loaded/reset set of API pages onto the in-memory builder,
+  // hydrating any page whose blocks are null (meaning "use compiled defaults")
+  // via defaultQuoteProposalPage, then persists locally (not to the instance —
+  // the instance is already the source of the pages we just applied).
+  const applyApiPagesToBuilder = (apiPages, message) => {
+    const hydratedPages = (apiPages || []).map((apiPage) => (
+      hydrateProjectEstimatePageFromApi(ProjectEstimateApi.apiPageToBuilderPageShell(apiPage), client, sheet)
+    ));
+    const nextBuilder = { ...(draftRef.current || builder), pages: hydratedPages, updatedAt: new Date().toISOString() };
+    setBuilder(nextBuilder);
+    draftRef.current = nextBuilder;
+    dirtyRef.current = false;
+    sheet.updateClientPage("proposalBuilder", nextBuilder);
+    setSelectedBlockId("");
+    setEditingBlockId("");
+    setStatusMessage(message);
+  };
+
+  const updateMyTemplate = async () => {
+    const templateId = instanceSync.templateId;
+    if (!workspaceId || !templateId) {
+      setStatusMessage("Save this estimate at least once before updating a template.");
+      return;
+    }
+    try {
+      const template = await ProjectEstimateApi.getTemplate(workspaceId, templateId);
+      if (template.isSystemDefault) {
+        await saveAsNewSubscriberTemplate({ promptMessage: "The system default is protected — name your organisation's copy to edit it" });
+        return;
+      }
+      if (typeof window !== "undefined" && !window.confirm(
+        `Update "${template.templateName}"? This changes the template used by every future estimate created from it.`
+      )) return;
+      const nextBuilder = draftRef.current || builder;
+      const pages = (nextBuilder.pages || []).map((page, index) => (
+        ProjectEstimateApi.builderPageToApiPage(page, index, nextBuilder.importedDocuments)
+      ));
+      await ProjectEstimateApi.updateTemplate(workspaceId, templateId, {
+        pages,
+        createVersionSnapshot: true,
+        versionLabel: "Updated from estimate editor",
+      });
+      setStatusMessage("My template updated.");
+    } catch (error) {
+      setStatusMessage(error?.message || "Could not update template.");
+    }
+  };
+
+  const projectEstimateBaseTemplateForbiddenValues = () => {
+    const keys = [
+      "projectName",
+      "clientName",
+      "projectAddress",
+      "jobNumber",
+      "quoteNumber",
+      "quoteDate",
+      "quoteTotal",
+      "engineering",
+      "estimatedDuration",
+      "estimatedStart",
+    ];
+    return keys
+      .map((key) => linkedFields[key]?.value)
+      .filter((value) => typeof value === "string" && value.trim() && value !== "Not entered");
+  };
+
+  const projectEstimateBaseTemplateSettings = (sourceBuilder) => {
+    const theme = { ...(sourceBuilder.theme || {}) };
+    delete theme.clientNameOverride;
+    delete theme.siteAddressOverride;
+    delete theme.projectNameOverride;
+    delete theme.quoteNumberOverride;
+    delete theme.quoteDateOverride;
+    return {
+      ...(sourceBuilder.settings || {}),
+      theme,
+      templateType: "project_estimate",
+      sourceTemplateVersion: PROJECT_ESTIMATE_TEMPLATE_VERSION,
+      importSlots: {
+        inclusions: { pageType: "standardInclusions", mode: "placeholder" },
+        plans: { pageType: "pricedPlans", mode: "placeholder" },
+      },
+    };
+  };
+
+  const updateSystemBaseTemplate = async () => {
+    if (!workspaceId) {
+      setStatusMessage("A workspace is required before updating the base template.");
+      return;
+    }
+    setBaseTemplateConfirmOpen(false);
+    setStatusMessage("Updating Project Estimate base template...");
+    try {
+      if (typeof document !== "undefined" && document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+      const nextBuilder = draftRef.current || builder;
+      const pages = (nextBuilder.pages || []).map((page, index) => ({
+        ...ProjectEstimateApi.builderPageToApiPage(page, index, {}),
+        importedDocument: null,
+      }));
+      const sourceAudit = ProjectEstimateApi.auditProjectEstimateBaseTemplatePayload({
+        pages,
+        pageOrder: pages.map((page) => page.pageKey),
+        settings: projectEstimateBaseTemplateSettings(nextBuilder),
+        forbiddenProjectValues: projectEstimateBaseTemplateForbiddenValues(),
+      });
+      console.info("[project-estimate base-template] source payload audit before compact serialization", sourceAudit);
+      const result = await ProjectEstimateApi.updateSystemBaseTemplate(workspaceId, {
+        pages,
+        pageOrder: pages.map((page) => page.pageKey),
+        settings: projectEstimateBaseTemplateSettings(nextBuilder),
+        forbiddenProjectValues: projectEstimateBaseTemplateForbiddenValues(),
+      });
+      setStatusMessage(`${result.message}${result.version ? ` Version ${result.version}.` : ""}`);
+    } catch (error) {
+      setStatusMessage(error?.message || "Update failed.");
+    }
+  };
+
+  const resetToMyTemplate = async () => {
+    const templateId = instanceSync.templateId;
+    if (!workspaceId || !instanceSync.instanceId || !templateId) return;
+    if (typeof window !== "undefined" && !window.confirm("Discard unsaved changes and reload this estimate from its linked template?")) return;
+    try {
+      const instance = await ProjectEstimateApi.resetInstanceToTemplate(workspaceId, instanceSync.instanceId, templateId);
+      applyApiPagesToBuilder(instance.pages, "Reset to your saved template.");
+    } catch (error) {
+      setStatusMessage(error?.message || "Could not reset to template.");
+    }
+  };
+
+  const resetToSystemDefault = async () => {
+    if (!workspaceId || !instanceSync.instanceId) return;
+    if (typeof window !== "undefined" && !window.confirm("Reset this estimate to the protected system default template? This cannot be undone.")) return;
+    try {
+      const templates = await ProjectEstimateApi.listTemplates(workspaceId);
+      const systemDefault = templates.find((template) => template.isSystemDefault);
+      if (!systemDefault) throw new Error("System default template not found.");
+      const instance = await ProjectEstimateApi.resetInstanceToTemplate(workspaceId, instanceSync.instanceId, systemDefault.id);
+      instanceSync.setTemplateId(systemDefault.id);
+      applyApiPagesToBuilder(instance.pages, "Reset to system default template.");
+    } catch (error) {
+      setStatusMessage(error?.message || "Could not reset to system default.");
+    }
   };
 
   const uploadProposalPdf = async (file, sourceType) => {
@@ -3135,6 +3300,7 @@ export function ClientPageSheet({ sheet }) {
         pageCount: exportPayload.pageOrder.length,
         importedDocuments: exportPayload.importedDocumentReferences,
       });
+      validateProjectEstimateExportBounds(exportPagesRef.current);
       const renderedPages = await renderProposalPagesForPdf(exportPagesRef.current);
       const mergeWarnings = [];
       const blob = await createProposalPdfBlobFromProjectEstimate({
@@ -3186,31 +3352,36 @@ export function ClientPageSheet({ sheet }) {
     setMediaLibraryOpen(false);
   };
 
-  const saveAsNewSubscriberTemplate = async () => {
+  const saveAsNewSubscriberTemplate = async (options = {}) => {
+    if (!workspaceId) {
+      setStatusMessage("Join a workspace before saving a Project Estimate template.");
+      return;
+    }
     const timestamp = new Date().toISOString();
     const templateName = typeof window !== "undefined"
-      ? window.prompt("Template name", `My Project Estimate ${formatShortDateTime(timestamp)}`)
+      ? window.prompt(options.promptMessage || "Template name", `My Project Estimate ${formatShortDateTime(timestamp)}`)
       : "";
     if (typeof window !== "undefined" && !templateName) return;
-    const nextBuilder = {
-      ...(draftRef.current || builder),
-      id: proposalBuilderId("subscriber-template"),
-      templateId: `subscriber-project-estimate-${Date.now()}`,
-      templateVersion: 1,
-      template: {
-        id: `subscriber-project-estimate-${Date.now()}`,
-        version: 1,
-        schemaVersion: PROJECT_ESTIMATE_TEMPLATE_VERSION,
-        status: "subscriber",
-        protected: false,
+    const nextBuilder = draftRef.current || builder;
+    const pages = (nextBuilder.pages || []).map((page, index) => (
+      ProjectEstimateApi.builderPageToApiPage(page, index, nextBuilder.importedDocuments)
+    ));
+    try {
+      const { template } = await ProjectEstimateApi.createTemplate(workspaceId, {
+        templateName,
         basedOn: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.id,
         basedOnVersion: APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS.version,
-      },
-      name: templateName || `My Project Estimate ${formatShortDateTime(timestamp)}`,
-      updatedAt: timestamp,
-      savedAsSubscriberTemplateAt: timestamp,
-    };
-    await saveBuilderImmediate(nextBuilder, "Saved as new subscriber template.");
+        pageOrder: pages.map((page) => page.pageKey),
+        pages,
+      });
+      instanceSync.setTemplateId(template.id);
+      if (instanceSync.instanceId) {
+        await ProjectEstimateApi.saveInstance(workspaceId, instanceSync.instanceId, { templateId: template.id });
+      }
+      setStatusMessage(`Saved as "${template.templateName}".`);
+    } catch (error) {
+      setStatusMessage(error?.message || "Could not save template.");
+    }
   };
 
   const openAiRewriteForSelectedBlock = () => {
@@ -3328,13 +3499,63 @@ export function ClientPageSheet({ sheet }) {
         <strong>Estimate Pack</strong>
         <button style={pageEditMode ? styles.primaryButton : styles.secondaryButton} disabled={readonly} onClick={() => {
           setPageEditMode((current) => !current);
+          setSelectedBlockId("");
           setEditingBlockId("");
           setAddElementOpen(false);
         }}>{pageEditMode ? "Done Editing" : "Edit Page"}</button>
-        <button style={styles.secondaryButton} disabled={readonly} onClick={saveTemplate}>Save Template</button>
+        <button style={styles.secondaryButton} disabled={readonly} onClick={() => saveCurrentEstimateChanges("Estimate changes saved.")}>Save Changes to This Estimate</button>
         <button style={styles.secondaryButton} disabled={readonly} onClick={saveAsNewSubscriberTemplate}>Save as My Template</button>
+        <button style={styles.secondaryButton} disabled={readonly} onClick={updateMyTemplate}>Update My Template</button>
+        {isPlatformAdminUser ? (
+          <button style={styles.secondaryButton} disabled={readonly} onClick={() => setBaseTemplateConfirmOpen(true)}>Update Base Template</button>
+        ) : null}
+        <button style={styles.secondaryButton} disabled={readonly} onClick={resetToMyTemplate}>Reset</button>
         <button style={styles.secondaryButton} onClick={exportMergedProposalPdf}>Download PDF</button>
       </div>
+      {baseTemplateConfirmOpen ? (
+        <div style={styles.projectEstimateAdminModalOverlay} onMouseDown={() => setBaseTemplateConfirmOpen(false)}>
+          <div style={styles.projectEstimateAdminModal} onMouseDown={(event) => event.stopPropagation()}>
+            <strong>Update Project Estimate Base Template?</strong>
+            <p>
+              This will replace the default Project Estimate template used when new organisation templates and new project estimates are created.
+              Existing saved project estimates and existing subscriber templates will not be changed.
+            </p>
+            <div style={styles.projectEstimateAdminModalActions}>
+              <button type="button" style={styles.secondaryButton} onClick={() => setBaseTemplateConfirmOpen(false)}>Cancel</button>
+              <button type="button" style={styles.primaryButton} onClick={updateSystemBaseTemplate}>Update Base Template</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {templateManagerOpen ? (
+        <ProjectEstimateTemplateManager
+          workspaceId={workspaceId}
+          currentTemplateId={instanceSync.templateId}
+          onClose={() => setTemplateManagerOpen(false)}
+          onSelectTemplate={async (templateId) => {
+            if (!instanceSync.instanceId) return;
+            try {
+              const instance = await ProjectEstimateApi.resetInstanceToTemplate(workspaceId, instanceSync.instanceId, templateId);
+              instanceSync.setTemplateId(templateId);
+              applyApiPagesToBuilder(instance.pages, "Switched to selected template.");
+              setTemplateManagerOpen(false);
+            } catch (error) {
+              setStatusMessage(error?.message || "Could not switch template.");
+            }
+          }}
+        />
+      ) : null}
+      {versionHistoryOpen && instanceSync.templateId ? (
+        <ProjectEstimateVersionHistoryPanel
+          workspaceId={workspaceId}
+          templateId={instanceSync.templateId}
+          onClose={() => setVersionHistoryOpen(false)}
+          onRestored={() => {
+            setStatusMessage("Template version restored. Use \"Reset to My Template\" to load it into this estimate.");
+            setVersionHistoryOpen(false);
+          }}
+        />
+      ) : null}
       {statusMessage ? <div style={styles.proposalBuilderStatus}>{statusMessage}</div> : null}
       <div style={styles.proposalBuilderLayout}>
           <aside className="proposal-builder-sidebar" style={styles.proposalBuilderSidebar}>
@@ -3350,16 +3571,6 @@ export function ClientPageSheet({ sheet }) {
                 <ProjectEstimatePageAttachmentLabel page={page} importedDocuments={builder.importedDocuments || {}} />
               </button>
             ))}
-            <div style={styles.projectEstimatePageControls}>
-              <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addProjectEstimatePage}>Add Page</button>
-              <button type="button" disabled={readonly || !activePage} style={styles.secondaryButton} onClick={duplicateProjectEstimatePage}>Duplicate Page</button>
-              <button type="button" disabled={readonly || !activePage} style={styles.secondaryButton} onClick={renameProjectEstimatePage}>Rename Page</button>
-              <button type="button" disabled={readonly || activePage?.source !== "builder-created"} style={styles.dangerButton} onClick={deleteProjectEstimatePage}>Delete Page</button>
-              <button type="button" disabled={readonly || orderedProposalPages.findIndex((page) => page.id === activePage?.id) <= 0} style={styles.secondaryButton} onClick={() => moveProjectEstimatePage(-1)}>Move Page Up</button>
-              <button type="button" disabled={readonly || orderedProposalPages.findIndex((page) => page.id === activePage?.id) >= orderedProposalPages.length - 1} style={styles.secondaryButton} onClick={() => moveProjectEstimatePage(1)}>Move Page Down</button>
-              <button type="button" disabled={readonly || !activePage} style={styles.secondaryButton} onClick={toggleProjectEstimatePageHidden}>{activePage?.hiddenFromPdf ? "Show In PDF" : "Hide From PDF"}</button>
-              <button type="button" disabled={readonly || !projectEstimatePageDefinitionFor(activePage?.page_type || activePage?.id)} style={styles.secondaryButton} onClick={restoreApprovedProjectEstimatePage}>Restore Approved Page</button>
-            </div>
             <ProposalImportSidebarStatus
               page={activePage}
               inclusionsDocument={inclusionsDocument}
@@ -3398,52 +3609,28 @@ export function ClientPageSheet({ sheet }) {
               onOpenLibrary={openDocumentLibrary}
             />
           ) : (
-            pageEditMode && !readonly ? (
-              <ProjectEstimateWebsiteBuilderEditor
-                key={`website-builder-editor-${activePage.id}`}
-                page={activePage}
-                builder={builder}
-                client={client}
-                sheet={sheet}
-                linkedFields={linkedFields}
-                brandAssets={{
-                  logo: client.logoUrl ? { id: "estimate-logo", src: client.logoUrl, name: "Builder logo" } : null,
-                  images: [
-                    builder.theme?.heroImageUrl ? { id: "estimate-hero", src: builder.theme.heroImageUrl, name: "Hero image" } : null,
-                    builder.theme?.aboutImageUrl ? { id: "estimate-about", src: builder.theme.aboutImageUrl, name: "About image" } : null,
-                    builder.theme?.aboutDetailImageUrl ? { id: "estimate-about-detail", src: builder.theme.aboutDetailImageUrl, name: "About detail image" } : null,
-                  ].filter(Boolean),
-                }}
-                onUploadImage={prepareWebsiteBuilderEstimateImage}
-                onSave={(blocks) => {
-                  updateBuilder((current) => ({
-                    ...current,
-                    pages: (current.pages || []).map((page) => page.id === activePage.id
-                      ? projectEstimatePageFromWebsiteBuilderBlocks(page, blocks, linkedFields)
-                      : page),
-                  }), "Project Estimate page saved.");
-                  setStatusMessage("Project Estimate page saved.");
-                }}
-              />
-            ) : (
-              <ProjectEstimateEditablePage
-                key={activePage.id}
-                page={activePage}
-                theme={builder.theme}
-                linkedFields={linkedFields}
-                Brochure={EstimateInclusionsBrochure}
-                editMode={false}
-                selectedBlockId=""
-                editingBlockId=""
-                onSelectBlock={() => {}}
-                onEditBlock={() => {}}
-                onBlockContent={() => {}}
-                onBlockDesign={() => {}}
-                onReplaceImage={() => {}}
-                onStartDrag={() => {}}
-                onStartResize={() => {}}
-              />
-            )
+            <ProjectEstimateApprovedPage
+              key={activePage.id}
+              page={activePage}
+              theme={builder.theme}
+              linkedFields={linkedFields}
+              Brochure={EstimateInclusionsBrochure}
+              editMode={pageEditMode && !readonly}
+              selectedBlockId={selectedBlockId}
+              editingBlockId={editingBlockId}
+              onSelectBlock={setSelectedBlockId}
+              onEditBlock={setEditingBlockId}
+              onTextCommit={updateBlockContent}
+              onBlockDesign={updateBlockDesign}
+              onReplaceImage={(block) => {
+                setSelectedBlockId(block?.id || "");
+                blockImageUploadPurposeRef.current = block?.type === "logo" ? "logo" : "image";
+                imageInputRef.current?.click();
+              }}
+              onDuplicateBlock={duplicateBlock}
+              onDeleteBlock={removeBlock}
+              onMoveBlockLayer={moveBlockLayer}
+            />
           )}
           <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
@@ -3465,21 +3652,11 @@ export function ClientPageSheet({ sheet }) {
             data-source-path={page.importedDocument?.storagePath || page.importedDocument?.publicUrl || ""}
             data-source-page-number={page.importedPageNumber || page.importedDocument?.pageNumber || ""}
           >
-            <ProjectEstimateEditablePage
+            <ProjectEstimateApprovedPage
               page={page}
               theme={builder.theme}
               linkedFields={linkedFields}
               Brochure={EstimateInclusionsBrochure}
-              editMode={false}
-              selectedBlockId=""
-              editingBlockId=""
-              onSelectBlock={() => {}}
-              onEditBlock={() => {}}
-              onBlockContent={() => {}}
-              onBlockDesign={() => {}}
-              onStartDrag={() => {}}
-              onStartResize={() => {}}
-              renderVisualBlocks
             />
           </div>
         ))}
@@ -3896,6 +4073,26 @@ async function renderProposalPagesForPdf(container) {
     }
   }
   return renderedPages;
+}
+
+function validateProjectEstimateExportBounds(root) {
+  if (!root) return;
+  const pages = [...root.querySelectorAll("[data-proposal-export-page='true']")];
+  pages.forEach((pageWrap) => {
+    const page = pageWrap.querySelector(".proposal-builder-page");
+    if (!page) return;
+    const pageRect = page.getBoundingClientRect();
+    const pageLabel = pageWrap.getAttribute("data-page-type") || pageWrap.getAttribute("data-page-id") || "Project Estimate page";
+    const elements = [...page.querySelectorAll("[data-project-estimate-native-group], [data-project-estimate-native-element]")];
+    elements.forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      const id = element.getAttribute("data-project-estimate-native-group") || element.getAttribute("data-project-estimate-native-element") || "block";
+      const tolerance = 2;
+      if (rect.bottom > pageRect.bottom + tolerance || rect.right > pageRect.right + tolerance || rect.top < pageRect.top - tolerance || rect.left < pageRect.left - tolerance) {
+        throw new Error(`${pageLabel}: "${id}" does not fit inside the printable page area. Move or resize the block before downloading the PDF.`);
+      }
+    });
+  });
 }
 
 function buildProjectEstimateExportPayload({ builder = {}, sheet = {}, workspaceId = "", linkedFields = {} } = {}) {
@@ -4364,34 +4561,378 @@ function ProposalDocumentLibraryModal({ rows, loading, onClose, onSelect }) {
   );
 }
 
-function ProjectEstimateEditablePage({
+function ProjectEstimateApprovedPage({
   page,
   theme,
   linkedFields,
   Brochure,
-  editMode,
-  selectedBlockId,
-  editingBlockId,
+  editMode = false,
+  selectedBlockId = "",
+  editingBlockId = "",
   onSelectBlock,
   onEditBlock,
-  onBlockContent,
+  onTextCommit,
   onBlockDesign,
   onReplaceImage,
-  onStartDrag,
-  onStartResize,
-  renderVisualBlocks = false,
+  onDuplicateBlock,
+  onDeleteBlock,
+  onMoveBlockLayer,
 }) {
-  const hasCustomBlocks = (page.blocks || []).some((block) => !block.design?.hidden && isSubscriberProjectEstimateBlock(block, page));
-  const showVisualLayer = renderVisualBlocks || hasCustomBlocks;
-  const nativeHiddenBlockIds = (page.blocks || [])
-    .filter((block) => !isSubscriberProjectEstimateBlock(block, page) && block.design?.hidden === true)
+  const frameRef = useRef(null);
+  const savedTextSelectionRef = useRef(null);
+  const toolbarDragRef = useRef(null);
+  const resizeGestureRef = useRef(null);
+  const [selectionBox, setSelectionBox] = useState(null);
+  const [toolbarPosition, setToolbarPosition] = useState(null);
+  const [toolbarManuallyMoved, setToolbarManuallyMoved] = useState(false);
+  const [pageBoundaryWarning, setPageBoundaryWarning] = useState(false);
+  const nativeHiddenBlockIds = (page?.blocks || [])
+    .filter((block) => !isSubscriberProjectEstimateBlock(block, page) && block.design?.hidden === true && block.design?.hiddenBySubscriber === true)
     .map((block) => block.id);
-  const selectedNativeBlock = editMode && selectedBlockId
-    ? (page.blocks || []).find((block) => block.id === selectedBlockId && !isSubscriberProjectEstimateBlock(block, page))
-    : null;
-  const selectedNativeFrame = selectedNativeBlock ? proposalBlockFrame(selectedNativeBlock, page) : null;
+  const blockById = Object.fromEntries([
+    ...defaultProjectEstimateBlocks(page?.page_type || page?.id || ""),
+    ...(Array.isArray(page?.blocks) ? page.blocks : []),
+  ].map((block) => [block.id, block]));
+  const selectedBlock = blockById[selectedBlockId] || null;
+  const selectedDesign = selectedBlock?.design || {};
+  const editingBlock = blockById[editingBlockId] || null;
+  const editingDesign = editingBlock?.design || {};
+  const selectedIsText = selectedBlock ? projectEstimateIsTextBlock(selectedBlock) && selectedBlock.type !== "quote_field" : false;
+  const editingIsText = editingBlock ? projectEstimateIsTextBlock(editingBlock) && editingBlock.type !== "quote_field" : false;
+  const selectedIsLinked = selectedBlock?.type === "quote_field";
+  const selectedIsImage = selectedBlock ? projectEstimateIsImageBlock(selectedBlock) : false;
+  const selectedIsGroup = selectedBlock?.type === "group";
+  const selectedUsesParentResize = selectedBlock ? projectEstimateTextUsesParentResize(selectedBlock) : false;
+  const selectedIsStructuredChild = !!selectedDesign.parentGroupId && selectedUsesParentResize;
+  const canMoveOrResizeSelected = selectedBlock && !selectedUsesParentResize;
+  const canRemoveNative = selectedBlock ? isSubscriberProjectEstimateBlock(selectedBlock, page) : false;
+
+  const refreshSelectionBox = () => {
+    const frame = frameRef.current;
+    if (!frame || !editMode || !selectedBlockId) {
+      setSelectionBox(null);
+      return;
+    }
+    const element = selectedIsGroup
+      ? frame.querySelector(`[data-project-estimate-native-group="${cssEscapeValue(selectedBlockId)}"]`)
+      : frame.querySelector(`[data-project-estimate-native-element="${cssEscapeValue(selectedBlockId)}"]`);
+    if (!element) {
+      setSelectionBox(null);
+      return;
+    }
+    const frameRect = frame.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const scale = pageScale();
+    setSelectionBox({
+      left: (elementRect.left - frameRect.left) / scale,
+      top: (elementRect.top - frameRect.top) / scale,
+      width: elementRect.width / scale,
+      height: elementRect.height / scale,
+      viewportLeft: elementRect.left,
+      viewportTop: elementRect.top,
+      viewportRight: elementRect.right,
+      viewportBottom: elementRect.bottom,
+    });
+  };
+
+  useEffect(() => {
+    refreshSelectionBox();
+  }, [editMode, selectedBlockId, editingBlockId, page?.id, page?.blocks]);
+
+  useEffect(() => {
+    if (!editMode) return undefined;
+    const handle = () => refreshSelectionBox();
+    window.addEventListener("resize", handle);
+    window.addEventListener("scroll", handle, true);
+    return () => {
+      window.removeEventListener("resize", handle);
+      window.removeEventListener("scroll", handle, true);
+    };
+  }, [editMode, selectedBlockId, page?.id]);
+
+  useEffect(() => {
+    if (!editMode || !editingBlockId || !selectionBox || toolbarManuallyMoved) return;
+    setToolbarPosition(projectEstimateToolbarPositionForRect(selectionBox));
+  }, [editMode, editingBlockId, selectionBox, toolbarManuallyMoved]);
+
+  useEffect(() => {
+    if (!editMode || !editingBlockId || !selectionBox || toolbarManuallyMoved || typeof document === "undefined") return;
+    const toolbar = document.querySelector('[data-text-toolbar="true"]');
+    if (!toolbar) return;
+    const rect = toolbar.getBoundingClientRect();
+    const overlaps = !(rect.bottom <= selectionBox.viewportTop || rect.top >= selectionBox.viewportBottom || rect.right <= selectionBox.viewportLeft || rect.left >= selectionBox.viewportRight);
+    if (overlaps) {
+      setToolbarPosition(projectEstimateToolbarPositionForRect(selectionBox, { width: rect.width, height: rect.height }));
+    }
+  }, [editMode, editingBlockId, selectionBox, toolbarPosition, toolbarManuallyMoved]);
+
+  useEffect(() => {
+    setToolbarManuallyMoved(false);
+    setToolbarPosition(null);
+  }, [editingBlockId]);
+
+  const selectedElement = (blockId = selectedBlockId) => {
+    const frame = frameRef.current;
+    if (!frame || !blockId) return null;
+    return frame.querySelector(`[data-project-estimate-native-element="${cssEscapeValue(blockId)}"]`);
+  };
+
+  const activeTextElement = () => selectedElement(editingBlockId || selectedBlockId);
+
+  const selectedFrameElement = () => {
+    const frame = frameRef.current;
+    if (!frame || !selectedBlockId) return null;
+    return selectedIsGroup
+      ? frame.querySelector(`[data-project-estimate-native-group="${cssEscapeValue(selectedBlockId)}"]`)
+      : frame.querySelector(`[data-project-estimate-native-element="${cssEscapeValue(selectedBlockId)}"]`);
+  };
+
+  const pageScale = () => {
+    const rect = frameRef.current?.getBoundingClientRect?.();
+    return rect?.width ? rect.width / PROJECT_ESTIMATE_PAGE_WIDTH || 1 : 1;
+  };
+
+  const preserveCurrentSelection = () => {
+    const element = activeTextElement();
+    const selection = window.getSelection?.();
+    if (!element || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!element.contains(range.commonAncestorContainer)) return;
+    savedTextSelectionRef.current = range.cloneRange();
+  };
+
+  const restoreTextSelection = () => {
+    const range = savedTextSelectionRef.current;
+    const selection = window.getSelection?.();
+    if (!range || !selection) return false;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  };
+
+  const commitActiveTextEdit = () => {
+    const activeBlock = editingBlock || selectedBlock;
+    const element = selectedElement(activeBlock?.id || "");
+    if (!element || !activeBlock || activeBlock.type === "quote_field") return;
+    const contentKey = element.getAttribute("data-project-estimate-content-key") || "text";
+    onTextCommit?.(activeBlock.id, contentKey, element.innerHTML);
+    const parentGroupId = blockById[activeBlock.id]?.design?.parentGroupId || "";
+    if (parentGroupId) {
+      window.setTimeout(() => autoFitProjectEstimateGroup(parentGroupId), 80);
+    }
+  };
+
+  const commitSelectionOffset = (dx, dy) => {
+    if (!selectedBlock || selectedBlock.design?.locked) return;
+    const requestedLeft = (selectionBox?.left || 0) + dx;
+    const requestedTop = (selectionBox?.top || 0) + dy;
+    const nextLeft = clampNumber(requestedLeft, 0, PROJECT_ESTIMATE_PAGE_WIDTH - (selectionBox?.width || 0));
+    const nextTop = clampNumber(requestedTop, 0, PROJECT_ESTIMATE_PAGE_HEIGHT - (selectionBox?.height || 0));
+    setPageBoundaryWarning(nextLeft !== requestedLeft || nextTop !== requestedTop);
+    onBlockDesign?.(selectedBlock.id, "translateX", Number(selectedDesign.translateX || 0) + Math.round(nextLeft - (selectionBox?.left || 0)));
+    onBlockDesign?.(selectedBlock.id, "translateY", Number(selectedDesign.translateY || 0) + Math.round(nextTop - (selectionBox?.top || 0)));
+    requestAnimationFrame(refreshSelectionBox);
+  };
+
+  const startMoveSelected = (event) => {
+    if (!selectedBlock || selectedBlock.design?.locked || !canMoveOrResizeSelected) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const onPointerUp = (upEvent) => {
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("mouseup", onPointerUp);
+      const dx = Math.round(upEvent.clientX - startX);
+      const dy = Math.round(upEvent.clientY - startY);
+      if (dx || dy) commitSelectionOffset(dx, dy);
+    };
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+    window.addEventListener("mouseup", onPointerUp, { once: true });
+  };
+
+  const resizeSelected = (handle, event) => {
+    if (!selectedBlock || selectedBlock.design?.locked || !selectionBox || !canMoveOrResizeSelected) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+    const targetElement = selectedFrameElement();
+    if (!targetElement) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = selectionBox.left || 0;
+    const startTop = selectionBox.top || 0;
+    const startRight = startLeft + (selectionBox.width || 0);
+    const startBottom = startTop + (selectionBox.height || 0);
+    const startWidth = Number(selectedDesign.widthOverride || selectionBox.width || 0);
+    const startHeight = Number(selectedDesign.heightOverride || selectionBox.height || 0);
+    const startTranslateX = Number(selectedDesign.translateX || 0);
+    const startTranslateY = Number(selectedDesign.translateY || 0);
+    const minWidth = selectedIsText ? 72 : 36;
+    const minHeight = 24;
+    const applyResize = (moveEvent) => {
+      const scale = pageScale();
+      const dx = (moveEvent.clientX - startX) / scale;
+      const dy = (moveEvent.clientY - startY) / scale;
+      if (selectedIsText) {
+        const requestedWidth = startWidth + (handle.includes("e") ? dx : handle.includes("w") ? -dx : 0);
+        let nextWidth = clampNumber(Math.round(requestedWidth), minWidth, PROJECT_ESTIMATE_PAGE_WIDTH);
+        let nextLeft = handle.includes("w") ? startRight - nextWidth : startLeft;
+        if (nextLeft < 0) {
+          nextLeft = 0;
+          nextWidth = Math.max(minWidth, Math.round(startRight));
+        }
+        if (nextLeft + nextWidth > PROJECT_ESTIMATE_PAGE_WIDTH) nextWidth = Math.max(minWidth, Math.round(PROJECT_ESTIMATE_PAGE_WIDTH - nextLeft));
+        const nextTranslateX = startTranslateX + Math.round(nextLeft - startLeft);
+        targetElement.style.width = `${nextWidth}px`;
+        targetElement.style.height = "auto";
+        targetElement.style.minHeight = "";
+        targetElement.style.transform = `translate(${nextTranslateX}px, ${startTranslateY}px)`;
+        const measuredRect = targetElement.getBoundingClientRect();
+        const nextHeight = measuredRect.height / scale;
+        resizeGestureRef.current = {
+          widthOverride: nextWidth,
+          heightOverride: undefined,
+          translateX: nextTranslateX || undefined,
+          translateY: startTranslateY || undefined,
+        };
+        setSelectionBox({ ...selectionBox, left: nextLeft, top: startTop, width: nextWidth, height: nextHeight });
+        setPageBoundaryWarning(nextLeft !== startLeft + (handle.includes("w") ? dx : 0) || nextLeft + nextWidth > PROJECT_ESTIMATE_PAGE_WIDTH);
+        return;
+      }
+      let requestedWidth = startWidth + (handle.includes("e") ? dx : handle.includes("w") ? -dx : 0);
+      let requestedHeight = startHeight + (handle.includes("s") ? dy : handle.includes("n") ? -dy : 0);
+      let nextWidth = clampNumber(Math.round(requestedWidth), minWidth, PROJECT_ESTIMATE_PAGE_WIDTH);
+      let nextHeight = clampNumber(Math.round(requestedHeight), minHeight, PROJECT_ESTIMATE_PAGE_HEIGHT);
+      let nextLeft = handle.includes("w") ? startRight - nextWidth : startLeft;
+      let nextTop = handle.includes("n") ? startBottom - nextHeight : startTop;
+
+      if (nextLeft < 0) {
+        nextLeft = 0;
+        nextWidth = Math.max(minWidth, Math.round(startRight));
+      }
+      if (nextTop < 0) {
+        nextTop = 0;
+        nextHeight = Math.max(minHeight, Math.round(startBottom));
+      }
+      if (nextLeft + nextWidth > PROJECT_ESTIMATE_PAGE_WIDTH) nextWidth = Math.max(minWidth, Math.round(PROJECT_ESTIMATE_PAGE_WIDTH - nextLeft));
+      if (nextTop + nextHeight > PROJECT_ESTIMATE_PAGE_HEIGHT) nextHeight = Math.max(minHeight, Math.round(PROJECT_ESTIMATE_PAGE_HEIGHT - nextTop));
+
+      targetElement.style.width = `${nextWidth}px`;
+      targetElement.style.minHeight = `${nextHeight}px`;
+      targetElement.style.transform = `translate(${startTranslateX + Math.round(nextLeft - startLeft)}px, ${startTranslateY + Math.round(nextTop - startTop)}px)`;
+      const nextBox = { ...selectionBox, left: nextLeft, top: nextTop, width: nextWidth, height: nextHeight };
+      resizeGestureRef.current = {
+        widthOverride: nextWidth,
+        heightOverride: nextHeight,
+        translateX: startTranslateX + Math.round(nextLeft - startLeft),
+        translateY: startTranslateY + Math.round(nextTop - startTop),
+      };
+      setSelectionBox(nextBox);
+      setPageBoundaryWarning(nextLeft !== startLeft + (handle.includes("w") ? dx : 0) || nextTop !== startTop + (handle.includes("n") ? dy : 0));
+    };
+    const onPointerMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      applyResize(moveEvent);
+    };
+    const onPointerUp = (upEvent) => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      applyResize(upEvent);
+      const finalFrame = resizeGestureRef.current;
+      resizeGestureRef.current = null;
+      if (finalFrame) {
+        onBlockDesign?.(selectedBlock.id, finalFrame);
+      }
+      requestAnimationFrame(refreshSelectionBox);
+    };
+    resizeGestureRef.current = null;
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+  };
+
+  const applyTextCommand = (command, value = null) => {
+    const activeBlock = editingBlock || selectedBlock;
+    if (!activeBlock) return;
+    const element = selectedElement(activeBlock.id);
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    restoreTextSelection();
+    if (command === "fontSize") {
+      onBlockDesign?.(activeBlock.id, "fontSize", value);
+    } else if (command === "lineHeight") {
+      onBlockDesign?.(activeBlock.id, "lineHeight", value);
+    } else if (command === "createLink") {
+      const href = typeof window !== "undefined" ? window.prompt("Link URL", "https://") : "";
+      if (href) document.execCommand("createLink", false, href);
+    } else {
+      document.execCommand(command, false, value);
+    }
+    preserveCurrentSelection();
+  };
+
+  const startToolbarDrag = (event) => {
+    const toolbar = document.querySelector('[data-text-toolbar="true"]');
+    if (!toolbar) return;
+    event.preventDefault();
+    const rect = toolbar.getBoundingClientRect();
+    toolbarDragRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+    const move = (moveEvent) => {
+      const drag = toolbarDragRef.current;
+      if (!drag) return;
+      setToolbarManuallyMoved(true);
+      setToolbarPosition({
+        x: clampNumber(moveEvent.clientX - drag.offsetX, 8, Math.max(8, window.innerWidth - drag.width - 8)),
+        y: clampNumber(moveEvent.clientY - drag.offsetY, 8, Math.max(8, window.innerHeight - drag.height - 8)),
+        width: Math.round(drag.width),
+      });
+    };
+    const up = () => {
+      toolbarDragRef.current = null;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
+  };
+
+  const activeToolbarPosition = toolbarPosition || (selectionBox ? projectEstimateToolbarPositionForRect(selectionBox) : { x: 24, y: 24, width: 680 });
+
+  const autoFitProjectEstimateGroup = (groupId) => {
+    const group = frameRef.current?.querySelector(`[data-project-estimate-native-group="${cssEscapeValue(groupId)}"]`);
+    if (!group) return;
+    const requiredHeight = Math.ceil(group.scrollHeight);
+    const currentHeight = Math.ceil(group.getBoundingClientRect().height / pageScale());
+    if (requiredHeight > currentHeight) {
+      const groupRect = group.getBoundingClientRect();
+      const frameRect = frameRef.current?.getBoundingClientRect();
+      const groupTop = frameRect ? (groupRect.top - frameRect.top) / pageScale() : 0;
+      onBlockDesign?.(groupId, "heightOverride", Math.min(requiredHeight, PROJECT_ESTIMATE_PAGE_HEIGHT - groupTop));
+    }
+  };
+
+  const measuredProjectEstimateGroupHeight = (groupId) => {
+    const group = frameRef.current?.querySelector(`[data-project-estimate-native-group="${cssEscapeValue(groupId)}"]`);
+    return group ? Math.ceil(group.scrollHeight) : 18;
+  };
+
   return (
-    <div data-project-estimate-editor-frame={page?.page_type || page?.id || ""} style={styles.projectEstimateVisualEditorFrame} onMouseDown={() => editMode && onSelectBlock("")}>
+    <div
+      ref={frameRef}
+      data-project-estimate-approved-page={page?.page_type || page?.id || ""}
+      style={styles.projectEstimateVisualEditorFrame}
+      onMouseDown={() => {
+        if (!editMode) return;
+        commitActiveTextEdit();
+        onSelectBlock?.("");
+        onEditBlock?.("");
+      }}
+    >
       <ProjectEstimatePackPage
         page={page}
         theme={theme}
@@ -4402,141 +4943,527 @@ function ProjectEstimateEditablePage({
         editingBlockId={editingBlockId}
         onSelectBlock={onSelectBlock}
         onEditBlock={onEditBlock}
-        onTextCommit={onBlockContent}
-        onStartDrag={(block, event) => {
-          if (editingBlockId) return;
-          onStartDrag(block, event);
-        }}
+        onTextCommit={onTextCommit}
+        onStartDrag={() => {}}
         onReplaceImage={onReplaceImage}
+        onPreserveSelection={preserveCurrentSelection}
         hiddenBlockIds={nativeHiddenBlockIds}
       />
-      {selectedNativeBlock && selectedNativeFrame ? (
+      {editMode && selectedBlock && selectionBox ? (
         <div
-          data-project-estimate-native-selection={selectedNativeBlock.id}
+          data-project-estimate-selection-overlay="true"
           style={{
-            ...styles.projectEstimateEditOverlay,
-            left: selectedNativeFrame.x,
-            top: selectedNativeFrame.y,
-            right: "auto",
-            bottom: "auto",
-            width: selectedNativeFrame.width,
-            height: selectedNativeFrame.height,
+            position: "absolute",
+            left: selectionBox.left,
+            top: selectionBox.top,
+            width: selectionBox.width,
+            height: selectionBox.height,
+            zIndex: 90,
+            border: "2px solid #0ea5e9",
+            boxShadow: "0 0 0 2px rgba(14,165,233,0.18)",
             pointerEvents: "none",
-            border: "1px solid #38bdf8",
             boxSizing: "border-box",
           }}
         >
-          {editingBlockId !== selectedNativeBlock.id ? (
-            <button
-              type="button"
-              style={styles.projectEstimateMoveHandle}
-              onMouseDown={(event) => {
-                event.stopPropagation();
-                onStartDrag(selectedNativeBlock, event);
-              }}
-            >
-              Move
-            </button>
-          ) : null}
-          {editingBlockId !== selectedNativeBlock.id ? ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
+          {canMoveOrResizeSelected ? <button type="button" style={styles.projectEstimateMoveHandle} onPointerDown={startMoveSelected} onMouseDown={startMoveSelected}>Move</button> : null}
+          <div style={styles.projectEstimateElementName}>{selectedIsGroup ? "Section" : selectedBlock.content?.editorLabel || selectedBlock.id}</div>
+          <div style={{ position: "absolute", right: 0, top: -34, display: "flex", gap: 4, pointerEvents: "auto" }}>
+            {selectedIsLinked ? <span style={styles.projectEstimateLinkedIndicator}>Linked to Project Setup</span> : null}
+            {selectedIsImage ? <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onReplaceImage?.(selectedBlock)}>Replace</button> : null}
+            {selectedIsGroup ? <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onBlockDesign?.(selectedBlock.id, "locked", !selectedBlock.design?.locked)}>{selectedBlock.design?.locked ? "Unlock" : "Lock"}</button> : null}
+            <button type="button" style={styles.projectEstimateToolbarButton} disabled={!canRemoveNative} onClick={() => onDuplicateBlock?.(selectedBlock.id)}>Duplicate</button>
+            <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onMoveBlockLayer?.(selectedBlock.id, 1)}>Bring Forward</button>
+            <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onMoveBlockLayer?.(selectedBlock.id, -1)}>Send Backward</button>
+            <button type="button" style={styles.projectEstimateToolbarButton} disabled={!canRemoveNative} onClick={() => onDeleteBlock?.(selectedBlock.id)}>Delete</button>
+          </div>
+          {canMoveOrResizeSelected ? (selectedIsText ? ["w", "e"] : ["nw", "ne", "sw", "se"]).map((handle) => (
             <span
               key={handle}
-              style={{ ...styles.projectEstimateResizeHandle, ...projectEstimateResizeHandleStyle(handle), pointerEvents: "auto" }}
-              onMouseDown={(event) => {
-                event.stopPropagation();
-                onStartResize(selectedNativeBlock, handle, event);
+              data-project-estimate-resize-handle={handle}
+              style={{
+                ...styles.projectEstimateResizeHandle,
+                ...projectEstimateResizeHandleStyle(handle),
+                pointerEvents: "auto",
               }}
+              onPointerDown={(event) => resizeSelected(handle, event)}
             />
           )) : null}
         </div>
       ) : null}
-      {showVisualLayer ? (
-        <div style={{ ...styles.projectEstimateEditOverlay, ...(renderVisualBlocks ? styles.projectEstimateExportOverlay : {}) }}>
-          {(page.blocks || []).filter((block) => {
-            if (block.design?.hidden) return false;
-            return isSubscriberProjectEstimateBlock(block, page);
-          }).map((block) => {
-            const frame = proposalBlockFrame(block, page);
-            const selected = selectedBlockId === block.id;
-            const textEditable = ["heading", "text", "quote_field", "signature", "pricing_summary"].includes(block.type);
-            const imageEditable = ["image", "logo"].includes(block.type);
-            const customBlock = isSubscriberProjectEstimateBlock(block, page);
-            const renderBlockContent = customBlock || editingBlockId === block.id || block.design?.frameEdited || block.design?.styleEdited;
-            return (
-              <div
-                key={block.id}
-                data-project-estimate-element={block.id}
-                style={{
-                  ...styles.projectEstimateEditableRegion,
-                  left: frame.x,
-                  top: frame.y,
-                  width: frame.width,
-                  height: frame.height,
-                  zIndex: 30 + Number(block.order || 0),
-                  ...(selected ? styles.projectEstimateEditableRegionSelected : {}),
-                  ...(block.design?.locked ? styles.projectEstimateEditableRegionLocked : {}),
-                  ...(renderVisualBlocks ? styles.projectEstimateExportRegion : {}),
-                }}
-                onMouseDown={(event) => {
-                  if (!editMode) return;
-                  event.stopPropagation();
-                  onSelectBlock(block.id);
-                }}
-                onDoubleClick={(event) => {
-                  if (!editMode) return;
-                  event.stopPropagation();
-                  if (textEditable && !block.design?.locked) onEditBlock(block.id);
-                  if (imageEditable && !block.design?.locked) onReplaceImage?.(block);
-                }}
-              >
-                {editingBlockId === block.id && textEditable ? (
-                  <ProjectEstimateInlineEditableText
-                    block={block}
-                    linkedFields={linkedFields}
-                    onCommit={(value) => {
-                      onBlockContent(block.id, projectEstimateEditorContentKey(block), value);
-                      onEditBlock("");
-                    }}
-                    onCancel={() => onEditBlock("")}
-                  />
-                ) : renderBlockContent && imageEditable ? (
-                  <ProjectEstimateOverlayImage block={block} />
-                ) : renderBlockContent && textEditable ? (
-                  <ProjectEstimateOverlayText block={block} linkedFields={linkedFields} />
-                ) : renderBlockContent ? (
-                  <ProjectEstimateOverlayShape block={block} />
-                ) : null}
-                {selected && editMode ? (
-                  <>
-                    {editingBlockId !== block.id ? (
-                      <button
-                        type="button"
-                        style={styles.projectEstimateMoveHandle}
-                        onMouseDown={(event) => {
-                          event.stopPropagation();
-                          if (!block.design?.locked) onStartDrag(block, event);
-                        }}
-                      >
-                        Move
-                      </button>
-                    ) : null}
-                    {editingBlockId !== block.id ? ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
-                      <span
-                        key={handle}
-                        style={{ ...styles.projectEstimateResizeHandle, ...projectEstimateResizeHandleStyle(handle) }}
-                        onMouseDown={(event) => {
-                          event.stopPropagation();
-                          onStartResize(block, handle, event);
-                        }}
-                      />
-                    )) : null}
-                  </>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+      {editMode && pageBoundaryWarning ? (
+        <div aria-hidden="true" style={styles.projectEstimatePageBoundaryGuide} />
       ) : null}
+      {editMode && editingIsText && editingBlockId && typeof document !== "undefined" ? createPortal(
+          <WebsiteBuilderTextEditingToolbar
+            visible
+            textColor={editingDesign.color || "#0f172a"}
+            highlightColor={editingDesign.backgroundColor || "#ffffff"}
+            fontFamily={editingDesign.fontFamily || "Arial"}
+            fontSize={Number(editingDesign.fontSize || 18)}
+            lineHeight={Number(editingDesign.lineHeight || 1.5)}
+            fontWeight={String(editingDesign.fontWeight || 400)}
+            fontStyle={editingDesign.fontStyle || "normal"}
+            textDecoration={editingDesign.textDecoration || "none"}
+            textAlign={editingDesign.textAlign || "left"}
+            blockType={editingBlock.type === "heading" ? "H2" : "P"}
+            position={activeToolbarPosition}
+            onDragStart={startToolbarDrag}
+            onClose={() => {
+              commitActiveTextEdit();
+              onEditBlock?.("");
+            }}
+            onPreserveSelection={preserveCurrentSelection}
+            onCommand={applyTextCommand}
+            onTextColor={(value) => applyTextCommand("foreColor", value)}
+            onHighlightColor={(value) => applyTextCommand("hiliteColor", value)}
+            onFontSize={(value) => applyTextCommand("fontSize", value)}
+            onLineHeight={(value) => applyTextCommand("lineHeight", value)}
+            onFontFamily={(value) => applyTextCommand("fontName", value)}
+            onBlockType={(value) => applyTextCommand("formatBlock", value)}
+          />,
+        document.body
+      ) : null}
+    </div>
+  );
+}
+
+function projectEstimateToolbarPositionForRect(rect = {}, measured = {}) {
+  if (typeof window === "undefined") return { x: 24, y: 24, width: 680 };
+  const gap = 14;
+  const margin = 8;
+  const viewportWidth = window.innerWidth || 1440;
+  const viewportHeight = window.innerHeight || 900;
+  const width = Math.min(760, Math.max(320, Number(measured.width || 0) || viewportWidth - margin * 2));
+  const estimatedHeight = Math.min(viewportHeight - margin * 2, Math.max(360, Number(measured.height || 0) || 430));
+  const candidates = [
+    { x: rect.viewportLeft, y: rect.viewportTop - estimatedHeight - gap },
+    { x: rect.viewportLeft, y: rect.viewportBottom + gap },
+    { x: rect.viewportRight + gap, y: rect.viewportTop },
+    { x: rect.viewportLeft - width - gap, y: rect.viewportTop },
+  ];
+  const fits = (candidate) => (
+    candidate.x >= margin
+    && candidate.y >= margin
+    && candidate.x + width <= viewportWidth - margin
+    && candidate.y + estimatedHeight <= viewportHeight - margin
+  );
+  const chosen = candidates.find(fits) || candidates[0];
+  return {
+    x: Math.round(clampNumber(chosen.x, margin, Math.max(margin, viewportWidth - width - margin))),
+    y: Math.round(clampNumber(chosen.y, margin, Math.max(margin, viewportHeight - estimatedHeight - margin))),
+    width,
+  };
+}
+
+function ProjectEstimateDocumentEditor({
+  page,
+  theme,
+  linkedFields,
+  editMode,
+  selectedBlockId,
+  editingBlockId,
+  onSelectBlock,
+  onEditBlock,
+  onBlockContent,
+  onBlockDesign,
+  onReplaceImage,
+  onDuplicateBlock,
+  onDeleteBlock,
+  onMoveBlockLayer,
+}) {
+  const pageRef = useRef(null);
+  const selectionRef = useRef(null);
+  const [toolbarPosition, setToolbarPosition] = useState({ x: 160, y: 96, width: 1080 });
+  const [transientFrames, setTransientFrames] = useState({});
+  const pageType = page?.page_type || page?.id || "";
+  const sourceBlocks = useMemo(() => (page?.blocks || [])
+    .filter((block) => !block.design?.hidden)
+    .map((block) => projectEstimateElementWithFrame(block, pageType))
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0)), [page?.blocks, pageType]);
+  const blocks = useMemo(() => sourceBlocks.map((block) => (
+    transientFrames[block.id]
+      ? { ...block, design: { ...(block.design || {}), frame: transientFrames[block.id], frameEdited: true } }
+      : block
+  )), [sourceBlocks, transientFrames]);
+  const selectedBlock = blocks.find((block) => block.id === selectedBlockId) || null;
+  const editingBlock = blocks.find((block) => block.id === editingBlockId) || null;
+  const selectedText = editingBlock && projectEstimateIsTextBlock(editingBlock) ? editingBlock : null;
+  const selectedDesign = selectedText?.design || {};
+
+  useEffect(() => {
+    if (!editMode) {
+      onSelectBlock?.("");
+      onEditBlock?.("");
+    }
+  }, [editMode]);
+
+  const pageScale = () => {
+    const rect = pageRef.current?.getBoundingClientRect?.();
+    return rect?.width ? rect.width / PROJECT_ESTIMATE_PAGE_WIDTH || 1 : 1;
+  };
+
+  const commitFrame = (blockId, frame) => {
+    onBlockDesign?.(blockId, "frame", normaliseProposalFrame(frame, blocks.find((block) => block.id === blockId) || {}));
+  };
+
+  const handleDragEnd = ({ active, delta }) => {
+    const block = blocks.find((item) => item.id === active?.id);
+    if (!block || block.design?.locked || editingBlockId === block.id) return;
+    const scale = pageScale();
+    const frame = proposalBlockFrame(block, page);
+    setTransientFrames((current) => {
+      const next = { ...current };
+      delete next[block.id];
+      return next;
+    });
+    commitFrame(block.id, {
+      ...frame,
+      x: frame.x + (delta?.x || 0) / scale,
+      y: frame.y + (delta?.y || 0) / scale,
+    });
+  };
+
+  const startResize = (block, handle, event) => {
+    if (!block || block.design?.locked || editingBlockId === block.id) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const scale = pageScale();
+    const startFrame = proposalBlockFrame(block, page);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const aspectRatio = startFrame.width / Math.max(1, startFrame.height);
+    const lockAspect = projectEstimateIsImageBlock(block) && !event.shiftKey;
+    let finalFrame = startFrame;
+    const onMove = (moveEvent) => {
+      const next = resizeProposalFrame(
+        startFrame,
+        handle,
+        (moveEvent.clientX - startX) / scale,
+        (moveEvent.clientY - startY) / scale,
+        lockAspect ? aspectRatio : 0
+      );
+      finalFrame = next;
+      setTransientFrames((current) => ({ ...current, [block.id]: next }));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setTransientFrames((current) => {
+        const next = { ...current };
+        delete next[block.id];
+        return next;
+      });
+      commitFrame(block.id, finalFrame);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  };
+
+  const preserveSelection = () => {
+    const selection = window.getSelection?.();
+    if (selection && selection.rangeCount) selectionRef.current = selection.getRangeAt(0).cloneRange();
+  };
+
+  const restoreSelection = () => {
+    const selection = window.getSelection?.();
+    if (!selection || !selectionRef.current) return;
+    selection.removeAllRanges();
+    selection.addRange(selectionRef.current);
+  };
+
+  const commitEditingHtml = () => {
+    const node = pageRef.current?.querySelector?.(`[data-project-estimate-editable-text="${cssEscapeValue(editingBlockId)}"]`);
+    if (!node || !editingBlock) return;
+    if (editingBlock.type !== "quote_field") {
+      onBlockContent?.(editingBlock.id, projectEstimateEditorContentKey(editingBlock), node.innerHTML);
+    }
+  };
+
+  const applyTextCommand = (command, value = null) => {
+    if (!editingBlock) return;
+    restoreSelection();
+    const designPatch = {};
+    const commandName = String(command || "");
+    if (commandName === "fontName") designPatch.fontFamily = value;
+    if (commandName === "fontSize") designPatch.fontSize = Number(value) || selectedDesign.fontSize || 17;
+    if (commandName === "lineHeight") designPatch.lineHeight = Number(value) || selectedDesign.lineHeight || 1.35;
+    if (commandName === "foreColor") designPatch.color = value;
+    if (commandName === "hiliteColor") designPatch.backgroundColor = value === "transparent" ? "" : value;
+    if (commandName === "justifyLeft") designPatch.textAlign = "left";
+    if (commandName === "justifyCenter") designPatch.textAlign = "center";
+    if (commandName === "justifyRight") designPatch.textAlign = "right";
+    if (commandName === "justifyFull") designPatch.textAlign = "justify";
+    try {
+      if (["bold", "italic", "underline", "insertUnorderedList", "insertOrderedList", "removeFormat", "justifyLeft", "justifyCenter", "justifyRight", "justifyFull"].includes(commandName)) {
+        document.execCommand(commandName, false, value);
+      } else if (commandName === "createLink") {
+        const url = window.prompt("Enter link URL", "");
+        if (url) document.execCommand("createLink", false, url);
+      } else if (commandName === "fontName") {
+        document.execCommand("fontName", false, value);
+      } else if (commandName === "foreColor" || commandName === "hiliteColor") {
+        document.execCommand(commandName, false, value);
+      }
+    } catch {}
+    Object.entries(designPatch).forEach(([key, nextValue]) => onBlockDesign?.(editingBlock.id, key, nextValue));
+    commitEditingHtml();
+    preserveSelection();
+  };
+
+  const startToolbarDrag = (event) => {
+    if (event.target?.closest?.("button,select,input,label")) return;
+    event.preventDefault();
+    const start = { x: event.clientX, y: event.clientY, position: toolbarPosition };
+    const onMove = (moveEvent) => {
+      setToolbarPosition((current) => ({
+        ...current,
+        x: Math.max(12, start.position.x + moveEvent.clientX - start.x),
+        y: Math.max(12, start.position.y + moveEvent.clientY - start.y),
+      }));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  };
+
+  return (
+    <>
+      <DndContext onDragEnd={handleDragEnd}>
+        <section
+          ref={pageRef}
+          className="proposal-builder-page"
+          data-project-estimate-document-canvas="true"
+          style={{
+            ...styles.luxuryPage,
+            padding: 0,
+            display: "block",
+            position: "relative",
+            overflow: "hidden",
+            background: page?.design?.backgroundColor || "#ffffff",
+          }}
+          onMouseDown={() => {
+            if (editMode) {
+              commitEditingHtml();
+              onEditBlock?.("");
+              onSelectBlock?.("");
+            }
+          }}
+        >
+          {blocks.map((block) => (
+            <ProjectEstimateDocumentElement
+              key={block.id}
+              block={block}
+              selected={selectedBlockId === block.id}
+              editing={editingBlockId === block.id}
+              editMode={editMode}
+              linkedFields={linkedFields}
+              onSelect={() => onSelectBlock?.(block.id)}
+              onEdit={() => projectEstimateIsTextBlock(block) && !block.design?.locked ? onEditBlock?.(block.id) : null}
+              onReplaceImage={() => onReplaceImage?.(block)}
+              onResizeStart={startResize}
+              onPreserveSelection={preserveSelection}
+            />
+          ))}
+          {editMode && selectedBlock && editingBlockId !== selectedBlock.id ? (
+            <ProjectEstimateObjectToolbar
+              block={selectedBlock}
+              onDuplicate={() => onDuplicateBlock?.(selectedBlock.id)}
+              onDelete={() => onDeleteBlock?.(selectedBlock)}
+              onBringForward={() => onMoveBlockLayer?.(selectedBlock.id, "front")}
+              onSendBackward={() => onMoveBlockLayer?.(selectedBlock.id, "back")}
+              onReplaceImage={() => onReplaceImage?.(selectedBlock)}
+            />
+          ) : null}
+          {editMode && selectedBlock?.type === "quote_field" ? (
+            <div style={{ position: "absolute", left: proposalBlockFrame(selectedBlock, page).x, top: Math.max(0, proposalBlockFrame(selectedBlock, page).y - 28), zIndex: 400, ...styles.projectEstimateLinkedIndicator }}>
+              Linked to Project Setup
+            </div>
+          ) : null}
+        </section>
+      </DndContext>
+      {editMode && selectedText ? (
+        <WebsiteBuilderTextEditingToolbar
+          visible
+          textColor={selectedDesign.color || "#0f172a"}
+          highlightColor={selectedDesign.backgroundColor || "#ffffff"}
+          fontFamily={selectedDesign.fontFamily || "Arial"}
+          fontSize={selectedDesign.fontSize || (selectedText.type === "heading" ? 40 : 17)}
+          lineHeight={selectedDesign.lineHeight || 1.35}
+          fontWeight={String(selectedDesign.fontWeight || 400)}
+          fontStyle={selectedDesign.fontStyle || "normal"}
+          textDecoration={selectedDesign.textDecoration || "none"}
+          textAlign={selectedDesign.textAlign || "left"}
+          blockType={selectedText.type === "heading" ? "H2" : "P"}
+          position={toolbarPosition}
+          onDragStart={startToolbarDrag}
+          onClose={() => {
+            commitEditingHtml();
+            onEditBlock?.("");
+          }}
+          onPreserveSelection={preserveSelection}
+          onCommand={(command) => applyTextCommand(command)}
+          onTextColor={(value) => applyTextCommand("foreColor", value)}
+          onHighlightColor={(value) => applyTextCommand("hiliteColor", value)}
+          onFontSize={(value) => applyTextCommand("fontSize", value)}
+          onLineHeight={(value) => applyTextCommand("lineHeight", value)}
+          onBlockType={(value) => applyTextCommand("formatBlock", value)}
+          onFontFamily={(value) => applyTextCommand("fontName", value)}
+          hasCopiedFormat={false}
+          canStyleBox={false}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function ProjectEstimateDocumentElement({
+  block,
+  selected,
+  editing,
+  editMode,
+  linkedFields,
+  onSelect,
+  onEdit,
+  onReplaceImage,
+  onResizeStart,
+  onPreserveSelection,
+}) {
+  const frame = proposalBlockFrame(block);
+  const textBlock = projectEstimateIsTextBlock(block);
+  const imageBlock = projectEstimateIsImageBlock(block);
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: block.id,
+    disabled: !editMode || editing || block.design?.locked,
+  });
+  const style = {
+    position: "absolute",
+    left: frame.x,
+    top: frame.y,
+    width: frame.width,
+    height: frame.height,
+    zIndex: Number(block.design?.zIndex || block.order || 0) + 10,
+    boxSizing: "border-box",
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected && editMode ? "2px solid #0ea5e9" : "none",
+    outlineOffset: 0,
+    background: selected && editMode ? "rgba(14,165,233,0.035)" : "transparent",
+    cursor: editing ? "text" : editMode ? "move" : "default",
+    touchAction: "none",
+  };
+  const dragProps = !editing ? { ...listeners, ...attributes } : {};
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-project-estimate-element={block.id}
+      style={style}
+      onMouseDown={(event) => {
+        if (!editMode) return;
+        event.stopPropagation();
+        onSelect?.();
+      }}
+      onDoubleClick={(event) => {
+        if (!editMode) return;
+        event.stopPropagation();
+        if (textBlock) onEdit?.();
+        if (imageBlock) onReplaceImage?.();
+      }}
+      {...dragProps}
+    >
+      {textBlock ? (
+        <ProjectEstimateDocumentText
+          block={block}
+          linkedFields={linkedFields}
+          editing={editing}
+          onPreserveSelection={onPreserveSelection}
+        />
+      ) : imageBlock ? (
+        <ProjectEstimateDocumentImage block={block} />
+      ) : (
+        <ProjectEstimateOverlayShape block={block} />
+      )}
+      {selected && editMode && !editing ? ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((handle) => (
+        <span
+          key={handle}
+          style={{ ...styles.projectEstimateResizeHandle, ...projectEstimateResizeHandleStyle(handle), pointerEvents: "auto" }}
+          onPointerDown={(event) => onResizeStart?.(block, handle, event)}
+        />
+      )) : null}
+    </div>
+  );
+}
+
+function ProjectEstimateDocumentText({ block, linkedFields, editing, onPreserveSelection }) {
+  const value = resolveProposalText(projectEstimateBlockTextValue(block, linkedFields), linkedFields);
+  return (
+    <div
+      data-project-estimate-editable-text={block.id}
+      contentEditable={editing && block.type !== "quote_field"}
+      suppressContentEditableWarning
+      onInput={onPreserveSelection}
+      onMouseUp={onPreserveSelection}
+      onKeyUp={onPreserveSelection}
+      style={{
+        ...projectEstimateBlockTextStyle(block),
+        overflow: "hidden",
+        cursor: editing ? "text" : "inherit",
+      }}
+      dangerouslySetInnerHTML={{ __html: looksLikeRichText(value) ? value : escapeProjectEstimateHtml(value).replace(/\n/g, "<br>") }}
+    />
+  );
+}
+
+function ProjectEstimateDocumentImage({ block }) {
+  const src = block.content?.imageUrl || block.content?.logoUrl || block.content?.defaultImageUrl || block.content?.defaultLogoUrl || "";
+  return src ? (
+    <img
+      src={src}
+      alt={block.content?.alt || block.content?.editorLabel || "Project estimate image"}
+      draggable={false}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "block",
+        objectFit: block.design?.objectFit || block.design?.fit || "cover",
+        objectPosition: `${Number(block.design?.objectPositionX ?? 50)}% ${Number(block.design?.objectPositionY ?? 50)}%`,
+        borderRadius: Number(block.design?.borderRadius || 0),
+        opacity: Number(block.design?.opacity ?? 1),
+        userSelect: "none",
+        pointerEvents: "none",
+      }}
+    />
+  ) : <div style={styles.proposalImagePlaceholder}>{block.content?.editorLabel || "Image"}</div>;
+}
+
+function ProjectEstimateObjectToolbar({ block, onDuplicate, onDelete, onBringForward, onSendBackward, onReplaceImage }) {
+  const frame = proposalBlockFrame(block);
+  return (
+    <div
+      data-project-estimate-object-toolbar="true"
+      style={{
+        position: "absolute",
+        left: frame.x,
+        top: Math.max(0, frame.y - 38),
+        zIndex: 500,
+        display: "flex",
+        gap: 4,
+        alignItems: "center",
+        padding: 5,
+        borderRadius: 8,
+        border: "1px solid rgba(14,165,233,0.45)",
+        background: "#ffffff",
+        boxShadow: "0 12px 28px rgba(15,23,42,0.18)",
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      {projectEstimateIsImageBlock(block) ? <button type="button" style={styles.secondaryButton} onClick={onReplaceImage}>Replace</button> : null}
+      <button type="button" style={styles.secondaryButton} onClick={onDuplicate}>Duplicate</button>
+      <button type="button" style={styles.secondaryButton} onClick={onBringForward}>Forward</button>
+      <button type="button" style={styles.secondaryButton} onClick={onSendBackward}>Back</button>
+      <button type="button" style={styles.dangerButton} onClick={() => onDelete?.()}>Delete</button>
     </div>
   );
 }
@@ -4549,41 +5476,6 @@ function ProjectEstimateOverlayText({ block, linkedFields }) {
   return (
     <div style={projectEstimateBlockTextStyle(block)}>
       {value}
-    </div>
-  );
-}
-
-function ProjectEstimateInlineEditableText({ block, linkedFields, onCommit, onCancel }) {
-  const ref = useRef(null);
-  const initialValueRef = useRef(projectEstimateBlockRawTextValue(block));
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    node.focus();
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    range.collapse(false);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, []);
-  return (
-    <div
-      ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      dangerouslySetInnerHTML={looksLikeRichText(initialValueRef.current) ? { __html: initialValueRef.current } : undefined}
-      style={{ ...projectEstimateBlockTextStyle(block), ...styles.projectEstimateInlineTextEditing }}
-      onBlur={(event) => onCommit(normaliseProjectEstimateEditableText(event.currentTarget.innerText))}
-      onInput={() => {}}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          onCancel();
-        }
-      }}
-    >
-      {looksLikeRichText(initialValueRef.current) ? null : resolveProposalText(initialValueRef.current, linkedFields)}
     </div>
   );
 }
@@ -4617,92 +5509,12 @@ function ProjectEstimateOverlayShape({ block }) {
   return <div style={{ width: "100%", height: "100%", background: block.design?.backgroundColor || block.design?.fill || "rgba(14,165,233,0.10)", border: `${block.design?.borderWidth || 1}px solid ${block.design?.borderColor || "rgba(14,165,233,0.35)"}`, borderRadius: Number(block.design?.borderRadius || 8) }} />;
 }
 
-function ProjectEstimateWebsiteBuilderEditor({ page, builder, client, sheet, linkedFields, brandAssets, onUploadImage, onSave }) {
-  const pageName = page?.title || pretty(page?.page_type || page?.id || "Project Estimate Page");
-  const pageBlocks = useMemo(() => projectEstimatePageToWebsiteBuilderBlocks(page, builder?.theme || {}, linkedFields), [page, builder?.theme, linkedFields]);
-  const editorProject = useMemo(() => ({
-    id: `project-estimate-${sheet?.workbook?.id || sheet?.workbook?.builderId || "local"}`,
-    name: client?.companyName || "Project Estimate",
-    userId: sheet?.workbook?.userId || sheet?.workbook?.ownerId || "",
-    pages: [{ id: page?.id || page?.page_type || "page", name: pageName, slug: page?.page_type || page?.id || "page" }],
-    pageBlocks: { [pageName]: pageBlocks },
-  }), [client?.companyName, page?.id, page?.page_type, pageName, pageBlocks, sheet?.workbook?.builderId, sheet?.workbook?.id, sheet?.workbook?.ownerId, sheet?.workbook?.userId]);
-
-  return (
-    <div data-project-estimate-website-builder-adapter="true" style={styles.projectEstimateWebsiteBuilderFrame}>
-      <WebsiteBuilderPageCanvas
-        project={editorProject}
-        brandAssets={brandAssets}
-        pageBlocks={pageBlocks}
-        activePage={pageName}
-        currentObjective="Edit this Project Estimate page"
-        onSave={onSave}
-        onForceSave={onSave}
-        onUploadImage={onUploadImage}
-        onSelectAsset={(_index, _key, _asset, updatedBlocks) => {
-          if (Array.isArray(updatedBlocks)) onSave?.(updatedBlocks);
-        }}
-        showHeader
-        canSaveTemplates={false}
-      />
-    </div>
-  );
-}
-
-function ProjectEstimateTextToolbar({ block, readonly, onBlockDesign, onUndo, onRedo }) {
-  if (!block || !["heading", "text", "quote_field", "signature", "pricing_summary"].includes(block.type)) return null;
-  const design = block.design || {};
-  const command = (name, value = null) => {
-    try {
-      if (typeof document !== "undefined") document.execCommand(name, false, value);
-    } catch {}
-  };
-  const set = (key, value) => {
-    if (key === "fontWeight") command("bold");
-    if (key === "fontStyle") command("italic");
-    if (key === "textDecoration") command("underline");
-    if (key === "color") command("foreColor", value);
-    if (key === "backgroundColor") command("hiliteColor", value);
-    if (key === "textAlign") command(`justify${String(value || "left").replace(/^./, (char) => char.toUpperCase())}`);
-    onBlockDesign(block.id, key, value);
-  };
-  return (
-    <div style={styles.projectEstimateTextToolbar}>
-      <select disabled={readonly} value={design.fontFamily || "Arial"} onChange={(event) => set("fontFamily", event.target.value)}>
-        {["Arial", "Georgia", "Inter", "Times New Roman", "Helvetica"].map((font) => <option key={font} value={font}>{font}</option>)}
-      </select>
-      <input disabled={readonly} type="number" value={design.fontSize || (block.type === "heading" ? 40 : 17)} onChange={(event) => set("fontSize", Number(event.target.value) || 12)} />
-      <button type="button" disabled={readonly} style={design.fontWeight >= 700 ? styles.projectEstimateToolbarButtonActive : styles.projectEstimateToolbarButton} onClick={() => set("fontWeight", design.fontWeight >= 700 ? 400 : 800)}>B</button>
-      <button type="button" disabled={readonly} style={design.fontStyle === "italic" ? styles.projectEstimateToolbarButtonActive : styles.projectEstimateToolbarButton} onClick={() => set("fontStyle", design.fontStyle === "italic" ? "normal" : "italic")}>I</button>
-      <button type="button" disabled={readonly} style={design.textDecoration === "underline" ? styles.projectEstimateToolbarButtonActive : styles.projectEstimateToolbarButton} onClick={() => set("textDecoration", design.textDecoration === "underline" ? "none" : "underline")}>U</button>
-      <input disabled={readonly} type="color" value={design.color || "#0f172a"} onChange={(event) => set("color", event.target.value)} title="Text colour" />
-      <input disabled={readonly} type="color" value={design.backgroundColor || "#ffffff"} onChange={(event) => set("backgroundColor", event.target.value)} title="Background colour" />
-      {["left", "center", "right"].map((align) => <button key={align} type="button" disabled={readonly} style={design.textAlign === align ? styles.projectEstimateToolbarButtonActive : styles.projectEstimateToolbarButton} onClick={() => set("textAlign", align)}>{align[0].toUpperCase()}</button>)}
-      <label>LH <input disabled={readonly} type="number" step="0.1" value={design.lineHeight || 1.3} onChange={(event) => set("lineHeight", Number(event.target.value) || 1.2)} /></label>
-      <label>LS <input disabled={readonly} type="number" step="0.1" value={design.letterSpacing || 0} onChange={(event) => set("letterSpacing", Number(event.target.value) || 0)} /></label>
-      <button type="button" disabled={readonly} style={styles.projectEstimateToolbarButton} onClick={() => set("listStyle", design.listStyle === "bullet" ? "" : "bullet")}>Bullets</button>
-      <button type="button" disabled={readonly} style={styles.projectEstimateToolbarButton} onClick={() => set("listStyle", design.listStyle === "numbered" ? "" : "numbered")}>Numbered</button>
-      <button type="button" disabled={readonly} style={styles.projectEstimateToolbarButton} onClick={onUndo}>Undo</button>
-      <button type="button" disabled={readonly} style={styles.projectEstimateToolbarButton} onClick={onRedo}>Redo</button>
-    </div>
-  );
-}
-
 function ProjectEstimateAddElementMenu({ onAdd }) {
   const items = [
     ["heading", "Heading"],
     ["text", "Paragraph"],
     ["text_box", "Text box"],
     ["image", "Image"],
-    ["logo", "Logo"],
-    ["shape", "Shape"],
-    ["divider", "Divider"],
-    ["quote_field", "Linked Job Field"],
-    ["signature", "Signature"],
-    ["spacer", "Spacer"],
-    ["container", "Container"],
-    ["group", "Group"],
-    ["blank_page", "Blank Page"],
   ];
   return (
     <div style={styles.projectEstimateAddElementMenu}>
@@ -5179,7 +5991,6 @@ function ProjectEstimateContextualInspector({
   return (
     <div style={styles.proposalPropertiesStack}>
       {tabs}
-      <ProjectEstimateTextToolbar block={block} readonly={readonly} onBlockDesign={onBlockDesign} onUndo={onUndo} onRedo={onRedo} />
       <h3>{definition.navigationTitle}</h3>
       <p style={styles.mutedText}>{block.content?.editorLabel || field.label || proposalBlockLabel(block.type)}</p>
       {isText ? (
@@ -5457,6 +6268,90 @@ function defaultProposalBlockFrame(block = {}) {
   return { x: 74, y: 150 + order * 118, width: block.type === "heading" ? 610 : 560, height: block.type === "heading" ? 92 : 86 };
 }
 
+function projectEstimateElementWithFrame(block = {}, pageType = "") {
+  const frame = block.design?.frame || projectEstimateDefaultElementFrame(pageType, block);
+  return {
+    ...block,
+    design: {
+      ...(block.design || {}),
+      frame,
+      frameEdited: Boolean(block.design?.frameEdited),
+    },
+  };
+}
+
+function projectEstimateDefaultElementFrame(pageType = "", block = {}) {
+  const id = String(block.id || "");
+  const frames = {
+    cover: {
+      "cover-hero-image": { x: 0, y: 0, width: 794, height: 1123 },
+      "cover-document-label": { x: 74, y: 312, width: 560, height: 42 },
+      "cover-title": { x: 74, y: 360, width: 610, height: 132 },
+      "cover-client-site": { x: 74, y: 524, width: 520, height: 82 },
+      "cover-intro": { x: 74, y: 620, width: 520, height: 88 },
+      "cover-estimate-number": { x: 74, y: 1028, width: 240, height: 42 },
+      "cover-estimate-date": { x: 520, y: 1028, width: 220, height: 42 },
+    },
+    estimateSummary: {
+      "estimateSummary-eyebrow": { x: 54, y: 150, width: 220, height: 32 },
+      "estimateSummary-heading": { x: 54, y: 190, width: 660, height: 98 },
+      "estimateSummary-intro": { x: 54, y: 306, width: 660, height: 96 },
+      "estimateSummary-notice-heading": { x: 84, y: 854, width: 610, height: 44 },
+      "estimateSummary-notice-body": { x: 84, y: 908, width: 610, height: 112 },
+    },
+    about: {
+      "about-heading": { x: 40, y: 142, width: 330, height: 118 },
+      "about-about-copy": { x: 40, y: 270, width: 330, height: 122 },
+      "about-hero-image": { x: 404, y: 142, width: 350, height: 252 },
+      "about-detail-image": { x: 557, y: 286, width: 151, height: 118 },
+      "about-eyebrow": { x: 40, y: 430, width: 220, height: 28 },
+      "about-subhead": { x: 40, y: 462, width: 690, height: 58 },
+      "about-card-1-title": { x: 58, y: 548, width: 190, height: 24 },
+      "about-card-1-body": { x: 58, y: 576, width: 190, height: 74 },
+      "about-card-2-title": { x: 286, y: 548, width: 190, height: 24 },
+      "about-card-2-body": { x: 286, y: 576, width: 190, height: 74 },
+      "about-card-3-title": { x: 514, y: 548, width: 190, height: 24 },
+      "about-card-3-body": { x: 514, y: 576, width: 190, height: 74 },
+      "about-card-4-title": { x: 58, y: 684, width: 190, height: 24 },
+      "about-card-4-body": { x: 58, y: 712, width: 190, height: 98 },
+      "about-card-5-title": { x: 286, y: 684, width: 190, height: 24 },
+      "about-card-5-body": { x: 286, y: 712, width: 190, height: 98 },
+      "about-card-6-title": { x: 514, y: 684, width: 190, height: 24 },
+      "about-card-6-body": { x: 514, y: 712, width: 190, height: 98 },
+    },
+    pricing: {
+      "pricing-eyebrow": { x: 74, y: 160, width: 240, height: 34 },
+      "pricing-heading": { x: 74, y: 205, width: 640, height: 88 },
+      "pricing-intro": { x: 74, y: 330, width: 640, height: 95 },
+      "pricing-pricing-summary": { x: 74, y: 520, width: 640, height: 52 },
+      "pricing-total-line": { x: 74, y: 958, width: 640, height: 60 },
+    },
+    termsNotes: {
+      "termsNotes-eyebrow": { x: 54, y: 142, width: 280, height: 32 },
+      "termsNotes-heading": { x: 54, y: 190, width: 660, height: 94 },
+      "termsNotes-intro": { x: 74, y: 336, width: 620, height: 104 },
+      "termsNotes-quote-timing-heading": { x: 74, y: 502, width: 620, height: 42 },
+      "termsNotes-quote-timing-list": { x: 74, y: 556, width: 620, height: 220 },
+      "termsNotes-footer": { x: 74, y: 850, width: 620, height: 110 },
+    },
+    acceptance: {
+      "acceptance-eyebrow": { x: 54, y: 150, width: 240, height: 32 },
+      "acceptance-heading": { x: 54, y: 198, width: 660, height: 88 },
+      "acceptance-intro": { x: 54, y: 312, width: 660, height: 90 },
+      "acceptance-acknowledgement": { x: 74, y: 690, width: 620, height: 130 },
+    },
+  };
+  return frames[pageType]?.[id] || defaultProposalBlockFrame(block);
+}
+
+function projectEstimateIsTextBlock(block = {}) {
+  return ["heading", "text", "quote_field", "signature", "pricing_summary"].includes(block.type);
+}
+
+function projectEstimateIsImageBlock(block = {}) {
+  return ["image", "logo"].includes(block.type) || String(block.id || "").includes("image");
+}
+
 function clampNumber(value, min, max) {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, value));
@@ -5474,7 +6369,7 @@ function moveProposalFrame(frame = null, dx = 0, dy = 0) {
   };
 }
 
-function resizeProposalFrame(frame = null, handle = "se", dx = 0, dy = 0) {
+function resizeProposalFrame(frame = null, handle = "se", dx = 0, dy = 0, aspectRatio = 0) {
   const current = normaliseProposalFrame(frame);
   let { x, y, width, height } = current;
   if (handle.includes("e")) width += dx;
@@ -5487,6 +6382,15 @@ function resizeProposalFrame(frame = null, handle = "se", dx = 0, dy = 0) {
     y += dy;
     height -= dy;
   }
+  if (aspectRatio > 0 && (handle.includes("e") || handle.includes("w")) && (handle.includes("n") || handle.includes("s"))) {
+    height = width / aspectRatio;
+    if (handle.includes("n")) y = current.y + (current.height - height);
+  } else if (aspectRatio > 0 && (handle.includes("e") || handle.includes("w"))) {
+    height = width / aspectRatio;
+  } else if (aspectRatio > 0 && (handle.includes("n") || handle.includes("s"))) {
+    width = height * aspectRatio;
+    if (handle.includes("w")) x = current.x + (current.width - width);
+  }
   width = clampNumber(width, 36, PROJECT_ESTIMATE_PAGE_WIDTH - x);
   height = clampNumber(height, 24, PROJECT_ESTIMATE_PAGE_HEIGHT - y);
   x = clampNumber(x, 0, PROJECT_ESTIMATE_PAGE_WIDTH - width);
@@ -5495,8 +6399,8 @@ function resizeProposalFrame(frame = null, handle = "se", dx = 0, dy = 0) {
 }
 
 function projectEstimateResizeHandleStyle(handle) {
-  const offset = -5;
-  const middle = "calc(50% - 5px)";
+  const offset = -6;
+  const middle = "calc(50% - 6px)";
   const map = {
     nw: { left: offset, top: offset, cursor: "nwse-resize" },
     n: { left: middle, top: offset, cursor: "ns-resize" },
@@ -5517,6 +6421,19 @@ function projectEstimateBlockRawTextValue(block = {}) {
   return "";
 }
 
+function escapeProjectEstimateHtml(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function cssEscapeValue(value = "") {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(String(value || ""));
+  return String(value || "").replace(/["\\]/g, "\\$&");
+}
+
 function isSubscriberProjectEstimateBlock(block = {}, page = {}) {
   if (block.id === "cover-hero-image") return false;
   const pageType = page?.page_type || page?.id || "";
@@ -5525,7 +6442,7 @@ function isSubscriberProjectEstimateBlock(block = {}, page = {}) {
 }
 
 function looksLikeRichText(value = "") {
-  return /<\/?(span|strong|b|em|i|u|font|div|p|br)\b/i.test(String(value || ""));
+  return /<\/?(span|strong|b|em|i|u|font|div|p|br|ul|ol|li|h[1-6])\b/i.test(String(value || ""));
 }
 
 function normaliseProjectEstimateEditableText(value = "") {
@@ -5585,168 +6502,6 @@ function projectEstimateBlockTextStyle(block = {}) {
     overflow: "hidden",
     borderRadius: Number(design.borderRadius || 0),
   };
-}
-
-function projectEstimatePageToWebsiteBuilderBlocks(page = {}, theme = {}, linkedFields = {}) {
-  return (page.blocks || [])
-    .filter((block) => block?.design?.hidden !== true)
-    .map((block, index) => projectEstimateBlockToWebsiteBuilderBlock(block, page, theme, linkedFields, index))
-    .filter(Boolean);
-}
-
-function projectEstimateBlockToWebsiteBuilderBlock(block = {}, page = {}, theme = {}, linkedFields = {}, index = 0) {
-  const design = block.design || {};
-  const frame = proposalBlockFrame(block, page);
-  const common = {
-    id: `pe-${block.id}`,
-    props: {
-      __projectEstimateBlockId: block.id,
-      __projectEstimateBlockType: block.type,
-      __projectEstimateContentKey: projectEstimateEditorContentKey(block),
-      __projectEstimatePageType: page.page_type || page.id || "",
-      baseLayoutWidth: PROJECT_ESTIMATE_PAGE_WIDTH,
-      backgroundColor: design.backgroundColor || "transparent",
-      marginTop: 0,
-      paddingTop: Math.max(0, Number(design.padding || 0)),
-      paddingBottom: Math.max(0, Number(design.padding || 0)),
-      minHeight: `${Math.max(24, Number(frame.height || 80))}px`,
-      opacity: Number(design.opacity ?? 1),
-    },
-  };
-  if (block.type === "image" || block.type === "logo" || block.id === "cover-hero-image") {
-    const src = block.content?.imageUrl || block.content?.logoUrl || block.content?.defaultImageUrl || block.content?.defaultLogoUrl || theme.heroImageUrl || "";
-    return {
-      ...common,
-      type: "image",
-      props: {
-        ...common.props,
-        src,
-        alt: block.content?.alt || block.content?.editorLabel || proposalBlockLabel(block.type),
-        width: `${Math.max(120, Number(frame.width || PROJECT_ESTIMATE_PAGE_WIDTH))}px`,
-        height: `${Math.max(80, Number(frame.height || 360))}px`,
-        objectFit: design.objectFit || design.fit || "cover",
-        objectPosition: `${Number(design.objectPositionX ?? 50)}% ${Number(design.objectPositionY ?? 50)}%`,
-        borderRadius: Number(design.borderRadius || 0),
-        fullWidthBackground: block.id === "cover-hero-image",
-      },
-    };
-  }
-  if (block.type === "divider") {
-    return {
-      ...common,
-      type: "divider",
-      props: {
-        ...common.props,
-        color: design.color || design.backgroundColor || "#cbd5e1",
-        thickness: Number(design.thickness || frame.height || 2),
-        backgroundColor: "transparent",
-      },
-    };
-  }
-  if (block.type === "spacer") {
-    return { ...common, type: "space", props: { ...common.props, height: Number(frame.height || design.height || 32), backgroundColor: "transparent" } };
-  }
-  const text = projectEstimateBlockTextValue(block, linkedFields);
-  return {
-    ...common,
-    type: "text",
-    props: {
-      ...common.props,
-      text: looksLikeRichText(text) ? text : String(text || "").replace(/\n/g, "<br />"),
-      alignment: design.textAlign || "left",
-      textAlign: design.textAlign || "left",
-      textColor: design.color || (block.type === "heading" ? "#0f172a" : "#334155"),
-      fontFamily: design.fontFamily || "Arial",
-      bodyFontFamily: design.fontFamily || "Arial",
-      textFontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
-      bodyFontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
-      fontWeight: String(design.fontWeight || (block.type === "heading" ? 800 : 500)),
-      bodyLineHeight: Number(design.lineHeight || 1.35),
-      textLineHeight: Number(design.lineHeight || 1.35),
-      letterSpacing: Number(design.letterSpacing || 0),
-      hideBorder: true,
-      fullWidthBackground: false,
-    },
-  };
-}
-
-function projectEstimatePageFromWebsiteBuilderBlocks(page = {}, websiteBlocks = [], linkedFields = {}) {
-  const existingBlocks = Array.isArray(page.blocks) ? page.blocks : [];
-  const byId = new Map(existingBlocks.map((block) => [block.id, block]));
-  const nextBlocks = (Array.isArray(websiteBlocks) ? websiteBlocks : []).map((websiteBlock, index) => {
-    const existingId = String(websiteBlock?.props?.__projectEstimateBlockId || "").trim();
-    const existing = existingId ? byId.get(existingId) : null;
-    return existing
-      ? projectEstimateBlockFromWebsiteBuilderBlock(existing, websiteBlock, index)
-      : projectEstimateNewBlockFromWebsiteBuilderBlock(websiteBlock, page, linkedFields, index);
-  }).filter(Boolean);
-  const nextIds = new Set(nextBlocks.map((block) => block.id));
-  const hiddenExisting = existingBlocks
-    .filter((block) => !nextIds.has(block.id))
-    .map((block) => ({ ...block, design: { ...(block.design || {}), hidden: true, hiddenBySubscriber: true } }));
-  return { ...page, blocks: [...nextBlocks, ...hiddenExisting].sort((a, b) => Number(a.order || 0) - Number(b.order || 0)) };
-}
-
-function projectEstimateBlockFromWebsiteBuilderBlock(block = {}, websiteBlock = {}, index = 0) {
-  const props = websiteBlock.props || {};
-  const contentKey = props.__projectEstimateContentKey || projectEstimateEditorContentKey(block);
-  const content = { ...(block.content || {}) };
-  if (websiteBlock.type === "image") {
-    if (block.type === "logo") content.logoUrl = props.src || content.logoUrl || "";
-    else content.imageUrl = props.src || content.imageUrl || "";
-  } else if (contentKey && block.type !== "quote_field") {
-    content[contentKey] = props.text ?? content[contentKey] ?? "";
-  }
-  return {
-    ...block,
-    order: index,
-    content,
-    design: { ...(block.design || {}), ...projectEstimateDesignFromWebsiteBuilderProps(block, websiteBlock, index) },
-  };
-}
-
-function projectEstimateNewBlockFromWebsiteBuilderBlock(websiteBlock = {}, page = {}, linkedFields = {}, index = 0) {
-  const type = websiteBlock.type === "image" ? "image" : websiteBlock.type === "divider" ? "divider" : websiteBlock.type === "space" ? "spacer" : "text";
-  const props = websiteBlock.props || {};
-  const block = createProposalBuilderBlock(type, linkedFields, index, {
-    id: String(websiteBlock.id || "").startsWith("pe-") ? proposalBuilderId("block") : (websiteBlock.id || proposalBuilderId("block")),
-    source: "builder-created",
-    pageType: page.page_type || page.id || "",
-    content: type === "image"
-      ? { imageUrl: props.src || "", alt: props.alt || "", editorLabel: "Image" }
-      : { text: props.text || "", editorLabel: type === "divider" ? "Divider" : "Text" },
-    design: projectEstimateDesignFromWebsiteBuilderProps({ type }, websiteBlock, index),
-  });
-  return normaliseProposalBuilderBlock({ ...block, source: "builder-created" });
-}
-
-function projectEstimateDesignFromWebsiteBuilderProps(block = {}, websiteBlock = {}, index = 0) {
-  const props = websiteBlock.props || {};
-  const width = parseProposalPixelValue(props.width, block.type === "image" ? 570 : 560);
-  const height = parseProposalPixelValue(props.height || props.minHeight, block.type === "image" ? 320 : 86);
-  return {
-    frame: { x: 74, y: 150 + Number(index || 0) * 118, width, height },
-    frameEdited: true,
-    styleEdited: true,
-    color: props.textColor || props.color,
-    fontFamily: props.fontFamily || props.bodyFontFamily,
-    fontSize: Number(props.textFontSize || props.bodyFontSize || props.fontSize || 17),
-    fontWeight: props.fontWeight,
-    textAlign: props.alignment || props.textAlign,
-    lineHeight: Number(props.textLineHeight || props.bodyLineHeight || props.lineHeight || 1.35),
-    letterSpacing: Number(props.letterSpacing || 0),
-    backgroundColor: props.backgroundColor,
-    padding: Number(props.paddingTop || props.padding || 0),
-    objectFit: props.objectFit,
-    borderRadius: Number(props.borderRadius || 0),
-    hidden: false,
-    hiddenBySubscriber: false,
-  };
-}
-
-function parseProposalPixelValue(value, fallback = 0) {
-  const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function createProposalVisualElement(type, linkedFields, order = 0) {
@@ -6036,6 +6791,7 @@ function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly })
 
 export function StandardInclusionsSheet({ sheet }) {
   const readonly = sheet.previewMode;
+  const { workspaceId } = useWorkspace();
   const workbookId = sheet.workbook?.id || sheet.workbook?.jobId || sheet.workbook?.openedFileName || "local";
   const pdfUploadRef = useRef(null);
   const pptxUploadRef = useRef(null);
@@ -6050,7 +6806,7 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
-  const [onlyOfficeAuthToken, setOnlyOfficeAuthToken] = useState("");
+  const onlyOfficeAuthToken = "";
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
   const pages = normalisePremierPdfPages(standard.pdfPages);
   const selectedPageId = standard.selectedPdfPageId || pages[0]?.id || "";
@@ -6063,21 +6819,6 @@ export function StandardInclusionsSheet({ sheet }) {
     : null;
   const activeOnlyOfficeDocumentId = !standard.scheduleDeleted ? standard.onlyOfficeDocumentId || "" : "";
   const activeSummary = standardScheduleSummary(activeDocument, standard);
-
-  useEffect(() => {
-    if (!activeOnlyOfficeDocumentId || onlyOfficeAuthToken) return;
-    let cancelled = false;
-    supabase.auth.getSession()
-      .then(({ data }) => {
-        if (!cancelled) setOnlyOfficeAuthToken(data?.session?.access_token || "");
-      })
-      .catch(() => {
-        if (!cancelled) setOnlyOfficeAuthToken("");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeOnlyOfficeDocumentId, onlyOfficeAuthToken]);
 
   async function saveStandard(next, options = {}) {
     const nextStandard = normaliseStandardInclusions({
@@ -6273,51 +7014,58 @@ export function StandardInclusionsSheet({ sheet }) {
   }
 
   async function preparePowerPointImport(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !String(file.name || "").toLowerCase().endsWith(".pptx")) return;
-    setStandardStatus("Uploading PowerPoint for ONLYOFFICE editing...");
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile || !String(selectedFile.name || "").toLowerCase().endsWith(".pptx")) {
+      event.target.value = "";
+      return;
+    }
+    setStandardStatus("Uploading PowerPoint...");
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || "";
-      if (!token) throw new Error("Sign in before uploading a Standard Inclusions PowerPoint.");
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tenantId", sheet.workbook?.builderId || sheet.workbook?.id || "local-builder");
+      formData.append("file", selectedFile, selectedFile.name);
+      event.target.value = "";
       const response = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+        },
         body: formData,
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "PowerPoint upload failed.");
+      if (!response.ok || !payload?.ok) {
+        const code = payload?.code || "POWERPOINT_UPLOAD_FAILED";
+        throw new Error(`${code}: ${payload?.error || "PowerPoint upload failed."}`);
+      }
       const document = payload.document;
+      setStandardStatus("Opening PowerPoint in the ONLYOFFICE editor...");
       await saveStandardWithRevision({
-        documentBuilder: null,
         source: "onlyoffice-pptx",
         scheduleDeleted: false,
         isDeleted: false,
         deletedAt: null,
         activeDocumentId: document.id,
-        activeDocumentName: document.source_file_name || file.name,
+        activeDocumentName: document.source_file_name || selectedFile.name,
         activeDocumentSource: "onlyoffice-pptx",
-        activeDocumentLastSavedAt: document.updated_at || new Date().toISOString(),
+        activeDocumentLastSavedAt: new Date().toISOString(),
         pdfPages: [],
         selectedPdfPageId: "",
         pdfSourceName: "",
-        pptxSourceName: file.name,
+        pptxSourceName: document.source_file_name || selectedFile.name,
         pdfEditorMode: "onlyoffice",
         onlyOfficeDocumentId: document.id,
-        onlyOfficeVersion: document.version || 1,
+        onlyOfficeVersion: Number(document.version || 1),
         onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
         onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
-      }, "upload-pptx-onlyoffice", file.name, { persist: true });
-      setOnlyOfficeAuthToken(token);
+      }, "upload-pptx-onlyoffice", document.source_file_name || selectedFile.name, { persist: true });
       setImportPreview(null);
       setManagementMode("");
-      setStandardStatus("PowerPoint uploaded. Opening in ONLYOFFICE Presentation Editor.");
+      setStandardStatus(`PowerPoint uploaded: "${document.source_file_name || selectedFile.name}" is now open in the ONLYOFFICE editor.`);
     } catch (error) {
-      console.error("Standard Inclusions ONLYOFFICE PowerPoint upload failed", error);
+      event.target.value = "";
+      console.error("Standard Inclusions PowerPoint upload failed", error);
       setStandardStatus(error?.message || "PowerPoint upload failed.");
     }
   }
@@ -6398,6 +7146,24 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus(`Imported and saved ${persistedPageCount} Standard Inclusions page${persistedPageCount === 1 ? "" : "s"}.`);
   }
 
+  function handleOnlyOfficeDocumentUpdated(document) {
+    if (!document?.id) return;
+    saveStandardWithRevision({
+      source: "onlyoffice-pptx",
+      scheduleDeleted: false,
+      isDeleted: false,
+      deletedAt: null,
+      activeDocumentId: document.id,
+      activeDocumentName: document.source_file_name || standard.activeDocumentName,
+      activeDocumentSource: "onlyoffice-pptx",
+      activeDocumentLastSavedAt: new Date().toISOString(),
+      onlyOfficeDocumentId: document.id,
+      onlyOfficeVersion: Number(document.version || 1),
+      onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
+      onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
+    }, "onlyoffice-version-change", document.source_file_name || "", { persist: true });
+  }
+
   return (
     <div style={styles.standardPdfShell}>
       <section style={styles.standardPdfToolbar}>
@@ -6411,10 +7177,12 @@ export function StandardInclusionsSheet({ sheet }) {
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
       {activeOnlyOfficeDocumentId ? (
         <OnlyOfficePresentationEditor
+          key={`${activeOnlyOfficeDocumentId}-v${standard.onlyOfficeVersion || 1}`}
           documentId={activeOnlyOfficeDocumentId}
           authToken={onlyOfficeAuthToken}
           onStatus={setStandardStatus}
           onClose={() => setStandardStatus("ONLYOFFICE editor closed.")}
+          onDocumentUpdated={handleOnlyOfficeDocumentUpdated}
         />
       ) : activeDocument ? (
         <StandardScheduleLoadedEditor
@@ -7338,6 +8106,51 @@ async function collectIndexedDbStandardScheduleCandidates() {
       resolve(candidates);
     };
   });
+}
+
+async function renderPowerPointSlideBaseImages(file, { tenantId = "" } = {}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token || "";
+  const form = new FormData();
+  form.append("file", file, file.name || "standard-inclusions.pptx");
+  form.append("tenantId", tenantId || "");
+  const response = await fetch("/api/standard-inclusions/pptx/render-preview-pdf", {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload?.ok || !payload?.pdfDataUrl) {
+    throw new Error(payload?.error || "PowerPoint slide rendering failed. Configure ONLYOFFICE before importing editable PowerPoint schedules.");
+  }
+  const slideImages = await renderPdfDataUrlToPageImages(payload.pdfDataUrl);
+  if (!slideImages.length) throw new Error("PowerPoint slide rendering completed but produced no page images.");
+  return {
+    slideImages,
+    documentId: payload.documentId || "",
+    pptxAssetId: payload.pptxAssetId || "",
+    renderSource: payload.renderSource || "onlyoffice",
+  };
+}
+
+async function renderPdfDataUrlToPageImages(pdfDataUrl) {
+  const pdfjsLib = await loadPdfJs();
+  const bytes = await fetch(pdfDataUrl).then((response) => response.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const slideImages = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 2.5 });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const context = canvas.getContext("2d", { alpha: false });
+    await page.render({ canvasContext: context, viewport }).promise;
+    slideImages.push(canvas.toDataURL("image/png"));
+  }
+  return slideImages;
 }
 
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
@@ -9154,6 +9967,7 @@ function createBuilderProjectEstimatePage(order = 0) {
 function migrateProjectEstimateSavedBlocks(pageType, savedBlocks = [], fallbackBlocks = [], cleanup = createProjectEstimateCleanupReport()) {
   const saved = Array.isArray(savedBlocks) ? savedBlocks.map((block) => normaliseProposalBuilderBlock(block)) : [];
   if (!saved.length) return fallbackBlocks;
+  const repairEstimateSummaryIntroGeometry = projectEstimateSummaryIntroGeometryIsMalformed(pageType, saved);
   const usedSavedIds = new Set();
   const allowedBlockIds = new Set(fallbackBlocks.map((block) => block.id));
   const migratedFallbacks = fallbackBlocks.map((fallback) => {
@@ -9164,6 +9978,12 @@ function migrateProjectEstimateSavedBlocks(pageType, savedBlocks = [], fallbackB
       const matchDesign = { ...(match.design || {}) };
       if (matchDesign.hidden === true && !matchDesign.hiddenBySubscriber) {
         delete matchDesign.hidden;
+      }
+      if (repairEstimateSummaryIntroGeometry && PROJECT_ESTIMATE_SUMMARY_INTRO_GEOMETRY_IDS.has(fallback.id)) {
+        delete matchDesign.widthOverride;
+        delete matchDesign.heightOverride;
+        delete matchDesign.translateX;
+        delete matchDesign.translateY;
       }
       return {
         ...fallback,
@@ -9202,6 +10022,22 @@ function migrateProjectEstimateSavedBlocks(pageType, savedBlocks = [], fallbackB
   cleanup.summary.duplicateBlocksRemoved = cleanup.removed.filter((entry) => entry.reason === "duplicate-linked-field").length;
   cleanup.summary.wrongPageBlocksRemoved = cleanup.removed.filter((entry) => entry.reason === "wrong-page").length;
   return [...migratedFallbacks, ...builderBlocks].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+const PROJECT_ESTIMATE_SUMMARY_INTRO_GEOMETRY_IDS = new Set([
+  "estimateSummary-intro-section",
+  "estimateSummary-eyebrow",
+  "estimateSummary-heading",
+  "estimateSummary-intro",
+]);
+
+function projectEstimateSummaryIntroGeometryIsMalformed(pageType, savedBlocks = []) {
+  if (pageType !== "estimateSummary") return false;
+  return savedBlocks.some((block) => {
+    if (!PROJECT_ESTIMATE_SUMMARY_INTRO_GEOMETRY_IDS.has(block?.id)) return false;
+    const design = block.design || {};
+    return design.heightOverride !== undefined || design.translateY !== undefined;
+  });
 }
 
 function findMatchingProjectEstimateBlock(fallback, savedBlocks, usedSavedIds) {
@@ -9429,6 +10265,17 @@ function defaultLuxuryProposalTheme(client = {}) {
       { value: "98%", label: "Client Satisfaction" },
       { value: "4.9/5", label: "Average Rating" },
     ],
+  };
+}
+
+function hydrateProjectEstimatePageFromApi(pageShell, client, sheet) {
+  if (Array.isArray(pageShell.blocks) && pageShell.blocks.length) return pageShell;
+  const fallback = defaultQuoteProposalPage(pageShell.page_type, client, sheet);
+  return {
+    ...fallback,
+    id: pageShell.id || fallback.id,
+    hiddenFromPdf: pageShell.hiddenFromPdf,
+    source: pageShell.source || fallback.source,
   };
 }
 
@@ -13778,21 +14625,16 @@ const styles = {
   proposalAddElementWrap: { position: "relative", display: "inline-flex" },
   projectEstimateAddElementMenu: { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 80, width: 230, display: "grid", gap: 4, background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, boxShadow: "0 18px 45px rgba(15,23,42,0.22)" },
   projectEstimateVisualEditorFrame: { position: "relative", width: 794, minHeight: 1123, flex: "0 0 auto" },
-  projectEstimateWebsiteBuilderFrame: { width: "100%", minHeight: 720, background: "#f8fafc", borderRadius: 12, overflow: "hidden", boxShadow: "0 18px 46px rgba(15,23,42,0.10)" },
-  projectEstimateEditOverlay: { position: "absolute", inset: 0, zIndex: 40, pointerEvents: "none" },
-  projectEstimateExportOverlay: { pointerEvents: "none" },
-  projectEstimateEditableRegion: { position: "absolute", border: "1px solid transparent", background: "transparent", boxSizing: "border-box", pointerEvents: "auto", cursor: "pointer" },
-  projectEstimateExportRegion: { border: 0, background: "transparent", pointerEvents: "none", cursor: "default" },
-  projectEstimateEditableRegionSelected: { border: "2px solid #0ea5e9", background: "transparent", boxShadow: "0 0 0 2px rgba(14,165,233,0.16)", cursor: "move" },
-  projectEstimateEditableRegionLocked: { cursor: "not-allowed" },
-  projectEstimateResizeHandle: { position: "absolute", width: 10, height: 10, border: "1px solid #0369a1", background: "#ffffff", borderRadius: 2, zIndex: 4 },
-  projectEstimateMoveHandle: { position: "absolute", left: 6, top: -30, zIndex: 6, pointerEvents: "auto", border: "1px solid #0369a1", background: "#ffffff", color: "#075985", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 900, cursor: "move", boxShadow: "0 8px 18px rgba(15,23,42,0.16)" },
+  projectEstimatePageBoundaryGuide: { position: "absolute", inset: 0, zIndex: 95, pointerEvents: "none", border: "3px solid #dc2626", boxShadow: "inset 0 0 0 2px rgba(220,38,38,0.16)" },
+  projectEstimateResizeHandle: { position: "absolute", width: 12, height: 12, border: "2px solid #0369a1", background: "#ffffff", borderRadius: "50%", zIndex: 8, boxSizing: "border-box", boxShadow: "0 2px 8px rgba(15,23,42,0.18)" },
+  projectEstimateMoveHandle: { position: "absolute", left: 6, top: -34, zIndex: 6, pointerEvents: "auto", border: "1px solid #0369a1", background: "#ffffff", color: "#075985", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 900, cursor: "move", boxShadow: "0 8px 18px rgba(15,23,42,0.16)" },
   projectEstimateElementName: { position: "absolute", left: 0, top: -24, background: "#0369a1", color: "#ffffff", borderRadius: 4, padding: "3px 6px", fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" },
   projectEstimateElementDimensions: { position: "absolute", right: 0, bottom: -22, background: "#0f172a", color: "#ffffff", borderRadius: 4, padding: "2px 5px", fontSize: 10, fontWeight: 800 },
-  projectEstimateInlineTextEditing: { outline: "2px solid #f59e0b", background: "rgba(255,255,255,0.96)", cursor: "text" },
-  projectEstimateTextToolbar: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 8, padding: 8 },
-  projectEstimateToolbarButton: { border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 6, padding: "5px 8px", fontWeight: 900 },
-  projectEstimateToolbarButtonActive: { border: "1px solid #0ea5e9", background: "#e0f2fe", color: "#075985", borderRadius: 6, padding: "5px 8px", fontWeight: 900 },
+  projectEstimateToolbarButton: { border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontWeight: 900, cursor: "pointer" },
+  projectEstimateLinkedIndicator: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#075985", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 900 },
+  projectEstimateAdminModalOverlay: { position: "fixed", inset: 0, zIndex: 2600, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 18 },
+  projectEstimateAdminModal: { width: "min(520px, 94vw)", background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 10, padding: 18, display: "grid", gap: 12, boxShadow: "0 24px 70px rgba(15,23,42,0.34)" },
+  projectEstimateAdminModalActions: { display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" },
   projectEstimateInspectorTabs: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", padding: 4 },
   projectEstimateInspectorTab: { border: 0, borderRadius: 6, background: "transparent", color: "#475569", padding: "8px 10px", fontWeight: 950, cursor: "pointer" },
   projectEstimateInspectorTabActive: { border: 0, borderRadius: 6, background: "#0f172a", color: "#ffffff", padding: "8px 10px", fontWeight: 950, cursor: "pointer" },

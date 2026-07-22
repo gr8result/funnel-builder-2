@@ -34,7 +34,25 @@ function normalizeRange(value) {
 
 function normalizeInterval(value) {
   const interval = String(value || "1d").trim().toLowerCase();
-  return interval === "1d" ? "1d" : "1d";
+  const aliases = {
+    "1m": "1m",
+    "1min": "1m",
+    "5m": "5m",
+    "5min": "5m",
+    "15m": "15m",
+    "15min": "15m",
+    "30m": "30m",
+    "30min": "30m",
+    "1h": "1h",
+    "60min": "1h",
+    "4h": "4h",
+    "1d": "1d",
+    "1day": "1d",
+    "1w": "1w",
+    "1wk": "1w",
+    "1week": "1w",
+  };
+  return aliases[interval] || "1d";
 }
 
 function historyWithYearRange(result) {

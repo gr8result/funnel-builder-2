@@ -2,11 +2,17 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
+import { buildHeikinAshiCandles, FreedomChartDisplayToggles, FreedomChartTypeSelector, FREEDOM_CHART_TYPES, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
+import PaperAccountBar from "../../../components/freedom-trader/PaperAccountBar";
+import PaperOrderTicket from "../../../components/freedom-trader/PaperOrderTicket";
+import { normalizeSignalLabel, signalClassName } from "../../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
 const PLANNER_STORAGE_KEY = "freedom-trader-visual-levels";
 const CHART_RANGE_STORAGE_KEY = "freedom-trader-chart-ranges";
+const CHART_TYPE_STORAGE_KEY = "freedom-trader-chart-type";
 const FIB_STORAGE_KEY = "freedom-trader-fib-retracements";
 
 const FIB_LEVELS = [
@@ -123,6 +129,12 @@ function futureTimeSlots(candles, interval) {
     if (isDailyInterval(interval)) return addTradingDays(lastTime, index + 1).toISOString().slice(0, 10);
     return new Date(lastTime.getTime() + intervalMinutes(interval) * 60_000 * (index + 1)).toISOString();
   });
+}
+
+function loadStoredChartType() {
+  if (typeof window === "undefined") return "candles";
+  const stored = window.localStorage.getItem(CHART_TYPE_STORAGE_KEY);
+  return FREEDOM_CHART_TYPES.some((item) => item.value === stored) ? stored : "candles";
 }
 
 function clampLogicalRange(range, totalCount, realCount, interval) {
@@ -322,6 +334,8 @@ function mapServerAnalysisToSetup(symbol, analysis, fallbackSetup) {
     tradingScore: analysis.tradingScore,
     trend: analysis.trend,
     status: analysis.status,
+    signalResult: analysis.signalResult,
+    legacySetupStatus: analysis.legacySetupStatus,
     confidence: analysis.confidence,
     entry: analysis.setup?.plannedEntry ?? null,
     target: analysis.setup?.target ?? null,
@@ -417,10 +431,24 @@ export default function TraderCompany({ passwordHash }) {
   const [shareOverride, setShareOverride] = useState("");
   const [timeframe, setTimeframe] = useState("1D");
   const [chartInterval, setChartInterval] = useState("1m");
+  const [chartType, setChartType] = useState("candles");
   const [chartError, setChartError] = useState("");
   const [chartMeta, setChartMeta] = useState(null);
   const [openPosition, setOpenPosition] = useState(null);
+  const [paperPosition, setPaperPosition] = useState(null);
+  const [paperOrders, setPaperOrders] = useState([]);
+  const [paperTrades, setPaperTrades] = useState([]);
+  const [selectedTradeMarker, setSelectedTradeMarker] = useState(null);
+  const [displayToggles, setDisplayToggles] = useState({
+    tradePlan: true,
+    completedTrades: true,
+    openPositions: true,
+    alerts: true,
+    fibonacci: true,
+    volume: true,
+  });
   const [buyModalOpen, setBuyModalOpen] = useState(false);
+  const [paperTicketMode, setPaperTicketMode] = useState("buy");
   const [buyForm, setBuyForm] = useState({});
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [tradeDraft, setTradeDraft] = useState(null);
@@ -447,8 +475,13 @@ export default function TraderCompany({ passwordHash }) {
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
+    setChartType(loadStoredChartType());
     setCheckingStorage(false);
   }, []);
+
+  useEffect(() => {
+    if (!checkingStorage) window.localStorage.setItem(CHART_TYPE_STORAGE_KEY, normalizeChartType(chartType));
+  }, [chartType, checkingStorage]);
 
   useEffect(() => {
     async function load() {
@@ -480,10 +513,18 @@ export default function TraderCompany({ passwordHash }) {
           setCandles([]);
           setChartError(historyData?.error || "Historical data temporarily unavailable.");
         }
-        const positionsResponse = await fetch("/api/freedom-trader/positions");
+        const [positionsResponse, paperResponse] = await Promise.all([
+          fetch("/api/freedom-trader/positions"),
+          fetch("/api/freedom-trader/paper-account"),
+        ]);
         const positionsData = await positionsResponse.json().catch(() => null);
+        const paperData = await paperResponse.json().catch(() => null);
         const existingPosition = positionsData?.positions?.find((position) => position.symbol === symbol && position.status === "open");
         setOpenPosition(existingPosition || null);
+        const existingPaperPosition = paperData?.positions?.find((position) => position.ticker === symbol);
+        setPaperPosition(existingPaperPosition || null);
+        setPaperOrders((paperData?.orders || paperData?.pendingOrders || []).filter((order) => order.ticker === symbol));
+        setPaperTrades((paperData?.trades || []).filter((trade) => trade.ticker === symbol));
       } catch (err) {
         console.error("Freedom Trader company load failed:", err);
         setError(err.message || "Trading data temporarily unavailable.");
@@ -562,6 +603,7 @@ export default function TraderCompany({ passwordHash }) {
 
   function openBuyModal() {
     setSaveMessage("");
+    setPaperTicketMode("buy");
     setBuyForm({
       symbol,
       currentPrice: setup.currentPrice || "",
@@ -573,6 +615,12 @@ export default function TraderCompany({ passwordHash }) {
       brokerage: 0,
       notes: "",
     });
+    setBuyModalOpen(true);
+  }
+
+  function openSellModal() {
+    setSaveMessage("");
+    setPaperTicketMode("sell");
     setBuyModalOpen(true);
   }
 
@@ -962,17 +1010,76 @@ export default function TraderCompany({ passwordHash }) {
 
   const chartData = useMemo(() => {
     const futureDates = futureTimeSlots(candles, chartInterval);
+    const selectedChartType = normalizeChartType(chartType);
+    const displayCandles = selectedChartType === "heikin" ? buildHeikinAshiCandles(candles) : candles;
+    const dates = [...candles.map((candle) => candle.date), ...futureDates];
+    const closestDate = (timestamp) => {
+      if (!timestamp || !dates.length) return dates[dates.length - 1];
+      const target = new Date(timestamp).getTime();
+      if (!Number.isFinite(target)) return dates[dates.length - 1];
+      return dates.reduce((best, date) => {
+        const bestDiff = Math.abs(new Date(best).getTime() - target);
+        const nextDiff = Math.abs(new Date(date).getTime() - target);
+        return nextDiff < bestDiff ? date : best;
+      }, dates[0]);
+    };
+    const tradeMarkers = paperTrades.map((trade) => {
+      const side = String(trade.side || "").toLowerCase();
+      const realised = Number(trade.realised_profit_loss);
+      return {
+        name: side === "sell" ? "Completed sell" : "Completed buy",
+        value: [closestDate(trade.traded_at), Number(trade.price)],
+        symbol: side === "sell" ? "triangle" : "pin",
+        symbolSize: 18,
+        itemStyle: { color: side === "sell" ? "#ff5c5c" : "#23d18b" },
+        label: {
+          formatter: `${side === "sell" ? "SELL" : "BUY"} ${trade.quantity} @ ${formatCurrency(Number(trade.price))}${Number.isFinite(realised) ? `\nPROFIT ${formatCurrency(realised)}` : ""}`,
+        },
+        markerDetail: {
+          type: side === "sell" ? "completed sell" : "completed buy",
+          dateTime: trade.traded_at,
+          quantity: trade.quantity,
+          fillPrice: Number(trade.price),
+          fees: Number(trade.brokerage_fee),
+          orderType: "filled paper order",
+          realisedProfitLoss: Number.isFinite(realised) ? realised : null,
+          exitReason: trade.exit_reason || null,
+        },
+      };
+    }).filter((marker) => Number.isFinite(marker.value[1]));
+    const orderMarkers = paperOrders.filter((order) => order.status === "pending").map((order) => ({
+      name: "Pending limit order",
+      value: [closestDate(order.created_at), Number(order.requested_price)],
+      symbol: "diamond",
+      symbolSize: 16,
+      itemStyle: { color: "#ffe25c" },
+      label: { formatter: `PENDING ${String(order.side || "").toUpperCase()} ${order.quantity} @ ${formatCurrency(Number(order.requested_price))}` },
+      markerDetail: {
+        type: "pending limit order",
+        dateTime: order.created_at,
+        quantity: order.quantity,
+        fillPrice: null,
+        fees: Number(order.brokerage_fee),
+        orderType: order.order_type,
+        realisedProfitLoss: null,
+        exitReason: null,
+      },
+    })).filter((marker) => Number.isFinite(marker.value[1]));
     return {
-      dates: [...candles.map((candle) => candle.date), ...futureDates],
+      dates,
       candles: [
-        ...candles.map((candle) => [candle.open, candle.close, candle.low, candle.high]),
+        ...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]),
         ...futureDates.map(() => ["-", "-", "-", "-"]),
       ],
+      closeLine: [...displayCandles.map((candle) => candle.close), ...futureDates.map(() => "-")],
+      ohlcBars: [...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]), ...futureDates.map(() => ["-", "-", "-", "-"])],
       volume: [...candles.map((candle) => candle.volume || 0), ...futureDates.map(() => "-")],
+      tradeMarkers,
+      orderMarkers,
       realCount: candles.length,
       futureCount: futureDates.length,
     };
-  }, [candles, chartInterval]);
+  }, [candles, chartInterval, chartType, paperOrders, paperTrades]);
 
   const chartPointFromEvent = useCallback((event) => {
     const chart = chartRef.current;
@@ -1245,6 +1352,43 @@ export default function TraderCompany({ passwordHash }) {
       }
       const visibleRange = clampLogicalRange(chartRangeRef.current, totalCount, realCount, chartInterval);
       chartRangeRef.current = { key: rangeKey, ...visibleRange };
+      const priceMarkLine = {
+        symbol: "none",
+        label: { color: "#d8e5ea" },
+        lineStyle: { type: "dashed" },
+        data: [
+          Number.isFinite(setup.currentPrice) ? { name: "Current", yAxis: setup.currentPrice, lineStyle: { color: "#eaf2ff", width: 1 } } : null,
+        ].filter(Boolean),
+      };
+      const basePriceSeries = {
+        name: symbol,
+        data: normalizeChartType(chartType) === "line" || normalizeChartType(chartType) === "area" ? chartData.closeLine : chartData.candles,
+        markLine: priceMarkLine,
+      };
+      const selectedChartType = normalizeChartType(chartType);
+      const priceSeries =
+        selectedChartType === "line" || selectedChartType === "area"
+          ? {
+              ...basePriceSeries,
+              type: "line",
+              showSymbol: false,
+              smooth: true,
+              lineStyle: { color: "#5ebdff", width: 2.4 },
+              areaStyle: selectedChartType === "area" ? { color: "rgba(94,189,255,0.18)" } : undefined,
+            }
+          : {
+              ...basePriceSeries,
+              type: "candlestick",
+              barMinWidth: selectedChartType === "ohlc" ? 2 : 4,
+              barMaxWidth: selectedChartType === "ohlc" ? 8 : 18,
+              itemStyle: {
+                color: selectedChartType === "hollow" ? "transparent" : "#23d18b",
+                color0: "#ff5c5c",
+                borderColor: "#23d18b",
+                borderColor0: "#ff5c5c",
+                borderWidth: selectedChartType === "ohlc" ? 2 : 1.4,
+              },
+            };
       chartRef.current.setOption({
         backgroundColor: "transparent",
         animation: false,
@@ -1280,12 +1424,23 @@ export default function TraderCompany({ passwordHash }) {
           { scale: true, gridIndex: 1, axisLabel: { color: "#aebdc4" }, splitLine: { show: false } },
         ],
         series: [
-          { name: symbol, type: "candlestick", data: chartData.candles, itemStyle: { color: "#23d18b", color0: "#ff5c5c", borderColor: "#23d18b", borderColor0: "#ff5c5c" },
-            markLine: { symbol: "none", label: { color: "#d8e5ea" }, lineStyle: { type: "dashed" }, data: [
-              Number.isFinite(setup.currentPrice) ? { name: "Current", yAxis: setup.currentPrice, lineStyle: { color: "#eaf2ff", width: 1 } } : null,
-            ].filter(Boolean) } },
-          { name: "Volume", type: "bar", xAxisIndex: 1, yAxisIndex: 1, data: chartData.volume, itemStyle: { color: "rgba(29,155,255,0.45)" } },
-        ],
+          priceSeries,
+          displayToggles.volume ? { name: "Volume", type: "bar", xAxisIndex: 1, yAxisIndex: 1, data: chartData.volume, itemStyle: { color: "rgba(29,155,255,0.45)" } } : null,
+          displayToggles.completedTrades ? {
+            name: "Completed Trades",
+            type: "scatter",
+            data: chartData.tradeMarkers,
+            label: { show: true, color: "#f6f8f9", fontSize: 11, fontWeight: 900, position: "top", backgroundColor: "rgba(5,8,11,.78)", borderRadius: 4, padding: [4, 6] },
+            z: 8,
+          } : null,
+          displayToggles.openPositions ? {
+            name: "Pending Orders",
+            type: "scatter",
+            data: chartData.orderMarkers,
+            label: { show: true, color: "#fff3b0", fontSize: 11, fontWeight: 900, position: "bottom", backgroundColor: "rgba(5,8,11,.78)", borderRadius: 4, padding: [4, 6] },
+            z: 8,
+          } : null,
+        ].filter(Boolean),
       }, { notMerge: false, lazyUpdate: true });
       const handleDataZoom = () => {
         const option = chartRef.current?.getOption?.();
@@ -1303,6 +1458,10 @@ export default function TraderCompany({ passwordHash }) {
       };
       chartRef.current.off("datazoom");
       chartRef.current.on("datazoom", handleDataZoom);
+      chartRef.current.off("click");
+      chartRef.current.on("click", (params) => {
+        if (params?.data?.markerDetail) setSelectedTradeMarker(params.data.markerDetail);
+      });
       window.setTimeout(refreshOverlayPixels, 0);
     }
     renderChart();
@@ -1315,8 +1474,9 @@ export default function TraderCompany({ passwordHash }) {
       disposed = true;
       window.removeEventListener("resize", resize);
       chartRef.current?.off?.("datazoom");
+      chartRef.current?.off?.("click");
     };
-  }, [chartData, chartInterval, loadSavedChartRange, refreshOverlayPixels, setup, symbol, timeframe]);
+  }, [chartData, chartInterval, chartType, displayToggles.completedTrades, displayToggles.openPositions, displayToggles.volume, loadSavedChartRange, refreshOverlayPixels, saveChartRange, setup, symbol, timeframe]);
 
   const visualOverlayReady = levelsComplete(visualLevels) && Object.values(linePixels).every(Number.isFinite);
   const chartPlotTop = 22;
@@ -1329,8 +1489,16 @@ export default function TraderCompany({ passwordHash }) {
   const profitZone = visualOverlayReady ? clampChartZone(linePixels.target, linePixels.entry) : { top: 0, height: 0 };
   const riskZone = visualOverlayReady ? clampChartZone(linePixels.entry, linePixels.stop) : { top: 0, height: 0 };
   const tradeStatus = currentTradeStatus();
+  const centralSignal = setup.signalResult || {
+    overallSignal: normalizeSignalLabel(setup.status),
+    timeframe: "1D",
+    confidence: setup.confidence,
+    dataProvider: setup.marketData?.historySource || chartMeta?.source || "Unknown",
+    marketDataTimestamp: setup.marketData?.latestCandleDate || chartMeta?.latestTimestamp || null,
+    reasons: [setup.reasoning].filter(Boolean),
+  };
   const currentBlockers = tradeBlockers();
-  const fibVisible = fibDrawing?.visible !== false;
+  const fibVisible = displayToggles.fibonacci && fibDrawing?.visible !== false;
   const fibOverlayReady = fibVisible && fibGeometry.anchor1 && fibGeometry.anchor2 && fibGeometry.body && fibGeometry.levels.length;
   const selectedFibLevel = fibGeometry.levels.find((level) => level.key === selectedFibLevelKey);
 
@@ -1344,21 +1512,29 @@ export default function TraderCompany({ passwordHash }) {
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong>
         <span>Active Trading & Market Opportunities</span>
       </section>
+      <PaperAccountBar />
+      <FreedomModuleNav module="trader" paper />
       <header className="hero">
-        <nav className="platformSwitch" aria-label="Freedom platform switch">
-          <Link href="/freedom">Freedom Investment</Link>
-          <Link className="active" href="/freedom-trader">Freedom Trader</Link>
-        </nav>
-        <Link className="back" href="/freedom-trader">Back to Freedom Trader</Link>
         <div className="heroMain">
           <span className="logo">{company.logoText}</span>
           <div>
             <h1>{company.companyName}</h1>
-            <p>{symbol} / {company.sector} / {formatCurrency(setup.currentPrice)}</p>
+            <p>
+              {symbol} / {analysis?.exchange || "NASDAQ"} / USD / {formatCurrency(setup.currentPrice)}
+              <span>{chartMeta?.dataLabel || setup.marketData?.historySource || "Data provider pending"}</span>
+            </p>
           </div>
-          <SignalBadge signal={tradeStatus} />
+          <div className="analysisSignalBox">
+            <span>Analysis Signal</span>
+            <SignalBadge signal={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
+            <small>{Number.isFinite(centralSignal.confidence) ? `${centralSignal.confidence}% confidence` : "Confidence pending"}</small>
+          </div>
         </div>
         <div className="heroActions">
+          <button className="primaryAction" type="button" onClick={openBuyModal}>BUY PAPER TRADE</button>
+          <button type="button" onClick={() => createAlert("PRICE WATCH", setup.currentPrice, "above")}>CREATE ALERT</button>
+          {paperPosition ? <button type="button" onClick={openSellModal}>SELL POSITION</button> : null}
+          {paperPosition ? <Link className="editPositionLink" href="/freedom-trader/portfolio">EDIT STOP / TARGET</Link> : null}
           <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
         </div>
       </header>
@@ -1400,7 +1576,7 @@ export default function TraderCompany({ passwordHash }) {
         <div className="panelHeader">
           <div>
             <h2>Trade Chart</h2>
-            <p>Candles, volume, Fibonacci, current price, entry, stop and target.</p>
+            <p>ANALYSIS SIGNAL: {centralSignal.overallSignal} ({centralSignal.timeframe || "1D"}). PROPOSED TRADE PLAN - NOT YET EXECUTED.</p>
           </div>
           <div className="chartControls">
             <span>Range</span>
@@ -1415,6 +1591,7 @@ export default function TraderCompany({ passwordHash }) {
                 {item.label}
               </button>
             ))}
+            <FreedomChartTypeSelector value={chartType} onChange={setChartType} />
             <span>Drawing</span>
             <button className={chartMode === "pan" ? "active" : ""} type="button" onClick={() => setChartMode("pan")}>Pan</button>
             <button className={chartMode === "fib" ? "active" : ""} type="button" onClick={() => setChartMode("fib")}>Fib Retracement</button>
@@ -1424,6 +1601,7 @@ export default function TraderCompany({ passwordHash }) {
             <button type="button" onClick={() => setFibVisibility(true)} disabled={!fibDrawing || fibVisible}>Show Fib</button>
           </div>
         </div>
+        <FreedomChartDisplayToggles toggles={displayToggles} onChange={setDisplayToggles} />
         <div
           className="chartShell"
           onMouseLeave={endChartPan}
@@ -1437,7 +1615,7 @@ export default function TraderCompany({ passwordHash }) {
           {chartError ? <div className="chartState warning">{chartError}</div> : null}
           {chartMeta?.dataLabel ? <div className="dataLabel">{chartMeta.dataLabel}</div> : null}
           <div ref={chartNodeRef} className="chart" />
-          {fibOverlayReady ? (
+          {displayToggles.fibonacci && fibOverlayReady ? (
             <div className="fibDrawingLayer" aria-label="Fibonacci retracement drawing">
               {fibGeometry.bands.map((band) => (
                 <div
@@ -1516,7 +1694,7 @@ export default function TraderCompany({ passwordHash }) {
               ) : null}
             </div>
           ) : null}
-          {chartMode === "fib" ? (
+          {displayToggles.fibonacci && chartMode === "fib" ? (
             <div
               className="fibDraftLayer"
               onPointerDown={startFibDraft}
@@ -1524,7 +1702,7 @@ export default function TraderCompany({ passwordHash }) {
               onPointerUp={finishFibDraft}
             />
           ) : null}
-          {visualOverlayReady ? (
+          {displayToggles.tradePlan && visualOverlayReady ? (
             <div className="visualPlannerOverlay" aria-label="Visual trade planner">
               <div className="zone profitZone" style={{ top: profitZone.top, height: profitZone.height }} />
               <div className="zone riskZone" style={{ top: riskZone.top, height: riskZone.height }} />
@@ -1552,7 +1730,8 @@ export default function TraderCompany({ passwordHash }) {
           ) : null}
         </div>
         <div className="visualPlannerPanel">
-          <Metric label="Status" value={tradeStatus} />
+          <Metric label="Analysis Signal" value={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
+          <Metric label="Paper Position" value={openPosition ? tradeStatus : "No open paper position"} />
           <Metric label="BUY" value={formatCurrency(visualLevels.entry)} />
           <Metric label="STOP LOSS" value={formatCurrency(visualLevels.stop)} />
           <Metric label="SELL" value={formatCurrency(visualLevels.target)} />
@@ -1563,9 +1742,23 @@ export default function TraderCompany({ passwordHash }) {
             setVisualLevels(recommended);
             saveVisualLevels(recommended);
           }}>Reset to Recommended Levels</button>
+          <button type="button" onClick={openBuyModal}>Create Paper Trade</button>
           <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
           {saveMessage ? <p className="inlineNotice">{saveMessage}</p> : null}
         </div>
+        {selectedTradeMarker ? (
+          <div className="tradeMarkerDetails">
+            <strong>{selectedTradeMarker.type}</strong>
+            <span>Date and time: {selectedTradeMarker.dateTime || "--"}</span>
+            <span>Quantity: {selectedTradeMarker.quantity ?? "--"}</span>
+            <span>Fill price: {formatCurrency(selectedTradeMarker.fillPrice)}</span>
+            <span>Fees: {formatCurrency(selectedTradeMarker.fees)}</span>
+            <span>Order type: {selectedTradeMarker.orderType || "--"}</span>
+            <span>Realised profit/loss: {formatCurrency(selectedTradeMarker.realisedProfitLoss)}</span>
+            <span>Exit reason: {selectedTradeMarker.exitReason || "--"}</span>
+            <button type="button" onClick={() => setSelectedTradeMarker(null)}>Close</button>
+          </div>
+        ) : null}
       </section>
 
       <footer>Freedom Trader is separate from Freedom Investment. Trading research only. Not financial advice.</footer>
@@ -1624,6 +1817,32 @@ export default function TraderCompany({ passwordHash }) {
         </div>
       ) : null}
 
+      {buyModalOpen ? (
+        <PaperOrderTicket
+          mode={paperTicketMode}
+          company={{ ...company, symbol, exchange: analysis?.exchange || "NASDAQ" }}
+          position={paperTicketMode === "sell" ? paperPosition : null}
+          setup={{
+            ...setup,
+            entry: visualLevels.entry,
+            stop: visualLevels.stop,
+            target: visualLevels.target,
+            marketData: {
+              ...(setup.marketData || {}),
+              exchange: analysis?.exchange || "NASDAQ",
+              currency: String(symbol).endsWith(".AX") ? "AUD" : "USD",
+              provider: setup.marketData?.quoteSource || setup.marketData?.provider || "Finnhub",
+            },
+          }}
+          onClose={() => setBuyModalOpen(false)}
+          onSubmitted={() => {
+            setSaveMessage("Paper order submitted. No real money was used.");
+            setBuyModalOpen(false);
+            window.location.reload();
+          }}
+        />
+      ) : null}
+
       <style jsx>{`
         .boot, .page { background: #05080b; color: #f5f7f8; font-family: Inter, ui-sans-serif, system-ui; min-height: 100vh; }
         .boot { align-items: center; display: flex; font-weight: 900; justify-content: center; }
@@ -1640,6 +1859,9 @@ export default function TraderCompany({ passwordHash }) {
         .back { color: #d7efff; font-size: 18px; font-weight: 900; text-decoration: none; }
         .heroMain { align-items: center; display: flex; gap: 18px; margin-top: 24px; }
         .heroActions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+        .analysisSignalBox { align-items: flex-end; display: grid; gap: 5px; justify-items: end; margin-left: auto; }
+        .analysisSignalBox > span, .analysisSignalBox small { color: #aab8be; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .editPositionLink { align-items: center; background: rgba(29,155,255,.12); border: 1px solid rgba(29,155,255,.34); border-radius: 7px; color: #d7efff; display: inline-flex; font-weight: 950; min-height: 38px; padding: 0 12px; text-decoration: none; }
         .heroActions button { background: rgba(29,155,255,.14); border: 1px solid rgba(29,155,255,.34); color: #d7efff; padding: 0 13px; }
         .heroActions .primaryAction, .primaryAction { background: #ff9900; border-color: #ff9900; color: #061014; }
         .logo { align-items: center; background: linear-gradient(135deg, var(--company-primary), var(--company-secondary)); border-radius: 999px; display: inline-flex; font-size: 20px; font-weight: 950; height: 74px; justify-content: center; width: 74px; }
@@ -1657,6 +1879,11 @@ export default function TraderCompany({ passwordHash }) {
         .chartControls button.active { background: rgba(255,153,0,.2); border-color: rgba(255,153,0,.52); color: #fff; }
         .chartControls button:disabled { cursor: not-allowed; opacity: .42; }
         .chartControls span { align-items: center; color: #aebdc4; display: inline-flex; font-size: 12px; font-weight: 950; min-height: 38px; text-transform: uppercase; }
+        .chartTypeSelect { align-items: center; color: #aab8be; display: inline-flex; font-size: 11px; font-weight: 900; gap: 6px; text-transform: uppercase; }
+        .chartTypeSelect select { background: #091117; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; color: #f6f8f9; font-weight: 850; height: 34px; padding: 0 8px; }
+        .displayToggles { align-items: center; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 20px; }
+        .displayToggles label { align-items: center; display: inline-flex; flex-direction: row; gap: 7px; text-transform: none; }
+        .displayToggles input { height: auto; width: auto; }
         .chartShell { height: 660px; overflow: hidden; position: relative; }
         .chart { height: 100%; width: 100%; }
         .chartState { align-items: center; background: rgba(5,8,11,.78); color: #d8e5ea; display: flex; font-weight: 900; inset: 0; justify-content: center; padding: 20px; position: absolute; text-align: center; z-index: 5; }
@@ -1693,6 +1920,10 @@ export default function TraderCompany({ passwordHash }) {
         .plannerLine.dragging span, .plannerLine.dragging strong { box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 30px rgba(0,0,0,.35); }
         .visualPlannerPanel { border-top: 1px solid rgba(255,255,255,.08); display: grid; gap: 12px; grid-template-columns: repeat(5,minmax(0,1fr)) repeat(3,minmax(120px,.65fr)); padding: 16px; }
         .visualPlannerPanel button { min-height: 44px; padding: 0 12px; }
+        .tradeMarkerDetails { background: rgba(5,8,11,.94); border-top: 1px solid rgba(255,255,255,.1); display: grid; gap: 7px; grid-template-columns: repeat(4,minmax(0,1fr)) auto; padding: 14px 16px; }
+        .tradeMarkerDetails strong { color: #fff; text-transform: uppercase; }
+        .tradeMarkerDetails span { color: #d8e5ea; font-size: 13px; }
+        .tradeMarkerDetails button { min-height: 34px; }
         .inlineNotice { color: #b8f4e6; font-size: 12px; font-weight: 850; grid-column: 1 / -1; margin: 0; }
         .split { display: grid; gap: 18px; grid-template-columns: 1.25fr .75fr; }
         .panel { padding: 18px; }
@@ -1737,10 +1968,11 @@ export default function TraderCompany({ passwordHash }) {
         .riskPreview small { color: #ffd7a1; display: block; margin-top: 6px; }
         .modalActions { display: flex; gap: 10px; }
         :global(.signal) { border-radius: 999px; display: inline-flex; font-size: 12px; font-weight: 950; padding: 8px 12px; }
-        :global(.signal.strong), :global(.signal.buy) { background: rgba(35,209,139,.14); border: 1px solid rgba(35,209,139,.38); color: #b8f4e6; }
-        :global(.signal.strong) { background: rgba(34,255,163,.18); border-color: rgba(34,255,163,.55); color: #c8ffe8; }
+        :global(.signal.strong), :global(.signal.strongBuy), :global(.signal.buy) { background: rgba(35,209,139,.14); border: 1px solid rgba(35,209,139,.38); color: #b8f4e6; }
+        :global(.signal.strong), :global(.signal.strongBuy) { background: rgba(34,255,163,.18); border-color: rgba(34,255,163,.55); color: #c8ffe8; }
         :global(.signal.watch) { background: rgba(250,204,21,.14); border: 1px solid rgba(250,204,21,.34); color: #ffe98a; }
-        :global(.signal.wait) { background: rgba(255,153,0,.14); border: 1px solid rgba(255,153,0,.38); color: #ffd7a1; }
+        :global(.signal.wait), :global(.signal.holdOff) { background: rgba(255,153,0,.14); border: 1px solid rgba(255,153,0,.38); color: #ffd7a1; }
+        :global(.signal.sell), :global(.signal.strongSell) { background: rgba(255,92,92,.14); border: 1px solid rgba(255,92,92,.38); color: #ffc8c8; }
         :global(.signal.noTrade) { background: rgba(255,92,92,.14); border: 1px solid rgba(255,92,92,.38); color: #ffc8c8; }
         :global(.signal.info) { background: rgba(29,155,255,.14); border: 1px solid rgba(29,155,255,.38); color: #d7efff; }
         @media (max-width: 1100px) { .cards, .split, .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1752,7 +1984,7 @@ export default function TraderCompany({ passwordHash }) {
 
 function SignalBadge({ signal }) {
   const normalized = String(signal || "WATCH").toUpperCase();
-  const className = normalized.includes("TARGET") ? "strong" : normalized.includes("ACTIVE") ? "buy" : normalized.includes("BUY") ? "buy" : normalized.includes("WAIT") ? "wait" : normalized.includes("STOP") || normalized === "NO TRADE" ? "noTrade" : normalized === "INFO" ? "info" : "watch";
+  const className = normalized.includes("TARGET") ? "strong" : normalized.includes("ACTIVE") ? "buy" : signalClassName(normalized);
   return <span className={`signal ${className}`}>{normalized}</span>;
 }
 

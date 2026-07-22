@@ -98,6 +98,10 @@ export async function getServerSideProps(ctx) {
       ctx.res?.setHeader("X-GR8-Published-Project-Id", publication.project_id || siteData.id || "");
       ctx.res?.setHeader("X-GR8-Site-Data-Updated-At", siteData.updatedAt || "");
       ctx.res?.setHeader("X-GR8-Site-Data-Hash", siteDataHash);
+      ctx.res?.setHeader("X-GR8-Published-Revision", siteData.publishedVersion || siteData.publication?.publishedVersion || "");
+      ctx.res?.setHeader("X-GR8-Published-Timestamp", publication.published_at || siteData.publishedAt || siteData.publication?.publishedAt || "");
+      ctx.res?.setHeader("X-GR8-Snapshot-Hash", siteDataHash);
+      ctx.res?.setHeader("X-GR8-Requested-Page-Slug", "home");
       return {
         props: {
           mode: "published-website",

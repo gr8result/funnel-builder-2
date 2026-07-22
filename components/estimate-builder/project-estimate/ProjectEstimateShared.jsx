@@ -46,24 +46,42 @@ export function LuxuryImageFrame({ src, label, wide = false, tall = false, deep 
 }
 
 export function nativeProjectEstimateTextProps(blockId, contentKey, editorBridge = {}) {
-  if (!editorBridge?.editMode) return {};
   const block = editorBridge.blockById?.[blockId] || {};
+  const editMode = !!editorBridge?.editMode;
   const selected = editorBridge.selectedBlockId === blockId;
-  const editing = editorBridge.editingBlockId === blockId;
+  const isLinkedProjectField = block.type === "quote_field";
+  const editing = editMode && editorBridge.editingBlockId === blockId && !isLinkedProjectField;
   const design = block.design || {};
-  const designStyle = projectEstimateNativeDesignStyle(design);
-  return {
+  const parentGroupId = design.parentGroupId || "";
+  const designStyle = projectEstimateNativeDesignStyle(design, { ignoreFrameOverrides: projectEstimateTextUsesParentResize(block) });
+  const baseProps = {
     "data-project-estimate-native-element": blockId,
-    contentEditable: editing,
-    suppressContentEditableWarning: true,
-    tabIndex: 0,
+    "data-project-estimate-content-key": contentKey,
+    ...(editMode ? { contentEditable: editing, suppressContentEditableWarning: true, tabIndex: 0 } : {}),
+    style: {
+      ...designStyle,
+      boxSizing: "border-box",
+      whiteSpace: "normal",
+      overflowWrap: "break-word",
+      wordBreak: "normal",
+      pointerEvents: editMode ? "auto" : undefined,
+      outline: "none",
+      cursor: editing ? "text" : editMode ? "pointer" : undefined,
+      borderRadius: 3,
+    },
+  };
+  if (!editMode) return baseProps;
+  return {
+    ...baseProps,
     onMouseDown: (event) => {
       event.stopPropagation();
-      editorBridge.onSelectBlock?.(blockId);
+      editorBridge.onSelectBlock?.(parentGroupId || blockId);
+      if (!parentGroupId) editorBridge.onEditBlock?.("");
       if (process.env.NODE_ENV !== "production") {
         console.info("[Project Estimate editor] Clicked object", {
           pageId: editorBridge.pageId || "",
-          objectId: blockId,
+          objectId: parentGroupId || blockId,
+          childTextId: parentGroupId ? blockId : "",
           type: block.type || "text",
           visible: block.design?.hidden !== true,
           locked: block.design?.locked === true,
@@ -74,39 +92,78 @@ export function nativeProjectEstimateTextProps(blockId, contentKey, editorBridge
     onDoubleClick: (event) => {
       event.stopPropagation();
       const target = event.currentTarget;
-      editorBridge.onSelectBlock?.(blockId);
+      editorBridge.onSelectBlock?.(parentGroupId || blockId);
+      if (isLinkedProjectField) return;
       editorBridge.onEditBlock?.(blockId);
       requestAnimationFrame(() => placeCaretAtEnd(target));
     },
     onBlur: (event) => {
       if (!editing) return;
-      if (event.relatedTarget?.closest?.('[data-project-estimate-text-toolbar="true"]')) return;
-      editorBridge.onTextCommit?.(blockId, contentKey, String(event.currentTarget.innerText || "").trim());
+      if (event.relatedTarget?.closest?.('[data-project-estimate-text-toolbar="true"], [data-text-toolbar="true"]')) return;
+      editorBridge.onTextCommit?.(blockId, contentKey, projectEstimateCleanEditableHtml(event.currentTarget.innerHTML));
       editorBridge.onEditBlock?.("");
     },
     onKeyDown: (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        editorBridge.onTextCommit?.(blockId, contentKey, String(event.currentTarget.innerText || "").trim());
+        editorBridge.onTextCommit?.(blockId, contentKey, projectEstimateCleanEditableHtml(event.currentTarget.innerHTML));
         event.currentTarget.blur();
         editorBridge.onEditBlock?.("");
       }
     },
+    onKeyUp: () => editorBridge.onPreserveSelection?.(),
+    onMouseUp: () => editorBridge.onPreserveSelection?.(),
+  };
+}
+
+export function projectEstimateRichTextProps(blockId, contentKey, value, editorBridge = {}) {
+  const nativeProps = nativeProjectEstimateTextProps(blockId, contentKey, editorBridge);
+  return {
+    ...nativeProps,
+    dangerouslySetInnerHTML: { __html: projectEstimateSanitizedRichHtml(value) },
+  };
+}
+
+export function nativeProjectEstimateGroupProps(blockId, editorBridge = {}) {
+  const block = editorBridge.blockById?.[blockId] || {};
+  const editMode = !!editorBridge?.editMode;
+  const selected = editorBridge.selectedBlockId === blockId;
+  const designStyle = projectEstimateNativeDesignStyle(block.design || {});
+  const baseProps = {
+    "data-project-estimate-native-group": blockId,
+    ...(editMode ? { tabIndex: 0 } : {}),
     style: {
       ...designStyle,
-      outline: "none",
-      cursor: editing ? "text" : "pointer",
-      borderRadius: 3,
+      boxSizing: "border-box",
+      cursor: editMode ? (selected ? "move" : "pointer") : undefined,
+    },
+  };
+  if (!editMode) return baseProps;
+  return {
+    ...baseProps,
+    onMouseDown: (event) => {
+      event.stopPropagation();
+      editorBridge.onSelectBlock?.(blockId);
+      editorBridge.onEditBlock?.("");
     },
   };
 }
 
 export function nativeProjectEstimateImageProps(blockId, editorBridge = {}) {
-  if (!editorBridge?.editMode) return {};
   const block = editorBridge.blockById?.[blockId] || {};
+  const editMode = !!editorBridge?.editMode;
   const selected = editorBridge.selectedBlockId === blockId;
-  return {
+  const baseProps = {
     "data-project-estimate-native-element": blockId,
+    style: {
+      ...projectEstimateNativeDesignStyle(block.design || {}),
+      outline: "none",
+      cursor: editMode ? (selected ? "move" : "pointer") : undefined,
+    },
+  };
+  if (!editMode) return baseProps;
+  return {
+    ...baseProps,
     onMouseDown: (event) => {
       event.stopPropagation();
       editorBridge.onSelectBlock?.(blockId);
@@ -126,25 +183,17 @@ export function nativeProjectEstimateImageProps(blockId, editorBridge = {}) {
       editorBridge.onSelectBlock?.(blockId);
       editorBridge.onReplaceImage?.(block);
     },
-    style: {
-      outline: "none",
-      cursor: selected ? "move" : "pointer",
-    },
   };
 }
 
-function projectEstimateNativeDesignStyle(design = {}) {
-  const frame = design.frameEdited && design.frame ? {
-    position: "absolute",
-    left: Number(design.frame.x || 0),
-    top: Number(design.frame.y || 0),
-    width: Number(design.frame.width || 0) || undefined,
-    minHeight: Number(design.frame.height || 0) || undefined,
-    zIndex: Number(design.zIndex || 5),
-    boxSizing: "border-box",
-  } : {};
+function projectEstimateNativeDesignStyle(design = {}, options = {}) {
+  const translateX = Number(design.translateX || 0);
+  const translateY = Number(design.translateY || 0);
   return {
-    ...frame,
+    ...(!options.ignoreFrameOverrides && (translateX || translateY) ? { transform: `translate(${translateX}px, ${translateY}px)` } : {}),
+    ...(!options.ignoreFrameOverrides && design.widthOverride ? { width: Number(design.widthOverride) } : {}),
+    ...(!options.ignoreFrameOverrides && design.heightOverride ? { minHeight: Number(design.heightOverride) } : {}),
+    ...(design.zIndex !== undefined ? { position: "relative", zIndex: Number(design.zIndex || 0) } : {}),
     ...(design.color ? { color: design.color } : {}),
     ...(design.fontFamily ? { fontFamily: design.fontFamily } : {}),
     ...(design.fontSize ? { fontSize: Number(design.fontSize) } : {}),
@@ -157,6 +206,89 @@ function projectEstimateNativeDesignStyle(design = {}) {
     ...(design.opacity !== undefined ? { opacity: Number(design.opacity) } : {}),
     ...(design.backgroundColor ? { backgroundColor: design.backgroundColor } : {}),
   };
+}
+
+const PROJECT_ESTIMATE_FREE_TEXT_PARENT_GROUP_IDS = new Set([
+  "estimateSummary-intro-section",
+  "about-top-section",
+  "pricing-hero-panel",
+]);
+
+export function projectEstimateTextUsesParentResize(block = {}) {
+  const parentGroupId = block?.design?.parentGroupId;
+  if (!parentGroupId) return false;
+  if (block.type === "quote_field") return true;
+  return !PROJECT_ESTIMATE_FREE_TEXT_PARENT_GROUP_IDS.has(parentGroupId);
+}
+
+export function projectEstimateCleanEditableHtml(value = "") {
+  return projectEstimateSanitizedRichHtml(value)
+    .replace(/<p>\s*<\/p>/gi, "")
+    .trim();
+}
+
+export function projectEstimateSanitizedRichHtml(value = "") {
+  const normalized = projectEstimateDecodeMalformedHtml(String(value ?? ""));
+  if (!projectEstimateLooksLikeHtml(normalized)) return escapeProjectEstimateHtml(normalized).replace(/\r?\n/g, "<br>");
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return projectEstimateFlattenParagraphShells(normalized
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ""));
+  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${normalized}</div>`, "text/html");
+  doc.querySelectorAll("script, style, iframe, object, embed, link, meta").forEach((node) => node.remove());
+  doc.body.querySelectorAll("*").forEach((node) => {
+    [...node.attributes].forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const val = String(attribute.value || "");
+      if (name.startsWith("on") || /javascript:/i.test(val)) node.removeAttribute(attribute.name);
+      if (name === "style") {
+        const safeStyle = val
+          .split(";")
+          .map((entry) => entry.trim())
+          .filter((entry) => /^(color|background-color|font-weight|font-style|text-decoration|text-align|font-family|font-size|line-height)\s*:/i.test(entry) && !/javascript:/i.test(entry))
+          .join("; ");
+        if (safeStyle) node.setAttribute("style", safeStyle);
+        else node.removeAttribute("style");
+      }
+    });
+  });
+  return projectEstimateFlattenParagraphShells(doc.body.firstElementChild?.innerHTML || "");
+}
+
+function projectEstimateDecodeMalformedHtml(value = "") {
+  const trimmed = String(value || "");
+  if (!/&lt;\/?[a-z][\s\S]*?&gt;/i.test(trimmed)) return trimmed;
+  const textarea = typeof document !== "undefined" ? document.createElement("textarea") : null;
+  if (!textarea) {
+    return trimmed
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  textarea.innerHTML = trimmed;
+  return textarea.value;
+}
+
+function projectEstimateLooksLikeHtml(value = "") {
+  return /<\/?[a-z][\s\S]*?>/i.test(String(value || ""));
+}
+
+function projectEstimateFlattenParagraphShells(html = "") {
+  return String(html || "")
+    .replace(/^\s*<p(?:\s[^>]*)?>/i, "")
+    .replace(/<\/p>\s*$/i, "")
+    .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, "<br>");
+}
+
+function escapeProjectEstimateHtml(value = "") {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function placeCaretAtEnd(target) {

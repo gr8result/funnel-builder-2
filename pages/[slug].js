@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { PublishedWebsiteRenderer } from './sites/[...slug]'
 import { getPlatformAppHost, normalizeDomain } from '../lib/website-builder/publishConfig'
 import { getPrimaryPublishedWebsite, publishedWebsiteHasPage } from '../lib/website-builder/publicationStore'
+import { websiteContentHash } from '../lib/website-builder/documentVersion'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -101,6 +102,16 @@ export async function getServerSideProps({ params, req, res }) {
   if (!isLocalHost && !isAppHost) {
     const publication = await getPrimaryPublishedWebsite(host)
     if (publication && publishedWebsiteHasPage(publication, requestedPath)) {
+      const siteData = publication.site_data && typeof publication.site_data === 'object' ? publication.site_data : {}
+      const siteDataHash = websiteContentHash(siteData)
+      res?.setHeader('X-GR8-Published-Row-Id', publication.id || '')
+      res?.setHeader('X-GR8-Published-Project-Id', publication.project_id || siteData.id || '')
+      res?.setHeader('X-GR8-Site-Data-Updated-At', siteData.updatedAt || '')
+      res?.setHeader('X-GR8-Site-Data-Hash', siteDataHash)
+      res?.setHeader('X-GR8-Published-Revision', siteData.publishedVersion || siteData.publication?.publishedVersion || '')
+      res?.setHeader('X-GR8-Published-Timestamp', publication.published_at || siteData.publishedAt || siteData.publication?.publishedAt || '')
+      res?.setHeader('X-GR8-Snapshot-Hash', siteDataHash)
+      res?.setHeader('X-GR8-Requested-Page-Slug', requestedPath.join('/') || 'home')
       return {
         props: {
           mode: 'published-website',
